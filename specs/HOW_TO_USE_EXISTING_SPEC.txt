@@ -1,0 +1,92 @@
+HOW TO USE AN EXISTING SPECIFICATION IN A SPEC KIT (SPECKIT)
+============================================================
+
+If you already have a pre-existing specification document (e.g., from an external prompt, legacy draft, or written manually) and want to use it within the Spec Kit automated workflow (e.g., for planning, task checklist generation, and implementation), follow these steps:
+
+1. CREATE THE FEATURE DIRECTORY
+------------------------------
+Create a new subdirectory under the `specs/` folder of the repository. Follow the project's naming convention (e.g., prefix it with a 3-digit sequential number or a timestamp, followed by a short feature name):
+  
+  $ mkdir -p specs/003-my-existing-feature
+
+2. PLACE AND RENAME YOUR SPECIFICATION
+--------------------------------------
+Move your existing specification file into this new directory and rename it to `spec.md`:
+
+  $ cp /path/to/my/existing/spec.md specs/003-my-existing-feature/spec.md
+
+Ensure it follows the structure expected by the templates:
+- Title / Header and Metadata (Feature Branch, Created, Status)
+- User Scenarios & Testing (Priority ordered stories with Given/When/Then acceptance criteria)
+- Functional Requirements (Numbered as FR-001, FR-002, etc.)
+- Key Entities (Models/Data structures involved)
+- Success Criteria (Measurable, tech-agnostic outcomes)
+- Assumptions & Dependencies
+
+3. LINK THE ACTIVE FEATURE STATE
+-------------------------------
+To notify the downstream Spec Kit commands (like `/speckit-plan`, `/speckit-tasks`, `/speckit-implement`) which feature directory is currently active, update the `.specify/feature.json` file in the project configuration:
+
+Modify `.specify/feature.json` to point to your directory:
+```json
+{
+  "feature_directory": "specs/003-my-existing-feature"
+}
+```
+
+4. VALIDATE WITH A QUALITY CHECKLIST
+------------------------------------
+Create a requirements quality validation checklist file at:
+`specs/003-my-existing-feature/checklists/requirements.md`
+
+Use the following content to initialize it:
+```markdown
+# Specification Quality Checklist: [FEATURE NAME]
+
+**Purpose**: Validate specification completeness and quality before proceeding to planning
+**Created**: [DATE]
+**Feature**: [Link to spec.md](../spec.md)
+
+## Content Quality
+
+- [ ] No implementation details (languages, frameworks, APIs)
+- [ ] Focused on user value and business needs
+- [ ] Written for non-technical stakeholders
+- [ ] All mandatory sections completed
+
+## Requirement Completeness
+
+- [ ] No [NEEDS CLARIFICATION] markers remain
+- [ ] Requirements are testable and unambiguous
+- [ ] Success criteria are measurable
+- [ ] Success criteria are technology-agnostic (no implementation details)
+- [ ] All acceptance scenarios are defined
+- [ ] Edge cases are identified
+- [ ] Scope is clearly bounded
+- [ ] Dependencies and assumptions identified
+
+## Feature Readiness
+
+- [ ] All functional requirements have clear acceptance criteria
+- [ ] User scenarios cover primary flows
+- [ ] Feature meets measurable outcomes defined in Success Criteria
+- [ ] No implementation details leak into specification
+```
+
+Perform a manual validation pass on your `spec.md` against this checklist, checking off items as they pass. If any item fails, update the text in `spec.md` to solve the discrepancy before proceeding.
+
+5. RUN DOWNSTREAM WORKFLOWS
+---------------------------
+Once the state is linked and the spec is validated, you can skip the `/speckit-specify` command and run downstream workflows directly:
+
+- Run `/speckit-plan` (which runs the `speckit-plan` skill) to auto-generate:
+  - `specs/003-my-existing-feature/plan.md` (Design summary)
+  - `specs/003-my-existing-feature/research.md` (Technical details)
+  - `specs/003-my-existing-feature/data-model.md` (State and structures)
+  - `specs/003-my-existing-feature/quickstart.md` (Validation guides)
+  And it will automatically link your active plan into the workspace context (`AGENTS.md`).
+
+- Run `/speckit-tasks` (which runs the `speckit-tasks` skill) to auto-generate:
+  - `specs/003-my-existing-feature/tasks.md` (Actionable implementation checklist).
+
+- Run `/speckit-implement` (which runs the `speckit-implement` skill) to execute the tasks in order and implement the feature code.

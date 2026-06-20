@@ -1,0 +1,776 @@
+import Foundation
+import Observation
+import AppKit
+
+@Observable
+public final class GameViewModel {
+    public var state: GameState
+    public var timer: Timer?
+    
+    public var options: GameOptions {
+        didSet {
+            saveOptions()
+            handleOptionsChanged(oldValue: oldValue)
+        }
+    }
+    
+    public var statistics: GameStatistics {
+        didSet {
+            saveStatistics()
+        }
+    }
+    
+    public var gamesWon: Int {
+        get { statistics.gamesWon }
+        set {
+            var newStats = statistics
+            newStats.gamesWon = newValue
+            statistics = newStats
+            UserDefaults.standard.set(newValue, forKey: "gamesWon")
+        }
+    }
+    
+    public var gamesPlayed: Int {
+        get { statistics.gamesPlayed }
+        set {
+            var newStats = statistics
+            newStats.gamesPlayed = newValue
+            statistics = newStats
+            UserDefaults.standard.set(newValue, forKey: "gamesPlayed")
+        }
+    }
+    
+    public var highScore: Int = 0 {
+        didSet {
+            if options.isVegasScoring {
+                UserDefaults.standard.set(highScore, forKey: "highScoreVegas")
+            } else {
+                UserDefaults.standard.set(highScore, forKey: "highScore")
+            }
+        }
+    }
+    
+    public var highScoreString: String {
+        if options.isVegasScoring {
+            let dollars = Double(highScore) / 100.0
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencySymbol = "$"
+            formatter.maximumFractionDigits = 2
+            return formatter.string(from: NSNumber(value: dollars)) ?? String(format: "$%.2f", dollars)
+        } else {
+            return String(highScore)
+        }
+    }
+    
+    // Auto-complete status
+    public var isAutocompleteAvailable: Bool = false
+    public var isAutoplayRunning: Bool = false
+    
+    // Undo stack
+    private var undoStack: [GameState] = []
+    
+    // Initial state for game replay
+    private var initialState: GameState?
+    
+    public var canUndo: Bool {
+        !undoStack.isEmpty
+    }
+    
+    public var maxRecycles: Int? {
+        guard options.isDrawConstraintsEnabled else { return nil }
+        if options.isVegasScoring {
+            return state.drawMode == .drawThree ? 1 : 0
+        } else {
+            return state.drawMode == .drawThree ? 3 : nil
+        }
+    }
+    
+    public var canRecycleStock: Bool {
+        if let maxRec = maxRecycles {
+            return state.recyclesCount < maxRec
+        }
+        return true
+    }
+    
+    public var scoreString: String {
+        if options.isVegasScoring {
+            let dollars = Double(state.score) / 100.0
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencySymbol = "$"
+            formatter.maximumFractionDigits = 2
+            return formatter.string(from: NSNumber(value: dollars)) ?? String(format: "$%.2f", dollars)
+        } else {
+            return String(state.score)
+        }
+    }
+    
+    public var defaultZoomScale: CGFloat = 1.0
+    public var cardBackTheme: String {
+        get { options.cardBackTheme }
+        set {
+            var newOpts = options
+            newOpts.cardBackTheme = newValue
+            options = newOpts
+            UserDefaults.standard.set(newValue, forKey: "cardBackTheme")
+        }
+    }
+    
+    private func saveOptions() {
+        if let encoded = try? JSONEncoder().encode(options) {
+            UserDefaults.standard.set(encoded, forKey: "solitaire_options")
+        }
+        UserDefaults.standard.set(options.cardBackTheme, forKey: "cardBackTheme")
+    }
+    
+    private func handleOptionsChanged(oldValue: GameOptions) {
+        if options.isTimed != oldValue.isTimed {
+            if options.isTimed {
+                if state.movesCount > 0 && !state.hasWon {
+                    startTimerIfNeeded()
+                }
+            } else {
+                stopTimer()
+                state.timerSeconds = 0
+            }
+        }
+        
+        if options.isVegasScoring != oldValue.isVegasScoring {
+            if options.isVegasScoring {
+                if UserDefaults.standard.object(forKey: "highScoreVegas") != nil {
+                    self.highScore = UserDefaults.standard.integer(forKey: "highScoreVegas")
+                } else {
+                    self.highScore = -5200
+                }
+            } else {
+                self.highScore = UserDefaults.standard.integer(forKey: "highScore")
+            }
+            startNewGame()
+        }
+    }
+    
+    private func saveStatistics() {
+        if let encoded = try? JSONEncoder().encode(statistics) {
+            UserDefaults.standard.set(encoded, forKey: "solitaire_statistics")
+        }
+    }
+    
+    public func playSound(named name: String) {
+        guard options.isSoundEnabled else { return }
+        
+        if let soundURL = Bundle.main.url(forResource: name, withExtension: "aiff") {
+            if let sound = NSSound(contentsOf: soundURL, byReference: true) {
+                sound.play()
+                return
+            }
+        }
+        
+        let systemName: String
+        switch name {
+        case "shuffle": systemName = "Blow"
+        case "snap": systemName = "Tink"
+        case "victory": systemName = "Hero"
+        default: systemName = name
+        }
+        
+        if let sound = NSSound(named: NSSound.Name(systemName)) {
+            sound.play()
+        }
+    }
+    
+    public func recordWin(timeInSeconds: Int) {
+        var stats = statistics
+        stats.gamesWon += 1
+        stats.currentStreak += 1
+        stats.longestStreak = max(stats.longestStreak, stats.currentStreak)
+        stats.winningGamesCount += 1
+        stats.totalWinningTime += timeInSeconds
+        statistics = stats
+        
+        UserDefaults.standard.set(stats.gamesWon, forKey: "gamesWon")
+    }
+    
+    public init(state: GameState = GameState()) {
+        self.state = state
+        
+        // Load options and synchronize with legacy key
+        if let data = UserDefaults.standard.data(forKey: "solitaire_options"),
+           var decoded = try? JSONDecoder().decode(GameOptions.self, from: data) {
+            if let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") {
+                decoded.cardBackTheme = legacyTheme
+            }
+            self.options = decoded
+        } else {
+            let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
+            self.options = GameOptions(cardBackTheme: legacyTheme)
+        }
+        
+        // Load statistics and synchronize with legacy keys
+        let legacyWon = UserDefaults.standard.integer(forKey: "gamesWon")
+        let legacyPlayed = UserDefaults.standard.integer(forKey: "gamesPlayed")
+        if let data = UserDefaults.standard.data(forKey: "solitaire_statistics"),
+           var decoded = try? JSONDecoder().decode(GameStatistics.self, from: data) {
+            decoded.gamesPlayed = legacyPlayed
+            decoded.gamesWon = legacyWon
+            self.statistics = decoded
+        } else {
+            self.statistics = GameStatistics(gamesPlayed: legacyPlayed, gamesWon: legacyWon)
+        }
+        
+        if self.options.isVegasScoring {
+            if UserDefaults.standard.object(forKey: "highScoreVegas") != nil {
+                self.highScore = UserDefaults.standard.integer(forKey: "highScoreVegas")
+            } else {
+                self.highScore = -5200
+            }
+        } else {
+            self.highScore = UserDefaults.standard.integer(forKey: "highScore")
+        }
+        
+        // Load default zoom setting
+        if let savedDefault = UserDefaults.standard.value(forKey: "defaultZoomScale") as? Double {
+            self.defaultZoomScale = CGFloat(savedDefault)
+        } else {
+            self.defaultZoomScale = 1.0
+        }
+        
+        // Load saved zoom setting
+        if let savedZoom = UserDefaults.standard.value(forKey: "zoomScale") as? Double {
+            self.zoomScale = CGFloat(savedZoom)
+        } else {
+            self.zoomScale = self.defaultZoomScale
+        }
+        
+        startNewGame()
+    }
+    
+    deinit {
+        stopTimer()
+    }
+    
+    // MARK: - Game Setup
+    
+    public func startNewGame() {
+        stopTimer()
+        
+        if state.movesCount > 0 && !state.hasWon {
+            var stats = statistics
+            stats.currentStreak = 0
+            statistics = stats
+        }
+        
+        undoStack.removeAll()
+        gamesPlayed += 1
+        playSound(named: "shuffle")
+        
+        // 1. Create a 52-card deck
+        var deck: [Card] = []
+        for suit in Card.Suit.allCases {
+            for rank in 1...13 {
+                deck.append(Card(suit: suit, rank: rank, faceUp: false))
+            }
+        }
+        
+        // 2. Shuffle deck
+        deck.shuffle()
+        
+        // 3. Deal Tableau (7 columns)
+        var tableau: [Pile] = []
+        var deckIndex = 0
+        for i in 0..<7 {
+            var cards: [Card] = []
+            for j in 0...i {
+                var card = deck[deckIndex]
+                deckIndex += 1
+                if j == i {
+                    card.faceUp = true
+                }
+                cards.append(card)
+            }
+            tableau.append(Pile(id: "tableau_\(i)", type: .tableau, cards: cards))
+        }
+        
+        // 4. Place remainder in Stock
+        var stockCards: [Card] = []
+        while deckIndex < deck.count {
+            stockCards.append(deck[deckIndex])
+            deckIndex += 1
+        }
+        let stock = Pile(id: "stock", type: .stock, cards: stockCards)
+        
+        // 5. Initialize Piles
+        let waste = Pile(id: "waste", type: .waste, cards: [])
+        let foundationSuits: [Card.Suit] = [.spades, .clubs, .diamonds, .hearts]
+        let foundations = foundationSuits.map { suit in
+            Pile(id: "foundation_\(suit.rawValue)", type: .foundation, cards: [])
+        }
+        
+        // 6. Set State
+        let initialScore = options.isVegasScoring ? -5200 : 0
+        state = GameState(
+            stock: stock,
+            waste: waste,
+            foundations: foundations,
+            tableau: tableau,
+            score: initialScore,
+            movesCount: 0,
+            timerSeconds: 0,
+            isTimerActive: false,
+            drawMode: state.drawMode,
+            hasWon: false,
+            recyclesCount: 0
+        )
+        
+        isAutocompleteAvailable = false
+        isAutoplayRunning = false
+        initialState = state
+    }
+    
+    public func restartCurrentGame() {
+        guard let initial = initialState else { return }
+        stopTimer()
+        undoStack.removeAll()
+        state = initial
+        isAutocompleteAvailable = false
+        isAutoplayRunning = false
+        clearHint()
+    }
+    
+    // MARK: - Core Interactions
+    
+    public func drawCard() {
+        guard !state.stock.isEmpty else {
+            recycleStock()
+            return
+        }
+        
+        saveStateForUndo()
+        startTimerIfNeeded()
+        
+        let count = state.drawMode == .drawOne ? 1 : min(3, state.stock.cards.count)
+        var drawn: [Card] = []
+        
+        for _ in 0..<count {
+            if var card = state.stock.cards.popLast() {
+                card.faceUp = true
+                drawn.append(card)
+            }
+        }
+        
+        // Drawn cards go on the waste pile
+        state.waste.cards.append(contentsOf: drawn)
+        
+        state.movesCount += 1
+        
+        checkAutocompleteState()
+    }
+    
+    public func recycleStock() {
+        guard state.stock.isEmpty && !state.waste.isEmpty else { return }
+        guard canRecycleStock else { return }
+        
+        saveStateForUndo()
+        state.recyclesCount += 1
+        playSound(named: "shuffle")
+        
+        let recycled = state.waste.cards.map { card in
+            var c = card
+            c.faceUp = false
+            return c
+        }.reversed()
+        
+        state.stock.cards = Array(recycled)
+        state.waste.cards.removeAll()
+        state.movesCount += 1
+    }
+    
+    // MARK: - Move Validation & Execution
+    
+    public func isValidMove(cards: [Card], to targetPile: Pile) -> Bool {
+        guard let firstCard = cards.first else { return false }
+        
+        switch targetPile.type {
+        case .tableau:
+            if targetPile.isEmpty {
+                return firstCard.rank == 13 // Only Kings
+            } else {
+                guard let topCard = targetPile.topCard else { return false }
+                return firstCard.rank == topCard.rank - 1 && firstCard.isRed != topCard.isRed
+            }
+        case .foundation:
+            // Foundations can only accept a single card at a time
+            guard cards.count == 1 else { return false }
+            
+            guard let suitString = targetPile.id.components(separatedBy: "_").last,
+                  let suit = Card.Suit(rawValue: suitString) else {
+                return false
+            }
+            
+            guard firstCard.suit == suit else { return false }
+            
+            if targetPile.isEmpty {
+                return firstCard.rank == 1 // Only Ace starts an empty foundation
+            } else {
+                guard let topCard = targetPile.topCard else { return false }
+                return firstCard.rank == topCard.rank + 1
+            }
+        case .stock, .waste:
+            return false
+        }
+    }
+    
+    public func moveCards(_ cards: [Card], from sourcePile: Pile, to targetPile: Pile) {
+        guard isValidMove(cards: cards, to: targetPile) else { return }
+        
+        saveStateForUndo()
+        startTimerIfNeeded()
+        playSound(named: "snap")
+        
+        // Remove cards from source
+        let cardIDs = Set(cards.map { $0.id })
+        
+        if sourcePile.type == .stock {
+            state.stock.cards.removeAll { cardIDs.contains($0.id) }
+        } else if sourcePile.type == .waste {
+            state.waste.cards.removeAll { cardIDs.contains($0.id) }
+        } else if sourcePile.type == .tableau {
+            if let idx = state.tableau.firstIndex(where: { $0.id == sourcePile.id }) {
+                state.tableau[idx].cards.removeAll { cardIDs.contains($0.id) }
+                
+                // Auto-flip next card if face down
+                if !state.tableau[idx].cards.isEmpty && !state.tableau[idx].cards.last!.faceUp {
+                    state.tableau[idx].cards[state.tableau[idx].cards.count - 1].faceUp = true
+                }
+            }
+        } else if sourcePile.type == .foundation {
+            if let idx = state.foundations.firstIndex(where: { $0.id == sourcePile.id }) {
+                state.foundations[idx].cards.removeAll { cardIDs.contains($0.id) }
+            }
+        }
+        
+        // Add to target
+        if targetPile.type == .tableau {
+            if let idx = state.tableau.firstIndex(where: { $0.id == targetPile.id }) {
+                state.tableau[idx].cards.append(contentsOf: cards)
+            }
+        } else if targetPile.type == .foundation {
+            if let idx = state.foundations.firstIndex(where: { $0.id == targetPile.id }) {
+                state.foundations[idx].cards.append(contentsOf: cards)
+            }
+        }
+        
+        // Score adjustments
+        adjustScore(from: sourcePile.type, to: targetPile.type)
+        
+        state.movesCount += 1
+        checkWinState()
+        checkAutocompleteState()
+    }
+    
+    public func doubleClickMoveToFoundation(card: Card, from sourcePile: Pile) {
+        guard sourcePile.topCard?.id == card.id else { return }
+        
+        for foundation in state.foundations {
+            if isValidMove(cards: [card], to: foundation) {
+                moveCards([card], from: sourcePile, to: foundation)
+                break
+            }
+        }
+    }
+    
+    private func adjustScore(from source: Pile.PileType, to target: Pile.PileType) {
+        if options.isVegasScoring {
+            if target == .foundation {
+                state.score += 500
+            } else if source == .foundation && target == .tableau {
+                state.score -= 500
+            }
+        } else {
+            if target == .foundation {
+                state.score += 10
+            } else if (source == .stock || source == .waste) && target == .tableau {
+                state.score += 5
+            } else if source == .foundation && target == .tableau {
+                state.score = max(0, state.score - 15)
+            }
+        }
+        
+        if state.score > highScore {
+            highScore = state.score
+        }
+    }
+    
+    // MARK: - Timer Handling
+    
+    public func startTimerIfNeeded() {
+        guard options.isTimed else { return }
+        guard !state.isTimerActive else { return }
+        state.isTimerActive = true
+        
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            self.state.timerSeconds += 1
+        }
+    }
+    
+    public func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+        state.isTimerActive = false
+    }
+    
+    // MARK: - Victory Verification
+    
+    public func checkWinState() {
+        // Game is won when all 4 foundations have 13 cards (total 52 cards)
+        let totalFoundationCards = state.foundations.reduce(0) { $0 + $1.cards.count }
+        if totalFoundationCards == 52 && !state.hasWon {
+            state.hasWon = true
+            stopTimer()
+            recordWin(timeInSeconds: state.timerSeconds)
+            playSound(named: "victory")
+        }
+    }
+    
+    // MARK: - Autocomplete & Hints Check
+    
+    public func checkAutocompleteState() {
+        // Autocomplete is available when:
+        // 1. Stock and Waste piles are empty
+        // 2. All cards in Tableau columns are faceUp (no faceDown cards)
+        let stockEmpty = state.stock.isEmpty
+        let wasteEmpty = state.waste.isEmpty
+        
+        let allTableauFaceUp = state.tableau.allSatisfy { pile in
+            pile.cards.allSatisfy { $0.faceUp }
+        }
+        
+        let allCardsCount = state.tableau.reduce(0) { $0 + $1.cards.count } +
+                             state.foundations.reduce(0) { $0 + $1.cards.count }
+        
+        isAutocompleteAvailable = stockEmpty && wasteEmpty && allTableauFaceUp && allCardsCount == 52 && !state.hasWon
+    }
+    
+    // MARK: - Hints & Autocomplete Execution
+    
+    public struct HintMove: Equatable {
+        public let card: Card
+        public let sourcePileId: String
+        public let targetPileId: String
+        public let description: String
+    }
+    
+    public var activeHint: HintMove? = nil
+    
+    public func findHint() {
+        activeHint = nil
+        
+        // Priority 1: Move card to foundation (from Tableau or Waste)
+        if let topWaste = state.waste.topCard {
+            for foundation in state.foundations {
+                if isValidMove(cards: [topWaste], to: foundation) {
+                    activeHint = HintMove(
+                        card: topWaste,
+                        sourcePileId: state.waste.id,
+                        targetPileId: foundation.id,
+                        description: "Move \(topWaste.rankString)\(topWaste.suit.symbol) from Waste to Foundation."
+                    )
+                    return
+                }
+            }
+        }
+        
+        for tableauColumn in state.tableau {
+            if let topTab = tableauColumn.topCard {
+                for foundation in state.foundations {
+                    if isValidMove(cards: [topTab], to: foundation) {
+                        activeHint = HintMove(
+                            card: topTab,
+                            sourcePileId: tableauColumn.id,
+                            targetPileId: foundation.id,
+                            description: "Move \(topTab.rankString)\(topTab.suit.symbol) to Foundation."
+                        )
+                        return
+                    }
+                }
+            }
+        }
+        
+        // Priority 2: Reveal a face-down card
+        for tableauColumn in state.tableau {
+            guard let firstFaceUpIndex = tableauColumn.cards.firstIndex(where: { $0.faceUp }) else { continue }
+            guard firstFaceUpIndex > 0 else { continue }
+            
+            let dragStack = Array(tableauColumn.cards[firstFaceUpIndex..<tableauColumn.cards.count])
+            
+            for targetColumn in state.tableau {
+                if targetColumn.id != tableauColumn.id && isValidMove(cards: dragStack, to: targetColumn) {
+                    activeHint = HintMove(
+                        card: dragStack.first!,
+                        sourcePileId: tableauColumn.id,
+                        targetPileId: targetColumn.id,
+                        description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to reveal face-down card."
+                    )
+                    return
+                }
+            }
+        }
+        
+        // Priority 3: Move a card/sequence within Tableau to organize or clear space
+        if let topWaste = state.waste.topCard {
+            for targetColumn in state.tableau {
+                if isValidMove(cards: [topWaste], to: targetColumn) {
+                    activeHint = HintMove(
+                        card: topWaste,
+                        sourcePileId: state.waste.id,
+                        targetPileId: targetColumn.id,
+                        description: "Move \(topWaste.rankString)\(topWaste.suit.symbol) from Waste to Tableau."
+                    )
+                    return
+                }
+            }
+        }
+        
+        for tableauColumn in state.tableau {
+            guard let firstFaceUpIndex = tableauColumn.cards.firstIndex(where: { $0.faceUp }) else { continue }
+            guard firstFaceUpIndex == 0 else { continue }
+            
+            let dragStack = Array(tableauColumn.cards[firstFaceUpIndex..<tableauColumn.cards.count])
+            
+            for targetColumn in state.tableau {
+                if targetColumn.id != tableauColumn.id && !targetColumn.isEmpty && isValidMove(cards: dragStack, to: targetColumn) {
+                    activeHint = HintMove(
+                        card: dragStack.first!,
+                        sourcePileId: tableauColumn.id,
+                        targetPileId: targetColumn.id,
+                        description: "Organize Tableau: Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(targetColumn.topCard!.rankString)."
+                    )
+                    return
+                }
+            }
+        }
+        
+        // Priority 4: Draw from Stock
+        if !state.stock.isEmpty {
+            activeHint = HintMove(
+                card: Card(suit: .spades, rank: 1, faceUp: false),
+                sourcePileId: state.stock.id,
+                targetPileId: state.waste.id,
+                description: "Draw from Stock pile."
+            )
+            return
+        } else if !state.waste.isEmpty {
+            activeHint = HintMove(
+                card: Card(suit: .spades, rank: 1, faceUp: false),
+                sourcePileId: state.waste.id,
+                targetPileId: state.stock.id,
+                description: "Recycle Waste pile to Stock."
+            )
+            return
+        }
+        
+        activeHint = HintMove(
+            card: Card(suit: .spades, rank: 1, faceUp: false),
+            sourcePileId: "",
+            targetPileId: "",
+            description: "No such luck, friend! Try a new game!"
+        )
+    }
+    
+    public func clearHint() {
+        activeHint = nil
+    }
+    
+    public func runAutocomplete() {
+        guard isAutocompleteAvailable && !isAutoplayRunning else { return }
+        saveStateForUndo()
+        isAutoplayRunning = true
+        animateNextAutocompleteMove()
+    }
+    
+    private func animateNextAutocompleteMove() {
+        guard isAutoplayRunning else { return }
+        
+        if let nextMove = findNextFoundationMove() {
+            moveCards([nextMove.card], from: nextMove.source, to: nextMove.target)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+                self?.animateNextAutocompleteMove()
+            }
+        } else {
+            isAutoplayRunning = false
+            checkWinState()
+        }
+    }
+    
+    public func findNextFoundationMove() -> (card: Card, source: Pile, target: Pile)? {
+        if let topWaste = state.waste.topCard {
+            for foundation in state.foundations {
+                if isValidMove(cards: [topWaste], to: foundation) {
+                    return (topWaste, state.waste, foundation)
+                }
+            }
+        }
+        
+        for tableauColumn in state.tableau {
+            if let topTab = tableauColumn.topCard {
+                for foundation in state.foundations {
+                    if isValidMove(cards: [topTab], to: foundation) {
+                        return (topTab, tableauColumn, foundation)
+                    }
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    // MARK: - Undo Implementation
+    
+    private func saveStateForUndo() {
+        guard !isAutoplayRunning else { return }
+        undoStack.append(state)
+        if undoStack.count > 100 {
+            undoStack.removeFirst()
+        }
+    }
+    
+    public func undoLastAction() {
+        guard !undoStack.isEmpty else { return }
+        state = undoStack.removeLast()
+        isAutoplayRunning = false
+        clearHint()
+        checkWinState()
+        checkAutocompleteState()
+    }
+    
+    // MARK: - Zoom Implementation
+    public var zoomScale: CGFloat = 1.0 {
+        didSet {
+            UserDefaults.standard.set(Double(zoomScale), forKey: "zoomScale")
+        }
+    }
+    
+    public func zoomIn() {
+        zoomScale = min(2.0, zoomScale + 0.1)
+    }
+    
+    public func zoomOut() {
+        zoomScale = max(0.6, zoomScale - 0.1)
+    }
+    
+    public func resetZoom() {
+        zoomScale = defaultZoomScale
+    }
+    
+    public func makeCurrentZoomDefault() {
+        defaultZoomScale = zoomScale
+        UserDefaults.standard.set(Double(defaultZoomScale), forKey: "defaultZoomScale")
+    }
+    
+    public func resetStatistics() {
+        gamesWon = 0
+        gamesPlayed = 0
+    }
+}
