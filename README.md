@@ -1,5 +1,7 @@
 # 🐝 SoliBee & Beecell
 
+What's the #1 issue facing Mac users today? A lack of Klondike Solitaire. I used SpecKit and Gemini to build Solitaire for OSX so my woes would end (and to brush up on Agentic development.)
+
 A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the nostalgic retro visual charm and gameplay dynamics of classic Windows Solitaire with modern quality-of-life additions.
 
 ---
