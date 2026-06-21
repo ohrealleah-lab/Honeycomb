@@ -340,12 +340,15 @@ public final class GameViewModel {
     // MARK: - Core Interactions
     
     public func drawCard() {
-        guard !state.stock.isEmpty else {
+        if state.stock.isEmpty {
+            guard canRecycleStock else { return }
             recycleStock()
-            return
+        } else {
+            saveStateForUndo()
         }
         
-        saveStateForUndo()
+        guard !state.stock.isEmpty else { return }
+        
         startTimerIfNeeded()
         
         let count = state.drawMode == .drawOne ? 1 : min(3, state.stock.cards.count)

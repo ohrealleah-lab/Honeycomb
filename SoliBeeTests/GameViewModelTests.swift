@@ -72,16 +72,11 @@ struct GameViewModelTests {
         assert(viewModel.state.stock.cards.count == 0, "Stock should be empty")
         assert(viewModel.state.waste.cards.count == 24, "Waste should have 24 cards")
         
-        // Next draw should trigger recycling (resetting stock from waste)
+        // Next draw should trigger recycling and immediately draw the first card
         viewModel.drawCard()
         
-        assert(viewModel.state.stock.cards.count == 24, "Stock should have 24 cards after recycling")
-        assert(viewModel.state.waste.cards.count == 0, "Waste should be empty after recycling")
-        
-        // Following draw should draw 1 card
-        viewModel.drawCard()
-        assert(viewModel.state.stock.cards.count == 23, "Stock should have 23 cards after drawing")
-        assert(viewModel.state.waste.cards.count == 1, "Waste should have 1 card after drawing")
+        assert(viewModel.state.stock.cards.count == 23, "Stock should have 23 cards after recycling & drawing")
+        assert(viewModel.state.waste.cards.count == 1, "Waste should have 1 card after recycling & drawing")
     }
     
     static func testValidMoveTableauToTableau() {

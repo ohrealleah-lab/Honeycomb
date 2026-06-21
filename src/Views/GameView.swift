@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 public struct GameView: View {
     var viewModel: GameViewModel
@@ -209,21 +210,25 @@ public struct GameView: View {
                 
                 // Piles Row (Stock + Waste + Col 2 Blank + 4 Foundations)
                 HStack(alignment: .top, spacing: stackSpacing) {
-                    // Stock
-                    StockPileView(pile: viewModel.state.stock, stackSpacing: stackSpacing, canRecycle: viewModel.canRecycleStock)
-                        .offset(x: isShuffling ? -6 : 0, y: isShuffling ? -2 : 0)
-                        .rotationEffect(.degrees(isShuffling ? -4 : 0))
-                        .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.stock.id || viewModel.activeHint?.targetPileId == viewModel.state.stock.id))
-                        .background(GeometryReader { geo in
-                            Color.clear
-                                .onAppear {
-                                    pileFrames[viewModel.state.stock.id] = geo.frame(in: .global)
-                                }
-                                .onChange(of: geo.frame(in: .global)) { _, newFrame in
-                                    pileFrames[viewModel.state.stock.id] = newFrame
-                                }
-                        })
-                        .onTapGesture {
+                    ZStack {
+                        StockPileView(pile: viewModel.state.stock, stackSpacing: stackSpacing, canRecycle: viewModel.canRecycleStock)
+                            .offset(x: isShuffling ? -6 : 0, y: isShuffling ? -2 : 0)
+                            .rotationEffect(.degrees(isShuffling ? -4 : 0))
+                    }
+                    .frame(width: 80, height: 112)
+                    .contentShape(Rectangle())
+                    .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.stock.id || viewModel.activeHint?.targetPileId == viewModel.state.stock.id))
+                    .background(GeometryReader { geo in
+                        Color.clear
+                            .onAppear {
+                                pileFrames[viewModel.state.stock.id] = geo.frame(in: .global)
+                            }
+                            .onChange(of: geo.frame(in: .global)) { _, newFrame in
+                                pileFrames[viewModel.state.stock.id] = newFrame
+                            }
+                    })
+                    .overlay(
+                        ClickReceiver {
                             if viewModel.state.stock.isEmpty && !viewModel.canRecycleStock {
                                 return
                             }
@@ -234,7 +239,7 @@ public struct GameView: View {
                                 withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
                                     viewModel.drawCard()
                                 }
-                                // Play a quick physical shuffle wiggle on the stock pile
+                                // Play a quick physical wiggle on the stock pile
                                 withAnimation(.spring(response: 0.15, dampingFraction: 0.35)) {
                                     isShuffling = true
                                 }
@@ -251,6 +256,7 @@ public struct GameView: View {
                                 }
                             }
                         }
+                    )
                     
                     // Waste
                     WastePileView(
@@ -858,3 +864,30 @@ struct StatsView: View {
         .background(Color(NSColor.windowBackgroundColor))
     }
 }
+
+struct ClickReceiver: NSViewRepresentable {
+    var action: () -> Void
+
+    func makeNSView(context: Context) -> InstantClickNSView {
+        let view = InstantClickNSView()
+        view.action = action
+        return view
+    }
+
+    func updateNSView(_ nsView: InstantClickNSView, context: Context) {
+        nsView.action = action
+    }
+}
+
+class InstantClickNSView: NSView {
+    var action: (() -> Void)?
+
+    override func mouseDown(with event: NSEvent) {
+        action?()
+    }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        return true
+    }
+}
+

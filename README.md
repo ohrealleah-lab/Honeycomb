@@ -8,23 +8,22 @@ A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to rec
 
 ## 🎨 Core Features
 
-* **Retro Customization & Themes**:
-  * Alternating felt backgrounds: *Felt Green*, *Deep Crimson*, *Royal Blue*, and *Charcoal*.
-  * High-fidelity programmatic card backs (*Vulpera*, *Moogle*, and *Dingwall*).
-  * Empty card slots and pile borders dynamically render color-matched borders.
+
 * **Klondike Solitaire (SoliBee)**:
   * Easy (1-Card Draw) and Standard (3-Card Draw) gameplay.
-  * Alternate **Vegas Scoring Mode** (starts at `-$52.00` and awards `+$5.00` per card moved to foundations).
-  * Draw recycling constraints (limit stock recycles).
+  * Alternate **Vegas Scoring Mode**.
   * Undo functionality, live statistics tracking, and separate persisted high scores for both modes.
+  * **Customization & Themes**:
+  * Alternate felt backgrounds: *Felt Green*, *Deep Crimson*, *Royal Blue*, and *Charcoal*.
+  * Unique card backs (*Fox*, *Moogle*, and *Dingwall Afterburner II*).
 * **🤖 Smart Solitaire Engine**:
   * **AI Hint Engine**: Instant visual highlights indicating optimal moves.
   * **AI Autocomplete**: Automatically clears the board to foundation piles once victory is mathematically guaranteed.
 * **🔊 Sound & Animation**:
   * Nostalgic retro audio cues for shuffling, snapping cards into place, and victory cascades.
   * Bouncing card victory cascade animations on wins.
-* **🃏 Freecell Expansion (Beecell Spec Kit)**:
-  * Contains the pre-planned Spec Kit (`specs/003-beecell/`) for **Beecell**, a Freecell Solitaire variant supporting 1-deck and 2-deck (Double Deck) play modes.
+  🃏 Freecell Expansion (Beecell Spec Kit):
+Contains the pre-planned Spec Kit (specs/003-beecell/) for Beecell, a Freecell Solitaire variant supporting 1-deck and 2-deck (Double Deck) play modes.
 
 ---
 
