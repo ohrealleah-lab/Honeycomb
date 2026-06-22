@@ -8,6 +8,9 @@ public struct GameOptions: Codable, Equatable {
     public var isSoundEnabled: Bool = true
     public var isVegasScoring: Bool = false
     public var isDrawConstraintsEnabled: Bool = false
+    public var hideHintButton: Bool = false
+    public var hideStatsButton: Bool = false
+    public var deckCount: Int = 1
     
     public init(
         feltColor: FeltColorTheme = .feltGreen,
@@ -16,7 +19,10 @@ public struct GameOptions: Codable, Equatable {
         isStatusBarVisible: Bool = true,
         isSoundEnabled: Bool = true,
         isVegasScoring: Bool = false,
-        isDrawConstraintsEnabled: Bool = false
+        isDrawConstraintsEnabled: Bool = false,
+        hideHintButton: Bool = false,
+        hideStatsButton: Bool = false,
+        deckCount: Int = 1
     ) {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
@@ -25,6 +31,36 @@ public struct GameOptions: Codable, Equatable {
         self.isSoundEnabled = isSoundEnabled
         self.isVegasScoring = isVegasScoring
         self.isDrawConstraintsEnabled = isDrawConstraintsEnabled
+        self.hideHintButton = hideHintButton
+        self.hideStatsButton = hideStatsButton
+        self.deckCount = deckCount
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case feltColor
+        case cardBackTheme
+        case isTimed
+        case isStatusBarVisible
+        case isSoundEnabled
+        case isVegasScoring
+        case isDrawConstraintsEnabled
+        case hideHintButton
+        case hideStatsButton
+        case deckCount
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.feltColor = (try? container.decode(FeltColorTheme.self, forKey: .feltColor)) ?? .feltGreen
+        self.cardBackTheme = (try? container.decode(String.self, forKey: .cardBackTheme)) ?? "Vulpera"
+        self.isTimed = (try? container.decode(Bool.self, forKey: .isTimed)) ?? true
+        self.isStatusBarVisible = (try? container.decode(Bool.self, forKey: .isStatusBarVisible)) ?? true
+        self.isSoundEnabled = (try? container.decode(Bool.self, forKey: .isSoundEnabled)) ?? true
+        self.isVegasScoring = (try? container.decode(Bool.self, forKey: .isVegasScoring)) ?? false
+        self.isDrawConstraintsEnabled = (try? container.decode(Bool.self, forKey: .isDrawConstraintsEnabled)) ?? false
+        self.hideHintButton = (try? container.decode(Bool.self, forKey: .hideHintButton)) ?? false
+        self.hideStatsButton = (try? container.decode(Bool.self, forKey: .hideStatsButton)) ?? false
+        self.deckCount = (try? container.decode(Int.self, forKey: .deckCount)) ?? 1
     }
 }
 

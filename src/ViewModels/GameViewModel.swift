@@ -418,7 +418,7 @@ public final class GameViewModel {
                 guard let topCard = targetPile.topCard else { return false }
                 return firstCard.rank == topCard.rank + 1
             }
-        case .stock, .waste:
+        case .stock, .waste, .freeCell:
             return false
         }
     }

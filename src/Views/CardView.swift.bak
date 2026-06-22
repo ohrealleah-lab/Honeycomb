@@ -150,40 +150,6 @@ struct ShieldShape: Shape {
     }
 }
 
-struct FaceCardImageView: View {
-    let filename: String
-    let absolutePath: String
-    let fallbackView: AnyView
-    
-    var body: some View {
-        let nsImage: NSImage? = {
-            if let image = NSImage(contentsOfFile: absolutePath) {
-                return image
-            }
-            if let path = Bundle.main.path(forResource: filename, ofType: "png"),
-               let image = NSImage(contentsOfFile: path) {
-                return image
-            }
-            return nil
-        }()
-        
-        if let image = nsImage {
-            Image(nsImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 77, height: 122)
-                .clipped()
-                .cornerRadius(4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.black.opacity(0.15), lineWidth: 1)
-                )
-        } else {
-            fallbackView
-        }
-    }
-}
-
 struct CardCenterSuitView: View {
     let suit: Card.Suit
     let rank: Int
@@ -197,26 +163,14 @@ struct CardCenterSuitView: View {
                     .font(.system(size: 61))
                     .foregroundColor(color)
             } else if rank == 11 {
-                // Jack - custom image or high fidelity shield fallback
-                FaceCardImageView(
-                    filename: "J",
-                    absolutePath: "/Users/leah/SoliBee/J.png",
-                    fallbackView: AnyView(HighFidelityShieldView(color: color, suitSymbol: suit.symbol))
-                )
+                // Jack - high fidelity shield
+                HighFidelityShieldView(color: color, suitSymbol: suit.symbol)
             } else if rank == 12 {
-                // Queen - custom image or high fidelity tiara fallback
-                FaceCardImageView(
-                    filename: "Q",
-                    absolutePath: "/Users/leah/SoliBee/Q.png",
-                    fallbackView: AnyView(HighFidelityTiaraView(color: color, suitSymbol: suit.symbol))
-                )
+                // Queen - high fidelity tiara
+                HighFidelityTiaraView(color: color, suitSymbol: suit.symbol)
             } else if rank == 13 {
-                // King - custom image or high fidelity crown fallback
-                FaceCardImageView(
-                    filename: "K",
-                    absolutePath: "/Users/leah/SoliBee/K.png",
-                    fallbackView: AnyView(HighFidelityCrownView(color: color, suitSymbol: suit.symbol))
-                )
+                // King - high fidelity crown
+                HighFidelityCrownView(color: color, suitSymbol: suit.symbol)
             } else {
                 // Numbered cards 2 to 10
                 ZStack {

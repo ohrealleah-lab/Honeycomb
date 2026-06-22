@@ -22,18 +22,18 @@ public struct EmptyPileView: View {
     }
     
     public var body: some View {
-        RoundedRectangle(cornerRadius: 6)
+        RoundedRectangle(cornerRadius: 10)
             .fill(feltColor.statusBarColor)
-            .frame(width: 80, height: 112)
+            .frame(width: 128, height: 181)
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.white.opacity(0.35), lineWidth: 1.5)
             )
             .overlay(
                 Group {
                     if let sym = symbol {
                         Text(sym)
-                            .font(.system(size: 32))
+                            .font(.system(size: 51))
                             .foregroundColor(Color.white.opacity(0.2))
                     }
                 }
@@ -56,12 +56,12 @@ public struct StockPileView: View {
             } else {
                 CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
                     .transition(.asymmetric(
-                        insertion: .offset(x: 80 + stackSpacing).combined(with: .opacity),
+                        insertion: .offset(x: 128 + stackSpacing).combined(with: .opacity),
                         removal: .opacity
                     ))
             }
         }
-        .frame(width: 80, height: 112)
+        .frame(width: 128, height: 181)
         .contentShape(Rectangle())
     }
 }
@@ -96,9 +96,9 @@ public struct WastePileView: View {
                             ForEach(Array(cardsToShow.enumerated()), id: \.element.id) { index, card in
                                 CardView(card: card)
                                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
-                                    .offset(x: CGFloat(index) * 26)
+                                    .offset(x: CGFloat(index) * 42)
                                     .transition(.asymmetric(
-                                        insertion: .offset(x: -(80 + stackSpacing) - CGFloat(index) * 26).combined(with: .opacity),
+                                        insertion: .offset(x: -(128 + stackSpacing) - CGFloat(index) * 42).combined(with: .opacity),
                                         removal: .opacity
                                     ))
                                     .gesture(
@@ -125,14 +125,14 @@ public struct WastePileView: View {
                                     )
                             }
                         }
-                        .frame(width: 80 + CGFloat(max(0, cardsToShow.count - 1)) * 26, height: 112, alignment: .leading)
+                        .frame(width: 128 + CGFloat(max(0, cardsToShow.count - 1)) * 42, height: 181, alignment: .leading)
                     } else {
                         if let topCard = pile.topCard {
                             CardView(card: topCard)
                                 .id(topCard.id)
                                 .opacity(draggedCardIDs.contains(topCard.id) ? 0.0 : 1.0)
                                 .transition(.asymmetric(
-                                    insertion: .offset(x: -(80 + stackSpacing)).combined(with: .opacity),
+                                    insertion: .offset(x: -(128 + stackSpacing)).combined(with: .opacity),
                                     removal: .opacity
                                 ))
                                 .gesture(
@@ -156,11 +156,11 @@ public struct WastePileView: View {
                 }
                 .transition(.asymmetric(
                     insertion: .opacity,
-                    removal: .offset(x: -(80 + stackSpacing)).combined(with: .opacity)
+                    removal: .offset(x: -(128 + stackSpacing)).combined(with: .opacity)
                 ))
             }
         }
-        .frame(width: isDrawThree ? 132 : 80, height: 112, alignment: .leading)
+        .frame(width: isDrawThree ? 212 : 128, height: 181, alignment: .leading)
     }
 }
 
@@ -237,7 +237,7 @@ public struct TableauPileView: View {
     private func offsetForCard(at index: Int) -> CGFloat {
         var yOffset: CGFloat = 0
         for i in 0..<index {
-            yOffset += pile.cards[i].faceUp ? 20 : 12
+            yOffset += pile.cards[i].faceUp ? 32 : 20
         }
         return yOffset
     }

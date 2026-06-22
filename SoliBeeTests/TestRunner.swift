@@ -13,6 +13,14 @@ struct TestRunner {
         GameViewModelTests.run()
         print("✅ GameViewModelTests passed.")
         
+        print("🧪 Running AppCoordinatorTests...")
+        AppCoordinatorTests.run()
+        print("✅ AppCoordinatorTests passed.")
+        
+        print("🧪 Running SpiderTests...")
+        SpiderTests.run()
+        print("✅ SpiderTests passed.")
+        
         print("🎉 ALL TESTS PASSED SUCCESSFULLY!")
     }
 }

@@ -13,6 +13,9 @@ public struct GameView: View {
     @State private var isShuffling: Bool = false
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
+    @State private var hostingWindow: NSWindow? = nil
+    
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
     
     public init(viewModel: GameViewModel) {
         self.viewModel = viewModel
@@ -20,7 +23,8 @@ public struct GameView: View {
     
     public var body: some View {
         let stackSpacing = viewModel.zoomScale > 1.0 ? max(4.0, 18.0 - 14.0 * (viewModel.zoomScale - 1.0)) : 18.0
-        let boardWidth = 560.0 + 6.0 * stackSpacing + 40.0
+        let columnCount = viewModel.state.tableau.count > 0 ? viewModel.state.tableau.count : 7
+        let boardWidth = CGFloat(columnCount) * 128.0 + CGFloat(columnCount - 1) * stackSpacing + 40.0
         
         return ZStack {
             // Felt Board Background
@@ -100,38 +104,75 @@ public struct GameView: View {
                     }
                     .buttonStyle(.plain)
                     
-                    // Stats Button
-                    Button(action: {
-                        isShowingStats = true
-                    }) {
-                        Text("Stats")
+                    // Game Selection Dropdown
+                    Menu {
+                        Button(GameMode.klondike.rawValue) {
+                            if let coordinator = coordinator, coordinator.gameMode != .klondike {
+                                coordinator.gameMode = .klondike
+                                coordinator.startNewGame()
+                            }
+                        }
+                        Button(GameMode.beecell.rawValue) {
+                            if let coordinator = coordinator, coordinator.gameMode != .beecell {
+                                coordinator.gameMode = .beecell
+                                coordinator.startNewGame()
+                            }
+                        }
+                        Button(GameMode.spider.rawValue) {
+                            if let coordinator = coordinator, coordinator.gameMode != .spider {
+                                coordinator.gameMode = .spider
+                                coordinator.startNewGame()
+                            }
+                        }
+                    } label: {
+                        Text("Game Selection")
                             .font(.system(.body, design: .monospaced))
                             .fontWeight(.bold)
                             .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .menuStyle(.borderlessButton)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.white.opacity(0.15))
+                    .cornerRadius(4)
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                    
+                    // Stats Button
+                    if !viewModel.options.hideStatsButton {
+                        Button(action: {
+                            isShowingStats = true
+                        }) {
+                            Text("Stats")
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.white.opacity(0.15))
+                                .cornerRadius(4)
+                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
                     
                     // Hint Button
-                    Button(action: {
-                        viewModel.findHint()
-                    }) {
-                        Text("Hint")
-                            .font(.system(.body, design: .monospaced))
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                    if !viewModel.options.hideHintButton {
+                        Button(action: {
+                            viewModel.findHint()
+                        }) {
+                            Text("Hint")
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.white.opacity(0.15))
+                                .cornerRadius(4)
+                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .keyboardShortcut("h", modifiers: .command)
                     }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut("h", modifiers: .command)
                     
                     Spacer()
                     
@@ -177,6 +218,7 @@ public struct GameView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
                 .background(viewModel.options.feltColor.statusBarColor)
+                .layoutPriority(1)
                 
                 // Visual Divider line
                 Rectangle()
@@ -215,7 +257,7 @@ public struct GameView: View {
                             .offset(x: isShuffling ? -6 : 0, y: isShuffling ? -2 : 0)
                             .rotationEffect(.degrees(isShuffling ? -4 : 0))
                     }
-                    .frame(width: 80, height: 112)
+                    .frame(width: 128, height: 181)
                     .contentShape(Rectangle())
                     .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.stock.id || viewModel.activeHint?.targetPileId == viewModel.state.stock.id))
                     .background(GeometryReader { geo in
@@ -295,7 +337,7 @@ public struct GameView: View {
                     
                     // Blank spacer representing Tableau column 2 to lock grid alignment
                     Spacer()
-                        .frame(width: viewModel.state.drawMode == .drawThree ? 28 : 80)
+                        .frame(width: viewModel.state.drawMode == .drawThree ? 44 : 128)
                     
                     // 4 Foundations
                     ForEach(viewModel.state.foundations) { pile in
@@ -452,15 +494,15 @@ public struct GameView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             }
-            .frame(width: boardWidth, height: 620, alignment: .topLeading)
+            .frame(width: boardWidth, height: 950, alignment: .topLeading)
             .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
-            .frame(width: boardWidth * viewModel.zoomScale, height: 620 * viewModel.zoomScale, alignment: .topLeading)
+            .frame(width: boardWidth * viewModel.zoomScale, height: 950 * viewModel.zoomScale, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             
             // Drag overlay representation (positioned globally, scaled to match board)
             if !draggedCards.isEmpty {
-                VStack(spacing: 20 - 112) {
+                VStack(spacing: 32 - 181) {
                     ForEach(draggedCards) { card in
                         CardView(card: card)
                     }
@@ -478,14 +520,45 @@ public struct GameView: View {
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                idealWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
-               minHeight: 73 + 620 * viewModel.zoomScale,
-               idealHeight: 73 + 620 * viewModel.zoomScale,
+               minHeight: 73 + 950 * viewModel.zoomScale,
+               idealHeight: 73 + 950 * viewModel.zoomScale,
                maxHeight: .infinity)
         .sheet(isPresented: $isShowingOptions) {
-            OptionsView(viewModel: viewModel)
+            OptionsView(viewModel: viewModel, onViewStats: {
+                isShowingStats = true
+            })
         }
         .sheet(isPresented: $isShowingStats) {
             StatsView(viewModel: viewModel)
+        }
+        .background(WindowAccessor { window in
+            self.hostingWindow = window
+            resizeWindow(boardWidth: boardWidth * viewModel.zoomScale, boardHeight: (73.0 + 950.0 * viewModel.zoomScale))
+        })
+        .onChange(of: viewModel.zoomScale) {
+            resizeWindow(boardWidth: boardWidth * viewModel.zoomScale, boardHeight: (73.0 + 950.0 * viewModel.zoomScale))
+        }
+        .onChange(of: viewModel.state.tableau.count) {
+            resizeWindow(boardWidth: boardWidth * viewModel.zoomScale, boardHeight: (73.0 + 950.0 * viewModel.zoomScale))
+        }
+    }
+    
+    private func resizeWindow(boardWidth: CGFloat, boardHeight: CGFloat) {
+        guard let window = hostingWindow else { return }
+        DispatchQueue.main.async {
+            let currentFrame = window.frame
+            let newContentSize = NSSize(width: boardWidth, height: boardHeight)
+            let newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: newContentSize))
+            
+            let yOffset = currentFrame.height - newFrame.height
+            let updatedFrame = NSRect(
+                x: currentFrame.origin.x,
+                y: currentFrame.origin.y + yOffset,
+                width: newFrame.width,
+                height: newFrame.height
+            )
+            
+            window.setFrame(updatedFrame, display: true, animate: true)
         }
     }
     
@@ -673,9 +746,14 @@ struct OptionsView: View {
     @State private var isVegasScoring: Bool
     @State private var isDrawConstraintsEnabled: Bool
     @State private var drawMode: GameState.DrawMode
+    @State private var hideHintButton: Bool
+    @State private var hideStatsButton: Bool
     
-    init(viewModel: GameViewModel) {
+    let onViewStats: (() -> Void)?
+    
+    init(viewModel: GameViewModel, onViewStats: (() -> Void)? = nil) {
         self.viewModel = viewModel
+        self.onViewStats = onViewStats
         _feltColor = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme = State(initialValue: viewModel.options.cardBackTheme)
         _isTimed = State(initialValue: viewModel.options.isTimed)
@@ -684,6 +762,8 @@ struct OptionsView: View {
         _isVegasScoring = State(initialValue: viewModel.options.isVegasScoring)
         _isDrawConstraintsEnabled = State(initialValue: viewModel.options.isDrawConstraintsEnabled)
         _drawMode = State(initialValue: viewModel.state.drawMode)
+        _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
+        _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
     }
     
     var body: some View {
@@ -717,6 +797,13 @@ struct OptionsView: View {
                     }
                 }
                 .font(.system(.body, design: .monospaced))
+                .onChange(of: cardBackTheme) { _, newTheme in
+                    if newTheme == "Dingwall" {
+                        feltColor = .charcoal
+                    } else if newTheme == "Moogle" {
+                        feltColor = .royalBlue
+                    }
+                }
                 
                 Divider()
                 
@@ -731,6 +818,12 @@ struct OptionsView: View {
                 
                 Toggle("Limit Stock Recycles (Constraints)", isOn: $isDrawConstraintsEnabled)
                     .font(.system(.body, design: .monospaced))
+                
+                Toggle("Hide Hint button", isOn: $hideHintButton)
+                    .font(.system(.body, design: .monospaced))
+                
+                Toggle("Hide Stats button", isOn: $hideStatsButton)
+                    .font(.system(.body, design: .monospaced))
             }
             .padding(.horizontal, 24)
             
@@ -744,6 +837,21 @@ struct OptionsView: View {
                 
                 Spacer()
                 
+                Button(action: {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        onViewStats?()
+                    }
+                }) {
+                    Text("View Stats")
+                        .underline()
+                        .foregroundColor(.blue)
+                        .font(.system(.body, design: .monospaced))
+                }
+                .buttonStyle(.plain)
+                
+                Spacer()
+                
                 Button("OK") {
                     var updatedOpts = viewModel.options
                     updatedOpts.feltColor = feltColor
@@ -753,6 +861,8 @@ struct OptionsView: View {
                     updatedOpts.isSoundEnabled = isSoundEnabled
                     updatedOpts.isVegasScoring = isVegasScoring
                     updatedOpts.isDrawConstraintsEnabled = isDrawConstraintsEnabled
+                    updatedOpts.hideHintButton = hideHintButton
+                    updatedOpts.hideStatsButton = hideStatsButton
                     
                     if viewModel.state.drawMode != drawMode {
                         viewModel.state.drawMode = drawMode
@@ -864,6 +974,8 @@ struct StatsView: View {
         .background(Color(NSColor.windowBackgroundColor))
     }
 }
+
+
 
 struct ClickReceiver: NSViewRepresentable {
     var action: () -> Void

@@ -6,6 +6,7 @@ public struct Pile: Identifiable, Equatable, Codable {
         case waste
         case tableau
         case foundation
+        case freeCell
     }
     
     public let id: String
