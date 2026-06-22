@@ -1,29 +1,40 @@
-# 🐝 SoliBee & Beecell
-
+# 🐝 Solibee Solitaire Suite
 What's the #1 issue facing Mac users today? A lack of Klondike Solitaire. I used SpecKit and Gemini to build Solitaire for OSX so my woes would end (and to brush up on Agentic development.)
 
-A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the nostalgic retro visual charm and gameplay dynamics of classic Windows Solitaire with modern quality-of-life additions.
+A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the nostalgic retro visual charm and gameplay dynamics of classic Solitaire games with modern quality-of-life additions, custom themes, and smooth window resizes.
 
 ---
 
-## 🎨 Core Features
+## 🎨 Game Modes
+
+Solibee supports three fully implemented, distinct Solitaire games selectable via the **Game Selection** dropdown:
+
+### 1. Klondike (SoliBee)
+* **Modes**: Easy (1-Card Draw) and Standard (3-Card Draw).
+* **Rules & Scoring**: Classic scoring rules alongside an optional **Vegas Scoring Mode**.
+* **Engine Features**: Supports automated autocomplete once victory is mathematically guaranteed.
+
+### 2. Beecell (Freecell)
+* **Modes**: Supports both **1-Deck** (8 columns, 4 free cells, 4 foundations) and **2-Deck** (10 columns, 4 free cells, 8 foundations) options.
+* **Rules & Scoring**: Open card placement strategy with move limits based on the number of empty free cells and tableau spaces.
+
+### 3. Spider Solibee (Spider)
+* **Modes**: **1-Suit** (Spades), **2-Suit** (Spades/Hearts), or **4-Suit** (Spades/Hearts/Diamonds/Clubs) options.
+* **Rules & Scoring**: Start at 500 points, decrement 1 point per move, and earn 100 points for each full sequence (King to Ace of a single suit) cleared.
 
 
-* **Klondike Solitaire (SoliBee)**:
-  * Easy (1-Card Draw) and Standard (3-Card Draw) gameplay.
-  * Alternate **Vegas Scoring Mode**.
-  * Undo functionality, live statistics tracking, and separate persisted high scores for both modes.
-  * **Customization & Themes**:
-  * Alternate felt backgrounds: *Felt Green*, *Deep Crimson*, *Royal Blue*, and *Charcoal*.
-  * Unique card backs (*Fox*, *Moogle*, and *Dingwall Afterburner II*).
-* **🤖 Smart Solitaire Engine**:
-  * **AI Hint Engine**: Instant visual highlights indicating optimal moves.
-  * **AI Autocomplete**: Automatically clears the board to foundation piles once victory is mathematically guaranteed.
-* **🔊 Sound & Animation**:
-  * Nostalgic retro audio cues for shuffling, snapping cards into place, and victory cascades.
-  * Bouncing card victory cascade animations on wins.
-  🃏 Freecell Expansion (Beecell Spec Kit):
-Contains the pre-planned Spec Kit (specs/003-beecell/) for Beecell, a Freecell Solitaire variant supporting 1-deck and 2-deck (Double Deck) play modes.
+---
+
+## 🛠️ Shared Features & Engine Capabilties
+
+Across all three games, the following suite of premium core features is available:
+
+* **Smart Helper Engine**:
+  * **AI Hint System**: Press `Cmd + H` to instantly highlight optimal legal moves on the board.
+  * **Full Undo History**: Complete multi-step action undo history via `Cmd + Z`.
+  * **Live Statistics**: Score tracking, move count, game timers, win percentages, and persisted local high scores.
+  * **Visual Themes**: Dynamic felt backgrounds (*Felt Green*, *Deep Crimson*, *Royal Blue*, and *Charcoal*).
+  * **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
 
 ---
 
@@ -31,10 +42,10 @@ Contains the pre-planned Spec Kit (specs/003-beecell/) for Beecell, a Freecell S
 
 ### Prerequisites
 * **Operating System**: macOS 14.0 or later
-* **Compiler**: Swift 6 (Xcode 15+ Command Line Tools installed)
+* **Compiler**: Swift 6 / Swift 5.10 (Xcode 15+ Command Line Tools installed)
 
 ### Build Commands
-We use a simple `Makefile` for local compilation, building standalone `.app` bundles, testing, and execution:
+We use a simple `Makefile` for compilation, packaging standalone `.app` bundles, testing, and execution:
 
 * **Compile the application**:
   ```bash
@@ -42,7 +53,7 @@ We use a simple `Makefile` for local compilation, building standalone `.app` bun
   ```
   *Creates a standalone, double-clickable `SoliBee.app` bundle in the repository root.*
 
-* **Build & Run SoliBee**:
+* **Build & Run Solibee**:
   ```bash
   make run
   ```
@@ -57,19 +68,6 @@ We use a simple `Makefile` for local compilation, building standalone `.app` bun
   make clean
   ```
 
----
-
-## ⌨️ Keyboard Shortcuts
-
-Speed up your gameplay with built-in macOS shortcuts:
-
-| Shortcut | Action |
-| --- | --- |
-| `Cmd + Z` | Undo last move |
-| `Cmd + N` | Deal a new game |
-| `Cmd + H` | Highlight next hint |
-| `Cmd + 1` | Switch to 1-Card Draw mode |
-| `Cmd + 3` | Switch to 3-Card Draw mode |
 
 ---
 
@@ -79,12 +77,11 @@ Speed up your gameplay with built-in macOS shortcuts:
 SoliBee/
 ├── SoliBee.app/            # Native standalone macOS bundle (generated by make build)
 ├── SoliBeeTests/           # Unit test suite verifying game state & VM logic
-├── specs/                  # Spec Kit directory
-│   ├── 001-solitaire-game/  # SoliBee baseline specifications & plan
-│   ├── 002-enhanced-solitaire-features/ # Custom themes, sound, Vegas rules specs
-│   └── 003-beecell/        # Beecell Freecell specification (1-deck and 2-deck modes)
+├── specs/                  # Specifications & Plan files
 └── src/
-    ├── Models/             # Card, GameOptions, GameState, and Pile structures
-    ├── ViewModels/         # GameViewModel logic, auto-solver, statistics and persistence
-    └── Views/              # SwiftUI GameView, PileView, CardView, and animations
+    ├── Models/             # Shared GameMode and basic definitions
+    ├── ViewModels/         # Main AppCoordinator holding state
+    ├── Views/              # Shared Router and base GameView (Klondike)
+    ├── Beecell/            # Beecell models, view models, and views
+    └── Spider/             # Spider models, view models, and views
 ```
