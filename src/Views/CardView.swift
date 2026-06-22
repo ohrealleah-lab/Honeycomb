@@ -153,6 +153,7 @@ struct ShieldShape: Shape {
 struct FaceCardImageView: View {
     let filename: String
     let absolutePath: String
+    let color: Color
     let fallbackView: AnyView
     
     var body: some View {
@@ -170,13 +171,15 @@ struct FaceCardImageView: View {
         if let image = nsImage {
             Image(nsImage: image)
                 .resizable()
+                .renderingMode(.template)
+                .foregroundColor(color)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 77, height: 122)
                 .clipped()
                 .cornerRadius(4)
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.black.opacity(0.15), lineWidth: 1)
+                        .stroke(color.opacity(0.15), lineWidth: 1)
                 )
         } else {
             fallbackView
@@ -201,6 +204,7 @@ struct CardCenterSuitView: View {
                 FaceCardImageView(
                     filename: "J",
                     absolutePath: "/Users/leah/SoliBee/J.png",
+                    color: color,
                     fallbackView: AnyView(HighFidelityShieldView(color: color, suitSymbol: suit.symbol))
                 )
             } else if rank == 12 {
@@ -208,6 +212,7 @@ struct CardCenterSuitView: View {
                 FaceCardImageView(
                     filename: "Q",
                     absolutePath: "/Users/leah/SoliBee/Q.png",
+                    color: color,
                     fallbackView: AnyView(HighFidelityTiaraView(color: color, suitSymbol: suit.symbol))
                 )
             } else if rank == 13 {
@@ -215,6 +220,7 @@ struct CardCenterSuitView: View {
                 FaceCardImageView(
                     filename: "K",
                     absolutePath: "/Users/leah/SoliBee/K.png",
+                    color: color,
                     fallbackView: AnyView(HighFidelityCrownView(color: color, suitSymbol: suit.symbol))
                 )
             } else {
