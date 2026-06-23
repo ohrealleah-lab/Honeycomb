@@ -24,7 +24,14 @@
         <Border x:Name="CardBack" BorderBrush="White" BorderThickness="2" CornerRadius="6" Visibility="Collapsed">
             <Grid x:Name="CardBackVectorGrid" Padding="6">
                 <!-- Programmatic geometric vector pattern for Themes -->
-                <Path x:Name="CardBackPattern" Stroke="White" StrokeThickness="1.5" Opacity="0.75" Stretch="Fill" />
+                <Path x:Name="CardBackPattern" Stroke="White" StrokeThickness="1.5" Opacity="0.75" Stretch="Fill">
+                    <Path.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform x:Name="CardBackScaleTransform" CenterX="36.5" CenterY="56.5" />
+                            <TranslateTransform x:Name="CardBackTranslateTransform" />
+                        </TransformGroup>
+                    </Path.RenderTransform>
+                </Path>
             </Grid>
         </Border>
     </Grid>

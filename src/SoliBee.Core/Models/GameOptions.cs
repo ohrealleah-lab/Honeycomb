@@ -19,4 +19,7 @@ public class GameOptions
     public bool IsVegasScoring { get; set; } = false;
     public bool IsDrawConstraintsEnabled { get; set; } = false;
     public int CustomFeltColorRevision { get; set; } = 0;
+    public double CardBackScale { get; set; } = 1.0;
+    public double CardBackOffsetX { get; set; } = 0.0;
+    public double CardBackOffsetY { get; set; } = 0.0;
 }

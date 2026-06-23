@@ -126,6 +126,15 @@ public static class SettingsService
                 if (GetValue("CustomFeltColorRevision") is int rev)
                     options.CustomFeltColorRevision = rev;
 
+                if (GetValue("CardBackScale") is double scale)
+                    options.CardBackScale = scale;
+
+                if (GetValue("CardBackOffsetX") is double offsetX)
+                    options.CardBackOffsetX = offsetX;
+
+                if (GetValue("CardBackOffsetY") is double offsetY)
+                    options.CardBackOffsetY = offsetY;
+
                 return options;
             }
             catch
@@ -166,6 +175,9 @@ public static class SettingsService
                 SetValue("IsVegasScoring", options.IsVegasScoring);
                 SetValue("IsDrawConstraintsEnabled", options.IsDrawConstraintsEnabled);
                 SetValue("CustomFeltColorRevision", options.CustomFeltColorRevision);
+                SetValue("CardBackScale", options.CardBackScale);
+                SetValue("CardBackOffsetX", options.CardBackOffsetX);
+                SetValue("CardBackOffsetY", options.CardBackOffsetY);
                 return;
             }
             catch

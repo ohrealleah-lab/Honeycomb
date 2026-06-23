@@ -47,6 +47,10 @@ public partial class PreferencesView : UserControl
             SoundCheckBox.IsChecked = options.IsSoundEnabled;
             VegasCheckBox.IsChecked = options.IsVegasScoring;
             DrawConstraintsCheckBox.IsChecked = options.IsDrawConstraintsEnabled;
+
+            OffsetXSlider.Value = options.CardBackOffsetX;
+            OffsetYSlider.Value = options.CardBackOffsetY;
+            ScaleSlider.Value = options.CardBackScale;
         }
         _initializing = false;
     }
@@ -87,6 +91,19 @@ public partial class PreferencesView : UserControl
             options.IsSoundEnabled = SoundCheckBox.IsChecked ?? false;
             options.IsVegasScoring = VegasCheckBox.IsChecked ?? false;
             options.IsDrawConstraintsEnabled = DrawConstraintsCheckBox.IsChecked ?? false;
+            NotifySettingsChanged(options);
+        }
+    }
+
+    private void Slider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_initializing) return;
+
+        if (DataContext is GameOptions options)
+        {
+            options.CardBackOffsetX = OffsetXSlider.Value;
+            options.CardBackOffsetY = OffsetYSlider.Value;
+            options.CardBackScale = ScaleSlider.Value;
             NotifySettingsChanged(options);
         }
     }

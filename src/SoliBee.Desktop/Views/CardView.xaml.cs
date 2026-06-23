@@ -160,6 +160,18 @@ public partial class CardView : UserControl
             );
             CardBackPattern.Stroke = new SolidColorBrush(Colors.White);
         }
+
+        if (CardBackScaleTransform != null)
+        {
+            CardBackScaleTransform.ScaleX = options.CardBackScale;
+            CardBackScaleTransform.ScaleY = options.CardBackScale;
+        }
+
+        if (CardBackTranslateTransform != null)
+        {
+            CardBackTranslateTransform.X = options.CardBackOffsetX;
+            CardBackTranslateTransform.Y = options.CardBackOffsetY;
+        }
     }
 
     private void CardView_PointerPressed(object sender, PointerRoutedEventArgs e)
