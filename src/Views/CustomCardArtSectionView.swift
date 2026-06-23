@@ -40,7 +40,7 @@ struct CardBackPreviewView: View {
                         Circle().fill(Color.blue.opacity(0.3)).frame(width: 6, height: 6)
                     }
                 } else if let customBack = CustomCardBackManager.shared.customCardBacks.first(where: { $0.name == theme }) {
-                    if let nsImage = CustomCardBackManager.shared.image(for: customBack.relativePath) {
+                    if let nsImage = CustomCardBackManager.shared.thumbnail(for: customBack.relativePath) {
                         Image(nsImage: nsImage)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -400,6 +400,11 @@ public struct CardDeckSelectorView: View {
                         .padding(.horizontal, 4)
                     }
                     .frame(height: 115)
+                    .onAppear {
+                        DispatchQueue.main.async {
+                            proxy.scrollTo(cardBackTheme, anchor: .center)
+                        }
+                    }
                     
                     // Right Slide Button
                     Button(action: {

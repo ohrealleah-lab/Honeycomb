@@ -37,8 +37,11 @@ public struct CustomCardBack: Codable, Identifiable, Equatable {
 @Observable
 public final class CustomCardBackManager {
     public static let shared = CustomCardBackManager()
-    
+
     public let defaultThemes = ["Vulpera", "Moogle", "Dingwall"]
+
+    private var imageCache: [String: NSImage] = [:]
+    private var thumbnailCache: [String: NSImage] = [:]
     
     public var deletedDefaultDecks: [String] = [] {
         didSet {
@@ -163,8 +166,31 @@ public final class CustomCardBackManager {
     }
     
     public func image(for relativePath: String) -> NSImage? {
+        if let cached = imageCache[relativePath] { return cached }
         let fileURL = getFileURL(for: relativePath)
-        return NSImage(contentsOf: fileURL)
+        guard let img = NSImage(contentsOf: fileURL) else { return nil }
+        imageCache[relativePath] = img
+        return img
+    }
+
+    public func thumbnail(for relativePath: String) -> NSImage? {
+        if let cached = thumbnailCache[relativePath] { return cached }
+        guard let full = image(for: relativePath) else { return nil }
+        let targetSize = NSSize(width: 120, height: 170)
+        let thumb = NSImage(size: targetSize)
+        thumb.lockFocus()
+        full.draw(in: NSRect(origin: .zero, size: targetSize),
+                  from: NSRect(origin: .zero, size: full.size),
+                  operation: .copy,
+                  fraction: 1.0)
+        thumb.unlockFocus()
+        thumbnailCache[relativePath] = thumb
+        return thumb
+    }
+
+    public func invalidateCache(for relativePath: String) {
+        imageCache.removeValue(forKey: relativePath)
+        thumbnailCache.removeValue(forKey: relativePath)
     }
     
     public func resetDefaultCardBacks() {
