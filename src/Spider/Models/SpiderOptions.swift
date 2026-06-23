@@ -10,6 +10,8 @@ public struct SpiderOptions: Codable, Equatable {
     public var hideHintButton: Bool = false
     public var hideStatsButton: Bool = false
     
+    public var customFeltColorRevision: Int = 0
+    
     enum CodingKeys: String, CodingKey {
         case feltColor
         case cardBackTheme
@@ -19,6 +21,7 @@ public struct SpiderOptions: Codable, Equatable {
         case isVegasScoring
         case hideHintButton
         case hideStatsButton
+        case customFeltColorRevision
     }
     
     public init(
@@ -29,7 +32,8 @@ public struct SpiderOptions: Codable, Equatable {
         isSoundEnabled: Bool = true,
         isVegasScoring: Bool = false,
         hideHintButton: Bool = false,
-        hideStatsButton: Bool = false
+        hideStatsButton: Bool = false,
+        customFeltColorRevision: Int = 0
     ) {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
@@ -39,6 +43,7 @@ public struct SpiderOptions: Codable, Equatable {
         self.isVegasScoring = isVegasScoring
         self.hideHintButton = hideHintButton
         self.hideStatsButton = hideStatsButton
+        self.customFeltColorRevision = customFeltColorRevision
     }
     
     public init(from decoder: Decoder) throws {
@@ -51,5 +56,6 @@ public struct SpiderOptions: Codable, Equatable {
         self.isVegasScoring = try container.decodeIfPresent(Bool.self, forKey: .isVegasScoring) ?? false
         self.hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
         self.hideStatsButton = try container.decodeIfPresent(Bool.self, forKey: .hideStatsButton) ?? false
+        self.customFeltColorRevision = try container.decodeIfPresent(Int.self, forKey: .customFeltColorRevision) ?? 0
     }
 }

@@ -12,6 +12,8 @@ public struct GameOptions: Codable, Equatable {
     public var hideStatsButton: Bool = false
     public var deckCount: Int = 1
     
+    public var customFeltColorRevision: Int = 0
+    
     public init(
         feltColor: FeltColorTheme = .feltGreen,
         cardBackTheme: String = "Vulpera",
@@ -22,7 +24,8 @@ public struct GameOptions: Codable, Equatable {
         isDrawConstraintsEnabled: Bool = false,
         hideHintButton: Bool = false,
         hideStatsButton: Bool = false,
-        deckCount: Int = 1
+        deckCount: Int = 1,
+        customFeltColorRevision: Int = 0
     ) {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
@@ -34,6 +37,7 @@ public struct GameOptions: Codable, Equatable {
         self.hideHintButton = hideHintButton
         self.hideStatsButton = hideStatsButton
         self.deckCount = deckCount
+        self.customFeltColorRevision = customFeltColorRevision
     }
     
     private enum CodingKeys: String, CodingKey {
@@ -47,6 +51,7 @@ public struct GameOptions: Codable, Equatable {
         case hideHintButton
         case hideStatsButton
         case deckCount
+        case customFeltColorRevision
     }
     
     public init(from decoder: Decoder) throws {
@@ -61,6 +66,7 @@ public struct GameOptions: Codable, Equatable {
         self.hideHintButton = (try? container.decode(Bool.self, forKey: .hideHintButton)) ?? false
         self.hideStatsButton = (try? container.decode(Bool.self, forKey: .hideStatsButton)) ?? false
         self.deckCount = (try? container.decode(Int.self, forKey: .deckCount)) ?? 1
+        self.customFeltColorRevision = (try? container.decode(Int.self, forKey: .customFeltColorRevision)) ?? 0
     }
 }
 
@@ -69,4 +75,11 @@ public enum FeltColorTheme: String, Codable, CaseIterable {
     case crimson
     case royalBlue
     case charcoal
+    case desert
+    case custom
+}
+
+extension Notification.Name {
+    public static let feltColorDidChange = Notification.Name("feltColorDidChange")
+    public static let cardBackThemeDidChange = Notification.Name("cardBackThemeDidChange")
 }

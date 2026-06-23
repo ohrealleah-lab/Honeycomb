@@ -20,12 +20,17 @@ build:
 	cp J.png $(APP_BUNDLE)/Contents/Resources/J.png
 	cp Q.png $(APP_BUNDLE)/Contents/Resources/Q.png
 	cp K.png $(APP_BUNDLE)/Contents/Resources/K.png
+	cp "red j.png" "$(APP_BUNDLE)/Contents/Resources/red j.png"
+	cp "red k.png" "$(APP_BUNDLE)/Contents/Resources/red k.png"
+	cp "red q.png" "$(APP_BUNDLE)/Contents/Resources/red q.png"
 	cp src/shuffle.aiff $(APP_BUNDLE)/Contents/Resources/shuffle.aiff
 	cp src/snap.aiff $(APP_BUNDLE)/Contents/Resources/snap.aiff
 	cp src/victory.aiff $(APP_BUNDLE)/Contents/Resources/victory.aiff
 	# Copy compiled binary from SPM build path to the app bundle
 	cp .build/debug/$(APP_NAME) $(MACOS_BIN)
 	chmod +x $(MACOS_BIN)
+	# Sign the app bundle so macOS doesn't kill it on launch
+	codesign --force --deep --sign - $(APP_BUNDLE)
 	@echo "Build successful! $(APP_BUNDLE) created."
 
 clean:

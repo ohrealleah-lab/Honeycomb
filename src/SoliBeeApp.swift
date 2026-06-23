@@ -63,6 +63,16 @@ struct SoliBeeApp: App {
                 Button("Reset Statistics") {
                     coordinator.resetStatistics()
                 }
+                
+                Button("Reset Default Card Backs") {
+                    CustomCardBackManager.shared.resetDefaultCardBacks()
+                }
+
+                Divider()
+
+                Button("Play Winning Animation") {
+                    coordinator.triggerWinAnimation()
+                }
             }
             
             CommandGroup(replacing: .toolbar) {

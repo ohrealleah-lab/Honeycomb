@@ -40,7 +40,7 @@ public struct BeecellView: View {
                         viewModel.startNewGame()
                     }) {
                         Text("New Game")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.body)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
@@ -50,6 +50,7 @@ public struct BeecellView: View {
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
                     .keyboardShortcut("n", modifiers: .command)
                     
                     // Restart Game
@@ -57,7 +58,7 @@ public struct BeecellView: View {
                         viewModel.restartCurrentGame()
                     }) {
                         Text("Restart Game")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.body)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
@@ -67,13 +68,14 @@ public struct BeecellView: View {
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
                     
                     // Undo Button
                     Button(action: {
                         viewModel.undoLastAction()
                     }) {
                         Text("Undo")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.body)
                             .fontWeight(.bold)
                             .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
                             .padding(.horizontal, 12)
@@ -87,6 +89,7 @@ public struct BeecellView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!viewModel.canUndo)
+                    .focusable(false)
                     .keyboardShortcut("z", modifiers: .command)
                     
                     // Options
@@ -94,7 +97,7 @@ public struct BeecellView: View {
                         isShowingOptions = true
                     }) {
                         Text("Options")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.body)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
@@ -104,6 +107,7 @@ public struct BeecellView: View {
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
                     
                     // Game Selection Dropdown
                     Menu {
@@ -127,7 +131,7 @@ public struct BeecellView: View {
                         }
                     } label: {
                         Text("Game Selection")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.body)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                     }
@@ -137,6 +141,7 @@ public struct BeecellView: View {
                     .background(Color.white.opacity(0.15))
                     .cornerRadius(4)
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                    .focusable(false)
                     
                     // Stats
                     if !viewModel.options.hideStatsButton {
@@ -144,7 +149,7 @@ public struct BeecellView: View {
                             isShowingStats = true
                         }) {
                             Text("Stats")
-                                .font(.system(.body, design: .monospaced))
+                                .font(.body)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
@@ -154,6 +159,7 @@ public struct BeecellView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
                         .buttonStyle(.plain)
+                        .focusable(false)
                     }
                     
                     // Hint
@@ -162,7 +168,7 @@ public struct BeecellView: View {
                             viewModel.findHint()
                         }) {
                             Text("Hint")
-                                .font(.system(.body, design: .monospaced))
+                                .font(.body)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
@@ -172,6 +178,7 @@ public struct BeecellView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
                         .buttonStyle(.plain)
+                        .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }
                     
@@ -454,16 +461,9 @@ public struct BeecellView: View {
                             }
                         }
                         .padding(.horizontal, 20)
-                        
-                        Spacer()
-                    }
-                    .disabled(viewModel.isAutoplayRunning)
-                    .padding(.top, 20)
-                    
-                    // Autocomplete Overlay Banner
-                    if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning {
-                        VStack {
-                            Spacer()
+
+                        // Autocomplete Banner — inline below the tableau so it sits under the lowest cards
+                        if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Victory is guaranteed!")
@@ -490,10 +490,15 @@ public struct BeecellView: View {
                             .padding(16)
                             .background(Color.blue.opacity(0.9))
                             .cornerRadius(8)
-                            .padding(20)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
                             .shadow(radius: 5)
                         }
+
+                        Spacer()
                     }
+                    .disabled(viewModel.isAutoplayRunning)
+                    .padding(.top, 20)
                     
                     // Victory Cascade Overlay (reusing SoliBee's bouncing card animation)
                     if viewModel.state.hasWon {
@@ -509,11 +514,11 @@ public struct BeecellView: View {
                                     .font(.system(size: 40, weight: .black, design: .monospaced))
                                     .foregroundColor(.yellow)
                                     .shadow(radius: 3)
-                                
+
                                 Text("Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
                                     .font(.system(.body, design: .monospaced))
                                     .foregroundColor(.white)
-                                
+
                                 Button("Play Again") {
                                     viewModel.startNewGame()
                                 }
@@ -530,7 +535,7 @@ public struct BeecellView: View {
                             .background(Color.black.opacity(0.75))
                             .cornerRadius(12)
                             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
-                            .padding(.bottom, 60)
+                            Spacer()
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -558,6 +563,7 @@ public struct BeecellView: View {
             }
         }
         .environment(\.feltColor, viewModel.options.feltColor)
+        .id(viewModel.options.customFeltColorRevision)
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                idealWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
@@ -767,6 +773,11 @@ struct BeecellOptionsView: View {
     @State private var isVegasScoring: Bool
     @State private var hideHintButton: Bool
     @State private var hideStatsButton: Bool
+    @State private var customSelectedColor: Color
+    
+    let originalRed: Double
+    let originalGreen: Double
+    let originalBlue: Double
     
     init(viewModel: BeecellViewModel, isShowingStats: Binding<Bool>) {
         self.viewModel = viewModel
@@ -779,6 +790,20 @@ struct BeecellOptionsView: View {
         _isVegasScoring = State(initialValue: viewModel.options.isVegasScoring)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        
+        let r = UserDefaults.standard.double(forKey: "custom_felt_red")
+        let g = UserDefaults.standard.double(forKey: "custom_felt_green")
+        let b = UserDefaults.standard.double(forKey: "custom_felt_blue")
+        self.originalRed = r
+        self.originalGreen = g
+        self.originalBlue = b
+        let initialColor: Color
+        if r == 0 && g == 0 && b == 0 {
+            initialColor = Color(red: 0.35, green: 0.15, blue: 0.45)
+        } else {
+            initialColor = Color(red: r, green: g, blue: b)
+        }
+        _customSelectedColor = State(initialValue: initialColor)
     }
     
     var body: some View {
@@ -789,43 +814,69 @@ struct BeecellOptionsView: View {
             
             Divider()
             
-            VStack(alignment: .leading, spacing: 12) {
-                Picker("Game Mode:", selection: $deckCount) {
-                    Text("Standard (1-Deck)").tag(1)
-                    Text("Two Decks (2-Decks)").tag(2)
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Picker("Game Mode:", selection: $deckCount) {
+                        Text("Standard (1-Deck)").tag(1)
+                        Text("Two Decks (2-Decks)").tag(2)
+                    }
+                    .pickerStyle(.segmented)
+                    
+                    Divider()
+                    
+                    Picker("Felt Color:", selection: $feltColor) {
+                        Text("Felt Green").tag(FeltColorTheme.feltGreen)
+                        Text("Crimson").tag(FeltColorTheme.crimson)
+                        Text("Royal Blue").tag(FeltColorTheme.royalBlue)
+                        Text("Charcoal").tag(FeltColorTheme.charcoal)
+                        Text("Desert").tag(FeltColorTheme.desert)
+                        Text("Custom").tag(FeltColorTheme.custom)
+                    }
+                    .font(.system(.body, design: .monospaced))
+                    .onChange(of: feltColor) { _, newColor in
+                        // Sync default card theme backings if user changes felt
+                    }
+                    
+                    if feltColor == .custom {
+                        ColorPicker("Custom Color:", selection: $customSelectedColor)
+                            .font(.system(.body, design: .monospaced))
+                            .onChange(of: customSelectedColor) { _, newColor in
+                                let nsColor = NSColor(newColor)
+                                if let rgbColor = nsColor.usingColorSpace(.deviceRGB) {
+                                    UserDefaults.standard.set(Double(rgbColor.redComponent), forKey: "custom_felt_red")
+                                    UserDefaults.standard.set(Double(rgbColor.greenComponent), forKey: "custom_felt_green")
+                                    UserDefaults.standard.set(Double(rgbColor.blueComponent), forKey: "custom_felt_blue")
+                                }
+                            }
+                    }
+                    
+                    CardDeckSelectorView(cardBackTheme: $cardBackTheme, feltColor: $feltColor)
+                    
+                    Divider()
+                    
+                    Toggle("Timed Game", isOn: $isTimed)
+                        .font(.system(.body, design: .monospaced))
+                    
+                    Toggle("Sound Effects", isOn: $isSoundEnabled)
+                        .font(.system(.body, design: .monospaced))
+                    
+                    Toggle("Hide Hint button", isOn: $hideHintButton)
+                        .font(.system(.body, design: .monospaced))
+                    
+                    Toggle("Hide Stats button", isOn: $hideStatsButton)
+                        .font(.system(.body, design: .monospaced))
                 }
-                .pickerStyle(.segmented)
-                
-                Divider()
-                
-                Picker("Felt Color:", selection: $feltColor) {
-                    Text("Felt Green").tag(FeltColorTheme.feltGreen)
-                    Text("Crimson").tag(FeltColorTheme.crimson)
-                    Text("Royal Blue").tag(FeltColorTheme.royalBlue)
-                    Text("Charcoal").tag(FeltColorTheme.charcoal)
-                }
-                .font(.system(.body, design: .monospaced))
-                
-                Divider()
-                
-                Toggle("Timed Game", isOn: $isTimed)
-                    .font(.system(.body, design: .monospaced))
-                
-                Toggle("Sound Effects", isOn: $isSoundEnabled)
-                    .font(.system(.body, design: .monospaced))
-                
-                Toggle("Hide Hint button", isOn: $hideHintButton)
-                    .font(.system(.body, design: .monospaced))
-                
-                Toggle("Hide Stats button", isOn: $hideStatsButton)
-                    .font(.system(.body, design: .monospaced))
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
+            .frame(maxHeight: 680)
             
             Divider()
             
             HStack {
                 Button("Cancel") {
+                    UserDefaults.standard.set(originalRed, forKey: "custom_felt_red")
+                    UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
+                    UserDefaults.standard.set(originalBlue, forKey: "custom_felt_blue")
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
@@ -857,6 +908,7 @@ struct BeecellOptionsView: View {
                     updatedOpts.isVegasScoring = isVegasScoring
                     updatedOpts.hideHintButton = hideHintButton
                     updatedOpts.hideStatsButton = hideStatsButton
+                    updatedOpts.customFeltColorRevision += 1
                     
                     viewModel.options = updatedOpts
                     dismiss()

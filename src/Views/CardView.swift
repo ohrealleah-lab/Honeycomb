@@ -170,14 +170,10 @@ struct FaceCardImageView: View {
         if let image = nsImage {
             Image(nsImage: image)
                 .resizable()
-                .aspectRatio(contentMode: .fill)
+                .aspectRatio(contentMode: .fit)
+                .frame(height: 62)
                 .frame(width: 77, height: 122)
                 .clipped()
-                .cornerRadius(4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.black.opacity(0.15), lineWidth: 1)
-                )
         } else {
             fallbackView
         }
@@ -197,24 +193,30 @@ struct CardCenterSuitView: View {
                     .font(.system(size: 61))
                     .foregroundColor(color)
             } else if rank == 11 {
-                // Jack - custom image or high fidelity shield fallback
+                // Jack - red j.png for Hearts/Diamonds, J.png for Spades/Clubs
+                let path = suit.isRed ? "/Users/leah/SoliBee/red j.png" : "/Users/leah/SoliBee/J.png"
+                let name = suit.isRed ? "red j" : "J"
                 FaceCardImageView(
-                    filename: "J",
-                    absolutePath: "/Users/leah/SoliBee/J.png",
+                    filename: name,
+                    absolutePath: path,
                     fallbackView: AnyView(HighFidelityShieldView(color: color, suitSymbol: suit.symbol))
                 )
             } else if rank == 12 {
-                // Queen - custom image or high fidelity tiara fallback
+                // Queen - red q.png for Hearts/Diamonds, Q.png for Spades/Clubs
+                let path = suit.isRed ? "/Users/leah/SoliBee/red q.png" : "/Users/leah/SoliBee/Q.png"
+                let name = suit.isRed ? "red q" : "Q"
                 FaceCardImageView(
-                    filename: "Q",
-                    absolutePath: "/Users/leah/SoliBee/Q.png",
+                    filename: name,
+                    absolutePath: path,
                     fallbackView: AnyView(HighFidelityTiaraView(color: color, suitSymbol: suit.symbol))
                 )
             } else if rank == 13 {
-                // King - custom image or high fidelity crown fallback
+                // King - red k.png for Hearts/Diamonds, K.png for Spades/Clubs
+                let path = suit.isRed ? "/Users/leah/SoliBee/red k.png" : "/Users/leah/SoliBee/K.png"
+                let name = suit.isRed ? "red k" : "K"
                 FaceCardImageView(
-                    filename: "K",
-                    absolutePath: "/Users/leah/SoliBee/K.png",
+                    filename: name,
+                    absolutePath: path,
                     fallbackView: AnyView(HighFidelityCrownView(color: color, suitSymbol: suit.symbol))
                 )
             } else {
@@ -348,23 +350,7 @@ struct CardBackView: View {
         let theme = cardBackTheme
         
         ZStack {
-            if theme == "Blue Rose" {
-                BlueRoseView()
-                    .frame(width: 80, height: 112)
-                    .scaleEffect(1.6)
-            } else if theme == "Spooky Castle" {
-                SpookyCastleView()
-                    .frame(width: 80, height: 112)
-                    .scaleEffect(1.6)
-            } else if theme == "Palm Tree" {
-                PalmTreeView()
-                    .frame(width: 80, height: 112)
-                    .scaleEffect(1.6)
-            } else if theme == "Aquarium Fish" {
-                AquariumFishView()
-                    .frame(width: 80, height: 112)
-                    .scaleEffect(1.6)
-            } else if theme == "Moogle" {
+            if theme == "Moogle" {
                 // Moogle image filling the card back (zoomed by 25%)
                 if let path = Bundle.main.path(forResource: "moogle", ofType: "jpg") ?? Bundle.main.path(forResource: "moogle", ofType: "png"),
                    let nsImage = NSImage(contentsOfFile: path) {
@@ -386,6 +372,17 @@ struct CardBackView: View {
                 } else {
                     Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
                 }
+            } else if let customBack = CustomCardBackManager.shared.customCardBacks.first(where: { $0.name == theme }) {
+                if let nsImage = CustomCardBackManager.shared.image(for: customBack.relativePath) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 120, height: 173)
+                        .scaleEffect(CGFloat(customBack.scale))
+                        .offset(x: CGFloat(customBack.offsetX), y: CGFloat(customBack.offsetY))
+                } else {
+                    Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
+                }
             } else {
                 // Priest image filling the card back (Vulpera)
                 if let path = Bundle.main.path(forResource: "priest", ofType: "png") ?? Bundle.main.path(forResource: "priest", ofType: "jpg"),
@@ -404,192 +401,7 @@ struct CardBackView: View {
     }
 }
 
-struct BlueRoseView: View {
-    var body: some View {
-        ZStack {
-            RadialGradient(
-                colors: [Color(red: 0.1, green: 0.2, blue: 0.65), Color(red: 0.02, green: 0.05, blue: 0.25)],
-                center: .center, startRadius: 5, endRadius: 65
-            )
-            ZStack {
-                Image(systemName: "laurel.leading")
-                    .foregroundColor(Color(red: 0.3, green: 0.7, blue: 0.4).opacity(0.6))
-                    .font(.system(size: 40))
-                
-                ForEach(0..<6) { i in
-                    Ellipse()
-                        .stroke(Color(red: 0.5, green: 0.75, blue: 1.0), lineWidth: 1.5)
-                        .background(Ellipse().fill(Color(red: 0.1, green: 0.35, blue: 0.85).opacity(0.3)))
-                        .frame(width: 28 - CGFloat(i * 3), height: 38 - CGFloat(i * 5))
-                        .rotationEffect(.degrees(Double(i * 35)))
-                }
-                
-                Circle()
-                    .fill(Color(red: 0.7, green: 0.88, blue: 1.0))
-                    .frame(width: 6, height: 6)
-            }
-            .scaleEffect(1.2)
-        }
-    }
-}
 
-struct SpookyCastleView: View {
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.15, green: 0.1, blue: 0.25), Color(red: 0.05, green: 0.02, blue: 0.1)],
-                startPoint: .top, endPoint: .bottom
-            )
-            
-            Circle()
-                .fill(Color(red: 0.98, green: 0.98, blue: 0.75))
-                .shadow(color: Color(red: 0.98, green: 0.98, blue: 0.75).opacity(0.6), radius: 10)
-                .frame(width: 36, height: 36)
-                .offset(x: 14, y: -24)
-            
-            Path { path in
-                path.move(to: CGPoint(x: 10, y: 100))
-                path.addLine(to: CGPoint(x: 70, y: 100))
-                path.addLine(to: CGPoint(x: 70, y: 70))
-                path.addLine(to: CGPoint(x: 62, y: 70))
-                path.addLine(to: CGPoint(x: 62, y: 40))
-                path.addLine(to: CGPoint(x: 58, y: 40))
-                path.addLine(to: CGPoint(x: 58, y: 70))
-                path.addLine(to: CGPoint(x: 48, y: 70))
-                path.addLine(to: CGPoint(x: 48, y: 25))
-                path.addLine(to: CGPoint(x: 42, y: 25))
-                path.addLine(to: CGPoint(x: 42, y: 15))
-                path.addLine(to: CGPoint(x: 38, y: 25))
-                path.addLine(to: CGPoint(x: 32, y: 25))
-                path.addLine(to: CGPoint(x: 32, y: 70))
-                path.addLine(to: CGPoint(x: 22, y: 70))
-                path.addLine(to: CGPoint(x: 22, y: 40))
-                path.addLine(to: CGPoint(x: 18, y: 40))
-                path.addLine(to: CGPoint(x: 18, y: 70))
-                path.addLine(to: CGPoint(x: 10, y: 70))
-                path.closeSubpath()
-            }
-            .fill(Color(red: 0.08, green: 0.08, blue: 0.15))
-            .offset(x: 0, y: 6)
-            
-            Group {
-                Image(systemName: "bird")
-                    .font(.system(size: 8))
-                    .foregroundColor(.black)
-                    .rotationEffect(.degrees(-15))
-                    .offset(x: -16, y: -20)
-                
-                Image(systemName: "bird")
-                    .font(.system(size: 6))
-                    .foregroundColor(.black)
-                    .rotationEffect(.degrees(10))
-                    .offset(x: -8, y: -32)
-            }
-        }
-    }
-}
-
-struct PalmTreeView: View {
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.95, green: 0.3, blue: 0.5), Color(red: 0.95, green: 0.6, blue: 0.2)],
-                startPoint: .top, endPoint: .bottom
-            )
-            
-            Circle()
-                .fill(Color(red: 0.98, green: 0.85, blue: 0.3))
-                .frame(width: 44, height: 44)
-                .offset(x: 0, y: 15)
-            
-            Path { path in
-                path.move(to: CGPoint(x: 0, y: 90))
-                path.addQuadCurve(to: CGPoint(x: 80, y: 90), control: CGPoint(x: 40, y: 82))
-                path.addLine(to: CGPoint(x: 80, y: 112))
-                path.addLine(to: CGPoint(x: 0, y: 112))
-                path.closeSubpath()
-            }
-            .fill(Color(red: 0.15, green: 0.05, blue: 0.2))
-            
-            ZStack {
-                Path { path in
-                    path.move(to: CGPoint(x: 35, y: 90))
-                    path.addQuadCurve(to: CGPoint(x: 25, y: 45), control: CGPoint(x: 28, y: 70))
-                    path.addLine(to: CGPoint(x: 28, y: 45))
-                    path.addQuadCurve(to: CGPoint(x: 39, y: 90), control: CGPoint(x: 32, y: 70))
-                    path.closeSubpath()
-                }
-                .fill(Color(red: 0.15, green: 0.05, blue: 0.2))
-                
-                ForEach(0..<5) { i in
-                    Ellipse()
-                        .fill(Color(red: 0.15, green: 0.05, blue: 0.2))
-                        .frame(width: 24, height: 8)
-                        .rotationEffect(.degrees(Double(i * 35 - 70)))
-                        .offset(x: -8 + CGFloat(i * 3), y: -15 + CGFloat(abs(i - 2) * 2))
-                }
-                .offset(x: 26, y: 45)
-            }
-        }
-    }
-}
-
-struct AquariumFishView: View {
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.05, green: 0.3, blue: 0.5), Color(red: 0.01, green: 0.1, blue: 0.35)],
-                startPoint: .top, endPoint: .bottom
-            )
-            
-            ForEach(0..<6) { i in
-                Circle()
-                    .stroke(Color.white.opacity(0.4), lineWidth: 0.8)
-                    .frame(width: CGFloat(2 + i % 3 * 2), height: CGFloat(2 + i % 3 * 2))
-                    .position(
-                        x: CGFloat(15 + (i * 12) % 55),
-                        y: CGFloat(90 - i * 15)
-                    )
-            }
-            
-            ZStack {
-                Path { path in
-                    path.move(to: CGPoint(x: 18, y: 0))
-                    path.addLine(to: CGPoint(x: 28, y: -10))
-                    path.addLine(to: CGPoint(x: 25, y: 0))
-                    path.addLine(to: CGPoint(x: 28, y: 10))
-                    path.closeSubpath()
-                }
-                .fill(Color(red: 0.95, green: 0.45, blue: 0.15))
-                .offset(x: 10, y: 0)
-                
-                Ellipse()
-                    .fill(Color(red: 0.95, green: 0.45, blue: 0.15))
-                    .frame(width: 26, height: 16)
-                    .overlay(
-                        Ellipse()
-                            .stroke(Color(red: 1.0, green: 0.6, blue: 0.3), lineWidth: 1)
-                    )
-                
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 4, height: 4)
-                    .overlay(Circle().fill(Color.black).frame(width: 1.5, height: 1.5))
-                    .offset(x: -8, y: -2)
-                
-                Path { path in
-                    path.move(to: CGPoint(x: 0, y: 0))
-                    path.addQuadCurve(to: CGPoint(x: 4, y: 6), control: CGPoint(x: 3, y: 3))
-                    path.addQuadCurve(to: CGPoint(x: -2, y: 2), control: CGPoint(x: 1, y: 4))
-                    path.closeSubpath()
-                }
-                .fill(Color(red: 0.95, green: 0.55, blue: 0.25))
-                .offset(x: -2, y: 3)
-            }
-            .scaleEffect(1.2)
-        }
-    }
-}
 
 struct BeeSideProfile: View {
     var body: some View {

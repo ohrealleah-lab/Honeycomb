@@ -11,6 +11,17 @@ public final class SpiderViewModel {
         didSet {
             saveOptions()
             handleOptionsChanged(oldValue: oldValue)
+            if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
+                UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
+                NotificationCenter.default.post(name: .feltColorDidChange, object: self, userInfo: [
+                    "feltColor": options.feltColor,
+                    "customFeltColorRevision": options.customFeltColorRevision
+                ])
+            }
+            if options.cardBackTheme != oldValue.cardBackTheme {
+                UserDefaults.standard.set(options.cardBackTheme, forKey: "cardBackTheme")
+                NotificationCenter.default.post(name: .cardBackThemeDidChange, object: self, userInfo: ["cardBackTheme": options.cardBackTheme])
+            }
         }
     }
     
@@ -160,10 +171,16 @@ public final class SpiderViewModel {
             if let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") {
                 decoded.cardBackTheme = legacyTheme
             }
+            if let globalFeltStr = UserDefaults.standard.string(forKey: "global_felt_color"),
+               let globalFelt = FeltColorTheme(rawValue: globalFeltStr) {
+                decoded.feltColor = globalFelt
+            }
             self.options = decoded
         } else {
             let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
-            self.options = SpiderOptions(cardBackTheme: legacyTheme)
+            let globalFeltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
+            let globalFelt = FeltColorTheme(rawValue: globalFeltStr) ?? .feltGreen
+            self.options = SpiderOptions(feltColor: globalFelt, cardBackTheme: legacyTheme)
         }
         
         // Load statistics
@@ -188,11 +205,36 @@ public final class SpiderViewModel {
             self.zoomScale = self.defaultZoomScale
         }
         
+        // Register for global preferences notifications
+        NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
+        
         startNewGame()
     }
     
     deinit {
         stopTimer()
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func handleFeltColorNotification(_ notification: Notification) {
+        guard let sender = notification.object as? AnyObject, sender !== self else { return }
+        guard let theme = notification.userInfo?["feltColor"] as? FeltColorTheme else { return }
+        let rev = notification.userInfo?["customFeltColorRevision"] as? Int ?? 0
+        if self.options.feltColor != theme || self.options.customFeltColorRevision != rev {
+            var newOpts = self.options
+            newOpts.feltColor = theme
+            newOpts.customFeltColorRevision = rev
+            self.options = newOpts
+        }
+    }
+    
+    @objc private func handleCardBackThemeNotification(_ notification: Notification) {
+        guard let sender = notification.object as? AnyObject, sender !== self else { return }
+        guard let theme = notification.userInfo?["cardBackTheme"] as? String else { return }
+        if self.options.cardBackTheme != theme {
+            self.options.cardBackTheme = theme
+        }
     }
     
     // MARK: - Game Setup

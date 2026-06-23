@@ -5,6 +5,7 @@ struct GameStateTests {
         testCardInitialization()
         testCardRankStrings()
         testPileHelpers()
+        testCustomCardBackCoding()
     }
     
     static func testCardInitialization() {
@@ -40,5 +41,47 @@ struct GameStateTests {
         pile.cards.removeAll()
         assert(pile.isEmpty, "Pile should be empty")
         assert(pile.topCard == nil, "Top card should be nil")
+    }
+    
+    static func testCustomCardBackCoding() {
+        // Test encoding and decoding with offsetX and offsetY present
+        let back1 = CustomCardBack(id: UUID(), name: "Test Back", relativePath: "test.png", scale: 1.5, offsetX: 10.0, offsetY: -20.0)
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        
+        do {
+            let data = try encoder.encode(back1)
+            let decoded = try decoder.decode(CustomCardBack.self, from: data)
+            assert(decoded.id == back1.id, "ID should match")
+            assert(decoded.name == back1.name, "Name should match")
+            assert(decoded.relativePath == back1.relativePath, "Path should match")
+            assert(decoded.scale == back1.scale, "Scale should match")
+            assert(decoded.offsetX == back1.offsetX, "OffsetX should match")
+            assert(decoded.offsetY == back1.offsetY, "OffsetY should match")
+        } catch {
+            assertionFailure("Failed to encode/decode with offsets: \(error)")
+        }
+        
+        // Test backwards compatibility: decode from JSON where offsetX and offsetY are missing
+        let jsonWithoutOffsets = """
+        {
+            "id": "A4C98226-788B-4DC0-891A-0402092147DF",
+            "name": "Legacy Back",
+            "relativePath": "legacy.png",
+            "scale": 1.25
+        }
+        """.data(using: .utf8)!
+        
+        do {
+            let decodedLegacy = try decoder.decode(CustomCardBack.self, from: jsonWithoutOffsets)
+            assert(decodedLegacy.id == UUID(uuidString: "A4C98226-788B-4DC0-891A-0402092147DF"), "ID should match")
+            assert(decodedLegacy.name == "Legacy Back", "Name should match")
+            assert(decodedLegacy.relativePath == "legacy.png", "Path should match")
+            assert(decodedLegacy.scale == 1.25, "Scale should match")
+            assert(decodedLegacy.offsetX == 0.0, "OffsetX should default to 0.0")
+            assert(decodedLegacy.offsetY == 0.0, "OffsetY should default to 0.0")
+        } catch {
+            assertionFailure("Failed to decode legacy custom card back without offsets: \(error)")
+        }
     }
 }

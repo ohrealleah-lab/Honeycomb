@@ -5,39 +5,36 @@ struct BouncingCard: Identifiable {
     let card: Card
     var x: CGFloat
     var y: CGFloat
-    var vx: CGFloat
-    var vy: CGFloat
+    var vx: CGFloat  // pixels per second
+    var vy: CGFloat  // pixels per second
     var trail: [CGPoint] = []
 }
 
 public struct WinAnimationView: View {
     let foundations: [Pile]
     let onFinished: () -> Void
-    
+
     @State private var activeCards: [BouncingCard] = []
     @State private var cardsQueue: [Card] = []
     @State private var lastSpawnTime: Date = Date()
-    
+    @State private var lastFrameDate: Date? = nil
+
     public init(foundations: [Pile], onFinished: @escaping () -> Void) {
         self.foundations = foundations
         self.onFinished = onFinished
     }
-    
+
     public var body: some View {
         GeometryReader { geo in
             TimelineView(.animation) { timeline in
                 Canvas { context, size in
-                    // Update physics and draw trails
-                    for index in activeCards.indices {
-                        let card = activeCards[index]
-                        
-                        // Draw trail points (signature retro Solitaire cascade trail)
+                    for card in activeCards {
+                        // Draw trail points
                         for point in card.trail {
                             if let symbol = context.resolveSymbol(id: card.id) {
                                 context.draw(symbol, at: point)
                             }
                         }
-                        
                         // Draw current position
                         if let symbol = context.resolveSymbol(id: card.id) {
                             context.draw(symbol, at: CGPoint(x: card.x, y: card.y))
@@ -59,11 +56,10 @@ public struct WinAnimationView: View {
             .background(Color.clear)
         }
     }
-    
+
     // MARK: - Setup Spawning Queue
-    
+
     private func setupAnimationQueue(screenSize: CGSize) {
-        // Collect cards from foundation in reverse order (Kings down to Aces)
         var queue: [Card] = []
         for rank in (1...13).reversed() {
             for foundation in foundations {
@@ -75,71 +71,76 @@ public struct WinAnimationView: View {
         self.cardsQueue = queue
         self.activeCards = []
         self.lastSpawnTime = Date()
+        self.lastFrameDate = nil
     }
-    
+
     // MARK: - Physics & Particle Updates
-    
+
     private func updatePhysics(screenSize: CGSize, currentDate: Date) {
-        // 1. Spawn a new card from the queue if interval elapsed
+        // Compute delta time, clamped to avoid large jumps on first frame or after pauses
+        let dt: CGFloat
+        if let last = lastFrameDate {
+            dt = CGFloat(min(currentDate.timeIntervalSince(last), 1.0 / 30.0))
+        } else {
+            dt = 1.0 / 60.0
+        }
+        lastFrameDate = currentDate
+
+        // Spawn a new card from the queue if interval elapsed
         if !cardsQueue.isEmpty && currentDate.timeIntervalSince(lastSpawnTime) > 0.4 {
             let nextCard = cardsQueue.removeFirst()
-            
-            // Determine starting foundation position (X coordinate)
+
             let foundationIndex = foundations.firstIndex { pile in
                 pile.cards.contains { $0.id == nextCard.id }
             } ?? 0
-            
-            // Approximate screen locations for foundations (roughly in the right half of the board)
+
             let startX = screenSize.width * 0.5 + CGFloat(foundationIndex) * 98 + 40
-            let startY: CGFloat = 80 // Foundation row height
-            
-            // Random horizontal speed, initial slight upward jump
-            let vx = CGFloat.random(in: -4...4)
-            let vy = CGFloat.random(in: -6...(-2))
-            
-            let bouncing = BouncingCard(card: nextCard, x: startX, y: startY, vx: vx, vy: vy)
-            activeCards.append(bouncing)
+            let startY: CGFloat = 80
+
+            // Velocities in pixels per second (equivalent to original ±4 and -6…-2 px/frame @ 60 fps)
+            let vx = CGFloat.random(in: -240...240)
+            let vy = CGFloat.random(in: -360...(-120))
+
+            activeCards.append(BouncingCard(card: nextCard, x: startX, y: startY, vx: vx, vy: vy))
             lastSpawnTime = currentDate
         }
-        
-        // 2. Physics logic loop
-        let gravity: CGFloat = 0.28
+
+        // Physics constants (pixels/s and pixels/s²)
+        let gravity: CGFloat = 980     // ≈ 0.28 px/frame² × 60² fps
         let elasticity: CGFloat = 0.85
         let cardWidth: CGFloat = 80
         let cardHeight: CGFloat = 112
-        
+
         var remainingCards: [BouncingCard] = []
-        
+
         for var bouncing in activeCards {
-            // Append current position to trail (preserving history)
             bouncing.trail.append(CGPoint(x: bouncing.x, y: bouncing.y))
             if bouncing.trail.count > 50 {
                 bouncing.trail.removeFirst()
             }
-            
-            // Update kinematics
-            bouncing.x += bouncing.vx
-            bouncing.y += bouncing.vy
-            bouncing.vy += gravity
-            
+
+            // Integrate with dt for frame-rate-independent motion
+            bouncing.x += bouncing.vx * dt
+            bouncing.y += bouncing.vy * dt
+            bouncing.vy += gravity * dt
+
             // Floor bounce
             let floorLimit = screenSize.height - cardHeight * 0.5
             if bouncing.y >= floorLimit {
                 bouncing.y = floorLimit
-                bouncing.vy = -bouncing.vy * elasticity
+                bouncing.vy = -abs(bouncing.vy) * elasticity
+                bouncing.vx *= 0.97
             }
-            
-            // Keep active if it remains on-screen
+
             let leftLimit = -cardWidth
             let rightLimit = screenSize.width + cardWidth
             if bouncing.x > leftLimit && bouncing.x < rightLimit {
                 remainingCards.append(bouncing)
             }
         }
-        
+
         activeCards = remainingCards
-        
-        // 3. Trigger callback if queue and active animations have all completed
+
         if cardsQueue.isEmpty && activeCards.isEmpty {
             onFinished()
         }
