@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsWindows Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))">true</IsWindows>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsWindows)' == 'true'">
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <OutputType>WinExe</OutputType>
+    <UseWinUI>true</UseWinUI>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsWindows)' != 'true'">
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RootNamespace>SoliBee.Desktop</RootNamespace>
+    <Platforms>x86;x64;ARM64;AnyCPU</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsWindows)' == 'true'">
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240311000" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.3233" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <ProjectReference Include="..\SoliBee.Core\SoliBee.Core.csproj" />
+  </ItemGroup>
+</Project>

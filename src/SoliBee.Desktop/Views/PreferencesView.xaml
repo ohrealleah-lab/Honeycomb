@@ -1,0 +1,33 @@
+<UserControl
+    x:Class="SoliBee.Desktop.Views.PreferencesView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SoliBee.Desktop.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel Spacing="12" Width="300" Margin="10">
+        <TextBlock Text="Felt Color Theme:" FontWeight="Bold" />
+        <ComboBox x:Name="FeltColorComboBox" HorizontalAlignment="Stretch" SelectionChanged="FeltColorComboBox_SelectionChanged">
+            <ComboBoxItem Content="Green Felt" Tag="FeltGreen" />
+            <ComboBoxItem Content="Crimson" Tag="Crimson" />
+            <ComboBoxItem Content="Royal Blue" Tag="RoyalBlue" />
+            <ComboBoxItem Content="Charcoal" Tag="Charcoal" />
+            <ComboBoxItem Content="Desert" Tag="Desert" />
+            <ComboBoxItem Content="Custom" Tag="Custom" />
+        </ComboBox>
+
+        <TextBlock Text="Card Back Theme:" FontWeight="Bold" />
+        <ComboBox x:Name="CardBackComboBox" HorizontalAlignment="Stretch" SelectionChanged="CardBackComboBox_SelectionChanged">
+            <ComboBoxItem Content="Vulpera" Tag="Vulpera" />
+            <ComboBoxItem Content="Dingwall" Tag="Dingwall" />
+            <ComboBoxItem Content="Moogle" Tag="Moogle" />
+        </ComboBox>
+
+        <CheckBox x:Name="TimedCheckBox" Content="Timed Game" Checked="Option_Changed" Unchecked="Option_Changed" />
+        <CheckBox x:Name="SoundCheckBox" Content="Sound Effects" Checked="Option_Changed" Unchecked="Option_Changed" />
+        <CheckBox x:Name="VegasCheckBox" Content="Vegas Scoring" Checked="Option_Changed" Unchecked="Option_Changed" />
+        <CheckBox x:Name="DrawConstraintsCheckBox" Content="Draw Constraints (Draw-3)" Checked="Option_Changed" Unchecked="Option_Changed" />
+    </StackPanel>
+</UserControl>

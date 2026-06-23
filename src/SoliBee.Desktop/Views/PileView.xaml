@@ -1,0 +1,18 @@
+<UserControl
+    x:Class="SoliBee.Desktop.Views.PileView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SoliBee.Desktop.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    PointerPressed="PileView_PointerPressed">
+
+    <Grid x:Name="PileGrid">
+        <!-- Programmatic vector empty pile slot outline -->
+        <Rectangle x:Name="EmptyOutline" Width="85" Height="125" Stroke="White" StrokeThickness="2" StrokeDashArray="3,3" RadiusX="6" RadiusY="6" Opacity="0.4" Fill="#20FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Top" />
+
+        <!-- Programmatic container for overlaying card stack views -->
+        <Canvas x:Name="CardsCanvas" Width="85" Height="125" HorizontalAlignment="Center" VerticalAlignment="Top" />
+    </Grid>
+</UserControl>
