@@ -7,7 +7,8 @@ public enum PileType
     Stock,
     Waste,
     Foundation,
-    Tableau
+    Tableau,
+    FreeCell
 }
 
 public class Pile

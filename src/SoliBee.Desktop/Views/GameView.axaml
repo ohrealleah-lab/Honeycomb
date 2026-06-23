@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.GameView"
+             Padding="20"
+             ClipToBounds="False">
+
+    <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
+        <!-- Center container for the entire playing board, aligned towards the top to reduce space with the menu -->
+        <StackPanel Width="1004" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,10,0,0" ClipToBounds="False">
+            <!-- Top row: Stock, Waste, and Foundations, aligned to Grid columns -->
+            <Grid ColumnDefinitions="128,18,128,18,128,18,128,18,128,18,128,18,128" Width="1004" HorizontalAlignment="Center" ClipToBounds="False">
+                <!-- Stock -->
+                <local:PileView x:Name="StockPileControl" Grid.Column="0" Clicked="StockPileControl_Clicked" />
+                
+                <!-- Waste -->
+                <local:PileView x:Name="WastePileControl" Grid.Column="2" />
+
+                <!-- Foundations (aligned to Tableau Columns 4, 5, 6, 7) -->
+                <local:PileView x:Name="Foundation0" Grid.Column="6" />
+                <local:PileView x:Name="Foundation1" Grid.Column="8" />
+                <local:PileView x:Name="Foundation2" Grid.Column="10" />
+                <local:PileView x:Name="Foundation3" Grid.Column="12" />
+            </Grid>
+
+            <!-- Bottom row: Tableaus -->
+            <Grid ColumnDefinitions="128,18,128,18,128,18,128,18,128,18,128,18,128" Width="1004" HorizontalAlignment="Center">
+                <local:PileView x:Name="Tableau0" Grid.Column="0" />
+                <local:PileView x:Name="Tableau1" Grid.Column="2" />
+                <local:PileView x:Name="Tableau2" Grid.Column="4" />
+                <local:PileView x:Name="Tableau3" Grid.Column="6" />
+                <local:PileView x:Name="Tableau4" Grid.Column="8" />
+                <local:PileView x:Name="Tableau5" Grid.Column="10" />
+                <local:PileView x:Name="Tableau6" Grid.Column="12" />
+            </Grid>
+        </StackPanel>
+
+        <!-- Global dragging canvas overlay -->
+        <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+        <!-- Bouncing Card Cascade Overlay when won -->
+        <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
+    </Grid>
+</UserControl>

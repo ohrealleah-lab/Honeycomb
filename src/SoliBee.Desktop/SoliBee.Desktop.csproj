@@ -1,32 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <IsWindows Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))">true</IsWindows>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(IsWindows)' == 'true'">
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <OutputType>WinExe</OutputType>
-    <UseWinUI>true</UseWinUI>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(IsWindows)' != 'true'">
     <TargetFramework>net8.0</TargetFramework>
-    <OutputType>Library</OutputType>
+    <Nullable>enable</Nullable>
+    <BuiltInStylesVersion>11.0.10</BuiltInStylesVersion>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <RootNamespace>SoliBee.Desktop</RootNamespace>
-    <Platforms>x86;x64;ARM64;AnyCPU</Platforms>
-  </PropertyGroup>
-
-  <ItemGroup Condition="'$(IsWindows)' == 'true'">
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240311000" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.3233" />
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/**" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.10" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\SoliBee.Core\SoliBee.Core.csproj" />
   </ItemGroup>
 </Project>

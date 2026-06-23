@@ -26,6 +26,10 @@ public partial class GameViewModel : ObservableObject
     public List<Pile> Tableaus { get; } = new();
 
     private readonly Stack<GameStateSnapshot> _undoStack = new();
+    private List<Card> _initialDeck = new();
+    private System.Threading.Timer? _gameTimer;
+
+    public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
 
     public GameViewModel()
     {
@@ -62,7 +66,7 @@ public partial class GameViewModel : ObservableObject
 
         State = new GameState
         {
-            Score = Options.IsVegasScoring ? -52 : 0,
+            Score = Options.IsVegasScoring ? -5200 : 0,
             MovesCount = 0,
             TimerSeconds = 0,
             IsTimerActive = Options.IsTimed,
@@ -95,6 +99,9 @@ public partial class GameViewModel : ObservableObject
         var rng = new Random();
         deck = deck.OrderBy(c => rng.Next()).ToList();
 
+        // Save a copy of the shuffled deck for RestartGame
+        _initialDeck = deck.Select(c => c with { IsFaceUp = false }).ToList();
+
         // Deal cards to tableau
         for (int i = 0; i < 7; i++)
         {
@@ -121,11 +128,85 @@ public partial class GameViewModel : ObservableObject
 
         Stats.GamesPlayed++;
         StatsService.SaveStats(Stats);
+
+        // Start background timer ticking
+        _gameTimer?.Dispose();
+        _gameTimer = new System.Threading.Timer(_ =>
+        {
+            if (State != null && State.IsTimerActive && !State.HasWon)
+            {
+                State.TimerSeconds++;
+                OnPropertyChanged(nameof(TimeDisplay));
+            }
+        }, null, 1000, 1000);
         
         OnPropertyChanged(nameof(Stock));
         OnPropertyChanged(nameof(Waste));
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(Tableaus));
+        OnPropertyChanged(nameof(TimeDisplay));
+    }
+
+    public void RestartGame()
+    {
+        if (!_initialDeck.Any()) return;
+
+        // Clear everything
+        Stock.Cards.Clear();
+        Waste.Cards.Clear();
+        foreach (var f in Foundations) f.Cards.Clear();
+        foreach (var t in Tableaus) t.Cards.Clear();
+        _undoStack.Clear();
+
+        State.Score = Options.IsVegasScoring ? -5200 : 0;
+        State.MovesCount = 0;
+        State.TimerSeconds = 0;
+        State.IsTimerActive = Options.IsTimed;
+        State.HasWon = false;
+        State.RecyclesCount = 0;
+
+        var deckCopy = _initialDeck.Select(c => c).ToList();
+
+        // Deal cards to tableau in the exact same order
+        for (int i = 0; i < 7; i++)
+        {
+            for (int j = 0; j <= i; j++)
+            {
+                var card = deckCopy[0];
+                deckCopy.RemoveAt(0);
+
+                // Top card is face up
+                if (j == i)
+                {
+                    card = card with { IsFaceUp = true };
+                }
+
+                Tableaus[i].Cards.Add(card);
+            }
+        }
+
+        // Put remaining cards in stock
+        foreach (var card in deckCopy)
+        {
+            Stock.Cards.Add(card);
+        }
+
+        // Reset and restart background timer ticking
+        _gameTimer?.Dispose();
+        _gameTimer = new System.Threading.Timer(_ =>
+        {
+            if (State != null && State.IsTimerActive && !State.HasWon)
+            {
+                State.TimerSeconds++;
+                OnPropertyChanged(nameof(TimeDisplay));
+            }
+        }, null, 1000, 1000);
+
+        OnPropertyChanged(nameof(Stock));
+        OnPropertyChanged(nameof(Waste));
+        OnPropertyChanged(nameof(Foundations));
+        OnPropertyChanged(nameof(Tableaus));
+        OnPropertyChanged(nameof(TimeDisplay));
     }
 
     public void DrawCard()
@@ -137,9 +218,14 @@ public partial class GameViewModel : ObservableObject
             // Recycle waste back to stock
             if (Waste.Cards.Count == 0) return;
 
-            // In Vegas scoring, recycle is restricted or costs points (standard Vegas allows limited recycles)
             State.RecyclesCount++;
-            
+
+            if (Options.IsDrawConstraintsEnabled)
+            {
+                int maxRecycles = Options.IsVegasScoring ? 1 : 3;
+                if (State.RecyclesCount > maxRecycles) return;
+            }
+
             // Move waste cards to stock in reverse order, turn face down
             var wasteCards = Waste.Cards.ToList();
             wasteCards.Reverse();
@@ -149,6 +235,8 @@ public partial class GameViewModel : ObservableObject
             }
             Waste.Cards.Clear();
             State.MovesCount++;
+            OnPropertyChanged(nameof(Stock));
+            OnPropertyChanged(nameof(Waste));
             return;
         }
 
@@ -163,6 +251,8 @@ public partial class GameViewModel : ObservableObject
         }
 
         State.MovesCount++;
+        OnPropertyChanged(nameof(Stock));
+        OnPropertyChanged(nameof(Waste));
     }
 
     public bool CanMoveCard(Card card, Pile targetPile)
@@ -255,22 +345,20 @@ public partial class GameViewModel : ObservableObject
 
         State.MovesCount++;
         CheckVictory();
+        OnPropertyChanged(nameof(Stock));
+        OnPropertyChanged(nameof(Waste));
+        OnPropertyChanged(nameof(Foundations));
+        OnPropertyChanged(nameof(Tableaus));
     }
 
     private void UpdateScoreForMove(PileType source, PileType target)
     {
         if (Options.IsVegasScoring)
         {
-            // Vegas scoring: +5 for each card moved to Foundation
             if (target == PileType.Foundation)
-            {
-                State.Score += 5;
-            }
-            // Moving off foundation costs $5
+                State.Score += 500;
             else if (source == PileType.Foundation)
-            {
-                State.Score -= 5;
-            }
+                State.Score -= 500;
         }
         else
         {
@@ -426,6 +514,8 @@ public partial class GameViewModel : ObservableObject
             }
         }
     }
+
+    public bool CanUndo => _undoStack.Count > 0;
 
     private Pile FindPileContaining(Card card)
     {

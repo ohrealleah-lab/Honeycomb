@@ -126,6 +126,18 @@ public static class SettingsService
                 if (GetValue("CustomFeltColorRevision") is int rev)
                     options.CustomFeltColorRevision = rev;
 
+                if (GetValue("CustomFeltColorHex") is string hex)
+                    options.CustomFeltColorHex = hex;
+
+                if (GetValue("CustomCardBacksJson") is string jsonStr)
+                {
+                    try
+                    {
+                        options.CustomCardBacks = JsonSerializer.Deserialize<List<CustomCardBack>>(jsonStr) ?? new();
+                    }
+                    catch {}
+                }
+
                 if (GetValue("CardBackScale") is double scale)
                     options.CardBackScale = scale;
 
@@ -134,6 +146,21 @@ public static class SettingsService
 
                 if (GetValue("CardBackOffsetY") is double offsetY)
                     options.CardBackOffsetY = offsetY;
+
+                if (GetValue("IsStatusBarVisible") is bool isStatusBar)
+                    options.IsStatusBarVisible = isStatusBar;
+
+                if (GetValue("HideHintButton") is bool hideHint)
+                    options.HideHintButton = hideHint;
+
+                if (GetValue("HideStatsButton") is bool hideStats)
+                    options.HideStatsButton = hideStats;
+
+                if (GetValue("BeecellDeckCount") is int beecellDeck)
+                    options.BeecellDeckCount = beecellDeck;
+
+                if (GetValue("SpiderSuitCount") is int spiderSuits)
+                    options.SpiderSuitCount = spiderSuits;
 
                 return options;
             }
@@ -175,9 +202,23 @@ public static class SettingsService
                 SetValue("IsVegasScoring", options.IsVegasScoring);
                 SetValue("IsDrawConstraintsEnabled", options.IsDrawConstraintsEnabled);
                 SetValue("CustomFeltColorRevision", options.CustomFeltColorRevision);
+                SetValue("CustomFeltColorHex", options.CustomFeltColorHex);
                 SetValue("CardBackScale", options.CardBackScale);
                 SetValue("CardBackOffsetX", options.CardBackOffsetX);
                 SetValue("CardBackOffsetY", options.CardBackOffsetY);
+                SetValue("IsStatusBarVisible", options.IsStatusBarVisible);
+                SetValue("HideHintButton", options.HideHintButton);
+                SetValue("HideStatsButton", options.HideStatsButton);
+                SetValue("BeecellDeckCount", options.BeecellDeckCount);
+                SetValue("SpiderSuitCount", options.SpiderSuitCount);
+
+                try
+                {
+                    var jsonStr = JsonSerializer.Serialize(options.CustomCardBacks);
+                    SetValue("CustomCardBacksJson", jsonStr);
+                }
+                catch {}
+
                 return;
             }
             catch
