@@ -7,8 +7,8 @@ MACOS_BIN=$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)
 all: build
 
 build:
-	# Build the executable using Swift Package Manager
-	swift build
+	# Build the executable using Swift Package Manager (release)
+	swift build -c release
 	# Create standalone application bundle structure
 	mkdir -p $(APP_BUNDLE)/Contents/MacOS
 	mkdir -p $(APP_BUNDLE)/Contents/Resources
@@ -27,7 +27,7 @@ build:
 	cp src/snap.aiff $(APP_BUNDLE)/Contents/Resources/snap.aiff
 	cp src/victory.aiff $(APP_BUNDLE)/Contents/Resources/victory.aiff
 	# Copy compiled binary from SPM build path to the app bundle
-	cp .build/debug/$(APP_NAME) $(MACOS_BIN)
+	cp .build/release/$(APP_NAME) $(MACOS_BIN)
 	chmod +x $(MACOS_BIN)
 	# Sign the app bundle so macOS doesn't kill it on launch
 	codesign --force --deep --sign - $(APP_BUNDLE)
