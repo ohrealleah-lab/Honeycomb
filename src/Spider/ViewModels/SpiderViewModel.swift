@@ -79,6 +79,9 @@ public final class SpiderViewModel {
     // Auto-complete status
     public var isAutocompleteAvailable: Bool = false
     public var isAutoplayRunning: Bool = false
+
+    // Stuck detection
+    public var isStuck: Bool = false
     
     // Undo stack
     private var undoStack: [SpiderState] = []
@@ -327,9 +330,10 @@ public final class SpiderViewModel {
         
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        isStuck = false
         initialState = state
     }
-    
+
     public func restartCurrentGame() {
         guard let initial = initialState else { return }
         stopTimer()
@@ -337,6 +341,7 @@ public final class SpiderViewModel {
         state = initial
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        isStuck = false
     }
     
     // MARK: - Core Interactions
@@ -367,10 +372,11 @@ public final class SpiderViewModel {
         
         state.score = max(0, state.score - 1)
         state.movesCount += 1
-        
+
         checkCompletedRuns()
+        checkStuckState()
     }
-    
+
     // MARK: - Move Validation & Execution
     
     public func isValidDragSequence(_ cards: [Card]) -> Bool {
@@ -427,10 +433,11 @@ public final class SpiderViewModel {
         
         state.score = max(0, state.score - 1)
         state.movesCount += 1
-        
+
         checkCompletedRuns()
+        checkStuckState()
     }
-    
+
     public func doubleClickMove(card: Card, from sourcePile: Pile) {
         // Find if this card is part of a valid sequence up to the top of the pile
         guard let colIdx = state.tableau.firstIndex(where: { $0.id == sourcePile.id }) else { return }
@@ -582,12 +589,45 @@ public final class SpiderViewModel {
         guard !undoStack.isEmpty else { return }
         state = undoStack.removeLast()
         isAutoplayRunning = false
+        isStuck = false
         clearHint()
         checkWinState()
+        checkStuckState()
     }
     
+    // MARK: - Stuck Detection
+
+    private func hasValidMoves() -> Bool {
+        if !state.stock.isEmpty && !hasEmptyTableauColumn { return true }
+
+        for colIdx in 0..<state.tableau.count {
+            let col = state.tableau[colIdx]
+            guard !col.isEmpty else { continue }
+
+            // Find start of movable face-up sequence
+            var seqStart = col.cards.count - 1
+            while seqStart > 0 && col.cards[seqStart].faceUp {
+                let upper = col.cards[seqStart - 1]
+                let lower = col.cards[seqStart]
+                if upper.faceUp && upper.rank == lower.rank + 1 { seqStart -= 1 } else { break }
+            }
+
+            let seq = Array(col.cards[seqStart...])
+            for tgtIdx in 0..<state.tableau.count where tgtIdx != colIdx {
+                let target = state.tableau[tgtIdx]
+                if isValidMove(cards: seq, to: target) { return true }
+            }
+        }
+        return false
+    }
+
+    public func checkStuckState() {
+        guard !state.hasWon else { isStuck = false; return }
+        isStuck = !hasValidMoves()
+    }
+
     // MARK: - Hints
-    
+
     public struct SpiderHintMove: Equatable {
         public let card: Card
         public let sourcePileId: String

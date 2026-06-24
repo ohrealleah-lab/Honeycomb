@@ -60,6 +60,22 @@ public final class GameViewModel {
             }
         }
     }
+
+    // Vegas bankroll — cumulative score within a session only; resets on app launch
+    public var vegasBankroll: Int = 0
+
+    public func resetVegasBankroll() {
+        vegasBankroll = 0
+    }
+
+    public var vegasBankrollString: String {
+        let dollars = Double(vegasBankroll) / 100.0
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencySymbol = "$"
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: dollars)) ?? String(format: "$%.2f", dollars)
+    }
     
     public var highScoreString: String {
         if options.isVegasScoring {
@@ -77,7 +93,11 @@ public final class GameViewModel {
     // Auto-complete status
     public var isAutocompleteAvailable: Bool = false
     public var isAutoplayRunning: Bool = false
-    
+
+    // Stuck / stock exhaustion
+    public var isStuck: Bool = false
+    public var isStockExhausted: Bool = false
+
     // Undo stack
     private var undoStack: [GameState] = []
     
@@ -154,8 +174,10 @@ public final class GameViewModel {
                 } else {
                     self.highScore = -5200
                 }
+                vegasBankroll = 0  // fresh bankroll when entering Vegas mode
             } else {
                 self.highScore = UserDefaults.standard.integer(forKey: "highScore")
+                vegasBankroll = 0
             }
             startNewGame()
         }
@@ -244,6 +266,8 @@ public final class GameViewModel {
         } else {
             self.highScore = UserDefaults.standard.integer(forKey: "highScore")
         }
+
+        self.vegasBankroll = 0
         
         // Load default zoom setting
         if let savedDefault = UserDefaults.standard.value(forKey: "defaultZoomScale") as? Double {
@@ -350,6 +374,7 @@ public final class GameViewModel {
         
         // 6. Set State
         let initialScore = options.isVegasScoring ? -5200 : 0
+        if options.isVegasScoring { vegasBankroll += initialScore }
         state = GameState(
             stock: stock,
             waste: waste,
@@ -366,9 +391,11 @@ public final class GameViewModel {
         
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        isStuck = false
+        isStockExhausted = false
         initialState = state
     }
-    
+
     public func restartCurrentGame() {
         guard let initial = initialState else { return }
         stopTimer()
@@ -376,6 +403,8 @@ public final class GameViewModel {
         state = initial
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        isStuck = false
+        isStockExhausted = false
         clearHint()
     }
     
@@ -407,10 +436,11 @@ public final class GameViewModel {
         state.waste.cards.append(contentsOf: drawn)
         
         state.movesCount += 1
-        
+
         checkAutocompleteState()
+        checkStuckState()
     }
-    
+
     public func recycleStock() {
         guard state.stock.isEmpty && !state.waste.isEmpty else { return }
         guard canRecycleStock else { return }
@@ -507,10 +537,11 @@ public final class GameViewModel {
         
         // Score adjustments
         adjustScore(from: sourcePile.type, to: targetPile.type)
-        
+
         state.movesCount += 1
         checkWinState()
         checkAutocompleteState()
+        checkStuckState()
     }
     
     public func doubleClickMoveToFoundation(card: Card, from sourcePile: Pile) {
@@ -528,8 +559,10 @@ public final class GameViewModel {
         if options.isVegasScoring {
             if target == .foundation {
                 state.score += 500
+                vegasBankroll += 500
             } else if source == .foundation && target == .tableau {
                 state.score -= 500
+                vegasBankroll -= 500
             }
         } else {
             if target == .foundation {
@@ -597,8 +630,53 @@ public final class GameViewModel {
         isAutocompleteAvailable = stockEmpty && wasteEmpty && allTableauFaceUp && allCardsCount == 52 && !state.hasWon
     }
     
+    // MARK: - Stuck Detection
+
+    private func hasValidMoves() -> Bool {
+        // Can draw from stock or recycle waste?
+        if !state.stock.isEmpty || canRecycleStock { return true }
+
+        let allSources: [Pile] = (state.waste.topCard != nil ? [state.waste] : []) + state.tableau
+        let targets: [Pile] = state.foundations + state.tableau
+
+        for source in allSources {
+            guard let topCard = source.topCard else { continue }
+            for target in targets where target.id != source.id {
+                if isValidMove(cards: [topCard], to: target) { return true }
+            }
+            // Try multi-card tableau sequences
+            if source.type == .tableau {
+                guard let colIdx = state.tableau.firstIndex(where: { $0.id == source.id }) else { continue }
+                let col = state.tableau[colIdx]
+                for startIdx in 0..<col.cards.count where col.cards[startIdx].faceUp {
+                    let seq = Array(col.cards[startIdx...])
+                    // Validate sequence
+                    var valid = true
+                    for i in 0..<seq.count - 1 {
+                        if seq[i].rank != seq[i+1].rank + 1 || seq[i].isRed == seq[i+1].isRed { valid = false; break }
+                    }
+                    guard valid else { continue }
+                    for target in state.tableau where target.id != source.id {
+                        if isValidMove(cards: seq, to: target) { return true }
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    public func checkStuckState() {
+        guard !state.hasWon && !isAutocompleteAvailable else {
+            isStuck = false
+            isStockExhausted = false
+            return
+        }
+        isStockExhausted = state.stock.isEmpty && state.waste.isEmpty
+        isStuck = !hasValidMoves()
+    }
+
     // MARK: - Hints & Autocomplete Execution
-    
+
     public struct HintMove: Equatable {
         public let card: Card
         public let sourcePileId: String
@@ -785,9 +863,11 @@ public final class GameViewModel {
         guard !undoStack.isEmpty else { return }
         state = undoStack.removeLast()
         isAutoplayRunning = false
+        isStuck = false
         clearHint()
         checkWinState()
         checkAutocompleteState()
+        checkStuckState()
     }
     
     // MARK: - Zoom Implementation

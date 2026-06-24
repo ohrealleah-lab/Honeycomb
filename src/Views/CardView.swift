@@ -398,17 +398,25 @@ struct CardBackView: View {
                 let manager = CustomCardBackManager.shared
                 if isAnimated && manager.isGIF(for: customBack.relativePath),
                    let gifURL = manager.gifURL(for: customBack.relativePath) {
-                    AnimatedGIFView(url: gifURL)
-                        .frame(width: 120, height: 173)
-                        .scaleEffect(CGFloat(customBack.scale))
-                        .offset(x: CGFloat(customBack.offsetX), y: CGFloat(customBack.offsetY))
+                    ZStack {
+                        AnimatedGIFView(url: gifURL)
+                            .frame(width: 120, height: 173)
+                            .scaleEffect(CGFloat(customBack.scale))
+                            .offset(x: CGFloat(customBack.offsetX), y: CGFloat(customBack.offsetY))
+                    }
+                    .frame(width: 128, height: 181)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else if let nsImage = manager.image(for: customBack.relativePath) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 120, height: 173)
-                        .scaleEffect(CGFloat(customBack.scale))
-                        .offset(x: CGFloat(customBack.offsetX), y: CGFloat(customBack.offsetY))
+                    ZStack {
+                        Image(nsImage: nsImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 120, height: 173)
+                            .scaleEffect(CGFloat(customBack.scale))
+                            .offset(x: CGFloat(customBack.offsetX), y: CGFloat(customBack.offsetY))
+                    }
+                    .frame(width: 128, height: 181)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else {
                     Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
                 }
@@ -439,14 +447,16 @@ struct CustomFaceArtImageView: View {
 
     var body: some View {
         if let img = CustomFaceCardArtManager.shared.image(for: art) {
-            Image(nsImage: img)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 77, height: 122)
-                .scaleEffect(CGFloat(art.scale))
-                .offset(x: CGFloat(art.offsetX), y: CGFloat(art.offsetY))
-                .frame(width: 77, height: 122)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+            ZStack {
+                Image(nsImage: img)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 77, height: 122)
+                    .scaleEffect(CGFloat(art.scale))
+                    .offset(x: CGFloat(art.offsetX), y: CGFloat(art.offsetY))
+            }
+            .frame(width: 86, height: 138)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
         }
     }
 }

@@ -300,6 +300,37 @@ public struct SpiderView: View {
                     }
                     .padding(.top, 20)
                     
+                    // Stuck Banner
+                    if viewModel.isStuck && !viewModel.state.hasWon {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("No moves available.")
+                                    .font(.system(.headline, design: .monospaced))
+                                    .foregroundColor(.white)
+                                Text("No valid moves remain and the stock is empty.")
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                            Spacer()
+                            Button("New Game") { viewModel.startNewGame() }
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.yellow)
+                                .cornerRadius(6)
+                                .shadow(radius: 2)
+                                .buttonStyle(.plain)
+                        }
+                        .padding(16)
+                        .background(Color.orange.opacity(0.9))
+                        .cornerRadius(8)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        .shadow(radius: 5)
+                    }
+
                     // Empty column Stock deal warning
                     if isShowingEmptyStockWarning {
                         VStack(spacing: 12) {
@@ -496,6 +527,7 @@ public struct SpiderView: View {
                 height: newFrame.height
             )
             
+            window.contentMinSize = newContentSize
             window.setFrame(updatedFrame, display: true, animate: true)
         }
     }

@@ -16,16 +16,18 @@ struct FaceCardIdentifiableImage: Identifiable {
 
 struct FaceCardSlotTileView: View {
     let slot: FaceCardSlot
-    @State private var art: CustomFaceArt? = nil
 
     private var cardColor: Color { slot.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1) }
 
     var body: some View {
+        // Read directly from the manager so SwiftUI's @Observable tracking only re-renders
+        // this tile when its specific slot entry in faceArts changes.
+        let art = CustomFaceCardArtManager.shared.art(for: slot)
         ZStack {
             RoundedRectangle(cornerRadius: 6).fill(Color.white).frame(width: 60, height: 85)
 
             Group {
-                if let art = art, let img = CustomFaceCardArtManager.shared.image(for: art) {
+                if let art, let img = CustomFaceCardArtManager.shared.image(for: art) {
                     Image(nsImage: img)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -45,8 +47,6 @@ struct FaceCardSlotTileView: View {
                 .stroke(Color.black.opacity(0.85), lineWidth: 0.5)
                 .frame(width: 60, height: 85)
         }
-        .onAppear { art = CustomFaceCardArtManager.shared.art(for: slot) }
-        .onChange(of: CustomFaceCardArtManager.shared.faceArts) { art = CustomFaceCardArtManager.shared.art(for: slot) }
     }
 
     @ViewBuilder
@@ -162,6 +162,10 @@ struct FaceCardArtEditorView: View {
                         Button("Remove") { onDelete?() }
                             .foregroundColor(.red)
                     }
+                    Button("Reset") {
+                        scale = 1.0; offsetX = 0; offsetY = 0
+                    }
+                    .foregroundColor(.secondary)
                     Spacer()
                     Button("Cancel") { onCancel() }
                     Button("Save") { onSave(scale, offsetX, offsetY) }
@@ -191,7 +195,7 @@ struct FaceCardArtEditorView: View {
 
 struct FaceCardArtSectionView: View {
     @State private var pendingImport: FaceCardIdentifiableImage? = nil
-    @State private var editingSlot: FaceCardSlot? = nil
+    @State private var editingExistingSlot: FaceCardSlot? = nil
     @State private var slotToDelete: FaceCardSlot? = nil
     @State private var showingDeleteAlert = false
 
@@ -235,6 +239,31 @@ struct FaceCardArtSectionView: View {
                 onCancel: { pendingImport = nil }
             )
         }
+        .sheet(item: $editingExistingSlot) { slot in
+            if let art = CustomFaceCardArtManager.shared.art(for: slot),
+               let img = CustomFaceCardArtManager.shared.image(for: art) {
+                FaceCardArtEditorView(
+                    slot: slot,
+                    image: img,
+                    rawData: Data(),
+                    isGIF: CustomFaceCardArtManager.shared.isGIF(art),
+                    existingArt: art,
+                    onSave: { scale, offsetX, offsetY in
+                        var updated = art
+                        updated.scale = scale
+                        updated.offsetX = offsetX
+                        updated.offsetY = offsetY
+                        CustomFaceCardArtManager.shared.update(updated)
+                        editingExistingSlot = nil
+                    },
+                    onDelete: {
+                        CustomFaceCardArtManager.shared.remove(slot: slot)
+                        editingExistingSlot = nil
+                    },
+                    onCancel: { editingExistingSlot = nil }
+                )
+            }
+        }
         .alert("Remove Art", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { slotToDelete = nil }
             Button("Remove", role: .destructive) {
@@ -257,7 +286,12 @@ struct FaceCardArtSectionView: View {
         return VStack(spacing: 4) {
             ZStack(alignment: .topTrailing) {
                 FaceCardSlotTileView(slot: slot)
-                    .onTapGesture { selectImage(for: slot) }
+                    .onTapGesture(count: 2) {
+                        if art != nil { editingExistingSlot = slot }
+                    }
+                    .onTapGesture(count: 1) {
+                        if art == nil { selectImage(for: slot) }
+                    }
 
                 if art != nil {
                     Button {

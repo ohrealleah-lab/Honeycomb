@@ -34,6 +34,9 @@ public final class BeecellViewModel {
     // Auto-complete status
     public var isAutocompleteAvailable: Bool = false
     public var isAutoplayRunning: Bool = false
+
+    // Stuck detection
+    public var isStuck: Bool = false
     
     // Undo stack
     private var undoStack: [BeecellState] = []
@@ -338,10 +341,11 @@ public final class BeecellViewModel {
         
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        isStuck = false
         initialState = state
         clearHint()
     }
-    
+
     public func restartCurrentGame() {
         guard let initial = initialState else { return }
         stopTimer()
@@ -349,6 +353,7 @@ public final class BeecellViewModel {
         state = initial
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        isStuck = false
         clearHint()
     }
     
@@ -468,8 +473,9 @@ public final class BeecellViewModel {
         state.movesCount += 1
         checkWinState()
         checkAutocompleteState()
+        checkStuckState()
     }
-    
+
     public func doubleClickMove(card: Card, from sourcePile: Pile) {
         guard sourcePile.topCard?.id == card.id else { return }
         
@@ -543,8 +549,49 @@ public final class BeecellViewModel {
         }
     }
     
+    // MARK: - Stuck Detection
+
+    private func hasValidMoves() -> Bool {
+        let allPiles: [Pile] = state.freeCells + state.foundations + state.tableau
+
+        // Check every face-up top card against every possible target
+        for source in allPiles {
+            guard let topCard = source.topCard else { continue }
+
+            // Try single card to all targets
+            for target in allPiles where target.id != source.id {
+                if isValidMove(cards: [topCard], to: target) { return true }
+            }
+
+            // Try sequences from tableau columns
+            if source.type == .tableau {
+                var seqStart = source.cards.count - 1
+                while seqStart > 0 {
+                    let upper = source.cards[seqStart - 1]
+                    let lower = source.cards[seqStart]
+                    if upper.rank == lower.rank + 1 && upper.isRed != lower.isRed { seqStart -= 1 } else { break }
+                }
+                if seqStart < source.cards.count - 1 {
+                    let seq = Array(source.cards[seqStart..<source.cards.count])
+                    for target in state.tableau where target.id != source.id {
+                        if isValidMove(cards: seq, to: target) { return true }
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    public func checkStuckState() {
+        guard !state.hasWon && !isAutocompleteAvailable else {
+            isStuck = false
+            return
+        }
+        isStuck = !hasValidMoves()
+    }
+
     // MARK: - Autocomplete & Hint
-    
+
     public func checkAutocompleteState() {
         let expectedCards = options.deckCount * 52
         let totalFoundationCards = state.foundations.reduce(0) { $0 + $1.cards.count }
@@ -766,9 +813,11 @@ public final class BeecellViewModel {
         guard !undoStack.isEmpty else { return }
         state = undoStack.removeLast()
         isAutoplayRunning = false
+        isStuck = false
         clearHint()
         checkWinState()
         checkAutocompleteState()
+        checkStuckState()
     }
     
     // MARK: - Zoom Actions

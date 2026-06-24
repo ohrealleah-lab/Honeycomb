@@ -80,13 +80,17 @@ public final class CustomFaceCardArtManager {
     public static let shared = CustomFaceCardArtManager()
 
     public var faceArts: [CustomFaceArt] = []
-    private var imageCache: [String: NSImage] = [:]
+    @ObservationIgnored private var imageCache: [String: NSImage] = [:]
 
-    private init() { load() }
+    // Face card art renders in a 77×122 frame; cache at 2× for retina.
+    private static let displaySize = NSSize(width: 154, height: 244)
+
+    private init() { load(); preloadImages() }
 
     private var appSupportDirectory: URL {
-        let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-        let dir = paths[0].appendingPathComponent("SoliBee")
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let dir = base.appendingPathComponent("SoliBee")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }
@@ -96,11 +100,52 @@ public final class CustomFaceCardArtManager {
            let decoded = try? JSONDecoder().decode([CustomFaceArt].self, from: data) {
             faceArts = decoded
         }
+        pruneOrphanedEntries()
+    }
+
+    private func pruneOrphanedEntries() {
+        let dir = appSupportDirectory
+        let before = faceArts.count
+        faceArts = faceArts.filter {
+            FileManager.default.fileExists(atPath: dir.appendingPathComponent($0.relativePath).path)
+        }
+        if faceArts.count != before {
+            save()
+        }
     }
 
     private func save() {
         if let encoded = try? JSONEncoder().encode(faceArts) {
             UserDefaults.standard.set(encoded, forKey: "custom_face_arts")
+        }
+        preloadImages()
+    }
+
+    private func scaled(_ source: NSImage, to size: NSSize) -> NSImage {
+        let result = NSImage(size: size)
+        result.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        source.draw(in: NSRect(origin: .zero, size: size),
+                    from: NSRect(origin: .zero, size: source.size),
+                    operation: .copy, fraction: 1.0)
+        result.unlockFocus()
+        return result
+    }
+
+    /// Warms the image cache on a background thread so scrolling never blocks on disk I/O.
+    public func preloadImages() {
+        // Snapshot missing paths on the calling (main) thread — safe Dictionary read.
+        let toLoad = faceArts
+            .filter { imageCache[$0.relativePath] == nil }
+            .map { (path: $0.relativePath, url: appSupportDirectory.appendingPathComponent($0.relativePath)) }
+        guard !toLoad.isEmpty else { return }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            for item in toLoad {
+                guard let img = NSImage(contentsOf: item.url) else { continue }
+                let display = self.scaled(img, to: Self.displaySize)
+                DispatchQueue.main.async { self.imageCache[item.path] = display }
+            }
         }
     }
 
@@ -142,8 +187,8 @@ public final class CustomFaceCardArtManager {
             if deleteFile {
                 let fileURL = appSupportDirectory.appendingPathComponent(existing.relativePath)
                 try? FileManager.default.removeItem(at: fileURL)
-                imageCache.removeValue(forKey: existing.relativePath)
             }
+            imageCache.removeValue(forKey: existing.relativePath)
             faceArts.removeAll { $0.slot == slot }
             save()
         }
@@ -158,10 +203,12 @@ public final class CustomFaceCardArtManager {
 
     public func image(for art: CustomFaceArt) -> NSImage? {
         if let cached = imageCache[art.relativePath] { return cached }
+        // Cache miss — load and scale synchronously (fallback; preloadImages() should prevent this).
         let url = appSupportDirectory.appendingPathComponent(art.relativePath)
         guard let img = NSImage(contentsOf: url) else { return nil }
-        imageCache[art.relativePath] = img
-        return img
+        let display = scaled(img, to: Self.displaySize)
+        imageCache[art.relativePath] = display
+        return display
     }
 
     public func gifURL(for art: CustomFaceArt) -> URL? {

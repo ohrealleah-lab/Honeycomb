@@ -191,8 +191,12 @@ public struct GameView: View {
                             // Games Won
                             StatusItemView(label: "GAMES WON", value: String(viewModel.gamesWon))
                             
-                            // Score
-                            StatusItemView(label: "SCORE", value: viewModel.scoreString)
+                            // Score / Bankroll
+                            if viewModel.options.isVegasScoring {
+                                StatusItemView(label: "BANKROLL", value: viewModel.vegasBankrollString)
+                            } else {
+                                StatusItemView(label: "SCORE", value: viewModel.scoreString)
+                            }
                             
                             // Moves
                             StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
@@ -263,6 +267,15 @@ public struct GameView: View {
                         StockPileView(pile: viewModel.state.stock, stackSpacing: stackSpacing, canRecycle: viewModel.canRecycleStock)
                             .offset(x: isShuffling ? -6 : 0, y: isShuffling ? -2 : 0)
                             .rotationEffect(.degrees(isShuffling ? -4 : 0))
+                        if viewModel.isStockExhausted {
+                            Text("Stock\nExhausted")
+                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                .multilineTextAlignment(.center)
+                                .foregroundColor(.white)
+                                .padding(6)
+                                .background(Color.orange.opacity(0.85))
+                                .cornerRadius(6)
+                        }
                     }
                     .frame(width: 128, height: 181)
                     .contentShape(Rectangle())
@@ -421,6 +434,37 @@ public struct GameView: View {
                 }
                 .padding(.horizontal, 20)
 
+                // Stuck Banner
+                if viewModel.isStuck && !viewModel.state.hasWon {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(viewModel.isStockExhausted ? "Stock exhausted — no moves left." : "No moves available.")
+                                .font(.system(.headline, design: .monospaced))
+                                .foregroundColor(.white)
+                            Text("There are no valid moves remaining.")
+                                .font(.system(.subheadline, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        Spacer()
+                        Button("New Game") { viewModel.startNewGame() }
+                            .font(.system(.body, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.yellow)
+                            .cornerRadius(6)
+                            .shadow(radius: 2)
+                            .buttonStyle(.plain)
+                    }
+                    .padding(16)
+                    .background(Color.orange.opacity(0.9))
+                    .cornerRadius(8)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .shadow(radius: 5)
+                }
+
                 // Autocomplete Banner — inline below the tableau so it sits under the lowest cards
                 if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning {
                     HStack {
@@ -474,7 +518,9 @@ public struct GameView: View {
                             .foregroundColor(.yellow)
                             .shadow(radius: 3)
 
-                        Text("Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
+                        Text(viewModel.options.isVegasScoring
+                             ? "Bankroll: \(viewModel.vegasBankrollString) | Time: \(formatTime(viewModel.state.timerSeconds))"
+                             : "Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
                             .font(.system(.body, design: .monospaced))
                             .foregroundColor(.white)
 
@@ -564,10 +610,11 @@ public struct GameView: View {
                 height: newFrame.height
             )
             
+            window.contentMinSize = newContentSize
             window.setFrame(updatedFrame, display: true, animate: true)
         }
     }
-    
+
     private func handleDragEnded() {
         let releaseLocation = CGPoint(
             x: dragLocation.x + dragOffset.width,
@@ -981,7 +1028,21 @@ struct StatsView: View {
                     Text(String(format: "%.1f%%", stats.winPercentage))
                 }
                 .font(.system(.body, design: .monospaced))
-                
+
+                if viewModel.options.isVegasScoring {
+                    HStack {
+                        Text("Vegas Bankroll:")
+                        Spacer()
+                        Text(viewModel.vegasBankrollString)
+                            .foregroundColor(viewModel.vegasBankroll >= 0 ? .green : .red)
+                    }
+                    .font(.system(.body, design: .monospaced))
+
+                    Button("Reset Bankroll") { viewModel.resetVegasBankroll() }
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+
                 HStack {
                     Text("Current Streak:")
                     Spacer()
