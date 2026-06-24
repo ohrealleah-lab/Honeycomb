@@ -49,9 +49,7 @@ public final class BeecellViewModel {
     }
     
     public var currentModeKey: String {
-        let mode = options.isVegasScoring ? "vegas" : "standard"
-        let deck = options.deckCount == 1 ? "1deck" : "2deck"
-        return "\(mode)_\(deck)"
+        options.deckCount == 1 ? "1deck" : "2deck"
     }
     
     public var currentModeStats: ModeStats {
@@ -69,31 +67,9 @@ public final class BeecellViewModel {
         }
     }
     
-    public var highScoreString: String {
-        if options.isVegasScoring {
-            let dollars = Double(highScore) / 100.0
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .currency
-            formatter.currencySymbol = "$"
-            formatter.maximumFractionDigits = 2
-            return formatter.string(from: NSNumber(value: dollars)) ?? String(format: "$%.2f", dollars)
-        } else {
-            return String(highScore)
-        }
-    }
-    
-    public var scoreString: String {
-        if options.isVegasScoring {
-            let dollars = Double(state.score) / 100.0
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .currency
-            formatter.currencySymbol = "$"
-            formatter.maximumFractionDigits = 2
-            return formatter.string(from: NSNumber(value: dollars)) ?? String(format: "$%.2f", dollars)
-        } else {
-            return String(state.score)
-        }
-    }
+    public var highScoreString: String { String(highScore) }
+
+    public var scoreString: String { String(state.score) }
     
     public var cardBackTheme: String {
         get { options.cardBackTheme }
@@ -130,7 +106,7 @@ public final class BeecellViewModel {
             }
         }
         
-        if options.isVegasScoring != oldValue.isVegasScoring || options.deckCount != oldValue.deckCount {
+        if options.deckCount != oldValue.deckCount {
             startNewGame()
         }
     }
@@ -326,7 +302,7 @@ public final class BeecellViewModel {
         }
         
         // 6. Scoring
-        let initialScore = options.isVegasScoring ? (-5200 * options.deckCount) : 0
+        let initialScore = 0
         
         state = BeecellState(
             freeCells: freeCells,
@@ -497,18 +473,10 @@ public final class BeecellViewModel {
     }
     
     private func adjustScore(from source: Pile.PileType, to target: Pile.PileType) {
-        if options.isVegasScoring {
-            if target == .foundation {
-                state.score += 500
-            } else if source == .foundation {
-                state.score -= 500
-            }
-        } else {
-            if target == .foundation {
-                state.score += 10
-            } else if source == .foundation {
-                state.score = max(0, state.score - 15)
-            }
+        if target == .foundation {
+            state.score += 10
+        } else if source == .foundation {
+            state.score = max(0, state.score - 15)
         }
         
         if state.score > highScore {

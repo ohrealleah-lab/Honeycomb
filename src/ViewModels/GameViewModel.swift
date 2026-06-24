@@ -394,6 +394,7 @@ public final class GameViewModel {
         isStuck = false
         isStockExhausted = false
         initialState = state
+        clearHint()
     }
 
     public func restartCurrentGame() {

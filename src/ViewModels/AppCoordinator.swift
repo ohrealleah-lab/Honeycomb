@@ -8,6 +8,7 @@ public final class AppCoordinator {
     public var gameMode: GameMode {
         didSet {
             UserDefaults.standard.set(gameMode.rawValue, forKey: "selectedGameMode")
+            syncSharedOptions(from: oldValue, to: gameMode)
         }
     }
     
@@ -20,6 +21,51 @@ public final class AppCoordinator {
         self.gameMode = GameMode(rawValue: saved) ?? .klondike
     }
     
+    // Copy isTimed, isSoundEnabled, hideHintButton, hideStatsButton from the outgoing game to all others.
+    private func syncSharedOptions(from old: GameMode, to new: GameMode) {
+        let isTimed: Bool
+        let isSoundEnabled: Bool
+        let hideHintButton: Bool
+        let hideStatsButton: Bool
+
+        switch old {
+        case .klondike:
+            isTimed = klondikeViewModel.options.isTimed
+            isSoundEnabled = klondikeViewModel.options.isSoundEnabled
+            hideHintButton = klondikeViewModel.options.hideHintButton
+            hideStatsButton = klondikeViewModel.options.hideStatsButton
+        case .beecell:
+            isTimed = beecellViewModel.options.isTimed
+            isSoundEnabled = beecellViewModel.options.isSoundEnabled
+            hideHintButton = beecellViewModel.options.hideHintButton
+            hideStatsButton = beecellViewModel.options.hideStatsButton
+        case .spider:
+            isTimed = spiderViewModel.options.isTimed
+            isSoundEnabled = spiderViewModel.options.isSoundEnabled
+            hideHintButton = spiderViewModel.options.hideHintButton
+            hideStatsButton = spiderViewModel.options.hideStatsButton
+        }
+
+        if new != .klondike {
+            klondikeViewModel.options.isTimed = isTimed
+            klondikeViewModel.options.isSoundEnabled = isSoundEnabled
+            klondikeViewModel.options.hideHintButton = hideHintButton
+            klondikeViewModel.options.hideStatsButton = hideStatsButton
+        }
+        if new != .beecell {
+            beecellViewModel.options.isTimed = isTimed
+            beecellViewModel.options.isSoundEnabled = isSoundEnabled
+            beecellViewModel.options.hideHintButton = hideHintButton
+            beecellViewModel.options.hideStatsButton = hideStatsButton
+        }
+        if new != .spider {
+            spiderViewModel.options.isTimed = isTimed
+            spiderViewModel.options.isSoundEnabled = isSoundEnabled
+            spiderViewModel.options.hideHintButton = hideHintButton
+            spiderViewModel.options.hideStatsButton = hideStatsButton
+        }
+    }
+
     public func startNewGame() {
         switch gameMode {
         case .klondike:

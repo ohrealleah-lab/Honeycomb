@@ -802,7 +802,6 @@ struct BeecellOptionsView: View {
     @State private var deckCount: Int
     @State private var isTimed: Bool
     @State private var isSoundEnabled: Bool
-    @State private var isVegasScoring: Bool
     @State private var hideHintButton: Bool
     @State private var hideStatsButton: Bool
     @State private var customSelectedColor: Color
@@ -819,7 +818,6 @@ struct BeecellOptionsView: View {
         _deckCount = State(initialValue: viewModel.options.deckCount)
         _isTimed = State(initialValue: viewModel.options.isTimed)
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
-        _isVegasScoring = State(initialValue: viewModel.options.isVegasScoring)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
         
@@ -939,7 +937,6 @@ struct BeecellOptionsView: View {
                     updatedOpts.deckCount = deckCount
                     updatedOpts.isTimed = isTimed
                     updatedOpts.isSoundEnabled = isSoundEnabled
-                    updatedOpts.isVegasScoring = isVegasScoring
                     updatedOpts.hideHintButton = hideHintButton
                     updatedOpts.hideStatsButton = hideStatsButton
                     updatedOpts.customFeltColorRevision += 1
@@ -966,7 +963,7 @@ struct BeecellStatsView: View {
         let stats = viewModel.currentModeStats
         
         VStack(spacing: 20) {
-            Text("Statistics (\(viewModel.options.deckCount == 1 ? "1-Deck" : "2-Decks") - \(viewModel.options.isVegasScoring ? "Vegas" : "Standard"))")
+            Text("Statistics (\(viewModel.options.deckCount == 1 ? "1-Deck" : "2-Decks"))")
                 .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .padding(.top, 12)
             
