@@ -56,7 +56,7 @@ public struct GameView: View {
                     Button(action: {
                         viewModel.restartCurrentGame()
                     }) {
-                        Text("Restart Game")
+                        Text("Restart")
                             .font(.body)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -828,7 +828,27 @@ struct OptionsView: View {
                     .pickerStyle(.segmented)
                     
                     Divider()
-                    
+
+                    Toggle("Timed Game", isOn: $isTimed)
+                        .font(.system(.body, design: .monospaced))
+
+                    Toggle("Sound Effects", isOn: $isSoundEnabled)
+                        .font(.system(.body, design: .monospaced))
+
+                    Toggle("Vegas Scoring Mode", isOn: $isVegasScoring)
+                        .font(.system(.body, design: .monospaced))
+
+                    Toggle("Limit Deck Recycles (Traditional Vegas Style", isOn: $isDrawConstraintsEnabled)
+                        .font(.system(.body, design: .monospaced))
+
+                    Toggle("Hide Hint button", isOn: $hideHintButton)
+                        .font(.system(.body, design: .monospaced))
+
+                    Toggle("Hide Stats button", isOn: $hideStatsButton)
+                        .font(.system(.body, design: .monospaced))
+
+                    Divider()
+
                     Picker("Felt Color:", selection: $feltColor) {
                         Text("Felt Green").tag(FeltColorTheme.feltGreen)
                         Text("Crimson").tag(FeltColorTheme.crimson)
@@ -838,7 +858,7 @@ struct OptionsView: View {
                         Text("Custom").tag(FeltColorTheme.custom)
                     }
                     .font(.system(.body, design: .monospaced))
-                    
+
                     if feltColor == .custom {
                         ColorPicker("Custom Color:", selection: $customSelectedColor)
                             .font(.system(.body, design: .monospaced))
@@ -851,28 +871,10 @@ struct OptionsView: View {
                                 }
                             }
                     }
-                    
-                    CardDeckSelectorView(cardBackTheme: $cardBackTheme, feltColor: $feltColor)
-                    
+
                     Divider()
-                    
-                    Toggle("Timed Game", isOn: $isTimed)
-                        .font(.system(.body, design: .monospaced))
-                    
-                    Toggle("Sound Effects", isOn: $isSoundEnabled)
-                        .font(.system(.body, design: .monospaced))
-                    
-                    Toggle("Vegas Scoring Mode", isOn: $isVegasScoring)
-                        .font(.system(.body, design: .monospaced))
-                    
-                    Toggle("Limit Deck Recycles (Traditional Vegas Style", isOn: $isDrawConstraintsEnabled)
-                        .font(.system(.body, design: .monospaced))
-                    
-                    Toggle("Hide Hint button", isOn: $hideHintButton)
-                        .font(.system(.body, design: .monospaced))
-                    
-                    Toggle("Hide Stats button", isOn: $hideStatsButton)
-                        .font(.system(.body, design: .monospaced))
+
+                    CustomArtPanelView(cardBackTheme: $cardBackTheme, feltColor: $feltColor)
                 }
                 .padding(.horizontal, 24)
             }

@@ -16,8 +16,10 @@ public struct SpiderStockView: View {
                 EmptyPileView(symbol: "∅")
             } else {
                 // Render overlapping card backs to represent remaining deals (max 5)
-                ForEach(0..<min(5, dealsRemaining), id: \.self) { index in
-                    CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
+                let visibleCount = min(5, dealsRemaining)
+                ForEach(0..<visibleCount, id: \.self) { index in
+                    CardView(card: Card(suit: .spades, rank: 1, faceUp: false),
+                             isAnimated: index == visibleCount - 1)
                         .offset(x: CGFloat(index) * 2.5, y: 0)
                 }
             }

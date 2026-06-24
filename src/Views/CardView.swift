@@ -2,9 +2,10 @@ import SwiftUI
 
 public struct CardView: View {
     public let card: Card
+    public var isAnimated: Bool = false
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
     @Environment(GameViewModel.self) private var viewModel: GameViewModel?
-    
+
     private var cardBackTheme: String {
         if let coordinator = coordinator {
             switch coordinator.gameMode {
@@ -32,7 +33,7 @@ public struct CardView: View {
             if card.faceUp {
                 CardFrontView(card: card)
             } else {
-                CardBackView()
+                CardBackView(isAnimated: isAnimated)
             }
         }
         .frame(width: 128, height: 181)
@@ -188,37 +189,57 @@ struct CardCenterSuitView: View {
     var body: some View {
         Group {
             if rank == 1 {
-                // Ace - single large suit
-                Text(suit.symbol)
-                    .font(.system(size: 61))
-                    .foregroundColor(color)
+                // Ace — use custom art if available and enabled
+                if let slot = FaceCardSlot.slot(rank: 1, isRed: suit.isRed),
+                   let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
+                    CustomFaceArtImageView(art: art)
+                } else {
+                    Text(suit.symbol)
+                        .font(.system(size: 61))
+                        .foregroundColor(color)
+                }
             } else if rank == 11 {
-                // Jack - red j.png for Hearts/Diamonds, J.png for Spades/Clubs
-                let path = suit.isRed ? "/Users/leah/SoliBee/red j.png" : "/Users/leah/SoliBee/J.png"
-                let name = suit.isRed ? "red j" : "J"
-                FaceCardImageView(
-                    filename: name,
-                    absolutePath: path,
-                    fallbackView: AnyView(HighFidelityShieldView(color: color, suitSymbol: suit.symbol))
-                )
+                // Jack — custom art overrides default image
+                if let slot = FaceCardSlot.slot(rank: 11, isRed: suit.isRed),
+                   let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
+                    CustomFaceArtImageView(art: art)
+                } else {
+                    let path = suit.isRed ? "/Users/leah/SoliBee/red j.png" : "/Users/leah/SoliBee/J.png"
+                    let name = suit.isRed ? "red j" : "J"
+                    FaceCardImageView(
+                        filename: name,
+                        absolutePath: path,
+                        fallbackView: AnyView(HighFidelityShieldView(color: color, suitSymbol: suit.symbol))
+                    )
+                }
             } else if rank == 12 {
-                // Queen - red q.png for Hearts/Diamonds, Q.png for Spades/Clubs
-                let path = suit.isRed ? "/Users/leah/SoliBee/red q.png" : "/Users/leah/SoliBee/Q.png"
-                let name = suit.isRed ? "red q" : "Q"
-                FaceCardImageView(
-                    filename: name,
-                    absolutePath: path,
-                    fallbackView: AnyView(HighFidelityTiaraView(color: color, suitSymbol: suit.symbol))
-                )
+                // Queen
+                if let slot = FaceCardSlot.slot(rank: 12, isRed: suit.isRed),
+                   let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
+                    CustomFaceArtImageView(art: art)
+                } else {
+                    let path = suit.isRed ? "/Users/leah/SoliBee/red q.png" : "/Users/leah/SoliBee/Q.png"
+                    let name = suit.isRed ? "red q" : "Q"
+                    FaceCardImageView(
+                        filename: name,
+                        absolutePath: path,
+                        fallbackView: AnyView(HighFidelityTiaraView(color: color, suitSymbol: suit.symbol))
+                    )
+                }
             } else if rank == 13 {
-                // King - red k.png for Hearts/Diamonds, K.png for Spades/Clubs
-                let path = suit.isRed ? "/Users/leah/SoliBee/red k.png" : "/Users/leah/SoliBee/K.png"
-                let name = suit.isRed ? "red k" : "K"
-                FaceCardImageView(
-                    filename: name,
-                    absolutePath: path,
-                    fallbackView: AnyView(HighFidelityCrownView(color: color, suitSymbol: suit.symbol))
-                )
+                // King
+                if let slot = FaceCardSlot.slot(rank: 13, isRed: suit.isRed),
+                   let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
+                    CustomFaceArtImageView(art: art)
+                } else {
+                    let path = suit.isRed ? "/Users/leah/SoliBee/red k.png" : "/Users/leah/SoliBee/K.png"
+                    let name = suit.isRed ? "red k" : "K"
+                    FaceCardImageView(
+                        filename: name,
+                        absolutePath: path,
+                        fallbackView: AnyView(HighFidelityCrownView(color: color, suitSymbol: suit.symbol))
+                    )
+                }
             } else {
                 // Numbered cards 2 to 10
                 ZStack {
@@ -329,6 +350,7 @@ struct CardCenterSuitView: View {
 // MARK: - Card Back Rendering (Custom Bee Theme)
 
 struct CardBackView: View {
+    var isAnimated: Bool = false
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
     @Environment(GameViewModel.self) private var viewModel: GameViewModel?
     
@@ -373,7 +395,14 @@ struct CardBackView: View {
                     Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
                 }
             } else if let customBack = CustomCardBackManager.shared.customCardBacks.first(where: { $0.name == theme }) {
-                if let nsImage = CustomCardBackManager.shared.image(for: customBack.relativePath) {
+                let manager = CustomCardBackManager.shared
+                if isAnimated && manager.isGIF(for: customBack.relativePath),
+                   let gifURL = manager.gifURL(for: customBack.relativePath) {
+                    AnimatedGIFView(url: gifURL)
+                        .frame(width: 120, height: 173)
+                        .scaleEffect(CGFloat(customBack.scale))
+                        .offset(x: CGFloat(customBack.offsetX), y: CGFloat(customBack.offsetY))
+                } else if let nsImage = manager.image(for: customBack.relativePath) {
                     Image(nsImage: nsImage)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -402,6 +431,66 @@ struct CardBackView: View {
 }
 
 
+
+// MARK: - Custom face art image view
+
+struct CustomFaceArtImageView: View {
+    let art: CustomFaceArt
+
+    var body: some View {
+        if let img = CustomFaceCardArtManager.shared.image(for: art) {
+            Image(nsImage: img)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 77, height: 122)
+                .scaleEffect(CGFloat(art.scale))
+                .offset(x: CGFloat(art.offsetX), y: CGFloat(art.offsetY))
+                .frame(width: 77, height: 122)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+        }
+    }
+}
+
+// MARK: - Animated GIF support
+
+import AppKit
+
+struct AnimatedGIFView: NSViewRepresentable {
+    let url: URL
+
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
+        container.wantsLayer = true
+
+        let imageView = NSImageView()
+        imageView.imageScaling = .scaleProportionallyUpOrDown
+        imageView.imageAlignment = .alignCenter
+        imageView.animates = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+
+        if let image = NSImage(contentsOf: url) {
+            imageView.image = image
+        }
+
+        container.addSubview(imageView)
+        NSLayoutConstraint.activate([
+            imageView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            imageView.topAnchor.constraint(equalTo: container.topAnchor),
+            imageView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+        return container
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard let imageView = nsView.subviews.first as? NSImageView else { return }
+        if imageView.image == nil, let image = NSImage(contentsOf: url) {
+            imageView.image = image
+        }
+    }
+}
 
 struct BeeSideProfile: View {
     var body: some View {

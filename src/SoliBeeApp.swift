@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct SoliBeeApp: App {
     @State private var coordinator = AppCoordinator()
-    
+
     var body: some Scene {
         WindowGroup {
             AppRouterView(coordinator: coordinator)
@@ -16,54 +16,24 @@ struct SoliBeeApp: App {
                     coordinator.startNewGame()
                 }
                 .keyboardShortcut("n", modifiers: .command)
-                
-                Button("Restart Game") {
+
+                Button("Restart") {
                     coordinator.restartCurrentGame()
                 }
                 .keyboardShortcut("r", modifiers: .command)
-                
+
                 Button("Undo") {
                     coordinator.undoLastAction()
                 }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(!coordinator.canUndo)
-                
+
                 Divider()
-                
-                Button("Draw 1 Card") {
-                    if coordinator.gameMode == .klondike {
-                        coordinator.klondikeViewModel.state.drawMode = .drawOne
-                        coordinator.klondikeViewModel.startNewGame()
-                    } else if coordinator.gameMode == .beecell {
-                        coordinator.beecellViewModel.options.deckCount = 1
-                        coordinator.beecellViewModel.startNewGame()
-                    } else if coordinator.gameMode == .spider {
-                        coordinator.spiderViewModel.options.suitCount = 1
-                        coordinator.spiderViewModel.startNewGame()
-                    }
-                }
-                .keyboardShortcut("1", modifiers: [.command, .option])
-                
-                Button("Draw 3 Cards") {
-                    if coordinator.gameMode == .klondike {
-                        coordinator.klondikeViewModel.state.drawMode = .drawThree
-                        coordinator.klondikeViewModel.startNewGame()
-                    } else if coordinator.gameMode == .beecell {
-                        coordinator.beecellViewModel.options.deckCount = 2
-                        coordinator.beecellViewModel.startNewGame()
-                    } else if coordinator.gameMode == .spider {
-                        coordinator.spiderViewModel.options.suitCount = 2
-                        coordinator.spiderViewModel.startNewGame()
-                    }
-                }
-                .keyboardShortcut("3", modifiers: [.command, .option])
-                
-                Divider()
-                
+
                 Button("Reset Statistics") {
                     coordinator.resetStatistics()
                 }
-                
+
                 Button("Reset Default Card Backs") {
                     CustomCardBackManager.shared.resetDefaultCardBacks()
                 }
@@ -74,29 +44,64 @@ struct SoliBeeApp: App {
                     coordinator.triggerWinAnimation()
                 }
             }
-            
+
+            CommandGroup(replacing: .appInfo) {
+                Button("About SoliBee") {
+                    NSApp.orderFrontStandardAboutPanel(nil)
+                }
+            }
+
+            CommandGroup(replacing: .help) {
+                HelpMenuCommands()
+            }
+
             CommandGroup(replacing: .toolbar) {
                 Button("Zoom In") {
                     coordinator.zoomIn()
                 }
                 .keyboardShortcut("+", modifiers: .command)
-                
+
                 Button("Zoom Out") {
                     coordinator.zoomOut()
                 }
                 .keyboardShortcut("-", modifiers: .command)
-                
+
                 Button("Reset Zoom") {
                     coordinator.resetZoom()
                 }
                 .keyboardShortcut("0", modifiers: .command)
-                
+
                 Divider()
-                
+
                 Button("Make Current Zoom Default") {
                     coordinator.makeCurrentZoomDefault()
                 }
             }
         }
+
+        WindowGroup("Klondike Solitaire Help", id: "klondike-help") {
+            KlondikeHelpView()
+        }
+        .windowResizability(.contentSize)
+
+        WindowGroup("Beecell Help", id: "beecell-help") {
+            BeecellHelpView()
+        }
+        .windowResizability(.contentSize)
+
+        WindowGroup("Spider Solibee Help", id: "spider-help") {
+            SpiderHelpView()
+        }
+        .windowResizability(.contentSize)
+    }
+}
+
+private struct HelpMenuCommands: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Klondike Solitaire Help") { openWindow(id: "klondike-help") }
+        Button("Beecell Help")            { openWindow(id: "beecell-help") }
+        Button("Spider Solibee Help")     { openWindow(id: "spider-help") }
     }
 }

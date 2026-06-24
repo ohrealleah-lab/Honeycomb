@@ -57,7 +57,7 @@ public struct BeecellView: View {
                     Button(action: {
                         viewModel.restartCurrentGame()
                     }) {
-                        Text("Restart Game")
+                        Text("Restart")
                             .font(.body)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -823,7 +823,21 @@ struct BeecellOptionsView: View {
                     .pickerStyle(.segmented)
                     
                     Divider()
-                    
+
+                    Toggle("Timed Game", isOn: $isTimed)
+                        .font(.system(.body, design: .monospaced))
+
+                    Toggle("Sound Effects", isOn: $isSoundEnabled)
+                        .font(.system(.body, design: .monospaced))
+
+                    Toggle("Hide Hint button", isOn: $hideHintButton)
+                        .font(.system(.body, design: .monospaced))
+
+                    Toggle("Hide Stats button", isOn: $hideStatsButton)
+                        .font(.system(.body, design: .monospaced))
+
+                    Divider()
+
                     Picker("Felt Color:", selection: $feltColor) {
                         Text("Felt Green").tag(FeltColorTheme.feltGreen)
                         Text("Crimson").tag(FeltColorTheme.crimson)
@@ -836,7 +850,7 @@ struct BeecellOptionsView: View {
                     .onChange(of: feltColor) { _, newColor in
                         // Sync default card theme backings if user changes felt
                     }
-                    
+
                     if feltColor == .custom {
                         ColorPicker("Custom Color:", selection: $customSelectedColor)
                             .font(.system(.body, design: .monospaced))
@@ -849,22 +863,10 @@ struct BeecellOptionsView: View {
                                 }
                             }
                     }
-                    
-                    CardDeckSelectorView(cardBackTheme: $cardBackTheme, feltColor: $feltColor)
-                    
+
                     Divider()
-                    
-                    Toggle("Timed Game", isOn: $isTimed)
-                        .font(.system(.body, design: .monospaced))
-                    
-                    Toggle("Sound Effects", isOn: $isSoundEnabled)
-                        .font(.system(.body, design: .monospaced))
-                    
-                    Toggle("Hide Hint button", isOn: $hideHintButton)
-                        .font(.system(.body, design: .monospaced))
-                    
-                    Toggle("Hide Stats button", isOn: $hideStatsButton)
-                        .font(.system(.body, design: .monospaced))
+
+                    CustomArtPanelView(cardBackTheme: $cardBackTheme, feltColor: $feltColor)
                 }
                 .padding(.horizontal, 24)
             }

@@ -18,5 +18,7 @@
     <string>NSApplication</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Leahbee. All rights reserved.</string>
 </dict>
 </plist>

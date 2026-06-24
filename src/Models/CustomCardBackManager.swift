@@ -91,39 +91,31 @@ public final class CustomCardBackManager {
     
     public func addCustomCardBack(name: String, image: NSImage, scale: Double, offsetX: Double = 0.0, offsetY: Double = 0.0) -> Bool {
         let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Prevent duplicate names or name of a default theme (even if deleted, to avoid confusion)
         guard !cleanedName.isEmpty,
               !defaultThemes.contains(cleanedName),
               !customCardBacks.contains(where: { $0.name == cleanedName }) else {
             return false
         }
-        
+
         let id = UUID()
         let filename = "\(id.uuidString).png"
         let fileURL = appSupportDirectory.appendingPathComponent(filename)
-        
-        // Convert NSImage to PNG data preserving transparency
+
         var pngData: Data? = nil
         for rep in image.representations {
             if let bitmapRep = rep as? NSBitmapImageRep {
                 pngData = bitmapRep.representation(using: .png, properties: [:])
-                if pngData != nil {
-                    break
-                }
+                if pngData != nil { break }
             }
         }
-        
         if pngData == nil {
             if let tiffData = image.tiffRepresentation,
                let bitmap = NSBitmapImageRep(data: tiffData) {
                 pngData = bitmap.representation(using: .png, properties: [:])
             }
         }
-        
-        guard let finalPngData = pngData else {
-            return false
-        }
-        
+        guard let finalPngData = pngData else { return false }
+
         do {
             try finalPngData.write(to: fileURL)
             let newBack = CustomCardBack(id: id, name: cleanedName, relativePath: filename, scale: scale, offsetX: offsetX, offsetY: offsetY)
@@ -131,9 +123,41 @@ public final class CustomCardBackManager {
             saveCustomCardBacks()
             return true
         } catch {
-            print("Failed to save custom card back: \(error)")
             return false
         }
+    }
+
+    /// Saves raw GIF data preserving animation frames. Use this instead of addCustomCardBack when the source file is a GIF.
+    public func addCustomCardBackGIF(name: String, data: Data, scale: Double, offsetX: Double = 0.0, offsetY: Double = 0.0) -> Bool {
+        let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedName.isEmpty,
+              !defaultThemes.contains(cleanedName),
+              !customCardBacks.contains(where: { $0.name == cleanedName }) else {
+            return false
+        }
+
+        let id = UUID()
+        let filename = "\(id.uuidString).gif"
+        let fileURL = appSupportDirectory.appendingPathComponent(filename)
+
+        do {
+            try data.write(to: fileURL)
+            let newBack = CustomCardBack(id: id, name: cleanedName, relativePath: filename, scale: scale, offsetX: offsetX, offsetY: offsetY)
+            customCardBacks.append(newBack)
+            saveCustomCardBacks()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    public func isGIF(for relativePath: String) -> Bool {
+        relativePath.lowercased().hasSuffix(".gif")
+    }
+
+    public func gifURL(for relativePath: String) -> URL? {
+        guard isGIF(for: relativePath) else { return nil }
+        return getFileURL(for: relativePath)
     }
     
     public func removeCustomCardBack(_ customBack: CustomCardBack) {

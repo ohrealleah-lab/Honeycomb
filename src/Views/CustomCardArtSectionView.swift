@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct IdentifiableImage: Identifiable {
     let id = UUID()
     let image: NSImage
+    let gifData: Data?  // non-nil only when the source was a .gif file
 }
 
 struct CardBackPreviewView: View {
@@ -423,9 +424,13 @@ public struct CardDeckSelectorView: View {
         }
         .sheet(item: $selectedImageItem) { item in
             CustomCardBackEditorView(image: item.image) { name, scale, offsetX, offsetY in
-                if CustomCardBackManager.shared.addCustomCardBack(name: name, image: item.image, scale: scale, offsetX: offsetX, offsetY: offsetY) {
-                    cardBackTheme = name
+                let saved: Bool
+                if let gifData = item.gifData {
+                    saved = CustomCardBackManager.shared.addCustomCardBackGIF(name: name, data: gifData, scale: scale, offsetX: offsetX, offsetY: offsetY)
+                } else {
+                    saved = CustomCardBackManager.shared.addCustomCardBack(name: name, image: item.image, scale: scale, offsetX: offsetX, offsetY: offsetY)
                 }
+                if saved { cardBackTheme = name }
                 selectedImageItem = nil
             } onCancel: {
                 selectedImageItem = nil
@@ -516,23 +521,24 @@ public struct CardDeckSelectorView: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.allowedContentTypes = [.jpeg, .png]
-        
+        panel.allowedContentTypes = [.jpeg, .png, .gif]
+
         if panel.runModal() == .OK {
             if let url = panel.url {
                 let ext = url.pathExtension.lowercased()
-                if ext != "jpg" && ext != "jpeg" && ext != "png" {
+                guard ["jpg", "jpeg", "png", "gif"].contains(ext) else {
                     let alert = NSAlert()
                     alert.messageText = "Error"
-                    alert.informativeText = "File must be .jpg or .png!"
+                    alert.informativeText = "File must be .jpg, .png, or .gif!"
                     alert.alertStyle = .warning
                     alert.addButton(withTitle: "OK")
                     alert.runModal()
                     return
                 }
-                
+
                 if let image = NSImage(contentsOf: url) {
-                    selectedImageItem = IdentifiableImage(image: image)
+                    let gifData = ext == "gif" ? (try? Data(contentsOf: url)) : nil
+                    selectedImageItem = IdentifiableImage(image: image, gifData: gifData)
                 } else {
                     let alert = NSAlert()
                     alert.messageText = "Error"

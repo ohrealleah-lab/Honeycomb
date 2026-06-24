@@ -54,7 +54,7 @@ public struct StockPileView: View {
                 EmptyPileView(symbol: canRecycle ? "↺" : nil)
                     .transition(.opacity)
             } else {
-                CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
+                CardView(card: Card(suit: .spades, rank: 1, faceUp: false), isAnimated: true)
                     .transition(.asymmetric(
                         insertion: .offset(x: 128 + stackSpacing).combined(with: .opacity),
                         removal: .opacity
