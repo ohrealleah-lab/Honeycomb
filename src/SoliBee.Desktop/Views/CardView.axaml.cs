@@ -32,6 +32,31 @@ public partial class CardView : UserControl
     private static readonly Dictionary<string, Bitmap> _customBitmapCache = new();
     private static readonly Dictionary<string, (Bitmap[] Frames, int[] Durations)> _gifFrameCache = new();
 
+    private static readonly IReadOnlyDictionary<string, string> _houliAssets =
+        new Dictionary<string, string>
+        {
+            ["Forest"]       = "houli_forest.png",
+            ["On the Water"] = "houli_onthewater.png",
+            ["Pareidolic"]   = "houli_pareidolic.png",
+            ["Pareidolic 2"] = "houli_pareidolic2.png",
+            ["Red Sky"]      = "houli_redsky.png",
+            ["Sunset"]       = "houli_sunset.png",
+        };
+
+    // Bundled FF mode default face art — baked-in images + the scale values tuned during setup.
+    // Keyed by FaceCardSlot; only used when no user-configured art exists for that slot.
+    private static readonly Dictionary<FaceCardSlot, (string Uri, double Scale)> _ffDefaultArt = new()
+    {
+        { FaceCardSlot.BlackAce,   ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-black-ace.png",   1.3849734933035716) },
+        { FaceCardSlot.RedAce,     ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-red-ace.png",     1.377974330357143)  },
+        { FaceCardSlot.BlackJack,  ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-black-jack.png",  1.2036021205357144) },
+        { FaceCardSlot.RedJack,    ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-red-jack.png",    1.372998046875)     },
+        { FaceCardSlot.BlackQueen, ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-black-queen.png", 1.4577162388392857) },
+        { FaceCardSlot.RedQueen,   ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-red-queen.png",   1.1898465401785714) },
+        { FaceCardSlot.BlackKing,  ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-black-king.png",  1.3697209821428573) },
+        { FaceCardSlot.RedKing,    ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-red-king.png",    1.493359375)        },
+    };
+
     // Pre-allocated brushes — only ~5 combinations exist, no need to allocate per render
     // internal so ThemeEditorWindow can mutate .Color for live debug preview
     internal static readonly SolidColorBrush _brushFaceBackNormal   = new(Colors.White);
@@ -343,9 +368,13 @@ public partial class CardView : UserControl
             LargeAceText.IsVisible = false;
             FaceCardImage.IsVisible = false;
 
-            // Custom face art takes priority over all other rendering for A/J/Q/K
+            // Custom face art takes priority over all other rendering for A/J/Q/K.
+            // In FF mode any configured art is used as the default (enabled flag is ignored);
+            // in normal mode the enabled flag still gates display.
             var faceSlot = FaceCardSlotExtensions.SlotFor(Card.Rank, isRed);
-            var customFaceArt = faceSlot.HasValue ? FaceCardArtService.GetEnabledArt(faceSlot.Value) : null;
+            var customFaceArt = faceSlot.HasValue
+                ? (ffMode ? FaceCardArtService.GetArt(faceSlot.Value) : FaceCardArtService.GetEnabledArt(faceSlot.Value))
+                : null;
 
             if (customFaceArt != null)
             {
@@ -378,59 +407,46 @@ public partial class CardView : UserControl
                 FaceCardImage.RenderTransform = null;
                 CenterGrid.ClipToBounds = false;
 
-                if (Card.Rank == 1)
+                // In FF mode: use bundled default art for all face/ace slots
+                if (ffMode && faceSlot.HasValue && _ffDefaultArt.TryGetValue(faceSlot.Value, out var ffDefault))
                 {
-                    if (ffMode)
+                    FaceCardImage.IsVisible = true;
+                    FaceCardImage.Stretch = Avalonia.Media.Stretch.Uniform;
+                    FaceCardImage.Width  = 70;
+                    FaceCardImage.Height = 60;
+                    FaceCardImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+                    var tg = new TransformGroup();
+                    tg.Children.Add(new ScaleTransform(ffDefault.Scale, ffDefault.Scale));
+                    FaceCardImage.RenderTransform = tg;
+                    CenterGrid.ClipToBounds = true;
+                    try { FaceCardImage.Source = GetCachedBitmap(ffDefault.Uri); }
+                    catch
                     {
-                        FaceCardImage.IsVisible = true;
-                        FaceCardImage.Width  = 22;
-                        FaceCardImage.Height = 35;
-                        try
-                        {
-                            FaceCardImage.Source = GetCachedBitmapTrimmed("avares://SoliBee.Desktop/Assets/chocobo.png");
-                        }
-                        catch
-                        {
-                            FaceCardImage.IsVisible = false;
-                            LargeAceText.IsVisible = true;
-                            LargeAceText.Text = suitChar;
-                            LargeAceText.Foreground = brush;
-                        }
-                    }
-                    else
-                    {
+                        FaceCardImage.IsVisible = false;
                         LargeAceText.IsVisible = true;
-                        LargeAceText.Text = suitChar;
+                        LargeAceText.Text = Card.Rank == 1 ? suitChar : rankStr;
                         LargeAceText.Foreground = brush;
                     }
+                }
+                else if (Card.Rank == 1)
+                {
+                    LargeAceText.IsVisible = true;
+                    LargeAceText.Text = suitChar;
+                    LargeAceText.Foreground = brush;
                 }
                 else if (Card.Rank >= 11 && Card.Rank <= 13)
                 {
                     FaceCardImage.IsVisible = true;
-                    FaceCardImage.Width  = ffMode ? 65 : 70;
-                    FaceCardImage.Height = ffMode ? 104 : 60;
-                    string filename = ffMode
-                        ? Card.Rank switch
-                        {
-                            11 => "tonberry.png",
-                            13 => "moogle.png",
-                            _ => isRed ? "red q.png" : "Q.png"
-                        }
-                        : Card.Rank switch
-                        {
-                            11 => isRed ? "red j.png" : "J.png",
-                            12 => isRed ? "red q.png" : "Q.png",
-                            13 => isRed ? "red k.png" : "K.png",
-                            _ => ""
-                        };
-
-                    try
+                    FaceCardImage.Width  = 70;
+                    FaceCardImage.Height = 60;
+                    string filename = Card.Rank switch
                     {
-                        string uri = $"avares://SoliBee.Desktop/Assets/{filename}";
-                        FaceCardImage.Source = (ffMode && filename == "moogle.png")
-                            ? GetCachedBitmapNoBackground(uri)
-                            : GetCachedBitmap(uri);
-                    }
+                        11 => isRed ? "red j.png" : "J.png",
+                        12 => isRed ? "red q.png" : "Q.png",
+                        13 => isRed ? "red k.png" : "K.png",
+                        _ => ""
+                    };
+                    try { FaceCardImage.Source = GetCachedBitmap($"avares://SoliBee.Desktop/Assets/{filename}"); }
                     catch
                     {
                         FaceCardImage.IsVisible = false;
@@ -630,9 +646,23 @@ public partial class CardView : UserControl
             offsetX = options.CardBackOffsetX;
             offsetY = options.CardBackOffsetY;
         }
+        else if (theme == "Warrior of Light")
+        {
+            filename = "warrior-of-light.png";
+            scale = options.CardBackScale;
+            offsetX = options.CardBackOffsetX;
+            offsetY = options.CardBackOffsetY;
+        }
         else if (theme == "Vulpera")
         {
             filename = "vulpera.png";
+        }
+        else if (_houliAssets.TryGetValue(theme, out var houliFile))
+        {
+            filename = houliFile;
+            scale    = options.CardBackScale;
+            offsetX  = options.CardBackOffsetX;
+            offsetY  = options.CardBackOffsetY;
         }
         else
         {
@@ -962,6 +992,21 @@ public partial class CardView : UserControl
     }
 
     public void Highlight() { }
+
+    public void ShowHint()
+    {
+        if (CardFace == null || Card == null || !Card.IsFaceUp) return;
+        CardFace.BorderBrush = new SolidColorBrush(Color.Parse("#FFD700"));
+        CardFace.BorderThickness = new Thickness(3);
+    }
+
+    public void ClearHint()
+    {
+        if (CardFace == null || Card == null || !Card.IsFaceUp) return;
+        bool ffMode = SettingsService.LoadOptions().IsFinalFantasyMode;
+        CardFace.BorderBrush     = ffMode ? _brushFaceBorderFFCard : _brushFaceBorderNormal;
+        CardFace.BorderThickness = new Thickness(ffMode ? 2.5 : 0.75);
+    }
 
     public void ClearSelection()
     {

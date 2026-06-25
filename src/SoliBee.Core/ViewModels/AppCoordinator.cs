@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 
@@ -19,6 +20,9 @@ public partial class AppCoordinator : ObservableObject
     private SpiderViewModel _spiderViewModel;
 
     [ObservableProperty]
+    private VideoPokerViewModel _videoPokerViewModel;
+
+    [ObservableProperty]
     private object _activeViewModel;
 
     private static readonly string LastModeFile = Path.Combine(
@@ -27,24 +31,27 @@ public partial class AppCoordinator : ObservableObject
 
     public AppCoordinator()
     {
-        GameViewModel = new GameViewModel();
-        BeecellViewModel = new BeecellViewModel();
-        SpiderViewModel = new SpiderViewModel();
+        GameViewModel      = new GameViewModel();
+        BeecellViewModel   = new BeecellViewModel();
+        SpiderViewModel    = new SpiderViewModel();
+        VideoPokerViewModel = new VideoPokerViewModel();
 
         ActiveViewModel = LoadLastMode() switch
         {
-            "Beecell" => (object)BeecellViewModel,
-            "Spider" => (object)SpiderViewModel,
-            _ => (object)GameViewModel
+            "Beecell"    => (object)BeecellViewModel,
+            "Spider"     => (object)SpiderViewModel,
+            "VideoPoker" => (object)VideoPokerViewModel,
+            _            => (object)GameViewModel
         };
     }
 
     public bool CanUndo => ActiveViewModel switch
     {
-        GameViewModel gvm => gvm.CanUndo,
-        BeecellViewModel bvm => bvm.CanUndo,
-        SpiderViewModel svm => svm.CanUndo,
-        _ => false
+        GameViewModel gvm       => gvm.CanUndo,
+        BeecellViewModel bvm    => bvm.CanUndo,
+        SpiderViewModel svm     => svm.CanUndo,
+        VideoPokerViewModel _   => false,
+        _                       => false
     };
 
     public void SwitchToGame()
@@ -65,6 +72,13 @@ public partial class AppCoordinator : ObservableObject
     {
         ActiveViewModel = SpiderViewModel;
         SaveLastMode("Spider");
+        OnPropertyChanged(nameof(CanUndo));
+    }
+
+    public void SwitchToVideoPoker()
+    {
+        ActiveViewModel = VideoPokerViewModel;
+        SaveLastMode("VideoPoker");
         OnPropertyChanged(nameof(CanUndo));
     }
 
@@ -89,6 +103,15 @@ public partial class AppCoordinator : ObservableObject
             bvm.ResetStatistics();
         else if (ActiveViewModel is SpiderViewModel svm)
             svm.ResetStatistics();
+    }
+
+    [RelayCommand]
+    public void ApplyTheme(SoliBeeTheme theme)
+    {
+        var options = SettingsService.LoadOptions();
+        ThemeService.ApplyTheme(theme, options);
+        SettingsService.SaveOptions(options);
+        WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(options));
     }
 
     [RelayCommand]

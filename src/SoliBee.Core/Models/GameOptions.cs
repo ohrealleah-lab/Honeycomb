@@ -33,6 +33,8 @@ public class GameOptions
     public int BeecellDeckCount { get; set; } = 1;
     public int SpiderSuitCount { get; set; } = 1;
 
+    public bool HasAppliedDefaultTheme { get; set; } = false;
+
     // Theme editor color overrides — null means use the compiled default
     public string? ThemeFaceBackNormal { get; set; }
     public string? ThemeFaceBackFF { get; set; }

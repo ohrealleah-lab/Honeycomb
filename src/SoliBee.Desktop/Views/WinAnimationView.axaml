@@ -2,6 +2,49 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SoliBee.Desktop.Views.WinAnimationView">
 
-    <!-- Transparent overlay canvas for hardware-accelerated composition animations -->
-    <Canvas x:Name="AnimationCanvas" Background="#10000000" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+    <Grid>
+        <!-- Bouncing card canvas (bottom layer) -->
+        <Canvas x:Name="AnimationCanvas" Background="#18000000"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+        <!-- Win info panel (top layer) -->
+        <Border x:Name="WinInfoPanel"
+                Background="#D2000000" CornerRadius="12" Padding="48,32"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                BoxShadow="0 8 40 0 #80000000">
+            <StackPanel Spacing="10" HorizontalAlignment="Center">
+
+                <TextBlock Text="YOU WIN!"
+                           FontSize="44" FontWeight="Black" Foreground="#FFD700"
+                           FontFamily="Courier New, Consolas, monospace"
+                           HorizontalAlignment="Center"/>
+
+                <TextBlock x:Name="WinScoreLabel"
+                           FontSize="20" Foreground="White"
+                           FontFamily="Courier New, Consolas, monospace"
+                           HorizontalAlignment="Center"/>
+
+                <TextBlock x:Name="WinTimeLabel"
+                           FontSize="15" Foreground="#AAFFFFFF"
+                           FontFamily="Courier New, Consolas, monospace"
+                           HorizontalAlignment="Center"/>
+
+                <Button x:Name="PlayAgainButton"
+                        Content="Play Again"
+                        Click="PlayAgain_Click"
+                        HorizontalAlignment="Center"
+                        HorizontalContentAlignment="Center"
+                        Width="170" Height="46"
+                        Margin="0,14,0,0"
+                        Background="#CC2255AA"
+                        Foreground="White"
+                        CornerRadius="6"
+                        FontSize="16" FontWeight="Bold"
+                        FontFamily="Courier New, Consolas, monospace"
+                        BorderBrush="#88DDEEFF" BorderThickness="1"/>
+
+            </StackPanel>
+        </Border>
+    </Grid>
+
 </UserControl>

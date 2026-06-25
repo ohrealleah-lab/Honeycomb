@@ -112,5 +112,13 @@ public static class FaceCardArtService
     public static bool IsGif(CustomFaceArt art) =>
         art.RelativePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
 
+    public static void ReplaceAll(IEnumerable<CustomFaceArt> arts)
+    {
+        EnsureLoaded();
+        _arts.Clear();
+        _arts.AddRange(arts);
+        Save();
+    }
+
     public static string ArtDirectory => _artDir;
 }

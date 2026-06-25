@@ -19,7 +19,14 @@ public partial class MainWindow : Window
         InitializeComponent();
         
         _coordinator = new AppCoordinator();
-        
+
+        // One-time migration: if FF mode was on before themes existed, seed a "Final Fantasy" theme
+        ThemeService.MigrateFFModeIfNeeded(_coordinator.GameViewModel.Options);
+
+        // First launch: apply Pareidolic 2 as the default visual theme
+        if (ThemeService.ApplyDefaultThemeIfNeeded(_coordinator.GameViewModel.Options))
+            SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
+
         // Select correct Klondike mode on startup based on options
         bool isDrawThree = _coordinator.GameViewModel.Options.IsDrawConstraintsEnabled;
         GameSelectionBox.SelectedIndex = isDrawThree ? 2 : 1;
@@ -108,33 +115,25 @@ public partial class MainWindow : Window
     private void NewGame_Click(object? sender, RoutedEventArgs e)
     {
         if (this.DataContext is GameViewModel klondikeVm)
-        {
             klondikeVm.InitializeGame();
-        }
         else if (this.DataContext is BeecellViewModel freecellVm)
-        {
             freecellVm.InitializeGame();
-        }
         else if (this.DataContext is SpiderViewModel spiderVm)
-        {
             spiderVm.InitializeGame();
-        }
+        else if (this.DataContext is VideoPokerViewModel vpVm)
+            vpVm.StartNewGame();
     }
 
     private void RestartGame_Click(object? sender, RoutedEventArgs e)
     {
         if (this.DataContext is GameViewModel klondikeVm)
-        {
             klondikeVm.RestartGame();
-        }
         else if (this.DataContext is BeecellViewModel freecellVm)
-        {
             freecellVm.RestartGame();
-        }
         else if (this.DataContext is SpiderViewModel spiderVm)
-        {
             spiderVm.RestartGame();
-        }
+        else if (this.DataContext is VideoPokerViewModel vpVm)
+            vpVm.StartNewGame();
     }
 
     private void Undo_Click(object? sender, RoutedEventArgs e)
@@ -145,34 +144,36 @@ public partial class MainWindow : Window
             beecellVm.Undo();
         else if (this.DataContext is SpiderViewModel spiderVm)
             spiderVm.Undo();
+        // Video Poker has no undo
     }
 
-    private void Autocomplete_Click(object? sender, RoutedEventArgs e)
+    private void Hint_Click(object? sender, RoutedEventArgs e)
     {
         if (this.DataContext is GameViewModel klondikeVm)
-        {
-            klondikeVm.AutocompleteCommand.Execute(null);
-        }
+            klondikeVm.FindHint();
+        else if (this.DataContext is BeecellViewModel beecellVm)
+            beecellVm.FindHint();
+        else if (this.DataContext is SpiderViewModel spiderVm)
+            spiderVm.FindHint();
+        // Video Poker has no hint
     }
 
     private void Preferences_Click(object? sender, RoutedEventArgs e)
     {
-        GameOptions? options = this.DataContext switch
+        GameOptions options = this.DataContext switch
         {
-            GameViewModel vm => vm.Options,
-            BeecellViewModel vm => vm.Options,
-            SpiderViewModel vm => vm.Options,
-            _ => null
+            GameViewModel vm        => vm.Options,
+            BeecellViewModel vm     => vm.Options,
+            SpiderViewModel vm      => vm.Options,
+            VideoPokerViewModel _   => _coordinator.GameViewModel.Options,
+            _                       => _coordinator.GameViewModel.Options
         };
 
-        if (options != null)
-        {
-            var preferencesView = new PreferencesView();
-            preferencesView.DataContext = options;
-            preferencesView.ShowVegasOption = this.DataContext is GameViewModel;
-            this.PreferencesContent.Content = preferencesView;
-            this.PreferencesOverlay.IsVisible = true;
-        }
+        var preferencesView = new PreferencesView();
+        preferencesView.DataContext = options;
+        preferencesView.ShowVegasOption = this.DataContext is GameViewModel;
+        this.PreferencesContent.Content = preferencesView;
+        this.PreferencesOverlay.IsVisible = true;
     }
 
     private void ThemeEditor_Click(object? sender, RoutedEventArgs e)
@@ -197,11 +198,11 @@ public partial class MainWindow : Window
     {
         (double width, double minWidth) = tag switch
         {
-            "Beecell"       => (1200, 1140),
-            "Spider"        => (1460, 1420),
-            _               => (1120, 1080),  // Klondike Draw1/Draw3
+            "Beecell"    => (1200, 1140),
+            "Spider"     => (1460, 1420),
+            "VideoPoker" => (1000, 960),
+            _            => (1120, 1080),
         };
-        this.Width    = Math.Max(this.Width,    width);
         this.MinWidth = minWidth;
         if (this.Width < width) this.Width = width;
     }
@@ -237,8 +238,16 @@ public partial class MainWindow : Window
                 _coordinator.SwitchToSpider();
                 this.MainContent.Content = new SpiderView { DataContext = _coordinator.SpiderViewModel };
             }
+            else if (tag == "VideoPoker")
+            {
+                _coordinator.SwitchToVideoPoker();
+                this.MainContent.Content = new VideoPokerView { DataContext = _coordinator.VideoPokerViewModel };
+            }
 
             this.DataContext = _coordinator.ActiveViewModel;
+
+            if (HintButton != null)
+                HintButton.IsVisible = tag != "VideoPoker";
 
             // Apply felt color of the active VM
             if (_coordinator.ActiveViewModel is GameViewModel klondikeVm)
@@ -252,6 +261,10 @@ public partial class MainWindow : Window
             else if (_coordinator.ActiveViewModel is SpiderViewModel spiderVm)
             {
                 ApplyFeltColor(spiderVm.Options);
+            }
+            else if (_coordinator.ActiveViewModel is VideoPokerViewModel)
+            {
+                ApplyFeltColor(_coordinator.GameViewModel.Options);
             }
         }
     }

@@ -55,6 +55,16 @@
                            FontSize="10" Foreground="#808080" />
             </StackPanel>
 
+            <!-- THEMES SECTION -->
+            <TextBlock Text="Themes:" FontWeight="Bold" Foreground="White" Margin="0,6,0,0" />
+            <Button x:Name="SaveThemeButton" Content="Save current as Theme…"
+                    Click="SaveTheme_Click"
+                    Background="#444444" Foreground="White"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            <StackPanel x:Name="ThemeListPanel" Spacing="2" />
+            <TextBlock x:Name="NoThemesLabel" Text="No saved themes yet."
+                       FontSize="11" Foreground="#808080" />
+
             <TextBlock Text="Custom Face Card Art:" FontWeight="Bold" Foreground="White" Margin="0,6,0,0" />
             <TextBlock Text="Tap a tile to upload art. Tap again to adjust." FontSize="10" Foreground="#A0A0A0" Margin="0,-4,0,0" />
             <v:FaceCardArtSectionView />
@@ -69,7 +79,7 @@
             <Button Content="About SoliBee" Click="About_Click" Background="#333333" Foreground="#A0A0A0" Padding="10,5" Margin="0,4,0,0" />
         </StackPanel>
 
-        <!-- Delete Confirmation Overlay (Initially hidden) -->
+        <!-- Delete Card Back Confirmation Overlay -->
         <Grid x:Name="ConfirmDeleteOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="#2E2E2E" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                 <StackPanel Spacing="12" Width="230">
@@ -78,6 +88,36 @@
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button Content="Cancel" Click="CancelDelete_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#444444" Foreground="White" Margin="0,0,4,0" />
                         <Button Content="Delete" Click="ConfirmDelete_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#882222" Foreground="White" Margin="4,0,0,0" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Save Theme Name Overlay -->
+        <Grid x:Name="SaveThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="#2E2E2E" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <StackPanel Spacing="12" Width="230">
+                    <TextBlock Text="Save Theme" FontSize="15" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                    <TextBlock Text="Enter a name for this theme:" FontSize="12" Foreground="LightGray" />
+                    <TextBox x:Name="ThemeNameInput" Watermark="Theme name…"
+                             BorderBrush="#666666" Foreground="Black" />
+                    <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
+                        <Button Content="Cancel" Click="CancelSaveTheme_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#444444" Foreground="White" Margin="0,0,4,0" />
+                        <Button Content="Save" Click="ConfirmSaveTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#225522" Foreground="White" Margin="4,0,0,0" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Confirm Delete Theme Overlay -->
+        <Grid x:Name="ConfirmDeleteThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="#2E2E2E" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <StackPanel Spacing="12" Width="230">
+                    <TextBlock Text="Delete Theme" FontSize="15" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                    <TextBlock x:Name="DeleteThemeConfirmText" Text="Delete this theme?" FontSize="12" Foreground="LightGray" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
+                    <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
+                        <Button Content="Cancel" Click="CancelDeleteTheme_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#444444" Foreground="White" Margin="0,0,4,0" />
+                        <Button Content="Delete" Click="ConfirmDeleteTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#882222" Foreground="White" Margin="4,0,0,0" />
                     </Grid>
                 </StackPanel>
             </Border>

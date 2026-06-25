@@ -166,6 +166,8 @@ public static class SettingsService
                 if (GetValue("SpiderSuitCount") is int spiderSuits)
                     options.SpiderSuitCount = spiderSuits;
 
+                if (GetValue("HasAppliedDefaultTheme") is bool hat) options.HasAppliedDefaultTheme = hat;
+
                 if (GetValue("ThemeFaceBackNormal")  is string t1) options.ThemeFaceBackNormal  = t1;
                 if (GetValue("ThemeFaceBackFF")       is string t2) options.ThemeFaceBackFF       = t2;
                 if (GetValue("ThemeFaceBorderNormal") is string t3) options.ThemeFaceBorderNormal = t3;
@@ -229,6 +231,8 @@ public static class SettingsService
                 SetValue("HideStatsButton", options.HideStatsButton);
                 SetValue("BeecellDeckCount", options.BeecellDeckCount);
                 SetValue("SpiderSuitCount", options.SpiderSuitCount);
+
+                SetValue("HasAppliedDefaultTheme", options.HasAppliedDefaultTheme);
 
                 if (options.ThemeFaceBackNormal  != null) SetValue("ThemeFaceBackNormal",  options.ThemeFaceBackNormal);
                 if (options.ThemeFaceBackFF       != null) SetValue("ThemeFaceBackFF",       options.ThemeFaceBackFF);

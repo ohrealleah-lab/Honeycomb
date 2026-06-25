@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using SoliBee.Core.Models;
 
@@ -9,6 +10,8 @@ namespace SoliBee.Desktop.Views;
 
 public partial class WinAnimationView : UserControl
 {
+    public event EventHandler? PlayAgainRequested;
+
     private DispatcherTimer? _timer;
     private readonly List<BouncingCard> _activeCards = new();
     private readonly Random _random = new();
@@ -27,9 +30,14 @@ public partial class WinAnimationView : UserControl
         InitializeComponent();
     }
 
-    public void StartAnimation(IEnumerable<Pile> foundations)
+    public void StartAnimation(IEnumerable<Pile> foundations, string scoreText = "", string timeText = "")
     {
         StopAnimation();
+
+        // Show win info panel with score and time
+        WinScoreLabel.Text = string.IsNullOrEmpty(scoreText) ? "" : $"Score: {scoreText}";
+        WinTimeLabel.Text  = string.IsNullOrEmpty(timeText)  ? "" : $"Time: {timeText}";
+        WinInfoPanel.IsVisible = true;
 
         var foundationList = foundations.ToList();
         _foundationCount = Math.Max(1, foundationList.Count);
@@ -49,7 +57,7 @@ public partial class WinAnimationView : UserControl
         _timer.Start();
     }
 
-    // Backward-compatible overload for callers that haven't been updated yet
+    // Backward-compatible no-arg overload
     public void StartAnimation()
     {
         var foundations = new List<Pile>();
@@ -78,8 +86,10 @@ public partial class WinAnimationView : UserControl
         _activeCards.Clear();
         _spawnQueue.Clear();
         AnimationCanvas.Children.Clear();
-        _spawnTicks = 0;
-        _spawnIndex = 0;
+        _spawnTicks  = 0;
+        _spawnIndex  = 0;
+
+        WinInfoPanel.IsVisible = false;
     }
 
     private void Timer_Tick(object? sender, EventArgs e)
@@ -92,19 +102,19 @@ public partial class WinAnimationView : UserControl
             SpawnCard(card);
         }
 
-        double canvasWidth = AnimationCanvas.Bounds.Width;
+        double canvasWidth  = AnimationCanvas.Bounds.Width;
         double canvasHeight = AnimationCanvas.Bounds.Height;
 
         for (int i = _activeCards.Count - 1; i >= 0; i--)
         {
             var card = _activeCards[i];
             card.Vy += Gravity;
-            card.X += card.Vx;
-            card.Y += card.Vy;
+            card.X  += card.Vx;
+            card.Y  += card.Vy;
 
             if (card.Y + CardHeight >= canvasHeight && card.Vy > 0)
             {
-                card.Y = canvasHeight - CardHeight;
+                card.Y  = canvasHeight - CardHeight;
                 card.Vy = -card.Vy * Elasticity;
             }
 
@@ -116,13 +126,14 @@ public partial class WinAnimationView : UserControl
             }
 
             Canvas.SetLeft(card.View, card.X);
-            Canvas.SetTop(card.View, card.Y);
+            Canvas.SetTop(card.View,  card.Y);
         }
 
+        // When all cards have left the screen, stop the ticker but keep the win panel visible
         if (_spawnQueue.Count == 0 && _activeCards.Count == 0)
         {
-            StopAnimation();
-            this.IsVisible = false;
+            _timer?.Stop();
+            _timer = null;
         }
     }
 
@@ -138,21 +149,26 @@ public partial class WinAnimationView : UserControl
         var bouncingCard = new BouncingCard
         {
             View = cardView,
-            X = startX,
-            Y = 40,
-            Vx = _random.NextDouble() * 6 - 3,
-            Vy = -_random.NextDouble() * 4 - 1
+            X    = startX,
+            Y    = 40,
+            Vx   = _random.NextDouble() * 6 - 3,
+            Vy   = -_random.NextDouble() * 4 - 1,
         };
 
         _activeCards.Add(bouncingCard);
+    }
+
+    private void PlayAgain_Click(object? sender, RoutedEventArgs e)
+    {
+        PlayAgainRequested?.Invoke(this, EventArgs.Empty);
     }
 }
 
 public class BouncingCard
 {
     public required CardView View { get; set; }
-    public double X { get; set; }
-    public double Y { get; set; }
+    public double X  { get; set; }
+    public double Y  { get; set; }
     public double Vx { get; set; }
     public double Vy { get; set; }
 }

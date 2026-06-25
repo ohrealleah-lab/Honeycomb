@@ -1,0 +1,249 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.VideoPokerView">
+
+    <Grid x:Name="BoardFeltGrid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="215"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ─── Pay Table Panel ─────────────────────────────────────────── -->
+        <Border Grid.Column="0" Background="#22000000" Padding="10,14,8,14">
+            <StackPanel Spacing="0">
+
+                <!-- Variant selector -->
+                <ComboBox x:Name="VariantComboBox"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center"
+                          SelectionChanged="VariantComboBox_SelectionChanged"
+                          Margin="0,0,0,8">
+                    <ComboBoxItem Content="Jacks or Better"/>
+                    <ComboBoxItem Content="Deuces Wild"/>
+                    <ComboBoxItem Content="Bonus Poker"/>
+                </ComboBox>
+
+                <!-- Column headers -->
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="22"/>
+                        <ColumnDefinition Width="22"/>
+                        <ColumnDefinition Width="22"/>
+                        <ColumnDefinition Width="22"/>
+                        <ColumnDefinition Width="22"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="HAND" FontSize="8" Foreground="#60FFFFFF"
+                               FontFamily="Courier New, Consolas, monospace" Grid.Column="0"/>
+                    <TextBlock Text="1" FontSize="8" Foreground="#60FFFFFF"
+                               FontFamily="Courier New, Consolas, monospace"
+                               Grid.Column="1" HorizontalAlignment="Center"/>
+                    <TextBlock Text="2" FontSize="8" Foreground="#60FFFFFF"
+                               FontFamily="Courier New, Consolas, monospace"
+                               Grid.Column="2" HorizontalAlignment="Center"/>
+                    <TextBlock Text="3" FontSize="8" Foreground="#60FFFFFF"
+                               FontFamily="Courier New, Consolas, monospace"
+                               Grid.Column="3" HorizontalAlignment="Center"/>
+                    <TextBlock Text="4" FontSize="8" Foreground="#60FFFFFF"
+                               FontFamily="Courier New, Consolas, monospace"
+                               Grid.Column="4" HorizontalAlignment="Center"/>
+                    <TextBlock Text="5" FontSize="8" Foreground="#60FFFFFF"
+                               FontFamily="Courier New, Consolas, monospace"
+                               Grid.Column="5" HorizontalAlignment="Center"/>
+                </Grid>
+
+                <StackPanel x:Name="PayTablePanel" Spacing="1"/>
+
+            </StackPanel>
+        </Border>
+
+        <!-- ─── Game Area ───────────────────────────────────────────────── -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>      <!-- top flex space -->
+                <RowDefinition Height="Auto"/>   <!-- cards + hold badges -->
+                <RowDefinition Height="36"/>     <!-- result text -->
+                <RowDefinition Height="Auto"/>   <!-- credits/bet + buttons -->
+                <RowDefinition Height="20"/>     <!-- bottom padding -->
+            </Grid.RowDefinitions>
+
+            <!-- Cards + hold badges (Row 1) -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="16"
+                        HorizontalAlignment="Center" VerticalAlignment="Bottom">
+
+                <!-- Card slot 0 -->
+                <StackPanel Spacing="0">
+                    <Grid x:Name="CardSlot0" Width="128" Height="181"
+                          Tag="0" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                        <local:CardView x:Name="Card0View" IsHitTestVisible="False" Width="128" Height="181"/>
+                    </Grid>
+                    <Border x:Name="HoldBadge0" Height="26" Width="128" CornerRadius="0,0,5,5"
+                            Background="#CCFFE033" Opacity="0" Margin="0,0,0,0">
+                        <TextBlock Text="H O L D" FontSize="11" FontWeight="Black"
+                                   Foreground="#111111" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" LetterSpacing="2"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Card slot 1 -->
+                <StackPanel Spacing="0">
+                    <Grid x:Name="CardSlot1" Width="128" Height="181"
+                          Tag="1" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                        <local:CardView x:Name="Card1View" IsHitTestVisible="False" Width="128" Height="181"/>
+                    </Grid>
+                    <Border x:Name="HoldBadge1" Height="26" Width="128" CornerRadius="0,0,5,5"
+                            Background="#CCFFE033" Opacity="0">
+                        <TextBlock Text="H O L D" FontSize="11" FontWeight="Black"
+                                   Foreground="#111111" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" LetterSpacing="2"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Card slot 2 -->
+                <StackPanel Spacing="0">
+                    <Grid x:Name="CardSlot2" Width="128" Height="181"
+                          Tag="2" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                        <local:CardView x:Name="Card2View" IsHitTestVisible="False" Width="128" Height="181"/>
+                    </Grid>
+                    <Border x:Name="HoldBadge2" Height="26" Width="128" CornerRadius="0,0,5,5"
+                            Background="#CCFFE033" Opacity="0">
+                        <TextBlock Text="H O L D" FontSize="11" FontWeight="Black"
+                                   Foreground="#111111" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" LetterSpacing="2"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Card slot 3 -->
+                <StackPanel Spacing="0">
+                    <Grid x:Name="CardSlot3" Width="128" Height="181"
+                          Tag="3" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                        <local:CardView x:Name="Card3View" IsHitTestVisible="False" Width="128" Height="181"/>
+                    </Grid>
+                    <Border x:Name="HoldBadge3" Height="26" Width="128" CornerRadius="0,0,5,5"
+                            Background="#CCFFE033" Opacity="0">
+                        <TextBlock Text="H O L D" FontSize="11" FontWeight="Black"
+                                   Foreground="#111111" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" LetterSpacing="2"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Card slot 4 -->
+                <StackPanel Spacing="0">
+                    <Grid x:Name="CardSlot4" Width="128" Height="181"
+                          Tag="4" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                        <local:CardView x:Name="Card4View" IsHitTestVisible="False" Width="128" Height="181"/>
+                    </Grid>
+                    <Border x:Name="HoldBadge4" Height="26" Width="128" CornerRadius="0,0,5,5"
+                            Background="#CCFFE033" Opacity="0">
+                        <TextBlock Text="H O L D" FontSize="11" FontWeight="Black"
+                                   Foreground="#111111" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" LetterSpacing="2"/>
+                    </Border>
+                </StackPanel>
+
+            </StackPanel>
+
+            <!-- Result text (Row 2) -->
+            <Border Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Padding="20,4" CornerRadius="6"
+                    x:Name="ResultBanner" Background="Transparent">
+                <TextBlock x:Name="ResultTextBlock"
+                           FontSize="16" FontWeight="Bold"
+                           Foreground="#FFD700"
+                           FontFamily="Courier New, Consolas, monospace"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- Controls: display row + button row (Row 3) -->
+            <StackPanel Grid.Row="3" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
+
+                <!-- Credits + Bet display -->
+                <StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center">
+                    <StackPanel Spacing="3" HorizontalAlignment="Center">
+                        <TextBlock Text="CREDITS"
+                                   FontSize="9" FontWeight="Bold" Foreground="#80FFFFFF"
+                                   FontFamily="Courier New, Consolas, monospace"
+                                   HorizontalAlignment="Center"/>
+                        <Border Background="#18FFFFFF" BorderBrush="#40FFFFFF" BorderThickness="1"
+                                CornerRadius="4" Padding="20,5">
+                            <TextBlock x:Name="CreditsLabel"
+                                       FontSize="22" FontWeight="Black" Foreground="White"
+                                       FontFamily="Courier New, Consolas, monospace"
+                                       HorizontalAlignment="Center" MinWidth="60" TextAlignment="Center"/>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Spacing="3" HorizontalAlignment="Center">
+                        <TextBlock Text="BET"
+                                   FontSize="9" FontWeight="Bold" Foreground="#80FFFFFF"
+                                   FontFamily="Courier New, Consolas, monospace"
+                                   HorizontalAlignment="Center"/>
+                        <Border Background="#18FFFFFF" BorderBrush="#40FFFFFF" BorderThickness="1"
+                                CornerRadius="4" Padding="20,5">
+                            <TextBlock x:Name="BetLabel"
+                                       FontSize="22" FontWeight="Black" Foreground="#FFD700"
+                                       FontFamily="Courier New, Consolas, monospace"
+                                       HorizontalAlignment="Center" MinWidth="40" TextAlignment="Center"/>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Action buttons -->
+                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                    <Button x:Name="DealDrawButton"
+                            Content="Deal" Height="36" Padding="20,0"
+                            Click="DealDraw_Click" Classes="vp-button vp-button-primary"/>
+                    <Button Content="− Bet" Height="36" Padding="16,0"
+                            Click="DecreaseBet_Click" Classes="vp-button"/>
+                    <Button Content="+ Bet" Height="36" Padding="16,0"
+                            Click="IncreaseBet_Click" Classes="vp-button"/>
+                    <Button Content="Bet Max" Height="36" Padding="16,0"
+                            Click="BetMax_Click" Classes="vp-button"/>
+                    <Button x:Name="RebuyButton"
+                            Content="Buy In" Height="36" Padding="16,0"
+                            IsVisible="False"
+                            Click="Rebuy_Click" Classes="vp-button vp-button-rebuy"/>
+                </StackPanel>
+
+            </StackPanel>
+
+        </Grid>
+    </Grid>
+
+    <UserControl.Styles>
+        <Style Selector="Button.vp-button">
+            <Setter Property="Background" Value="#26FFFFFF"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#80FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontFamily" Value="Courier New, Consolas, monospace"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.vp-button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#44FFFFFF"/>
+        </Style>
+        <Style Selector="Button.vp-button-primary">
+            <Setter Property="Background" Value="#CC2255AA"/>
+            <Setter Property="BorderBrush" Value="#AADDEEFF"/>
+        </Style>
+        <Style Selector="Button.vp-button-primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#CC3366CC"/>
+        </Style>
+        <Style Selector="Button.vp-button-rebuy">
+            <Setter Property="Background" Value="#CC664400"/>
+            <Setter Property="BorderBrush" Value="#FFAA44"/>
+        </Style>
+        <Style Selector="ComboBox#VariantComboBox">
+            <Setter Property="Background" Value="#22FFFFFF"/>
+            <Setter Property="Foreground" Value="#FFD700"/>
+            <Setter Property="BorderBrush" Value="#44FFD700"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Courier New, Consolas, monospace"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </UserControl.Styles>
+
+</UserControl>

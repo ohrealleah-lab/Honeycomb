@@ -74,6 +74,7 @@ public partial class GameView : CardGameView
             ApplyFeltColor(vm.Options);
             BindPiles(vm);
         }
+        VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
     }
 
     private void GameView_Unloaded(object? sender, RoutedEventArgs e)
@@ -81,6 +82,12 @@ public partial class GameView : CardGameView
         if (DataContext is GameViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
         WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
+        VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
+    }
+
+    private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is GameViewModel vm) vm.InitializeGame();
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -89,9 +96,19 @@ public partial class GameView : CardGameView
         {
             if (e.PropertyName == nameof(GameViewModel.State))
             {
-                _winTriggered = false;
                 if (DataContext is GameViewModel vm && vm.State.HasWon)
                     TriggerVictoryCascade();
+                else
+                {
+                    _winTriggered = false;
+                    VictoryOverlay.StopAnimation();
+                    VictoryOverlay.IsVisible = false;
+                }
+            }
+            else if (e.PropertyName == nameof(GameViewModel.IsAutocompletable))
+            {
+                if (DataContext is GameViewModel vm && vm.IsAutocompletable)
+                    vm.Autocomplete();
             }
             else if (e.PropertyName == nameof(GameViewModel.Stock))
             {
@@ -123,6 +140,11 @@ public partial class GameView : CardGameView
             else if (e.PropertyName == nameof(GameViewModel.HasNoMoves))
             {
                 if (DataContext is GameViewModel vm) NoMovesBanner.IsVisible = vm.HasNoMoves;
+            }
+            else if (e.PropertyName == nameof(GameViewModel.ActiveHint))
+            {
+                if (DataContext is GameViewModel vm)
+                    ApplyHint(vm.ActiveHint, AllPileViews());
             }
         });
     }
@@ -192,6 +214,11 @@ public partial class GameView : CardGameView
         }
     }
 
+    private IEnumerable<PileView> AllPileViews() =>
+        new PileView[] { StockPileControl, WastePileControl,
+            Foundation0, Foundation1, Foundation2, Foundation3,
+            Tableau0, Tableau1, Tableau2, Tableau3, Tableau4, Tableau5, Tableau6 };
+
     private void UpdateAllPilesLayout()
     {
         StockPileControl.UpdateCardsLayout();
@@ -216,7 +243,10 @@ public partial class GameView : CardGameView
         if (_winTriggered) return;
         _winTriggered = true;
         VictoryOverlay.IsVisible = true;
-        VictoryOverlay.StartAnimation();
+        if (DataContext is GameViewModel vm)
+            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.TimeDisplay);
+        else
+            VictoryOverlay.StartAnimation();
         SoundService.PlayVictory();
     }
 

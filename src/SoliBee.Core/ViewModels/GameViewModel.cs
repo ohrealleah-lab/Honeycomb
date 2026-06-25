@@ -26,6 +26,9 @@ public partial class GameViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasNoMoves;
 
+    [ObservableProperty]
+    private HintMove? _activeHint;
+
     public Pile Stock { get; } = new("Stock", PileType.Stock);
     public Pile Waste { get; } = new("Waste", PileType.Waste);
     public List<Pile> Foundations { get; } = new();
@@ -80,7 +83,7 @@ public partial class GameViewModel : ObservableObject
 
     public void InitializeGame()
     {
-        // Clear everything
+        ActiveHint = null;
         Stock.Cards.Clear();
         Waste.Cards.Clear();
         foreach (var f in Foundations) f.Cards.Clear();
@@ -290,6 +293,7 @@ public partial class GameViewModel : ObservableObject
         if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
             State.IsTimerActive = true;
         State.MovesCount++;
+        CheckAutocomplete();
         CheckDeadlock();
         OnPropertyChanged(nameof(Stock));
         OnPropertyChanged(nameof(Waste));
@@ -355,6 +359,7 @@ public partial class GameViewModel : ObservableObject
     {
         if (!CanMoveCard(card, targetPile)) return;
 
+        ActiveHint = null;
         SaveStateForUndo();
 
         var sourcePile = FindPileContaining(card);
@@ -449,6 +454,7 @@ public partial class GameViewModel : ObservableObject
     public void Undo()
     {
         if (_undoStack.Count == 0) return;
+        ActiveHint = null;
 
         var snapshot = _undoStack.Pop();
         State.Score = snapshot.Score;
@@ -601,6 +607,90 @@ public partial class GameViewModel : ObservableObject
         }
         return false;
     }
+
+    // MARK: - Hint
+
+    public void FindHint()
+    {
+        ActiveHint = null;
+
+        // 1. Waste top → foundation
+        var wasteTop = Waste.Cards.Count > 0 ? Waste.Cards.Last() : null;
+        if (wasteTop != null)
+        {
+            foreach (var f in Foundations)
+            {
+                if (CanMoveCard(wasteTop, f))
+                {
+                    ActiveHint = new HintMove(wasteTop, Waste.Id, f.Id, $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} to Foundation.");
+                    return;
+                }
+            }
+        }
+
+        // 2. Tableau top → foundation
+        foreach (var src in Tableaus)
+        {
+            if (src.Cards.Count == 0) continue;
+            var card = src.Cards.Last();
+            foreach (var f in Foundations)
+            {
+                if (CanMoveCard(card, f))
+                {
+                    ActiveHint = new HintMove(card, src.Id, f.Id, $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} to Foundation.");
+                    return;
+                }
+            }
+        }
+
+        // 3. Waste top → tableau
+        if (wasteTop != null)
+        {
+            foreach (var t in Tableaus)
+            {
+                if (CanMoveCard(wasteTop, t))
+                {
+                    ActiveHint = new HintMove(wasteTop, Waste.Id, t.Id, $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} from waste.");
+                    return;
+                }
+            }
+        }
+
+        // 4. Tableau sequence → tableau (prefer moves that uncover face-down cards)
+        foreach (var src in Tableaus.OrderByDescending(t => t.Cards.Count(c => !c.IsFaceUp)))
+        {
+            if (src.Cards.Count == 0) continue;
+            int firstFaceUp = src.Cards.FindIndex(c => c.IsFaceUp);
+            if (firstFaceUp < 0) continue;
+            var seq = src.Cards.GetRange(firstFaceUp, src.Cards.Count - firstFaceUp);
+            foreach (var tgt in Tableaus)
+            {
+                if (tgt.Id == src.Id) continue;
+                if (tgt.Cards.Count == 0 && firstFaceUp == 0) continue; // don't suggest king-to-empty if no face-downs to uncover
+                if (CanMoveCard(seq[0], tgt))
+                {
+                    ActiveHint = new HintMove(seq[0], src.Id, tgt.Id, $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence.");
+                    return;
+                }
+            }
+        }
+
+        // 5. Suggest drawing from stock
+        if (Stock.Cards.Count > 0)
+        {
+            ActiveHint = new HintMove(new Card("deal", CardSuit.Spades, 1, false), Stock.Id, "", "Draw from stock.");
+            return;
+        }
+
+        ActiveHint = new HintMove(new Card("no_move", CardSuit.Spades, 1, true), "", "", "No moves available.");
+    }
+
+    private static string RankStr(int rank) => rank switch { 1 => "A", 11 => "J", 12 => "Q", 13 => "K", _ => rank.ToString() };
+    private static string SuitStr(CardSuit suit) => suit switch
+    {
+        CardSuit.Spades => "♠", CardSuit.Hearts => "♥",
+        CardSuit.Diamonds => "♦", CardSuit.Clubs => "♣", _ => ""
+    };
 
     public bool CanUndo => _undoStack.Count > 0;
 

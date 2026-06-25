@@ -88,12 +88,19 @@ public partial class BeecellView : CardGameView
             ApplyFeltColor(vm.Options);
             BindPiles(vm);
         }
+        VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
     }
 
     private void BeecellView_Unloaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is BeecellViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
+        VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
+    }
+
+    private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is BeecellViewModel vm) vm.InitializeGame();
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -105,6 +112,12 @@ public partial class BeecellView : CardGameView
             if (e.PropertyName == nameof(BeecellViewModel.State))
             {
                 if (vm.State.HasWon) TriggerVictoryCascade();
+                else
+                {
+                    _winTriggered = false;
+                    VictoryOverlay.StopAnimation();
+                    VictoryOverlay.IsVisible = false;
+                }
             }
             else if (e.PropertyName == "FreeCells")
             {
@@ -157,8 +170,17 @@ public partial class BeecellView : CardGameView
             {
                 NoMovesBanner.IsVisible = vm.HasNoMoves;
             }
+            else if (e.PropertyName == nameof(BeecellViewModel.ActiveHint))
+            {
+                ApplyHint(vm.ActiveHint, AllPileViews());
+            }
         });
     }
+
+    private IEnumerable<PileView> AllPileViews() =>
+        new PileView[] { FreeCell0, FreeCell1, FreeCell2, FreeCell3,
+            Foundation0, Foundation1, Foundation2, Foundation3,
+            Tableau0, Tableau1, Tableau2, Tableau3, Tableau4, Tableau5, Tableau6, Tableau7 };
 
     private void BindPiles(BeecellViewModel vm)
     {
@@ -196,7 +218,10 @@ public partial class BeecellView : CardGameView
         if (_winTriggered) return;
         _winTriggered = true;
         VictoryOverlay.IsVisible = true;
-        VictoryOverlay.StartAnimation();
+        if (DataContext is BeecellViewModel vm)
+            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.TimeDisplay);
+        else
+            VictoryOverlay.StartAnimation();
         SoundService.PlayVictory();
     }
 

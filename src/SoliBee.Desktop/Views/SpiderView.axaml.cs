@@ -73,12 +73,19 @@ public partial class SpiderView : CardGameView
             BindPiles(vm);
             UpdateStockDisplay(vm);
         }
+        VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
     }
 
     private void SpiderView_Unloaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is SpiderViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
+        VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
+    }
+
+    private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is SpiderViewModel vm) vm.InitializeGame();
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -90,6 +97,12 @@ public partial class SpiderView : CardGameView
             if (e.PropertyName == nameof(SpiderViewModel.State))
             {
                 if (vm.State.HasWon) TriggerVictoryCascade();
+                else
+                {
+                    _winTriggered = false;
+                    VictoryOverlay.StopAnimation();
+                    VictoryOverlay.IsVisible = false;
+                }
             }
             else if (e.PropertyName == "Tableaus")
             {
@@ -125,6 +138,10 @@ public partial class SpiderView : CardGameView
             {
                 NoMovesBanner.IsVisible = vm.HasNoMoves;
             }
+            else if (e.PropertyName == nameof(SpiderViewModel.ActiveHint))
+            {
+                ApplyHint(vm.ActiveHint, AllPileViews());
+            }
             else if (e.PropertyName == nameof(SpiderViewModel.Options))
             {
                 ApplyFeltColor(vm.Options);
@@ -149,6 +166,12 @@ public partial class SpiderView : CardGameView
             }
         });
     }
+
+    private IEnumerable<PileView> AllPileViews() =>
+        new PileView[] { Tableau0, Tableau1, Tableau2, Tableau3, Tableau4,
+            Tableau5, Tableau6, Tableau7, Tableau8, Tableau9,
+            Foundation0, Foundation1, Foundation2, Foundation3,
+            Foundation4, Foundation5, Foundation6, Foundation7 };
 
     private void BindPiles(SpiderViewModel vm)
     {
@@ -219,7 +242,10 @@ public partial class SpiderView : CardGameView
         if (_winTriggered) return;
         _winTriggered = true;
         VictoryOverlay.IsVisible = true;
-        VictoryOverlay.StartAnimation();
+        if (DataContext is SpiderViewModel vm)
+            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.TimeDisplay);
+        else
+            VictoryOverlay.StartAnimation();
         SoundService.PlayVictory();
     }
 
