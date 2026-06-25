@@ -10,6 +10,7 @@ using SoliBee.Core.Services;
 namespace SoliBee.Core.ViewModels;
 
 public record OptionsChangedMessage(GameOptions Options);
+public record FaceCardArtChangedMessage();
 
 public record HintMove(Card Card, string SourcePileId, string TargetPileId, string Description);
 
@@ -28,6 +29,9 @@ public partial class BeecellViewModel : ObservableObject
     private bool _isAutocompletable;
 
     [ObservableProperty]
+    private bool _hasNoMoves;
+
+    [ObservableProperty]
     private HintMove? _activeHint;
 
     public List<Pile> FreeCells { get; } = new();
@@ -39,6 +43,7 @@ public partial class BeecellViewModel : ObservableObject
     private System.Threading.Timer? _gameTimer;
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
+    public string ScoreDisplay => State.Score.ToString();
     public bool CanUndo => _undoStack.Count > 0;
 
     private string ModeKey => $"{(Options.IsVegasScoring ? "vegas" : "standard")}_{Options.BeecellDeckCount}deck";
@@ -122,6 +127,7 @@ public partial class BeecellViewModel : ObservableObject
 
         _initialSnapshot = CaptureSnapshot();
         IsAutocompletable = false;
+        HasNoMoves = false;
         ActiveHint = null;
 
         _gameTimer = new System.Threading.Timer(_ =>
@@ -149,6 +155,7 @@ public partial class BeecellViewModel : ObservableObject
         State.IsTimerActive = false;
         State.HasWon = false;
         IsAutocompletable = false;
+        HasNoMoves = false;
         ActiveHint = null;
 
         _gameTimer = new System.Threading.Timer(_ =>
@@ -236,6 +243,7 @@ public partial class BeecellViewModel : ObservableObject
         State.MovesCount++;
         CheckVictory();
         CheckAutocomplete();
+        CheckDeadlock();
         ActiveHint = null;
 
         OnPropertyChanged(nameof(FreeCells));
@@ -265,6 +273,7 @@ public partial class BeecellViewModel : ObservableObject
             if (target == PileType.Foundation) State.Score += 10 * cardCount;
             else if (source == PileType.Foundation) State.Score = Math.Max(0, State.Score - 15 * cardCount);
         }
+        OnPropertyChanged(nameof(ScoreDisplay));
     }
 
     // MARK: - Victory
@@ -333,6 +342,53 @@ public partial class BeecellViewModel : ObservableObject
             }
             if (!moved) break;
         }
+    }
+
+    // MARK: - Dead-end detection
+
+    private void CheckDeadlock()
+    {
+        if (State.HasWon) return;
+        HasNoMoves = !HasAnyLegalMoves();
+    }
+
+    private bool HasAnyLegalMoves()
+    {
+        // Free cell → foundation or tableau
+        foreach (var cell in FreeCells)
+        {
+            if (cell.Cards.Count == 0) continue;
+            var single = new List<Card> { cell.Cards.Last() };
+            foreach (var f in Foundations) if (CanMoveCards(single, f)) return true;
+            foreach (var t in Tableaus) if (CanMoveCards(single, t)) return true;
+        }
+        // Tableau top → foundation
+        foreach (var tab in Tableaus)
+        {
+            if (tab.Cards.Count == 0) continue;
+            var single = new List<Card> { tab.Cards.Last() };
+            foreach (var f in Foundations) if (CanMoveCards(single, f)) return true;
+        }
+        // Tableau sequence → other tableau
+        foreach (var src in Tableaus)
+        {
+            if (src.Cards.Count == 0) continue;
+            var seq = GetMovableSequence(src);
+            foreach (var tgt in Tableaus)
+            {
+                if (tgt.Id == src.Id) continue;
+                if (tgt.Cards.Count == 0 && seq.Count == src.Cards.Count) continue;
+                if (CanMoveCards(seq, tgt)) return true;
+            }
+        }
+        // Tableau top → free cell
+        foreach (var src in Tableaus)
+        {
+            if (src.Cards.Count == 0) continue;
+            var single = new List<Card> { src.Cards.Last() };
+            foreach (var cell in FreeCells) if (CanMoveCards(single, cell)) return true;
+        }
+        return false;
     }
 
     // MARK: - Hint
@@ -442,6 +498,7 @@ public partial class BeecellViewModel : ObservableObject
         if (_undoStack.Count == 0) return;
         RestoreSnapshot(_undoStack.Pop());
         ActiveHint = null;
+        HasNoMoves = false;
         CheckAutocomplete();
         OnPropertyChanged(nameof(FreeCells));
         OnPropertyChanged(nameof(Foundations));

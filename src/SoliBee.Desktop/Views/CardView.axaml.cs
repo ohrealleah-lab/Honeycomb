@@ -1,15 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
+using SkiaSharp;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
+using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.ViewModels;
 using SoliBee.Desktop.Services;
 
@@ -25,6 +30,80 @@ public partial class CardView : UserControl
 
     private static readonly Dictionary<string, Bitmap> _bitmapCache = new();
     private static readonly Dictionary<string, Bitmap> _customBitmapCache = new();
+    private static readonly Dictionary<string, (Bitmap[] Frames, int[] Durations)> _gifFrameCache = new();
+
+    // Pre-allocated brushes — only ~5 combinations exist, no need to allocate per render
+    // internal so ThemeEditorWindow can mutate .Color for live debug preview
+    internal static readonly SolidColorBrush _brushFaceBackNormal   = new(Colors.White);
+    internal static readonly SolidColorBrush _brushFaceBackFF       = new(Color.Parse("#333333"));
+    internal static readonly SolidColorBrush _brushFaceBorderNormal = new(Color.Parse("#D9000000"));
+    internal static readonly SolidColorBrush _brushFaceBorderFF     = new(Color.Parse("#00000000"));
+    internal static readonly SolidColorBrush _brushFaceBorderFFCard = new(Colors.White);
+    internal static readonly SolidColorBrush _brushTextRed          = new(Color.Parse("#CC1A1A"));
+    internal static readonly SolidColorBrush _brushTextRedFF        = new(Color.Parse("#FF4444"));
+    internal static readonly SolidColorBrush _brushTextBlackNormal  = new(Color.Parse("#1A1A1A"));
+    internal static readonly SolidColorBrush _brushTextBlackFF      = new(Color.Parse("#C0C0C0"));
+    internal static Color _ffShadowColor = Color.Parse("#B3FFD700");
+
+    // 2× render size: card backs render at 120×173, face art at 70×60
+    private const int CardBackCacheW = 240;
+    private const int CardBackCacheH = 346;
+    private const int FaceArtCacheW  = 140;
+    private const int FaceArtCacheH  = 120;
+
+    public static void ApplyThemeColors(SoliBee.Core.Models.GameOptions options)
+    {
+        if (options.ThemeFaceBackNormal  != null) _brushFaceBackNormal.Color  = Color.Parse(options.ThemeFaceBackNormal);
+        if (options.ThemeFaceBackFF       != null) _brushFaceBackFF.Color       = Color.Parse(options.ThemeFaceBackFF);
+        if (options.ThemeFaceBorderNormal != null) _brushFaceBorderNormal.Color = Color.Parse(options.ThemeFaceBorderNormal);
+        if (options.ThemeFaceBorderFF     != null) _brushFaceBorderFF.Color     = Color.Parse(options.ThemeFaceBorderFF);
+        if (options.ThemeFaceBorderFFCard != null) _brushFaceBorderFFCard.Color = Color.Parse(options.ThemeFaceBorderFFCard);
+        if (options.ThemeTextRed          != null) _brushTextRed.Color          = Color.Parse(options.ThemeTextRed);
+        if (options.ThemeTextRedFF        != null) _brushTextRedFF.Color        = Color.Parse(options.ThemeTextRedFF);
+        if (options.ThemeTextBlackNormal  != null) _brushTextBlackNormal.Color  = Color.Parse(options.ThemeTextBlackNormal);
+        if (options.ThemeTextBlackFF      != null) _brushTextBlackFF.Color      = Color.Parse(options.ThemeTextBlackFF);
+    }
+
+    internal static void BroadcastThemeChange() =>
+        WeakReferenceMessenger.Default.Send(new FaceCardArtChangedMessage());
+
+    public static void InvalidateFaceArtCache(string? filePath = null)
+    {
+        if (filePath != null)
+        {
+            if (_customBitmapCache.TryGetValue(filePath, out var bmp))
+            {
+                _customBitmapCache.Remove(filePath);
+                bmp.Dispose();
+            }
+        }
+        else
+        {
+            foreach (var bmp in _customBitmapCache.Values) bmp.Dispose();
+            _customBitmapCache.Clear();
+        }
+    }
+
+    // GIF animation state — shared timer so all animated backs tick together
+    private bool _isAnimated;
+    private bool _isGifListener;
+    private static DispatcherTimer? _sharedGifTimer;
+    private static Bitmap[]? _sharedGifFrames;
+    private static int[] _sharedGifDurations = Array.Empty<int>();
+    private static int _sharedGifFrameIndex;
+    private static readonly List<CardView> _gifListeners = new();
+
+    public bool IsAnimated
+    {
+        get => _isAnimated;
+        set
+        {
+            if (_isAnimated == value) return;
+            _isAnimated = value;
+            if (Card != null && !Card.IsFaceUp)
+                ApplyCardBackTheme();
+        }
+    }
 
     private static Bitmap GetCachedBitmap(string resourcePath)
     {
@@ -36,14 +115,152 @@ public partial class CardView : UserControl
         return bitmap;
     }
 
+    // Card backs (non-GIF) — cached at 2× render resolution
     private static Bitmap GetCachedCustomBitmap(string filePath)
     {
         if (!_customBitmapCache.TryGetValue(filePath, out var bitmap))
         {
-            bitmap = new Bitmap(filePath);
+            bitmap = ScaleToDisplay(filePath, CardBackCacheW, CardBackCacheH);
             _customBitmapCache[filePath] = bitmap;
         }
         return bitmap;
+    }
+
+    // Face card art — cached at 2× render resolution, first-frame for GIFs
+    internal static Bitmap GetCachedFaceArtBitmap(string filePath)
+    {
+        if (_customBitmapCache.TryGetValue(filePath, out var cached)) return cached;
+        var bitmap = LoadAndScaleFaceArt(filePath);
+        _customBitmapCache[filePath] = bitmap;
+        return bitmap;
+    }
+
+    // Handles GIF first-frame extraction + downscale to face-art display size
+    private static Bitmap LoadAndScaleFaceArt(string filePath)
+    {
+        if (filePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                using var codec = SKCodec.Create(filePath);
+                if (codec != null)
+                {
+                    var frameInfo = new SKImageInfo(codec.Info.Width, codec.Info.Height,
+                        SKColorType.Bgra8888, SKAlphaType.Premul);
+                    using var skBmp = new SKBitmap(frameInfo);
+                    codec.GetPixels(frameInfo, skBmp.GetPixels(), new SKCodecOptions(0));
+                    return ScaleToDisplay(skBmp, FaceArtCacheW, FaceArtCacheH);
+                }
+            }
+            catch { }
+            return new Bitmap(filePath);
+        }
+        return ScaleToDisplay(filePath, FaceArtCacheW, FaceArtCacheH);
+    }
+
+    // Downscale a file to maxW×maxH (preserving aspect ratio) with high-quality filtering.
+    // If the image already fits within the target, it is returned at its original size.
+    // Falls back to a plain Bitmap load on any failure.
+    private static Bitmap ScaleToDisplay(string filePath, int maxW, int maxH)
+    {
+        try
+        {
+            using var skBmp = SKBitmap.Decode(filePath);
+            if (skBmp == null) return new Bitmap(filePath);
+            return ScaleToDisplay(skBmp, maxW, maxH);
+        }
+        catch { return new Bitmap(filePath); }
+    }
+
+    private static Bitmap ScaleToDisplay(SKBitmap src, int maxW, int maxH)
+    {
+        float scaleX = (float)maxW / src.Width;
+        float scaleY = (float)maxH / src.Height;
+        float scale  = Math.Min(scaleX, scaleY);
+
+        SKBitmap work;
+        if (scale < 1.0f)
+        {
+            int w = Math.Max(1, (int)(src.Width  * scale));
+            int h = Math.Max(1, (int)(src.Height * scale));
+            work = src.Resize(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul),
+                              SKFilterQuality.High);
+        }
+        else
+        {
+            work = src.Copy(SKColorType.Bgra8888);
+        }
+
+        try
+        {
+            var wb = new WriteableBitmap(
+                new PixelSize(work.Width, work.Height),
+                new Vector(96, 96),
+                PixelFormat.Bgra8888, AlphaFormat.Premul);
+            using (var fb = wb.Lock())
+                Marshal.Copy(work.Bytes, 0, fb.Address, work.ByteCount);
+            return wb;
+        }
+        finally { work.Dispose(); }
+    }
+
+    // ── Background preloaders ─────────────────────────────────────────────────
+
+    // Warm the face-art cache for every stored art entry.
+    // Already-cached paths are skipped. Safe to call repeatedly.
+    public static void PreloadFaceArt()
+    {
+        foreach (var art in FaceCardArtService.GetAllArts())
+        {
+            var path = FaceCardArtService.GetFullPath(art);
+            if (_customBitmapCache.ContainsKey(path) || !File.Exists(path)) continue;
+
+            var capturedPath = path;
+            Task.Run(() =>
+            {
+                try
+                {
+                    var bmp = LoadAndScaleFaceArt(capturedPath);
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (!_customBitmapCache.ContainsKey(capturedPath))
+                            _customBitmapCache[capturedPath] = bmp;
+                    });
+                }
+                catch { }
+            });
+        }
+    }
+
+    // Warm the card-back cache for every non-GIF custom back in options.
+    public static void PreloadCardBacks(GameOptions options)
+    {
+        var backDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SoliBee", "CardBacks");
+
+        foreach (var cb in options.CustomCardBacks)
+        {
+            if (cb.FileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var path = Path.Combine(backDir, cb.FileName);
+            if (_customBitmapCache.ContainsKey(path) || !File.Exists(path)) continue;
+
+            var capturedPath = path;
+            Task.Run(() =>
+            {
+                try
+                {
+                    var bmp = ScaleToDisplay(capturedPath, CardBackCacheW, CardBackCacheH);
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (!_customBitmapCache.ContainsKey(capturedPath))
+                            _customBitmapCache[capturedPath] = bmp;
+                    });
+                }
+                catch { }
+            });
+        }
     }
 
     public static readonly StyledProperty<Card?> CardProperty =
@@ -64,6 +281,7 @@ public partial class CardView : UserControl
     {
         InitializeComponent();
         this.Loaded += (s, e) => UpdateCardFace();
+        this.Unloaded += (s, e) => StopGifAnimation();
     }
 
     private void OnCardChanged(AvaloniaPropertyChangedEventArgs e)
@@ -80,6 +298,15 @@ public partial class CardView : UserControl
             CardFace.IsVisible = true;
             CardBack.IsVisible = false;
 
+            bool ffMode = SettingsService.LoadOptions().IsFinalFantasyMode;
+            // Card face background and border adapt to FF mode
+            CardFace.Background       = ffMode ? _brushFaceBackFF       : _brushFaceBackNormal;
+            CardFace.BorderBrush      = ffMode ? _brushFaceBorderFFCard : _brushFaceBorderNormal;
+            CardFace.BorderThickness  = new Avalonia.Thickness(ffMode ? 2.5 : 0.75);
+            CardFace.BoxShadow        = ffMode
+                ? new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = -5, Blur = 6, Spread = 0, Color = _ffShadowColor })
+                : new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = 1.5, Blur = 1.5, Spread = 0, Color = Color.Parse("#26000000") });
+
             // Update rank text (Top-left & Bottom-right)
             string rankStr = Card.Rank switch
             {
@@ -92,11 +319,9 @@ public partial class CardView : UserControl
             RankText.Text = rankStr;
             RankTextBottom.Text = rankStr;
 
-            // Update suit character & color
+            // Suit color: red suits keep crimson; black suits go metallic silver in FF mode
             bool isRed = Card.Suit == CardSuit.Hearts || Card.Suit == CardSuit.Diamonds;
-            var colorHex = isRed ? "#CC1A1A" : "#1A1A1A"; // Deep crimson and dark charcoal black
-            var color = Color.Parse(colorHex);
-            var brush = new SolidColorBrush(color);
+            var brush = isRed ? (ffMode ? _brushTextRedFF : _brushTextRed) : (ffMode ? _brushTextBlackFF : _brushTextBlackNormal);
             RankText.Foreground = brush;
             RankTextBottom.Foreground = brush;
             MiniSuitText.Foreground = brush;
@@ -118,50 +343,119 @@ public partial class CardView : UserControl
             LargeAceText.IsVisible = false;
             FaceCardImage.IsVisible = false;
 
-            if (Card.Rank == 1)
+            // Custom face art takes priority over all other rendering for A/J/Q/K
+            var faceSlot = FaceCardSlotExtensions.SlotFor(Card.Rank, isRed);
+            var customFaceArt = faceSlot.HasValue ? FaceCardArtService.GetEnabledArt(faceSlot.Value) : null;
+
+            if (customFaceArt != null)
             {
-                // Ace
-                LargeAceText.IsVisible = true;
-                LargeAceText.Text = suitChar;
-                LargeAceText.Foreground = brush;
-            }
-            else if (Card.Rank >= 11 && Card.Rank <= 13)
-            {
-                // Face Cards (J, Q, K)
                 FaceCardImage.IsVisible = true;
-                string filename = Card.Rank switch
-                {
-                    11 => isRed ? "red j.png" : "J.png",
-                    12 => isRed ? "red q.png" : "Q.png",
-                    13 => isRed ? "red k.png" : "K.png",
-                    _ => ""
-                };
-                
+                FaceCardImage.Stretch = Avalonia.Media.Stretch.Uniform;
+                FaceCardImage.Width  = 70;
+                FaceCardImage.Height = 60;
+                FaceCardImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+                var tg = new TransformGroup();
+                tg.Children.Add(new ScaleTransform(customFaceArt.Scale, customFaceArt.Scale));
+                tg.Children.Add(new TranslateTransform(customFaceArt.OffsetX, customFaceArt.OffsetY));
+                FaceCardImage.RenderTransform = tg;
+                CenterGrid.ClipToBounds = true;
+
                 try
                 {
-                    string resourceUri = $"avares://SoliBee.Desktop/Assets/{filename}";
-                    FaceCardImage.Source = GetCachedBitmap(resourceUri);
+                    FaceCardImage.Source = GetCachedFaceArtBitmap(FaceCardArtService.GetFullPath(customFaceArt));
                 }
                 catch
                 {
-                    // Fallback to text rank representation
                     FaceCardImage.IsVisible = false;
                     LargeAceText.IsVisible = true;
-                    LargeAceText.Text = rankStr;
+                    LargeAceText.Text = Card.Rank == 1 ? suitChar : rankStr;
                     LargeAceText.Foreground = brush;
                 }
             }
             else
             {
-                // Numbered Cards (2-10)
-                SuitCanvas.IsVisible = true;
-                PopulateSuitCanvas(Card.Rank, suitChar, brush);
+                // Clear any leftover custom transforms
+                FaceCardImage.RenderTransform = null;
+                CenterGrid.ClipToBounds = false;
+
+                if (Card.Rank == 1)
+                {
+                    if (ffMode)
+                    {
+                        FaceCardImage.IsVisible = true;
+                        FaceCardImage.Width  = 22;
+                        FaceCardImage.Height = 35;
+                        try
+                        {
+                            FaceCardImage.Source = GetCachedBitmapTrimmed("avares://SoliBee.Desktop/Assets/chocobo.png");
+                        }
+                        catch
+                        {
+                            FaceCardImage.IsVisible = false;
+                            LargeAceText.IsVisible = true;
+                            LargeAceText.Text = suitChar;
+                            LargeAceText.Foreground = brush;
+                        }
+                    }
+                    else
+                    {
+                        LargeAceText.IsVisible = true;
+                        LargeAceText.Text = suitChar;
+                        LargeAceText.Foreground = brush;
+                    }
+                }
+                else if (Card.Rank >= 11 && Card.Rank <= 13)
+                {
+                    FaceCardImage.IsVisible = true;
+                    FaceCardImage.Width  = ffMode ? 65 : 70;
+                    FaceCardImage.Height = ffMode ? 104 : 60;
+                    string filename = ffMode
+                        ? Card.Rank switch
+                        {
+                            11 => "tonberry.png",
+                            13 => "moogle.png",
+                            _ => isRed ? "red q.png" : "Q.png"
+                        }
+                        : Card.Rank switch
+                        {
+                            11 => isRed ? "red j.png" : "J.png",
+                            12 => isRed ? "red q.png" : "Q.png",
+                            13 => isRed ? "red k.png" : "K.png",
+                            _ => ""
+                        };
+
+                    try
+                    {
+                        string uri = $"avares://SoliBee.Desktop/Assets/{filename}";
+                        FaceCardImage.Source = (ffMode && filename == "moogle.png")
+                            ? GetCachedBitmapNoBackground(uri)
+                            : GetCachedBitmap(uri);
+                    }
+                    catch
+                    {
+                        FaceCardImage.IsVisible = false;
+                        LargeAceText.IsVisible = true;
+                        LargeAceText.Text = rankStr;
+                        LargeAceText.Foreground = brush;
+                    }
+                }
+                else
+                {
+                    // Numbered Cards (2-10)
+                    SuitCanvas.IsVisible = true;
+                    PopulateSuitCanvas(Card.Rank, suitChar, brush);
+                }
             }
         }
         else
         {
             CardFace.IsVisible = false;
             CardBack.IsVisible = true;
+
+            bool ffMode = SettingsService.LoadOptions().IsFinalFantasyMode;
+            CardBack.Background       = ffMode ? _brushFaceBorderFF     : _brushFaceBackNormal;
+            CardBack.BorderBrush      = ffMode ? _brushFaceBorderFF     : _brushFaceBorderNormal;
+            CardBack.BorderThickness  = new Avalonia.Thickness(ffMode ? 4 : 0.75);
 
             ApplyCardBackTheme();
         }
@@ -366,17 +660,34 @@ public partial class CardView : UserControl
         {
             if (isCustom && customPath != null && File.Exists(customPath))
             {
-                CardBackImage.Source = GetCachedCustomBitmap(customPath);
+                if (customPath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+                {
+                    var (frames, durations) = GetCachedGifFrames(customPath);
+                    if (frames.Length > 0)
+                    {
+                        CardBackImage.Source = frames[0];
+                        if (_isAnimated && frames.Length > 1)
+                            StartGifAnimation(frames, durations);
+                        else
+                            StopGifAnimation();
+                    }
+                }
+                else
+                {
+                    StopGifAnimation();
+                    CardBackImage.Source = GetCachedCustomBitmap(customPath);
+                }
             }
             else
             {
+                StopGifAnimation();
                 string resourceUri = $"avares://SoliBee.Desktop/Assets/{filename}";
                 CardBackImage.Source = GetCachedBitmap(resourceUri);
             }
         }
         catch
         {
-            // Fallback
+            StopGifAnimation();
         }
 
         if (isDingwall)
@@ -388,10 +699,11 @@ public partial class CardView : UserControl
         }
         else
         {
-            CardBackImage.Width = 120;
+            bool ffMode = options.IsFinalFantasyMode;
+            CardBackImage.Width  = 120;
             CardBackImage.Height = 173;
             CardBackImage.Stretch = Stretch.Uniform;
-            
+
             if (Math.Abs(scale - 1.0) > 0.01 || Math.Abs(offsetX) > 0.01 || Math.Abs(offsetY) > 0.01)
             {
                 var group = new TransformGroup();
@@ -403,6 +715,235 @@ public partial class CardView : UserControl
             {
                 CardBackImage.RenderTransform = null;
             }
+        }
+    }
+
+    private static Bitmap GetCachedBitmapNoBackground(string resourceUri, int tolerance = 25)
+    {
+        string cacheKey = resourceUri + "__nobg";
+        if (_bitmapCache.TryGetValue(cacheKey, out var cached)) return cached;
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri(resourceUri));
+            using var codec = SKCodec.Create(stream);
+            if (codec == null) return GetCachedBitmap(resourceUri);
+
+            var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Bgra8888, SKAlphaType.Unpremul);
+            using var bmp = new SKBitmap(info);
+            codec.GetPixels(info, bmp.GetPixels());
+
+            int w = bmp.Width, h = bmp.Height;
+            byte[] bytes = bmp.Bytes;
+
+            // Sample background from top-left corner (BGRA order)
+            byte bgB = bytes[0], bgG = bytes[1], bgR = bytes[2];
+
+            // BFS flood fill from all 4 corners to identify background pixels
+            var visited = new bool[w * h];
+            var queue = new Queue<int>();
+
+            bool IsBg(int idx)
+            {
+                int o = idx * 4;
+                return Math.Abs(bytes[o]     - bgB) <= tolerance &&
+                       Math.Abs(bytes[o + 1] - bgG) <= tolerance &&
+                       Math.Abs(bytes[o + 2] - bgR) <= tolerance;
+            }
+
+            void Enqueue(int x, int y)
+            {
+                if (x < 0 || x >= w || y < 0 || y >= h) return;
+                int i = y * w + x;
+                if (!visited[i] && IsBg(i)) { visited[i] = true; queue.Enqueue(i); }
+            }
+
+            Enqueue(0, 0); Enqueue(w - 1, 0); Enqueue(0, h - 1); Enqueue(w - 1, h - 1);
+            while (queue.Count > 0)
+            {
+                int i = queue.Dequeue();
+                int x = i % w, y = i / w;
+                Enqueue(x + 1, y); Enqueue(x - 1, y); Enqueue(x, y + 1); Enqueue(x, y - 1);
+            }
+
+            // Erase background pixels and find tight bounding box of remaining content
+            int minX = w, maxX = 0, minY = h, maxY = 0;
+            for (int i = 0; i < w * h; i++)
+            {
+                if (visited[i])
+                {
+                    int o = i * 4;
+                    bytes[o] = bytes[o+1] = bytes[o+2] = bytes[o+3] = 0;
+                }
+                else
+                {
+                    int x = i % w, y = i / w;
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+
+            // Crop to the tight bounding box so the character fills the image slot
+            if (minX > maxX || minY > maxY) return GetCachedBitmap(resourceUri);
+            int cropW = maxX - minX + 1, cropH = maxY - minY + 1;
+            var cropped = new byte[cropW * cropH * 4];
+            for (int row = 0; row < cropH; row++)
+                Array.Copy(bytes, ((minY + row) * w + minX) * 4, cropped, row * cropW * 4, cropW * 4);
+
+            var wb = new WriteableBitmap(
+                new PixelSize(cropW, cropH), new Vector(96, 96),
+                PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+            using (var fb = wb.Lock())
+                Marshal.Copy(cropped, 0, fb.Address, cropped.Length);
+
+            _bitmapCache[cacheKey] = wb;
+            return wb;
+        }
+        catch { return GetCachedBitmap(resourceUri); }
+    }
+
+    // Removes near-transparent noise pixels and auto-crops to the tight content bounding box.
+    // Use for images that already have transparency but have anti-aliasing/noise at the edges.
+    private static Bitmap GetCachedBitmapTrimmed(string resourceUri, byte alphaThreshold = 40)
+    {
+        string cacheKey = resourceUri + "__trimmed";
+        if (_bitmapCache.TryGetValue(cacheKey, out var cached)) return cached;
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri(resourceUri));
+            using var codec = SKCodec.Create(stream);
+            if (codec == null) return GetCachedBitmap(resourceUri);
+
+            var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Bgra8888, SKAlphaType.Unpremul);
+            using var bmp = new SKBitmap(info);
+            codec.GetPixels(info, bmp.GetPixels());
+
+            int w = bmp.Width, h = bmp.Height;
+            byte[] bytes = bmp.Bytes;
+
+            // Zero noise pixels (alpha below threshold) and track content bounding box
+            int minX = w, maxX = 0, minY = h, maxY = 0;
+            for (int i = 0; i < w * h; i++)
+            {
+                int o = i * 4;
+                if (bytes[o + 3] <= alphaThreshold)
+                {
+                    bytes[o] = bytes[o+1] = bytes[o+2] = bytes[o+3] = 0;
+                }
+                else
+                {
+                    int x = i % w, y = i / w;
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+
+            if (minX > maxX || minY > maxY) return GetCachedBitmap(resourceUri);
+            int cropW = maxX - minX + 1, cropH = maxY - minY + 1;
+            var cropped = new byte[cropW * cropH * 4];
+            for (int row = 0; row < cropH; row++)
+                Array.Copy(bytes, ((minY + row) * w + minX) * 4, cropped, row * cropW * 4, cropW * 4);
+
+            var wb = new WriteableBitmap(
+                new PixelSize(cropW, cropH), new Vector(96, 96),
+                PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+            using (var fb = wb.Lock())
+                Marshal.Copy(cropped, 0, fb.Address, cropped.Length);
+
+            _bitmapCache[cacheKey] = wb;
+            return wb;
+        }
+        catch { return GetCachedBitmap(resourceUri); }
+    }
+
+    private static (Bitmap[] Frames, int[] Durations) GetCachedGifFrames(string filePath)
+    {
+        if (_gifFrameCache.TryGetValue(filePath, out var cached)) return cached;
+
+        try
+        {
+            using var codec = SKCodec.Create(filePath);
+            if (codec == null) return (Array.Empty<Bitmap>(), Array.Empty<int>());
+
+            var frameInfos = codec.FrameInfo;
+            int frameCount = frameInfos.Length > 0 ? frameInfos.Length : 1;
+            var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+
+            var frames = new List<Bitmap>(frameCount);
+            var durations = new List<int>(frameCount);
+
+            for (int i = 0; i < frameCount; i++)
+            {
+                durations.Add(frameInfos.Length > i ? Math.Max(50, frameInfos[i].Duration) : 100);
+
+                using var skBitmap = new SKBitmap(info);
+                var opts = new SKCodecOptions(i);
+                var result = codec.GetPixels(info, skBitmap.GetPixels(), opts);
+                if (result != SKCodecResult.Success && result != SKCodecResult.IncompleteInput) continue;
+
+                var wb = new WriteableBitmap(
+                    new PixelSize(info.Width, info.Height),
+                    new Vector(96, 96),
+                    PixelFormat.Bgra8888,
+                    AlphaFormat.Premul);
+                using (var fb = wb.Lock())
+                    Marshal.Copy(skBitmap.Bytes, 0, fb.Address, skBitmap.ByteCount);
+                frames.Add(wb);
+            }
+
+            var result2 = (frames.ToArray(), durations.ToArray());
+            _gifFrameCache[filePath] = result2;
+            return result2;
+        }
+        catch
+        {
+            return (Array.Empty<Bitmap>(), Array.Empty<int>());
+        }
+    }
+
+    private void StartGifAnimation(Bitmap[] frames, int[] durations)
+    {
+        StopGifAnimation();
+        _sharedGifFrames = frames;
+        _sharedGifDurations = durations;
+        _sharedGifFrameIndex = 0;
+
+        _gifListeners.Add(this);
+        _isGifListener = true;
+
+        if (_sharedGifTimer == null)
+        {
+            _sharedGifTimer = new DispatcherTimer(DispatcherPriority.Render);
+            _sharedGifTimer.Tick += SharedGifTick;
+        }
+        _sharedGifTimer.Interval = TimeSpan.FromMilliseconds(durations.Length > 0 ? durations[0] : 100);
+        _sharedGifTimer.Start();
+    }
+
+    private static void SharedGifTick(object? sender, EventArgs e)
+    {
+        if (_sharedGifFrames == null || _sharedGifFrames.Length == 0) return;
+        _sharedGifFrameIndex = (_sharedGifFrameIndex + 1) % _sharedGifFrames.Length;
+        if (_sharedGifTimer != null && _sharedGifDurations.Length > _sharedGifFrameIndex)
+            _sharedGifTimer.Interval = TimeSpan.FromMilliseconds(_sharedGifDurations[_sharedGifFrameIndex]);
+        var frame = _sharedGifFrames[_sharedGifFrameIndex];
+        for (int i = 0; i < _gifListeners.Count; i++)
+            _gifListeners[i].CardBackImage.Source = frame;
+    }
+
+    private void StopGifAnimation()
+    {
+        if (!_isGifListener) return;
+        _gifListeners.Remove(this);
+        _isGifListener = false;
+        if (_gifListeners.Count == 0)
+        {
+            _sharedGifTimer?.Stop();
+            _sharedGifFrames = null;
+            _sharedGifFrameIndex = 0;
         }
     }
 
@@ -420,53 +961,47 @@ public partial class CardView : UserControl
         }
     }
 
-    public void Highlight()
-    {
-        if (CardFace != null)
-        {
-            CardFace.BorderBrush = new SolidColorBrush(Colors.Gold);
-            CardFace.BorderThickness = new Thickness(3);
-        }
-    }
+    public void Highlight() { }
 
     public void ClearSelection()
     {
         if (CardFace != null)
         {
-            CardFace.BorderBrush = new SolidColorBrush(Color.Parse("#D9000000"));
-            CardFace.BorderThickness = new Thickness(0.75);
+            bool ffMode = SettingsService.LoadOptions().IsFinalFantasyMode;
+            CardFace.BorderBrush     = ffMode ? _brushFaceBorderFF    : _brushFaceBorderNormal;
+            CardFace.BorderThickness = new Thickness(ffMode ? 2.0 : 0.75);
         }
+    }
+
+    private static List<Card> GetCardsFromCard(Card fromCard, Pile pile)
+    {
+        int idx = pile.Cards.IndexOf(fromCard);
+        return idx < 0 ? new List<Card> { fromCard } : pile.Cards.GetRange(idx, pile.Cards.Count - idx);
+    }
+
+    private CardGameView? FindParentGameView()
+    {
+        Avalonia.StyledElement? parent = this.Parent;
+        while (parent != null)
+        {
+            if (parent is CardGameView cgv) return cgv;
+            parent = parent.Parent;
+        }
+        return null;
     }
 
     private void CardView_PointerPressed(object sender, PointerPressedEventArgs e)
     {
         if (Card == null || !Card.IsFaceUp) return;
 
-        // Find parent GameView
-        GameView? gameView = null;
-        var parent = this.Parent;
-        while (parent != null)
-        {
-            if (parent is GameView gv)
-            {
-                gameView = gv;
-                break;
-            }
-            parent = parent.Parent;
-        }
+        var gameView = FindParentGameView();
+        if (gameView == null) return;
 
-        if (gameView == null || gameView.DataContext is not GameViewModel vm) return;
-
-        // Find parent PileView
         PileView? pileView = null;
-        parent = this.Parent;
+        Avalonia.StyledElement? parent = this.Parent;
         while (parent != null)
         {
-            if (parent is PileView pv)
-            {
-                pileView = pv;
-                break;
-            }
+            if (parent is PileView pv) { pileView = pv; break; }
             parent = parent.Parent;
         }
         if (pileView == null || pileView.Pile == null) return;
@@ -475,25 +1010,23 @@ public partial class CardView : UserControl
 
         if (clickCount == 2)
         {
-            // Double-click: try to move to foundation
-            foreach (var f in vm.Foundations)
+            var sourcePile = this.ParentPile;
+            if (sourcePile != null && gameView.TryAutoMoveToFoundation(Card, sourcePile))
             {
-                if (vm.CanMoveCard(Card, f))
+                if (gameView.SelectedCardView != null)
                 {
-                    vm.MoveCard(Card, f);
-                    SoundService.PlaySnap();
-                    if (gameView.SelectedCardView != null)
-                    {
-                        gameView.SelectedCardView.ClearSelection();
-                        gameView.SelectedCardView = null;
-                    }
-                    e.Handled = true;
-                    return;
+                    gameView.SelectedCardView.ClearSelection();
+                    gameView.SelectedCardView = null;
                 }
+                e.Handled = true;
+                return;
             }
         }
         else
         {
+            // Capture the source pile NOW, before drag setup detaches this card from its canvas
+            var thisPile = pileView.Pile;
+
             // Single-click / Start Drag
             var dragCanvas = gameView.FindControl<Canvas>("DragCanvas");
             if (dragCanvas != null)
@@ -502,7 +1035,6 @@ public partial class CardView : UserControl
                 _dragStartPoint = e.GetPosition(gameView);
                 _sourcePileView = pileView;
 
-                // Build the dragged stack (this card and any cards on top of it in the same pile)
                 _draggedStack.Clear();
                 _dragStartPositions.Clear();
                 var canvas = pileView.FindControl<Canvas>("CardsCanvas");
@@ -514,87 +1046,76 @@ public partial class CardView : UserControl
                         if (child is CardView cv)
                         {
                             if (cv == this) foundThis = true;
-                            if (foundThis)
-                            {
-                                _draggedStack.Add(cv);
-                            }
+                            if (foundThis) _draggedStack.Add(cv);
                         }
                     }
                 }
 
-                // Record visual positions before detaching from parent canvas
                 foreach (var cv in _draggedStack)
                 {
                     var pos = cv.TranslatePoint(new Point(0, 0), gameView);
                     _dragStartPositions[cv] = pos ?? new Point(0, 0);
                 }
 
-                // Temporarily detach from original pile canvas and attach to DragCanvas
                 foreach (var cv in _draggedStack)
                 {
-                    var originalCanvas = cv.Parent as Canvas;
-                    if (originalCanvas != null)
-                    {
-                        originalCanvas.Children.Remove(cv);
-                    }
+                    (cv.Parent as Canvas)?.Children.Remove(cv);
                     dragCanvas.Children.Add(cv);
-
-                    // Set coordinates directly on the DragCanvas
                     Canvas.SetLeft(cv, _dragStartPositions[cv].X);
                     Canvas.SetTop(cv, _dragStartPositions[cv].Y);
                 }
 
-                // Capture pointer on this reparented control
                 e.Pointer.Capture(this);
             }
 
-            // Click handling selection
+            // Click-to-select / click-to-move
             if (gameView.SelectedCardView == null)
             {
-                // Select this card
                 gameView.SelectedCardView = this;
+                gameView.SelectedSourcePile = thisPile;
                 this.Highlight();
             }
             else
             {
-                // Try to move previously selected card to this card's pile
                 var selectedCard = gameView.SelectedCardView.Card;
-                if (selectedCard != null && pileView.Pile != gameView.SelectedCardView.ParentPile)
+                // Use SelectedSourcePile (captured at selection time) not ParentPile,
+                // because after PointerReleased the old CardView is orphaned.
+                var sourcePile = gameView.SelectedSourcePile;
+                if (selectedCard != null && sourcePile != null && pileView.Pile != sourcePile)
                 {
-                    if (vm.CanMoveCard(selectedCard, pileView.Pile))
+                    var cardsToMove = GetCardsFromCard(selectedCard, sourcePile);
+                    if (gameView.CanMoveCards(cardsToMove, pileView.Pile))
                     {
-                        vm.MoveCard(selectedCard, pileView.Pile);
-                        SoundService.PlaySnap();
+                        gameView.TryMoveCards(cardsToMove, sourcePile, pileView.Pile);
                         gameView.SelectedCardView.ClearSelection();
                         gameView.SelectedCardView = null;
-                        
-                        // Cancel drag state
+                        gameView.SelectedSourcePile = null;
                         e.Pointer.Capture(null);
                         _isDragging = false;
                         ResetDraggedStack(gameView);
                     }
                     else
                     {
-                        // Select this new card instead
                         gameView.SelectedCardView.ClearSelection();
                         gameView.SelectedCardView = this;
+                        gameView.SelectedSourcePile = thisPile;
                         this.Highlight();
                     }
                 }
                 else
                 {
-                    // Clicked same pile: if it's a different card, select it instead. Otherwise deselect.
                     var previousSelection = gameView.SelectedCardView;
                     previousSelection.ClearSelection();
                     if (previousSelection != this)
                     {
                         gameView.SelectedCardView = this;
+                        gameView.SelectedSourcePile = thisPile;
                         this.Highlight();
                     }
                     else
                     {
                         gameView.SelectedCardView = null;
-                        // Cancel drag state
+                        gameView.SelectedSourcePile = null;
                         e.Pointer.Capture(null);
                         _isDragging = false;
                         ResetDraggedStack(gameView);
@@ -610,24 +1131,13 @@ public partial class CardView : UserControl
     {
         if (!_isDragging || Card == null) return;
 
-        GameView? gameView = null;
-        var parent = this.Parent;
-        while (parent != null)
-        {
-            if (parent is GameView gv)
-            {
-                gameView = gv;
-                break;
-            }
-            parent = parent.Parent;
-        }
+        var gameView = FindParentGameView();
         if (gameView == null) return;
 
         var currentPoint = e.GetPosition(gameView);
         double dx = currentPoint.X - _dragStartPoint.X;
         double dy = currentPoint.Y - _dragStartPoint.Y;
 
-        // Move all cards in the stack directly on the DragCanvas
         foreach (var cv in _draggedStack)
         {
             if (_dragStartPositions.TryGetValue(cv, out var startPos))
@@ -647,41 +1157,28 @@ public partial class CardView : UserControl
         e.Pointer.Capture(null);
         _isDragging = false;
 
-        GameView? gameView = null;
-        var parent = this.Parent;
-        while (parent != null)
+        var gameView = FindParentGameView();
+        if (gameView == null)
         {
-            if (parent is GameView gv)
-            {
-                gameView = gv;
-                break;
-            }
-            parent = parent.Parent;
-        }
-        if (gameView == null || gameView.DataContext is not GameViewModel vm)
-        {
-            ResetDraggedStack(gameView);
+            ResetDraggedStack(null);
             return;
         }
 
         var dropPoint = e.GetPosition(gameView);
-
-        // Detect target pile by finding which pile contains the drop point
-        PileView? targetPileView = FindTargetPileView(gameView, dropPoint);
+        var targetPileView = FindTargetPileView(gameView, dropPoint);
 
         bool moved = false;
-        if (targetPileView != null && targetPileView != _sourcePileView && targetPileView.Pile != null)
+        if (targetPileView != null && targetPileView != _sourcePileView && targetPileView.Pile != null && _sourcePileView?.Pile != null)
         {
-            if (vm.CanMoveCard(Card!, targetPileView.Pile))
+            var cardsToMove = GetCardsFromCard(Card!, _sourcePileView.Pile);
+            if (gameView.TryMoveCards(cardsToMove, _sourcePileView.Pile, targetPileView.Pile))
             {
-                vm.MoveCard(Card!, targetPileView.Pile);
-                SoundService.PlaySnap();
                 moved = true;
-
                 if (gameView.SelectedCardView != null)
                 {
                     gameView.SelectedCardView.ClearSelection();
                     gameView.SelectedCardView = null;
+                    gameView.SelectedSourcePile = null;
                 }
             }
         }
@@ -696,13 +1193,14 @@ public partial class CardView : UserControl
             {
                 gameView.SelectedCardView.ClearSelection();
                 gameView.SelectedCardView = null;
+                gameView.SelectedSourcePile = null;
             }
         }
 
         e.Handled = true;
     }
 
-    private void ResetDraggedStack(GameView? gameView)
+    private void ResetDraggedStack(CardGameView? gameView)
     {
         if (gameView != null)
         {
@@ -710,23 +1208,17 @@ public partial class CardView : UserControl
             if (dragCanvas != null)
             {
                 foreach (var cv in _draggedStack)
-                {
                     dragCanvas.Children.Remove(cv);
-                }
             }
         }
 
-        if (_sourcePileView != null)
-        {
-            _sourcePileView.UpdateCardsLayout();
-        }
-
+        _sourcePileView?.UpdateCardsLayout();
         _draggedStack.Clear();
         _dragStartPositions.Clear();
         _sourcePileView = null;
     }
 
-    private PileView? FindTargetPileView(GameView gameView, Point dropPoint)
+    private PileView? FindTargetPileView(CardGameView gameView, Point dropPoint)
     {
         var piles = new List<PileView>();
         FindPileViewsRecursive(gameView, piles);

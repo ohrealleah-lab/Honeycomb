@@ -4,14 +4,33 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <BuiltInStylesVersion>11.0.10</BuiltInStylesVersion>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>SoliBee Solitaire Suite</Product>
+    <Company>Leahbee</Company>
+    <Copyright>© 2026 Leahbee. All rights reserved.</Copyright>
+    <Description>A solitaire suite featuring Klondike, Beecell, and Spider Solitaire.</Description>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <!-- Define WINDOWS symbol when building on Windows so SoundService P/Invoke compiles in -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets/**" />
+    <!-- Embed all assets except WAV files (those must live on disk for winmm.dll playback) -->
+    <AvaloniaResource Include="Assets/**" Exclude="Assets/*.wav" />
+    <!-- WAV files copied alongside the executable at runtime -->
+    <Content Include="Assets/shuffle.wav" CopyToOutputDirectory="Always" />
+    <Content Include="Assets/snap.wav" CopyToOutputDirectory="Always" />
+    <Content Include="Assets/victory.wav" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.0.10" />
+    <PackageReference Include="SkiaSharp" Version="2.88.7" />
     <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.0.10" />
     <PackageReference Include="Avalonia.Desktop" Version="11.0.10" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.10" />

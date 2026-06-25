@@ -1,11 +1,15 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
@@ -17,6 +21,13 @@ namespace SoliBee.Desktop.Views;
 public partial class PreferencesView : UserControl
 {
     private bool _initializing = true;
+    private Bitmap? _cardBackPreviewBitmap;
+
+    public bool ShowVegasOption
+    {
+        get => VegasCheckBox.IsVisible;
+        set => VegasCheckBox.IsVisible = value;
+    }
 
     public PreferencesView()
     {
@@ -43,7 +54,7 @@ public partial class PreferencesView : UserControl
         if (DataContext is GameOptions options)
         {
             // Select FeltColor in ComboBox
-            foreach (ComboBoxItem item in FeltColorComboBox.Items)
+            foreach (var item in FeltColorComboBox.Items.OfType<ComboBoxItem>())
             {
                 if (item.Tag?.ToString() == options.FeltColor.ToString())
                 {
@@ -56,7 +67,7 @@ public partial class PreferencesView : UserControl
             PopulateCardBacks(options);
 
             // Select CardBackTheme
-            foreach (ComboBoxItem item in CardBackComboBox.Items)
+            foreach (var item in CardBackComboBox.Items.OfType<ComboBoxItem>())
             {
                 if (item.Tag?.ToString() == options.CardBackTheme)
                 {
@@ -70,10 +81,9 @@ public partial class PreferencesView : UserControl
             TimedCheckBox.IsChecked = options.IsTimed;
             SoundCheckBox.IsChecked = options.IsSoundEnabled;
             VegasCheckBox.IsChecked = options.IsVegasScoring;
+            FinalFantasyCheckBox.IsChecked = options.IsFinalFantasyMode;
 
-            OffsetXSlider.Value = options.CardBackOffsetX;
-            OffsetYSlider.Value = options.CardBackOffsetY;
-            ScaleSlider.Value = options.CardBackScale;
+            UpdateCardBackPreview(options);
 
             if (options.FeltColor == FeltColorTheme.Custom)
             {
@@ -138,7 +148,7 @@ public partial class PreferencesView : UserControl
 
         if (DataContext is GameOptions options && CardBackComboBox.SelectedItem is ComboBoxItem item && item.Tag != null)
         {
-            var selectedTag = item.Tag.ToString();
+            var selectedTag = item.Tag.ToString()!;
             options.CardBackTheme = selectedTag;
 
             bool isCustom = selectedTag != "Vulpera" && selectedTag != "Dingwall" && selectedTag != "Moogle";
@@ -147,42 +157,24 @@ public partial class PreferencesView : UserControl
             var customBack = options.CustomCardBacks.Find(c => c.Name == selectedTag);
             if (customBack != null)
             {
-                _initializing = true;
                 options.CardBackScale = customBack.Scale;
                 options.CardBackOffsetX = customBack.OffsetX;
                 options.CardBackOffsetY = customBack.OffsetY;
-
-                ScaleSlider.Value = customBack.Scale;
-                OffsetXSlider.Value = customBack.OffsetX;
-                OffsetYSlider.Value = customBack.OffsetY;
-                _initializing = false;
+            }
+            else if (selectedTag == "Moogle")
+            {
+                options.CardBackScale = 1.25;
+                options.CardBackOffsetX = 0;
+                options.CardBackOffsetY = 0;
             }
             else
             {
-                if (selectedTag == "Moogle")
-                {
-                    _initializing = true;
-                    options.CardBackScale = 1.25;
-                    options.CardBackOffsetX = 0;
-                    options.CardBackOffsetY = 0;
-                    ScaleSlider.Value = 1.25;
-                    OffsetXSlider.Value = 0;
-                    OffsetYSlider.Value = 0;
-                    _initializing = false;
-                }
-                else
-                {
-                    _initializing = true;
-                    options.CardBackScale = 1.0;
-                    options.CardBackOffsetX = 0;
-                    options.CardBackOffsetY = 0;
-                    ScaleSlider.Value = 1.0;
-                    OffsetXSlider.Value = 0;
-                    OffsetYSlider.Value = 0;
-                    _initializing = false;
-                }
+                options.CardBackScale = 1.0;
+                options.CardBackOffsetX = 0;
+                options.CardBackOffsetY = 0;
             }
 
+            UpdateCardBackPreview(options);
             NotifySettingsChanged(options);
         }
     }
@@ -196,31 +188,130 @@ public partial class PreferencesView : UserControl
             options.IsTimed = TimedCheckBox.IsChecked ?? false;
             options.IsSoundEnabled = SoundCheckBox.IsChecked ?? false;
             options.IsVegasScoring = VegasCheckBox.IsChecked ?? false;
+            options.IsFinalFantasyMode = FinalFantasyCheckBox.IsChecked ?? false;
             NotifySettingsChanged(options);
         }
     }
 
-    private void Slider_ValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
+    private void UpdateCardBackPreview(GameOptions options)
     {
-        if (_initializing) return;
+        bool isDingwall = options.CardBackTheme == "Dingwall";
+        var old = _cardBackPreviewBitmap;
+        _cardBackPreviewBitmap = LoadCardBackBitmapForPreview(options);
+        CardBackPreviewImage.Source = _cardBackPreviewBitmap;
+        old?.Dispose();
 
-        if (DataContext is GameOptions options)
+        if (isDingwall)
         {
-            options.CardBackOffsetX = OffsetXSlider.Value;
-            options.CardBackOffsetY = OffsetYSlider.Value;
-            options.CardBackScale = ScaleSlider.Value;
+            CardBackPreviewImage.Stretch = Stretch.Fill;
+            CardBackPreviewImage.RenderTransform = null;
+        }
+        else
+        {
+            CardBackPreviewImage.Stretch = Stretch.Uniform;
+            double scale = options.CardBackScale;
+            double tileRatio = 80.0 / 128.0;
+            double offsetX = options.CardBackOffsetX * tileRatio;
+            double offsetY = options.CardBackOffsetY * tileRatio;
 
-            var customBack = options.CustomCardBacks.Find(c => c.Name == options.CardBackTheme);
+            if (Math.Abs(scale - 1.0) > 0.01 || Math.Abs(offsetX) > 0.01 || Math.Abs(offsetY) > 0.01)
+            {
+                CardBackPreviewImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+                var tg = new TransformGroup();
+                tg.Children.Add(new ScaleTransform(scale, scale));
+                tg.Children.Add(new TranslateTransform(offsetX, offsetY));
+                CardBackPreviewImage.RenderTransform = tg;
+            }
+            else
+            {
+                CardBackPreviewImage.RenderTransform = null;
+            }
+        }
+    }
+
+    private static Bitmap? LoadCardBackBitmapForPreview(GameOptions options)
+    {
+        try
+        {
+            string theme = options.CardBackTheme;
+            if (theme == "Dingwall")
+                return new Bitmap(AssetLoader.Open(new Uri("avares://SoliBee.Desktop/Assets/dingwall.jpg")));
+            if (theme == "Moogle")
+                return new Bitmap(AssetLoader.Open(new Uri("avares://SoliBee.Desktop/Assets/moogle.jpg")));
+            if (theme == "Vulpera")
+                return new Bitmap(AssetLoader.Open(new Uri("avares://SoliBee.Desktop/Assets/vulpera.png")));
+
+            var customBack = options.CustomCardBacks.Find(c => c.Name == theme);
             if (customBack != null)
             {
-                customBack.Scale = options.CardBackScale;
-                customBack.OffsetX = options.CardBackOffsetX;
-                customBack.OffsetY = options.CardBackOffsetY;
+                var path = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SoliBee", "CardBacks", customBack.FileName);
+                if (File.Exists(path))
+                    return new Bitmap(path);
             }
+            return new Bitmap(AssetLoader.Open(new Uri("avares://SoliBee.Desktop/Assets/vulpera.png")));
+        }
+        catch { return null; }
+    }
 
-            NotifySettingsChanged(options);
+    private bool _isEditorOpen;
+
+    private async void CardBackPreview_Click(object? sender, PointerPressedEventArgs e)
+    {
+        // Release implicit pointer capture immediately so the dialog and parent window
+        // don't have stale capture state after the dialog closes — without this, all
+        // subsequent pointer events are routed back to this border (re-opening the editor).
+        e.Handled = true;
+        e.Pointer.Capture(null);
+
+        if (_isEditorOpen) return;
+        if (DataContext is not GameOptions options) return;
+
+        _isEditorOpen = true;
+        try
+        {
+            bool isDingwall = options.CardBackTheme == "Dingwall";
+            var bmp = _cardBackPreviewBitmap ?? LoadCardBackBitmapForPreview(options);
+            if (bmp == null) return;
+
+            var owner = (Window?)TopLevel.GetTopLevel(this);
+            var editor = new CardBackEditorWindow(bmp, isDingwall,
+                options.CardBackScale, options.CardBackOffsetX, options.CardBackOffsetY);
+
+            if (owner != null)
+                await editor.ShowDialog(owner);
+            else
+                editor.Show();
+
+            if (editor.Saved && !isDingwall)
+            {
+                options.CardBackScale = editor.NewScale;
+                options.CardBackOffsetX = editor.NewOffsetX;
+                options.CardBackOffsetY = editor.NewOffsetY;
+
+                var customBack = options.CustomCardBacks.Find(c => c.Name == options.CardBackTheme);
+                if (customBack != null)
+                {
+                    customBack.Scale = editor.NewScale;
+                    customBack.OffsetX = editor.NewOffsetX;
+                    customBack.OffsetY = editor.NewOffsetY;
+                }
+
+                UpdateCardBackPreview(options);
+                NotifySettingsChanged(options);
+            }
+        }
+        finally
+        {
+            _isEditorOpen = false;
         }
     }
+
+    private void HelpKlondike_Click(object? sender, RoutedEventArgs e) => new HelpWindow("Klondike").Show();
+    private void HelpBeecell_Click(object? sender, RoutedEventArgs e)  => new HelpWindow("Beecell").Show();
+    private void HelpSpider_Click(object? sender, RoutedEventArgs e)   => new HelpWindow("Spider").Show();
+    private void About_Click(object? sender, RoutedEventArgs e)        => new AboutWindow().Show();
 
     private void NotifySettingsChanged(GameOptions options)
     {
@@ -235,11 +326,12 @@ public partial class PreferencesView : UserControl
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel == null) return;
 
+        var gifType = new FilePickerFileType("Animated GIF") { Patterns = new[] { "*.gif" } };
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Select Card Back Image",
             AllowMultiple = false,
-            FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
+            FileTypeFilter = new[] { FilePickerFileTypes.ImageAll, gifType }
         });
 
         if (files == null || files.Count == 0) return;
@@ -265,14 +357,24 @@ public partial class PreferencesView : UserControl
                 Directory.CreateDirectory(destDir);
             }
 
-            string uniqueFileName = Guid.NewGuid().ToString() + ".png";
+            bool isGif = file.Name.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
+            string uniqueFileName = Guid.NewGuid().ToString() + (isGif ? ".gif" : ".png");
             string destPath = Path.Combine(destDir, uniqueFileName);
 
             using (var sourceStream = await file.OpenReadAsync())
             {
-                using (var bitmap = Bitmap.DecodeToWidth(sourceStream, 512))
+                if (isGif)
                 {
-                    bitmap.Save(destPath);
+                    // Preserve raw GIF bytes so animation frames are not lost
+                    using var destStream = File.Create(destPath);
+                    await sourceStream.CopyToAsync(destStream);
+                }
+                else
+                {
+                    using (var bitmap = Bitmap.DecodeToWidth(sourceStream, 512))
+                    {
+                        bitmap.Save(destPath);
+                    }
                 }
             }
 
@@ -291,7 +393,7 @@ public partial class PreferencesView : UserControl
             
             PopulateCardBacks(options);
             
-            foreach (ComboBoxItem item in CardBackComboBox.Items)
+            foreach (var item in CardBackComboBox.Items.OfType<ComboBoxItem>())
             {
                 if (item.Tag?.ToString() == displayName)
                 {
@@ -303,14 +405,13 @@ public partial class PreferencesView : UserControl
             options.CardBackScale = 1.0;
             options.CardBackOffsetX = 0.0;
             options.CardBackOffsetY = 0.0;
-            ScaleSlider.Value = 1.0;
-            OffsetXSlider.Value = 0.0;
-            OffsetYSlider.Value = 0.0;
             DeleteCustomCardBackButton.IsEnabled = true;
 
             _initializing = false;
 
+            UpdateCardBackPreview(options);
             NotifySettingsChanged(options);
+            CardView.PreloadCardBacks(options);
         }
         catch (Exception ex)
         {
@@ -368,7 +469,7 @@ public partial class PreferencesView : UserControl
         PopulateCardBacks(options);
 
         // Reselect Vulpera
-        foreach (ComboBoxItem item in CardBackComboBox.Items)
+        foreach (var item in CardBackComboBox.Items.OfType<ComboBoxItem>())
         {
             if (item.Tag?.ToString() == "Vulpera")
             {
@@ -380,12 +481,11 @@ public partial class PreferencesView : UserControl
         options.CardBackScale = 1.0;
         options.CardBackOffsetX = 0;
         options.CardBackOffsetY = 0;
-        ScaleSlider.Value = 1.0;
-        OffsetXSlider.Value = 0;
-        OffsetYSlider.Value = 0;
         DeleteCustomCardBackButton.IsEnabled = false;
         _initializing = false;
+        UpdateCardBackPreview(options);
 
         NotifySettingsChanged(options);
+        CardView.PreloadCardBacks(options);
     }
 }

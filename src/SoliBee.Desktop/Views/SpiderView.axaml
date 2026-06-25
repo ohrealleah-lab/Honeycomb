@@ -1,0 +1,89 @@
+<local:CardGameView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.SpiderView"
+             ClipToBounds="False">
+
+    <!-- Outer grid: scroll area + drag canvas overlay -->
+    <Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
+                <!--
+                    Single grid with shared ColumnDefinitions ensures the stock/foundation row
+                    and the tableau row share one layout pass — guarantees pixel-perfect alignment.
+                    ColDefs: 128,12 × 10 = 1388px (10 card cols, 9 gaps)
+                -->
+                <Grid Width="1388" Margin="20,10,20,20"
+                      HorizontalAlignment="Left" VerticalAlignment="Top"
+                      ClipToBounds="False"
+                      ColumnDefinitions="128,12,128,12,128,12,128,12,128,12,128,12,128,12,128,12,128,12,128">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />  <!-- row 0: stock + foundations -->
+                        <RowDefinition Height="18" />    <!-- row 1: gap  -->
+                        <RowDefinition Height="Auto" />  <!-- row 2: tableaus -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Stock deal area (col 0, row 0) -->
+                    <Grid Grid.Column="0" Grid.Row="0"
+                          Width="128" Height="181"
+                          HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <Rectangle x:Name="SpiderStockEmptyOutline"
+                                   Width="128" Height="181"
+                                   Stroke="White" StrokeThickness="1.5"
+                                   RadiusX="10" RadiusY="10"
+                                   Opacity="0.35" Fill="#15FFFFFF"
+                                   IsVisible="False"
+                                   HorizontalAlignment="Left" VerticalAlignment="Top" />
+                        <Canvas x:Name="SpiderStockCanvas"
+                                Width="128" Height="181"
+                                HorizontalAlignment="Left" VerticalAlignment="Top" />
+                        <Border x:Name="SpiderStockOverlay"
+                                Background="#01000000"
+                                Cursor="Hand"
+                                PointerPressed="StockButton_PointerPressed"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                    </Grid>
+
+                    <!-- 8 Foundation slots (cols 2–16, row 0) -->
+                    <local:PileView x:Name="Foundation0" Grid.Column="2"  Grid.Row="0" />
+                    <local:PileView x:Name="Foundation1" Grid.Column="4"  Grid.Row="0" />
+                    <local:PileView x:Name="Foundation2" Grid.Column="6"  Grid.Row="0" />
+                    <local:PileView x:Name="Foundation3" Grid.Column="8"  Grid.Row="0" />
+                    <local:PileView x:Name="Foundation4" Grid.Column="10" Grid.Row="0" />
+                    <local:PileView x:Name="Foundation5" Grid.Column="12" Grid.Row="0" />
+                    <local:PileView x:Name="Foundation6" Grid.Column="14" Grid.Row="0" />
+                    <local:PileView x:Name="Foundation7" Grid.Column="16" Grid.Row="0" />
+
+                    <!-- 10 Tableau columns (cols 0–18, row 2) -->
+                    <local:PileView x:Name="Tableau0"  Grid.Column="0"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau1"  Grid.Column="2"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau2"  Grid.Column="4"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau3"  Grid.Column="6"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau4"  Grid.Column="8"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau5"  Grid.Column="10" Grid.Row="2" />
+                    <local:PileView x:Name="Tableau6"  Grid.Column="12" Grid.Row="2" />
+                    <local:PileView x:Name="Tableau7"  Grid.Column="14" Grid.Row="2" />
+                    <local:PileView x:Name="Tableau8"  Grid.Column="16" Grid.Row="2" />
+                    <local:PileView x:Name="Tableau9"  Grid.Column="18" Grid.Row="2" />
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Drag overlay sits outside the ScrollViewer so it covers the full view -->
+        <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+        <!-- Win animation overlay -->
+        <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
+
+        <!-- No-moves banner -->
+        <Border x:Name="NoMovesBanner" IsVisible="False"
+                Background="#CC000000" CornerRadius="8" Padding="20,12"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock Text="No more moves available." Foreground="White" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="Start a New Game to continue." Foreground="#AAFFFFFF" FontSize="13" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
+    </Grid>
+
+</local:CardGameView>

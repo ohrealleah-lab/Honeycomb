@@ -24,6 +24,9 @@ public partial class SpiderViewModel : ObservableObject
     private bool _isAutocompletable;
 
     [ObservableProperty]
+    private bool _hasNoMoves;
+
+    [ObservableProperty]
     private HintMove? _activeHint;
 
     public List<Pile> StockPiles { get; } = new();
@@ -35,6 +38,7 @@ public partial class SpiderViewModel : ObservableObject
     private System.Threading.Timer? _gameTimer;
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
+    public string ScoreDisplay => State.Score.ToString();
     public bool CanUndo => _undoStack.Count > 0;
 
     private string SuitKey => Options.SpiderSuitCount.ToString();
@@ -114,6 +118,7 @@ public partial class SpiderViewModel : ObservableObject
         Stats = stats;
 
         IsAutocompletable = false;
+        HasNoMoves = false;
         ActiveHint = null;
         _initialSnapshot = CaptureSnapshot();
 
@@ -142,6 +147,7 @@ public partial class SpiderViewModel : ObservableObject
         State.IsTimerActive = false;
         State.HasWon = false;
         IsAutocompletable = false;
+        HasNoMoves = false;
         ActiveHint = null;
 
         _gameTimer = new System.Threading.Timer(_ =>
@@ -250,12 +256,14 @@ public partial class SpiderViewModel : ObservableObject
         TryCompleteRuns();
         CheckVictory();
         CheckAutocomplete();
+        CheckDeadlock();
         ActiveHint = null;
 
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(TimeDisplay));
+        OnPropertyChanged(nameof(ScoreDisplay));
     }
 
     private void FlipTopCard(Pile pile)
@@ -287,12 +295,14 @@ public partial class SpiderViewModel : ObservableObject
         TryCompleteRuns();
         CheckVictory();
         CheckAutocomplete();
+        CheckDeadlock();
         ActiveHint = null;
 
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(StockPiles));
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(ScoreDisplay));
     }
 
     // MARK: - Complete Run Detection
@@ -411,6 +421,30 @@ public partial class SpiderViewModel : ObservableObject
         }
     }
 
+    // MARK: - Dead-end detection
+
+    private void CheckDeadlock()
+    {
+        if (State.HasWon) return;
+        HasNoMoves = !HasAnyLegalMoves();
+    }
+
+    private bool HasAnyLegalMoves()
+    {
+        if (CanDealFromStock) return true;
+        foreach (var src in Tableaus)
+        {
+            var seq = GetMovableSequence(src);
+            if (seq.Count == 0) continue;
+            foreach (var tgt in Tableaus)
+            {
+                if (tgt.Id == src.Id) continue;
+                if (CanMoveSequence(seq, tgt)) return true;
+            }
+        }
+        return false;
+    }
+
     // MARK: - Hint
 
     [RelayCommand]
@@ -480,6 +514,7 @@ public partial class SpiderViewModel : ObservableObject
         if (_undoStack.Count == 0) return;
         RestoreSnapshot(_undoStack.Pop());
         ActiveHint = null;
+        HasNoMoves = false;
         CheckAutocomplete();
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(StockPiles));

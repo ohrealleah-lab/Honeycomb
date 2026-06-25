@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using SoliBee.Core.Services;
 
 namespace SoliBee.Desktop.Services;
@@ -17,18 +18,29 @@ public static class SoundService
 #if WINDOWS
         try
         {
-            var uri = new Uri($"ms-appx:///Assets/{filename}");
-            var player = new Windows.Media.Playback.MediaPlayer();
-            player.Source = Windows.Media.Core.MediaSource.CreateFromUri(uri);
-            player.Play();
+            var path = Path.Combine(AppContext.BaseDirectory, "Assets", filename);
+            if (File.Exists(path))
+                NativeMethods.PlaySoundFile(path);
         }
-        catch
-        {
-            // Ignore playback exceptions
-        }
+        catch { }
 #else
-        // Mock sound playback on non-Windows platforms
         Console.WriteLine($"[SoundService] Playing: {filename}");
 #endif
     }
+
+#if WINDOWS
+    private static class NativeMethods
+    {
+        [System.Runtime.InteropServices.DllImport("winmm.dll", SetLastError = true,
+            CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern bool PlaySound(string pszSound, IntPtr hmod, uint fdwSound);
+
+        private const uint SND_FILENAME  = 0x00020000;
+        private const uint SND_ASYNC     = 0x00000001;
+        private const uint SND_NODEFAULT = 0x00000002;
+
+        public static void PlaySoundFile(string path) =>
+            PlaySound(path, IntPtr.Zero, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+    }
+#endif
 }

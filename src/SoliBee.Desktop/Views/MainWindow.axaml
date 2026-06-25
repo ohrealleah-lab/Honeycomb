@@ -2,8 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="SoliBee.Desktop.Views.MainWindow"
         Title="SoliBee Solitaire Suite"
-        Width="1080" Height="768"
-        MinWidth="1060" MinHeight="750"
+        Icon="avares://SoliBee.Desktop/Assets/AppIcon.png"
+        Width="1120" Height="768"
+        MinWidth="1080" MinHeight="750"
         WindowStartupLocation="CenterScreen">
 
     <Grid>
@@ -17,11 +18,6 @@
             <DockPanel LastChildFill="False">
                 <!-- Buttons on the Left -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <Button Content="New Game" Click="NewGame_Click" Classes="toolbar" />
-                    <Button Content="Restart Game" Click="RestartGame_Click" Classes="toolbar" />
-                    <Button Content="Undo" Click="Undo_Click" Classes="toolbar" />
-                    <Button Content="Options" Click="Preferences_Click" Classes="toolbar" />
-                    
                     <ComboBox SelectedIndex="1" x:Name="GameSelectionBox" Classes="toolbar-combo" SelectionChanged="GameSelectionBox_SelectionChanged">
                         <ComboBoxItem Content="Game Selection" IsEnabled="False" IsVisible="False" />
                         <ComboBoxItem Content="Klondike (Draw 1)" Tag="SolitaireDraw1" />
@@ -29,6 +25,13 @@
                         <ComboBoxItem Content="Beecell" Tag="Beecell" />
                         <ComboBoxItem Content="Spider" Tag="Spider" />
                     </ComboBox>
+                    <Button Content="New Game" Click="NewGame_Click" Classes="toolbar" />
+                    <Button Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
+                    <Button Content="Undo" Click="Undo_Click" Classes="toolbar" />
+                    <Button Content="Autocomplete" Click="Autocomplete_Click" Classes="toolbar"
+                            IsEnabled="{Binding IsAutocompletable}" />
+                    <Button Content="Options" Click="Preferences_Click" Classes="toolbar" />
+                    <Button Content="Theme Editor" Click="ThemeEditor_Click" Classes="toolbar" IsVisible="False" />
                 </StackPanel>
 
                 <!-- Stats on the Right -->
@@ -46,7 +49,7 @@
                     <!-- SCORE -->
                     <StackPanel Spacing="2" HorizontalAlignment="Center">
                         <TextBlock Text="SCORE" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding State.Score}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding ScoreDisplay}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                     </StackPanel>
                     <!-- MOVES -->
                     <StackPanel Spacing="2" HorizontalAlignment="Center">

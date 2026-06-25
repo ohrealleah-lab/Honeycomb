@@ -21,6 +21,7 @@ public class GameOptions
     public bool IsSoundEnabled { get; set; } = true;
     public bool IsVegasScoring { get; set; } = false;
     public bool IsDrawConstraintsEnabled { get; set; } = false;
+    public bool IsFinalFantasyMode { get; set; } = false;
     public int CustomFeltColorRevision { get; set; } = 0;
     public string CustomFeltColorHex { get; set; } = "#592673";
     public double CardBackScale { get; set; } = 1.0;
@@ -31,4 +32,15 @@ public class GameOptions
     public bool HideStatsButton { get; set; } = false;
     public int BeecellDeckCount { get; set; } = 1;
     public int SpiderSuitCount { get; set; } = 1;
+
+    // Theme editor color overrides — null means use the compiled default
+    public string? ThemeFaceBackNormal { get; set; }
+    public string? ThemeFaceBackFF { get; set; }
+    public string? ThemeFaceBorderNormal { get; set; }
+    public string? ThemeFaceBorderFF { get; set; }
+    public string? ThemeFaceBorderFFCard { get; set; }
+    public string? ThemeTextRed { get; set; }
+    public string? ThemeTextRedFF { get; set; }
+    public string? ThemeTextBlackNormal { get; set; }
+    public string? ThemeTextBlackFF { get; set; }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -134,7 +135,11 @@ public partial class PileView : UserControl
             for (int i = 0; i < Pile.Cards.Count; i++)
             {
                 var card = Pile.Cards[i];
-                var cardView = new CardView { Card = card };
+                var cardView = new CardView();
+                // Set IsAnimated before Card so ApplyCardBackTheme picks it up
+                if (Pile.Type == PileType.Stock && i == Pile.Cards.Count - 1)
+                    cardView.IsAnimated = true;
+                cardView.Card = card;
 
                 Canvas.SetLeft(cardView, 0);
                 Canvas.SetTop(cardView, offset);
@@ -152,6 +157,12 @@ public partial class PileView : UserControl
         }
     }
 
+    private static List<Card> GetCardsFromCard(Card fromCard, Pile pile)
+    {
+        int idx = pile.Cards.IndexOf(fromCard);
+        return idx < 0 ? new List<Card> { fromCard } : pile.Cards.GetRange(idx, pile.Cards.Count - idx);
+    }
+
     private void PileView_PointerPressed(object sender, PointerPressedEventArgs e)
     {
         if (Pile == null) return;
@@ -162,34 +173,32 @@ public partial class PileView : UserControl
             return;
         }
 
-        // Find parent GameView
-        GameView? gameView = null;
-        var parent = this.Parent;
+        CardGameView? gameView = null;
+        Avalonia.StyledElement? parent = this.Parent;
         while (parent != null)
         {
-            if (parent is GameView gv)
-            {
-                gameView = gv;
-                break;
-            }
+            if (parent is CardGameView cgv) { gameView = cgv; break; }
             parent = parent.Parent;
         }
 
-        if (gameView == null || gameView.DataContext is not GameViewModel vm) return;
+        if (gameView == null) return;
 
         if (gameView.SelectedCardView != null)
         {
             var selectedCard = gameView.SelectedCardView.Card;
-            if (selectedCard != null && Pile != gameView.SelectedCardView.ParentPile)
+            var sourcePile = gameView.SelectedSourcePile;
+            if (selectedCard != null && sourcePile != null && Pile != sourcePile)
             {
-                if (vm.CanMoveCard(selectedCard, Pile))
+                var cardsToMove = GetCardsFromCard(selectedCard, sourcePile);
+                if (gameView.CanMoveCards(cardsToMove, Pile))
                 {
-                    vm.MoveCard(selectedCard, Pile);
+                    gameView.TryMoveCards(cardsToMove, sourcePile, Pile);
                     SoundService.PlaySnap();
                 }
             }
             gameView.SelectedCardView.ClearSelection();
             gameView.SelectedCardView = null;
+            gameView.SelectedSourcePile = null;
         }
     }
 }

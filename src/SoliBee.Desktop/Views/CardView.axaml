@@ -24,7 +24,7 @@
                     <TextBlock x:Name="LargeAceText" FontSize="61" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" IsVisible="False" />
 
                     <!-- Image for Face Cards J, Q, K -->
-                    <Image x:Name="FaceCardImage" Width="70" Height="108" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
+                    <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
                 </Grid>
 
                 <!-- Bottom-Right Value & Suit Display (Horizontal, Rotated 180 degrees) -->
@@ -40,7 +40,7 @@
 
         <!-- Card Back (Face Down) -->
         <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="0.75" CornerRadius="10" IsVisible="False" Padding="0" Background="White" BoxShadow="0 1.5 1.5 0 #26000000" ClipToBounds="True">
-            <Grid x:Name="CardBackGrid" Width="128" Height="181" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid x:Name="CardBackGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>
         </Border>

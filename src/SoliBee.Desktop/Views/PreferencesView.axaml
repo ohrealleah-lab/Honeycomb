@@ -1,10 +1,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:SoliBee.Desktop.Views"
              x:Class="SoliBee.Desktop.Views.PreferencesView">
 
     <Grid>
         <StackPanel Spacing="12" Width="270" Margin="10,10,20,10">
-            <TextBlock Text="Felt Color Theme:" FontWeight="Bold" Foreground="White" />
+            <CheckBox x:Name="TimedCheckBox" Content="Timed Game" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" />
+            <CheckBox x:Name="SoundCheckBox" Content="Sound Effects" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" />
+            <CheckBox x:Name="VegasCheckBox" Content="Vegas Scoring" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" />
+            <CheckBox x:Name="FinalFantasyCheckBox" Content="Final Fantasy Mode" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" />
+
+            <TextBlock Text="Felt Color Theme:" FontWeight="Bold" Foreground="White" Margin="0,4,0,0" />
             <ComboBox x:Name="FeltColorComboBox" HorizontalAlignment="Stretch" SelectionChanged="FeltColorComboBox_SelectionChanged">
                 <ComboBoxItem Content="Green Felt" Tag="FeltGreen" />
                 <ComboBoxItem Content="Crimson" Tag="Crimson" />
@@ -31,21 +37,36 @@
                 <Button x:Name="DeleteCustomCardBackButton" Grid.Column="1" Content="Delete" Click="DeleteCustomCardBack_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#662222" Foreground="White" Margin="4,0,0,0" IsEnabled="False" />
             </Grid>
 
-            <!-- Card Back Adjustments Group (compact spacing) -->
-            <StackPanel Spacing="2">
-                <TextBlock Text="Card Back Horizontal Offset:" FontSize="12" FontWeight="SemiBold" Foreground="White" />
-                <Slider x:Name="OffsetXSlider" Minimum="-50" Maximum="50" Value="0" ValueChanged="Slider_ValueChanged" Height="30" />
-
-                <TextBlock Text="Card Back Vertical Offset:" FontSize="12" FontWeight="SemiBold" Foreground="White" />
-                <Slider x:Name="OffsetYSlider" Minimum="-50" Maximum="50" Value="0" ValueChanged="Slider_ValueChanged" Height="30" />
-
-                <TextBlock Text="Card Back Scale:" FontSize="12" FontWeight="SemiBold" Foreground="White" />
-                <Slider x:Name="ScaleSlider" Minimum="0.5" Maximum="2.0" TickFrequency="0.05" Value="1.0" ValueChanged="Slider_ValueChanged" Height="30" />
+            <!-- Card back preview (tap to adjust) -->
+            <StackPanel Spacing="3">
+                <Border x:Name="CardBackPreviewBorder"
+                        Width="80" Height="113"
+                        BorderBrush="#D9000000" BorderThickness="0.75"
+                        CornerRadius="7" ClipToBounds="True"
+                        HorizontalAlignment="Left"
+                        Cursor="Hand"
+                        Background="White"
+                        PointerPressed="CardBackPreview_Click">
+                    <Grid Width="80" Height="113" ClipToBounds="True">
+                        <Image x:Name="CardBackPreviewImage" Stretch="Uniform" />
+                    </Grid>
+                </Border>
+                <TextBlock Text="Tap to adjust scale &amp; position"
+                           FontSize="10" Foreground="#808080" />
             </StackPanel>
-            
-            <CheckBox x:Name="TimedCheckBox" Content="Timed Game" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" />
-            <CheckBox x:Name="SoundCheckBox" Content="Sound Effects" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" />
-            <CheckBox x:Name="VegasCheckBox" Content="Vegas Scoring" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" />
+
+            <TextBlock Text="Custom Face Card Art:" FontWeight="Bold" Foreground="White" Margin="0,6,0,0" />
+            <TextBlock Text="Tap a tile to upload art. Tap again to adjust." FontSize="10" Foreground="#A0A0A0" Margin="0,-4,0,0" />
+            <v:FaceCardArtSectionView />
+
+            <TextBlock Text="Help:" FontWeight="Bold" Foreground="White" Margin="0,6,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Klondike" Click="HelpKlondike_Click" Background="#444444" Foreground="White" Padding="10,5" />
+                <Button Content="Beecell" Click="HelpBeecell_Click" Background="#444444" Foreground="White" Padding="10,5" />
+                <Button Content="Spider" Click="HelpSpider_Click" Background="#444444" Foreground="White" Padding="10,5" />
+            </StackPanel>
+
+            <Button Content="About SoliBee" Click="About_Click" Background="#333333" Foreground="#A0A0A0" Padding="10,5" Margin="0,4,0,0" />
         </StackPanel>
 
         <!-- Delete Confirmation Overlay (Initially hidden) -->

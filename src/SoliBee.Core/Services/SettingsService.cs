@@ -8,13 +8,15 @@ namespace SoliBee.Core.Services;
 
 public static class SettingsService
 {
+    private static GameOptions? _cache;
+
     private static readonly string FallbackDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SoliBee"
     );
     private static readonly string FallbackFilePath = Path.Combine(FallbackDirectory, "settings.json");
 
-    private static object GetLocalSettings()
+    private static object? GetLocalSettings()
     {
         try
         {
@@ -34,7 +36,7 @@ public static class SettingsService
         }
     }
 
-    private static object GetValue(string key)
+    private static object? GetValue(string key)
     {
         var localSettings = GetLocalSettings();
         if (localSettings == null) return null;
@@ -98,6 +100,8 @@ public static class SettingsService
 
     public static GameOptions LoadOptions()
     {
+        if (_cache != null) return _cache;
+
         var options = new GameOptions();
         var localSettings = GetLocalSettings();
 
@@ -162,6 +166,17 @@ public static class SettingsService
                 if (GetValue("SpiderSuitCount") is int spiderSuits)
                     options.SpiderSuitCount = spiderSuits;
 
+                if (GetValue("ThemeFaceBackNormal")  is string t1) options.ThemeFaceBackNormal  = t1;
+                if (GetValue("ThemeFaceBackFF")       is string t2) options.ThemeFaceBackFF       = t2;
+                if (GetValue("ThemeFaceBorderNormal") is string t3) options.ThemeFaceBorderNormal = t3;
+                if (GetValue("ThemeFaceBorderFF")     is string t4) options.ThemeFaceBorderFF     = t4;
+                if (GetValue("ThemeFaceBorderFFCard") is string t5) options.ThemeFaceBorderFFCard = t5;
+                if (GetValue("ThemeTextRed")          is string t6) options.ThemeTextRed          = t6;
+                if (GetValue("ThemeTextRedFF")        is string t7) options.ThemeTextRedFF        = t7;
+                if (GetValue("ThemeTextBlackNormal")  is string t8) options.ThemeTextBlackNormal  = t8;
+                if (GetValue("ThemeTextBlackFF")      is string t9) options.ThemeTextBlackFF      = t9;
+
+                _cache = options;
                 return options;
             }
             catch
@@ -177,7 +192,7 @@ public static class SettingsService
             {
                 var json = File.ReadAllText(FallbackFilePath);
                 var loaded = JsonSerializer.Deserialize<GameOptions>(json);
-                if (loaded != null) return loaded;
+                if (loaded != null) { _cache = loaded; return loaded; }
             }
         }
         catch
@@ -185,11 +200,14 @@ public static class SettingsService
             // Keep default options
         }
 
+        _cache = options;
         return options;
     }
 
     public static void SaveOptions(GameOptions options)
     {
+        _cache = options;
+
         var localSettings = GetLocalSettings();
         if (localSettings != null)
         {
@@ -211,6 +229,16 @@ public static class SettingsService
                 SetValue("HideStatsButton", options.HideStatsButton);
                 SetValue("BeecellDeckCount", options.BeecellDeckCount);
                 SetValue("SpiderSuitCount", options.SpiderSuitCount);
+
+                if (options.ThemeFaceBackNormal  != null) SetValue("ThemeFaceBackNormal",  options.ThemeFaceBackNormal);
+                if (options.ThemeFaceBackFF       != null) SetValue("ThemeFaceBackFF",       options.ThemeFaceBackFF);
+                if (options.ThemeFaceBorderNormal != null) SetValue("ThemeFaceBorderNormal", options.ThemeFaceBorderNormal);
+                if (options.ThemeFaceBorderFF     != null) SetValue("ThemeFaceBorderFF",     options.ThemeFaceBorderFF);
+                if (options.ThemeFaceBorderFFCard != null) SetValue("ThemeFaceBorderFFCard", options.ThemeFaceBorderFFCard);
+                if (options.ThemeTextRed          != null) SetValue("ThemeTextRed",          options.ThemeTextRed);
+                if (options.ThemeTextRedFF        != null) SetValue("ThemeTextRedFF",        options.ThemeTextRedFF);
+                if (options.ThemeTextBlackNormal  != null) SetValue("ThemeTextBlackNormal",  options.ThemeTextBlackNormal);
+                if (options.ThemeTextBlackFF      != null) SetValue("ThemeTextBlackFF",      options.ThemeTextBlackFF);
 
                 try
                 {

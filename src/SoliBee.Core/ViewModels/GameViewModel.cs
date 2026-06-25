@@ -20,6 +20,12 @@ public partial class GameViewModel : ObservableObject
     [ObservableProperty]
     private GameStatistics _stats;
 
+    [ObservableProperty]
+    private bool _isAutocompletable;
+
+    [ObservableProperty]
+    private bool _hasNoMoves;
+
     public Pile Stock { get; } = new("Stock", PileType.Stock);
     public Pile Waste { get; } = new("Waste", PileType.Waste);
     public List<Pile> Foundations { get; } = new();
@@ -28,8 +34,25 @@ public partial class GameViewModel : ObservableObject
     private readonly Stack<GameStateSnapshot> _undoStack = new();
     private List<Card> _initialDeck = new();
     private System.Threading.Timer? _gameTimer;
+    private int _vegasGameStartScore;
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
+
+    public string ScoreDisplay
+    {
+        get
+        {
+            if (Options?.IsVegasScoring == true)
+            {
+                int abs = Math.Abs(State.Score);
+                return State.Score < 0 ? $"-${abs}.00" : $"${abs}.00";
+            }
+            return State.Score.ToString();
+        }
+    }
+
+    partial void OnStateChanged(GameState value) => OnPropertyChanged(nameof(ScoreDisplay));
+    partial void OnOptionsChanged(GameOptions value) => OnPropertyChanged(nameof(ScoreDisplay));
 
     public GameViewModel()
     {
@@ -64,12 +87,15 @@ public partial class GameViewModel : ObservableObject
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
+        int startScore = Options.IsVegasScoring ? State.Score - 52 : 0;
+        _vegasGameStartScore = startScore;
+
         State = new GameState
         {
-            Score = Options.IsVegasScoring ? -5200 : 0,
+            Score = startScore,
             MovesCount = 0,
             TimerSeconds = 0,
-            IsTimerActive = Options.IsTimed,
+            IsTimerActive = false,
             HasWon = false,
             RecyclesCount = 0,
             Mode = Options.IsDrawConstraintsEnabled ? DrawMode.DrawThree : DrawMode.DrawOne
@@ -126,6 +152,9 @@ public partial class GameViewModel : ObservableObject
             Stock.Cards.Add(card);
         }
 
+        IsAutocompletable = false;
+        HasNoMoves = false;
+
         Stats.GamesPlayed++;
         StatsService.SaveStats(Stats);
 
@@ -158,12 +187,16 @@ public partial class GameViewModel : ObservableObject
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
-        State.Score = Options.IsVegasScoring ? -5200 : 0;
+        _vegasGameStartScore = Options.IsVegasScoring ? -52 : 0;
+        State.Score = _vegasGameStartScore;
+        OnPropertyChanged(nameof(ScoreDisplay));
         State.MovesCount = 0;
         State.TimerSeconds = 0;
-        State.IsTimerActive = Options.IsTimed;
+        State.IsTimerActive = false;
         State.HasWon = false;
         State.RecyclesCount = 0;
+        IsAutocompletable = false;
+        HasNoMoves = false;
 
         var deckCopy = _initialDeck.Select(c => c).ToList();
 
@@ -217,13 +250,14 @@ public partial class GameViewModel : ObservableObject
         {
             // Recycle waste back to stock
             if (Waste.Cards.Count == 0) return;
+            if (Options.IsVegasScoring && State.RecyclesCount >= 1) return;
 
             State.RecyclesCount++;
 
-            if (Options.IsDrawConstraintsEnabled)
+            if (Options.IsVegasScoring)
             {
-                int maxRecycles = Options.IsVegasScoring ? 1 : 3;
-                if (State.RecyclesCount > maxRecycles) return;
+                State.Score -= 25;
+                OnPropertyChanged(nameof(ScoreDisplay));
             }
 
             // Move waste cards to stock in reverse order, turn face down
@@ -234,7 +268,10 @@ public partial class GameViewModel : ObservableObject
                 Stock.Cards.Add(card with { IsFaceUp = false });
             }
             Waste.Cards.Clear();
+            if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
+                State.IsTimerActive = true;
             State.MovesCount++;
+            CheckDeadlock();
             OnPropertyChanged(nameof(Stock));
             OnPropertyChanged(nameof(Waste));
             return;
@@ -250,7 +287,10 @@ public partial class GameViewModel : ObservableObject
             Waste.Cards.Add(card with { IsFaceUp = true });
         }
 
+        if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
+            State.IsTimerActive = true;
         State.MovesCount++;
+        CheckDeadlock();
         OnPropertyChanged(nameof(Stock));
         OnPropertyChanged(nameof(Waste));
     }
@@ -331,34 +371,41 @@ public partial class GameViewModel : ObservableObject
         }
 
         // Auto flip the new top card of the source pile if it's a tableau
+        bool didFlip = false;
         if (sourcePile.Type == PileType.Tableau && sourcePile.Cards.Count > 0)
         {
             var topCard = sourcePile.Cards.Last();
             if (!topCard.IsFaceUp)
             {
                 sourcePile.Cards[sourcePile.Cards.Count - 1] = topCard with { IsFaceUp = true };
+                didFlip = true;
             }
         }
 
         // Update score
-        UpdateScoreForMove(sourcePile.Type, targetPile.Type);
+        UpdateScoreForMove(sourcePile.Type, targetPile.Type, didFlip);
 
+        if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
+            State.IsTimerActive = true;
         State.MovesCount++;
         CheckVictory();
+        CheckAutocomplete();
+        CheckDeadlock();
         OnPropertyChanged(nameof(Stock));
         OnPropertyChanged(nameof(Waste));
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(Tableaus));
     }
 
-    private void UpdateScoreForMove(PileType source, PileType target)
+    private void UpdateScoreForMove(PileType source, PileType target, bool didFlip = false)
     {
         if (Options.IsVegasScoring)
         {
             if (target == PileType.Foundation)
-                State.Score += 500;
-            else if (source == PileType.Foundation)
-                State.Score -= 500;
+            {
+                State.Score += 5;
+                OnPropertyChanged(nameof(ScoreDisplay));
+            }
         }
         else
         {
@@ -372,6 +419,8 @@ public partial class GameViewModel : ObservableObject
             else if (source == PileType.Waste && target == PileType.Foundation) State.Score += 10;
             else if (source == PileType.Tableau && target == PileType.Foundation) State.Score += 10;
             else if (source == PileType.Foundation && target == PileType.Tableau) State.Score -= 15;
+            if (didFlip) State.Score += 5;
+            OnPropertyChanged(nameof(ScoreDisplay));
         }
     }
 
@@ -429,28 +478,30 @@ public partial class GameViewModel : ObservableObject
             index++;
         }
 
+        HasNoMoves = false;
+        CheckAutocomplete();
         OnPropertyChanged(nameof(Stock));
         OnPropertyChanged(nameof(Waste));
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(Tableaus));
+        OnPropertyChanged(nameof(ScoreDisplay));
+        OnPropertyChanged(nameof(CanUndo));
     }
 
-    public bool IsAutocompletable()
+    private void CheckAutocomplete()
     {
-        if (Stock.Cards.Any() || Waste.Cards.Any()) return false;
-
+        if (Stock.Cards.Any() || Waste.Cards.Any()) { IsAutocompletable = false; return; }
         foreach (var t in Tableaus)
         {
-            if (t.Cards.Any(c => !c.IsFaceUp)) return false;
+            if (t.Cards.Any(c => !c.IsFaceUp)) { IsAutocompletable = false; return; }
         }
-
-        return true;
+        IsAutocompletable = !State.HasWon;
     }
 
     [RelayCommand]
     public void Autocomplete()
     {
-        if (!IsAutocompletable()) return;
+        if (!IsAutocompletable) return;
 
         while (Foundations.Sum(f => f.Cards.Count) < 52)
         {
@@ -515,6 +566,42 @@ public partial class GameViewModel : ObservableObject
         }
     }
 
+    private void CheckDeadlock()
+    {
+        if (State.HasWon) return;
+        HasNoMoves = !HasAnyLegalMoves();
+    }
+
+    private bool HasAnyLegalMoves()
+    {
+        if (Stock.Cards.Count > 0) return true;
+        if (Waste.Cards.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= 1)) return true;
+
+        var wasteTop = Waste.Cards.Count > 0 ? Waste.Cards.Last() : null;
+        if (wasteTop != null)
+        {
+            foreach (var f in Foundations) if (CanMoveCard(wasteTop, f)) return true;
+            foreach (var t in Tableaus) if (CanMoveCard(wasteTop, t)) return true;
+        }
+
+        foreach (var src in Tableaus)
+        {
+            if (src.Cards.Count == 0) continue;
+            int firstFaceUp = src.Cards.FindIndex(c => c.IsFaceUp);
+            if (firstFaceUp < 0) continue;
+            for (int i = firstFaceUp; i < src.Cards.Count; i++)
+            {
+                foreach (var f in Foundations) if (CanMoveCard(src.Cards[i], f)) return true;
+                foreach (var tgt in Tableaus)
+                {
+                    if (tgt.Id == src.Id) continue;
+                    if (CanMoveCard(src.Cards[i], tgt)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public bool CanUndo => _undoStack.Count > 0;
 
     private Pile FindPileContaining(Card card)
@@ -525,7 +612,7 @@ public partial class GameViewModel : ObservableObject
         var found = Foundations.FirstOrDefault(f => f.Cards.Contains(card));
         if (found != null) return found;
 
-        return Tableaus.FirstOrDefault(t => t.Cards.Contains(card));
+        return Tableaus.FirstOrDefault(t => t.Cards.Contains(card))!;
     }
 
     private static bool IsRed(CardSuit suit)
