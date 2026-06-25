@@ -248,6 +248,8 @@ public partial class MainWindow : Window
 
             if (HintButton != null)
                 HintButton.IsVisible = tag != "VideoPoker";
+            if (UndoButton != null)
+                UndoButton.IsVisible = tag != "VideoPoker";
 
             // Apply felt color of the active VM
             if (_coordinator.ActiveViewModel is GameViewModel klondikeVm)

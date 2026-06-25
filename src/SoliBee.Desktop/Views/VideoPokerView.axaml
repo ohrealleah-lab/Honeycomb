@@ -36,19 +36,19 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="HAND" FontSize="8" Foreground="#60FFFFFF"
                                FontFamily="Courier New, Consolas, monospace" Grid.Column="0"/>
-                    <TextBlock Text="1" FontSize="8" Foreground="#60FFFFFF"
+                    <TextBlock x:Name="PayColHdr1" Text="1" FontSize="8" Foreground="#60FFFFFF"
                                FontFamily="Courier New, Consolas, monospace"
                                Grid.Column="1" HorizontalAlignment="Center"/>
-                    <TextBlock Text="2" FontSize="8" Foreground="#60FFFFFF"
+                    <TextBlock x:Name="PayColHdr2" Text="2" FontSize="8" Foreground="#60FFFFFF"
                                FontFamily="Courier New, Consolas, monospace"
                                Grid.Column="2" HorizontalAlignment="Center"/>
-                    <TextBlock Text="3" FontSize="8" Foreground="#60FFFFFF"
+                    <TextBlock x:Name="PayColHdr3" Text="3" FontSize="8" Foreground="#60FFFFFF"
                                FontFamily="Courier New, Consolas, monospace"
                                Grid.Column="3" HorizontalAlignment="Center"/>
-                    <TextBlock Text="4" FontSize="8" Foreground="#60FFFFFF"
+                    <TextBlock x:Name="PayColHdr4" Text="4" FontSize="8" Foreground="#60FFFFFF"
                                FontFamily="Courier New, Consolas, monospace"
                                Grid.Column="4" HorizontalAlignment="Center"/>
-                    <TextBlock Text="5" FontSize="8" Foreground="#60FFFFFF"
+                    <TextBlock x:Name="PayColHdr5" Text="5" FontSize="8" Foreground="#60FFFFFF"
                                FontFamily="Courier New, Consolas, monospace"
                                Grid.Column="5" HorizontalAlignment="Center"/>
                 </Grid>
@@ -194,10 +194,13 @@
                             Content="Deal" Height="36" Padding="20,0"
                             Click="DealDraw_Click" Classes="vp-button vp-button-primary"/>
                     <Button Content="− Bet" Height="36" Padding="16,0"
+                            IsEnabled="{Binding IsDealing}"
                             Click="DecreaseBet_Click" Classes="vp-button"/>
                     <Button Content="+ Bet" Height="36" Padding="16,0"
+                            IsEnabled="{Binding IsDealing}"
                             Click="IncreaseBet_Click" Classes="vp-button"/>
                     <Button Content="Bet Max" Height="36" Padding="16,0"
+                            IsEnabled="{Binding IsDealing}"
                             Click="BetMax_Click" Classes="vp-button"/>
                     <Button x:Name="RebuyButton"
                             Content="Buy In" Height="36" Padding="16,0"
