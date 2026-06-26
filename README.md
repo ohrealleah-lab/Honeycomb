@@ -1,7 +1,7 @@
 # 🐝 Solibee Solitaire Suite
 What's the #1 issue facing Mac users today? A lack of ad-free Klondike Solitaire. I used SpecKit, Gemini, and Claude to build Solitaire for OSX so my woes would end (and to brush up on Agentic development.) 
 
-A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the gameplay dynamics of classic Solitaire games with modern flourishes and customization. **Make the game yours**.
+A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the gameplay dynamics of classic Solitaire games with modern flourishes and customization. All art was created by real artists - there is zero AI art.   **Make the game yours**. **Make the game yours**.
 
 ---
 
