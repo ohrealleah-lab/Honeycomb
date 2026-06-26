@@ -28,14 +28,14 @@ Solibee supports four fully implemented, distinct games selectable via the **Gam
   
 ---
 
-## ♥️ Game Features - Make the Game Yours!
+## ♥️ Game Features - Make The Game Yours!
 
-* **Custom Card Backs**: Set the card back to whatever you want! Even an animated gif!
-* **Custom Card Art**: Set the art for red and black suits for Aces, Jacks, Kings, and Queens!
-* **Custom Color Background**: Set the tablaeu to match your deck of cards.
+* **Custom Card Backs**: Set the card back to whatever you want. Even an animated gif!
+* **Custom Card Art**: Set the art for red and black suits for Aces, Jacks, Kings, and Queens.
+* **Custom Color Background**: Set the tableau to match your deck of cards.
 * **Visual Themes**: Use a presaved theme, or create your own! Easily toggle between multiple themes.
 * **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
-* **ZERO AI Art**: All included art was created by artists who asked not to be credited, and is used with permission.
+* **ZERO AI Art**: All art was created by real artists, used with permission.
   
 ---
 
