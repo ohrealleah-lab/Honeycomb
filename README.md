@@ -1,7 +1,7 @@
 # 🐝 Solibee Solitaire Suite
 What's the #1 issue facing Windows users today? A lack of ad-free Klondike Solitaire. I used SpecKit, Gemini, and Claude to build Solitaire for Windows so my woes would end (and to brush up on Agentic development.) 
 
-A native Windows Solitaire suite written in **Avalonia UI 11 / .NET 8 C#**, designed to recreate the gameplay dynamics of classic Solitaire games with modern flourishes and customization. **Make the game yours**.
+A native Windows Solitaire suite written in **Avalonia UI 11 / .NET 8 C#**, designed to recreate the gameplay dynamics of classic Solitaire games with modern flourishes and customization. All art was created by real artists - there is zero AI art.   **Make the game yours**.
 
 ---
 
