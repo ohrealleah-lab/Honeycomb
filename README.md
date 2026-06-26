@@ -7,7 +7,7 @@ A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to rec
 
 ## ♠️ Game Modes
 
-Solibee supports three fully implemented, distinct Solitaire games selectable via the **Game Selection** dropdown:
+Solibee supports four fully implemented, distinct games selectable via the **Game Selection** dropdown:
 
 ### 1. Klondike
 * **Modes**: Easy (1-Card Draw) and Standard (3-Card Draw).
