@@ -23,7 +23,7 @@ Solibee supports four fully implemented, distinct games selectable via the **Gam
 
 ### 3. Video Poker
 * **Modes**: **Jacks or Better, Deuces Wild, Bonus Poker**
-* **Rules & Scoring**: Jacks or Better: Win by holding a pair of Jacks or higher,b Deuces Wild: All 2s are wild cards. Bonus Poker: Jacks or Better rules with enhanced payouts for four-of-a-kind hands.
+* **Rules & Scoring**: **Jacks or Better**: Win by holding a pair of Jacks or higher, **Deuces Wild**: All 2s are wild cards, **Bonus Poker**: Jacks or Better rules with enhanced payouts for four-of-a-kind hands.
 
   
 ---
