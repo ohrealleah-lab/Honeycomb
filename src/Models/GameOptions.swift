@@ -13,7 +13,8 @@ public struct GameOptions: Codable, Equatable {
     public var deckCount: Int = 1
     
     public var customFeltColorRevision: Int = 0
-    
+    public var isDarkMode: Bool = false
+
     public init(
         feltColor: FeltColorTheme = .feltGreen,
         cardBackTheme: String = "Vulpera",
@@ -25,7 +26,8 @@ public struct GameOptions: Codable, Equatable {
         hideHintButton: Bool = false,
         hideStatsButton: Bool = false,
         deckCount: Int = 1,
-        customFeltColorRevision: Int = 0
+        customFeltColorRevision: Int = 0,
+        isDarkMode: Bool = false
     ) {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
@@ -38,6 +40,7 @@ public struct GameOptions: Codable, Equatable {
         self.hideStatsButton = hideStatsButton
         self.deckCount = deckCount
         self.customFeltColorRevision = customFeltColorRevision
+        self.isDarkMode = isDarkMode
     }
     
     private enum CodingKeys: String, CodingKey {
@@ -52,8 +55,9 @@ public struct GameOptions: Codable, Equatable {
         case hideStatsButton
         case deckCount
         case customFeltColorRevision
+        case isDarkMode
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.feltColor = (try? container.decode(FeltColorTheme.self, forKey: .feltColor)) ?? .feltGreen
@@ -67,6 +71,7 @@ public struct GameOptions: Codable, Equatable {
         self.hideStatsButton = (try? container.decode(Bool.self, forKey: .hideStatsButton)) ?? false
         self.deckCount = (try? container.decode(Int.self, forKey: .deckCount)) ?? 1
         self.customFeltColorRevision = (try? container.decode(Int.self, forKey: .customFeltColorRevision)) ?? 0
+        self.isDarkMode = (try? container.decode(Bool.self, forKey: .isDarkMode)) ?? false
     }
 }
 
@@ -82,4 +87,5 @@ public enum FeltColorTheme: String, Codable, CaseIterable {
 extension Notification.Name {
     public static let feltColorDidChange = Notification.Name("feltColorDidChange")
     public static let cardBackThemeDidChange = Notification.Name("cardBackThemeDidChange")
+    public static let darkModeDidChange = Notification.Name("darkModeDidChange")
 }

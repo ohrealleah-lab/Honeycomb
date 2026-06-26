@@ -17,12 +17,24 @@ build:
 	cp src/priest.png $(APP_BUNDLE)/Contents/Resources/priest.png
 	cp src/moogle.jpg $(APP_BUNDLE)/Contents/Resources/moogle.jpg
 	cp src/dingwall.jpg $(APP_BUNDLE)/Contents/Resources/dingwall.jpg
-	cp J.png $(APP_BUNDLE)/Contents/Resources/J.png
-	cp Q.png $(APP_BUNDLE)/Contents/Resources/Q.png
-	cp K.png $(APP_BUNDLE)/Contents/Resources/K.png
-	cp "red j.png" "$(APP_BUNDLE)/Contents/Resources/red j.png"
-	cp "red k.png" "$(APP_BUNDLE)/Contents/Resources/red k.png"
-	cp "red q.png" "$(APP_BUNDLE)/Contents/Resources/red q.png"
+	cp images/letters/J.png $(APP_BUNDLE)/Contents/Resources/J.png
+	cp images/letters/Q.png $(APP_BUNDLE)/Contents/Resources/Q.png
+	cp images/letters/K.png $(APP_BUNDLE)/Contents/Resources/K.png
+	cp "images/letters/red j.png" "$(APP_BUNDLE)/Contents/Resources/red j.png"
+	cp "images/letters/red k.png" "$(APP_BUNDLE)/Contents/Resources/red k.png"
+	cp "images/letters/red q.png" "$(APP_BUNDLE)/Contents/Resources/red q.png"
+	cp images/letters/dark_k_red.png $(APP_BUNDLE)/Contents/Resources/dark_k_red.png
+	cp images/letters/dark_q_red.png $(APP_BUNDLE)/Contents/Resources/dark_q_red.png
+	cp images/letters/dark_j_red.png $(APP_BUNDLE)/Contents/Resources/dark_j_red.png
+	cp images/letters/dark_k_grey.png $(APP_BUNDLE)/Contents/Resources/dark_k_grey.png
+	cp images/letters/dark_q_grey.png $(APP_BUNDLE)/Contents/Resources/dark_q_grey.png
+	cp images/letters/dark_j_grey.png $(APP_BUNDLE)/Contents/Resources/dark_j_grey.png
+	cp "images/backgrounds/Houli Provided/Forest.png" "$(APP_BUNDLE)/Contents/Resources/Forest.png"
+	cp "images/backgrounds/Houli Provided/On The Water.png" "$(APP_BUNDLE)/Contents/Resources/On The Water.png"
+	cp "images/backgrounds/Houli Provided/Pareidolic.png" "$(APP_BUNDLE)/Contents/Resources/Pareidolic.png"
+	cp "images/backgrounds/Houli Provided/Pareidolic 2.png" "$(APP_BUNDLE)/Contents/Resources/Pareidolic 2.png"
+	cp "images/backgrounds/Houli Provided/Red Sky.png" "$(APP_BUNDLE)/Contents/Resources/Red Sky.png"
+	cp "images/backgrounds/Houli Provided/Sunset.png" "$(APP_BUNDLE)/Contents/Resources/Sunset.png"
 	cp src/shuffle.aiff $(APP_BUNDLE)/Contents/Resources/shuffle.aiff
 	cp src/snap.aiff $(APP_BUNDLE)/Contents/Resources/snap.aiff
 	cp src/victory.aiff $(APP_BUNDLE)/Contents/Resources/victory.aiff

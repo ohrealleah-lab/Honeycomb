@@ -141,8 +141,41 @@ struct SpiderHelpView: View {
     }
 }
 
+// MARK: - Video Poker Guide
+
+struct VideoPokerHelpView: View {
+    var body: some View {
+        HelpShell(title: "Video Poker", subtitle: "Jacks or Better · Deuces Wild · Bonus Poker") {
+            RuleSection(title: "Objective",
+                        text: "Build the best five-card poker hand. If your hand matches an entry on the pay table, you win a multiple of your bet. Higher-ranking hands pay more.")
+
+            RuleSection(title: "How to Play",
+                        text: "1. Set your bet (1–5 coins) and press Deal.\n2. Five cards are dealt face-up. Click any cards you want to keep, or use 1–5 on the keyboard.\n3. Press Draw (or Space). Unselected cards are replaced with new ones from the deck.\n4. Your final hand is evaluated against the pay table and any winnings are added to your credits.")
+
+            RuleSection(title: "Hand Rankings (low to high)",
+                        text: "Jacks or Better — a pair of Jacks, Queens, Kings, or Aces\nTwo Pair\nThree of a Kind\nStraight — five consecutive ranks, any suit\nFlush — five cards of the same suit\nFull House — three of a kind plus a pair\nFour of a Kind\nStraight Flush — five consecutive cards in the same suit\nRoyal Flush — A K Q J 10 in the same suit (top payout)")
+
+            RuleSection(title: "Betting & Credits",
+                        text: "Choose 1 to 5 coins per hand. BET MAX locks in 5 coins and immediately deals. The Royal Flush jackpot is only awarded at the maximum 5-coin bet — always bet max when you can afford it.\n\nIf your credits drop below your current bet, a Rebuy button appears to top up.")
+
+            RuleSection(title: "Jacks or Better",
+                        text: "The standard 9/6 full-pay game. The lowest qualifying hand is a pair of Jacks or better. Payouts follow the classic schedule: Full House pays 9×, Flush pays 6×.")
+
+            RuleSection(title: "Deuces Wild",
+                        text: "All four 2s are wild and can substitute for any card. Because wilds make strong hands much easier to hit, the minimum qualifying hand is raised to Three of a Kind. Special hands include Four Deuces (four 2s) and Wild Royal Flush (a Royal using at least one deuce).")
+
+            RuleSection(title: "Bonus Poker",
+                        text: "Based on Jacks or Better with enhanced payouts for four-of-a-kind hands. Four Aces pays 80×, four 2s/3s/4s pay 40×, and other quads pay the standard 25×.")
+
+            RuleSection(title: "Keyboard Shortcuts",
+                        text: "Space — Deal / Draw\n1 2 3 4 5 — Toggle hold for cards 1–5\nH — Hold all cards\nC — Clear all holds")
+        }
+    }
+}
+
 // MARK: - Previews
 
 #Preview("Klondike Help") { KlondikeHelpView() }
 #Preview("Beecell Help") { BeecellHelpView() }
 #Preview("Spider Help") { SpiderHelpView() }
+#Preview("Video Poker Help") { VideoPokerHelpView() }

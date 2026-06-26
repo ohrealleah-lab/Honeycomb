@@ -40,6 +40,16 @@ struct CardBackPreviewView: View {
                     } else {
                         Circle().fill(Color.blue.opacity(0.3)).frame(width: 6, height: 6)
                     }
+                } else if CardBackView.bundleBackgroundNames.contains(theme) {
+                    if let path = Bundle.main.path(forResource: theme, ofType: "png"),
+                       let nsImage = NSImage(contentsOfFile: path) {
+                        Image(nsImage: nsImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 60, height: 85)
+                    } else {
+                        Circle().fill(Color.blue.opacity(0.3)).frame(width: 6, height: 6)
+                    }
                 } else if let customBack = CustomCardBackManager.shared.customCardBacks.first(where: { $0.name == theme }) {
                     if let nsImage = CustomCardBackManager.shared.thumbnail(for: customBack.relativePath) {
                         Image(nsImage: nsImage)
@@ -220,15 +230,15 @@ struct DeckItemView: View {
     @Binding var feltColor: FeltColorTheme
     let deleteDeckByName: (String) -> Void
     let proxy: ScrollViewProxy
-    
+
+    @State private var showingDeleteAlert = false
+
     var body: some View {
         VStack(spacing: 4) {
             ZStack(alignment: .topTrailing) {
                 // The Card Preview Button
                 Button(action: {
                     cardBackTheme = name
-                    // Theme selection updated
-                    
                     withAnimation(.easeInOut(duration: 0.3)) {
                         proxy.scrollTo(name, anchor: .center)
                     }
@@ -241,12 +251,12 @@ struct DeckItemView: View {
                         .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 3)
                         .frame(width: 66, height: 91)
                 )
-                
+
                 // Delete Overlay Button (if active count > 1)
                 if activeCount > 1 {
-                    Button(action: {
-                        deleteDeckByName(name)
-                    }) {
+                    Button {
+                        showingDeleteAlert = true
+                    } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.red)
                             .background(Circle().fill(Color.white))
@@ -255,6 +265,12 @@ struct DeckItemView: View {
                     .buttonStyle(.plain)
                     .offset(x: 5, y: -5)
                     .help("Delete deck")
+                    .alert("Delete Card Back", isPresented: $showingDeleteAlert) {
+                        Button("Cancel", role: .cancel) { }
+                        Button("Delete", role: .destructive) { deleteDeckByName(name) }
+                    } message: {
+                        Text("Are you sure you want to delete \"\(name)\"?")
+                    }
                 }
             }
             .frame(width: 66, height: 91)
@@ -284,87 +300,18 @@ public struct CardDeckSelectorView: View {
     
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Row 1: Add Custom and Selected Card Back Pinned View
-            HStack(spacing: 16) {
-                // Add Custom Card Back Button
-                VStack(spacing: 4) {
-                    Button(action: {
-                        selectImage()
-                    }) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.primary.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [4]))
-                                .frame(width: 60, height: 85)
-                            
-                            Image(systemName: "plus")
-                                .foregroundColor(.secondary)
-                                .font(.title2)
-                        }
-                        .contentShape(Rectangle())
-                    }
+            // Row 1: Scrollable Carousel of All Decks in Stable Order
+            HStack {
+                Text("Card Deck Selection (must be .jpg or .png):")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.primary)
+                Spacer()
+                Button("Add Custom…") { selectImage() }
+                    .font(.system(size: 12, design: .monospaced))
                     .buttonStyle(.plain)
-                    .frame(width: 66, height: 91)
-                    
-                    Text("Add Custom")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.secondary)
-                }
-                
-                // Currently Selected Card Back Pinned
-                let activeDecks = CustomCardBackManager.shared.activeDecks
-                if activeDecks.contains(cardBackTheme) {
-                    VStack(spacing: 4) {
-                        ZStack {
-                            CardBackPreviewView(theme: cardBackTheme)
-                        }
-                        .frame(width: 66, height: 91)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.blue, lineWidth: 3)
-                                .frame(width: 66, height: 91)
-                        )
-                        
-                        Text(cardBackTheme)
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.primary)
-                            .lineLimit(1)
-                            .frame(width: 75)
-                    }
-                }
-                
-                // Pinned Selected Felt Color Representation
-                VStack(spacing: 4) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(feltColor.primaryColor)
-                            .frame(width: 60, height: 85)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.black.opacity(0.85), lineWidth: 0.5)
-                            )
-                        
-                        Text("FELT")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white)
-                            .shadow(radius: 2)
-                    }
-                    .frame(width: 66, height: 91)
-                    
-                    Text(feltColorName(feltColor))
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                        .frame(width: 75)
-                }
+                    .foregroundColor(.accentColor)
             }
-            
-            Divider()
-            
-            // Row 2: Scrollable Carousel of All Decks in Stable Order
-            Text("Card Deck Selection (must be .jpg or .png):")
-                .font(.system(.body, design: .monospaced))
-                .foregroundColor(.primary)
-            
+
             ScrollViewReader { proxy in
                 HStack(spacing: 4) {
                     let activeDecks = CustomCardBackManager.shared.activeDecks
@@ -491,14 +438,14 @@ public struct CardDeckSelectorView: View {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     proxy.scrollTo(prevName, anchor: .center)
                 }
-            } else {
+            } else if let first = activeDecks.first {
                 withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo("add_custom", anchor: .center)
+                    proxy.scrollTo(first, anchor: .center)
                 }
             }
-        } else {
+        } else if let first = activeDecks.first {
             withAnimation(.easeInOut(duration: 0.3)) {
-                proxy.scrollTo("add_custom", anchor: .center)
+                proxy.scrollTo(first, anchor: .center)
             }
         }
     }

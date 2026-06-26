@@ -38,7 +38,7 @@ public struct CustomCardBack: Codable, Identifiable, Equatable {
 public final class CustomCardBackManager {
     public static let shared = CustomCardBackManager()
 
-    public let defaultThemes = ["Vulpera", "Moogle", "Dingwall"]
+    public let defaultThemes = ["Vulpera", "Moogle", "Dingwall", "Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset"]
 
     // Excluded from observation so cache writes don't trigger SwiftUI re-renders across the board.
     @ObservationIgnored private var imageCache: [String: NSImage] = [:]

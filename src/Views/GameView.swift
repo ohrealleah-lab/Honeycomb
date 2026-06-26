@@ -30,7 +30,9 @@ public struct GameView: View {
             // Felt Board Background
             viewModel.options.feltColor.primaryColor
                 .ignoresSafeArea()
-            
+
+            FeltVignetteView()
+
             VStack(spacing: 0) {
                 // Stationary Top Control and Status Panel (1.0x Scale)
                 HStack(spacing: 20) {
@@ -39,8 +41,7 @@ public struct GameView: View {
                         viewModel.startNewGame()
                     }) {
                         Text("New Game")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -48,17 +49,16 @@ public struct GameView: View {
                             .cornerRadius(4)
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
                     .keyboardShortcut("n", modifiers: .command)
-                    
+
                     // Restart Game Button
                     Button(action: {
                         viewModel.restartCurrentGame()
                     }) {
                         Text("Restart")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -66,16 +66,15 @@ public struct GameView: View {
                             .cornerRadius(4)
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
-                    
+
                     // Undo Button
                     Button(action: {
                         viewModel.undoLastAction()
                     }) {
                         Text("Undo")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -86,7 +85,7 @@ public struct GameView: View {
                                     .stroke(viewModel.canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
                             )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(HoverToolbarButtonStyle())
                     .disabled(!viewModel.canUndo)
                     .focusable(false)
                     .keyboardShortcut("z", modifiers: .command)
@@ -96,8 +95,7 @@ public struct GameView: View {
                         isShowingOptions = true
                     }) {
                         Text("Options")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -105,9 +103,9 @@ public struct GameView: View {
                             .cornerRadius(4)
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
-                    
+
                     // Game Selection Dropdown
                     Menu {
                         Button(GameMode.klondike.rawValue) {
@@ -128,10 +126,14 @@ public struct GameView: View {
                                 coordinator.startNewGame()
                             }
                         }
+                        Button(GameMode.videoPoker.rawValue) {
+                            if let coordinator = coordinator, coordinator.gameMode != .videoPoker {
+                                coordinator.gameMode = .videoPoker
+                            }
+                        }
                     } label: {
                         Text("Game Selection")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(.white)
                     }
                     .menuStyle(.borderlessButton)
@@ -141,15 +143,14 @@ public struct GameView: View {
                     .cornerRadius(4)
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     .focusable(false)
-                    
+
                     // Stats Button
                     if !viewModel.options.hideStatsButton {
                         Button(action: {
                             isShowingStats = true
                         }) {
                             Text("Stats")
-                                .font(.body)
-                                .fontWeight(.bold)
+                                .font(.display(16))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
@@ -157,18 +158,17 @@ public struct GameView: View {
                                 .cornerRadius(4)
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(HoverToolbarButtonStyle())
                         .focusable(false)
                     }
-                    
+
                     // Hint Button
                     if !viewModel.options.hideHintButton {
                         Button(action: {
                             viewModel.findHint()
                         }) {
                             Text("Hint")
-                                .font(.body)
-                                .fontWeight(.bold)
+                                .font(.display(16))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
@@ -176,7 +176,7 @@ public struct GameView: View {
                                 .cornerRadius(4)
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(HoverToolbarButtonStyle())
                         .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }
@@ -227,6 +227,7 @@ public struct GameView: View {
                     .opacity(0)
                 }
                 .padding(.horizontal, 16)
+                .padding(.top, 12)
                 .padding(.vertical, 6)
                 .background(viewModel.options.feltColor.statusBarColor)
                 .layoutPriority(1)
@@ -821,8 +822,9 @@ struct OptionsView: View {
     @State private var drawMode: GameState.DrawMode
     @State private var hideHintButton: Bool
     @State private var hideStatsButton: Bool
+    @State private var isDarkMode: Bool
     @State private var customSelectedColor: Color
-    
+
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
@@ -842,7 +844,8 @@ struct OptionsView: View {
         _drawMode = State(initialValue: viewModel.state.drawMode)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
-        
+        _isDarkMode = State(initialValue: viewModel.options.isDarkMode)
+
         let r = UserDefaults.standard.double(forKey: "custom_felt_red")
         let g = UserDefaults.standard.double(forKey: "custom_felt_green")
         let b = UserDefaults.standard.double(forKey: "custom_felt_blue")
@@ -893,6 +896,17 @@ struct OptionsView: View {
 
                     Toggle("Hide Stats button", isOn: $hideStatsButton)
                         .font(.system(.body, design: .monospaced))
+
+                    Toggle("Dark Mode Cards", isOn: $isDarkMode)
+                        .font(.system(.body, design: .monospaced))
+
+                    Divider()
+
+                    ThemesSectionView(
+                        currentCardBackTheme: cardBackTheme,
+                        currentIsDarkMode: isDarkMode,
+                        currentFeltColor: feltColor
+                    )
 
                     Divider()
 
@@ -966,8 +980,9 @@ struct OptionsView: View {
                     updatedOpts.isDrawConstraintsEnabled = isDrawConstraintsEnabled
                     updatedOpts.hideHintButton = hideHintButton
                     updatedOpts.hideStatsButton = hideStatsButton
+                    updatedOpts.isDarkMode = isDarkMode
                     updatedOpts.customFeltColorRevision += 1
-                    
+
                     if viewModel.state.drawMode != drawMode {
                         viewModel.state.drawMode = drawMode
                         viewModel.startNewGame()
@@ -989,7 +1004,8 @@ struct OptionsView: View {
 struct StatsView: View {
     let viewModel: GameViewModel
     @Environment(\.dismiss) private var dismiss
-    
+    @State private var showingResetConfirmation = false
+
     var body: some View {
         let stats = viewModel.statistics
         
@@ -1070,13 +1086,21 @@ struct StatsView: View {
             
             HStack {
                 Button("Reset Stats") {
-                    let emptyStats = GameStatistics()
-                    viewModel.statistics = emptyStats
-                    viewModel.resetStatistics()
+                    showingResetConfirmation = true
                 }
                 .buttonStyle(.borderless)
                 .foregroundColor(.red)
                 .font(.system(.body, design: .monospaced))
+                .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
+                    Button("Reset", role: .destructive) {
+                        let emptyStats = GameStatistics()
+                        viewModel.statistics = emptyStats
+                        viewModel.resetStatistics()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will permanently clear all statistics. This cannot be undone.")
+                }
                 
                 Spacer()
                 

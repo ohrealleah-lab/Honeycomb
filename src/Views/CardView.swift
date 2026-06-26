@@ -15,29 +15,50 @@ public struct CardView: View {
                 return coordinator.beecellViewModel.cardBackTheme
             case .spider:
                 return coordinator.spiderViewModel.options.cardBackTheme
+            case .videoPoker:
+                return coordinator.videoPokerViewModel.options.cardBackTheme
             }
         }
         return viewModel?.cardBackTheme ?? "Vulpera"
     }
-    
+
+    private var isDarkMode: Bool {
+        if let coordinator = coordinator {
+            switch coordinator.gameMode {
+            case .klondike:
+                return coordinator.klondikeViewModel.options.isDarkMode
+            case .beecell:
+                return coordinator.beecellViewModel.options.isDarkMode
+            case .spider:
+                return coordinator.spiderViewModel.options.isDarkMode
+            case .videoPoker:
+                return coordinator.videoPokerViewModel.options.isDarkMode
+            }
+        }
+        return viewModel?.options.isDarkMode ?? false
+    }
+
     private var outlineColor: Color {
+        if isDarkMode {
+            return Color(red: 0.3, green: 0.3, blue: 0.3)
+        }
         if !card.faceUp && cardBackTheme == "Dingwall" {
             // Charcoal/grey to match the Dingwall image background and silver hardware
             return Color(red: 0.35, green: 0.35, blue: 0.36)
         }
         return Color.black.opacity(0.85)
     }
-    
+
     public var body: some View {
         ZStack {
             if card.faceUp {
-                CardFrontView(card: card)
+                CardFrontView(card: card, isDarkMode: isDarkMode)
             } else {
                 CardBackView(isAnimated: isAnimated)
             }
         }
         .frame(width: 128, height: 181)
-        .background(Color.white)
+        .background(isDarkMode ? Color(red: 0.118, green: 0.118, blue: 0.118) : Color.white)
         .cornerRadius(10)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
@@ -51,9 +72,15 @@ public struct CardView: View {
 
 struct CardFrontView: View {
     let card: Card
-    
+    var isDarkMode: Bool = false
+
     var color: Color {
-        card.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1)
+        if isDarkMode {
+            return card.isRed
+                ? Color(red: 1.0, green: 0.267, blue: 0.267)
+                : Color(red: 0.753, green: 0.753, blue: 0.753)
+        }
+        return card.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1)
     }
     
     var body: some View {
@@ -71,7 +98,7 @@ struct CardFrontView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             
             // Center Suit Icon(s) (Larger, takes up most of card)
-            CardCenterSuitView(suit: card.suit, rank: card.rank, color: color)
+            CardCenterSuitView(suit: card.suit, rank: card.rank, color: color, isDarkMode: isDarkMode)
                 .frame(width: 86, height: 138)
             
             // Bottom Right Index (Horizontal, inverted, decreased size)
@@ -155,7 +182,8 @@ struct FaceCardImageView: View {
     let filename: String
     let absolutePath: String
     let fallbackView: AnyView
-    
+    var fillFrame: Bool = false
+
     var body: some View {
         let nsImage: NSImage? = {
             if let image = NSImage(contentsOfFile: absolutePath) {
@@ -167,14 +195,21 @@ struct FaceCardImageView: View {
             }
             return nil
         }()
-        
+
         if let image = nsImage {
-            Image(nsImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 62)
-                .frame(width: 77, height: 122)
-                .clipped()
+            if fillFrame {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 77, height: 122)
+            } else {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 62)
+                    .frame(width: 77, height: 122)
+                    .clipped()
+            }
         } else {
             fallbackView
         }
@@ -185,7 +220,8 @@ struct CardCenterSuitView: View {
     let suit: Card.Suit
     let rank: Int
     let color: Color
-    
+    var isDarkMode: Bool = false
+
     var body: some View {
         Group {
             if rank == 1 {
@@ -203,6 +239,11 @@ struct CardCenterSuitView: View {
                 if let slot = FaceCardSlot.slot(rank: 11, isRed: suit.isRed),
                    let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
                     CustomFaceArtImageView(art: art)
+                } else if isDarkMode {
+                    let name = suit.isRed ? "dark_j_red" : "dark_j_grey"
+                    let path = "/Users/leah/SoliBee/\(name).png"
+                    FaceCardImageView(filename: name, absolutePath: path,
+                        fallbackView: AnyView(HighFidelityShieldView(color: color, suitSymbol: suit.symbol)), fillFrame: true)
                 } else {
                     let path = suit.isRed ? "/Users/leah/SoliBee/red j.png" : "/Users/leah/SoliBee/J.png"
                     let name = suit.isRed ? "red j" : "J"
@@ -217,6 +258,11 @@ struct CardCenterSuitView: View {
                 if let slot = FaceCardSlot.slot(rank: 12, isRed: suit.isRed),
                    let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
                     CustomFaceArtImageView(art: art)
+                } else if isDarkMode {
+                    let name = suit.isRed ? "dark_q_red" : "dark_q_grey"
+                    let path = "/Users/leah/SoliBee/\(name).png"
+                    FaceCardImageView(filename: name, absolutePath: path,
+                        fallbackView: AnyView(HighFidelityTiaraView(color: color, suitSymbol: suit.symbol)), fillFrame: true)
                 } else {
                     let path = suit.isRed ? "/Users/leah/SoliBee/red q.png" : "/Users/leah/SoliBee/Q.png"
                     let name = suit.isRed ? "red q" : "Q"
@@ -231,6 +277,11 @@ struct CardCenterSuitView: View {
                 if let slot = FaceCardSlot.slot(rank: 13, isRed: suit.isRed),
                    let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
                     CustomFaceArtImageView(art: art)
+                } else if isDarkMode {
+                    let name = suit.isRed ? "dark_k_red" : "dark_k_grey"
+                    let path = "/Users/leah/SoliBee/\(name).png"
+                    FaceCardImageView(filename: name, absolutePath: path,
+                        fallbackView: AnyView(HighFidelityCrownView(color: color, suitSymbol: suit.symbol)), fillFrame: true)
                 } else {
                     let path = suit.isRed ? "/Users/leah/SoliBee/red k.png" : "/Users/leah/SoliBee/K.png"
                     let name = suit.isRed ? "red k" : "K"
@@ -351,6 +402,8 @@ struct CardCenterSuitView: View {
 
 struct CardBackView: View {
     var isAnimated: Bool = false
+
+    static let bundleBackgroundNames: Set<String> = ["Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset"]
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
     @Environment(GameViewModel.self) private var viewModel: GameViewModel?
     
@@ -363,11 +416,13 @@ struct CardBackView: View {
                 return coordinator.beecellViewModel.cardBackTheme
             case .spider:
                 return coordinator.spiderViewModel.options.cardBackTheme
+            case .videoPoker:
+                return coordinator.videoPokerViewModel.options.cardBackTheme
             }
         }
         return viewModel?.cardBackTheme ?? "Vulpera"
     }
-    
+
     var body: some View {
         let theme = cardBackTheme
         
@@ -393,6 +448,16 @@ struct CardBackView: View {
                         .frame(width: 128, height: 181)
                 } else {
                     Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
+                }
+            } else if Self.bundleBackgroundNames.contains(theme) {
+                if let path = Bundle.main.path(forResource: theme, ofType: "png"),
+                   let nsImage = NSImage(contentsOfFile: path) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 128, height: 181)
+                } else {
+                    Circle().fill(Color.gray.opacity(0.3)).frame(width: 10, height: 10)
                 }
             } else if let customBack = CustomCardBackManager.shared.customCardBacks.first(where: { $0.name == theme }) {
                 let manager = CustomCardBackManager.shared

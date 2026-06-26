@@ -22,6 +22,10 @@ public final class SpiderViewModel {
                 UserDefaults.standard.set(options.cardBackTheme, forKey: "cardBackTheme")
                 NotificationCenter.default.post(name: .cardBackThemeDidChange, object: self, userInfo: ["cardBackTheme": options.cardBackTheme])
             }
+            if options.isDarkMode != oldValue.isDarkMode {
+                UserDefaults.standard.set(options.isDarkMode, forKey: "isDarkMode")
+                NotificationCenter.default.post(name: .darkModeDidChange, object: self, userInfo: ["isDarkMode": options.isDarkMode])
+            }
         }
     }
     

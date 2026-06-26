@@ -299,12 +299,13 @@ struct FaceCardArtSectionView: View {
                         showingDeleteAlert = true
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white)
-                            .background(Circle().fill(Color.black.opacity(0.5)))
+                            .foregroundColor(.red)
+                            .background(Circle().fill(Color.white))
+                            .font(.system(size: 16))
                     }
                     .buttonStyle(.plain)
-                    .offset(x: 4, y: -4)
+                    .offset(x: 5, y: -5)
+                    .help("Remove art")
                 }
             }
 

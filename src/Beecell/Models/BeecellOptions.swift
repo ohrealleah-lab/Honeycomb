@@ -10,6 +10,7 @@ public struct BeecellOptions: Codable, Equatable {
     public var hideStatsButton: Bool = false
 
     public var customFeltColorRevision: Int = 0
+    public var isDarkMode: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case feltColor
@@ -20,6 +21,7 @@ public struct BeecellOptions: Codable, Equatable {
         case hideHintButton
         case hideStatsButton
         case customFeltColorRevision
+        case isDarkMode
     }
 
     public init(
@@ -30,7 +32,8 @@ public struct BeecellOptions: Codable, Equatable {
         isSoundEnabled: Bool = true,
         hideHintButton: Bool = false,
         hideStatsButton: Bool = false,
-        customFeltColorRevision: Int = 0
+        customFeltColorRevision: Int = 0,
+        isDarkMode: Bool = false
     ) {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
@@ -40,6 +43,7 @@ public struct BeecellOptions: Codable, Equatable {
         self.hideHintButton = hideHintButton
         self.hideStatsButton = hideStatsButton
         self.customFeltColorRevision = customFeltColorRevision
+        self.isDarkMode = isDarkMode
     }
 
     public init(from decoder: Decoder) throws {
@@ -52,5 +56,6 @@ public struct BeecellOptions: Codable, Equatable {
         self.hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
         self.hideStatsButton = try container.decodeIfPresent(Bool.self, forKey: .hideStatsButton) ?? false
         self.customFeltColorRevision = try container.decodeIfPresent(Int.self, forKey: .customFeltColorRevision) ?? 0
+        self.isDarkMode = try container.decodeIfPresent(Bool.self, forKey: .isDarkMode) ?? false
     }
 }

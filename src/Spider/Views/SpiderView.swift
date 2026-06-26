@@ -31,6 +31,9 @@ public struct SpiderView: View {
             // Felt Board Background
             viewModel.options.feltColor.primaryColor
                 .ignoresSafeArea()
+
+            FeltVignetteView()
+
             
             VStack(spacing: 0) {
                 // Top Control Row
@@ -40,8 +43,7 @@ public struct SpiderView: View {
                         viewModel.startNewGame()
                     }) {
                         Text("New Game")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -49,17 +51,16 @@ public struct SpiderView: View {
                             .cornerRadius(4)
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
                     .keyboardShortcut("n", modifiers: .command)
-                    
+
                     // Restart Game
                     Button(action: {
                         viewModel.restartCurrentGame()
                     }) {
                         Text("Restart")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -67,16 +68,15 @@ public struct SpiderView: View {
                             .cornerRadius(4)
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
-                    
+
                     // Undo
                     Button(action: {
                         viewModel.undoLastAction()
                     }) {
                         Text("Undo")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -87,18 +87,17 @@ public struct SpiderView: View {
                                     .stroke(viewModel.canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
                             )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(HoverToolbarButtonStyle())
                     .disabled(!viewModel.canUndo)
                     .focusable(false)
                     .keyboardShortcut("z", modifiers: .command)
-                    
+
                     // Options
                     Button(action: {
                         isShowingOptions = true
                     }) {
                         Text("Options")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -106,9 +105,9 @@ public struct SpiderView: View {
                             .cornerRadius(4)
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
-                    
+
                     // Game Selection Dropdown
                     Menu {
                         Button(GameMode.klondike.rawValue) {
@@ -129,10 +128,14 @@ public struct SpiderView: View {
                                 coordinator.startNewGame()
                             }
                         }
+                        Button(GameMode.videoPoker.rawValue) {
+                            if let coordinator = coordinator, coordinator.gameMode != .videoPoker {
+                                coordinator.gameMode = .videoPoker
+                            }
+                        }
                     } label: {
                         Text("Game Selection")
-                            .font(.body)
-                            .fontWeight(.bold)
+                            .font(.display(16))
                             .foregroundColor(.white)
                     }
                     .menuStyle(.borderlessButton)
@@ -142,15 +145,14 @@ public struct SpiderView: View {
                     .cornerRadius(4)
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     .focusable(false)
-                    
+
                     // Stats
                     if !viewModel.options.hideStatsButton {
                         Button(action: {
                             isShowingStats = true
                         }) {
                             Text("Stats")
-                                .font(.body)
-                                .fontWeight(.bold)
+                                .font(.display(16))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
@@ -158,18 +160,17 @@ public struct SpiderView: View {
                                 .cornerRadius(4)
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(HoverToolbarButtonStyle())
                         .focusable(false)
                     }
-                    
+
                     // Hint
                     if !viewModel.options.hideHintButton {
                         Button(action: {
                             viewModel.findHint()
                         }) {
                             Text("Hint")
-                                .font(.body)
-                                .fontWeight(.bold)
+                                .font(.display(16))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
@@ -177,7 +178,7 @@ public struct SpiderView: View {
                                 .cornerRadius(4)
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(HoverToolbarButtonStyle())
                         .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }
@@ -191,7 +192,8 @@ public struct SpiderView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 6)
+                .padding(.top, 12)
+                .padding(.bottom, 6)
                 .background(viewModel.options.feltColor.statusBarColor)
                 .layoutPriority(1)
                 
@@ -546,12 +548,13 @@ struct SpiderOptionsView: View {
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
     @State private var hideStatsButton: Bool
+    @State private var isDarkMode: Bool
     @State private var customSelectedColor: Color
-    
+
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
-    
+
     init(viewModel: SpiderViewModel, isShowingStats: Binding<Bool>) {
         self.viewModel = viewModel
         self._isShowingStats = isShowingStats
@@ -562,6 +565,7 @@ struct SpiderOptionsView: View {
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        _isDarkMode = State(initialValue: viewModel.options.isDarkMode)
         
         let r = UserDefaults.standard.double(forKey: "custom_felt_red")
         let g = UserDefaults.standard.double(forKey: "custom_felt_green")
@@ -609,6 +613,17 @@ struct SpiderOptionsView: View {
                     Toggle("Hide Stats button", isOn: $hideStatsButton)
                         .font(.system(.body, design: .monospaced))
 
+                    Toggle("Dark Mode Cards", isOn: $isDarkMode)
+                        .font(.system(.body, design: .monospaced))
+
+                    Divider()
+
+                    ThemesSectionView(
+                        currentCardBackTheme: cardBackTheme,
+                        currentIsDarkMode: isDarkMode,
+                        currentFeltColor: feltColor
+                    )
+
                     Divider()
 
                     Picker("Felt Color:", selection: $feltColor) {
@@ -641,9 +656,9 @@ struct SpiderOptionsView: View {
                 .padding(.horizontal, 24)
             }
             .frame(maxHeight: 680)
-            
+
             Divider()
-            
+
             HStack {
                 Button("Cancel") {
                     UserDefaults.standard.set(originalRed, forKey: "custom_felt_red")
@@ -679,6 +694,7 @@ struct SpiderOptionsView: View {
                     updatedOpts.isSoundEnabled = isSoundEnabled
                     updatedOpts.hideHintButton = hideHintButton
                     updatedOpts.hideStatsButton = hideStatsButton
+                    updatedOpts.isDarkMode = isDarkMode
                     updatedOpts.customFeltColorRevision += 1
                     
                     viewModel.options = updatedOpts
@@ -698,7 +714,8 @@ struct SpiderOptionsView: View {
 struct SpiderStatsView: View {
     let viewModel: SpiderViewModel
     @Environment(\.dismiss) private var dismiss
-    
+    @State private var showingResetConfirmation = false
+
     var body: some View {
         let stats = viewModel.currentModeStats
         
@@ -758,13 +775,21 @@ struct SpiderStatsView: View {
             
             HStack {
                 Button("Reset Stats") {
-                    var stats = viewModel.statistics
-                    stats.statsBySuits[viewModel.options.suitCount] = SpiderModeStats()
-                    viewModel.statistics = stats
+                    showingResetConfirmation = true
                 }
                 .buttonStyle(.borderless)
                 .foregroundColor(.red)
                 .font(.system(.body, design: .monospaced))
+                .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
+                    Button("Reset", role: .destructive) {
+                        var stats = viewModel.statistics
+                        stats.statsBySuits[viewModel.options.suitCount] = SpiderModeStats()
+                        viewModel.statistics = stats
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will permanently clear all statistics. This cannot be undone.")
+                }
                 
                 Spacer()
                 

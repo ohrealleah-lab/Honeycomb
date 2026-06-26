@@ -5,3 +5,7 @@ SoliBee.app/
 test_runner
 *.swp
 *.lock
+
+.gemini/
+.swiftpm/
+SoliBee.zip

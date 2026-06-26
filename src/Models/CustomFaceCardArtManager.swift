@@ -216,6 +216,15 @@ public final class CustomFaceCardArtManager {
         return appSupportDirectory.appendingPathComponent(art.relativePath)
     }
 
+    /// Replaces the active face art set with the given arts (skipping any whose files are missing).
+    public func restore(_ arts: [CustomFaceArt]) {
+        let dir = appSupportDirectory
+        faceArts = arts.filter {
+            FileManager.default.fileExists(atPath: dir.appendingPathComponent($0.relativePath).path)
+        }
+        save()
+    }
+
     public func isGIF(_ art: CustomFaceArt) -> Bool {
         art.relativePath.lowercased().hasSuffix(".gif")
     }
