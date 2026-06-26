@@ -23,19 +23,20 @@ Solibee supports four fully implemented, distinct games selectable via the **Gam
 
 ### 3. Video Poker
 * **Modes**: **Jacks or Better, Deuces Wild, Bonus Poker**
-* **Rules & Scoring**: Jacks or Better: Win by holding a pair of Jacks or higher,b Deuces Wild: All 2s are wild cards. Bonus Poker: Jacks or Better rules with enhanced payouts for four-of-a-kind hands/
+* **Rules & Scoring**: Jacks or Better: Win by holding a pair of Jacks or higher,b Deuces Wild: All 2s are wild cards. Bonus Poker: Jacks or Better rules with enhanced payouts for four-of-a-kind hands.
 
   
 ---
 
 ## ♥️ Game Features - Make the Game Yours!
 
-* ** **Custom Card Backs**: Set the card back to whatever you want! Even an animated gif!
-* ** **Custom Card Art**: Set the art for red and black suits for Aces, Jacks, Kings, and Queens!
-* ** **Custom Color Background**: Set the tablaeu to match your deck of cards.
-* ** **Visual Themes**: Use a presaved theme, or create your own! Easily toggle between multiple themes.
-* ** **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
-* ** **ZERO AI Art**: All included art was created by artists who asked not to be credited, and is used with permission.
+* **Custom Card Backs**: Set the card back to whatever you want! Even an animated gif!
+* **Custom Card Art**: Set the art for red and black suits for Aces, Jacks, Kings, and Queens!
+* **Custom Color Background**: Set the tablaeu to match your deck of cards.
+* **Visual Themes**: Use a presaved theme, or create your own! Easily toggle between multiple themes.
+* **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
+* **ZERO AI Art**: All included art was created by artists who asked not to be credited, and is used with permission.
+  
 ---
 
 ## ♣️ Game Capabilties
