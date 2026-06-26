@@ -1,44 +1,53 @@
 # 🐝 Solibee Solitaire Suite
-What's the #1 issue facing Mac users today? A lack of Klondike Solitaire. I used SpecKit and Gemini to build Solitaire for OSX so my woes would end (and to brush up on Agentic development.)
+What's the #1 issue facing Mac users today? A lack of ad-free Klondike Solitaire. I used SpecKit and Gemini to build Solitaire for OSX so my woes would end (and to brush up on Agentic development.) 
 
-A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the nostalgic retro visual charm and gameplay dynamics of classic Solitaire games with modern customization. Change your card deck to any image you want, even an animated gif! Change the Aces, Kings, Queens, and Jacks to an static image. Adjust the playing board color to match your deck. Make the game **yours**.
+A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the gameplay dynamics of classic Solitaire games with modern flourishes and customization. Make the game **yours**.
 
 ---
 
-## 🎨 Game Modes
+## ♠️ Game Modes
 
 Solibee supports three fully implemented, distinct Solitaire games selectable via the **Game Selection** dropdown:
 
-### 1. Klondike (SoliBee)
+### 1. Klondike
 * **Modes**: Easy (1-Card Draw) and Standard (3-Card Draw).
 * **Rules & Scoring**: Classic scoring rules alongside an optional **Vegas Scoring Mode**.
-* **Engine Features**: Supports automated autocomplete once victory is mathematically guaranteed.
 
-### 2. Beecell (Freecell)
+### 2. Freecell
 * **Modes**: Supports both **1-Deck** (8 columns, 4 free cells, 4 foundations) and **2-Deck** (10 columns, 4 free cells, 8 foundations) options.
 * **Rules & Scoring**: Open card placement strategy with move limits based on the number of empty free cells and tableau spaces.
 
-### 3. Spider Solibee (Spider)
+### 3. Spider Solitaire
 * **Modes**: **1-Suit** (Spades), **2-Suit** (Spades/Hearts), or **4-Suit** (Spades/Hearts/Diamonds/Clubs) options.
 * **Rules & Scoring**: Start at 500 points, decrement 1 point per move, and earn 100 points for each full sequence (King to Ace of a single suit) cleared.
 
+### 3. Video Poker
+* **Modes**: **Jacks or Better, Deuces Wild, Bonus Poker**
+* **Rules & Scoring**: Jacks or Better: Win by holding a pair of Jacks or higher,b Deuces Wild: All 2s are wild cards. Bonus Poker: Jacks or Better rules with enhanced payouts for four-of-a-kind hands/
+
+  
+---
+
+## ♥️ Game Features
+
+* ** **Custom Card Backs**: Set the card back to whatever you want! Even an animated gif!
+* ** **Custom Card Art**: Set the art for red and black suits for Aces, Jacks, Kings, and Queens!
+* ** **Custom Color Background**: Set the tablaeu to match your deck of cards.
+* ** **Visual Themes**: Use a presaved theme, or create your own! Easily toggle between multiple themes.
+* ** **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
+* ** **ZERO AI Art**: All included art was created by artists who asked not to be credited, and is used with permission.
+---
+
+## ♣️ Game Capabilties
+
+* **Engine Features**: Supports automated autocomplete once victory is mathematically guaranteed.
+* **Hint System**: Instantly highlight optimal legal moves on the board.
+* **Full Undo History**: Complete multi-step action undo history.
+* **Live Statistics**: Score tracking, move count, game timers, win percentages, and persisted local high scores.
 
 ---
 
-## 🛠️ Shared Features & Engine Capabilties
-
-Across all three games, the following suite of premium core features is available:
-
-* **Smart Helper Engine**:
-  * **AI Hint System**: Press `Cmd + H` to instantly highlight optimal legal moves on the board.
-  * **Full Undo History**: Complete multi-step action undo history via `Cmd + Z`.
-  * **Live Statistics**: Score tracking, move count, game timers, win percentages, and persisted local high scores.
-  * **Visual Themes**: Dynamic felt backgrounds (*Felt Green*, *Deep Crimson*, *Royal Blue*, and *Charcoal*).
-  * **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
-
----
-
-## 🚀 Getting Started
+## ♦️ Getting Started
 
 ### Prerequisites
 * **Operating System**: macOS 14.0 or later
