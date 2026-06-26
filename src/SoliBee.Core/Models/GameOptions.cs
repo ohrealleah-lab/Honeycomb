@@ -34,6 +34,27 @@ public class GameOptions
     public int SpiderSuitCount { get; set; } = 1;
 
     public bool HasAppliedDefaultTheme { get; set; } = false;
+    public string LastGameMode { get; set; } = "SolitaireDraw1";
+
+    // Per-game zoom levels (LayoutTransform scale, 0.5–1.5)
+    public double KlondikeZoom    { get; set; } = 1.0;
+    public double BeecellZoom     { get; set; } = 1.0;
+    public double SpiderZoom      { get; set; } = 1.0;
+    public double VideoPokerZoom  { get; set; } = 1.0;
+
+    // Per-game window size (normal/restored size + maximize flag)
+    public double KlondikeWidth      { get; set; } = 1120;
+    public double KlondikeHeight     { get; set; } = 768;
+    public bool   KlondikeMaximized  { get; set; } = false;
+    public double BeecellWidth       { get; set; } = 1200;
+    public double BeecellHeight      { get; set; } = 768;
+    public bool   BeecellMaximized   { get; set; } = false;
+    public double SpiderWidth        { get; set; } = 1460;
+    public double SpiderHeight       { get; set; } = 768;
+    public bool   SpiderMaximized    { get; set; } = false;
+    public double VideoPokerWidth    { get; set; } = 1090;
+    public double VideoPokerHeight   { get; set; } = 768;
+    public bool   VideoPokerMaximized { get; set; } = false;
 
     // Theme editor color overrides — null means use the compiled default
     public string? ThemeFaceBackNormal { get; set; }

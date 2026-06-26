@@ -7,7 +7,7 @@
 
     <Grid x:Name="CardRoot" Width="128" Height="181">
         <!-- Card Face (Face Up) -->
-        <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="0.75" Background="White" CornerRadius="10" Padding="4" BoxShadow="0 1.5 1.5 0 #26000000">
+        <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="0.75" Background="White" CornerRadius="10" Padding="4" BoxShadow="0 4 16 0 #60000000, 0 2 4 0 #80000000">
             <Grid>
                 <!-- Top-Left Value & Suit Display (Horizontal) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="2" Margin="4,2,0,0">
@@ -39,7 +39,7 @@
         </Border>
 
         <!-- Card Back (Face Down) -->
-        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="0.75" CornerRadius="10" IsVisible="False" Padding="0" Background="White" BoxShadow="0 1.5 1.5 0 #26000000" ClipToBounds="True">
+        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="0.75" CornerRadius="10" IsVisible="False" Padding="0" Background="White" BoxShadow="0 4 16 0 #60000000, 0 2 4 0 #80000000" ClipToBounds="True">
             <Grid x:Name="CardBackGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>

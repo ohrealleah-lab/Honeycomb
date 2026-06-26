@@ -18,7 +18,7 @@
             <DockPanel LastChildFill="False">
                 <!-- Buttons on the Left -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <ComboBox SelectedIndex="1" x:Name="GameSelectionBox" Classes="toolbar-combo" SelectionChanged="GameSelectionBox_SelectionChanged">
+                    <ComboBox x:Name="GameSelectionBox" Classes="toolbar-combo" SelectionChanged="GameSelectionBox_SelectionChanged">
                         <ComboBoxItem Content="Game Selection" IsEnabled="False" IsVisible="False" />
                         <ComboBoxItem Content="Klondike (Draw 1)" Tag="SolitaireDraw1" />
                         <ComboBoxItem Content="Klondike (Draw 3)" Tag="SolitaireDraw3" />
@@ -67,7 +67,9 @@
 
         <!-- Main Game Area -->
         <Grid Grid.Row="1">
-            <ContentControl x:Name="MainContent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+            <LayoutTransformControl x:Name="MainContentWrapper" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <ContentControl x:Name="MainContent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+            </LayoutTransformControl>
             
             <!-- Preferences Modal Dialog Overlay -->
             <Grid x:Name="PreferencesOverlay" Background="#90000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">

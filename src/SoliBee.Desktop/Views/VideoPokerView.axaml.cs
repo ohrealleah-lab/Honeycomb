@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -15,29 +17,36 @@ namespace SoliBee.Desktop.Views;
 public partial class VideoPokerView : UserControl
 {
     private readonly CardView[]  _cardViews = null!;
-    private readonly Border[]    _holdBadges = null!;
     private Grid[]               _cardSlots = null!;
     private readonly Dictionary<string, Border> _payRowBorders = new();
     private TextBlock[] _payColHeaders = null!;
     private readonly List<TextBlock[]> _payValueBlocks = new();
-    private DispatcherTimer? _resultFadeTimer;
 
     private static readonly Card _blankCard = new("__vp_blank__", CardSuit.Spades, 0, false);
 
-    // Result caching — keeps result visible until next Deal
-    private string _cachedResultText = "";
-    private bool   _cachedHasWin = false;
-    private VideoPokerPhase _prevPhase = VideoPokerPhase.Deal;
-
     private bool _variantInitializing = true;
+
+    // Animation state
+    private CancellationTokenSource? _dealAnimCts;
+    private DispatcherTimer? _winPulseTimer;
+    private double _winPulsePhase;
+    private DispatcherTimer? _creditAnimTimer;
+    private int _displayedCredits = -1;
+
+    // Banner fade state
+    private Border? _activeBanner;
+    private DispatcherTimer? _bannerDelayTimer;
+    private DispatcherTimer? _bannerFadeTimer;
+
+    // Cards fade state
+    private DispatcherTimer? _cardsFadeTimer;
 
     public VideoPokerView()
     {
         InitializeComponent();
 
-        _cardViews  = new[] { Card0View,  Card1View,  Card2View,  Card3View,  Card4View  };
-        _holdBadges = new[] { HoldBadge0, HoldBadge1, HoldBadge2, HoldBadge3, HoldBadge4 };
-        _cardSlots     = new[] { CardSlot0,  CardSlot1,  CardSlot2,  CardSlot3,  CardSlot4  };
+        _cardViews = new[] { Card0View, Card1View, Card2View, Card3View, Card4View };
+        _cardSlots = new[] { CardSlot0, CardSlot1, CardSlot2, CardSlot3, CardSlot4 };
         _payColHeaders = new[] { PayColHdr1, PayColHdr2, PayColHdr3, PayColHdr4, PayColHdr5 };
 
         this.Loaded   += VideoPokerView_Loaded;
@@ -66,12 +75,14 @@ public partial class VideoPokerView : UserControl
             vm.PropertyChanged -= Vm_PropertyChanged;
         TopLevel.GetTopLevel(this)?.RemoveHandler(
             InputElement.KeyDownEvent, OnKeyDown);
-        StopResultFade();
+        HideActiveBanner();
+        StopCardsFade();
+        _dealAnimCts?.Cancel();
+        _creditAnimTimer?.Stop();
     }
 
     private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // Timer fires from a background thread — must marshal to UI thread
         Dispatcher.UIThread.Post(() =>
         {
             if (DataContext is not VideoPokerViewModel vm) return;
@@ -94,14 +105,11 @@ public partial class VideoPokerView : UserControl
 
     private void UpdateCards(VideoPokerViewModel vm)
     {
-        bool anyHeld = vm.IsHolding && System.Array.Exists(vm.State.HeldSlots, h => h);
         for (int i = 0; i < 5; i++)
         {
             var card = vm.State.Hand.Count > i ? vm.State.Hand[i] : _blankCard;
             _cardViews[i].Card = card;
-
-            // Only dim un-held cards once the player has held at least one card
-            _cardViews[i].Opacity = (anyHeld && !vm.State.HeldSlots[i]) ? 0.65 : 1.0;
+            _cardViews[i].Opacity = 1.0;
         }
     }
 
@@ -110,14 +118,13 @@ public partial class VideoPokerView : UserControl
         for (int i = 0; i < 5; i++)
         {
             bool held = vm.IsHolding && vm.State.HeldSlots[i];
-            _holdBadges[i].Opacity = held ? 1.0 : 0.0;
             _cardSlots[i].RenderTransform = new TranslateTransform(0, held ? -20 : 0);
         }
     }
 
     private void UpdateControls(VideoPokerViewModel vm)
     {
-        CreditsLabel.Text      = vm.CreditDisplay;
+        AnimateCreditsTo(vm.CreditDisplay);
         BetLabel.Text          = vm.BetDisplay;
         DealDrawButton.Content = vm.DealDrawLabel;
         RebuyButton.IsVisible  = vm.NeedsRebuy;
@@ -131,72 +138,121 @@ public partial class VideoPokerView : UserControl
 
     private void UpdateResult(VideoPokerViewModel vm)
     {
-        var phase = vm.State.Phase;
-
-        if (phase == VideoPokerPhase.Result)
+        if (vm.State.Phase == VideoPokerPhase.Result && vm.HasWin)
         {
-            StopResultFade();
-            _cachedResultText = vm.ResultText;
-            _cachedHasWin     = vm.HasWin;
+            WinHandNameBlock.Text = vm.State.LastHandName;
+            WinPayoutBlock.Text   = $"+{vm.State.LastPayout}";
+            ShowBanner(WinBanner);
+            StartWinPulse();
         }
-        else if (_prevPhase == VideoPokerPhase.Result && phase == VideoPokerPhase.Holding)
+        else if (vm.State.Phase == VideoPokerPhase.Result && vm.ShowNoWin)
         {
-            StartResultFade();
-            _prevPhase = phase;
-            return;
-        }
-        else if (_resultFadeTimer != null)
-        {
-            // Fade in progress — don't overwrite display
-            _prevPhase = phase;
-            return;
+            ShowBanner(NoWinOverlay);
+            StopWinPulse();
         }
         else
         {
-            _cachedResultText = "";
-            _cachedHasWin     = false;
+            HideActiveBanner();
         }
-
-        _prevPhase = phase;
-
-        ResultTextBlock.Text       = _cachedResultText;
-        ResultTextBlock.Foreground = _cachedHasWin
-            ? new SolidColorBrush(Color.Parse("#FFD700"))
-            : new SolidColorBrush(Color.Parse("#AAAAAA"));
-        ResultBanner.Background    = _cachedHasWin
-            ? new SolidColorBrush(Color.Parse("#33FFD700"))
-            : Brushes.Transparent;
     }
 
-    private void StartResultFade()
+    private void ShowBanner(Border banner)
     {
-        _resultFadeTimer?.Stop();
-        double opacity = 1.0;
-        _resultFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
-        _resultFadeTimer.Tick += (_, _) =>
+        if (_activeBanner == banner)
         {
-            opacity -= 0.06; // ~330 ms total (17 steps × 20 ms)
+            // Already visible — restart the delay so player has a fresh 1.5 s
+            StartBannerDelay();
+            return;
+        }
+        HideActiveBanner();
+        _activeBanner = banner;
+        banner.Opacity = 1.0;
+        banner.IsVisible = true;
+        StartBannerDelay();
+    }
+
+    private void StartBannerDelay()
+    {
+        _bannerDelayTimer?.Stop();
+        _bannerDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+        _bannerDelayTimer.Tick += (_, _) =>
+        {
+            _bannerDelayTimer!.Stop();
+            _bannerDelayTimer = null;
+            StartBannerFade();
+        };
+        _bannerDelayTimer.Start();
+    }
+
+    private void StartBannerFade()
+    {
+        _bannerFadeTimer?.Stop();
+        double opacity = 1.0;
+        _bannerFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _bannerFadeTimer.Tick += (_, _) =>
+        {
+            opacity -= 0.05; // ~320 ms total
             if (opacity <= 0)
             {
-                _resultFadeTimer!.Stop();
-                _resultFadeTimer = null;
-                _cachedResultText = "";
-                _cachedHasWin = false;
-                ResultTextBlock.Text = "";
-                ResultBanner.Background = Brushes.Transparent;
-                ResultBanner.Opacity = 1.0;
+                _bannerFadeTimer!.Stop();
+                _bannerFadeTimer = null;
+                if (_activeBanner != null)
+                {
+                    _activeBanner.IsVisible = false;
+                    _activeBanner.Opacity   = 1.0;
+                    _activeBanner = null;
+                }
+                StopWinPulse();
+                StartCardsFade();
                 return;
             }
-            ResultBanner.Opacity = opacity;
+            if (_activeBanner != null)
+                _activeBanner.Opacity = opacity;
         };
-        _resultFadeTimer.Start();
+        _bannerFadeTimer.Start();
     }
 
-    private void StopResultFade()
+    private void HideActiveBanner()
     {
-        _resultFadeTimer?.Stop();
-        _resultFadeTimer = null;
-        ResultBanner.Opacity = 1.0;
+        _bannerDelayTimer?.Stop();
+        _bannerDelayTimer = null;
+        _bannerFadeTimer?.Stop();
+        _bannerFadeTimer = null;
+        if (_activeBanner != null)
+        {
+            _activeBanner.IsVisible = false;
+            _activeBanner.Opacity   = 1.0;
+            _activeBanner = null;
+        }
+        StopWinPulse();
+        StopCardsFade();
+    }
+
+    private void StartCardsFade()
+    {
+        _cardsFadeTimer?.Stop();
+        double opacity = 1.0;
+        _cardsFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _cardsFadeTimer.Tick += (_, _) =>
+        {
+            opacity -= 0.025; // ~640 ms total
+            if (opacity <= 0)
+            {
+                _cardsFadeTimer!.Stop();
+                _cardsFadeTimer = null;
+                CardsRow.Opacity = 0;
+                return;
+            }
+            CardsRow.Opacity = opacity;
+        };
+        _cardsFadeTimer.Start();
+    }
+
+    private void StopCardsFade()
+    {
+        _cardsFadeTimer?.Stop();
+        _cardsFadeTimer = null;
+        CardsRow.Opacity = 1.0;
     }
 
     // ── Pay table ─────────────────────────────────────────────────────────────
@@ -211,7 +267,7 @@ public partial class VideoPokerView : UserControl
         {
             var border = new Border
             {
-                Padding      = new Avalonia.Thickness(2, 2),
+                Padding      = new Avalonia.Thickness(2, 3),
                 CornerRadius = new Avalonia.CornerRadius(3),
                 Background   = Brushes.Transparent,
             };
@@ -219,12 +275,12 @@ public partial class VideoPokerView : UserControl
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             for (int i = 0; i < 5; i++)
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(34) });
 
             var nameBlock = new TextBlock
             {
                 Text         = entry.HandName,
-                FontSize     = 9.5,
+                FontSize     = 14,
                 Foreground   = Brushes.White,
                 FontFamily   = new FontFamily("Courier New, Consolas, monospace"),
                 TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
@@ -238,7 +294,7 @@ public partial class VideoPokerView : UserControl
                 var valBlock = new TextBlock
                 {
                     Text                = entry.Multipliers[i].ToString(),
-                    FontSize            = 9.5,
+                    FontSize            = 14,
                     Foreground          = Brushes.White,
                     FontFamily          = new FontFamily("Courier New, Consolas, monospace"),
                     HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
@@ -309,6 +365,158 @@ public partial class VideoPokerView : UserControl
         }
     }
 
+    // ── Deal animation ────────────────────────────────────────────────────────
+
+    private void DoDealOrDraw(VideoPokerViewModel vm)
+    {
+        bool[] prevHeld = vm.State.Phase == VideoPokerPhase.Holding
+            ? (bool[])vm.State.HeldSlots.Clone()
+            : new bool[5];
+
+        vm.DealOrDraw();
+        Refresh(vm);
+        SoundService.PlayShuffle();
+
+        bool[] toAnimate = new bool[5];
+        for (int i = 0; i < 5; i++)
+            toAnimate[i] = !prevHeld[i];
+
+        _ = StartDealAnimationAsync(toAnimate);
+    }
+
+    private async Task StartDealAnimationAsync(bool[] toAnimate)
+    {
+        _dealAnimCts?.Cancel();
+        _dealAnimCts = new CancellationTokenSource();
+        var ct = _dealAnimCts.Token;
+
+        StopCardsFade();
+
+        // Set new cards to starting position (above, invisible)
+        for (int i = 0; i < 5; i++)
+        {
+            if (!toAnimate[i]) continue;
+            _cardSlots[i].RenderTransform = new TranslateTransform(0, -55);
+            _cardViews[i].Opacity = 0;
+        }
+
+        const int staggerMs  = 70;
+        const int durationMs = 190;
+        const int frameMs    = 15;
+        const int steps      = durationMs / frameMs;
+
+        var tasks = new List<Task>();
+        int cardIndex = 0;
+        for (int i = 0; i < 5; i++)
+        {
+            if (!toAnimate[i]) continue;
+            int capturedI = i;
+            int delay     = cardIndex * staggerMs;
+            cardIndex++;
+
+            tasks.Add(Task.Run(async () =>
+            {
+                try
+                {
+                    if (delay > 0) await Task.Delay(delay, ct);
+
+                    for (int step = 0; step <= steps; step++)
+                    {
+                        if (ct.IsCancellationRequested) break;
+                        double t    = step / (double)steps;
+                        double ease = 1.0 - Math.Pow(1.0 - t, 3); // cubic ease-out
+
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            if (_cardSlots[capturedI].RenderTransform is TranslateTransform tt)
+                                tt.Y = -55 * (1.0 - ease);
+                            _cardViews[capturedI].Opacity = ease;
+                        }, DispatcherPriority.Render);
+
+                        if (step < steps) await Task.Delay(frameMs, ct);
+                    }
+
+                    if (!ct.IsCancellationRequested)
+                    {
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            _cardSlots[capturedI].RenderTransform = new TranslateTransform(0, 0);
+                            _cardViews[capturedI].Opacity = 1.0;
+                        });
+                    }
+                }
+                catch (OperationCanceledException) { }
+            }, ct));
+        }
+
+        try { await Task.WhenAll(tasks); }
+        catch (OperationCanceledException) { }
+    }
+
+    // ── Win pulse ─────────────────────────────────────────────────────────────
+
+    private void StartWinPulse()
+    {
+        _winPulseTimer?.Stop();
+        _winPulsePhase = 0;
+        WinBanner.RenderTransform = new ScaleTransform(1.0, 1.0);
+
+        _winPulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _winPulseTimer.Tick += (_, _) =>
+        {
+            _winPulsePhase += 0.045;
+            double scale = 1.0 + Math.Sin(_winPulsePhase) * 0.028;
+            if (WinBanner.RenderTransform is ScaleTransform st)
+            {
+                st.ScaleX = scale;
+                st.ScaleY = scale;
+            }
+        };
+        _winPulseTimer.Start();
+    }
+
+    private void StopWinPulse()
+    {
+        _winPulseTimer?.Stop();
+        _winPulseTimer = null;
+        if (WinBanner != null)
+            WinBanner.RenderTransform = null;
+    }
+
+    // ── Credit roll-up ────────────────────────────────────────────────────────
+
+    private void AnimateCreditsTo(string newDisplay)
+    {
+        if (!int.TryParse(newDisplay, out int target)) { CreditsLabel.Text = newDisplay; return; }
+        if (_displayedCredits < 0) { _displayedCredits = target; CreditsLabel.Text = newDisplay; return; }
+        if (_displayedCredits == target) return;
+
+        _creditAnimTimer?.Stop();
+        int start   = _displayedCredits;
+        int delta   = target - start;
+        int totalMs = Math.Min(600, Math.Abs(delta) * 4);
+        totalMs     = Math.Max(totalMs, 120);
+        int elapsed = 0;
+
+        _creditAnimTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _creditAnimTimer.Tick += (_, _) =>
+        {
+            elapsed += 16;
+            double t    = Math.Min(1.0, elapsed / (double)totalMs);
+            double ease = 1.0 - Math.Pow(1.0 - t, 2); // quadratic ease-out
+            _displayedCredits = start + (int)(delta * ease);
+            CreditsLabel.Text = _displayedCredits.ToString();
+            if (t >= 1.0)
+            {
+                _displayedCredits = target;
+                CreditsLabel.Text = target.ToString();
+                _creditAnimTimer!.Stop();
+                _creditAnimTimer = null;
+            }
+        };
+        _creditAnimTimer.Start();
+    }
+
     // ── Keyboard ──────────────────────────────────────────────────────────────
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -319,11 +527,7 @@ public partial class VideoPokerView : UserControl
         {
             case Key.Space:
             case Key.Enter:
-                vm.DealOrDraw();
-                Refresh(vm);
-                SoundService.PlayShuffle();
-                e.Handled = true;
-                break;
+                DoDealOrDraw(vm); e.Handled = true; break;
             case Key.D1: case Key.NumPad1: HoldByKey(vm, 0); e.Handled = true; break;
             case Key.D2: case Key.NumPad2: HoldByKey(vm, 1); e.Handled = true; break;
             case Key.D3: case Key.NumPad3: HoldByKey(vm, 2); e.Handled = true; break;
@@ -353,13 +557,38 @@ public partial class VideoPokerView : UserControl
         BuildPayTable(vm);
     }
 
+    private void DealFromResult()
+    {
+        if (DataContext is not VideoPokerViewModel vm) return;
+        DoDealOrDraw(vm);
+    }
+
+    private void NoWinOverlay_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        DealFromResult();
+        e.Handled = true;
+    }
+
+    private void WinBanner_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        DealFromResult();
+        e.Handled = true;
+    }
+
     private void CardSlot_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Grid g) return;
         if (!int.TryParse(g.Tag?.ToString(), out var idx)) return;
         if (DataContext is not VideoPokerViewModel vm) return;
-        if (!vm.IsHolding) return;
 
+        if (vm.State.Phase == VideoPokerPhase.Result)
+        {
+            DealFromResult();
+            e.Handled = true;
+            return;
+        }
+
+        if (!vm.IsHolding) return;
         vm.ToggleHold(idx);
         Refresh(vm);
         SoundService.PlaySnap();
@@ -369,9 +598,7 @@ public partial class VideoPokerView : UserControl
     private void DealDraw_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not VideoPokerViewModel vm) return;
-        vm.DealOrDraw();
-        Refresh(vm);
-        SoundService.PlayShuffle();
+        DoDealOrDraw(vm);
     }
 
     private void DecreaseBet_Click(object? sender, RoutedEventArgs e)

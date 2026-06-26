@@ -77,10 +77,8 @@ public partial class VideoPokerViewModel : ObservableObject
     public string CreditDisplay   => State.SessionCredits.ToString();
     public string BetDisplay      => State.CurrentBet.ToString();
     public string TimeDisplay     => TimeSpan.FromSeconds(State.TimerSeconds).ToString(@"mm\:ss");
-    public string ResultText      => State.Phase == VideoPokerPhase.Result
-                                        ? (State.LastPayout > 0
-                                            ? $"★  {State.LastHandName}  +{State.LastPayout}  ★"
-                                            : "No Win")
+    public string ResultText      => State.Phase == VideoPokerPhase.Result && State.LastPayout > 0
+                                        ? $"★  {State.LastHandName}  +{State.LastPayout}  ★"
                                         : "";
     public bool   HasWin          => State.Phase == VideoPokerPhase.Result && State.LastPayout > 0;
     public bool   ShowNoWin       => State.Phase == VideoPokerPhase.Result && State.LastPayout == 0 && State.Hand.Count > 0;

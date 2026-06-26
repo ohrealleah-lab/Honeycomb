@@ -1,7 +1,9 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
@@ -13,11 +15,15 @@ public partial class MainWindow : Window
 {
     private AppCoordinator _coordinator;
     private ThemeEditorWindow? _themeEditor;
+    private readonly ScaleTransform _contentScale = new(1.0, 1.0);
+    private string _currentGameTag = "SolitaireDraw1";
 
     public MainWindow()
     {
         InitializeComponent();
-        
+
+        MainContentWrapper.LayoutTransform = _contentScale;
+
         _coordinator = new AppCoordinator();
 
         // One-time migration: if FF mode was on before themes existed, seed a "Final Fantasy" theme
@@ -27,12 +33,8 @@ public partial class MainWindow : Window
         if (ThemeService.ApplyDefaultThemeIfNeeded(_coordinator.GameViewModel.Options))
             SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
 
-        // Select correct Klondike mode on startup based on options
-        bool isDrawThree = _coordinator.GameViewModel.Options.IsDrawConstraintsEnabled;
-        GameSelectionBox.SelectedIndex = isDrawThree ? 2 : 1;
-
-        this.MainContent.Content = new GameView { DataContext = _coordinator.GameViewModel };
-        this.DataContext = _coordinator.GameViewModel;
+        // Restore the last game the user had open; SelectionChanged handler sets content + DataContext
+        GameSelectionBox.SelectedIndex = GameModeToIndex(_coordinator.GameViewModel.Options.LastGameMode);
 
         // Register to listen to OptionsChangedMessage to keep Window background color in sync
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
@@ -45,6 +47,10 @@ public partial class MainWindow : Window
 
         // Apply any saved theme color overrides before first render
         CardView.ApplyThemeColors(_coordinator.GameViewModel.Options);
+
+        this.AddHandler(PointerWheelChangedEvent, OnPointerWheelChanged, RoutingStrategies.Tunnel);
+        this.KeyDown += OnWindowKeyDown;
+        this.Closing += (_, _) => SaveCurrentWindowSize();
 
         // Preload custom art into display-resolution cache before first scroll
         this.Loaded += (_, _) =>
@@ -194,17 +200,24 @@ public partial class MainWindow : Window
         this.PreferencesContent.Content = null;
     }
 
+    private static int GameModeToIndex(string tag) => tag switch
+    {
+        "SolitaireDraw3" => 2,
+        "Beecell"        => 3,
+        "Spider"         => 4,
+        "VideoPoker"     => 5,
+        _                => 1,
+    };
+
     private void ResizeWindowForGame(string tag)
     {
-        (double width, double minWidth) = tag switch
+        this.MinWidth = tag switch
         {
-            "Beecell"    => (1200, 1140),
-            "Spider"     => (1460, 1420),
-            "VideoPoker" => (1000, 960),
-            _            => (1120, 1080),
+            "Beecell"    => 1140,
+            "Spider"     => 1420,
+            "VideoPoker" => 1050,
+            _            => 1080,
         };
-        this.MinWidth = minWidth;
-        if (this.Width < width) this.Width = width;
     }
 
     private void GameSelectionBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -213,8 +226,10 @@ public partial class MainWindow : Window
 
         if (GameSelectionBox.SelectedItem is ComboBoxItem item && item.Tag != null)
         {
-            var tag = item.Tag.ToString();
-            ResizeWindowForGame(tag ?? "");
+            var tag = item.Tag.ToString() ?? "SolitaireDraw1";
+            SaveCurrentWindowSize();   // capture size of the game we're leaving
+            _currentGameTag = tag;
+            ResizeWindowForGame(tag);  // sets MinWidth only
             if (tag == "SolitaireDraw1" || tag == "SolitaireDraw3")
             {
                 bool wantDrawThree = (tag == "SolitaireDraw3");
@@ -246,10 +261,17 @@ public partial class MainWindow : Window
 
             this.DataContext = _coordinator.ActiveViewModel;
 
+            // Restore zoom and window size for the newly selected game
+            ApplyZoom(GetGameZoom(tag));
+            RestoreWindowSizeForGame(tag);
+
             if (HintButton != null)
                 HintButton.IsVisible = tag != "VideoPoker";
             if (UndoButton != null)
                 UndoButton.IsVisible = tag != "VideoPoker";
+
+            _coordinator.GameViewModel.Options.LastGameMode = tag;
+            SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
 
             // Apply felt color of the active VM
             if (_coordinator.ActiveViewModel is GameViewModel klondikeVm)
@@ -268,6 +290,111 @@ public partial class MainWindow : Window
             {
                 ApplyFeltColor(_coordinator.GameViewModel.Options);
             }
+        }
+    }
+
+    // ── Per-game window size ──────────────────────────────────────────────────
+
+    private void SaveCurrentWindowSize()
+    {
+        if (_coordinator == null) return;
+        var opts = _coordinator.GameViewModel.Options;
+        bool maximized = WindowState == WindowState.Maximized;
+        switch (_currentGameTag)
+        {
+            case "Beecell":
+                if (!maximized) { opts.BeecellWidth = Width; opts.BeecellHeight = Height; }
+                opts.BeecellMaximized = maximized;
+                break;
+            case "Spider":
+                if (!maximized) { opts.SpiderWidth = Width; opts.SpiderHeight = Height; }
+                opts.SpiderMaximized = maximized;
+                break;
+            case "VideoPoker":
+                if (!maximized) { opts.VideoPokerWidth = Width; opts.VideoPokerHeight = Height; }
+                opts.VideoPokerMaximized = maximized;
+                break;
+            default:
+                if (!maximized) { opts.KlondikeWidth = Width; opts.KlondikeHeight = Height; }
+                opts.KlondikeMaximized = maximized;
+                break;
+        }
+        SettingsService.SaveOptions(opts);
+    }
+
+    private void RestoreWindowSizeForGame(string tag)
+    {
+        var opts = _coordinator.GameViewModel.Options;
+        (double w, double h, bool max) = tag switch
+        {
+            "Beecell"    => (opts.BeecellWidth,    opts.BeecellHeight,    opts.BeecellMaximized),
+            "Spider"     => (opts.SpiderWidth,     opts.SpiderHeight,     opts.SpiderMaximized),
+            "VideoPoker" => (opts.VideoPokerWidth, opts.VideoPokerHeight, opts.VideoPokerMaximized),
+            _            => (opts.KlondikeWidth,   opts.KlondikeHeight,   opts.KlondikeMaximized),
+        };
+        if (max)
+        {
+            WindowState = WindowState.Maximized;
+        }
+        else
+        {
+            WindowState = WindowState.Normal;
+            Width  = Math.Max(MinWidth, w);
+            Height = Math.Max(MinHeight, h);
+        }
+    }
+
+    // ── Per-game zoom ─────────────────────────────────────────────────────────
+
+    private double GetGameZoom(string tag) => tag switch
+    {
+        "Beecell"    => _coordinator.GameViewModel.Options.BeecellZoom,
+        "Spider"     => _coordinator.GameViewModel.Options.SpiderZoom,
+        "VideoPoker" => _coordinator.GameViewModel.Options.VideoPokerZoom,
+        _            => _coordinator.GameViewModel.Options.KlondikeZoom,
+    };
+
+    private void ApplyZoom(double zoom)
+    {
+        zoom = Math.Clamp(zoom, 0.5, 1.5);
+        var opts = _coordinator.GameViewModel.Options;
+        switch (_currentGameTag)
+        {
+            case "Beecell":    opts.BeecellZoom    = zoom; break;
+            case "Spider":     opts.SpiderZoom     = zoom; break;
+            case "VideoPoker": opts.VideoPokerZoom = zoom; break;
+            default:           opts.KlondikeZoom   = zoom; break;
+        }
+        _contentScale.ScaleX = zoom;
+        _contentScale.ScaleY = zoom;
+        SettingsService.SaveOptions(opts);
+    }
+
+    private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if ((e.KeyModifiers & KeyModifiers.Control) == 0) return;
+        e.Handled = true;
+        double step = e.Delta.Y > 0 ? 0.05 : -0.05;
+        ApplyZoom(GetGameZoom(_currentGameTag) + step);
+    }
+
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if ((e.KeyModifiers & KeyModifiers.Control) == 0) return;
+        if (e.Key == Key.OemPlus || e.Key == Key.Add)
+        {
+            e.Handled = true;
+            ApplyZoom(GetGameZoom(_currentGameTag) + 0.05);
+        }
+        else if (e.Key == Key.OemMinus || e.Key == Key.Subtract)
+        {
+            e.Handled = true;
+            ApplyZoom(GetGameZoom(_currentGameTag) - 0.05);
+        }
+        else if (e.Key == Key.D0 || e.Key == Key.NumPad0)
+        {
+            e.Handled = true;
+            ApplyZoom(1.0);
         }
     }
 }

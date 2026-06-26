@@ -167,6 +167,25 @@ public static class SettingsService
                     options.SpiderSuitCount = spiderSuits;
 
                 if (GetValue("HasAppliedDefaultTheme") is bool hat) options.HasAppliedDefaultTheme = hat;
+                if (GetValue("LastGameMode") is string lgm) options.LastGameMode = lgm;
+
+                if (GetValue("KlondikeZoom")   is double kz)  options.KlondikeZoom   = kz;
+                if (GetValue("BeecellZoom")    is double bz)  options.BeecellZoom    = bz;
+                if (GetValue("SpiderZoom")     is double spz) options.SpiderZoom     = spz;
+                if (GetValue("VideoPokerZoom") is double vpz) options.VideoPokerZoom = vpz;
+
+                if (GetValue("KlondikeWidth")       is double klW)  options.KlondikeWidth       = klW;
+                if (GetValue("KlondikeHeight")      is double klH)  options.KlondikeHeight      = klH;
+                if (GetValue("KlondikeMaximized")   is bool   klM)  options.KlondikeMaximized   = klM;
+                if (GetValue("BeecellWidth")        is double bcW)  options.BeecellWidth        = bcW;
+                if (GetValue("BeecellHeight")       is double bcH)  options.BeecellHeight       = bcH;
+                if (GetValue("BeecellMaximized")    is bool   bcM)  options.BeecellMaximized    = bcM;
+                if (GetValue("SpiderWidth")         is double spW)  options.SpiderWidth         = spW;
+                if (GetValue("SpiderHeight")        is double spH)  options.SpiderHeight        = spH;
+                if (GetValue("SpiderMaximized")     is bool   spM)  options.SpiderMaximized     = spM;
+                if (GetValue("VideoPokerWidth")     is double vpW)  options.VideoPokerWidth     = vpW;
+                if (GetValue("VideoPokerHeight")    is double vpH)  options.VideoPokerHeight    = vpH;
+                if (GetValue("VideoPokerMaximized") is bool   vpM)  options.VideoPokerMaximized = vpM;
 
                 if (GetValue("ThemeFaceBackNormal")  is string t1) options.ThemeFaceBackNormal  = t1;
                 if (GetValue("ThemeFaceBackFF")       is string t2) options.ThemeFaceBackFF       = t2;
@@ -233,6 +252,25 @@ public static class SettingsService
                 SetValue("SpiderSuitCount", options.SpiderSuitCount);
 
                 SetValue("HasAppliedDefaultTheme", options.HasAppliedDefaultTheme);
+                SetValue("LastGameMode", options.LastGameMode);
+
+                SetValue("KlondikeZoom",   options.KlondikeZoom);
+                SetValue("BeecellZoom",    options.BeecellZoom);
+                SetValue("SpiderZoom",     options.SpiderZoom);
+                SetValue("VideoPokerZoom", options.VideoPokerZoom);
+
+                SetValue("KlondikeWidth",       options.KlondikeWidth);
+                SetValue("KlondikeHeight",      options.KlondikeHeight);
+                SetValue("KlondikeMaximized",   options.KlondikeMaximized);
+                SetValue("BeecellWidth",        options.BeecellWidth);
+                SetValue("BeecellHeight",       options.BeecellHeight);
+                SetValue("BeecellMaximized",    options.BeecellMaximized);
+                SetValue("SpiderWidth",         options.SpiderWidth);
+                SetValue("SpiderHeight",        options.SpiderHeight);
+                SetValue("SpiderMaximized",     options.SpiderMaximized);
+                SetValue("VideoPokerWidth",     options.VideoPokerWidth);
+                SetValue("VideoPokerHeight",    options.VideoPokerHeight);
+                SetValue("VideoPokerMaximized", options.VideoPokerMaximized);
 
                 if (options.ThemeFaceBackNormal  != null) SetValue("ThemeFaceBackNormal",  options.ThemeFaceBackNormal);
                 if (options.ThemeFaceBackFF       != null) SetValue("ThemeFaceBackFF",       options.ThemeFaceBackFF);
