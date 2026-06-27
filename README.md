@@ -35,7 +35,7 @@ Solibee supports four fully implemented, distinct games selectable via the **Gam
 * **Custom Color Background**: Set the tableau to match your deck of cards.
 * **Visual Themes**: Use a presaved theme, or create your own! Easily toggle between multiple themes.
 * **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
-* **ZERO AI Art**: All art was created by real artists, used with permission.
+* **ZERO AI Art**: All art was created by real artists, used with permission. Artists asked to remain anonymous.
   
 ---
 
