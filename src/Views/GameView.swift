@@ -325,6 +325,7 @@ public struct GameView: View {
                     WastePileView(
                         pile: viewModel.state.waste,
                         isDrawThree: viewModel.state.drawMode == .drawThree,
+                        wasteDisplayCount: viewModel.state.wasteDisplayCount,
                         stackSpacing: stackSpacing,
                         draggedCardIDs: Set(draggedCards.map { $0.id }),
                         onDragStarted: { card, stack, startLoc in
@@ -983,11 +984,12 @@ struct OptionsView: View {
                     updatedOpts.isDarkMode = isDarkMode
                     updatedOpts.customFeltColorRevision += 1
 
+                    updatedOpts.drawMode = drawMode
                     if viewModel.state.drawMode != drawMode {
                         viewModel.state.drawMode = drawMode
                         viewModel.startNewGame()
                     }
-                    
+
                     viewModel.options = updatedOpts
                     dismiss()
                 }

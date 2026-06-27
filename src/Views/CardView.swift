@@ -299,7 +299,7 @@ struct CardCenterSuitView: View {
                             .font(.system(size: 32, weight: .bold))
                             .foregroundColor(color)
                             .rotationEffect(.degrees(pos.isUpsideDown ? 180 : 0))
-                            .offset(x: pos.x, y: pos.y)
+                            .position(x: 43 + pos.x, y: 69 + pos.y)
                     }
                 }
                 .frame(width: 86, height: 138)

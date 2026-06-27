@@ -14,6 +14,7 @@ public struct GameOptions: Codable, Equatable {
     
     public var customFeltColorRevision: Int = 0
     public var isDarkMode: Bool = false
+    public var drawMode: GameState.DrawMode = .drawThree
 
     public init(
         feltColor: FeltColorTheme = .feltGreen,
@@ -27,7 +28,8 @@ public struct GameOptions: Codable, Equatable {
         hideStatsButton: Bool = false,
         deckCount: Int = 1,
         customFeltColorRevision: Int = 0,
-        isDarkMode: Bool = false
+        isDarkMode: Bool = false,
+        drawMode: GameState.DrawMode = .drawThree
     ) {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
@@ -41,8 +43,9 @@ public struct GameOptions: Codable, Equatable {
         self.deckCount = deckCount
         self.customFeltColorRevision = customFeltColorRevision
         self.isDarkMode = isDarkMode
+        self.drawMode = drawMode
     }
-    
+
     private enum CodingKeys: String, CodingKey {
         case feltColor
         case cardBackTheme
@@ -56,6 +59,7 @@ public struct GameOptions: Codable, Equatable {
         case deckCount
         case customFeltColorRevision
         case isDarkMode
+        case drawMode
     }
 
     public init(from decoder: Decoder) throws {
@@ -72,6 +76,7 @@ public struct GameOptions: Codable, Equatable {
         self.deckCount = (try? container.decode(Int.self, forKey: .deckCount)) ?? 1
         self.customFeltColorRevision = (try? container.decode(Int.self, forKey: .customFeltColorRevision)) ?? 0
         self.isDarkMode = (try? container.decode(Bool.self, forKey: .isDarkMode)) ?? false
+        self.drawMode = (try? container.decode(GameState.DrawMode.self, forKey: .drawMode)) ?? .drawThree
     }
 }
 

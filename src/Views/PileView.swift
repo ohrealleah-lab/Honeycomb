@@ -71,6 +71,7 @@ public struct StockPileView: View {
 public struct WastePileView: View {
     let pile: Pile
     let isDrawThree: Bool
+    let wasteDisplayCount: Int
     let stackSpacing: CGFloat
     let draggedCardIDs: Set<UUID>
     let onDragStarted: (Card, [Card], CGPoint) -> Void
@@ -86,8 +87,7 @@ public struct WastePileView: View {
             } else {
                 ZStack {
                     if isDrawThree {
-                        let maxShow = 3
-                        let cardsToShow = Array(pile.cards.suffix(maxShow))
+                        let cardsToShow = Array(pile.cards.suffix(wasteDisplayCount))
                         
                         ZStack(alignment: .leading) {
                             EmptyPileView()

@@ -291,6 +291,7 @@ public final class GameViewModel {
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
         
+        self.state.drawMode = self.options.drawMode
         startNewGame()
     }
     
@@ -439,7 +440,8 @@ public final class GameViewModel {
         
         // Drawn cards go on the waste pile
         state.waste.cards.append(contentsOf: drawn)
-        
+        state.wasteDisplayCount = drawn.count
+
         state.movesCount += 1
 
         checkAutocompleteState()
@@ -462,6 +464,7 @@ public final class GameViewModel {
         
         state.stock.cards = Array(recycled)
         state.waste.cards.removeAll()
+        state.wasteDisplayCount = 0
         state.movesCount += 1
     }
     
@@ -514,6 +517,7 @@ public final class GameViewModel {
             state.stock.cards.removeAll { cardIDs.contains($0.id) }
         } else if sourcePile.type == .waste {
             state.waste.cards.removeAll { cardIDs.contains($0.id) }
+            state.wasteDisplayCount = max(0, state.wasteDisplayCount - cardIDs.count)
         } else if sourcePile.type == .tableau {
             if let idx = state.tableau.firstIndex(where: { $0.id == sourcePile.id }) {
                 state.tableau[idx].cards.removeAll { cardIDs.contains($0.id) }
