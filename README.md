@@ -25,6 +25,9 @@ Solibee supports four fully implemented, distinct games selectable via the **Gam
 * **Modes**: **Jacks or Better, Deuces Wild, Bonus Poker**
 * **Rules & Scoring**: **Jacks or Better**: Win by holding a pair of Jacks or higher, **Deuces Wild**: All 2s are wild cards, **Bonus Poker**: Jacks or Better rules with enhanced payouts for four-of-a-kind hands.
 
+### 3. Blackjack
+* **Rules & Scoring**: Casino-style blackjack game with hit, stand, double down, and split; session credits, configurable bets, and 3:2 blackjack payouts.
+
   
 ---
 
