@@ -106,6 +106,11 @@ struct SoliBeeApp: App {
             VideoPokerHelpView()
         }
         .windowResizability(.contentSize)
+
+        WindowGroup("Blackjack Help", id: "blackjack-help") {
+            BlackjackHelpView()
+        }
+        .windowResizability(.contentSize)
     }
 }
 
@@ -117,5 +122,6 @@ private struct HelpMenuCommands: View {
         Button("Beecell Help")            { openWindow(id: "beecell-help") }
         Button("Spider Solibee Help")     { openWindow(id: "spider-help") }
         Button("Video Poker Help")        { openWindow(id: "videopoker-help") }
+        Button("Blackjack Help")          { openWindow(id: "blackjack-help") }
     }
 }

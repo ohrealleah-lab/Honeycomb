@@ -22,6 +22,10 @@ struct AppRouterView: View {
                 VideoPokerView(viewModel: coordinator.videoPokerViewModel)
                     .id(GameMode.videoPoker.rawValue)
                     .transition(.opacity)
+            case .blackjack:
+                BlackjackView(viewModel: coordinator.blackjackViewModel)
+                    .id(GameMode.blackjack.rawValue)
+                    .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.25), value: coordinator.gameMode)

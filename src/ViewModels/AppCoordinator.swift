@@ -9,6 +9,7 @@ public final class AppCoordinator {
         didSet {
             UserDefaults.standard.set(gameMode.rawValue, forKey: "selectedGameMode")
             syncSharedOptions(from: oldValue, to: gameMode)
+            if gameMode == .blackjack { blackjackViewModel.deal() }
         }
     }
 
@@ -16,10 +17,12 @@ public final class AppCoordinator {
     public let beecellViewModel    = BeecellViewModel()
     public let spiderViewModel     = SpiderViewModel()
     public let videoPokerViewModel = VideoPokerViewModel()
+    public let blackjackViewModel  = BlackjackViewModel()
 
     public init() {
         let saved = UserDefaults.standard.string(forKey: "selectedGameMode") ?? GameMode.klondike.rawValue
         self.gameMode = GameMode(rawValue: saved) ?? .klondike
+        if gameMode == .blackjack { blackjackViewModel.deal() }
     }
 
     // MARK: - Shared option sync
@@ -56,6 +59,12 @@ public final class AppCoordinator {
             hideHintButton  = videoPokerViewModel.options.hideHintButton
             hideStatsButton = videoPokerViewModel.options.hideStatsButton
             isDarkMode      = videoPokerViewModel.options.isDarkMode
+        case .blackjack:
+            isTimed         = blackjackViewModel.options.isTimed
+            isSoundEnabled  = blackjackViewModel.options.isSoundEnabled
+            hideHintButton  = false
+            hideStatsButton = blackjackViewModel.options.hideStatsButton
+            isDarkMode      = blackjackViewModel.options.isDarkMode
         }
 
         if new != .klondike {
@@ -86,6 +95,12 @@ public final class AppCoordinator {
             videoPokerViewModel.options.hideStatsButton = hideStatsButton
             videoPokerViewModel.options.isDarkMode      = isDarkMode
         }
+        if new != .blackjack {
+            blackjackViewModel.options.isTimed         = isTimed
+            blackjackViewModel.options.isSoundEnabled  = isSoundEnabled
+            blackjackViewModel.options.hideStatsButton = hideStatsButton
+            blackjackViewModel.options.isDarkMode      = isDarkMode
+        }
     }
 
     // MARK: - Game actions
@@ -96,6 +111,7 @@ public final class AppCoordinator {
         case .beecell:   beecellViewModel.startNewGame()
         case .spider:    spiderViewModel.startNewGame()
         case .videoPoker: videoPokerViewModel.startNewGame()
+        case .blackjack:  blackjackViewModel.startNewGame()
         }
     }
 
@@ -105,6 +121,7 @@ public final class AppCoordinator {
         case .beecell:    beecellViewModel.restartCurrentGame()
         case .spider:     spiderViewModel.restartCurrentGame()
         case .videoPoker: videoPokerViewModel.restartCurrentGame()
+        case .blackjack:  blackjackViewModel.restartCurrentGame()
         }
     }
 
@@ -113,7 +130,7 @@ public final class AppCoordinator {
         case .klondike:  klondikeViewModel.undoLastAction()
         case .beecell:   beecellViewModel.undoLastAction()
         case .spider:    spiderViewModel.undoLastAction()
-        case .videoPoker: break
+        case .videoPoker, .blackjack: break
         }
     }
 
@@ -122,7 +139,7 @@ public final class AppCoordinator {
         case .klondike:  return klondikeViewModel.canUndo
         case .beecell:   return beecellViewModel.canUndo
         case .spider:    return spiderViewModel.canUndo
-        case .videoPoker: return false
+        case .videoPoker, .blackjack: return false
         }
     }
 
@@ -131,7 +148,7 @@ public final class AppCoordinator {
         case .klondike:  klondikeViewModel.zoomIn()
         case .beecell:   beecellViewModel.zoomIn()
         case .spider:    spiderViewModel.zoomIn()
-        case .videoPoker: break
+        case .videoPoker, .blackjack: break
         }
     }
 
@@ -140,7 +157,7 @@ public final class AppCoordinator {
         case .klondike:  klondikeViewModel.zoomOut()
         case .beecell:   beecellViewModel.zoomOut()
         case .spider:    spiderViewModel.zoomOut()
-        case .videoPoker: break
+        case .videoPoker, .blackjack: break
         }
     }
 
@@ -149,7 +166,7 @@ public final class AppCoordinator {
         case .klondike:  klondikeViewModel.resetZoom()
         case .beecell:   beecellViewModel.resetZoom()
         case .spider:    spiderViewModel.resetZoom()
-        case .videoPoker: break
+        case .videoPoker, .blackjack: break
         }
     }
 
@@ -158,7 +175,7 @@ public final class AppCoordinator {
         case .klondike:  klondikeViewModel.makeCurrentZoomDefault()
         case .beecell:   beecellViewModel.makeCurrentZoomDefault()
         case .spider:    spiderViewModel.makeCurrentZoomDefault()
-        case .videoPoker: break
+        case .videoPoker, .blackjack: break
         }
     }
 
@@ -168,6 +185,7 @@ public final class AppCoordinator {
         case .beecell:    beecellViewModel.resetStatistics()
         case .spider:     spiderViewModel.resetStatistics()
         case .videoPoker: videoPokerViewModel.resetStatistics()
+        case .blackjack:  blackjackViewModel.resetStatistics()
         }
     }
 
@@ -206,6 +224,13 @@ public final class AppCoordinator {
         v.customFeltColorRevision += 1
         videoPokerViewModel.options = v
 
+        var bj = blackjackViewModel.options
+        bj.cardBackTheme = theme.cardBackTheme
+        bj.isDarkMode    = theme.isDarkMode
+        bj.feltColor     = theme.feltColor
+        bj.customFeltColorRevision += 1
+        blackjackViewModel.options = bj
+
         CustomFaceCardArtManager.shared.restore(theme.faceArts)
     }
 
@@ -230,8 +255,8 @@ public final class AppCoordinator {
             let count = max(spiderViewModel.state.foundations.count, 4)
             spiderViewModel.state.foundations = fullFoundations(count: count)
             spiderViewModel.state.hasWon = true
-        case .videoPoker:
-            break   // no card-cascade win animation for poker modes
+        case .videoPoker, .blackjack:
+            break   // no card-cascade win animation for poker/casino modes
         }
     }
 }

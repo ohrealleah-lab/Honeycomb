@@ -139,6 +139,9 @@ public struct VideoPokerView: View {
             Button(GameMode.videoPoker.rawValue) {
                 if let c = coordinator, c.gameMode != .videoPoker { c.gameMode = .videoPoker }
             }
+            Button(GameMode.blackjack.rawValue) {
+                if let c = coordinator, c.gameMode != .blackjack { c.gameMode = .blackjack }
+            }
         } label: {
             Text("Game Selection")
                 .font(.display(16))

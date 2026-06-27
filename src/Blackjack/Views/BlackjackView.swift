@@ -1,0 +1,649 @@
+import SwiftUI
+import AppKit
+
+public struct BlackjackView: View {
+    var viewModel: BlackjackViewModel
+    @State private var isShowingOptions = false
+    @State private var isShowingStats   = false
+    @State private var showResultBanner = false
+    @State private var cardsVisible     = true
+    @State private var dealerFlipped    = false  // triggers hole-card flip animation
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
+
+    public init(viewModel: BlackjackViewModel) {
+        self.viewModel = viewModel
+    }
+
+    public var body: some View {
+        ZStack {
+            viewModel.options.feltColor.primaryColor
+                .ignoresSafeArea()
+
+            FeltVignetteView()
+
+            VStack(spacing: 0) {
+                toolbarView
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+
+                Divider().overlay(Color.white.opacity(0.2))
+
+                VStack(spacing: 14) {
+                    creditDisplay
+
+                    dealerArea
+                        .padding(.horizontal, 24)
+
+                    vsLabel
+
+                    playerArea
+                        .padding(.horizontal, 24)
+
+                    Color.clear.frame(height: 20)
+
+                    actionButtons
+                }
+                .padding(.vertical, 18)
+
+                Spacer()
+            }
+
+            // Result banner overlay
+            if showResultBanner && !viewModel.state.lastResultSummary.isEmpty {
+                resultBanner
+            }
+
+            // Keyboard shortcuts
+            keyboardShortcuts
+                .opacity(0)
+                .frame(width: 0, height: 0)
+                .clipped()
+        }
+        .frame(minWidth: 680, minHeight: 600)
+        .sheet(isPresented: $isShowingOptions) {
+            BlackjackOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
+        }
+        .sheet(isPresented: $isShowingStats) {
+            BlackjackStatsView(viewModel: viewModel)
+        }
+        .onChange(of: viewModel.state.phase) { _, newPhase in
+            if newPhase == .result {
+                dealerFlipped = true
+                showResultBanner = true
+                withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    showResultBanner = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false }
+                    }
+                }
+            }
+            if newPhase == .betting {
+                dealerFlipped = false
+                showResultBanner = false
+                withAnimation(.easeIn(duration: 0.2)) { cardsVisible = true }
+            }
+            if newPhase == .playing {
+                dealerFlipped = false
+                showResultBanner = false
+                withAnimation(.easeIn(duration: 0.2)) { cardsVisible = true }
+            }
+            if newPhase == .dealerTurn {
+                dealerFlipped = true
+            }
+        }
+    }
+
+    // MARK: - Toolbar
+
+    private var toolbarView: some View {
+        HStack(spacing: 20) {
+            toolbarButton("New Game") { viewModel.startNewGame() }
+            toolbarButton("Options")  { isShowingOptions = true }
+            gameModeMenu
+            if !viewModel.options.hideStatsButton {
+                toolbarButton("Stats") { isShowingStats = true }
+            }
+            Spacer()
+            if viewModel.options.isTimed {
+                Text(formatTime(viewModel.state.timerSeconds))
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.white)
+            }
+        }
+    }
+
+    private func toolbarButton(_ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.display(16))
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.white.opacity(0.15))
+                .cornerRadius(4)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+        }
+        .buttonStyle(HoverToolbarButtonStyle())
+        .focusable(false)
+    }
+
+    private var gameModeMenu: some View {
+        Menu {
+            Button(GameMode.klondike.rawValue) {
+                if let c = coordinator, c.gameMode != .klondike { c.gameMode = .klondike; c.startNewGame() }
+            }
+            Button(GameMode.beecell.rawValue) {
+                if let c = coordinator, c.gameMode != .beecell { c.gameMode = .beecell; c.startNewGame() }
+            }
+            Button(GameMode.spider.rawValue) {
+                if let c = coordinator, c.gameMode != .spider { c.gameMode = .spider; c.startNewGame() }
+            }
+            Button(GameMode.videoPoker.rawValue) {
+                if let c = coordinator, c.gameMode != .videoPoker { c.gameMode = .videoPoker }
+            }
+            Button(GameMode.blackjack.rawValue) {
+                if let c = coordinator, c.gameMode != .blackjack { c.gameMode = .blackjack }
+            }
+        } label: {
+            Text("Game Selection")
+                .font(.display(16))
+                .foregroundColor(.white)
+        }
+        .menuStyle(.borderlessButton)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.15))
+        .cornerRadius(4)
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+        .focusable(false)
+    }
+
+    // MARK: - Credit Display
+
+    private var creditDisplay: some View {
+        HStack(spacing: 32) {
+            VStack(spacing: 2) {
+                Text("SESSION")
+                    .font(.display(10, weight: .bold))
+                    .foregroundColor(.white.opacity(0.6))
+                Text("\(viewModel.state.sessionCredits)")
+                    .font(.display(22, weight: .black))
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 8)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.35))
+                    RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(LinearGradient(colors: [Color.white.opacity(0.07), Color.clear],
+                                             startPoint: .top, endPoint: .bottom))
+                }
+            )
+
+            VStack(spacing: 2) {
+                Text("BET")
+                    .font(.display(10, weight: .bold))
+                    .foregroundColor(.white.opacity(0.6))
+                Text("\(viewModel.state.currentBet)")
+                    .font(.display(22, weight: .black))
+                    .foregroundColor(.yellow)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 8)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.35))
+                    RoundedRectangle(cornerRadius: 8).stroke(Color.yellow.opacity(0.4), lineWidth: 1)
+                }
+            )
+        }
+    }
+
+    // MARK: - Dealer Area
+
+    private var dealerArea: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Text("DEALER")
+                    .font(.display(12, weight: .bold))
+                    .foregroundColor(.white.opacity(0.6))
+                if viewModel.state.phase != .betting {
+                    let val = viewModel.state.phase == .playing
+                        ? viewModel.state.dealerVisibleValue
+                        : viewModel.state.dealerValue
+                    Text("\(val)")
+                        .font(.display(14, weight: .bold))
+                        .foregroundColor(.white.opacity(0.85))
+                }
+            }
+
+            HStack(spacing: 12) {
+                ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { idx, card in
+                    CardView(card: card)
+                        .frame(width: 77, height: 112)
+                        .opacity(cardsVisible ? 1 : 0)
+                        .animation(.easeIn(duration: 0.15).delay(Double(idx) * 0.08), value: cardsVisible)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
+        }
+    }
+
+    // MARK: - VS Label
+
+    private var vsLabel: some View {
+        HStack {
+            Rectangle()
+                .fill(Color.white.opacity(0.12))
+                .frame(height: 1)
+            Text("VS")
+                .font(.display(11, weight: .black))
+                .foregroundColor(.white.opacity(0.4))
+                .padding(.horizontal, 10)
+            Rectangle()
+                .fill(Color.white.opacity(0.12))
+                .frame(height: 1)
+        }
+        .padding(.horizontal, 24)
+    }
+
+    // MARK: - Player Area
+
+    private var playerArea: some View {
+        VStack(spacing: 8) {
+            Text("PLAYER")
+                .font(.display(12, weight: .bold))
+                .foregroundColor(.white.opacity(0.6))
+
+            HStack(alignment: .top, spacing: 20) {
+                ForEach(Array(viewModel.state.playerHands.enumerated()), id: \.offset) { handIdx, hand in
+                    let isActive = handIdx == viewModel.state.activeHandIndex && viewModel.state.phase == .playing
+                    VStack(spacing: 6) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(hand.cards.enumerated()), id: \.offset) { cardIdx, card in
+                                CardView(card: card)
+                                    .frame(width: 77, height: 112)
+                                    .opacity(cardsVisible ? 1 : 0)
+                                    .animation(.easeIn(duration: 0.15).delay(Double(cardIdx) * 0.08), value: cardsVisible)
+                            }
+                        }
+                        .padding(6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(isActive ? Color.yellow.opacity(0.85) : Color.clear, lineWidth: 2)
+                        )
+
+                        HStack(spacing: 6) {
+                            Text("\(hand.value)")
+                                .font(.display(16, weight: .black))
+                                .foregroundColor(hand.isBust ? .red : .white)
+                            if viewModel.state.playerHands.count > 1 {
+                                Text("BET \(hand.bet)")
+                                    .font(.display(11, weight: .bold))
+                                    .foregroundColor(.yellow.opacity(0.8))
+                            }
+                            if let result = hand.result {
+                                resultBadge(result)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 140, alignment: .center)
+        }
+    }
+
+    private func resultBadge(_ result: BlackjackHandResult) -> some View {
+        let (text, color): (String, Color) = {
+            switch result {
+            case .blackjack: return ("BJ", .yellow)
+            case .win:       return ("WIN", .green)
+            case .loss:      return ("LOSS", .red)
+            case .push:      return ("PUSH", .white)
+            case .bust:      return ("BUST", .red)
+            }
+        }()
+        return Text(text)
+            .font(.display(10, weight: .black))
+            .foregroundColor(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.2))
+            .cornerRadius(4)
+    }
+
+    // MARK: - Result Banner
+
+    private var resultBanner: some View {
+        let summary = viewModel.state.lastResultSummary
+        let isWin = summary.contains("Win") || summary.contains("Blackjack")
+        let isBust = summary.contains("Bust") || summary.contains("Dealer Wins") || summary.contains("Loss")
+
+        return VStack(spacing: 6) {
+            Text(summary)
+                .font(.display(24, weight: .black))
+                .foregroundColor(isWin ? .yellow : (isBust ? .red.opacity(0.9) : .white))
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.black.opacity(0.75))
+                .overlay(RoundedRectangle(cornerRadius: 14)
+                    .stroke(isWin ? Color.yellow.opacity(0.6) : Color.white.opacity(0.15), lineWidth: 1.5))
+        )
+        .shadow(color: .black.opacity(0.5), radius: 12)
+        .transition(.opacity.combined(with: .scale(scale: 0.92)))
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showResultBanner)
+    }
+
+    // MARK: - Action Buttons
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            switch viewModel.state.phase {
+            case .betting, .result:
+                casinoButton("-", color: .white.opacity(0.2)) { viewModel.decreaseBet() }
+                casinoButton("BET MAX", color: .orange.opacity(0.85)) { viewModel.maxBet() }
+                casinoButton("+", color: .white.opacity(0.2)) { viewModel.increaseBet() }
+                Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
+                casinoButton("DEAL", color: .yellow, textColor: .black,
+                             disabled: viewModel.state.sessionCredits < viewModel.state.currentBet) {
+                    viewModel.deal()
+                }
+
+            case .playing:
+                casinoButton("HIT",   color: .green.opacity(0.85))  { viewModel.hit() }
+                casinoButton("STAND", color: .red.opacity(0.75))    { viewModel.stand() }
+                if viewModel.canDouble {
+                    casinoButton("DOUBLE", color: .blue.opacity(0.75)) { viewModel.doubleDown() }
+                }
+                if viewModel.canSplit {
+                    casinoButton("SPLIT", color: .purple.opacity(0.75)) { viewModel.split() }
+                }
+
+            case .dealerTurn:
+                casinoButton("HIT",   color: .green.opacity(0.3),  disabled: true) {}
+                casinoButton("STAND", color: .red.opacity(0.3),    disabled: true) {}
+            }
+
+            if viewModel.state.sessionCredits < viewModel.state.currentBet
+                && viewModel.state.phase != .playing
+                && viewModel.state.phase != .dealerTurn {
+                casinoButton("REBUY", color: .red.opacity(0.8)) { viewModel.rebuy() }
+            }
+        }
+    }
+
+    private func casinoButton(_ label: String, color: Color, textColor: Color = .white,
+                               disabled: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.display(14, weight: .black))
+                .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
+                .background(disabled ? Color.gray.opacity(0.3) : color)
+                .cornerRadius(6)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.3), lineWidth: 1))
+        }
+        .buttonStyle(PressButtonStyle())
+        .disabled(disabled)
+        .focusable(false)
+    }
+
+    // MARK: - Keyboard shortcuts
+
+    private var keyboardShortcuts: some View {
+        Group {
+            // Space — deal or hit
+            Button("") {
+                switch viewModel.state.phase {
+                case .betting, .result: viewModel.deal()
+                case .playing:          viewModel.hit()
+                case .dealerTurn:       break
+                }
+            }
+            .keyboardShortcut(.space, modifiers: [])
+
+            Button("") { viewModel.stand() }
+                .keyboardShortcut("s", modifiers: [])
+
+            Button("") { if viewModel.canDouble { viewModel.doubleDown() } }
+                .keyboardShortcut("d", modifiers: [])
+
+            Button("") { if viewModel.canSplit { viewModel.split() } }
+                .keyboardShortcut("p", modifiers: [])
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func formatTime(_ seconds: Int) -> String {
+        String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+}
+
+// MARK: - Options View
+
+struct BlackjackOptionsView: View {
+    @Bindable var viewModel: BlackjackViewModel
+    @Binding var isShowingStats: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var startingCredits: Int
+    @State private var betPerHand: Int
+    @State private var isTimed: Bool
+    @State private var isSoundEnabled: Bool
+    @State private var hideStatsButton: Bool
+    @State private var isDarkMode: Bool
+    @State private var feltColor: FeltColorTheme
+    @State private var cardBackTheme: String
+    @State private var customSelectedColor: Color
+
+    let originalRed: Double
+    let originalGreen: Double
+    let originalBlue: Double
+
+    init(viewModel: BlackjackViewModel, isShowingStats: Binding<Bool>) {
+        self.viewModel = viewModel
+        self._isShowingStats = isShowingStats
+        _startingCredits = State(initialValue: viewModel.options.startingCredits)
+        _betPerHand      = State(initialValue: viewModel.options.betPerHand)
+        _isTimed         = State(initialValue: viewModel.options.isTimed)
+        _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
+        _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        _isDarkMode      = State(initialValue: viewModel.options.isDarkMode)
+        _feltColor       = State(initialValue: viewModel.options.feltColor)
+        _cardBackTheme   = State(initialValue: viewModel.options.cardBackTheme)
+
+        let r = UserDefaults.standard.double(forKey: "custom_felt_red")
+        let g = UserDefaults.standard.double(forKey: "custom_felt_green")
+        let b = UserDefaults.standard.double(forKey: "custom_felt_blue")
+        self.originalRed = r; self.originalGreen = g; self.originalBlue = b
+        let initColor: Color = (r == 0 && g == 0 && b == 0)
+            ? Color(red: 0.35, green: 0.15, blue: 0.45)
+            : Color(red: r, green: g, blue: b)
+        _customSelectedColor = State(initialValue: initColor)
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Blackjack Preferences")
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .padding(.top, 12)
+
+            Divider()
+
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 10...10000, step: 10)
+                        .font(.system(.body, design: .monospaced))
+
+                    Picker("Default Bet:", selection: $betPerHand) {
+                        ForEach(1...5, id: \.self) { n in Text("\(n) coin\(n == 1 ? "" : "s")").tag(n) }
+                    }
+                    .pickerStyle(.segmented)
+                    .font(.system(.body, design: .monospaced))
+
+                    Divider()
+
+                    Toggle("Timed Game",        isOn: $isTimed).font(.system(.body, design: .monospaced))
+                    Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body, design: .monospaced))
+                    Toggle("Hide Stats button", isOn: $hideStatsButton).font(.system(.body, design: .monospaced))
+                    Toggle("Dark Mode Cards",   isOn: $isDarkMode).font(.system(.body, design: .monospaced))
+
+                    Divider()
+
+                    Picker("Felt Color:", selection: $feltColor) {
+                        Text("Felt Green").tag(FeltColorTheme.feltGreen)
+                        Text("Crimson").tag(FeltColorTheme.crimson)
+                        Text("Royal Blue").tag(FeltColorTheme.royalBlue)
+                        Text("Charcoal").tag(FeltColorTheme.charcoal)
+                        Text("Desert").tag(FeltColorTheme.desert)
+                        Text("Custom").tag(FeltColorTheme.custom)
+                    }
+                    .font(.system(.body, design: .monospaced))
+
+                    if feltColor == .custom {
+                        ColorPicker("Custom Color:", selection: $customSelectedColor)
+                            .font(.system(.body, design: .monospaced))
+                            .onChange(of: customSelectedColor) { _, c in
+                                let nc = NSColor(c)
+                                if let rgb = nc.usingColorSpace(.deviceRGB) {
+                                    UserDefaults.standard.set(Double(rgb.redComponent),   forKey: "custom_felt_red")
+                                    UserDefaults.standard.set(Double(rgb.greenComponent), forKey: "custom_felt_green")
+                                    UserDefaults.standard.set(Double(rgb.blueComponent),  forKey: "custom_felt_blue")
+                                }
+                            }
+                    }
+
+                    Divider()
+
+                    ThemesSectionView(
+                        currentCardBackTheme: cardBackTheme,
+                        currentIsDarkMode: isDarkMode,
+                        currentFeltColor: feltColor
+                    )
+
+                    Divider()
+
+                    CustomArtPanelView(cardBackTheme: $cardBackTheme, feltColor: $feltColor)
+                }
+                .padding(.horizontal, 24)
+            }
+            .frame(maxHeight: 560)
+
+            Divider()
+
+            HStack {
+                Button("Cancel") {
+                    UserDefaults.standard.set(originalRed,   forKey: "custom_felt_red")
+                    UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
+                    UserDefaults.standard.set(originalBlue,  forKey: "custom_felt_blue")
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button(action: {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { isShowingStats = true }
+                }) {
+                    Text("View Stats").foregroundColor(.blue).underline()
+                }
+                .buttonStyle(.plain)
+                .font(.system(.body, design: .monospaced))
+
+                Spacer()
+
+                Button("OK") {
+                    var o = viewModel.options
+                    o.startingCredits = startingCredits
+                    o.betPerHand      = betPerHand
+                    o.isTimed         = isTimed
+                    o.isSoundEnabled  = isSoundEnabled
+                    o.hideStatsButton = hideStatsButton
+                    o.isDarkMode      = isDarkMode
+                    o.feltColor       = feltColor
+                    o.cardBackTheme   = cardBackTheme
+                    o.customFeltColorRevision += 1
+                    viewModel.options = o
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 16)
+        }
+        .frame(width: 440)
+    }
+}
+
+// MARK: - Stats View
+
+struct BlackjackStatsView: View {
+    var viewModel: BlackjackViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingResetConfirmation = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Blackjack Statistics")
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .padding(.top, 16)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 10) {
+                statRow("Hands Played",  "\(viewModel.statistics.handsPlayed)")
+                statRow("Hands Won",     "\(viewModel.statistics.handsWon)")
+                statRow("Hands Lost",    "\(viewModel.statistics.handsLost)")
+                statRow("Pushes",        "\(viewModel.statistics.pushes)")
+                statRow("Blackjacks",    "\(viewModel.statistics.blackjacks)")
+                statRow("Win Rate",      String(format: "%.1f%%", viewModel.statistics.winRate * 100))
+                statRow("Total Wagered", "\(viewModel.statistics.totalWagered)")
+                statRow("Total Paid",    "\(viewModel.statistics.totalPaidOut)")
+                statRow("Biggest Pay",   "\(viewModel.statistics.biggestPayout)")
+                statRow("RTP",           String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100))
+                statRow("Rebuys",        "\(viewModel.statistics.rebuyCount)")
+            }
+            .padding(.horizontal, 24)
+
+            Divider()
+
+            HStack {
+                Button("Reset Stats") { showingResetConfirmation = true }
+                    .foregroundColor(.red)
+                    .font(.system(.body, design: .monospaced))
+                    .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
+                        Button("Reset", role: .destructive) { viewModel.resetStatistics() }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("This will permanently clear all Blackjack statistics. This cannot be undone.")
+                    }
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+                    .font(.system(.body, design: .monospaced))
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 16)
+        }
+        .frame(width: 340)
+    }
+
+    private func statRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label).font(.system(.body, design: .monospaced))
+            Spacer()
+            Text(value).font(.system(.body, design: .monospaced)).fontWeight(.bold)
+        }
+    }
+}

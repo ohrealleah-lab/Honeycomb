@@ -133,6 +133,11 @@ public struct BeecellView: View {
                                 coordinator.gameMode = .videoPoker
                             }
                         }
+                        Button(GameMode.blackjack.rawValue) {
+                            if let coordinator = coordinator, coordinator.gameMode != .blackjack {
+                                coordinator.gameMode = .blackjack
+                            }
+                        }
                     } label: {
                         Text("Game Selection")
                             .font(.display(16))

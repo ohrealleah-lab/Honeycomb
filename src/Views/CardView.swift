@@ -17,6 +17,8 @@ public struct CardView: View {
                 return coordinator.spiderViewModel.options.cardBackTheme
             case .videoPoker:
                 return coordinator.videoPokerViewModel.options.cardBackTheme
+            case .blackjack:
+                return coordinator.blackjackViewModel.options.cardBackTheme
             }
         }
         return viewModel?.cardBackTheme ?? "Vulpera"
@@ -33,6 +35,8 @@ public struct CardView: View {
                 return coordinator.spiderViewModel.options.isDarkMode
             case .videoPoker:
                 return coordinator.videoPokerViewModel.options.isDarkMode
+            case .blackjack:
+                return coordinator.blackjackViewModel.options.isDarkMode
             }
         }
         return viewModel?.options.isDarkMode ?? false
@@ -418,6 +422,8 @@ struct CardBackView: View {
                 return coordinator.spiderViewModel.options.cardBackTheme
             case .videoPoker:
                 return coordinator.videoPokerViewModel.options.cardBackTheme
+            case .blackjack:
+                return coordinator.blackjackViewModel.options.cardBackTheme
             }
         }
         return viewModel?.cardBackTheme ?? "Vulpera"

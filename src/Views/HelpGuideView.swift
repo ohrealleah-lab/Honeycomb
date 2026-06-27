@@ -173,9 +173,34 @@ struct VideoPokerHelpView: View {
     }
 }
 
+struct BlackjackHelpView: View {
+    var body: some View {
+        HelpShell(title: "Blackjack", subtitle: "Beat the Dealer to 21") {
+            RuleSection(title: "Objective",
+                        text: "Get a hand value closer to 21 than the dealer without going over. Card values: numbered cards are face value, face cards (J/Q/K) are worth 10, Aces are worth 11 or 1.")
+
+            RuleSection(title: "How to Play",
+                        text: "1. Set your bet (1–5 credits) and press Deal, or press BET MAX to bet 5 and deal immediately.\n2. You receive two cards face-up; the dealer gets one face-up and one face-down (the hole card).\n3. Choose Hit, Stand, Double Down, or Split.\n4. After you finish, the dealer reveals their hole card and draws until reaching 17 or higher.\n5. Your hand is compared to the dealer's and winnings are paid out.")
+
+            RuleSection(title: "Actions",
+                        text: "Hit — draw one more card\nStand — keep your current hand\nDouble Down — double your bet, draw exactly one card, then stand (available on your first two cards)\nSplit — if your first two cards have the same rank, split them into two separate hands each with its own bet")
+
+            RuleSection(title: "Payouts",
+                        text: "Win — pays 2× your bet (profit of 1×)\nBlackjack (Ace + 10-value card) — pays 3:2 (profit of 1.5×)\nPush (tie) — your bet is returned\nBust or Loss — bet is forfeited\n\nDealer must stand on 17 and hit on 16 or lower.")
+
+            RuleSection(title: "Credits",
+                        text: "You start each session with 100 credits. If your credits drop to zero, a Rebuy button adds another 100 credits to keep playing.")
+
+            RuleSection(title: "Keyboard Shortcuts",
+                        text: "Space — Deal (when betting)\nSpace / H — Hit\nS — Stand\nD — Double Down\nP — Split")
+        }
+    }
+}
+
 // MARK: - Previews
 
 #Preview("Klondike Help") { KlondikeHelpView() }
 #Preview("Beecell Help") { BeecellHelpView() }
 #Preview("Spider Help") { SpiderHelpView() }
 #Preview("Video Poker Help") { VideoPokerHelpView() }
+#Preview("Blackjack Help") { BlackjackHelpView() }
