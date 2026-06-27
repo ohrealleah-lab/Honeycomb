@@ -3,6 +3,9 @@ What's the #1 issue facing Windows users today? A lack of ad-free Klondike Solit
 
 A native Windows Solitaire suite written in **Avalonia UI 11 / .NET 8 C#**, designed to recreate the gameplay dynamics of classic Solitaire games with modern flourishes and customization. All art was created by real artists - there is zero AI art.   **Make the game yours**.
 
+<img width="1120" height="766" alt="image" src="https://github.com/user-attachments/assets/26a4073f-91d7-4d7c-8930-b076cec9b5c1" />
+
+
 ---
 
 ## ♠️ Game Modes
