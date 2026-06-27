@@ -3,14 +3,10 @@
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
              x:Class="SoliBee.Desktop.Views.VideoPokerView">
 
-    <Grid x:Name="BoardFeltGrid">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="340"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,Auto,*">
 
         <!-- Vignette depth overlay -->
-        <Rectangle Grid.ColumnSpan="2" IsHitTestVisible="False" ZIndex="-1">
+        <Rectangle Grid.RowSpan="3" IsHitTestVisible="False" ZIndex="-1">
             <Rectangle.Fill>
                 <RadialGradientBrush Center="50%,50%" Radius="0.8">
                     <GradientStop Color="#00000000" Offset="0.2"/>
@@ -19,114 +15,123 @@
             </Rectangle.Fill>
         </Rectangle>
 
-        <!-- ─── Pay Table Panel ─────────────────────────────────────────── -->
-        <Border Grid.Column="0" Padding="10,14,8,14"
-                BorderBrush="#25FFFFFF" BorderThickness="0,0,1,0">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                    <GradientStop Color="#30000000" Offset="0"/>
-                    <GradientStop Color="#15000000" Offset="1"/>
-                </LinearGradientBrush>
-            </Border.Background>
-            <StackPanel Spacing="0">
+        <!-- ─── Pay Table Bar (top) ──────────────────────────────────────────── -->
+        <Border Grid.Row="0" Background="#CC000000" Padding="12,6,12,8" Margin="0,0,0,6">
 
-                <!-- Variant selector -->
-                <ComboBox x:Name="VariantComboBox"
-                          HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Center"
-                          SelectionChanged="VariantComboBox_SelectionChanged"
-                          Margin="0,0,0,8">
-                    <ComboBoxItem Content="Jacks or Better"/>
-                    <ComboBoxItem Content="Deuces Wild"/>
-                    <ComboBoxItem Content="Bonus Poker"/>
-                </ComboBox>
+                <!-- Two-column pay table -->
+                <Grid ColumnDefinitions="*,12,*">
 
-                <!-- Column headers -->
-                <Grid Margin="0,0,0,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="34"/>
-                        <ColumnDefinition Width="34"/>
-                        <ColumnDefinition Width="34"/>
-                        <ColumnDefinition Width="34"/>
-                        <ColumnDefinition Width="34"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="HAND" FontSize="13" Foreground="#60FFFFFF"
-                               FontFamily="Courier New, Consolas, monospace" Grid.Column="0"/>
-                    <TextBlock x:Name="PayColHdr1" Text="1" FontSize="13" Foreground="#60FFFFFF"
-                               FontFamily="Courier New, Consolas, monospace"
-                               Grid.Column="1" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="PayColHdr2" Text="2" FontSize="13" Foreground="#60FFFFFF"
-                               FontFamily="Courier New, Consolas, monospace"
-                               Grid.Column="2" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="PayColHdr3" Text="3" FontSize="13" Foreground="#60FFFFFF"
-                               FontFamily="Courier New, Consolas, monospace"
-                               Grid.Column="3" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="PayColHdr4" Text="4" FontSize="13" Foreground="#60FFFFFF"
-                               FontFamily="Courier New, Consolas, monospace"
-                               Grid.Column="4" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="PayColHdr5" Text="5" FontSize="13" Foreground="#60FFFFFF"
-                               FontFamily="Courier New, Consolas, monospace"
-                               Grid.Column="5" HorizontalAlignment="Center"/>
+                    <!-- Left column -->
+                    <StackPanel Grid.Column="0" Spacing="0">
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"/>
+                            <TextBlock x:Name="PayColHdr1"  Text="1" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="1" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr2"  Text="2" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="2" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr3"  Text="3" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="3" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr4"  Text="4" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="4" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr5"  Text="5" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="5" HorizontalAlignment="Center"/>
+                        </Grid>
+                        <StackPanel x:Name="PayTablePanelLeft" Spacing="1"/>
+                    </StackPanel>
+
+                    <!-- Divider -->
+                    <Rectangle Grid.Column="1" Fill="#20FFFFFF" Width="1" VerticalAlignment="Stretch" HorizontalAlignment="Center"/>
+
+                    <!-- Right column -->
+                    <StackPanel Grid.Column="2" Spacing="0">
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"/>
+                            <TextBlock x:Name="PayColHdrR1" Text="1" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="1" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR2" Text="2" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="2" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR3" Text="3" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="3" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR4" Text="4" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="4" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR5" Text="5" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="5" HorizontalAlignment="Center"/>
+                        </Grid>
+                        <StackPanel x:Name="PayTablePanelRight" Spacing="1"/>
+                    </StackPanel>
+
                 </Grid>
+        </Border>
 
-                <StackPanel x:Name="PayTablePanel" Spacing="1"/>
-
+        <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
+        <Border Grid.Row="1" Background="#CC000000" CornerRadius="6"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Margin="0,6,0,6">
+            <StackPanel Orientation="Horizontal" Margin="0,8">
+                <StackPanel Spacing="1" Margin="28,0">
+                    <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold"
+                               Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="CreditsLabel" FontSize="28" FontWeight="Black"
+                               Foreground="White" MinWidth="90" TextAlignment="Center"/>
+                </StackPanel>
+                <Rectangle Width="1" Fill="#40FFFFFF" Margin="0,4"/>
+                <StackPanel Spacing="1" Margin="28,0">
+                    <TextBlock Text="BET" FontSize="10" FontWeight="Bold"
+                               Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="BetLabel" FontSize="28" FontWeight="Black"
+                               Foreground="#FFD700" MinWidth="36" TextAlignment="Center"/>
+                </StackPanel>
+                <Rectangle Width="1" Fill="#40FFFFFF" Margin="0,4"/>
+                <StackPanel Spacing="1" Margin="28,0">
+                    <TextBlock Text="HANDS" FontSize="10" FontWeight="Bold"
+                               Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="HandsLabel" FontSize="28" FontWeight="Black"
+                               Foreground="White" MinWidth="36" TextAlignment="Center"
+                               Text="0"/>
+                </StackPanel>
             </StackPanel>
         </Border>
 
-        <!-- ─── Game Area ───────────────────────────────────────────────── -->
-        <Grid Grid.Column="1">
+        <!-- ─── Game Area ─────────────────────────────────────────────────────── -->
+        <Grid Grid.Row="2" RowDefinitions="*,*">
 
-            <!-- All game content vertically + horizontally centered in the game column -->
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="0">
+            <!-- Cards + overlays — centered in the * row -->
+            <Grid Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center">
 
-                <!-- Hold prompt: reserve fixed height so cards don't shift when it appears -->
-                <Border Height="46" Margin="0,0,0,10">
-                    <TextBlock Text="How many cards, partner?"
-                               FontSize="26" FontWeight="Bold"
-                               Foreground="White" Opacity="0.85"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               IsVisible="{Binding IsHolding}"/>
-                </Border>
-
-                <!-- Cards + overlays (layered Grid) -->
-                <Grid>
-
-                    <!-- Card slots + hold badges -->
                     <StackPanel x:Name="CardsRow" Orientation="Horizontal" Spacing="0" HorizontalAlignment="Center">
 
                         <Grid x:Name="CardSlot0" Width="128" Height="181"
                               Tag="0" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <local:CardView x:Name="Card0View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
-
-                        <Grid x:Name="CardSlot1" Width="128" Height="181" Margin="-24,0,0,0"
+                        <Grid x:Name="CardSlot1" Width="128" Height="181" Margin="-40,0,0,0"
                               Tag="1" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <local:CardView x:Name="Card1View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
-
-                        <Grid x:Name="CardSlot2" Width="128" Height="181" Margin="-24,0,0,0"
+                        <Grid x:Name="CardSlot2" Width="128" Height="181" Margin="-40,0,0,0"
                               Tag="2" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <local:CardView x:Name="Card2View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
-
-                        <Grid x:Name="CardSlot3" Width="128" Height="181" Margin="-24,0,0,0"
+                        <Grid x:Name="CardSlot3" Width="128" Height="181" Margin="-40,0,0,0"
                               Tag="3" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <local:CardView x:Name="Card3View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
-
-                        <Grid x:Name="CardSlot4" Width="128" Height="181" Margin="-24,0,0,0"
+                        <Grid x:Name="CardSlot4" Width="128" Height="181" Margin="-40,0,0,0"
                               Tag="4" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <local:CardView x:Name="Card4View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
 
                     </StackPanel>
 
-                    <!-- Overlay layer: spans card-face height only (181px) so banners center over faces -->
+                    <!-- Overlay layer -->
                     <Grid Height="181" VerticalAlignment="Top">
 
-                        <!-- No-win overlay -->
                         <Border x:Name="NoWinOverlay" IsVisible="False"
                                 Background="#1A44CC" CornerRadius="8" Padding="32,14"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -143,9 +148,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Win overlay -->
-                        <Border x:Name="WinBanner"
-                                IsVisible="False"
+                        <Border x:Name="WinBanner" IsVisible="False"
                                 Background="#1A44CC" CornerRadius="8" Padding="32,14"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                 BoxShadow="0 0 28 8 #90FFD700, 0 4 18 0 #AA000000"
@@ -163,45 +166,40 @@
                         </Border>
 
                     </Grid>
-
                 </Grid>
 
-                <!-- Gap -->
-                <Border Height="14"/>
+            <!-- Buttons — centered in the lower * row -->
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
 
-                <!-- Buttons -->
                 <StackPanel x:Name="ButtonRow" Orientation="Horizontal" Spacing="10"
-                            HorizontalAlignment="Center" Margin="0,0,0,10">
+                            HorizontalAlignment="Center">
+                    <Button x:Name="HoldAllButton"
+                            Content="Hold All (H)" Height="46" Padding="20,0"
+                            IsEnabled="{Binding IsHolding}"
+                            Click="HoldAll_Click" Classes="vp-button"/>
+                    <Button x:Name="ClearButton"
+                            Content="Clear (Q)" Height="46" Padding="20,0"
+                            IsEnabled="{Binding IsHolding}"
+                            Click="ClearAll_Click" Classes="vp-button"/>
                     <Button x:Name="DealDrawButton"
-                            Content="Deal" Height="52" Padding="32,0"
-                            Click="DealDraw_Click" Classes="vp-button vp-button-primary"/>
-                    <Button Content="− Bet" Height="52" Padding="16,0"
-                            IsEnabled="{Binding IsDealing}"
-                            Click="DecreaseBet_Click" Classes="vp-button"/>
-                    <Button Content="Bet Max" Height="52" Padding="16,0"
-                            IsEnabled="{Binding IsDealing}"
-                            Click="BetMax_Click" Classes="vp-button"/>
-                    <Button Content="+ Bet" Height="52" Padding="16,0"
-                            IsEnabled="{Binding IsDealing}"
-                            Click="IncreaseBet_Click" Classes="vp-button"/>
+                            Content="Deal" Height="46" Padding="28,0"
+                            Click="DealDraw_Click" Classes="vp-button vp-button-draw"/>
                     <Button x:Name="RebuyButton"
-                            Content="Buy In" Height="52" Padding="16,0"
+                            Content="Buy In" Height="46" Padding="16,0"
                             IsVisible="False"
                             Click="Rebuy_Click" Classes="vp-button vp-button-rebuy"/>
                 </StackPanel>
 
-                <!-- Credits + Bet, centered under buttons -->
-                <StackPanel Orientation="Horizontal" Spacing="40" HorizontalAlignment="Center">
-                    <StackPanel Spacing="2">
-                        <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold" Foreground="#70FFFFFF"/>
-                        <TextBlock x:Name="CreditsLabel"
-                                   FontSize="28" FontWeight="Black" Foreground="White" MinWidth="80"/>
-                    </StackPanel>
-                    <StackPanel Spacing="2">
-                        <TextBlock Text="BET" FontSize="10" FontWeight="Bold" Foreground="#70FFFFFF"/>
-                        <TextBlock x:Name="BetLabel"
-                                   FontSize="28" FontWeight="Black" Foreground="#FFD700" MinWidth="40"/>
-                    </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <Button Content="− Bet" Height="34" Padding="14,0"
+                            IsEnabled="{Binding IsDealing}"
+                            Click="DecreaseBet_Click" Classes="vp-button vp-bet-button"/>
+                    <Button Content="Bet Max" Height="34" Padding="14,0"
+                            IsEnabled="{Binding IsDealing}"
+                            Click="BetMax_Click" Classes="vp-button vp-bet-button"/>
+                    <Button Content="+ Bet" Height="34" Padding="14,0"
+                            IsEnabled="{Binding IsDealing}"
+                            Click="IncreaseBet_Click" Classes="vp-button vp-bet-button"/>
                 </StackPanel>
 
             </StackPanel>
@@ -237,23 +235,23 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style Selector="Button.vp-button-primary">
+        <Style Selector="Button.vp-button-draw">
             <Setter Property="Background">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#DD3A77DD" Offset="0"/>
-                        <GradientStop Color="#CC1144AA" Offset="1"/>
+                        <GradientStop Color="#CC4CAF50" Offset="0"/>
+                        <GradientStop Color="#CC2E7D32" Offset="1"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
-            <Setter Property="BorderBrush" Value="#AADDEEFF"/>
+            <Setter Property="BorderBrush" Value="#AA81C784"/>
         </Style>
-        <Style Selector="Button.vp-button-primary:pointerover /template/ ContentPresenter">
+        <Style Selector="Button.vp-button-draw:pointerover /template/ ContentPresenter">
             <Setter Property="Background">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#DD4A88EE" Offset="0"/>
-                        <GradientStop Color="#CC2255BB" Offset="1"/>
+                        <GradientStop Color="#CC66BB6A" Offset="0"/>
+                        <GradientStop Color="#CC388E3C" Offset="1"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
@@ -262,12 +260,16 @@
             <Setter Property="Background" Value="#CC664400"/>
             <Setter Property="BorderBrush" Value="#FFAA44"/>
         </Style>
+        <Style Selector="Button.vp-bet-button">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Opacity" Value="0.80"/>
+        </Style>
         <Style Selector="ComboBox#VariantComboBox">
             <Setter Property="Background" Value="#22FFFFFF"/>
             <Setter Property="Foreground" Value="#FFD700"/>
             <Setter Property="BorderBrush" Value="#44FFD700"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontFamily" Value="Courier New, Consolas, monospace"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>

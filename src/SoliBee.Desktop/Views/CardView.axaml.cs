@@ -489,7 +489,7 @@ public partial class CardView : UserControl
             var textBlock = new TextBlock
             {
                 Text = suitChar,
-                FontSize = 48,
+                FontSize = 42,
                 FontWeight = FontWeight.Bold,
                 FontFamily = _pipFont,
                 Foreground = brush,

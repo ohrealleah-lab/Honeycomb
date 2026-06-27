@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
+using SoliBee.Desktop.Views;
 
 namespace SoliBee.Desktop.Views;
 
@@ -17,6 +18,7 @@ public partial class MainWindow : Window
     private ThemeEditorWindow? _themeEditor;
     private readonly ScaleTransform _contentScale = new(1.0, 1.0);
     private string _currentGameTag = "SolitaireDraw1";
+    private bool _variantInitializing;
 
     public MainWindow()
     {
@@ -128,6 +130,8 @@ public partial class MainWindow : Window
             spiderVm.InitializeGame();
         else if (this.DataContext is VideoPokerViewModel vpVm)
             vpVm.StartNewGame();
+        else if (this.DataContext is BlackjackViewModel bjVm)
+            bjVm.StartNewGame();
     }
 
     private void RestartGame_Click(object? sender, RoutedEventArgs e)
@@ -140,6 +144,8 @@ public partial class MainWindow : Window
             spiderVm.RestartGame();
         else if (this.DataContext is VideoPokerViewModel vpVm)
             vpVm.StartNewGame();
+        else if (this.DataContext is BlackjackViewModel bjVm)
+            bjVm.StartNewGame();
     }
 
     private void Undo_Click(object? sender, RoutedEventArgs e)
@@ -200,12 +206,23 @@ public partial class MainWindow : Window
         this.PreferencesContent.Content = null;
     }
 
+    private void PokerVariantBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_variantInitializing) return;
+        if (PokerVariantBox.SelectedIndex < 0) return;
+        var variant = (VideoPokerVariant)PokerVariantBox.SelectedIndex;
+        _coordinator.VideoPokerViewModel.SetVariant(variant);
+        if (MainContent.Content is VideoPokerView vpView)
+            vpView.OnVariantChanged();
+    }
+
     private static int GameModeToIndex(string tag) => tag switch
     {
         "SolitaireDraw3" => 2,
         "Beecell"        => 3,
         "Spider"         => 4,
         "VideoPoker"     => 5,
+        "Blackjack"      => 6,
         _                => 1,
     };
 
@@ -216,6 +233,7 @@ public partial class MainWindow : Window
             "Beecell"    => 1140,
             "Spider"     => 1420,
             "VideoPoker" => 1050,
+            "Blackjack"  => 900,
             _            => 1080,
         };
     }
@@ -258,6 +276,11 @@ public partial class MainWindow : Window
                 _coordinator.SwitchToVideoPoker();
                 this.MainContent.Content = new VideoPokerView { DataContext = _coordinator.VideoPokerViewModel };
             }
+            else if (tag == "Blackjack")
+            {
+                _coordinator.SwitchToBlackjack();
+                this.MainContent.Content = new BlackjackView { DataContext = _coordinator.BlackjackViewModel };
+            }
 
             this.DataContext = _coordinator.ActiveViewModel;
 
@@ -265,10 +288,26 @@ public partial class MainWindow : Window
             ApplyZoom(GetGameZoom(tag));
             RestoreWindowSizeForGame(tag);
 
+            bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
             if (HintButton != null)
-                HintButton.IsVisible = tag != "VideoPoker";
+                HintButton.IsVisible = isCardGame;
             if (UndoButton != null)
-                UndoButton.IsVisible = tag != "VideoPoker";
+                UndoButton.IsVisible = isCardGame;
+
+            if (PokerVariantBox != null)
+            {
+                if (tag == "VideoPoker")
+                {
+                    _variantInitializing = true;
+                    PokerVariantBox.SelectedIndex = (int)_coordinator.VideoPokerViewModel.Options.Variant;
+                    _variantInitializing = false;
+                    PokerVariantBox.IsVisible = true;
+                }
+                else
+                {
+                    PokerVariantBox.IsVisible = false;
+                }
+            }
 
             _coordinator.GameViewModel.Options.LastGameMode = tag;
             SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
@@ -288,6 +327,11 @@ public partial class MainWindow : Window
             }
             else if (_coordinator.ActiveViewModel is VideoPokerViewModel)
             {
+                ApplyFeltColor(_coordinator.GameViewModel.Options);
+            }
+            else if (_coordinator.ActiveViewModel is BlackjackViewModel bjvm)
+            {
+                // Blackjack has its own felt settings; fall back to shared options for window chrome
                 ApplyFeltColor(_coordinator.GameViewModel.Options);
             }
         }
@@ -314,6 +358,10 @@ public partial class MainWindow : Window
                 if (!maximized) { opts.VideoPokerWidth = Width; opts.VideoPokerHeight = Height; }
                 opts.VideoPokerMaximized = maximized;
                 break;
+            case "Blackjack":
+                if (!maximized) { opts.BlackjackWidth = Width; opts.BlackjackHeight = Height; }
+                opts.BlackjackMaximized = maximized;
+                break;
             default:
                 if (!maximized) { opts.KlondikeWidth = Width; opts.KlondikeHeight = Height; }
                 opts.KlondikeMaximized = maximized;
@@ -330,6 +378,7 @@ public partial class MainWindow : Window
             "Beecell"    => (opts.BeecellWidth,    opts.BeecellHeight,    opts.BeecellMaximized),
             "Spider"     => (opts.SpiderWidth,     opts.SpiderHeight,     opts.SpiderMaximized),
             "VideoPoker" => (opts.VideoPokerWidth, opts.VideoPokerHeight, opts.VideoPokerMaximized),
+            "Blackjack"  => (opts.BlackjackWidth,  opts.BlackjackHeight,  opts.BlackjackMaximized),
             _            => (opts.KlondikeWidth,   opts.KlondikeHeight,   opts.KlondikeMaximized),
         };
         if (max)
@@ -351,6 +400,7 @@ public partial class MainWindow : Window
         "Beecell"    => _coordinator.GameViewModel.Options.BeecellZoom,
         "Spider"     => _coordinator.GameViewModel.Options.SpiderZoom,
         "VideoPoker" => _coordinator.GameViewModel.Options.VideoPokerZoom,
+        "Blackjack"  => _coordinator.GameViewModel.Options.BlackjackZoom,
         _            => _coordinator.GameViewModel.Options.KlondikeZoom,
     };
 
@@ -363,6 +413,7 @@ public partial class MainWindow : Window
             case "Beecell":    opts.BeecellZoom    = zoom; break;
             case "Spider":     opts.SpiderZoom     = zoom; break;
             case "VideoPoker": opts.VideoPokerZoom = zoom; break;
+            case "Blackjack":  opts.BlackjackZoom  = zoom; break;
             default:           opts.KlondikeZoom   = zoom; break;
         }
         _contentScale.ScaleX = zoom;

@@ -186,6 +186,10 @@ public static class SettingsService
                 if (GetValue("VideoPokerWidth")     is double vpW)  options.VideoPokerWidth     = vpW;
                 if (GetValue("VideoPokerHeight")    is double vpH)  options.VideoPokerHeight    = vpH;
                 if (GetValue("VideoPokerMaximized") is bool   vpM)  options.VideoPokerMaximized = vpM;
+                if (GetValue("BlackjackZoom")      is double bjz)  options.BlackjackZoom      = bjz;
+                if (GetValue("BlackjackWidth")     is double bjW)  options.BlackjackWidth     = bjW;
+                if (GetValue("BlackjackHeight")    is double bjH)  options.BlackjackHeight    = bjH;
+                if (GetValue("BlackjackMaximized") is bool   bjM)  options.BlackjackMaximized = bjM;
 
                 if (GetValue("ThemeFaceBackNormal")  is string t1) options.ThemeFaceBackNormal  = t1;
                 if (GetValue("ThemeFaceBackFF")       is string t2) options.ThemeFaceBackFF       = t2;
@@ -271,6 +275,10 @@ public static class SettingsService
                 SetValue("VideoPokerWidth",     options.VideoPokerWidth);
                 SetValue("VideoPokerHeight",    options.VideoPokerHeight);
                 SetValue("VideoPokerMaximized", options.VideoPokerMaximized);
+                SetValue("BlackjackZoom",      options.BlackjackZoom);
+                SetValue("BlackjackWidth",     options.BlackjackWidth);
+                SetValue("BlackjackHeight",    options.BlackjackHeight);
+                SetValue("BlackjackMaximized", options.BlackjackMaximized);
 
                 if (options.ThemeFaceBackNormal  != null) SetValue("ThemeFaceBackNormal",  options.ThemeFaceBackNormal);
                 if (options.ThemeFaceBackFF       != null) SetValue("ThemeFaceBackFF",       options.ThemeFaceBackFF);

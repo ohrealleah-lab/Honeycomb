@@ -25,11 +25,18 @@
                         <ComboBoxItem Content="Beecell" Tag="Beecell" />
                         <ComboBoxItem Content="Spider" Tag="Spider" />
                         <ComboBoxItem Content="Video Poker" Tag="VideoPoker" />
+                        <ComboBoxItem Content="Blackjack" Tag="Blackjack" />
                     </ComboBox>
                     <Button Content="New Game" Click="NewGame_Click" Classes="toolbar" />
                     <Button Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
                     <Button x:Name="UndoButton" Content="Undo" Click="Undo_Click" Classes="toolbar" />
                     <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
+                    <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
+                              SelectionChanged="PokerVariantBox_SelectionChanged">
+                        <ComboBoxItem Content="Jacks or Better"/>
+                        <ComboBoxItem Content="Deuces Wild"/>
+                        <ComboBoxItem Content="Bonus Poker"/>
+                    </ComboBox>
                     <Button Content="Options" Click="Preferences_Click" Classes="toolbar" />
                     <Button Content="Theme Editor" Click="ThemeEditor_Click" Classes="toolbar" IsVisible="False" />
                 </StackPanel>

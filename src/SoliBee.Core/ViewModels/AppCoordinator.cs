@@ -23,6 +23,9 @@ public partial class AppCoordinator : ObservableObject
     private VideoPokerViewModel _videoPokerViewModel;
 
     [ObservableProperty]
+    private BlackjackViewModel _blackjackViewModel;
+
+    [ObservableProperty]
     private object _activeViewModel;
 
     private static readonly string LastModeFile = Path.Combine(
@@ -31,16 +34,18 @@ public partial class AppCoordinator : ObservableObject
 
     public AppCoordinator()
     {
-        GameViewModel      = new GameViewModel();
-        BeecellViewModel   = new BeecellViewModel();
-        SpiderViewModel    = new SpiderViewModel();
+        GameViewModel       = new GameViewModel();
+        BeecellViewModel    = new BeecellViewModel();
+        SpiderViewModel     = new SpiderViewModel();
         VideoPokerViewModel = new VideoPokerViewModel();
+        BlackjackViewModel  = new BlackjackViewModel();
 
         ActiveViewModel = LoadLastMode() switch
         {
             "Beecell"    => (object)BeecellViewModel,
             "Spider"     => (object)SpiderViewModel,
             "VideoPoker" => (object)VideoPokerViewModel,
+            "Blackjack"  => (object)BlackjackViewModel,
             _            => (object)GameViewModel
         };
     }
@@ -51,6 +56,7 @@ public partial class AppCoordinator : ObservableObject
         BeecellViewModel bvm    => bvm.CanUndo,
         SpiderViewModel svm     => svm.CanUndo,
         VideoPokerViewModel _   => false,
+        BlackjackViewModel _    => false,
         _                       => false
     };
 
@@ -79,6 +85,13 @@ public partial class AppCoordinator : ObservableObject
     {
         ActiveViewModel = VideoPokerViewModel;
         SaveLastMode("VideoPoker");
+        OnPropertyChanged(nameof(CanUndo));
+    }
+
+    public void SwitchToBlackjack()
+    {
+        ActiveViewModel = BlackjackViewModel;
+        SaveLastMode("Blackjack");
         OnPropertyChanged(nameof(CanUndo));
     }
 

@@ -19,12 +19,11 @@ public partial class VideoPokerView : UserControl
     private readonly CardView[]  _cardViews = null!;
     private Grid[]               _cardSlots = null!;
     private readonly Dictionary<string, Border> _payRowBorders = new();
-    private TextBlock[] _payColHeaders = null!;
+    private TextBlock[] _payColHeaders      = null!;
+    private TextBlock[] _payColHeadersRight = null!;
     private readonly List<TextBlock[]> _payValueBlocks = new();
 
     private static readonly Card _blankCard = new("__vp_blank__", CardSuit.Spades, 0, false);
-
-    private bool _variantInitializing = true;
 
     // Animation state
     private CancellationTokenSource? _dealAnimCts;
@@ -47,7 +46,8 @@ public partial class VideoPokerView : UserControl
 
         _cardViews = new[] { Card0View, Card1View, Card2View, Card3View, Card4View };
         _cardSlots = new[] { CardSlot0, CardSlot1, CardSlot2, CardSlot3, CardSlot4 };
-        _payColHeaders = new[] { PayColHdr1, PayColHdr2, PayColHdr3, PayColHdr4, PayColHdr5 };
+        _payColHeaders      = new[] { PayColHdr1,  PayColHdr2,  PayColHdr3,  PayColHdr4,  PayColHdr5  };
+        _payColHeadersRight = new[] { PayColHdrR1, PayColHdrR2, PayColHdrR3, PayColHdrR4, PayColHdrR5 };
 
         this.Loaded   += VideoPokerView_Loaded;
         this.Unloaded += VideoPokerView_Unloaded;
@@ -60,10 +60,6 @@ public partial class VideoPokerView : UserControl
 
         TopLevel.GetTopLevel(this)?.AddHandler(
             InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
-
-        _variantInitializing = true;
-        VariantComboBox.SelectedIndex = (int)vm.Options.Variant;
-        _variantInitializing = false;
 
         BuildPayTable(vm);
         Refresh(vm);
@@ -126,6 +122,7 @@ public partial class VideoPokerView : UserControl
     {
         AnimateCreditsTo(vm.CreditDisplay);
         BetLabel.Text          = vm.BetDisplay;
+        HandsLabel.Text        = vm.Stats.TotalHands.ToString();
         DealDrawButton.Content = vm.DealDrawLabel;
         RebuyButton.IsVisible  = vm.NeedsRebuy;
 
@@ -259,15 +256,22 @@ public partial class VideoPokerView : UserControl
 
     private void BuildPayTable(VideoPokerViewModel vm)
     {
-        PayTablePanel.Children.Clear();
+        PayTablePanelLeft.Children.Clear();
+        PayTablePanelRight.Children.Clear();
         _payRowBorders.Clear();
         _payValueBlocks.Clear();
 
-        foreach (var entry in vm.CurrentTable)
+        var entries  = vm.CurrentTable;
+        int leftCount = (entries.Length + 1) / 2;
+
+        for (int entryIdx = 0; entryIdx < entries.Length; entryIdx++)
         {
+            var entry = entries[entryIdx];
+            var panel = entryIdx < leftCount ? PayTablePanelLeft : PayTablePanelRight;
+
             var border = new Border
             {
-                Padding      = new Avalonia.Thickness(2, 3),
+                Padding      = new Avalonia.Thickness(2, 2),
                 CornerRadius = new Avalonia.CornerRadius(3),
                 Background   = Brushes.Transparent,
             };
@@ -275,12 +279,12 @@ public partial class VideoPokerView : UserControl
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             for (int i = 0; i < 5; i++)
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(34) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
 
             var nameBlock = new TextBlock
             {
                 Text         = entry.HandName,
-                FontSize     = 14,
+                FontSize     = 12,
                 Foreground   = Brushes.White,
                 FontFamily   = new FontFamily("Courier New, Consolas, monospace"),
                 TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
@@ -294,7 +298,7 @@ public partial class VideoPokerView : UserControl
                 var valBlock = new TextBlock
                 {
                     Text                = entry.Multipliers[i].ToString(),
-                    FontSize            = 14,
+                    FontSize            = 12,
                     Foreground          = Brushes.White,
                     FontFamily          = new FontFamily("Courier New, Consolas, monospace"),
                     HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
@@ -307,7 +311,7 @@ public partial class VideoPokerView : UserControl
             _payValueBlocks.Add(rowBlocks);
             border.Child = grid;
             _payRowBorders[entry.HandName] = border;
-            PayTablePanel.Children.Add(border);
+            panel.Children.Add(border);
         }
     }
 
@@ -326,13 +330,12 @@ public partial class VideoPokerView : UserControl
         for (int col = 0; col < 5; col++)
         {
             bool active = (col + 1) == currentBet;
-            _payColHeaders[col].Foreground = active
-                ? new SolidColorBrush(Color.Parse("#FFD700"))
-                : new SolidColorBrush(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF));
+            var activeFg  = new SolidColorBrush(Color.Parse("#FFD700"));
+            var dimFg     = new SolidColorBrush(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF));
+            _payColHeaders[col].Foreground      = active ? activeFg : dimFg;
+            _payColHeadersRight[col].Foreground = active ? activeFg : dimFg;
             foreach (var row in _payValueBlocks)
-                row[col].Foreground = active
-                    ? new SolidColorBrush(Color.Parse("#FFD700"))
-                    : Brushes.White;
+                row[col].Foreground = active ? new SolidColorBrush(Color.Parse("#FFD700")) : Brushes.White;
         }
     }
 
@@ -528,6 +531,10 @@ public partial class VideoPokerView : UserControl
             case Key.Space:
             case Key.Enter:
                 DoDealOrDraw(vm); e.Handled = true; break;
+            case Key.H:
+                if (vm.IsHolding) { vm.HoldAll(); Refresh(vm); } e.Handled = true; break;
+            case Key.Q:
+                if (vm.IsHolding) { vm.ClearHolds(); Refresh(vm); } e.Handled = true; break;
             case Key.D1: case Key.NumPad1: HoldByKey(vm, 0); e.Handled = true; break;
             case Key.D2: case Key.NumPad2: HoldByKey(vm, 1); e.Handled = true; break;
             case Key.D3: case Key.NumPad3: HoldByKey(vm, 2); e.Handled = true; break;
@@ -546,15 +553,11 @@ public partial class VideoPokerView : UserControl
 
     // ── Event handlers ────────────────────────────────────────────────────────
 
-    private void VariantComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    public void OnVariantChanged()
     {
-        if (_variantInitializing) return;
         if (DataContext is not VideoPokerViewModel vm) return;
-        if (VariantComboBox.SelectedIndex < 0) return;
-
-        var variant = (VideoPokerVariant)VariantComboBox.SelectedIndex;
-        vm.SetVariant(variant);
         BuildPayTable(vm);
+        Refresh(vm);
     }
 
     private void DealFromResult()
@@ -593,6 +596,22 @@ public partial class VideoPokerView : UserControl
         Refresh(vm);
         SoundService.PlaySnap();
         e.Handled = true;
+    }
+
+    private void HoldAll_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not VideoPokerViewModel vm) return;
+        if (!vm.IsHolding) return;
+        vm.HoldAll();
+        Refresh(vm);
+    }
+
+    private void ClearAll_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not VideoPokerViewModel vm) return;
+        if (!vm.IsHolding) return;
+        vm.ClearHolds();
+        Refresh(vm);
     }
 
     private void DealDraw_Click(object? sender, RoutedEventArgs e)
