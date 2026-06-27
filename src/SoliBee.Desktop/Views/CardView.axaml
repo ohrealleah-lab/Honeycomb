@@ -12,7 +12,7 @@
                 <!-- Top-Left Value & Suit Display (Horizontal) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="2" Margin="4,2,0,0">
                     <TextBlock x:Name="RankText" FontSize="17" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="Black" />
-                    <TextBlock x:Name="MiniSuitText" FontSize="14" Foreground="Black" VerticalAlignment="Center" />
+                    <TextBlock x:Name="MiniSuitText" FontSize="14" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" Foreground="Black" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Center Content: Grid for numbered cards OR single large letter for face cards -->
@@ -21,7 +21,7 @@
                     <Canvas x:Name="SuitCanvas" Width="86" Height="138" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
 
                     <!-- Large stylized letter for Ace -->
-                    <TextBlock x:Name="LargeAceText" FontSize="61" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" IsVisible="False" />
+                    <TextBlock x:Name="LargeAceText" FontSize="76" LineHeight="76" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" IsVisible="False" />
 
                     <!-- Image for Face Cards J, Q, K -->
                     <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
@@ -33,7 +33,7 @@
                         <RotateTransform Angle="180" />
                     </StackPanel.RenderTransform>
                     <TextBlock x:Name="RankTextBottom" FontSize="17" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="Black" />
-                    <TextBlock x:Name="MiniSuitTextBottom" FontSize="14" Foreground="Black" VerticalAlignment="Center" />
+                    <TextBlock x:Name="MiniSuitTextBottom" FontSize="14" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" Foreground="Black" VerticalAlignment="Center" />
                 </StackPanel>
             </Grid>
         </Border>

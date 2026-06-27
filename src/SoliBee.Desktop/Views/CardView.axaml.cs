@@ -477,6 +477,8 @@ public partial class CardView : UserControl
         }
     }
 
+    private static readonly FontFamily _pipFont = new("Segoe UI Symbol,Apple Symbols,sans-serif");
+
     private void PopulateSuitCanvas(int rank, string suitChar, IBrush brush)
     {
         SuitCanvas.Children.Clear();
@@ -487,8 +489,9 @@ public partial class CardView : UserControl
             var textBlock = new TextBlock
             {
                 Text = suitChar,
-                FontSize = 32,
+                FontSize = 48,
                 FontWeight = FontWeight.Bold,
+                FontFamily = _pipFont,
                 Foreground = brush,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
@@ -497,22 +500,17 @@ public partial class CardView : UserControl
 
             var container = new Grid
             {
-                Width = 36,
-                Height = 36,
+                Width = 44,
+                Height = 44,
                 Children = { textBlock },
                 RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative)
             };
 
             if (pos.isUpsideDown)
-            {
                 container.RenderTransform = new RotateTransform(180);
-            }
 
-            // Center of Canvas: (43, 69). Container is 36x36.
-            // Center the container exactly at (43 + pos.x, 69 + pos.y).
-            double left = 43 + pos.x - 18;
-            double top = 69 + pos.y - 18;
-
+            double left = 43 + pos.x - 22;
+            double top = 69 + pos.y - 22;
             Canvas.SetLeft(container, left);
             Canvas.SetTop(container, top);
             SuitCanvas.Children.Add(container);
@@ -594,28 +592,28 @@ public partial class CardView : UserControl
             },
             9 => new()
             {
-                new(-26, -42, false),
-                new(26, -42, false),
-                new(-26, -14, false),
-                new(26, -14, false),
-                new(-26, 14, true),
-                new(26, 14, true),
-                new(-26, 42, true),
-                new(26, 42, true),
+                new(-26, -44, false),
+                new(26, -44, false),
+                new(-26, -15, false),
+                new(26, -15, false),
+                new(-26, 15, true),
+                new(26, 15, true),
+                new(-26, 44, true),
+                new(26, 44, true),
                 new(0, 0, false)
             },
             10 => new()
             {
-                new(-26, -42, false),
-                new(26, -42, false),
-                new(-26, -14, false),
-                new(26, -14, false),
-                new(-26, 14, true),
-                new(26, 14, true),
-                new(-26, 42, true),
-                new(26, 42, true),
-                new(0, -27, false),
-                new(0, 27, true)
+                new(-26, -44, false),
+                new(26, -44, false),
+                new(-26, -15, false),
+                new(26, -15, false),
+                new(-26, 15, true),
+                new(26, 15, true),
+                new(-26, 44, true),
+                new(26, 44, true),
+                new(0, -30, false),
+                new(0, 30, true)
             },
             _ => new()
         };

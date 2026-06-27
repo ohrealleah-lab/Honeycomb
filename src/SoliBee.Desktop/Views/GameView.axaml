@@ -49,5 +49,6 @@
                 <TextBlock Text="Start a New Game to continue." Foreground="#AAFFFFFF" FontSize="13" VerticalAlignment="Center" />
             </StackPanel>
         </Border>
+
     </Grid>
 </local:CardGameView>

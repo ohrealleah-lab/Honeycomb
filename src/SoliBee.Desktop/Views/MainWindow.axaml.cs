@@ -380,6 +380,14 @@ public partial class MainWindow : Window
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape && PreferencesOverlay.IsVisible)
+        {
+            e.Handled = true;
+            PreferencesOverlay.IsVisible = false;
+            PreferencesContent.Content = null;
+            return;
+        }
+
         if ((e.KeyModifiers & KeyModifiers.Control) == 0) return;
         if (e.Key == Key.OemPlus || e.Key == Key.Add)
         {
