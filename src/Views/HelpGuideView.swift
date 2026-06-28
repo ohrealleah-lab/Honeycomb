@@ -87,7 +87,7 @@ struct KlondikeHelpView: View {
 
 struct BeecellHelpView: View {
     var body: some View {
-        HelpShell(title: "Beecell", subtitle: "FreeCell variant with a hive twist") {
+        HelpShell(title: "Freecell", subtitle: "FreeCell variant with a hive twist") {
             RuleSection(title: "Objective",
                         text: "Move all cards to the four foundation piles, built up by suit from Ace to King.")
 
@@ -116,7 +116,7 @@ struct BeecellHelpView: View {
 
 struct SpiderHelpView: View {
     var body: some View {
-        HelpShell(title: "Spider Solibee", subtitle: "Spider Solitaire with one, two, or four suits") {
+        HelpShell(title: "Spider Solitaire", subtitle: "Spider Solitaire with one, two, or four suits") {
             RuleSection(title: "Objective",
                         text: "Build eight complete in-suit sequences (Ace through King) within the tableau. Completed sequences are automatically removed to a foundation.")
 
@@ -175,7 +175,7 @@ struct VideoPokerHelpView: View {
 
 struct BlackjackHelpView: View {
     var body: some View {
-        HelpShell(title: "Blackjack", subtitle: "Beat the Dealer to 21") {
+        HelpShell(title: "Video Blackjack", subtitle: "Beat the Dealer to 21") {
             RuleSection(title: "Objective",
                         text: "Get a hand value closer to 21 than the dealer without going over. Card values: numbered cards are face value, face cards (J/Q/K) are worth 10, Aces are worth 11 or 1.")
 

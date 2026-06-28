@@ -13,6 +13,8 @@ public struct GameView: View {
     @State private var isShuffling: Bool = false
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
+    @State private var isShowingNewGameConfirm: Bool = false
+    @State private var pendingDrawMode: GameState.DrawMode? = nil
     @State private var hostingWindow: NSWindow? = nil
     
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
@@ -36,76 +38,6 @@ public struct GameView: View {
             VStack(spacing: 0) {
                 // Stationary Top Control and Status Panel (1.0x Scale)
                 HStack(spacing: 20) {
-                    // New Game Button
-                    Button(action: {
-                        viewModel.startNewGame()
-                    }) {
-                        Text("New Game")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .focusable(false)
-                    .keyboardShortcut("n", modifiers: .command)
-
-                    // Restart Game Button
-                    Button(action: {
-                        viewModel.restartCurrentGame()
-                    }) {
-                        Text("Restart")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .focusable(false)
-
-                    // Undo Button
-                    Button(action: {
-                        viewModel.undoLastAction()
-                    }) {
-                        Text("Undo")
-                            .font(.display(16))
-                            .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(viewModel.canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .disabled(!viewModel.canUndo)
-                    .focusable(false)
-                    .keyboardShortcut("z", modifiers: .command)
-                    
-                    // Options Button
-                    Button(action: {
-                        isShowingOptions = true
-                    }) {
-                        Text("Options")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .focusable(false)
-
                     // Game Selection Dropdown
                     Menu {
                         Button(GameMode.klondike.rawValue) {
@@ -149,11 +81,23 @@ public struct GameView: View {
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     .focusable(false)
 
+                    // Options Button
+                    Button(action: { isShowingOptions = true }) {
+                        Text("Options")
+                            .font(.display(16))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(4)
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                    }
+                    .buttonStyle(HoverToolbarButtonStyle())
+                    .focusable(false)
+
                     // Stats Button
                     if !viewModel.options.hideStatsButton {
-                        Button(action: {
-                            isShowingStats = true
-                        }) {
+                        Button(action: { isShowingStats = true }) {
                             Text("Stats")
                                 .font(.display(16))
                                 .foregroundColor(.white)
@@ -169,9 +113,7 @@ public struct GameView: View {
 
                     // Hint Button
                     if !viewModel.options.hideHintButton {
-                        Button(action: {
-                            viewModel.findHint()
-                        }) {
+                        Button(action: { viewModel.findHint() }) {
                             Text("Hint")
                                 .font(.display(16))
                                 .foregroundColor(.white)
@@ -185,6 +127,25 @@ public struct GameView: View {
                         .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }
+
+                    // Undo Button
+                    Button(action: { viewModel.undoLastAction() }) {
+                        Text("Undo")
+                            .font(.display(16))
+                            .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(4)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(viewModel.canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(HoverToolbarButtonStyle())
+                    .disabled(!viewModel.canUndo)
+                    .focusable(false)
+                    .keyboardShortcut("z", modifiers: .command)
                     
                     Spacer()
                     
@@ -211,25 +172,14 @@ public struct GameView: View {
                         }
                     }
                     
-                    Button(action: {
-                        viewModel.state.drawMode = .drawOne
-                        viewModel.startNewGame()
-                    }) {
-                        EmptyView()
-                    }
-                    .keyboardShortcut("1", modifiers: .command)
-                    .frame(width: 0, height: 0)
-                    .opacity(0)
-                    
-                    Button(action: {
-                        viewModel.state.drawMode = .drawThree
-                        viewModel.startNewGame()
-                    }) {
-                        EmptyView()
-                    }
-                    .keyboardShortcut("3", modifiers: .command)
-                    .frame(width: 0, height: 0)
-                    .opacity(0)
+                    Button(action: { pendingDrawMode = .drawOne; isShowingNewGameConfirm = true }) { EmptyView() }
+                        .keyboardShortcut("1", modifiers: .command).frame(width: 0, height: 0).opacity(0)
+
+                    Button(action: { pendingDrawMode = .drawThree; isShowingNewGameConfirm = true }) { EmptyView() }
+                        .keyboardShortcut("3", modifiers: .command).frame(width: 0, height: 0).opacity(0)
+
+                    Button(action: { isShowingNewGameConfirm = true }) { EmptyView() }
+                        .keyboardShortcut("n", modifiers: .command).frame(width: 0, height: 0).opacity(0)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -589,6 +539,13 @@ public struct GameView: View {
         }
         .sheet(isPresented: $isShowingStats) {
             StatsView(viewModel: viewModel)
+        }
+        .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
+            Button("New Game", role: .destructive) {
+                if let mode = pendingDrawMode { viewModel.state.drawMode = mode; pendingDrawMode = nil }
+                viewModel.startNewGame()
+            }
+            Button("Cancel", role: .cancel) { pendingDrawMode = nil }
         }
         .background(WindowAccessor { window in
             self.hostingWindow = window

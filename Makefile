@@ -19,8 +19,6 @@ build:
 	cp src/dingwall.jpg $(APP_BUNDLE)/Contents/Resources/dingwall.jpg
 	cp images/letters/Parisienne-Regular.ttf $(APP_BUNDLE)/Contents/Resources/Parisienne-Regular.ttf
 	cp images/letters/LilyScriptOne-Regular.ttf $(APP_BUNDLE)/Contents/Resources/LilyScriptOne-Regular.ttf
-	cp KaushanScript-Regular.ttf $(APP_BUNDLE)/Contents/Resources/KaushanScript-Regular.ttf
-	cp DancingScript-VariableFont_wght.ttf $(APP_BUNDLE)/Contents/Resources/DancingScript-VariableFont_wght.ttf
 	cp "images/backgrounds/Forest.png" "$(APP_BUNDLE)/Contents/Resources/Forest.png"
 	cp "images/backgrounds/On The Water.png" "$(APP_BUNDLE)/Contents/Resources/On The Water.png"
 	cp "images/backgrounds/Pareidolic.png" "$(APP_BUNDLE)/Contents/Resources/Pareidolic.png"

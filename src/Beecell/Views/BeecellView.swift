@@ -12,6 +12,7 @@ public struct BeecellView: View {
     @State private var pileFrames: [String: CGRect] = [:]
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
+    @State private var isShowingNewGameConfirm: Bool = false
     @State private var hostingWindow: NSWindow? = nil
     
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
@@ -38,76 +39,6 @@ public struct BeecellView: View {
             VStack(spacing: 0) {
                 // Top Control and Status Panel
                 HStack(spacing: 20) {
-                    // New Game
-                    Button(action: {
-                        viewModel.startNewGame()
-                    }) {
-                        Text("New Game")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .focusable(false)
-                    .keyboardShortcut("n", modifiers: .command)
-
-                    // Restart Game
-                    Button(action: {
-                        viewModel.restartCurrentGame()
-                    }) {
-                        Text("Restart")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .focusable(false)
-
-                    // Undo Button
-                    Button(action: {
-                        viewModel.undoLastAction()
-                    }) {
-                        Text("Undo")
-                            .font(.display(16))
-                            .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(viewModel.canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .disabled(!viewModel.canUndo)
-                    .focusable(false)
-                    .keyboardShortcut("z", modifiers: .command)
-
-                    // Options
-                    Button(action: {
-                        isShowingOptions = true
-                    }) {
-                        Text("Options")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .focusable(false)
-
                     // Game Selection Dropdown
                     Menu {
                         Button(GameMode.klondike.rawValue) {
@@ -151,11 +82,23 @@ public struct BeecellView: View {
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     .focusable(false)
 
+                    // Options
+                    Button(action: { isShowingOptions = true }) {
+                        Text("Options")
+                            .font(.display(16))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(4)
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                    }
+                    .buttonStyle(HoverToolbarButtonStyle())
+                    .focusable(false)
+
                     // Stats
                     if !viewModel.options.hideStatsButton {
-                        Button(action: {
-                            isShowingStats = true
-                        }) {
+                        Button(action: { isShowingStats = true }) {
                             Text("Stats")
                                 .font(.display(16))
                                 .foregroundColor(.white)
@@ -171,9 +114,7 @@ public struct BeecellView: View {
 
                     // Hint
                     if !viewModel.options.hideHintButton {
-                        Button(action: {
-                            viewModel.findHint()
-                        }) {
+                        Button(action: { viewModel.findHint() }) {
                             Text("Hint")
                                 .font(.display(16))
                                 .foregroundColor(.white)
@@ -187,6 +128,25 @@ public struct BeecellView: View {
                         .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }
+
+                    // Undo
+                    Button(action: { viewModel.undoLastAction() }) {
+                        Text("Undo")
+                            .font(.display(16))
+                            .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(4)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(viewModel.canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(HoverToolbarButtonStyle())
+                    .disabled(!viewModel.canUndo)
+                    .focusable(false)
+                    .keyboardShortcut("z", modifiers: .command)
                     
                     Spacer()
                     
@@ -196,26 +156,14 @@ public struct BeecellView: View {
                         StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                     }
                     
-                    // Hidden shortcut buttons for Cmd+1 and Cmd+2
-                    Button(action: {
-                        viewModel.options.deckCount = 1
-                        viewModel.startNewGame()
-                    }) {
-                        EmptyView()
-                    }
-                    .keyboardShortcut("1", modifiers: .command)
-                    .frame(width: 0, height: 0)
-                    .opacity(0)
-                    
-                    Button(action: {
-                        viewModel.options.deckCount = 2
-                        viewModel.startNewGame()
-                    }) {
-                        EmptyView()
-                    }
-                    .keyboardShortcut("2", modifiers: .command)
-                    .frame(width: 0, height: 0)
-                    .opacity(0)
+                    Button(action: { isShowingNewGameConfirm = true }) { EmptyView() }
+                        .keyboardShortcut("n", modifiers: .command).frame(width: 0, height: 0).opacity(0)
+
+                    Button(action: { viewModel.options.deckCount = 1; isShowingNewGameConfirm = true }) { EmptyView() }
+                        .keyboardShortcut("1", modifiers: .command).frame(width: 0, height: 0).opacity(0)
+
+                    Button(action: { viewModel.options.deckCount = 2; isShowingNewGameConfirm = true }) { EmptyView() }
+                        .keyboardShortcut("2", modifiers: .command).frame(width: 0, height: 0).opacity(0)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -611,6 +559,10 @@ public struct BeecellView: View {
         }
         .sheet(isPresented: $isShowingStats) {
             BeecellStatsView(viewModel: viewModel)
+        }
+        .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
+            Button("New Game", role: .destructive) { viewModel.startNewGame() }
+            Button("Cancel", role: .cancel) { }
         }
         .background(WindowAccessor { window in
             self.hostingWindow = window

@@ -6,7 +6,7 @@ struct SoliBeeApp: App {
     @State private var coordinator = AppCoordinator()
 
     init() {
-        for name in ["Parisienne-Regular", "KaushanScript-Regular", "DancingScript-VariableFont_wght", "LilyScriptOne-Regular"] {
+        for name in ["Parisienne-Regular", "LilyScriptOne-Regular"] {
             if let url = Bundle.main.url(forResource: name, withExtension: "ttf") {
                 CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
             }
@@ -101,12 +101,12 @@ struct SoliBeeApp: App {
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("Beecell Help", id: "beecell-help") {
+        WindowGroup("Freecell Help", id: "beecell-help") {
             BeecellHelpView()
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("Spider Solibee Help", id: "spider-help") {
+        WindowGroup("Spider Solitaire Help", id: "spider-help") {
             SpiderHelpView()
         }
         .windowResizability(.contentSize)
@@ -116,7 +116,7 @@ struct SoliBeeApp: App {
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("Blackjack Help", id: "blackjack-help") {
+        WindowGroup("Video Blackjack Help", id: "blackjack-help") {
             BlackjackHelpView()
         }
         .windowResizability(.contentSize)
@@ -133,10 +133,10 @@ private struct HelpMenuCommands: View {
 
     var body: some View {
         Button("Klondike Solitaire Help") { openWindow(id: "klondike-help") }
-        Button("Beecell Help")            { openWindow(id: "beecell-help") }
-        Button("Spider Solibee Help")     { openWindow(id: "spider-help") }
+        Button("Freecell Help")            { openWindow(id: "beecell-help") }
+        Button("Spider Solitaire Help")   { openWindow(id: "spider-help") }
         Button("Video Poker Help")        { openWindow(id: "videopoker-help") }
-        Button("Blackjack Help")          { openWindow(id: "blackjack-help") }
+        Button("Video Blackjack Help")    { openWindow(id: "blackjack-help") }
         Button("Themes Help")             { openWindow(id: "themes-help") }
     }
 }

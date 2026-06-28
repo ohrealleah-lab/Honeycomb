@@ -5,6 +5,7 @@ public struct BlackjackView: View {
     var viewModel: BlackjackViewModel
     @State private var isShowingOptions = false
     @State private var isShowingStats   = false
+    @State private var isShowingNewGameConfirm = false
     @State private var showResultBanner  = false
     @State private var cardsVisible      = true
     @State private var dealerFlipped     = false  // triggers hole-card flip animation
@@ -89,6 +90,10 @@ public struct BlackjackView: View {
         .sheet(isPresented: $isShowingStats) {
             BlackjackStatsView(viewModel: viewModel)
         }
+        .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
+            Button("New Game", role: .destructive) { viewModel.startNewGame() }
+            Button("Cancel", role: .cancel) { }
+        }
         .onAppear {
             if viewModel.state.phase == .betting && viewModel.state.playerHands.isEmpty {
                 withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
@@ -138,9 +143,8 @@ public struct BlackjackView: View {
 
     private var toolbarView: some View {
         HStack(spacing: 20) {
-            toolbarButton("New Game") { viewModel.startNewGame() }
-            toolbarButton("Options")  { isShowingOptions = true }
             gameModeMenu
+            toolbarButton("Options")  { isShowingOptions = true }
             if !viewModel.options.hideStatsButton {
                 toolbarButton("Stats") { isShowingStats = true }
             }

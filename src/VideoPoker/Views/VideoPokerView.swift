@@ -5,6 +5,7 @@ public struct VideoPokerView: View {
     var viewModel: VideoPokerViewModel
     @State private var isShowingOptions = false
     @State private var isShowingStats   = false
+    @State private var isShowingNewGameConfirm = false
     @State private var winFlash         = false
     @State private var cardVisible: [Bool] = Array(repeating: false, count: 5)
     @State private var cardRotation: [Double] = Array(repeating: 0, count: 5)
@@ -74,6 +75,10 @@ public struct VideoPokerView: View {
         .sheet(isPresented: $isShowingStats) {
             VideoPokerStatsView(viewModel: viewModel)
         }
+        .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
+            Button("New Game", role: .destructive) { viewModel.startNewGame() }
+            Button("Cancel", role: .cancel) { }
+        }
         .onAppear {
             if viewModel.state.phase == .holding && !viewModel.state.hand.isEmpty {
                 animateDeal()
@@ -117,9 +122,8 @@ public struct VideoPokerView: View {
 
     private var toolbarView: some View {
         HStack(spacing: 20) {
-            toolbarButton("New Game") { viewModel.startNewGame() }
-            toolbarButton("Options") { isShowingOptions = true }
             gameModeMenu
+            toolbarButton("Options") { isShowingOptions = true }
             if !viewModel.options.hideStatsButton {
                 toolbarButton("Stats") { isShowingStats = true }
             }
