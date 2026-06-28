@@ -505,6 +505,7 @@ public partial class BeecellViewModel : ObservableObject
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(TimeDisplay));
+        OnPropertyChanged(nameof(ScoreDisplay));
     }
 
     private void SaveStateForUndo()

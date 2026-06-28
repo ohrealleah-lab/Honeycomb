@@ -11,6 +11,7 @@ public class VideoPokerState
     public int CurrentBet { get; set; } = 1;
     public int LastPayout { get; set; }
     public string LastHandName { get; set; } = "";
+    public bool[] WinningCardMask { get; set; } = new bool[5];
     public int TimerSeconds { get; set; }
     public bool IsTimerRunning { get; set; }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls;
@@ -21,9 +22,13 @@ public partial class BlackjackView : UserControl
     private DispatcherTimer? _bustFlashTimer;
     private double           _winPulsePhase;
 
-    private BlackjackPhase _lastPhase     = BlackjackPhase.Betting;
+    private BlackjackPhase _lastPhase         = BlackjackPhase.Betting;
     private bool           _resultSoundPlayed = false;
-    private int            _prevBustCount = 0;
+    private int            _prevBustCount     = 0;
+
+    // Deal animation — track card IDs to detect newly-added cards each refresh
+    private List<string>       _prevDealerIds  = new();
+    private List<List<string>> _prevPlayerIds  = new();
 
     // Active chip button highlight tracking
     private static readonly SolidColorBrush _chipHighlight = new(Color.FromArgb(0x50, 0xFF, 0xFF, 0xFF));
@@ -40,6 +45,7 @@ public partial class BlackjackView : UserControl
         if (DataContext is not BlackjackViewModel vm) return;
         vm.PropertyChanged += Vm_PropertyChanged;
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+        if (vm.CanDeal) vm.Deal();
         Refresh(vm);
     }
 
@@ -101,19 +107,38 @@ public partial class BlackjackView : UserControl
             _resultSoundPlayed = false;
     }
 
+    // ── Deal animation helper ─────────────────────────────────────────────────
+
+    private static void ScheduleCardSlideIn(CardView cv, double fromX, double fromY, int durationMs, int delayMs)
+    {
+        if (delayMs == 0) { cv.BeginSlideIn(fromX, fromY, durationMs); return; }
+        var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(delayMs) };
+        t.Tick += (_, _) => { t.Stop(); cv.BeginSlideIn(fromX, fromY, durationMs); };
+        t.Start();
+    }
+
     // ── Dealer cards ──────────────────────────────────────────────────────────
 
     private void RebuildDealerCards(BlackjackViewModel vm)
     {
         DealerCardsPanel.Children.Clear();
 
-        var cards = vm.State.DealerHand.Cards;
+        var cards   = vm.State.DealerHand.Cards;
+        var newIds  = cards.Select(c => c.Id).ToList();
+        int stagger = 0;
+
         for (int i = 0; i < cards.Count; i++)
         {
             var cv = new CardView { Card = cards[i], IsHitTestVisible = false };
-            if (i > 0) cv.Margin = new Avalonia.Thickness(-24, 0, 0, 0);
-            DealerCardsPanel.Children.Add(cv);
+            var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 160, Height = 226, Child = cv };
+            if (i > 0) vb.Margin = new Avalonia.Thickness(-30, 0, 0, 0);
+            DealerCardsPanel.Children.Add(vb);
+
+            bool isNew = i >= _prevDealerIds.Count || _prevDealerIds[i] != newIds[i];
+            if (isNew) ScheduleCardSlideIn(cv, 0, -42, 185, stagger++ * 110);
         }
+
+        _prevDealerIds = newIds;
 
         bool isDuringPlay = vm.State.Phase == BlackjackPhase.Playing;
         var (visVal, visSoft)   = vm.State.DealerHand.ComputeVisibleValue();
@@ -146,6 +171,10 @@ public partial class BlackjackView : UserControl
     {
         PlayerHandsContainer.Children.Clear();
 
+        // Grow tracking list as needed
+        while (_prevPlayerIds.Count < vm.State.PlayerHands.Count)
+            _prevPlayerIds.Add(new List<string>());
+
         int bustCount = 0;
         Border? newBustBorder = null;
 
@@ -163,14 +192,25 @@ public partial class BlackjackView : UserControl
                              : soft ? $"{val}*"
                                     : $"{val}";
 
+            var prevIds = hi < _prevPlayerIds.Count ? _prevPlayerIds[hi] : new List<string>();
+            var newIds  = hand.Cards.Select(c => c.Id).ToList();
+            int stagger = 0;
+
             // Cards row
             var cardRow = new StackPanel { Orientation = Orientation.Horizontal };
             for (int ci = 0; ci < hand.Cards.Count; ci++)
             {
                 var cv = new CardView { Card = hand.Cards[ci], IsHitTestVisible = false };
-                if (ci > 0) cv.Margin = new Avalonia.Thickness(-24, 0, 0, 0);
-                cardRow.Children.Add(cv);
+                var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 160, Height = 226, Child = cv };
+                if (ci > 0) vb.Margin = new Avalonia.Thickness(-30, 0, 0, 0);
+                cardRow.Children.Add(vb);
+
+                bool isNew = ci >= prevIds.Count || prevIds[ci] != newIds[ci];
+                if (isNew) ScheduleCardSlideIn(cv, 0, 42, 185, stagger++ * 110);
             }
+
+            if (hi < _prevPlayerIds.Count) _prevPlayerIds[hi] = newIds;
+            else _prevPlayerIds.Add(newIds);
 
             // Value pill
             var valuePill = new Border
@@ -241,9 +281,8 @@ public partial class BlackjackView : UserControl
                 Child           = inner,
                 Padding         = new Avalonia.Thickness(6, 4),
                 CornerRadius    = new Avalonia.CornerRadius(6),
-                BorderThickness = new Avalonia.Thickness(active ? 2 : 0),
-                BorderBrush     = active ? new SolidColorBrush(Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF)) : null,
-                Background      = active ? new SolidColorBrush(Color.FromArgb(0x15, 0xFF, 0xFF, 0xFF)) : null,
+                BorderThickness = new Avalonia.Thickness(0),
+                Background      = null,
             };
 
             // Track the bust border for the flash animation

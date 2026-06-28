@@ -96,23 +96,34 @@ public partial class PileView : UserControl
         {
             if (isDrawThree)
             {
-                // Draw 3 mode: show top 3 cards fanned horizontally by 42px
-                int cardsToShow = Math.Min(3, Pile.Cards.Count);
+                // Draw 3 mode: show only cards from the current draw batch
+                int batchSize    = vm?.State.WasteDrawBatchSize ?? 0;
+                int cardsToShow  = Math.Min(batchSize, Pile.Cards.Count);
+
+                if (cardsToShow == 0)
+                {
+                    // Batch exhausted — prompt user to draw again
+                    EmptyOutline.IsVisible = true;
+                    CardsCanvas.Width  = 128;
+                    CardsCanvas.Height = 181;
+                    return;
+                }
+
                 int startIndex = Pile.Cards.Count - cardsToShow;
-                
+
                 for (int i = startIndex; i < Pile.Cards.Count; i++)
                 {
                     if (i < 0) continue;
-                    var card = Pile.Cards[i];
+                    var card     = Pile.Cards[i];
                     var cardView = new CardView { Card = card };
-                    
+
                     double xOffset = (i - startIndex) * 42;
                     Canvas.SetLeft(cardView, xOffset);
                     Canvas.SetTop(cardView, 0);
                     CardsCanvas.Children.Add(cardView);
                 }
 
-                CardsCanvas.Width = 128 + Math.Max(0, cardsToShow - 1) * 42;
+                CardsCanvas.Width  = 128 + Math.Max(0, cardsToShow - 1) * 42;
                 CardsCanvas.Height = 181;
             }
             else
@@ -193,7 +204,6 @@ public partial class PileView : UserControl
                 if (gameView.CanMoveCards(cardsToMove, Pile))
                 {
                     gameView.TryMoveCards(cardsToMove, sourcePile, Pile);
-                    SoundService.PlaySnap();
                 }
             }
             gameView.SelectedCardView.ClearSelection();

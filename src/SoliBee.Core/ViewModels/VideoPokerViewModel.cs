@@ -102,6 +102,14 @@ public partial class VideoPokerViewModel : ObservableObject
         State.SessionCredits = Options.StartingCredits;
         State.CurrentBet     = Math.Clamp(Options.BetPerHand, 1, 5);
 
+        // Sync shared visual settings from global options at startup
+        var shared = SettingsService.LoadOptions();
+        Options.IsFinalFantasyMode  = shared.IsFinalFantasyMode;
+        Options.CardBackTheme       = shared.CardBackTheme;
+        Options.IsSoundEnabled      = shared.IsSoundEnabled;
+        Options.FeltColor           = shared.FeltColor.ToString();
+        Options.CustomFeltColorHex  = shared.CustomFeltColorHex;
+
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
             Options.IsFinalFantasyMode  = m.Options.IsFinalFantasyMode;
@@ -120,9 +128,10 @@ public partial class VideoPokerViewModel : ObservableObject
     public void Deal()
     {
         if (State.SessionCredits < State.CurrentBet) return;
-        State.SessionCredits -= State.CurrentBet;
-        State.HeldSlots      = new bool[5];
-        State.Phase          = VideoPokerPhase.Holding;
+        State.SessionCredits  -= State.CurrentBet;
+        State.HeldSlots        = new bool[5];
+        State.WinningCardMask  = new bool[5];
+        State.Phase            = VideoPokerPhase.Holding;
 
         BuildAndShuffleDeck();
         State.Hand = _deck.Take(5).Select(c => c with { IsFaceUp = true }).ToList();
@@ -149,10 +158,13 @@ public partial class VideoPokerViewModel : ObservableObject
         }
 
         var (entry, payout) = EvaluateHand(State.Hand.ToArray());
-        State.LastPayout     = payout;
-        State.LastHandName   = entry?.HandName ?? "";
+        State.LastPayout      = payout;
+        State.LastHandName    = entry?.HandName ?? "";
         State.SessionCredits += payout;
-        State.Phase          = VideoPokerPhase.Result;
+        State.WinningCardMask = payout > 0
+            ? GetWinningCardMask(State.Hand, entry!.Rank, Options.Variant == VideoPokerVariant.DeucesWild)
+            : new bool[5];
+        State.Phase           = VideoPokerPhase.Result;
 
         if (payout > 0)
         {
@@ -195,13 +207,9 @@ public partial class VideoPokerViewModel : ObservableObject
 
     public void BetMax()
     {
-        if (State.Phase != VideoPokerPhase.Holding)
-        {
-            State.CurrentBet = 5;
-            Deal();
-            return;
-        }
-        NotifyStateChanged();
+        if (State.Phase == VideoPokerPhase.Holding) return;
+        State.CurrentBet = Math.Min(5, Math.Max(1, State.SessionCredits));
+        Deal();
     }
 
     public void IncreaseBet()
@@ -431,6 +439,57 @@ public partial class VideoPokerViewModel : ObservableObject
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static bool[] GetWinningCardMask(List<Card> hand, PokerHandRank rank, bool isDeucesWild)
+    {
+        var mask = new bool[5];
+        var h    = hand.ToArray();
+
+        // When wilds are involved, trace-back is ambiguous — light all cards
+        if (isDeucesWild && h.Any(c => c.Rank == 2))
+        {
+            for (int i = 0; i < 5; i++) mask[i] = true;
+            return mask;
+        }
+
+        switch (rank)
+        {
+            case PokerHandRank.RoyalFlush:
+            case PokerHandRank.StraightFlush:
+            case PokerHandRank.Straight:
+            case PokerHandRank.Flush:
+            case PokerHandRank.FullHouse:
+            case PokerHandRank.FiveOfAKind:
+                for (int i = 0; i < 5; i++) mask[i] = true;
+                break;
+
+            case PokerHandRank.FourOfAKind:
+            {
+                int r = h.GroupBy(c => c.Rank).First(g => g.Count() == 4).Key;
+                for (int i = 0; i < 5; i++) mask[i] = h[i].Rank == r;
+                break;
+            }
+            case PokerHandRank.ThreeOfAKind:
+            {
+                int r = h.GroupBy(c => c.Rank).First(g => g.Count() == 3).Key;
+                for (int i = 0; i < 5; i++) mask[i] = h[i].Rank == r;
+                break;
+            }
+            case PokerHandRank.TwoPair:
+            {
+                var pairs = h.GroupBy(c => c.Rank).Where(g => g.Count() == 2).Select(g => g.Key).ToHashSet();
+                for (int i = 0; i < 5; i++) mask[i] = pairs.Contains(h[i].Rank);
+                break;
+            }
+            case PokerHandRank.OnePair:
+            {
+                int r = h.GroupBy(c => c.Rank).First(g => g.Count() == 2).Key;
+                for (int i = 0; i < 5; i++) mask[i] = h[i].Rank == r;
+                break;
+            }
+        }
+        return mask;
+    }
 
     private void NotifyStateChanged()
     {

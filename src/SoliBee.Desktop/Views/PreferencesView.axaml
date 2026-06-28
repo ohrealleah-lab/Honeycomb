@@ -69,6 +69,16 @@
             <TextBlock Text="Tap a tile to upload art. Tap again to adjust." FontSize="10" Foreground="#A0A0A0" Margin="0,-4,0,0" />
             <v:FaceCardArtSectionView />
 
+            <StackPanel Spacing="4" Margin="0,6,0,0">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Debug: Ace Font Size" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
+                    <TextBlock x:Name="PipSizeLabel" Grid.Column="1" Foreground="#C0C0C0" FontSize="13" VerticalAlignment="Center" />
+                </Grid>
+                <Slider x:Name="PipSizeSlider" Minimum="20" Maximum="220" Value="188"
+                        TickFrequency="1" IsSnapToTickEnabled="True"
+                        ValueChanged="PipSizeSlider_Changed" />
+            </StackPanel>
+
             <TextBlock Text="Help:" FontWeight="Bold" Foreground="White" Margin="0,6,0,0" />
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Content="Klondike" Click="HelpKlondike_Click" Background="#444444" Foreground="White" Padding="10,5" />

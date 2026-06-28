@@ -16,7 +16,7 @@
         </Rectangle>
 
         <!-- ─── Pay Table Bar (top) ──────────────────────────────────────────── -->
-        <Border Grid.Row="0" Background="#CC000000" Padding="12,6,12,8" Margin="0,0,0,6">
+        <Border x:Name="PayTableBar" Grid.Row="0" Background="#CC000000" Padding="12,6,12,8" Margin="0,0,0,6">
 
                 <!-- Two-column pay table -->
                 <Grid ColumnDefinitions="*,12,*">
@@ -70,7 +70,7 @@
         </Border>
 
         <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
-        <Border Grid.Row="1" Background="#CC000000" CornerRadius="6"
+        <Border x:Name="BidBar" Grid.Row="1" Background="#CC000000" CornerRadius="6"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 Margin="0,6,0,6">
             <StackPanel Orientation="Horizontal" Margin="0,8">
@@ -106,31 +106,41 @@
 
                     <StackPanel x:Name="CardsRow" Orientation="Horizontal" Spacing="0" HorizontalAlignment="Center">
 
-                        <Grid x:Name="CardSlot0" Width="128" Height="181"
+                        <Grid x:Name="CardSlot0" Width="160" Height="226"
                               Tag="0" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card0View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox Stretch="Uniform">
+                                <local:CardView x:Name="Card0View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot1" Width="128" Height="181" Margin="-40,0,0,0"
+                        <Grid x:Name="CardSlot1" Width="160" Height="226" Margin="-50,0,0,0"
                               Tag="1" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card1View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox Stretch="Uniform">
+                                <local:CardView x:Name="Card1View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot2" Width="128" Height="181" Margin="-40,0,0,0"
+                        <Grid x:Name="CardSlot2" Width="160" Height="226" Margin="-50,0,0,0"
                               Tag="2" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card2View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox Stretch="Uniform">
+                                <local:CardView x:Name="Card2View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot3" Width="128" Height="181" Margin="-40,0,0,0"
+                        <Grid x:Name="CardSlot3" Width="160" Height="226" Margin="-50,0,0,0"
                               Tag="3" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card3View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox Stretch="Uniform">
+                                <local:CardView x:Name="Card3View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot4" Width="128" Height="181" Margin="-40,0,0,0"
+                        <Grid x:Name="CardSlot4" Width="160" Height="226" Margin="-50,0,0,0"
                               Tag="4" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card4View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox Stretch="Uniform">
+                                <local:CardView x:Name="Card4View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            </Viewbox>
                         </Grid>
 
                     </StackPanel>
 
                     <!-- Overlay layer -->
-                    <Grid Height="181" VerticalAlignment="Top">
+                    <Grid Height="226" VerticalAlignment="Top">
 
                         <Border x:Name="NoWinOverlay" IsVisible="False"
                                 Background="#1A44CC" CornerRadius="8" Padding="32,14"
@@ -182,7 +192,7 @@
                             IsEnabled="{Binding IsHolding}"
                             Click="ClearAll_Click" Classes="vp-button"/>
                     <Button x:Name="DealDrawButton"
-                            Content="Deal" Height="46" Padding="28,0"
+                            Content="{Binding DealDrawLabel}" Height="46" Padding="28,0"
                             Click="DealDraw_Click" Classes="vp-button vp-button-draw"/>
                     <Button x:Name="RebuyButton"
                             Content="Buy In" Height="46" Padding="16,0"
@@ -263,6 +273,9 @@
         <Style Selector="Button.vp-bet-button">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Opacity" Value="0.80"/>
+        </Style>
+        <Style Selector="Button.vp-bet-button:disabled">
+            <Setter Property="Opacity" Value="0.28"/>
         </Style>
         <Style Selector="ComboBox#VariantComboBox">
             <Setter Property="Background" Value="#22FFFFFF"/>

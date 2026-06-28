@@ -327,8 +327,7 @@ public partial class SpiderViewModel : ObservableObject
                 tableau.Cards.RemoveRange(tableau.Cards.Count - 13, 13);
                 FlipTopCard(tableau);
 
-                if (Options.IsVegasScoring)
-                    State.Score += 100;
+                State.Score += 100;
 
                 found = true;
                 break;
@@ -376,17 +375,81 @@ public partial class SpiderViewModel : ObservableObject
 
     private void CheckAutocomplete()
     {
-        bool allFaceUp = Tableaus.All(t => t.Cards.All(c => c.IsFaceUp));
-        bool allSorted = Tableaus.All(t =>
+        if (StockPiles.Count != 0 || State.HasWon) { IsAutocompletable = false; return; }
+
+        // Every card must be face-up and every pile must be a single same-suit descending run —
+        // these are the only sequences the autocomplete algorithm can move.
+        bool prerequisite = Tableaus.All(t =>
         {
+            if (t.Cards.Any(c => !c.IsFaceUp)) return false;
             for (int i = 0; i < t.Cards.Count - 1; i++)
-            {
                 if (t.Cards[i].Suit != t.Cards[i + 1].Suit || t.Cards[i].Rank != t.Cards[i + 1].Rank + 1)
                     return false;
-            }
             return true;
         });
-        IsAutocompletable = allFaceUp && allSorted && StockPiles.Count == 0 && !State.HasWon;
+        if (!prerequisite) { IsAutocompletable = false; return; }
+
+        // Simulate the algorithm to confirm it won't stall (e.g. K-sequences with no empty staging pile)
+        IsAutocompletable = SimulateAutocomplete();
+    }
+
+    private bool SimulateAutocomplete()
+    {
+        var piles = Tableaus.Select(t => t.Cards.ToList()).ToList();
+        int remaining = WinCards - Foundations.Sum(f => f.Cards.Count);
+
+        const int maxIter = 10_000;
+        for (int iter = 0; iter < maxIter && remaining > 0; iter++)
+        {
+            // Collect any complete 13-card same-suit runs
+            bool collected = false;
+            for (int i = 0; i < piles.Count; i++)
+            {
+                if (piles[i].Count < 13) continue;
+                var run = piles[i].GetRange(piles[i].Count - 13, 13);
+                if (!IsCompleteRun(run)) continue;
+                piles[i].RemoveRange(piles[i].Count - 13, 13);
+                remaining -= 13;
+                collected = true;
+                break;
+            }
+            if (collected) continue;
+
+            // Try to move a same-suit sequence
+            bool moved = false;
+            for (int si = 0; si < piles.Count && !moved; si++)
+            {
+                if (piles[si].Count == 0) continue;
+                int seqLen = SimSeqLen(piles[si]);
+                int seqBottomRank = piles[si][piles[si].Count - seqLen].Rank;
+                for (int ti = 0; ti < piles.Count && !moved; ti++)
+                {
+                    if (ti == si) continue;
+                    bool canPlace = piles[ti].Count == 0
+                        || seqBottomRank == piles[ti].Last().Rank - 1;
+                    if (!canPlace) continue;
+                    var seg = piles[si].GetRange(piles[si].Count - seqLen, seqLen);
+                    piles[si].RemoveRange(piles[si].Count - seqLen, seqLen);
+                    piles[ti].AddRange(seg);
+                    moved = true;
+                }
+            }
+            if (!moved) return false;
+        }
+        return remaining == 0;
+    }
+
+    // Length of the same-suit descending sequence at the top of a pile
+    private static int SimSeqLen(List<Card> pile)
+    {
+        int len = 1;
+        for (int i = pile.Count - 2; i >= 0; i--)
+        {
+            if (pile[i].Suit == pile[i + 1].Suit && pile[i].Rank == pile[i + 1].Rank + 1)
+                len++;
+            else break;
+        }
+        return len;
     }
 
     [RelayCommand]
@@ -521,6 +584,7 @@ public partial class SpiderViewModel : ObservableObject
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(TimeDisplay));
+        OnPropertyChanged(nameof(ScoreDisplay));
     }
 
     private void SaveStateForUndo()

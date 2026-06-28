@@ -15,4 +15,5 @@ public class GameState
     public bool HasWon { get; set; }
     public int RecyclesCount { get; set; }
     public DrawMode Mode { get; set; }
+    public int WasteDrawBatchSize { get; set; }
 }

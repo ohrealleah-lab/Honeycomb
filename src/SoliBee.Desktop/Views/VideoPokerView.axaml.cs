@@ -28,6 +28,11 @@ public partial class VideoPokerView : UserControl
     // Animation state
     private CancellationTokenSource? _dealAnimCts;
     private DispatcherTimer? _winPulseTimer;
+
+    // Deal / draw slide animation — track previous hand IDs to detect new cards
+    private readonly string[] _prevVpHandIds = new string[]
+        { "__vp_blank__", "__vp_blank__", "__vp_blank__", "__vp_blank__", "__vp_blank__" };
+    private readonly DispatcherTimer?[] _dealStaggerTimers = new DispatcherTimer?[5];
     private double _winPulsePhase;
     private DispatcherTimer? _creditAnimTimer;
     private int _displayedCredits = -1;
@@ -75,6 +80,7 @@ public partial class VideoPokerView : UserControl
         StopCardsFade();
         _dealAnimCts?.Cancel();
         _creditAnimTimer?.Stop();
+        CancelDealStaggerTimers();
     }
 
     private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -94,18 +100,77 @@ public partial class VideoPokerView : UserControl
         UpdateHoldBadges(vm);
         UpdateControls(vm);
         UpdateResult(vm);
+        UpdateWinCardHighlights(vm);
         HighlightPayRow(vm.WinningHandName);
         UpdatePayColumnHighlight(vm.State.CurrentBet);
         ApplyFeltColor(vm);
     }
 
+    private void UpdateWinCardHighlights(VideoPokerViewModel vm)
+    {
+        bool isWin = vm.State.Phase == VideoPokerPhase.Result && vm.HasWin;
+        for (int i = 0; i < 5; i++)
+        {
+            if (isWin && vm.State.WinningCardMask.Length > i && vm.State.WinningCardMask[i])
+                _cardViews[i].ShowHint();
+            else
+                _cardViews[i].ClearHint();
+        }
+    }
+
     private void UpdateCards(VideoPokerViewModel vm)
     {
+        bool[] isNew = new bool[5];
+        bool anyNew = false;
+
         for (int i = 0; i < 5; i++)
         {
             var card = vm.State.Hand.Count > i ? vm.State.Hand[i] : _blankCard;
-            _cardViews[i].Card = card;
+            string newId = card.Id;
+            isNew[i] = newId != _prevVpHandIds[i];
+            _prevVpHandIds[i] = newId;
+            _cardViews[i].Card    = card;
             _cardViews[i].Opacity = 1.0;
+            if (isNew[i]) anyNew = true;
+        }
+
+        if (anyNew) TriggerVpDealAnimation(isNew);
+    }
+
+    private void TriggerVpDealAnimation(bool[] isNew)
+    {
+        CancelDealStaggerTimers();
+        int stagger = 0;
+        for (int i = 0; i < 5; i++)
+        {
+            if (!isNew[i]) continue;
+            int slot    = i;
+            int delayMs = stagger++ * 75;
+            if (delayMs == 0)
+            {
+                _cardViews[slot].BeginSlideIn(0, 38, 185);
+            }
+            else
+            {
+                var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(delayMs) };
+                _dealStaggerTimers[slot] = t;
+                t.Tick += (_, _) =>
+                {
+                    t.Stop();
+                    _dealStaggerTimers[slot] = null;
+                    _cardViews[slot].BeginSlideIn(0, 38, 185);
+                };
+                t.Start();
+            }
+        }
+    }
+
+    private void CancelDealStaggerTimers()
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            _dealStaggerTimers[i]?.Stop();
+            _dealStaggerTimers[i] = null;
         }
     }
 
@@ -121,10 +186,9 @@ public partial class VideoPokerView : UserControl
     private void UpdateControls(VideoPokerViewModel vm)
     {
         AnimateCreditsTo(vm.CreditDisplay);
-        BetLabel.Text          = vm.BetDisplay;
-        HandsLabel.Text        = vm.Stats.TotalHands.ToString();
-        DealDrawButton.Content = vm.DealDrawLabel;
-        RebuyButton.IsVisible  = vm.NeedsRebuy;
+        BetLabel.Text         = vm.BetDisplay;
+        HandsLabel.Text       = vm.Stats.TotalHands.ToString();
+        RebuyButton.IsVisible = vm.NeedsRebuy;
 
         var slotCursor = vm.IsHolding
             ? new Cursor(StandardCursorType.Hand)
@@ -346,6 +410,8 @@ public partial class VideoPokerView : UserControl
         if (vm.Options.IsFinalFantasyMode)
         {
             BoardFeltGrid.Background = new SolidColorBrush(Colors.Black);
+            PayTableBar.Background   = new SolidColorBrush(Colors.Black);
+            BidBar.Background        = new SolidColorBrush(Color.Parse("#1A1A1A"));
             return;
         }
 
@@ -360,11 +426,18 @@ public partial class VideoPokerView : UserControl
         };
         try
         {
-            BoardFeltGrid.Background = new SolidColorBrush(Color.Parse(hex));
+            var felt = Color.Parse(hex);
+            BoardFeltGrid.Background = new SolidColorBrush(felt);
+            PayTableBar.Background   = new SolidColorBrush(felt);
+            // Bid bar uses a darkened shade of the felt color for text contrast
+            var bar = new Color(255, (byte)(felt.R / 2), (byte)(felt.G / 2), (byte)(felt.B / 2));
+            BidBar.Background = new SolidColorBrush(bar);
         }
         catch
         {
             BoardFeltGrid.Background = new SolidColorBrush(Colors.DarkGreen);
+            PayTableBar.Background   = new SolidColorBrush(Colors.DarkGreen);
+            BidBar.Background        = new SolidColorBrush(Color.Parse("#004000"));
         }
     }
 

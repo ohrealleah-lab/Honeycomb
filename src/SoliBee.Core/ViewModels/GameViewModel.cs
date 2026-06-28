@@ -39,6 +39,9 @@ public partial class GameViewModel : ObservableObject
     private System.Threading.Timer? _gameTimer;
     private int _vegasGameStartScore;
 
+    private List<HintMove> _hintCycleList  = new();
+    private int            _hintCycleIndex = 0;
+
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
 
     public string ScoreDisplay
@@ -47,8 +50,9 @@ public partial class GameViewModel : ObservableObject
         {
             if (Options?.IsVegasScoring == true)
             {
-                int abs = Math.Abs(State.Score);
-                return State.Score < 0 ? $"-${abs}.00" : $"${abs}.00";
+                int dollars = State.Score / 100;
+                int abs     = Math.Abs(dollars);
+                return dollars < 0 ? $"-${abs}.00" : $"${abs}.00";
             }
             return State.Score.ToString();
         }
@@ -83,14 +87,14 @@ public partial class GameViewModel : ObservableObject
 
     public void InitializeGame()
     {
-        ActiveHint = null;
+        ClearHintCycle();
         Stock.Cards.Clear();
         Waste.Cards.Clear();
         foreach (var f in Foundations) f.Cards.Clear();
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
-        int startScore = Options.IsVegasScoring ? State.Score - 52 : 0;
+        int startScore = Options.IsVegasScoring ? State.Score - 5200 : 0;
         _vegasGameStartScore = startScore;
 
         State = new GameState
@@ -190,7 +194,7 @@ public partial class GameViewModel : ObservableObject
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
-        _vegasGameStartScore = Options.IsVegasScoring ? -52 : 0;
+        _vegasGameStartScore = Options.IsVegasScoring ? -5200 : 0;
         State.Score = _vegasGameStartScore;
         OnPropertyChanged(nameof(ScoreDisplay));
         State.MovesCount = 0;
@@ -198,8 +202,10 @@ public partial class GameViewModel : ObservableObject
         State.IsTimerActive = false;
         State.HasWon = false;
         State.RecyclesCount = 0;
+        State.WasteDrawBatchSize = 0;
         IsAutocompletable = false;
         HasNoMoves = false;
+        ClearHintCycle();
 
         var deckCopy = _initialDeck.Select(c => c).ToList();
 
@@ -247,21 +253,16 @@ public partial class GameViewModel : ObservableObject
 
     public void DrawCard()
     {
-        SaveStateForUndo();
-
         if (Stock.Cards.Count == 0)
         {
-            // Recycle waste back to stock
+            // Recycle waste back to stock — guard no-ops before snapshot
             if (Waste.Cards.Count == 0) return;
             if (Options.IsVegasScoring && State.RecyclesCount >= 1) return;
 
+            ClearHintCycle();
+            SaveStateForUndo();
             State.RecyclesCount++;
-
-            if (Options.IsVegasScoring)
-            {
-                State.Score -= 25;
-                OnPropertyChanged(nameof(ScoreDisplay));
-            }
+            State.WasteDrawBatchSize = 0;
 
             // Move waste cards to stock in reverse order, turn face down
             var wasteCards = Waste.Cards.ToList();
@@ -280,15 +281,22 @@ public partial class GameViewModel : ObservableObject
             return;
         }
 
+        ClearHintCycle();
+        SaveStateForUndo();
+
         int drawCount = State.Mode == DrawMode.DrawThree ? 3 : 1;
         int cardsToDraw = Math.Min(drawCount, Stock.Cards.Count);
 
+        // Collect then reverse so the top-of-stock card ends up as top-of-waste
+        var drawn = new List<Card>(cardsToDraw);
         for (int i = 0; i < cardsToDraw; i++)
         {
-            var card = Stock.Cards[^1];
+            drawn.Add(Stock.Cards[^1] with { IsFaceUp = true });
             Stock.Cards.RemoveAt(Stock.Cards.Count - 1);
-            Waste.Cards.Add(card with { IsFaceUp = true });
         }
+        for (int i = drawn.Count - 1; i >= 0; i--)
+            Waste.Cards.Add(drawn[i]);
+        State.WasteDrawBatchSize = cardsToDraw;
 
         if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
             State.IsTimerActive = true;
@@ -313,19 +321,26 @@ public partial class GameViewModel : ObservableObject
         // Check rules based on target pile type
         if (targetPile.Type == PileType.Tableau)
         {
+            // Validate the sub-stack from card to the pile top is a proper alternating-color run
+            if (sourcePile.Type == PileType.Tableau)
+            {
+                int cardIndex = sourcePile.Cards.IndexOf(card);
+                for (int i = cardIndex; i < sourcePile.Cards.Count - 1; i++)
+                {
+                    var curr = sourcePile.Cards[i];
+                    var next = sourcePile.Cards[i + 1];
+                    if (!next.IsFaceUp || IsRed(curr.Suit) == IsRed(next.Suit) || curr.Rank != next.Rank + 1)
+                        return false;
+                }
+            }
+
             // Only King can go to empty tableau
             if (targetPile.Cards.Count == 0)
-            {
-                // Must be a King (rank 13)
-                // Note: if card is part of a fanned stack, we must move the whole stack.
-                // The base card of the stack must be rank 13.
                 return card.Rank == 13;
-            }
 
             var targetTopCard = targetPile.Cards.Last();
             if (!targetTopCard.IsFaceUp) return false;
 
-            // Target card must alternate color and be exactly 1 rank higher
             bool alternates = (IsRed(card.Suit) != IsRed(targetTopCard.Suit));
             bool sequential = (targetTopCard.Rank == card.Rank + 1);
 
@@ -359,7 +374,7 @@ public partial class GameViewModel : ObservableObject
     {
         if (!CanMoveCard(card, targetPile)) return;
 
-        ActiveHint = null;
+        ClearHintCycle();
         SaveStateForUndo();
 
         var sourcePile = FindPileContaining(card);
@@ -368,6 +383,9 @@ public partial class GameViewModel : ObservableObject
         // Extract cards from the index to the end
         var cardsToMove = sourcePile.Cards.GetRange(index, sourcePile.Cards.Count - index);
         sourcePile.Cards.RemoveRange(index, sourcePile.Cards.Count - index);
+
+        if (sourcePile == Waste && State.Mode == DrawMode.DrawThree)
+            State.WasteDrawBatchSize = Math.Max(0, State.WasteDrawBatchSize - 1);
 
         // Add to target pile
         foreach (var c in cardsToMove)
@@ -407,10 +425,10 @@ public partial class GameViewModel : ObservableObject
         if (Options.IsVegasScoring)
         {
             if (target == PileType.Foundation)
-            {
-                State.Score += 5;
-                OnPropertyChanged(nameof(ScoreDisplay));
-            }
+                State.Score += 500;
+            else if (source == PileType.Foundation && target == PileType.Tableau)
+                State.Score -= 500;
+            OnPropertyChanged(nameof(ScoreDisplay));
         }
         else
         {
@@ -433,12 +451,13 @@ public partial class GameViewModel : ObservableObject
     {
         var snapshot = new GameStateSnapshot
         {
-            Score = State.Score,
-            MovesCount = State.MovesCount,
-            TimerSeconds = State.TimerSeconds,
-            RecyclesCount = State.RecyclesCount,
-            HasWon = State.HasWon,
-            PileCards = new List<List<Card>>()
+            Score              = State.Score,
+            MovesCount         = State.MovesCount,
+            TimerSeconds       = State.TimerSeconds,
+            RecyclesCount      = State.RecyclesCount,
+            HasWon             = State.HasWon,
+            WasteDrawBatchSize = State.WasteDrawBatchSize,
+            PileCards          = new List<List<Card>>()
         };
 
         // Snapshot all piles
@@ -454,7 +473,7 @@ public partial class GameViewModel : ObservableObject
     public void Undo()
     {
         if (_undoStack.Count == 0) return;
-        ActiveHint = null;
+        ClearHintCycle();
 
         var snapshot = _undoStack.Pop();
         State.Score = snapshot.Score;
@@ -462,6 +481,7 @@ public partial class GameViewModel : ObservableObject
         State.TimerSeconds = snapshot.TimerSeconds;
         State.RecyclesCount = snapshot.RecyclesCount;
         State.HasWon = snapshot.HasWon;
+        State.WasteDrawBatchSize = snapshot.WasteDrawBatchSize;
 
         Stock.Cards.Clear();
         foreach (var c in snapshot.PileCards[0]) Stock.Cards.Add(c);
@@ -580,9 +600,7 @@ public partial class GameViewModel : ObservableObject
 
     private bool HasAnyLegalMoves()
     {
-        if (Stock.Cards.Count > 0) return true;
-        if (Waste.Cards.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= 1)) return true;
-
+        // Check waste top — immediately playable
         var wasteTop = Waste.Cards.Count > 0 ? Waste.Cards.Last() : null;
         if (wasteTop != null)
         {
@@ -590,6 +608,19 @@ public partial class GameViewModel : ObservableObject
             foreach (var t in Tableaus) if (CanMoveCard(wasteTop, t)) return true;
         }
 
+        // Check stock: each card could become the waste top after drawing
+        foreach (var card in Stock.Cards)
+            if (CardCanPlayAnywhere(card)) return true;
+
+        // Check buried waste cards: accessible after recycle (if allowed)
+        bool canRecycle = Waste.Cards.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= 1);
+        if (canRecycle && Waste.Cards.Count > 1)
+        {
+            for (int i = 0; i < Waste.Cards.Count - 1; i++)
+                if (CardCanPlayAnywhere(Waste.Cards[i])) return true;
+        }
+
+        // Check tableau moves
         foreach (var src in Tableaus)
         {
             if (src.Cards.Count == 0) continue;
@@ -608,25 +639,58 @@ public partial class GameViewModel : ObservableObject
         return false;
     }
 
+    private bool CardCanPlayAnywhere(Card card)
+    {
+        foreach (var f in Foundations)
+        {
+            if (f.Cards.Count == 0 && card.Rank == 1) return true;
+            if (f.Cards.Count > 0 && f.Cards.Last().Suit == card.Suit && card.Rank == f.Cards.Last().Rank + 1) return true;
+        }
+        foreach (var t in Tableaus)
+        {
+            if (t.Cards.Count == 0 && card.Rank == 13) return true;
+            if (t.Cards.Count > 0 && t.Cards.Last().IsFaceUp
+                && IsRed(card.Suit) != IsRed(t.Cards.Last().Suit)
+                && card.Rank == t.Cards.Last().Rank - 1) return true;
+        }
+        return false;
+    }
+
     // MARK: - Hint
 
     public void FindHint()
     {
-        ActiveHint = null;
+        // Rebuild the list on first press (or after any state change cleared it)
+        if (_hintCycleList.Count == 0)
+        {
+            _hintCycleList  = CollectAllHints();
+            _hintCycleIndex = 0;
+        }
+
+        if (_hintCycleList.Count == 0) { ActiveHint = null; return; }
+
+        ActiveHint      = _hintCycleList[_hintCycleIndex];
+        _hintCycleIndex = (_hintCycleIndex + 1) % _hintCycleList.Count;
+    }
+
+    private void ClearHintCycle()
+    {
+        _hintCycleList.Clear();
+        _hintCycleIndex = 0;
+        ActiveHint      = null;
+    }
+
+    private List<HintMove> CollectAllHints()
+    {
+        var hints    = new List<HintMove>();
+        var wasteTop = Waste.Cards.Count > 0 ? Waste.Cards.Last() : null;
 
         // 1. Waste top → foundation
-        var wasteTop = Waste.Cards.Count > 0 ? Waste.Cards.Last() : null;
         if (wasteTop != null)
-        {
             foreach (var f in Foundations)
-            {
                 if (CanMoveCard(wasteTop, f))
-                {
-                    ActiveHint = new HintMove(wasteTop, Waste.Id, f.Id, $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} to Foundation.");
-                    return;
-                }
-            }
-        }
+                    hints.Add(new HintMove(wasteTop, Waste.Id, f.Id,
+                        $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} to Foundation."));
 
         // 2. Tableau top → foundation
         foreach (var src in Tableaus)
@@ -634,29 +698,19 @@ public partial class GameViewModel : ObservableObject
             if (src.Cards.Count == 0) continue;
             var card = src.Cards.Last();
             foreach (var f in Foundations)
-            {
                 if (CanMoveCard(card, f))
-                {
-                    ActiveHint = new HintMove(card, src.Id, f.Id, $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} to Foundation.");
-                    return;
-                }
-            }
+                    hints.Add(new HintMove(card, src.Id, f.Id,
+                        $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} to Foundation."));
         }
 
         // 3. Waste top → tableau
         if (wasteTop != null)
-        {
             foreach (var t in Tableaus)
-            {
                 if (CanMoveCard(wasteTop, t))
-                {
-                    ActiveHint = new HintMove(wasteTop, Waste.Id, t.Id, $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} from waste.");
-                    return;
-                }
-            }
-        }
+                    hints.Add(new HintMove(wasteTop, Waste.Id, t.Id,
+                        $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} from waste."));
 
-        // 4. Tableau sequence → tableau (prefer moves that uncover face-down cards)
+        // 4. Tableau sequence → tableau (most face-down cards to uncover first)
         foreach (var src in Tableaus.OrderByDescending(t => t.Cards.Count(c => !c.IsFaceUp)))
         {
             if (src.Cards.Count == 0) continue;
@@ -666,23 +720,21 @@ public partial class GameViewModel : ObservableObject
             foreach (var tgt in Tableaus)
             {
                 if (tgt.Id == src.Id) continue;
-                if (tgt.Cards.Count == 0 && firstFaceUp == 0) continue; // don't suggest king-to-empty if no face-downs to uncover
                 if (CanMoveCard(seq[0], tgt))
-                {
-                    ActiveHint = new HintMove(seq[0], src.Id, tgt.Id, $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence.");
-                    return;
-                }
+                    hints.Add(new HintMove(seq[0], src.Id, tgt.Id,
+                        $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence."));
             }
         }
 
-        // 5. Suggest drawing from stock
+        // 5. Draw from stock
         if (Stock.Cards.Count > 0)
-        {
-            ActiveHint = new HintMove(new Card("deal", CardSuit.Spades, 1, false), Stock.Id, "", "Draw from stock.");
-            return;
-        }
+            hints.Add(new HintMove(new Card("deal", CardSuit.Spades, 1, false), Stock.Id, "", "Draw from stock."));
 
-        ActiveHint = new HintMove(new Card("no_move", CardSuit.Spades, 1, true), "", "", "No moves available.");
+        // No moves fallback
+        if (hints.Count == 0)
+            hints.Add(new HintMove(new Card("no_move", CardSuit.Spades, 1, true), "", "", "No moves available."));
+
+        return hints;
     }
 
     private static string RankStr(int rank) => rank switch { 1 => "A", 11 => "J", 12 => "Q", 13 => "K", _ => rank.ToString() };
@@ -727,5 +779,6 @@ public class GameStateSnapshot
     public int TimerSeconds { get; set; }
     public int RecyclesCount { get; set; }
     public bool HasWon { get; set; }
+    public int WasteDrawBatchSize { get; set; }
     public List<List<Card>> PileCards { get; set; } = new();
 }

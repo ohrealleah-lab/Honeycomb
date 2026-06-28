@@ -25,6 +25,9 @@
 
                     <!-- Image for Face Cards J, Q, K -->
                     <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
+
+                    <!-- SkiaSharp-rendered pip for Ace (ink-bounds centered) -->
+                    <Image x:Name="AcePipImage" Width="86" Height="86" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
                 </Grid>
 
                 <!-- Bottom-Right Value & Suit Display (Horizontal, Rotated 180 degrees) -->

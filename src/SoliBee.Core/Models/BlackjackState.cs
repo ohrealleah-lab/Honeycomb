@@ -14,6 +14,7 @@ public class BlackjackHand
     public int Bet { get; set; } = 1;
     public bool IsDoubled { get; set; }
     public bool IsStood { get; set; }
+    public bool FromSplit { get; set; }
     public BlackjackHandResult Result { get; set; } = BlackjackHandResult.Pending;
 
     // Full value (all cards, regardless of IsFaceUp) — used for game logic
@@ -43,8 +44,8 @@ public class BlackjackHand
     }
 
     public bool IsBust       => ComputeValue().Value > 21;
-    public bool IsBlackjack  => Cards.Count == 2 && ComputeValue().Value == 21;
-    public bool IsComplete   => IsStood || IsBust || IsDoubled || IsBlackjack;
+    public bool IsBlackjack  => !FromSplit && Cards.Count == 2 && ComputeValue().Value == 21;
+    public bool IsComplete   => IsStood || IsBust || IsDoubled || IsBlackjack || ComputeValue().Value == 21;
 }
 
 public class BlackjackState

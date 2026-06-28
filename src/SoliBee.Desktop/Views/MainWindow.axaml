@@ -25,7 +25,7 @@
                         <ComboBoxItem Content="Beecell" Tag="Beecell" />
                         <ComboBoxItem Content="Spider" Tag="Spider" />
                         <ComboBoxItem Content="Video Poker" Tag="VideoPoker" />
-                        <ComboBoxItem Content="Blackjack" Tag="Blackjack" />
+                        <ComboBoxItem Content="Video Blackjack" Tag="Blackjack" />
                     </ComboBox>
                     <Button Content="New Game" Click="NewGame_Click" Classes="toolbar" />
                     <Button Content="Restart" Click="RestartGame_Click" Classes="toolbar" />

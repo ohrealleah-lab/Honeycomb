@@ -82,6 +82,7 @@ public partial class GameView : CardGameView
         if (DataContext is GameViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
         WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
     }
 
@@ -117,6 +118,7 @@ public partial class GameView : CardGameView
             else if (e.PropertyName == nameof(GameViewModel.Waste))
             {
                 WastePileControl.UpdateCardsLayout();
+                AnimateTopWasteCard();
             }
             else if (e.PropertyName == "Foundations")
             {
@@ -236,6 +238,14 @@ public partial class GameView : CardGameView
         Tableau4.UpdateCardsLayout();
         Tableau5.UpdateCardsLayout();
         Tableau6.UpdateCardsLayout();
+    }
+
+    private void AnimateTopWasteCard()
+    {
+        var canvas = WastePileControl.FindControl<Avalonia.Controls.Canvas>("CardsCanvas");
+        if (canvas == null || canvas.Children.Count == 0) return;
+        if (canvas.Children[^1] is CardView cv && cv.Card?.IsFaceUp == true)
+            cv.BeginSlideIn(-48, 0, 200);
     }
 
     private void TriggerVictoryCascade()

@@ -109,6 +109,47 @@ public partial class CardView : UserControl
         }
     }
 
+    // Slide-in animation state (deal / draw / move)
+    private DispatcherTimer? _slideAnimTimer;
+    private int              _slideStepsLeft;
+    private double           _slideFromX, _slideFromY;
+    private readonly TranslateTransform _slideTx = new();
+    private const int SlideSteps = 9;
+
+    public void BeginSlideIn(double fromX, double fromY, int durationMs = 180)
+    {
+        _slideAnimTimer?.Stop();
+        _slideFromX = fromX;
+        _slideFromY = fromY;
+        _slideStepsLeft = SlideSteps;
+        RenderTransform = _slideTx;
+        ApplySlideFrame();
+        _slideAnimTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(Math.Max(1, durationMs / SlideSteps))
+        };
+        _slideAnimTimer.Tick += (_, _) =>
+        {
+            _slideStepsLeft--;
+            ApplySlideFrame();
+            if (_slideStepsLeft <= 0)
+            {
+                _slideAnimTimer!.Stop();
+                _slideAnimTimer = null;
+                RenderTransform = null;
+            }
+        };
+        _slideAnimTimer.Start();
+    }
+
+    private void ApplySlideFrame()
+    {
+        double t      = 1.0 - (double)_slideStepsLeft / SlideSteps;
+        double eased  = 1.0 - Math.Pow(1.0 - t, 3.0);
+        _slideTx.X    = _slideFromX * (1.0 - eased);
+        _slideTx.Y    = _slideFromY * (1.0 - eased);
+    }
+
     // GIF animation state — shared timer so all animated backs tick together
     private bool _isAnimated;
     private bool _isGifListener;
@@ -306,7 +347,13 @@ public partial class CardView : UserControl
     {
         InitializeComponent();
         this.Loaded += (s, e) => UpdateCardFace();
-        this.Unloaded += (s, e) => StopGifAnimation();
+        this.Unloaded += (s, e) =>
+        {
+            StopGifAnimation();
+            _slideAnimTimer?.Stop();
+            _slideAnimTimer = null;
+            RenderTransform = null;
+        };
     }
 
     private void OnCardChanged(AvaloniaPropertyChangedEventArgs e)
@@ -316,7 +363,7 @@ public partial class CardView : UserControl
 
     public void UpdateCardFace()
     {
-        if (Card == null || CardFace == null || CardBack == null || CardBackImage == null || SuitCanvas == null) return;
+        if (Card == null || CardFace == null || CardBack == null || CardBackImage == null || SuitCanvas == null || AcePipImage == null) return;
 
         if (Card.IsFaceUp)
         {
@@ -367,6 +414,7 @@ public partial class CardView : UserControl
             SuitCanvas.IsVisible = false;
             LargeAceText.IsVisible = false;
             FaceCardImage.IsVisible = false;
+            AcePipImage.IsVisible = false;
 
             // Custom face art takes priority over all other rendering for A/J/Q/K.
             // In FF mode any configured art is used as the default (enabled flag is ignored);
@@ -396,9 +444,17 @@ public partial class CardView : UserControl
                 catch
                 {
                     FaceCardImage.IsVisible = false;
-                    LargeAceText.IsVisible = true;
-                    LargeAceText.Text = Card.Rank == 1 ? suitChar : rankStr;
-                    LargeAceText.Foreground = brush;
+                    if (Card.Rank == 1)
+                    {
+                        AcePipImage.Source = GetOrCreateAceBitmap(suitChar, brush);
+                        AcePipImage.IsVisible = true;
+                    }
+                    else
+                    {
+                        LargeAceText.IsVisible = true;
+                        LargeAceText.Text = rankStr;
+                        LargeAceText.Foreground = brush;
+                    }
                 }
             }
             else
@@ -423,16 +479,23 @@ public partial class CardView : UserControl
                     catch
                     {
                         FaceCardImage.IsVisible = false;
-                        LargeAceText.IsVisible = true;
-                        LargeAceText.Text = Card.Rank == 1 ? suitChar : rankStr;
-                        LargeAceText.Foreground = brush;
+                        if (Card.Rank == 1)
+                        {
+                            AcePipImage.Source = GetOrCreateAceBitmap(suitChar, brush);
+                            AcePipImage.IsVisible = true;
+                        }
+                        else
+                        {
+                            LargeAceText.IsVisible = true;
+                            LargeAceText.Text = rankStr;
+                            LargeAceText.Foreground = brush;
+                        }
                     }
                 }
                 else if (Card.Rank == 1)
                 {
-                    LargeAceText.IsVisible = true;
-                    LargeAceText.Text = suitChar;
-                    LargeAceText.Foreground = brush;
+                    AcePipImage.Source = GetOrCreateAceBitmap(suitChar, brush);
+                    AcePipImage.IsVisible = true;
                 }
                 else if (Card.Rank >= 11 && Card.Rank <= 13)
                 {
@@ -477,7 +540,99 @@ public partial class CardView : UserControl
         }
     }
 
-    private static readonly FontFamily _pipFont = new("Segoe UI Symbol,Apple Symbols,sans-serif");
+    private static readonly Dictionary<(string suitChar, uint argb), Bitmap> _pipBitmapCache = new();
+    private static readonly Dictionary<(string suitChar, uint argb), Bitmap> _aceBitmapCache  = new();
+
+    private static float _pipFontSize = 87.5f;
+    private static float _aceFontSize = 187.5f;
+
+    public static void SetAceFontSize(float size)
+    {
+        _aceFontSize = size;
+        _aceBitmapCache.Clear();
+    }
+
+    private static Bitmap GetOrCreateAceBitmap(string suitChar, IBrush brush)
+    {
+        var color = brush is SolidColorBrush scb ? scb.Color : Colors.Black;
+        uint argb = ((uint)color.A << 24) | ((uint)color.R << 16) | ((uint)color.G << 8) | color.B;
+        var key = (suitChar, argb);
+        if (_aceBitmapCache.TryGetValue(key, out var cached))
+            return cached;
+
+        const int bitmapSize = 215; // 2.5× for HiDPI; larger for crisp rendering at 1.25× card scale
+        float fontSize = _aceFontSize;
+
+        using var surface = SKSurface.Create(new SKImageInfo(bitmapSize, bitmapSize, SKColorType.Rgba8888, SKAlphaType.Premul));
+        var skCanvas = surface.Canvas;
+        skCanvas.Clear(SKColors.Transparent);
+
+        var skColor = new SKColor(color.R, color.G, color.B, color.A);
+        using var paint = new SKPaint
+        {
+            Color = skColor,
+            IsAntialias = true,
+            TextSize = fontSize,
+            Typeface = SKTypeface.FromFamilyName("Segoe UI Symbol"),
+        };
+
+        var bounds = new SKRect();
+        paint.MeasureText(suitChar, ref bounds);
+
+        float x = bitmapSize / 2f - (bounds.Left + bounds.Right) / 2f;
+        float y = bitmapSize / 2f - (bounds.Top + bounds.Bottom) / 2f;
+
+        skCanvas.DrawText(suitChar, x, y, paint);
+
+        using var image = surface.Snapshot();
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using var stream = new MemoryStream(data.ToArray());
+        var bitmap = new Bitmap(stream);
+        _aceBitmapCache[key] = bitmap;
+        return bitmap;
+    }
+
+    private static Bitmap GetOrCreatePipBitmap(string suitChar, IBrush brush)
+    {
+        var color = brush is SolidColorBrush scb ? scb.Color : Colors.Black;
+        uint argb = ((uint)color.A << 24) | ((uint)color.R << 16) | ((uint)color.G << 8) | color.B;
+        var key = (suitChar, argb);
+        if (_pipBitmapCache.TryGetValue(key, out var cached))
+            return cached;
+
+        const int bitmapSize = 90; // 2.5× resolution; larger for crisp rendering at 1.25× card scale
+        float fontSize = _pipFontSize;
+
+        using var surface = SKSurface.Create(new SKImageInfo(bitmapSize, bitmapSize, SKColorType.Rgba8888, SKAlphaType.Premul));
+        var skCanvas = surface.Canvas;
+        skCanvas.Clear(SKColors.Transparent);
+
+        var skColor = new SKColor(color.R, color.G, color.B, color.A);
+        using var paint = new SKPaint
+        {
+            Color = skColor,
+            IsAntialias = true,
+            TextSize = fontSize,
+            Typeface = SKTypeface.FromFamilyName("Segoe UI Symbol"),
+        };
+
+        // Measure actual ink bounds relative to the baseline at the origin
+        var bounds = new SKRect();
+        paint.MeasureText(suitChar, ref bounds);
+
+        // Place the baseline so the glyph's ink center lands exactly at the bitmap center
+        float x = bitmapSize / 2f - (bounds.Left + bounds.Right) / 2f;
+        float y = bitmapSize / 2f - (bounds.Top + bounds.Bottom) / 2f;
+
+        skCanvas.DrawText(suitChar, x, y, paint);
+
+        using var image = surface.Snapshot();
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using var stream = new MemoryStream(data.ToArray());
+        var bitmap = new Bitmap(stream);
+        _pipBitmapCache[key] = bitmap;
+        return bitmap;
+    }
 
     private void PopulateSuitCanvas(int rank, string suitChar, IBrush brush)
     {
@@ -486,31 +641,28 @@ public partial class CardView : UserControl
         var positions = positionsFor(rank);
         foreach (var pos in positions)
         {
-            var textBlock = new TextBlock
+            var bitmap = GetOrCreatePipBitmap(suitChar, brush);
+            var pipImage = new Image
             {
-                Text = suitChar,
-                FontSize = 42,
-                FontWeight = FontWeight.Bold,
-                FontFamily = _pipFont,
-                Foreground = brush,
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                TextAlignment = TextAlignment.Center
+                Source = bitmap,
+                Width = 36,
+                Height = 36,
+                Stretch = Stretch.Uniform,
             };
 
             var container = new Grid
             {
-                Width = 44,
-                Height = 44,
-                Children = { textBlock },
+                Width = 36,
+                Height = 36,
+                Children = { pipImage },
                 RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative)
             };
 
             if (pos.isUpsideDown)
                 container.RenderTransform = new RotateTransform(180);
 
-            double left = 43 + pos.x - 22;
-            double top = 69 + pos.y - 22;
+            double left = 43 + pos.x - 18;
+            double top = 69 + pos.y - 18;
             Canvas.SetLeft(container, left);
             Canvas.SetTop(container, top);
             SuitCanvas.Children.Add(container);
@@ -532,88 +684,95 @@ public partial class CardView : UserControl
 
     private List<SuitPosition> positionsFor(int rank)
     {
+        // Canvas: 86×138, center (43,69), container 36×36 (half=18).
+        // ALL ranks: outer ±44 → consistent top pip height, 7px from canvas edge.
+        // 36px container with 26pt font gives 5px margin on each side of the glyph,
+        // so ascender overflow (e.g. ♥ at top) and inverted tips both have clearance.
+        // Ranks 8/10: inner ±15 → ~29px row spacing (near-uniform across 4 rows).
+        // Rank 9:     inner ±22 → exactly 22px row spacing across all 5 rows.
+        // Rank 10:    center extras ±30 → midpoint of outer/inner rows.
         return rank switch
         {
             2 => new()
             {
-                new(0, -42, false),
-                new(0, 42, true)
+                new(0, -44, false),
+                new(0,  44, true)
             },
             3 => new()
             {
-                new(0, -42, false),
-                new(0, 0, false),
-                new(0, 42, true)
+                new(0, -44, false),
+                new(0,   0, false),
+                new(0,  44, true)
             },
             4 => new()
             {
-                new(-26, -42, false),
-                new(26, -42, false),
-                new(-26, 42, true),
-                new(26, 42, true)
+                new(-26, -44, false),
+                new( 26, -44, false),
+                new(-26,  44, true),
+                new( 26,  44, true)
             },
             5 => new()
             {
-                new(-26, -42, false),
-                new(26, -42, false),
-                new(0, 0, false),
-                new(-26, 42, true),
-                new(26, 42, true)
+                new(-26, -44, false),
+                new( 26, -44, false),
+                new(  0,   0, false),
+                new(-26,  44, true),
+                new( 26,  44, true)
             },
             6 => new()
             {
-                new(-26, -42, false),
-                new(26, -42, false),
-                new(-26, 0, false),
-                new(26, 0, false),
-                new(-26, 42, true),
-                new(26, 42, true)
+                new(-26, -44, false),
+                new( 26, -44, false),
+                new(-26,   0, false),
+                new( 26,   0, false),
+                new(-26,  44, true),
+                new( 26,  44, true)
             },
             7 => new()
             {
-                new(-26, -42, false),
-                new(26, -42, false),
-                new(-26, 0, false),
-                new(26, 0, false),
-                new(-26, 42, true),
-                new(26, 42, true),
-                new(0, -21, false)
+                new(-26, -44, false),
+                new( 26, -44, false),
+                new(-26,   0, false),
+                new( 26,   0, false),
+                new(-26,  44, true),
+                new( 26,  44, true),
+                new(  0, -22, false)   // extra pip between top row and middle
             },
             8 => new()
             {
-                new(-26, -42, false),
-                new(26, -42, false),
-                new(-26, 0, false),
-                new(26, 0, false),
-                new(-26, 42, true),
-                new(26, 42, true),
-                new(0, -21, false),
-                new(0, 21, true)
+                new(-26, -44, false),
+                new( 26, -44, false),
+                new(-26, -15, false),
+                new( 26, -15, false),
+                new(-26,  15, true),
+                new( 26,  15, true),
+                new(-26,  44, true),
+                new( 26,  44, true)
             },
             9 => new()
             {
                 new(-26, -44, false),
-                new(26, -44, false),
+                new( 26, -44, false),
                 new(-26, -15, false),
-                new(26, -15, false),
-                new(-26, 15, true),
-                new(26, 15, true),
-                new(-26, 44, true),
-                new(26, 44, true),
-                new(0, 0, false)
+                new( 26, -15, false),
+                new(  0,   0, false),
+                new(-26,  15, true),
+                new( 26,  15, true),
+                new(-26,  44, true),
+                new( 26,  44, true)
             },
             10 => new()
             {
                 new(-26, -44, false),
-                new(26, -44, false),
+                new( 26, -44, false),
                 new(-26, -15, false),
-                new(26, -15, false),
-                new(-26, 15, true),
-                new(26, 15, true),
-                new(-26, 44, true),
-                new(26, 44, true),
-                new(0, -30, false),
-                new(0, 30, true)
+                new( 26, -15, false),
+                new(  0, -30, false),
+                new(  0,  30, true),
+                new(-26,  15, true),
+                new( 26,  15, true),
+                new(-26,  44, true),
+                new( 26,  44, true)
             },
             _ => new()
         };

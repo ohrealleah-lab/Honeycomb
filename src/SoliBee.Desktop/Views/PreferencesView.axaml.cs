@@ -103,6 +103,7 @@ public partial class PreferencesView : UserControl
             SyncUIFromOptions(options);
             RefreshThemeList();
         }
+        PipSizeLabel.Text = $"{(int)PipSizeSlider.Value}pt";
         _initializing = false;
     }
 
@@ -678,6 +679,16 @@ public partial class PreferencesView : UserControl
     private void HelpBeecell_Click(object? sender, RoutedEventArgs e)  => new HelpWindow("Beecell").Show();
     private void HelpSpider_Click(object? sender, RoutedEventArgs e)   => new HelpWindow("Spider").Show();
     private void About_Click(object? sender, RoutedEventArgs e)        => new AboutWindow().Show();
+
+    // ── Debug sliders ─────────────────────────────────────────────────────────
+
+    private void PipSizeSlider_Changed(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_initializing) return;
+        CardView.SetAceFontSize((float)e.NewValue);
+        PipSizeLabel.Text = $"{(int)e.NewValue}pt";
+        WeakReferenceMessenger.Default.Send(new FaceCardArtChangedMessage());
+    }
 
     // ── Settings broadcast ────────────────────────────────────────────────────
 

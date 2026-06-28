@@ -105,11 +105,13 @@ public partial class BlackjackViewModel : ObservableObject
         Stats.HandsPlayed++;
         Stats.TotalCreditsWagered += State.CurrentBet;
 
-        // Dealer blackjack — beats everything including player blackjack (per spec)
+        // Dealer blackjack — push if player also has a natural, otherwise player loses
         if (dealerHand.IsBlackjack)
         {
             FlipHoleCard();
-            playerHand.Result = BlackjackHandResult.Lost;
+            playerHand.Result = playerHand.IsBlackjack
+                ? BlackjackHandResult.Push
+                : BlackjackHandResult.Lost;
             SettleAndFinish();
             return;
         }
@@ -131,7 +133,7 @@ public partial class BlackjackViewModel : ObservableObject
         var hand = ActiveHand;
         if (hand == null || hand.IsComplete) return;
         hand.Cards.Add(DrawCard(faceUp: true));
-        if (hand.IsBust) AdvanceHand();
+        if (hand.IsBust || hand.ComputeValue().Value == 21) AdvanceHand();
         else NotifyStateChanged();
     }
 
@@ -159,12 +161,15 @@ public partial class BlackjackViewModel : ObservableObject
         var hand = ActiveHand;
         if (hand == null || hand.Cards.Count != 2 || State.Credits < hand.Bet || State.IsSplit) return;
 
+        bool splitAces = hand.Cards[0].Rank == 1;
+
         State.Credits -= hand.Bet;
         Stats.TotalCreditsWagered += hand.Bet;
 
-        var hand2 = new BlackjackHand { Bet = hand.Bet };
+        var hand2 = new BlackjackHand { Bet = hand.Bet, FromSplit = true };
         hand2.Cards.Add(hand.Cards[1]);
         hand.Cards.RemoveAt(1);
+        hand.FromSplit = true;
 
         hand.Cards.Add(DrawCard(faceUp: true));
         hand2.Cards.Add(DrawCard(faceUp: true));
@@ -173,7 +178,17 @@ public partial class BlackjackViewModel : ObservableObject
         State.IsSplit        = true;
         State.ActiveHandIndex = 0;
 
-        NotifyStateChanged();
+        if (splitAces)
+        {
+            // Standard rules: split aces receive exactly one card each, then auto-stand
+            hand.IsStood  = true;
+            hand2.IsStood = true;
+            DealerPlay();
+        }
+        else
+        {
+            NotifyStateChanged();
+        }
     }
 
     public void SetBet(int amount)
@@ -199,7 +214,7 @@ public partial class BlackjackViewModel : ObservableObject
 
     public void BetMax()
     {
-        State.CurrentBet = 5;
+        State.CurrentBet = Math.Max(1, Math.Min(5, State.Credits));
         if (State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result)
             Deal();
         else
@@ -309,7 +324,7 @@ public partial class BlackjackViewModel : ObservableObject
         switch (hand.Result)
         {
             case BlackjackHandResult.Blackjack:
-                int bjReturn = hand.Bet + (hand.Bet * 3 / 2);
+                int bjReturn = hand.Bet + (hand.Bet * 3 + 1) / 2;  // ceiling(bet * 3/2)
                 State.Credits += bjReturn;
                 Stats.HandsWon++;
                 Stats.Blackjacks++;
@@ -347,7 +362,6 @@ public partial class BlackjackViewModel : ObservableObject
 
     private Card DrawCard(bool faceUp)
     {
-        if (_deck.Count == 0) _deck = BuildAndShuffleDeck();
         var card = _deck[0];
         _deck.RemoveAt(0);
         return card with { IsFaceUp = faceUp };
