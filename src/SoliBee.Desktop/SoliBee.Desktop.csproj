@@ -10,7 +10,7 @@
     <Product>SoliBee Solitaire Suite</Product>
     <Company>Leahbee</Company>
     <Copyright>© 2026 Leahbee. All rights reserved.</Copyright>
-    <Description>A solitaire suite featuring Klondike, Beecell, and Spider Solitaire.</Description>
+    <Description>A solitaire suite featuring Klondike, Freecell, and Spider Solitaire.</Description>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
 

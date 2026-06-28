@@ -104,6 +104,7 @@ public static class ThemeService
             ThemeTextRedFF = options.ThemeTextRedFF,
             ThemeTextBlackNormal = options.ThemeTextBlackNormal,
             ThemeTextBlackFF = options.ThemeTextBlackFF,
+            ThemeCardShadow = options.ThemeCardShadow,
         };
 
         foreach (var art in FaceCardArtService.GetAllArts())
@@ -120,10 +121,10 @@ public static class ThemeService
         }
 
         return theme;
-    }
+     }
 
-    public static GameOptions ApplyTheme(SoliBeeTheme theme, GameOptions options)
-    {
+     public static GameOptions ApplyTheme(SoliBeeTheme theme, GameOptions options)
+     {
         options.CardBackTheme = theme.CardBackTheme;
         options.CardBackScale = theme.CardBackScale;
         options.CardBackOffsetX = theme.CardBackOffsetX;
@@ -140,6 +141,7 @@ public static class ThemeService
         options.ThemeTextRedFF = theme.ThemeTextRedFF;
         options.ThemeTextBlackNormal = theme.ThemeTextBlackNormal;
         options.ThemeTextBlackFF = theme.ThemeTextBlackFF;
+        options.ThemeCardShadow = theme.ThemeCardShadow;
         options.CustomFeltColorRevision++;
 
         // Restore face arts without deleting files on disk

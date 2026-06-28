@@ -7,7 +7,7 @@
 
     <Grid x:Name="CardRoot" Width="128" Height="181">
         <!-- Card Face (Face Up) -->
-        <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="0.75" Background="White" CornerRadius="10" Padding="4" BoxShadow="0 4 16 0 #60000000, 0 2 4 0 #80000000">
+        <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="0.75" Background="White" CornerRadius="10" Padding="4" BoxShadow="0 4 16 0 #60000000, 0 2 4 0 #80000000" ClipToBounds="True">
             <Grid>
                 <!-- Top-Left Value & Suit Display (Horizontal) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="2" Margin="4,2,0,0">
@@ -23,7 +23,15 @@
                     <!-- Large stylized letter for Ace -->
                     <TextBlock x:Name="LargeAceText" FontSize="76" LineHeight="76" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" IsVisible="False" />
 
-                    <!-- Image for Face Cards J, Q, K -->
+                    <!-- Decorative letter for Face Cards J, Q, K -->
+                    <TextBlock x:Name="FaceLetterText"
+                               FontFamily="avares://SoliBee.Desktop/Assets/#Apple Chancery"
+                               FontWeight="Bold"
+                               FontSize="120"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               TextAlignment="Center" IsVisible="False" />
+
+                    <!-- Image for custom face art (J/Q/K/A slots) -->
                     <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
 
                     <!-- SkiaSharp-rendered pip for Ace (ink-bounds centered) -->

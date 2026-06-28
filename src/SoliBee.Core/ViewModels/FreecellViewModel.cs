@@ -14,7 +14,7 @@ public record FaceCardArtChangedMessage();
 
 public record HintMove(Card Card, string SourcePileId, string TargetPileId, string Description);
 
-public partial class BeecellViewModel : ObservableObject
+public partial class FreecellViewModel : ObservableObject
 {
     [ObservableProperty]
     private GameState _state = new();
@@ -38,21 +38,21 @@ public partial class BeecellViewModel : ObservableObject
     public List<Pile> Foundations { get; } = new();
     public List<Pile> Tableaus { get; } = new();
 
-    private readonly Stack<BeecellSnapshot> _undoStack = new();
-    private BeecellSnapshot? _initialSnapshot;
+    private readonly Stack<FreecellSnapshot> _undoStack = new();
+    private FreecellSnapshot? _initialSnapshot;
     private System.Threading.Timer? _gameTimer;
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
     public string ScoreDisplay => State.Score.ToString();
     public bool CanUndo => _undoStack.Count > 0;
 
-    private string ModeKey => $"{(Options.IsVegasScoring ? "vegas" : "standard")}_{Options.BeecellDeckCount}deck";
-    private int ExpectedCards => Options.BeecellDeckCount * 52;
-    private int NumTableaus => Options.BeecellDeckCount == 1 ? 8 : 10;
-    private int NumFreeCells => Options.BeecellDeckCount == 1 ? 4 : 8;
-    private int NumFoundations => Options.BeecellDeckCount == 1 ? 4 : 8;
+    private string ModeKey => $"{(Options.IsVegasScoring ? "vegas" : "standard")}_{Options.FreecellDeckCount}deck";
+    private int ExpectedCards => Options.FreecellDeckCount * 52;
+    private int NumTableaus => Options.FreecellDeckCount == 1 ? 8 : 10;
+    private int NumFreeCells => Options.FreecellDeckCount == 1 ? 4 : 8;
+    private int NumFoundations => Options.FreecellDeckCount == 1 ? 4 : 8;
 
-    public BeecellViewModel()
+    public FreecellViewModel()
     {
         Options = SettingsService.LoadOptions();
         Stats = StatsService.LoadStats();
@@ -62,7 +62,7 @@ public partial class BeecellViewModel : ObservableObject
             var old = Options;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
-            if (Options.BeecellDeckCount != old.BeecellDeckCount || Options.IsVegasScoring != old.IsVegasScoring)
+            if (Options.FreecellDeckCount != old.FreecellDeckCount || Options.IsVegasScoring != old.IsVegasScoring)
                 InitializeGame();
         });
 
@@ -86,7 +86,7 @@ public partial class BeecellViewModel : ObservableObject
 
         State = new GameState
         {
-            Score = Options.IsVegasScoring ? -5200 * Options.BeecellDeckCount : 0,
+            Score = Options.IsVegasScoring ? -5200 * Options.FreecellDeckCount : 0,
             MovesCount = 0,
             TimerSeconds = 0,
             IsTimerActive = false,
@@ -95,7 +95,7 @@ public partial class BeecellViewModel : ObservableObject
 
         var suits = new[] { CardSuit.Spades, CardSuit.Hearts, CardSuit.Diamonds, CardSuit.Clubs };
         var deck = new List<Card>();
-        for (int d = 0; d < Options.BeecellDeckCount; d++)
+        for (int d = 0; d < Options.FreecellDeckCount; d++)
         {
             foreach (var suit in suits)
             {
@@ -103,7 +103,7 @@ public partial class BeecellViewModel : ObservableObject
                 {
                     var suitName = suit.ToString().ToLower();
                     var rankStr = rank switch { 1 => "A", 11 => "J", 12 => "Q", 13 => "K", _ => rank.ToString() };
-                    deck.Add(new Card($"beecell_{d}_{suitName}_{rankStr}", suit, rank, true));
+                    deck.Add(new Card($"freecell_{d}_{suitName}_{rankStr}", suit, rank, true));
                 }
             }
         }
@@ -119,9 +119,9 @@ public partial class BeecellViewModel : ObservableObject
         }
 
         var stats = StatsService.LoadStats();
-        if (!stats.BeecellStatsByMode.ContainsKey(ModeKey))
-            stats.BeecellStatsByMode[ModeKey] = new ModeStats();
-        stats.BeecellStatsByMode[ModeKey].GamesPlayed++;
+        if (!stats.FreecellStatsByMode.ContainsKey(ModeKey))
+            stats.FreecellStatsByMode[ModeKey] = new ModeStats();
+        stats.FreecellStatsByMode[ModeKey].GamesPlayed++;
         StatsService.SaveStats(stats);
         Stats = stats;
 
@@ -287,14 +287,14 @@ public partial class BeecellViewModel : ObservableObject
             _gameTimer?.Dispose();
 
             var stats = StatsService.LoadStats();
-            if (!stats.BeecellStatsByMode.ContainsKey(ModeKey))
-                stats.BeecellStatsByMode[ModeKey] = new ModeStats();
-            var ms = stats.BeecellStatsByMode[ModeKey];
+            if (!stats.FreecellStatsByMode.ContainsKey(ModeKey))
+                stats.FreecellStatsByMode[ModeKey] = new ModeStats();
+            var ms = stats.FreecellStatsByMode[ModeKey];
             ms.GamesWon++;
             ms.CurrentStreak++;
             if (ms.CurrentStreak > ms.LongestStreak) ms.LongestStreak = ms.CurrentStreak;
             if (State.Score > ms.HighScore) ms.HighScore = State.Score;
-            stats.BeecellStatsByMode[ModeKey] = ms;
+            stats.FreecellStatsByMode[ModeKey] = ms;
             StatsService.SaveStats(stats);
             Stats = stats;
         }
@@ -514,9 +514,9 @@ public partial class BeecellViewModel : ObservableObject
         OnPropertyChanged(nameof(CanUndo));
     }
 
-    private BeecellSnapshot CaptureSnapshot()
+    private FreecellSnapshot CaptureSnapshot()
     {
-        return new BeecellSnapshot
+        return new FreecellSnapshot
         {
             Score = State.Score,
             MovesCount = State.MovesCount,
@@ -527,7 +527,7 @@ public partial class BeecellViewModel : ObservableObject
         };
     }
 
-    private void RestoreSnapshot(BeecellSnapshot snapshot)
+    private void RestoreSnapshot(FreecellSnapshot snapshot)
     {
         State.Score = snapshot.Score;
         State.MovesCount = snapshot.MovesCount;
@@ -565,7 +565,7 @@ public partial class BeecellViewModel : ObservableObject
     public void ResetStatistics()
     {
         var stats = StatsService.LoadStats();
-        stats.BeecellStatsByMode.Remove(ModeKey);
+        stats.FreecellStatsByMode.Remove(ModeKey);
         StatsService.SaveStats(stats);
         Stats = stats;
     }
@@ -585,7 +585,7 @@ public partial class BeecellViewModel : ObservableObject
         _ => "?"
     };
 
-    private class BeecellSnapshot
+    private class FreecellSnapshot
     {
         public int Score { get; set; }
         public int MovesCount { get; set; }

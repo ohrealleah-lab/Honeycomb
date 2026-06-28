@@ -30,15 +30,16 @@ public class GameOptions
     public bool IsStatusBarVisible { get; set; } = true;
     public bool HideHintButton { get; set; } = false;
     public bool HideStatsButton { get; set; } = false;
-    public int BeecellDeckCount { get; set; } = 1;
+    public int FreecellDeckCount { get; set; } = 1;
     public int SpiderSuitCount { get; set; } = 1;
 
+    public bool IsVignetteEnabled { get; set; } = true;
     public bool HasAppliedDefaultTheme { get; set; } = false;
     public string LastGameMode { get; set; } = "SolitaireDraw1";
 
     // Per-game zoom levels (LayoutTransform scale, 0.5–1.5)
     public double KlondikeZoom    { get; set; } = 1.0;
-    public double BeecellZoom     { get; set; } = 1.0;
+    public double FreecellZoom     { get; set; } = 1.0;
     public double SpiderZoom      { get; set; } = 1.0;
     public double VideoPokerZoom  { get; set; } = 1.0;
 
@@ -46,9 +47,9 @@ public class GameOptions
     public double KlondikeWidth      { get; set; } = 1120;
     public double KlondikeHeight     { get; set; } = 768;
     public bool   KlondikeMaximized  { get; set; } = false;
-    public double BeecellWidth       { get; set; } = 1200;
-    public double BeecellHeight      { get; set; } = 768;
-    public bool   BeecellMaximized   { get; set; } = false;
+    public double FreecellWidth       { get; set; } = 1200;
+    public double FreecellHeight      { get; set; } = 768;
+    public bool   FreecellMaximized   { get; set; } = false;
     public double SpiderWidth        { get; set; } = 1460;
     public double SpiderHeight       { get; set; } = 768;
     public bool   SpiderMaximized    { get; set; } = false;
@@ -56,8 +57,8 @@ public class GameOptions
     public double VideoPokerHeight   { get; set; } = 768;
     public bool   VideoPokerMaximized { get; set; } = false;
     public double BlackjackZoom      { get; set; } = 1.0;
-    public double BlackjackWidth     { get; set; } = 960;
-    public double BlackjackHeight    { get; set; } = 768;
+    public double BlackjackWidth     { get; set; } = 1060;
+    public double BlackjackHeight    { get; set; } = 940;
     public bool   BlackjackMaximized { get; set; } = false;
 
     // Theme editor color overrides — null means use the compiled default
@@ -70,4 +71,5 @@ public class GameOptions
     public string? ThemeTextRedFF { get; set; }
     public string? ThemeTextBlackNormal { get; set; }
     public string? ThemeTextBlackFF { get; set; }
+    public string? ThemeCardShadow { get; set; }
 }

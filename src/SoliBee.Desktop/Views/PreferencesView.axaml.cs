@@ -46,7 +46,7 @@ public partial class PreferencesView : UserControl
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Vulpera",         Tag = "Vulpera" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Dingwall",         Tag = "Dingwall" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Moogle",           Tag = "Moogle" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Warrior of Light", Tag = "Warrior of Light" });
+        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Priest",           Tag = "Priest" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Forest",           Tag = "Forest" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "On the Water",     Tag = "On the Water" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Pareidolic",       Tag = "Pareidolic" });
@@ -60,13 +60,29 @@ public partial class PreferencesView : UserControl
         }
     }
 
+    // ── Themes panel navigation ───────────────────────────────────────────────
+
+    private void OpenThemes_Click(object? sender, RoutedEventArgs e)
+    {
+        MainPanel.IsVisible   = false;
+        ThemesPanel.IsVisible = true;
+        if (DataContext is GameOptions opts) RefreshThemeList();
+    }
+
+    private void CloseThemes_Click(object? sender, RoutedEventArgs e)
+    {
+        ThemesPanel.IsVisible = false;
+        MainPanel.IsVisible   = true;
+    }
+
     // Syncs all UI controls to match the provided options. Call inside _initializing guard.
     private void SyncUIFromOptions(GameOptions options)
     {
-        TimedCheckBox.IsChecked = options.IsTimed;
-        SoundCheckBox.IsChecked = options.IsSoundEnabled;
-        VegasCheckBox.IsChecked = options.IsVegasScoring;
+        TimedCheckBox.IsChecked        = options.IsTimed;
+        SoundCheckBox.IsChecked        = options.IsSoundEnabled;
+        VegasCheckBox.IsChecked        = options.IsVegasScoring;
         FinalFantasyCheckBox.IsChecked = options.IsFinalFantasyMode;
+        VignetteCheckBox.IsChecked     = options.IsVignetteEnabled;
 
         foreach (var item in FeltColorComboBox.Items.OfType<ComboBoxItem>())
         {
@@ -94,6 +110,12 @@ public partial class PreferencesView : UserControl
         }
 
         UpdateCardBackPreview(options);
+
+        // Custom Card Color Pickers
+        CardBgColorPicker.Color = Color.Parse(options.ThemeFaceBackNormal ?? "#FFFFFF");
+        CardOutlineColorPicker.Color = Color.Parse(options.ThemeFaceBorderNormal ?? "#D9000000");
+        CardTextBlackColorPicker.Color = Color.Parse(options.ThemeTextBlackNormal ?? "#1A1A1A");
+        CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
     }
 
     private void PreferencesView_Loaded(object? sender, RoutedEventArgs e)
@@ -103,7 +125,6 @@ public partial class PreferencesView : UserControl
             SyncUIFromOptions(options);
             RefreshThemeList();
         }
-        PipSizeLabel.Text = $"{(int)PipSizeSlider.Value}pt";
         _initializing = false;
     }
 
@@ -336,15 +357,16 @@ public partial class PreferencesView : UserControl
 
         if (DataContext is GameOptions options)
         {
-            options.IsTimed = TimedCheckBox.IsChecked ?? false;
-            options.IsSoundEnabled = SoundCheckBox.IsChecked ?? false;
-            options.IsVegasScoring = VegasCheckBox.IsChecked ?? false;
+            options.IsTimed            = TimedCheckBox.IsChecked        ?? false;
+            options.IsSoundEnabled     = SoundCheckBox.IsChecked        ?? false;
+            options.IsVegasScoring     = VegasCheckBox.IsChecked        ?? false;
+            options.IsVignetteEnabled  = VignetteCheckBox.IsChecked     ?? true;
 
             bool wasFF = options.IsFinalFantasyMode;
             options.IsFinalFantasyMode = FinalFantasyCheckBox.IsChecked ?? false;
 
             if (!wasFF && options.IsFinalFantasyMode)
-                ApplyCardBackSelection("Warrior of Light", options);
+                ApplyCardBackSelection("Priest", options);
 
             NotifySettingsChanged(options);
         }
@@ -385,26 +407,26 @@ public partial class PreferencesView : UserControl
     }
 
     private static bool IsBuiltInCardBack(string name) =>
-        name is "Vulpera" or "Dingwall" or "Moogle" or "Warrior of Light"
+        name is "Vulpera" or "Dingwall" or "Moogle" or "Priest"
              or "Forest" or "On the Water" or "Pareidolic" or "Pareidolic 2"
              or "Red Sky" or "Sunset";
 
     private static (double Scale, double OffsetX, double OffsetY) BuiltInCardBackDefaults(string name) => name switch
     {
         "Moogle"           => (1.25,               0, 0),
-        "Warrior of Light" => (1.0715080915178572,  0, 0.6333705357142776),
+        "Priest"           => (1.0715080915178572,  0, 0.6333705357142776),
         _                  => (1.0,                 0, 0),
     };
 
     private static readonly IReadOnlyDictionary<string, string> _houliAssets =
         new Dictionary<string, string>
         {
-            ["Forest"]       = "houli_forest.png",
-            ["On the Water"] = "houli_onthewater.png",
-            ["Pareidolic"]   = "houli_pareidolic.png",
-            ["Pareidolic 2"] = "houli_pareidolic2.png",
-            ["Red Sky"]      = "houli_redsky.png",
-            ["Sunset"]       = "houli_sunset.png",
+            ["Forest"]       = "forest.png",
+            ["On the Water"] = "onthewater.png",
+            ["Pareidolic"]   = "pareidolic.png",
+            ["Pareidolic 2"] = "pareidolic2.png",
+            ["Red Sky"]      = "redsky.png",
+            ["Sunset"]       = "sunset.png",
         };
 
     private void UpdateCardBackPreview(GameOptions options)
@@ -673,22 +695,63 @@ public partial class PreferencesView : UserControl
         }
     }
 
-    // ── Help / About ──────────────────────────────────────────────────────────
+    // ── About / Help ──────────────────────────────────────────────────
 
-    private void HelpKlondike_Click(object? sender, RoutedEventArgs e) => new HelpWindow("Klondike").Show();
-    private void HelpBeecell_Click(object? sender, RoutedEventArgs e)  => new HelpWindow("Beecell").Show();
-    private void HelpSpider_Click(object? sender, RoutedEventArgs e)   => new HelpWindow("Spider").Show();
+    private void Help_Click(object? sender, RoutedEventArgs e)
+    {
+        var owner = (Window?)TopLevel.GetTopLevel(this);
+        var help = new HelpWindow();
+        if (owner != null)
+            help.Show(owner);
+        else
+            help.Show();
+    }
+
     private void About_Click(object? sender, RoutedEventArgs e)        => new AboutWindow().Show();
 
-    // ── Debug sliders ─────────────────────────────────────────────────────────
+    // ── Custom Card Colors ────────────────────────────────────────────────────
 
-    private void PipSizeSlider_Changed(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    private void CardColorPicker_ColorChanged(object? sender, ColorChangedEventArgs e)
     {
-        if (_initializing) return;
-        CardView.SetAceFontSize((float)e.NewValue);
-        PipSizeLabel.Text = $"{(int)e.NewValue}pt";
-        WeakReferenceMessenger.Default.Send(new FaceCardArtChangedMessage());
+        if (_initializing || DataContext is not GameOptions options) return;
+
+        if (sender == CardBgColorPicker)
+            options.ThemeFaceBackNormal = e.NewColor.ToString();
+        else if (sender == CardOutlineColorPicker)
+            options.ThemeFaceBorderNormal = e.NewColor.ToString();
+        else if (sender == CardTextBlackColorPicker)
+            options.ThemeTextBlackNormal = e.NewColor.ToString();
+        else if (sender == CardTextRedColorPicker)
+            options.ThemeTextRed = e.NewColor.ToString();
+
+        CardView.ApplyThemeColors(options);
+        NotifySettingsChanged(options);
+        CardView.BroadcastThemeChange();
     }
+
+    private void ResetCardColors_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not GameOptions options) return;
+
+        options.ThemeFaceBackNormal = null;
+        options.ThemeFaceBorderNormal = null;
+        options.ThemeTextBlackNormal = null;
+        options.ThemeTextRed = null;
+        options.ThemeCardShadow = null;
+
+        _initializing = true;
+        CardBgColorPicker.Color = Colors.White;
+        CardOutlineColorPicker.Color = Color.Parse("#D9000000");
+        CardTextBlackColorPicker.Color = Color.Parse("#1A1A1A");
+        CardTextRedColorPicker.Color = Color.Parse("#CC1A1A");
+        _initializing = false;
+
+        CardView.ApplyThemeColors(options);
+        NotifySettingsChanged(options);
+        CardView.BroadcastThemeChange();
+    }
+
+
 
     // ── Settings broadcast ────────────────────────────────────────────────────
 

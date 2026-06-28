@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -34,6 +35,7 @@ public partial class VideoPokerView : UserControl
         { "__vp_blank__", "__vp_blank__", "__vp_blank__", "__vp_blank__", "__vp_blank__" };
     private readonly DispatcherTimer?[] _dealStaggerTimers = new DispatcherTimer?[5];
     private double _winPulsePhase;
+    private SolidColorBrush? _winGlowBrush;
     private DispatcherTimer? _creditAnimTimer;
     private int _displayedCredits = -1;
 
@@ -44,6 +46,23 @@ public partial class VideoPokerView : UserControl
 
     // Cards fade state
     private DispatcherTimer? _cardsFadeTimer;
+
+    // Hold lift animation
+    private readonly double[] _holdLiftY = new double[5];
+    private readonly DispatcherTimer?[] _holdLiftTimers = new DispatcherTimer?[5];
+
+    // Hold wobble animation
+    private readonly bool[] _prevHeldSlots = new bool[5];
+    private readonly DispatcherTimer?[] _holdWobbleTimers = new DispatcherTimer?[5];
+
+    // Pay row pulse
+    private DispatcherTimer? _payRowPulseTimer;
+    private double _payRowPulsePhase;
+    private string? _pulsingPayRow;
+
+    // Idle nudge
+    private DispatcherTimer? _idleTimer;
+    private DispatcherTimer? _idleFadeTimer;
 
     public VideoPokerView()
     {
@@ -78,9 +97,14 @@ public partial class VideoPokerView : UserControl
             InputElement.KeyDownEvent, OnKeyDown);
         HideActiveBanner();
         StopCardsFade();
+        StopPayRowPulse();
         _dealAnimCts?.Cancel();
         _creditAnimTimer?.Stop();
         CancelDealStaggerTimers();
+        CancelHoldLiftTimers();
+        CancelHoldWobbleTimers();
+        _idleTimer?.Stop();     _idleTimer    = null;
+        _idleFadeTimer?.Stop(); _idleFadeTimer = null;
     }
 
     private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -104,6 +128,7 @@ public partial class VideoPokerView : UserControl
         HighlightPayRow(vm.WinningHandName);
         UpdatePayColumnHighlight(vm.State.CurrentBet);
         ApplyFeltColor(vm);
+        ResetIdleTimer(vm);
     }
 
     private void UpdateWinCardHighlights(VideoPokerViewModel vm)
@@ -178,8 +203,86 @@ public partial class VideoPokerView : UserControl
     {
         for (int i = 0; i < 5; i++)
         {
-            bool held = vm.IsHolding && vm.State.HeldSlots[i];
-            _cardSlots[i].RenderTransform = new TranslateTransform(0, held ? -20 : 0);
+            bool held    = vm.IsHolding && vm.State.HeldSlots[i];
+            bool wasHeld = _prevHeldSlots[i];
+            AnimateCardLift(i, held ? -20 : 0);
+            if (held != wasHeld) StartHoldWobble(i);
+            _prevHeldSlots[i] = held;
+        }
+    }
+
+    private void AnimateCardLift(int slot, double targetY)
+    {
+        double startY = _holdLiftY[slot];
+        if (Math.Abs(startY - targetY) < 0.5)
+        {
+            _holdLiftY[slot] = targetY;
+            if (_cardSlots[slot].RenderTransform is TranslateTransform tx0) tx0.Y = targetY;
+            else _cardSlots[slot].RenderTransform = new TranslateTransform(0, targetY);
+            return;
+        }
+        _holdLiftTimers[slot]?.Stop();
+        if (_cardSlots[slot].RenderTransform is not TranslateTransform slotTx)
+        {
+            slotTx = new TranslateTransform(0, startY);
+            _cardSlots[slot].RenderTransform = slotTx;
+        }
+        double elapsed = 0;
+        const double durationMs = 150.0;
+        _holdLiftTimers[slot] = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _holdLiftTimers[slot]!.Tick += (_, _) =>
+        {
+            elapsed += 16;
+            double t = Math.Min(1.0, elapsed / durationMs);
+            double ease = t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
+            double y = startY + (targetY - startY) * ease;
+            _holdLiftY[slot] = y;
+            if (_cardSlots[slot].RenderTransform is TranslateTransform tx) tx.Y = y;
+            if (t >= 1.0) { _holdLiftTimers[slot]!.Stop(); _holdLiftTimers[slot] = null; }
+        };
+        _holdLiftTimers[slot]!.Start();
+    }
+
+    private void CancelHoldLiftTimers()
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            _holdLiftTimers[i]?.Stop();
+            _holdLiftTimers[i] = null;
+        }
+    }
+
+    private void StartHoldWobble(int slot)
+    {
+        _holdWobbleTimers[slot]?.Stop();
+        _cardViews[slot].RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+        var rotTx = new RotateTransform(0);
+        _cardViews[slot].RenderTransform = rotTx;
+        double phase = 0;
+        double amplitude = 10.0;
+        _holdWobbleTimers[slot] = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _holdWobbleTimers[slot]!.Tick += (_, _) =>
+        {
+            phase     += 0.35;
+            amplitude *= 0.90;
+            rotTx.Angle = Math.Sin(phase) * amplitude;
+            if (amplitude < 0.4)
+            {
+                _holdWobbleTimers[slot]!.Stop();
+                _holdWobbleTimers[slot] = null;
+                _cardViews[slot].RenderTransform = null;
+            }
+        };
+        _holdWobbleTimers[slot]!.Start();
+    }
+
+    private void CancelHoldWobbleTimers()
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            _holdWobbleTimers[i]?.Stop();
+            _holdWobbleTimers[i] = null;
+            _cardViews[i].RenderTransform = null;
         }
     }
 
@@ -201,15 +304,19 @@ public partial class VideoPokerView : UserControl
     {
         if (vm.State.Phase == VideoPokerPhase.Result && vm.HasWin)
         {
+            bool firstShow = _activeBanner != WinBanner;
             WinHandNameBlock.Text = vm.State.LastHandName;
             WinPayoutBlock.Text   = $"+{vm.State.LastPayout}";
             ShowBanner(WinBanner);
             StartWinPulse();
+            StartPayRowPulse(vm.WinningHandName);
+            if (firstShow) WinParticleSystem.Burst(ParticleCanvas);
         }
         else if (vm.State.Phase == VideoPokerPhase.Result && vm.ShowNoWin)
         {
             ShowBanner(NoWinOverlay);
             StopWinPulse();
+            StopPayRowPulse();
         }
         else
         {
@@ -286,6 +393,7 @@ public partial class VideoPokerView : UserControl
             _activeBanner = null;
         }
         StopWinPulse();
+        StopPayRowPulse();
         StopCardsFade();
     }
 
@@ -407,6 +515,7 @@ public partial class VideoPokerView : UserControl
 
     private void ApplyFeltColor(VideoPokerViewModel vm)
     {
+        VignetteRect.IsVisible = SoliBee.Core.Services.SettingsService.LoadOptions().IsVignetteEnabled;
         if (vm.Options.IsFinalFantasyMode)
         {
             BoardFeltGrid.Background = new SolidColorBrush(Colors.Black);
@@ -467,11 +576,15 @@ public partial class VideoPokerView : UserControl
         var ct = _dealAnimCts.Token;
 
         StopCardsFade();
+        CancelHoldLiftTimers();
+        CancelHoldWobbleTimers();
+        for (int i = 0; i < 5; i++) _prevHeldSlots[i] = false;
 
         // Set new cards to starting position (above, invisible)
         for (int i = 0; i < 5; i++)
         {
             if (!toAnimate[i]) continue;
+            _holdLiftY[i] = 0;
             _cardSlots[i].RenderTransform = new TranslateTransform(0, -55);
             _cardViews[i].Opacity = 0;
         }
@@ -536,6 +649,9 @@ public partial class VideoPokerView : UserControl
         _winPulseTimer?.Stop();
         _winPulsePhase = 0;
         WinBanner.RenderTransform = new ScaleTransform(1.0, 1.0);
+        _winGlowBrush = new SolidColorBrush(Color.Parse("#FFD700"));
+        WinBanner.BorderBrush     = _winGlowBrush;
+        WinBanner.BorderThickness = new Avalonia.Thickness(2);
 
         _winPulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         _winPulseTimer.Tick += (_, _) =>
@@ -547,6 +663,8 @@ public partial class VideoPokerView : UserControl
                 st.ScaleX = scale;
                 st.ScaleY = scale;
             }
+            byte alpha = (byte)(80 + (int)(175 * (0.5 + 0.5 * Math.Sin(_winPulsePhase * 1.3))));
+            _winGlowBrush!.Color = Color.FromArgb(alpha, 0xFF, 0xD7, 0x00);
         };
         _winPulseTimer.Start();
     }
@@ -555,8 +673,40 @@ public partial class VideoPokerView : UserControl
     {
         _winPulseTimer?.Stop();
         _winPulseTimer = null;
+        _winGlowBrush  = null;
         if (WinBanner != null)
+        {
             WinBanner.RenderTransform = null;
+            WinBanner.BorderThickness = new Avalonia.Thickness(0);
+            WinBanner.BorderBrush     = Brushes.Transparent;
+        }
+    }
+
+    // ── Pay row pulse ─────────────────────────────────────────────────────────
+
+    private void StartPayRowPulse(string handName)
+    {
+        StopPayRowPulse();
+        if (string.IsNullOrEmpty(handName) || !_payRowBorders.TryGetValue(handName, out var border)) return;
+        _pulsingPayRow    = handName;
+        _payRowPulsePhase = 0;
+        _payRowPulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _payRowPulseTimer.Tick += (_, _) =>
+        {
+            _payRowPulsePhase += 0.06;
+            byte alpha = (byte)(60 + (int)(110 * (0.5 + 0.5 * Math.Sin(_payRowPulsePhase))));
+            border.Background = new SolidColorBrush(Color.FromArgb(alpha, 0xFF, 0xD7, 0x00));
+        };
+        _payRowPulseTimer.Start();
+    }
+
+    private void StopPayRowPulse()
+    {
+        _payRowPulseTimer?.Stop();
+        _payRowPulseTimer = null;
+        if (_pulsingPayRow != null && _payRowBorders.TryGetValue(_pulsingPayRow, out var b))
+            b.Background = Brushes.Transparent;
+        _pulsingPayRow = null;
     }
 
     // ── Credit roll-up ────────────────────────────────────────────────────────
@@ -595,14 +745,19 @@ public partial class VideoPokerView : UserControl
 
     // ── Keyboard ──────────────────────────────────────────────────────────────
 
+    private DateTime _lastDealDrawTime = DateTime.MinValue;
+
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not VideoPokerViewModel vm) return;
 
         switch (e.Key)
         {
+            case Key.D:
             case Key.Space:
             case Key.Enter:
+                if ((DateTime.UtcNow - _lastDealDrawTime).TotalMilliseconds < 400) { e.Handled = true; break; }
+                _lastDealDrawTime = DateTime.UtcNow;
                 DoDealOrDraw(vm); e.Handled = true; break;
             case Key.H:
                 if (vm.IsHolding) { vm.HoldAll(); Refresh(vm); } e.Handled = true; break;
@@ -719,5 +874,54 @@ public partial class VideoPokerView : UserControl
         if (DataContext is not VideoPokerViewModel vm) return;
         vm.Rebuy();
         Refresh(vm);
+    }
+
+    // ── Idle nudge ────────────────────────────────────────────────────────────
+
+    private void ResetIdleTimer(VideoPokerViewModel vm)
+    {
+        _idleTimer?.Stop();
+        _idleTimer = null;
+        if (IdlePrompt.Opacity > 0) FadeOutIdlePrompt();
+        if (vm.State.Phase != VideoPokerPhase.Holding) return;
+        _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _idleTimer.Tick += (_, _) =>
+        {
+            _idleTimer!.Stop();
+            _idleTimer = null;
+            if (DataContext is VideoPokerViewModel v && v.State.Phase == VideoPokerPhase.Holding)
+                FadeInIdlePrompt();
+        };
+        _idleTimer.Start();
+    }
+
+    private void FadeInIdlePrompt()
+    {
+        _idleFadeTimer?.Stop();
+        double opacity = IdlePrompt.Opacity;
+        _idleFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _idleFadeTimer.Tick += (_, _) =>
+        {
+            opacity = Math.Min(1.0, opacity + 16.0 / 600.0);
+            IdlePrompt.Opacity = opacity;
+            if (opacity >= 1.0) { _idleFadeTimer!.Stop(); _idleFadeTimer = null; }
+        };
+        _idleFadeTimer.Start();
+    }
+
+    private void FadeOutIdlePrompt()
+    {
+        _idleFadeTimer?.Stop();
+        double opacity = IdlePrompt.Opacity;
+        if (opacity <= 0) return;
+        double speed = opacity / (300.0 / 16.0);
+        _idleFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _idleFadeTimer.Tick += (_, _) =>
+        {
+            opacity = Math.Max(0, opacity - speed);
+            IdlePrompt.Opacity = opacity;
+            if (opacity <= 0) { _idleFadeTimer!.Stop(); _idleFadeTimer = null; IdlePrompt.Opacity = 0; }
+        };
+        _idleFadeTimer.Start();
     }
 }

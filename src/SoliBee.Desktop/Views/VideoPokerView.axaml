@@ -6,7 +6,7 @@
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,Auto,*">
 
         <!-- Vignette depth overlay -->
-        <Rectangle Grid.RowSpan="3" IsHitTestVisible="False" ZIndex="-1">
+        <Rectangle x:Name="VignetteRect" Grid.RowSpan="3" IsHitTestVisible="False" ZIndex="-1">
             <Rectangle.Fill>
                 <RadialGradientBrush Center="50%,50%" Radius="0.8">
                     <GradientStop Color="#00000000" Offset="0.2"/>
@@ -102,7 +102,8 @@
         <Grid Grid.Row="2" RowDefinitions="*,*">
 
             <!-- Cards + overlays — centered in the * row -->
-            <Grid Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Margin="0,28,0,0">
 
                     <StackPanel x:Name="CardsRow" Orientation="Horizontal" Spacing="0" HorizontalAlignment="Center">
 
@@ -178,17 +179,29 @@
                     </Grid>
                 </Grid>
 
+            <!-- Idle nudge prompt -->
+            <Border x:Name="IdlePrompt" Grid.Row="1" Opacity="0" IsHitTestVisible="False" ZIndex="10"
+                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0"
+                    Background="#AA000000" CornerRadius="8" Padding="20,10">
+                <TextBlock Text="Select cards to HOLD, then Draw"
+                           FontSize="13" FontWeight="Bold" Foreground="#FFD700"
+                           FontFamily="Courier New, Consolas, monospace"/>
+            </Border>
+
+            <!-- Particle burst canvas -->
+            <Canvas x:Name="ParticleCanvas" Grid.RowSpan="2" IsHitTestVisible="False" ZIndex="50"/>
+
             <!-- Buttons — centered in the lower * row -->
             <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
 
                 <StackPanel x:Name="ButtonRow" Orientation="Horizontal" Spacing="10"
                             HorizontalAlignment="Center">
                     <Button x:Name="HoldAllButton"
-                            Content="Hold All (H)" Height="46" Padding="20,0"
+                            Content="Hold All  [H]" Height="46" Padding="20,0"
                             IsEnabled="{Binding IsHolding}"
                             Click="HoldAll_Click" Classes="vp-button"/>
                     <Button x:Name="ClearButton"
-                            Content="Clear (Q)" Height="46" Padding="20,0"
+                            Content="Clear  [Q]" Height="46" Padding="20,0"
                             IsEnabled="{Binding IsHolding}"
                             Click="ClearAll_Click" Classes="vp-button"/>
                     <Button x:Name="DealDrawButton"

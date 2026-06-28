@@ -16,17 +16,17 @@ using SoliBee.Desktop.Services;
 
 namespace SoliBee.Desktop.Views;
 
-public partial class BeecellView : CardGameView
+public partial class FreecellView : CardGameView
 {
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
-        if (DataContext is not BeecellViewModel vm) return false;
+        if (DataContext is not FreecellViewModel vm) return false;
         return vm.CanMoveCards(cards, targetPile);
     }
 
     public override bool TryMoveCards(List<Card> cards, Pile sourcePile, Pile targetPile)
     {
-        if (DataContext is not BeecellViewModel vm) return false;
+        if (DataContext is not FreecellViewModel vm) return false;
         if (!vm.CanMoveCards(cards, targetPile)) return false;
         vm.MoveCards(cards, sourcePile, targetPile);
         SoundService.PlaySnap();
@@ -35,7 +35,7 @@ public partial class BeecellView : CardGameView
 
     public override bool TryAutoMoveToFoundation(Card card, Pile sourcePile)
     {
-        if (DataContext is not BeecellViewModel vm) return false;
+        if (DataContext is not FreecellViewModel vm) return false;
         var single = new List<Card> { card };
         foreach (var f in vm.Foundations)
         {
@@ -58,11 +58,11 @@ public partial class BeecellView : CardGameView
         return false;
     }
 
-    public BeecellView()
+    public FreecellView()
     {
         InitializeComponent();
-        this.Loaded += BeecellView_Loaded;
-        this.Unloaded += BeecellView_Unloaded;
+        this.Loaded += FreecellView_Loaded;
+        this.Unloaded += FreecellView_Unloaded;
 
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
             Dispatcher.UIThread.InvokeAsync(RefreshAllPiles));
@@ -80,9 +80,9 @@ public partial class BeecellView : CardGameView
         Tableau6.UpdateCardsLayout(); Tableau7.UpdateCardsLayout();
     }
 
-    private void BeecellView_Loaded(object? sender, RoutedEventArgs e)
+    private void FreecellView_Loaded(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is BeecellViewModel vm)
+        if (DataContext is FreecellViewModel vm)
         {
             vm.PropertyChanged += ViewModel_PropertyChanged;
             ApplyFeltColor(vm.Options);
@@ -91,26 +91,29 @@ public partial class BeecellView : CardGameView
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
     }
 
-    private void BeecellView_Unloaded(object? sender, RoutedEventArgs e)
+    private void FreecellView_Unloaded(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is BeecellViewModel vm)
+        if (DataContext is FreecellViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
     }
 
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
     {
-        if (DataContext is BeecellViewModel vm) vm.InitializeGame();
+        if (DataContext is FreecellViewModel vm) vm.InitializeGame();
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (DataContext is not BeecellViewModel vm) return;
+            if (DataContext is not FreecellViewModel vm) return;
 
-            if (e.PropertyName == nameof(BeecellViewModel.State))
+            if (e.PropertyName == nameof(FreecellViewModel.State))
             {
+                BindPiles(vm);
+                RefreshAllPiles();
+
                 if (vm.State.HasWon) TriggerVictoryCascade();
                 else
                 {
@@ -146,7 +149,7 @@ public partial class BeecellView : CardGameView
                 Tableau6.UpdateCardsLayout();
                 Tableau7.UpdateCardsLayout();
             }
-            else if (e.PropertyName == nameof(BeecellViewModel.Options))
+            else if (e.PropertyName == nameof(FreecellViewModel.Options))
             {
                 ApplyFeltColor(vm.Options);
                 FreeCell0.UpdateCardsLayout();
@@ -166,11 +169,11 @@ public partial class BeecellView : CardGameView
                 Tableau6.UpdateCardsLayout();
                 Tableau7.UpdateCardsLayout();
             }
-            else if (e.PropertyName == nameof(BeecellViewModel.HasNoMoves))
+            else if (e.PropertyName == nameof(FreecellViewModel.HasNoMoves))
             {
                 NoMovesBanner.IsVisible = vm.HasNoMoves;
             }
-            else if (e.PropertyName == nameof(BeecellViewModel.ActiveHint))
+            else if (e.PropertyName == nameof(FreecellViewModel.ActiveHint))
             {
                 ApplyHint(vm.ActiveHint, AllPileViews());
             }
@@ -182,7 +185,7 @@ public partial class BeecellView : CardGameView
             Foundation0, Foundation1, Foundation2, Foundation3,
             Tableau0, Tableau1, Tableau2, Tableau3, Tableau4, Tableau5, Tableau6, Tableau7 };
 
-    private void BindPiles(BeecellViewModel vm)
+    private void BindPiles(FreecellViewModel vm)
     {
         if (vm.FreeCells.Count >= 4)
         {
@@ -218,7 +221,7 @@ public partial class BeecellView : CardGameView
         if (_winTriggered) return;
         _winTriggered = true;
         VictoryOverlay.IsVisible = true;
-        if (DataContext is BeecellViewModel vm)
+        if (DataContext is FreecellViewModel vm)
             VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.TimeDisplay);
         else
             VictoryOverlay.StartAnimation();

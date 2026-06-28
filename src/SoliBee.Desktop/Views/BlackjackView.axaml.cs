@@ -20,6 +20,8 @@ public partial class BlackjackView : UserControl
     private DispatcherTimer? _bannerFadeTimer;
     private DispatcherTimer? _winPulseTimer;
     private DispatcherTimer? _bustFlashTimer;
+    private DispatcherTimer? _idleTimer;
+    private DispatcherTimer? _idleFadeTimer;
     private double           _winPulsePhase;
 
     private BlackjackPhase _lastPhase         = BlackjackPhase.Betting;
@@ -84,6 +86,7 @@ public partial class BlackjackView : UserControl
         ApplyFeltColor(vm);
 
         _lastPhase = vm.State.Phase;
+        ResetIdleTimer(vm);
     }
 
     private void PlayTransitionSounds(BlackjackViewModel vm)
@@ -111,9 +114,10 @@ public partial class BlackjackView : UserControl
 
     private static void ScheduleCardSlideIn(CardView cv, double fromX, double fromY, int durationMs, int delayMs)
     {
-        if (delayMs == 0) { cv.BeginSlideIn(fromX, fromY, durationMs); return; }
+        cv.Opacity = 0;
+        if (delayMs == 0) { cv.BeginSlideIn(fromX, fromY, durationMs, fadeIn: true); return; }
         var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(delayMs) };
-        t.Tick += (_, _) => { t.Stop(); cv.BeginSlideIn(fromX, fromY, durationMs); };
+        t.Tick += (_, _) => { t.Stop(); cv.BeginSlideIn(fromX, fromY, durationMs, fadeIn: true); };
         t.Start();
     }
 
@@ -150,9 +154,7 @@ public partial class BlackjackView : UserControl
         }
         else if (isDuringPlay)
         {
-            DealerValuePill.IsVisible = visVal > 0;
-            DealerValueLabel.Text = $"{visVal}{(visSoft ? "*" : "")}";
-            DealerValueLabel.Foreground = Brushes.White;
+            DealerValuePill.IsVisible = false;
         }
         else
         {
@@ -273,8 +275,23 @@ public partial class BlackjackView : UserControl
 
             var inner = new StackPanel { Spacing = 5 };
             inner.Children.Add(cardRow);
-            inner.Children.Add(valuePill);
-            if (resultBadge != null) inner.Children.Add(resultBadge);
+            if (resultBadge != null)
+            {
+                // Side-by-side so total height matches the pill-only case
+                var pillRow = new StackPanel
+                {
+                    Orientation         = Orientation.Horizontal,
+                    Spacing             = 6,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                };
+                pillRow.Children.Add(valuePill);
+                pillRow.Children.Add(resultBadge);
+                inner.Children.Add(pillRow);
+            }
+            else
+            {
+                inner.Children.Add(valuePill);
+            }
 
             var container = new Border
             {
@@ -459,7 +476,11 @@ public partial class BlackjackView : UserControl
         ResultOverlay.Opacity   = 1.0;
         ResultOverlay.IsVisible = true;
 
-        if (win) StartWinPulse();
+        if (win)
+        {
+            StartWinPulse();
+            WinParticleSystem.Burst(ParticleCanvas);
+        }
         else StopWinPulse();
 
         _bannerDelayTimer?.Stop();
@@ -532,12 +553,64 @@ public partial class BlackjackView : UserControl
         _bannerFadeTimer?.Stop();  _bannerFadeTimer  = null;
         _winPulseTimer?.Stop();    _winPulseTimer    = null;
         _bustFlashTimer?.Stop();   _bustFlashTimer   = null;
+        _idleTimer?.Stop();        _idleTimer        = null;
+        _idleFadeTimer?.Stop();    _idleFadeTimer    = null;
+    }
+
+    // ── Idle nudge ────────────────────────────────────────────────────────────
+
+    private void ResetIdleTimer(BlackjackViewModel vm)
+    {
+        _idleTimer?.Stop();
+        _idleTimer = null;
+        if (IdlePrompt.Opacity > 0) FadeOutIdlePrompt();
+        if (vm.State.Phase != BlackjackPhase.Playing) return;
+        _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _idleTimer.Tick += (_, _) =>
+        {
+            _idleTimer!.Stop();
+            _idleTimer = null;
+            if (DataContext is BlackjackViewModel v && v.State.Phase == BlackjackPhase.Playing)
+                FadeInIdlePrompt();
+        };
+        _idleTimer.Start();
+    }
+
+    private void FadeInIdlePrompt()
+    {
+        _idleFadeTimer?.Stop();
+        double opacity = IdlePrompt.Opacity;
+        _idleFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _idleFadeTimer.Tick += (_, _) =>
+        {
+            opacity = Math.Min(1.0, opacity + 16.0 / 600.0);
+            IdlePrompt.Opacity = opacity;
+            if (opacity >= 1.0) { _idleFadeTimer!.Stop(); _idleFadeTimer = null; }
+        };
+        _idleFadeTimer.Start();
+    }
+
+    private void FadeOutIdlePrompt()
+    {
+        _idleFadeTimer?.Stop();
+        double opacity = IdlePrompt.Opacity;
+        if (opacity <= 0) return;
+        double speed = opacity / (300.0 / 16.0);
+        _idleFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _idleFadeTimer.Tick += (_, _) =>
+        {
+            opacity = Math.Max(0, opacity - speed);
+            IdlePrompt.Opacity = opacity;
+            if (opacity <= 0) { _idleFadeTimer!.Stop(); _idleFadeTimer = null; IdlePrompt.Opacity = 0; }
+        };
+        _idleFadeTimer.Start();
     }
 
     // ── Felt color ────────────────────────────────────────────────────────────
 
     private void ApplyFeltColor(BlackjackViewModel vm)
     {
+        VignetteRect.IsVisible = SoliBee.Core.Services.SettingsService.LoadOptions().IsVignetteEnabled;
         if (vm.Options.IsFinalFantasyMode)
         {
             BoardFeltGrid.Background = new SolidColorBrush(Colors.Black);

@@ -1,7 +1,7 @@
 <local:CardGameView xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
-             x:Class="SoliBee.Desktop.Views.BeecellView"
+             x:Class="SoliBee.Desktop.Views.FreecellView"
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" ClipToBounds="False">

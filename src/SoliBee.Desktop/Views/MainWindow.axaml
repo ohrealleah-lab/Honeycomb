@@ -22,14 +22,17 @@
                         <ComboBoxItem Content="Game Selection" IsEnabled="False" IsVisible="False" />
                         <ComboBoxItem Content="Klondike (Draw 1)" Tag="SolitaireDraw1" />
                         <ComboBoxItem Content="Klondike (Draw 3)" Tag="SolitaireDraw3" />
-                        <ComboBoxItem Content="Beecell" Tag="Beecell" />
-                        <ComboBoxItem Content="Spider" Tag="Spider" />
+                        <ComboBoxItem Content="Freecell (1 Deck)" Tag="Freecell1" />
+                        <ComboBoxItem Content="Freecell (2 Decks)" Tag="Freecell2" />
+                        <ComboBoxItem Content="Spider (1 Suit)" Tag="Spider1" />
+                        <ComboBoxItem Content="Spider (2 Suits)" Tag="Spider2" />
+                        <ComboBoxItem Content="Spider (4 Suits)" Tag="Spider4" />
                         <ComboBoxItem Content="Video Poker" Tag="VideoPoker" />
                         <ComboBoxItem Content="Video Blackjack" Tag="Blackjack" />
                     </ComboBox>
                     <Button Content="New Game" Click="NewGame_Click" Classes="toolbar" />
                     <Button Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
-                    <Button x:Name="UndoButton" Content="Undo" Click="Undo_Click" Classes="toolbar" />
+                    <Button Content="Options" Click="Preferences_Click" Classes="toolbar" />
                     <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
                     <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
                               SelectionChanged="PokerVariantBox_SelectionChanged">
@@ -37,7 +40,7 @@
                         <ComboBoxItem Content="Deuces Wild"/>
                         <ComboBoxItem Content="Bonus Poker"/>
                     </ComboBox>
-                    <Button Content="Options" Click="Preferences_Click" Classes="toolbar" />
+                    <Button x:Name="UndoButton" Content="Undo" Click="Undo_Click" Classes="toolbar" />
                     <Button Content="Theme Editor" Click="ThemeEditor_Click" Classes="toolbar" IsVisible="False" />
                 </StackPanel>
 
@@ -80,13 +83,27 @@
             
             <!-- Preferences Modal Dialog Overlay -->
             <Grid x:Name="PreferencesOverlay" Background="#90000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Border Background="#2E2E2E" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
+                <Border x:Name="PreferencesPanel" Background="#2E2E2E" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
                     <StackPanel Spacing="15">
                         <TextBlock Text="Preferences" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
                         <ScrollViewer MaxHeight="480" VerticalScrollBarVisibility="Auto">
                             <ContentControl x:Name="PreferencesContent" />
                         </ScrollViewer>
                         <Button Content="OK" Click="ClosePreferences_Click" HorizontalAlignment="Right" Width="80" HorizontalContentAlignment="Center" Background="#444444" Foreground="White" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+            
+            <!-- Game Action Confirmation Overlay -->
+            <Grid x:Name="ConfirmActionOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2">
+                <Border Background="#2E2E2E" CornerRadius="8" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                    <StackPanel Spacing="15" Width="260">
+                        <TextBlock x:Name="ConfirmActionTitle" Text="Start New Game?" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="ConfirmActionMessage" Text="Are you sure you want to abandon the current game and start a new one?" FontSize="12" Foreground="LightGray" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
+                        <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
+                            <Button Content="Cancel" Click="CancelConfirmAction_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#444444" Foreground="White" Margin="0,0,4,0" />
+                            <Button x:Name="ConfirmActionButton" Content="New Game" Click="ConfirmAction_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#882222" Foreground="White" Margin="4,0,0,0" />
+                        </Grid>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -103,11 +120,26 @@
             <Setter Property="Padding" Value="12,6" />
             <Setter Property="CornerRadius" Value="4" />
             <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08"/>
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style Selector="Button.toolbar:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#40FFFFFF" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderBrush" Value="White" />
+        </Style>
+        <Style Selector="Button.toolbar:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.04)" />
+        </Style>
+        <Style Selector="Button.toolbar:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.93)" />
         </Style>
         
         <!-- Toolbar ComboBox Styles -->

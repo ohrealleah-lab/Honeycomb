@@ -160,8 +160,8 @@ public static class SettingsService
                 if (GetValue("HideStatsButton") is bool hideStats)
                     options.HideStatsButton = hideStats;
 
-                if (GetValue("BeecellDeckCount") is int beecellDeck)
-                    options.BeecellDeckCount = beecellDeck;
+                if (GetValue("FreecellDeckCount") is int freecellDeck)
+                    options.FreecellDeckCount = freecellDeck;
 
                 if (GetValue("SpiderSuitCount") is int spiderSuits)
                     options.SpiderSuitCount = spiderSuits;
@@ -170,16 +170,16 @@ public static class SettingsService
                 if (GetValue("LastGameMode") is string lgm) options.LastGameMode = lgm;
 
                 if (GetValue("KlondikeZoom")   is double kz)  options.KlondikeZoom   = kz;
-                if (GetValue("BeecellZoom")    is double bz)  options.BeecellZoom    = bz;
+                if (GetValue("FreecellZoom")    is double bz)  options.FreecellZoom    = bz;
                 if (GetValue("SpiderZoom")     is double spz) options.SpiderZoom     = spz;
                 if (GetValue("VideoPokerZoom") is double vpz) options.VideoPokerZoom = vpz;
 
                 if (GetValue("KlondikeWidth")       is double klW)  options.KlondikeWidth       = klW;
                 if (GetValue("KlondikeHeight")      is double klH)  options.KlondikeHeight      = klH;
                 if (GetValue("KlondikeMaximized")   is bool   klM)  options.KlondikeMaximized   = klM;
-                if (GetValue("BeecellWidth")        is double bcW)  options.BeecellWidth        = bcW;
-                if (GetValue("BeecellHeight")       is double bcH)  options.BeecellHeight       = bcH;
-                if (GetValue("BeecellMaximized")    is bool   bcM)  options.BeecellMaximized    = bcM;
+                if (GetValue("FreecellWidth")        is double bcW)  options.FreecellWidth        = bcW;
+                if (GetValue("FreecellHeight")       is double bcH)  options.FreecellHeight       = bcH;
+                if (GetValue("FreecellMaximized")    is bool   bcM)  options.FreecellMaximized    = bcM;
                 if (GetValue("SpiderWidth")         is double spW)  options.SpiderWidth         = spW;
                 if (GetValue("SpiderHeight")        is double spH)  options.SpiderHeight        = spH;
                 if (GetValue("SpiderMaximized")     is bool   spM)  options.SpiderMaximized     = spM;
@@ -252,23 +252,23 @@ public static class SettingsService
                 SetValue("IsStatusBarVisible", options.IsStatusBarVisible);
                 SetValue("HideHintButton", options.HideHintButton);
                 SetValue("HideStatsButton", options.HideStatsButton);
-                SetValue("BeecellDeckCount", options.BeecellDeckCount);
+                SetValue("FreecellDeckCount", options.FreecellDeckCount);
                 SetValue("SpiderSuitCount", options.SpiderSuitCount);
 
                 SetValue("HasAppliedDefaultTheme", options.HasAppliedDefaultTheme);
                 SetValue("LastGameMode", options.LastGameMode);
 
                 SetValue("KlondikeZoom",   options.KlondikeZoom);
-                SetValue("BeecellZoom",    options.BeecellZoom);
+                SetValue("FreecellZoom",    options.FreecellZoom);
                 SetValue("SpiderZoom",     options.SpiderZoom);
                 SetValue("VideoPokerZoom", options.VideoPokerZoom);
 
                 SetValue("KlondikeWidth",       options.KlondikeWidth);
                 SetValue("KlondikeHeight",      options.KlondikeHeight);
                 SetValue("KlondikeMaximized",   options.KlondikeMaximized);
-                SetValue("BeecellWidth",        options.BeecellWidth);
-                SetValue("BeecellHeight",       options.BeecellHeight);
-                SetValue("BeecellMaximized",    options.BeecellMaximized);
+                SetValue("FreecellWidth",        options.FreecellWidth);
+                SetValue("FreecellHeight",       options.FreecellHeight);
+                SetValue("FreecellMaximized",    options.FreecellMaximized);
                 SetValue("SpiderWidth",         options.SpiderWidth);
                 SetValue("SpiderHeight",        options.SpiderHeight);
                 SetValue("SpiderMaximized",     options.SpiderMaximized);

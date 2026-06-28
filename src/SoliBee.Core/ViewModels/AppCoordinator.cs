@@ -14,7 +14,7 @@ public partial class AppCoordinator : ObservableObject
     private GameViewModel _gameViewModel;
 
     [ObservableProperty]
-    private BeecellViewModel _beecellViewModel;
+    private FreecellViewModel _freecellViewModel;
 
     [ObservableProperty]
     private SpiderViewModel _spiderViewModel;
@@ -35,14 +35,14 @@ public partial class AppCoordinator : ObservableObject
     public AppCoordinator()
     {
         GameViewModel       = new GameViewModel();
-        BeecellViewModel    = new BeecellViewModel();
+        FreecellViewModel    = new FreecellViewModel();
         SpiderViewModel     = new SpiderViewModel();
         VideoPokerViewModel = new VideoPokerViewModel();
         BlackjackViewModel  = new BlackjackViewModel();
 
         ActiveViewModel = LoadLastMode() switch
         {
-            "Beecell"    => (object)BeecellViewModel,
+            "Freecell"    => (object)FreecellViewModel,
             "Spider"     => (object)SpiderViewModel,
             "VideoPoker" => (object)VideoPokerViewModel,
             "Blackjack"  => (object)BlackjackViewModel,
@@ -53,7 +53,7 @@ public partial class AppCoordinator : ObservableObject
     public bool CanUndo => ActiveViewModel switch
     {
         GameViewModel gvm       => gvm.CanUndo,
-        BeecellViewModel bvm    => bvm.CanUndo,
+        FreecellViewModel bvm    => bvm.CanUndo,
         SpiderViewModel svm     => svm.CanUndo,
         VideoPokerViewModel _   => false,
         BlackjackViewModel _    => false,
@@ -67,10 +67,10 @@ public partial class AppCoordinator : ObservableObject
         OnPropertyChanged(nameof(CanUndo));
     }
 
-    public void SwitchToBeecell()
+    public void SwitchToFreecell()
     {
-        ActiveViewModel = BeecellViewModel;
-        SaveLastMode("Beecell");
+        ActiveViewModel = FreecellViewModel;
+        SaveLastMode("Freecell");
         OnPropertyChanged(nameof(CanUndo));
     }
 
@@ -99,7 +99,7 @@ public partial class AppCoordinator : ObservableObject
     public void Undo()
     {
         if (ActiveViewModel is GameViewModel gvm) gvm.Undo();
-        else if (ActiveViewModel is BeecellViewModel bvm) bvm.Undo();
+        else if (ActiveViewModel is FreecellViewModel bvm) bvm.Undo();
         else if (ActiveViewModel is SpiderViewModel svm) svm.Undo();
         OnPropertyChanged(nameof(CanUndo));
     }
@@ -112,7 +112,7 @@ public partial class AppCoordinator : ObservableObject
             gvm.Stats = new GameStatistics();
             StatsService.SaveStats(gvm.Stats);
         }
-        else if (ActiveViewModel is BeecellViewModel bvm)
+        else if (ActiveViewModel is FreecellViewModel bvm)
             bvm.ResetStatistics();
         else if (ActiveViewModel is SpiderViewModel svm)
             svm.ResetStatistics();
@@ -131,7 +131,7 @@ public partial class AppCoordinator : ObservableObject
     public void TriggerWinAnimation()
     {
         if (ActiveViewModel is GameViewModel gvm) gvm.State.HasWon = true;
-        else if (ActiveViewModel is BeecellViewModel bvm) bvm.State.HasWon = true;
+        else if (ActiveViewModel is FreecellViewModel bvm) bvm.State.HasWon = true;
         else if (ActiveViewModel is SpiderViewModel svm) svm.State.HasWon = true;
     }
 

@@ -3,8 +3,10 @@
              x:Class="SoliBee.Desktop.Views.FaceCardArtSectionView">
   <Grid>
     <StackPanel Spacing="4">
-      <StackPanel x:Name="BlackRow" Orientation="Horizontal" Spacing="4" />
-      <StackPanel x:Name="RedRow" Orientation="Horizontal" Spacing="4" />
+      <StackPanel x:Name="SpadesRow" Orientation="Horizontal" Spacing="4" />
+      <StackPanel x:Name="HeartsRow" Orientation="Horizontal" Spacing="4" />
+      <StackPanel x:Name="DiamondsRow" Orientation="Horizontal" Spacing="4" />
+      <StackPanel x:Name="ClubsRow" Orientation="Horizontal" Spacing="4" />
     </StackPanel>
 
     <!-- Confirm delete overlay -->

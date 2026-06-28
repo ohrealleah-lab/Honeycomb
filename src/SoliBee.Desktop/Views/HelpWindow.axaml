@@ -1,27 +1,442 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="SoliBee.Desktop.Views.HelpWindow"
-        Width="520" Height="580"
-        CanResize="False"
-        WindowStartupLocation="CenterScreen"
-        Background="#1E1E1E">
+        Title="SoliBee — Help Guide"
+        Width="720" Height="660"
+        MinWidth="540" MinHeight="420"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner"
+        Background="#1A1A1A"
+        ShowInTaskbar="False">
 
-    <Grid RowDefinitions="*, Auto">
+    <Grid RowDefinitions="Auto,*,Auto">
 
-        <ScrollViewer Grid.Row="0" Padding="24,20,24,8"
-                      VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="ContentPanel" Spacing="4" />
+        <!-- Title bar -->
+        <Border Grid.Row="0" Background="#111111" Padding="24,16">
+            <TextBlock Text="Help Guide"
+                       FontSize="22" FontWeight="Black"
+                       Foreground="White"/>
+        </Border>
+
+        <!-- Scrollable content -->
+        <ScrollViewer x:Name="HelpScroll"
+                      Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="24,20,24,20" Spacing="0">
+
+                <!-- ── Index ─────────────────────────────────────────────── -->
+                <Border Background="#222222" CornerRadius="6"
+                        Padding="18,14" Margin="0,0,0,24">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="CONTENTS"
+                                   FontSize="11" FontWeight="Bold" LetterSpacing="2"
+                                   Foreground="#FFD700"/>
+                        <StackPanel Spacing="2">
+                            <Button x:Name="IdxKlondike"  Content="Klondike Solitaire"  Click="GoTo_Klondike"    Classes="help-link"/>
+                            <Button x:Name="IdxFreecell"   Content="Freecell"              Click="GoTo_Freecell"     Classes="help-link"/>
+                            <Button x:Name="IdxSpider"    Content="Spider Solitaire"     Click="GoTo_Spider"      Classes="help-link"/>
+                            <Button x:Name="IdxVP"        Content="Video Poker"          Click="GoTo_VideoPoker"  Classes="help-link"/>
+                            <Button x:Name="IdxBJ"        Content="Video Blackjack"      Click="GoTo_Blackjack"   Classes="help-link"/>
+                            <Button x:Name="IdxThemes"    Content="Custom Themes &amp; Art" Click="GoTo_Themes"    Classes="help-link"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Klondike ──────────────────────────────────────────── -->
+                <Border x:Name="KlondikeAnchor" Margin="0,0,0,6">
+                    <TextBlock Text="KLONDIKE SOLITAIRE"
+                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               Foreground="#FFD700"/>
+                </Border>
+                <Border Background="#1E1E1E" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Move all 52 cards to the four foundation piles, built up by suit from Ace to King."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Setup" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Seven tableau columns are dealt: column 1 has 1 card, column 2 has 2, up to column 7 with 7 cards. Only the top card of each column is face-up. The remaining 24 cards form the Stock in the top-left corner."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="How to Play" Classes="help-heading"/>
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Tableau: "/>
+                                    <Run Text="Stack cards in descending rank with alternating colours (red on black, black on red). You can move any face-up card — or an entire face-up sequence — onto a column whose top card is exactly one rank higher and the opposite colour. Flipping a face-down card earns 5 points."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Foundations: "/>
+                                    <Run Text="Start each pile with an Ace, then build up in the same suit (Ace → 2 → … → King). Only a single top card can move to a foundation at a time."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Stock &amp; Waste: "/>
+                                    <Run Text="Click the Stock to deal cards face-up to the Waste pile. Only the top Waste card is playable. In Draw 1 mode one card is dealt per click. In Draw 3 mode three cards are dealt; you can only play cards from the current batch — once the batch is exhausted the waste shows an empty slot and you must draw again."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Empty columns: "/>
+                                    <Run Text="Only a King (or a sequence headed by a King) may be placed in an empty tableau column."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Scoring" Classes="help-heading"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                           Text="Standard — Waste→Tableau: +5 · Waste→Foundation: +10 · Tableau→Foundation: +10 · Flip a card: +5 · Foundation→Tableau: −15"/>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                           Text="Vegas — Starts at −$52. Each card moved to a foundation earns +$5; moving it back costs −$5. One free recycle of the waste is allowed (Vegas mode blocks a second recycle). The score display shows your running dollar balance."/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Uncover face-down cards as early as possible — they are your biggest source of new moves. Avoid sending cards to the foundations too quickly; you may need them as stepping stones on the tableau. Use the Hint button to see the best available move, and press it again to cycle through alternatives."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Freecell ───────────────────────────────────────────── -->
+                <Border x:Name="FreecellAnchor" Margin="0,0,0,6">
+                    <TextBlock Text="FREECELL"
+                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               Foreground="#FFD700"/>
+                </Border>
+                <Border Background="#1E1E1E" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Move all 52 cards to the four foundation piles, built up by suit from Ace to King."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Setup" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="All 52 cards are dealt face-up across 8 tableau columns (the first 4 columns get 7 cards, the last 4 get 6). There is no Stock. Four free cells at the top-left start empty."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="How to Play" Classes="help-heading"/>
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Tableau: "/>
+                                    <Run Text="Build columns in descending rank with alternating colours, just like Klondike. The top card of any column is always available to move."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Free cells: "/>
+                                    <Run Text="Each of the four free cells holds exactly one card. Use them to temporarily park cards that are in the way. A card in a free cell can be moved to any tableau column where it fits, or directly to a foundation."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Moving sequences: "/>
+                                    <Run Text="You can move a face-up sequence in one action, but only if you have enough spare capacity. The maximum sequence length you can move equals (free cells available + 1), multiplied by 2 for each empty tableau column. Plan ahead — filling your free cells too early leaves you unable to manoeuvre."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Foundations: "/>
+                                    <Run Text="Build up by suit from Ace. Any eligible card can go to a foundation at any time."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Not every deal is solvable — if no legal moves remain, the game is over. Keep at least one or two free cells empty at all times. Clearing an entire tableau column is extremely powerful; treat empty columns as your most valuable resource. Expose Aces and 2s early to start building the foundations."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Spider ────────────────────────────────────────────── -->
+                <Border x:Name="SpiderAnchor" Margin="0,0,0,6">
+                    <TextBlock Text="SPIDER SOLITAIRE"
+                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               Foreground="#FFD700"/>
+                </Border>
+                <Border Background="#1E1E1E" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Build eight complete same-suit runs from King down to Ace on the tableau. Each completed run is automatically removed and scores +100 points. Remove all eight runs to win."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Setup" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Two standard 52-card decks (104 cards total) are used. 54 cards are dealt to 10 tableau columns: the first 4 get 6 cards, the last 6 get 5. Only the top card of each column is face-up. The remaining 50 cards sit in 5 groups of 10 as the Stock."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="How to Play" Classes="help-heading"/>
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Building sequences: "/>
+                                    <Run Text="You can place any card (or sequence) on top of a column whose top card is exactly one rank higher. Suit does not need to match — you can stack a red 7 on a black 8 or a black 8. However, only a sequence where every card shares the same suit can be moved as a group. Mixed-suit stacks must be broken apart one card at a time."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Dealing from Stock: "/>
+                                    <Run Text="Click the Stock to deal one card face-up onto each of the 10 columns. All columns must have at least one card before you can deal. You have 5 deals available — use them wisely, as each deal buries your existing cards deeper."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Empty columns: "/>
+                                    <Run Text="Any card or valid sequence can fill an empty column. Empty columns are your most powerful tool — use them to stage cards while reorganising sequences."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Completed runs: "/>
+                                    <Run Text="When the bottom 13 cards of any column form a complete King-to-Ace run all of the same suit, those cards are automatically removed and you earn +100 points."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Difficulty Modes" Classes="help-heading"/>
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="1 Suit (Easy): "/>
+                                    <Run Text="All 104 cards are Spades. Every sequence you build can be moved as a group, making the game much more manageable."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="2 Suits (Medium): "/>
+                                    <Run Text="Spades and Hearts only. You must decide which suit to commit to when building each run."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="4 Suits (Hard): "/>
+                                    <Run Text="All four suits in play. Mixed sequences are unavoidable early on; careful one-card-at-a-time moves are required to untangle them."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Prioritise building same-suit sequences over mixed ones — only same-suit sequences can move as a group. Try to clear columns early; empty space is your most valuable resource. Avoid dealing from the Stock until you have truly exhausted all possible tableau moves."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Video Poker ───────────────────────────────────────── -->
+                <Border x:Name="VideoPokerAnchor" Margin="0,0,0,6">
+                    <TextBlock Text="VIDEO POKER"
+                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               Foreground="#FFD700"/>
+                </Border>
+                <Border Background="#1E1E1E" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Build the strongest possible 5-card poker hand. Winning hands are paid out as a multiple of your bet according to the pay table at the top of the screen."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="How to Play" Classes="help-heading"/>
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="1. Set your bet. "/>
+                                    <Run Text="Use + Bet or − Bet to choose 1–5 credits per hand. Press Bet Max to immediately bet 5 credits and deal. Betting 5 unlocks the Royal Flush bonus (800× instead of 250×)."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="2. Deal. "/>
+                                    <Run Text="Press Deal. Five cards are dealt face-up from a freshly shuffled 52-card deck."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="3. Choose cards to hold. "/>
+                                    <Run Text="Click any card to hold it (it rises up). Press keys 1–5 to toggle individual cards by position. Press H to hold all five cards, or Q to clear all holds."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="4. Draw. "/>
+                                    <Run Text="Press Draw. All unheld cards are replaced from the same deck. Your final 5-card hand is evaluated, the winning hand name appears highlighted on the pay table, and any payout is added to your credits."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Winning Hands (Jacks or Better)" Classes="help-heading"/>
+                            <StackPanel Spacing="3">
+                                <TextBlock Classes="help-body" Text="Royal Flush     — A K Q J 10, same suit           250× (800× at max bet)"/>
+                                <TextBlock Classes="help-body" Text="Straight Flush  — 5 in a row, same suit           50×"/>
+                                <TextBlock Classes="help-body" Text="Four of a Kind  — Four cards of the same rank     25×"/>
+                                <TextBlock Classes="help-body" Text="Full House      — Three of a kind + a pair        9×"/>
+                                <TextBlock Classes="help-body" Text="Flush           — Any 5 cards, same suit          6×"/>
+                                <TextBlock Classes="help-body" Text="Straight        — 5 consecutive ranks             4×"/>
+                                <TextBlock Classes="help-body" Text="Three of a Kind — Three of the same rank          3×"/>
+                                <TextBlock Classes="help-body" Text="Two Pair        — Two different pairs             2×"/>
+                                <TextBlock Classes="help-body" Text="Jacks or Better — Pair of Jacks, Queens, Kings, or Aces  1×"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Variants" Classes="help-heading"/>
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Deuces Wild: "/>
+                                    <Run Text="All four 2s are wild and can substitute for any card. The minimum winning hand is Three of a Kind. Adds Wild Royal Flush and Five of a Kind to the pay table."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Bonus Poker: "/>
+                                    <Run Text="Plays like Jacks or Better with premium payouts for four Aces (80×) and four 2s, 3s, or 4s (40×). Other quads pay the standard 25×."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Always keep a paying hand unless you are one card away from a Royal Flush. Never break up a Full House or Four of a Kind. In Deuces Wild, always hold every deuce — they are worth more than anything else. Check the highlighted column on the pay table to see your current bet's payouts at a glance."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Video Blackjack ───────────────────────────────────── -->
+                <Border x:Name="BlackjackAnchor" Margin="0,0,0,6">
+                    <TextBlock Text="VIDEO BLACKJACK"
+                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               Foreground="#FFD700"/>
+                </Border>
+                <Border Background="#1E1E1E" CornerRadius="6" Padding="18,14" Margin="0,0,0,8">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Beat the dealer by having a hand value closer to 21 without going over. Face cards (J, Q, K) are worth 10. Aces count as 1 or 11, whichever is better for your hand."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="How to Play" Classes="help-heading"/>
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="1. Place your bet. "/>
+                                    <Run Text="Use + Bet / − Bet to choose 1–5 credits, or press Bet Max to wager 5 and deal immediately."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="2. Deal. "/>
+                                    <Run Text="You receive two cards face-up. The dealer receives one card face-up and one face-down (the hole card)."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="3. Play your hand. "/>
+                                    <Run Text="Choose Hit, Stand, Double Down, or Split (see below). The game automatically stands when your total reaches 21."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="4. Dealer plays. "/>
+                                    <Run Text="The dealer reveals the hole card and must draw until reaching 17 or higher, then stands — on hard 17 and soft 17 alike."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="5. Result. "/>
+                                    <Run Text="The higher hand wins. A tie (push) returns your bet. A natural blackjack (Ace + 10-value card on the first two cards) pays 3:2 and wins immediately unless the dealer also has blackjack."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Hand Options" Classes="help-heading"/>
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Hit: "/>
+                                    <Run Text="Take another card. You may hit as many times as you like until you stand, reach 21 (auto-stand), or bust (exceed 21 and lose immediately)."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Stand: "/>
+                                    <Run Text="Finish your turn with your current hand and let the dealer play."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Double Down: "/>
+                                    <Run Text="Double your bet and receive exactly one more card, then stand automatically. Only available on your first two cards when you have enough credits to cover the extra bet."/>
+                                </TextBlock>
+                                <TextBlock Classes="help-body" TextWrapping="Wrap">
+                                    <Run FontWeight="SemiBold" Foreground="White" Text="Split: "/>
+                                    <Run Text="When your first two cards have the same value, split them into two separate hands, each receiving one more card. Each hand is then played independently. Costs a second bet equal to your original wager. Split Aces each receive exactly one additional card and then stand automatically."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Payouts" Classes="help-heading"/>
+                            <StackPanel Spacing="3">
+                                <TextBlock Classes="help-body" Text="Win               — 1:1 (you get your bet back plus the same amount)"/>
+                                <TextBlock Classes="help-body" Text="Natural Blackjack — 3:2 (e.g. bet 2 → win 3; bet 1 → win 2)"/>
+                                <TextBlock Classes="help-body" Text="Push (tie)        — Bet returned, no gain or loss"/>
+                                <TextBlock Classes="help-body" Text="Bust / Loss       — Bet forfeited"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Always double down on 11 when the dealer shows 2–10. Stand on any hard 17 or higher. Never split 10-value cards — a 20 is already a strong hand. Always split Aces and 8s. If the dealer shows 2–6, they are likely to bust, so stand on hard 12 or higher and let them come to you."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Custom Themes ───────────────────────────────────────── -->
+                <Border x:Name="ThemesAnchor" Margin="0,0,0,6">
+                    <TextBlock Text="CUSTOM THEMES &amp; ART"
+                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               Foreground="#FFD700"/>
+                </Border>
+                <Border Background="#1E1E1E" CornerRadius="6" Padding="18,14" Margin="0,0,0,8">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Overview" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="SoliBee features a visual theme editor where you can personalize the felt table, card backs, and face card art, and save your designs as custom themes."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Felt Backgrounds &amp; Vignette" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Toggle the Felt Vignette checkbox to add a subtle gradient shadow around the screen edges. Choose a standard table felt color (Green, Crimson, Blue, Charcoal, Desert) from the dropdown list, or choose Custom to display a color picker and select any shade you like."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Card Back Customization" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Select a built-in card back design (Vulpera, Dingwall, Moogle) or press Add… to upload your own custom image. Click the card preview tile to adjust the scale and position (offsets) of the custom card back image. If you no longer need a custom card back, select it and press Delete."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Custom Face Card Art" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Personalize the face cards (Aces, Jacks, Queens, Kings) for Spades, Hearts, Diamonds, and Clubs. Click any tile in the grid to upload an image or animated GIF for that card. Click the tile again to open the editor window where you can adjust the scale and offset. Use the On/Off toggle below each card tile to enable or disable that art, or click the X button to delete it."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Custom Card Colors" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Below the card art grid, you can select custom colors for the Card Background, Card Outline, and Card Text (separately for Black Suits and Red Suits). Press the Reset Card Colors button to revert all card colors to their standard system defaults."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Saving &amp; Managing Themes" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Press Save Theme… to name and save your current configuration (including custom felt, card backs, face card art, and card colors). All saved themes are listed under SAVED THEMES. Click any saved theme button to apply it instantly, or click its corresponding Delete button to remove it."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
         </ScrollViewer>
 
-        <Border Grid.Row="1"
-                BorderBrush="#3A3A3A" BorderThickness="0,1,0,0"
-                Padding="20,12">
-            <Button x:Name="CloseButton" Content="Close"
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="#111111" Padding="16,10">
+            <Button Content="Close"
                     Click="Close_Click"
-                    HorizontalAlignment="Right" Width="90"
+                    HorizontalAlignment="Right"
+                    Width="80"
                     HorizontalContentAlignment="Center"
-                    Background="#444444" Foreground="White" />
+                    Background="#444444"
+                    Foreground="White"/>
         </Border>
 
     </Grid>
+
+    <Window.Styles>
+        <Style Selector="Button.help-link">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#4DA6FF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0,3"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.help-link:pointerover /template/ ContentPresenter">
+            <Setter Property="Foreground" Value="#80C8FF"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="TextBlock.help-heading">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="LetterSpacing" Value="0.5"/>
+        </Style>
+        <Style Selector="TextBlock.help-body">
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Foreground" Value="#C0C0C0"/>
+            <Setter Property="LineHeight" Value="20"/>
+        </Style>
+    </Window.Styles>
+
 </Window>

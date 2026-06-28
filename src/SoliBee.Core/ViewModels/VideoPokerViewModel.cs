@@ -86,7 +86,7 @@ public partial class VideoPokerViewModel : ObservableObject
     public bool   IsDealing       => State.Phase == VideoPokerPhase.Deal || State.Phase == VideoPokerPhase.Result;
     public bool   IsHolding       => State.Phase == VideoPokerPhase.Holding;
     public bool   NeedsRebuy      => State.SessionCredits < State.CurrentBet;
-    public string DealDrawLabel   => IsHolding ? "Draw" : "Deal";
+    public string DealDrawLabel   => IsHolding ? "Draw  [D]" : "Deal  [D]";
     public string VariantName     => Options.Variant switch
     {
         VideoPokerVariant.DeucesWild => "DEUCES WILD",

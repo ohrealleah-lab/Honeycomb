@@ -32,6 +32,10 @@
             <TextBlock Text="© 2026 Leahbee. All rights reserved."
                        FontSize="11" Foreground="#808080"
                        HorizontalAlignment="Center" />
+
+            <TextBlock Text="For Rhinestone."
+                       FontSize="11" Foreground="#B0B0B0" FontStyle="Italic"
+                       HorizontalAlignment="Center" Margin="0,4,0,0" />
         </StackPanel>
 
         <Button Grid.Row="1"

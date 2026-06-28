@@ -27,6 +27,7 @@ public partial class CardView : UserControl
     private List<CardView> _draggedStack = new();
     private PileView? _sourcePileView;
     private Dictionary<CardView, Point> _dragStartPositions = new();
+    private Canvas? _dragCanvas;
 
     private static readonly Dictionary<string, Bitmap> _bitmapCache = new();
     private static readonly Dictionary<string, Bitmap> _customBitmapCache = new();
@@ -35,27 +36,16 @@ public partial class CardView : UserControl
     private static readonly IReadOnlyDictionary<string, string> _houliAssets =
         new Dictionary<string, string>
         {
-            ["Forest"]       = "houli_forest.png",
-            ["On the Water"] = "houli_onthewater.png",
-            ["Pareidolic"]   = "houli_pareidolic.png",
-            ["Pareidolic 2"] = "houli_pareidolic2.png",
-            ["Red Sky"]      = "houli_redsky.png",
-            ["Sunset"]       = "houli_sunset.png",
+            ["Forest"]       = "forest.png",
+            ["On the Water"] = "onthewater.png",
+            ["Pareidolic"]   = "pareidolic.png",
+            ["Pareidolic 2"] = "pareidolic2.png",
+            ["Red Sky"]      = "redsky.png",
+            ["Sunset"]       = "sunset.png",
         };
 
-    // Bundled FF mode default face art — baked-in images + the scale values tuned during setup.
-    // Keyed by FaceCardSlot; only used when no user-configured art exists for that slot.
-    private static readonly Dictionary<FaceCardSlot, (string Uri, double Scale)> _ffDefaultArt = new()
-    {
-        { FaceCardSlot.BlackAce,   ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-black-ace.png",   1.3849734933035716) },
-        { FaceCardSlot.RedAce,     ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-red-ace.png",     1.377974330357143)  },
-        { FaceCardSlot.BlackJack,  ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-black-jack.png",  1.2036021205357144) },
-        { FaceCardSlot.RedJack,    ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-red-jack.png",    1.372998046875)     },
-        { FaceCardSlot.BlackQueen, ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-black-queen.png", 1.4577162388392857) },
-        { FaceCardSlot.RedQueen,   ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-red-queen.png",   1.1898465401785714) },
-        { FaceCardSlot.BlackKing,  ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-black-king.png",  1.3697209821428573) },
-        { FaceCardSlot.RedKing,    ("avares://SoliBee.Desktop/Assets/FaceCardArt/ff-red-king.png",    1.493359375)        },
-    };
+    // FF mode default face art — empty; assets removed, falls back to LargeAceText rank display.
+    private static readonly Dictionary<FaceCardSlot, (string Uri, double Scale)> _ffDefaultArt = new();
 
     // Pre-allocated brushes — only ~5 combinations exist, no need to allocate per render
     // internal so ThemeEditorWindow can mutate .Color for live debug preview
@@ -69,6 +59,7 @@ public partial class CardView : UserControl
     internal static readonly SolidColorBrush _brushTextBlackNormal  = new(Color.Parse("#1A1A1A"));
     internal static readonly SolidColorBrush _brushTextBlackFF      = new(Color.Parse("#C0C0C0"));
     internal static Color _ffShadowColor = Color.Parse("#B3FFD700");
+    internal static Color _normalShadowColor = Color.Parse("#26000000");
 
     // 2× render size: card backs render at 120×173, face art at 70×60
     private const int CardBackCacheW = 240;
@@ -78,19 +69,34 @@ public partial class CardView : UserControl
 
     public static void ApplyThemeColors(SoliBee.Core.Models.GameOptions options)
     {
-        if (options.ThemeFaceBackNormal  != null) _brushFaceBackNormal.Color  = Color.Parse(options.ThemeFaceBackNormal);
-        if (options.ThemeFaceBackFF       != null) _brushFaceBackFF.Color       = Color.Parse(options.ThemeFaceBackFF);
-        if (options.ThemeFaceBorderNormal != null) _brushFaceBorderNormal.Color = Color.Parse(options.ThemeFaceBorderNormal);
-        if (options.ThemeFaceBorderFF     != null) _brushFaceBorderFF.Color     = Color.Parse(options.ThemeFaceBorderFF);
-        if (options.ThemeFaceBorderFFCard != null) _brushFaceBorderFFCard.Color = Color.Parse(options.ThemeFaceBorderFFCard);
-        if (options.ThemeTextRed          != null) _brushTextRed.Color          = Color.Parse(options.ThemeTextRed);
-        if (options.ThemeTextRedFF        != null) _brushTextRedFF.Color        = Color.Parse(options.ThemeTextRedFF);
-        if (options.ThemeTextBlackNormal  != null) _brushTextBlackNormal.Color  = Color.Parse(options.ThemeTextBlackNormal);
-        if (options.ThemeTextBlackFF      != null) _brushTextBlackFF.Color      = Color.Parse(options.ThemeTextBlackFF);
+        _brushFaceBackNormal.Color  = options.ThemeFaceBackNormal  != null ? Color.Parse(options.ThemeFaceBackNormal)  : Colors.White;
+        _brushFaceBackFF.Color       = options.ThemeFaceBackFF       != null ? Color.Parse(options.ThemeFaceBackFF)       : Color.Parse("#333333");
+        _brushFaceBorderNormal.Color = options.ThemeFaceBorderNormal != null ? Color.Parse(options.ThemeFaceBorderNormal) : Color.Parse("#D9000000");
+        _brushFaceBorderFF.Color     = options.ThemeFaceBorderFF     != null ? Color.Parse(options.ThemeFaceBorderFF)     : Color.Parse("#00000000");
+        _brushFaceBorderFFCard.Color = options.ThemeFaceBorderFFCard != null ? Color.Parse(options.ThemeFaceBorderFFCard) : Colors.White;
+        _brushTextRed.Color          = options.ThemeTextRed          != null ? Color.Parse(options.ThemeTextRed)          : Color.Parse("#CC1A1A");
+        _brushTextRedFF.Color        = options.ThemeTextRedFF        != null ? Color.Parse(options.ThemeTextRedFF)        : Color.Parse("#FF4444");
+        _brushTextBlackNormal.Color  = options.ThemeTextBlackNormal  != null ? Color.Parse(options.ThemeTextBlackNormal)  : Color.Parse("#1A1A1A");
+        _brushTextBlackFF.Color      = options.ThemeTextBlackFF      != null ? Color.Parse(options.ThemeTextBlackFF)      : Color.Parse("#C0C0C0");
+        _normalShadowColor           = options.ThemeCardShadow       != null ? Color.Parse(options.ThemeCardShadow)       : Color.Parse("#26000000");
     }
+
+    internal static double FaceLetterFontSize = 90.0;
 
     internal static void BroadcastThemeChange() =>
         WeakReferenceMessenger.Default.Send(new FaceCardArtChangedMessage());
+
+    public static void InvalidateAllCardViews(Visual root)
+    {
+        if (root == null) return;
+        foreach (var visual in root.GetVisualDescendants())
+        {
+            if (visual is CardView cv)
+            {
+                cv.UpdateCardFace();
+            }
+        }
+    }
 
     public static void InvalidateFaceArtCache(string? filePath = null)
     {
@@ -113,14 +119,20 @@ public partial class CardView : UserControl
     private DispatcherTimer? _slideAnimTimer;
     private int              _slideStepsLeft;
     private double           _slideFromX, _slideFromY;
+    private bool             _slideFadeIn;
     private readonly TranslateTransform _slideTx = new();
     private const int SlideSteps = 9;
 
-    public void BeginSlideIn(double fromX, double fromY, int durationMs = 180)
+    private DispatcherTimer? _hintPulseTimer;
+    private SolidColorBrush? _hintPulseBrush;
+
+    public void BeginSlideIn(double fromX, double fromY, int durationMs = 180, bool fadeIn = false)
     {
         _slideAnimTimer?.Stop();
-        _slideFromX = fromX;
-        _slideFromY = fromY;
+        _slideFromX  = fromX;
+        _slideFromY  = fromY;
+        _slideFadeIn = fadeIn;
+        if (fadeIn) Opacity = 0;
         _slideStepsLeft = SlideSteps;
         RenderTransform = _slideTx;
         ApplySlideFrame();
@@ -137,6 +149,7 @@ public partial class CardView : UserControl
                 _slideAnimTimer!.Stop();
                 _slideAnimTimer = null;
                 RenderTransform = null;
+                if (_slideFadeIn) { Opacity = 1.0; _slideFadeIn = false; }
             }
         };
         _slideAnimTimer.Start();
@@ -148,6 +161,7 @@ public partial class CardView : UserControl
         double eased  = 1.0 - Math.Pow(1.0 - t, 3.0);
         _slideTx.X    = _slideFromX * (1.0 - eased);
         _slideTx.Y    = _slideFromY * (1.0 - eased);
+        if (_slideFadeIn) Opacity = eased;
     }
 
     // GIF animation state — shared timer so all animated backs tick together
@@ -353,6 +367,8 @@ public partial class CardView : UserControl
             _slideAnimTimer?.Stop();
             _slideAnimTimer = null;
             RenderTransform = null;
+            _hintPulseTimer?.Stop();
+            _hintPulseTimer = null;
         };
     }
 
@@ -377,7 +393,7 @@ public partial class CardView : UserControl
             CardFace.BorderThickness  = new Avalonia.Thickness(ffMode ? 2.5 : 0.75);
             CardFace.BoxShadow        = ffMode
                 ? new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = -5, Blur = 6, Spread = 0, Color = _ffShadowColor })
-                : new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = 1.5, Blur = 1.5, Spread = 0, Color = Color.Parse("#26000000") });
+                : new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = 1.5, Blur = 1.5, Spread = 0, Color = _normalShadowColor });
 
             // Update rank text (Top-left & Bottom-right)
             string rankStr = Card.Rank switch
@@ -413,13 +429,14 @@ public partial class CardView : UserControl
             // Hide/Reset center components
             SuitCanvas.IsVisible = false;
             LargeAceText.IsVisible = false;
+            FaceLetterText.IsVisible = false;
             FaceCardImage.IsVisible = false;
             AcePipImage.IsVisible = false;
 
             // Custom face art takes priority over all other rendering for A/J/Q/K.
             // In FF mode any configured art is used as the default (enabled flag is ignored);
             // in normal mode the enabled flag still gates display.
-            var faceSlot = FaceCardSlotExtensions.SlotFor(Card.Rank, isRed);
+            var faceSlot = FaceCardSlotExtensions.SlotFor(Card.Rank, Card.Suit);
             var customFaceArt = faceSlot.HasValue
                 ? (ffMode ? FaceCardArtService.GetArt(faceSlot.Value) : FaceCardArtService.GetEnabledArt(faceSlot.Value))
                 : null;
@@ -499,24 +516,27 @@ public partial class CardView : UserControl
                 }
                 else if (Card.Rank >= 11 && Card.Rank <= 13)
                 {
-                    FaceCardImage.IsVisible = true;
-                    FaceCardImage.Width  = 70;
-                    FaceCardImage.Height = 60;
-                    string filename = Card.Rank switch
+                    FaceLetterText.IsVisible  = true;
+                    FaceLetterText.FontSize   = FaceLetterFontSize;
+                    FaceLetterText.Text       = rankStr;
+                    FaceLetterText.Foreground = brush;
+
+                    double offsetX = 0;
+                    double offsetY = 0;
+                    if (Card.Rank == 11) // J
                     {
-                        11 => isRed ? "red j.png" : "J.png",
-                        12 => isRed ? "red q.png" : "Q.png",
-                        13 => isRed ? "red k.png" : "K.png",
-                        _ => ""
-                    };
-                    try { FaceCardImage.Source = GetCachedBitmap($"avares://SoliBee.Desktop/Assets/{filename}"); }
-                    catch
-                    {
-                        FaceCardImage.IsVisible = false;
-                        LargeAceText.IsVisible = true;
-                        LargeAceText.Text = rankStr;
-                        LargeAceText.Foreground = brush;
+                        offsetX = -4;
+                        offsetY = -10;
                     }
+                    else if (Card.Rank == 12) // Q
+                    {
+                        offsetX = -5;
+                    }
+                    else if (Card.Rank == 13) // K
+                    {
+                        offsetX = -6;
+                    }
+                    FaceLetterText.RenderTransform = new TranslateTransform(offsetX, offsetY);
                 }
                 else
                 {
@@ -803,9 +823,9 @@ public partial class CardView : UserControl
             offsetX = options.CardBackOffsetX;
             offsetY = options.CardBackOffsetY;
         }
-        else if (theme == "Warrior of Light")
+        else if (theme == "Priest")
         {
-            filename = "warrior-of-light.png";
+            filename = "priest.png";
             scale = options.CardBackScale;
             offsetX = options.CardBackOffsetX;
             offsetY = options.CardBackOffsetY;
@@ -1153,12 +1173,26 @@ public partial class CardView : UserControl
     public void ShowHint()
     {
         if (CardFace == null || Card == null || !Card.IsFaceUp) return;
-        CardFace.BorderBrush = new SolidColorBrush(Color.Parse("#FFD700"));
+        _hintPulseTimer?.Stop();
+        _hintPulseBrush = new SolidColorBrush(Color.Parse("#FFD700"));
+        CardFace.BorderBrush     = _hintPulseBrush;
         CardFace.BorderThickness = new Thickness(3);
+        double phase = 0;
+        _hintPulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _hintPulseTimer.Tick += (_, _) =>
+        {
+            phase += 0.08;
+            byte alpha = (byte)(160 + (int)(95 * Math.Sin(phase)));
+            _hintPulseBrush!.Color = Color.FromArgb(alpha, 0xFF, 0xD7, 0x00);
+        };
+        _hintPulseTimer.Start();
     }
 
     public void ClearHint()
     {
+        _hintPulseTimer?.Stop();
+        _hintPulseTimer = null;
+        _hintPulseBrush = null;
         if (CardFace == null || Card == null || !Card.IsFaceUp) return;
         bool ffMode = SettingsService.LoadOptions().IsFinalFantasyMode;
         CardFace.BorderBrush     = ffMode ? _brushFaceBorderFFCard : _brushFaceBorderNormal;
@@ -1234,7 +1268,8 @@ public partial class CardView : UserControl
             if (dragCanvas != null)
             {
                 _isDragging = true;
-                _dragStartPoint = e.GetPosition(gameView);
+                _dragCanvas = dragCanvas;
+                _dragStartPoint = e.GetPosition(dragCanvas);
                 _sourcePileView = pileView;
 
                 _draggedStack.Clear();
@@ -1255,7 +1290,7 @@ public partial class CardView : UserControl
 
                 foreach (var cv in _draggedStack)
                 {
-                    var pos = cv.TranslatePoint(new Point(0, 0), gameView);
+                    var pos = cv.TranslatePoint(new Point(0, 0), dragCanvas);
                     _dragStartPositions[cv] = pos ?? new Point(0, 0);
                 }
 
@@ -1331,12 +1366,12 @@ public partial class CardView : UserControl
 
     private void CardView_PointerMoved(object sender, PointerEventArgs e)
     {
-        if (!_isDragging || Card == null) return;
+        if (!_isDragging || Card == null || _dragCanvas == null) return;
 
         var gameView = FindParentGameView();
         if (gameView == null) return;
 
-        var currentPoint = e.GetPosition(gameView);
+        var currentPoint = e.GetPosition(_dragCanvas);
         double dx = currentPoint.X - _dragStartPoint.X;
         double dy = currentPoint.Y - _dragStartPoint.Y;
 
@@ -1418,6 +1453,7 @@ public partial class CardView : UserControl
         _draggedStack.Clear();
         _dragStartPositions.Clear();
         _sourcePileView = null;
+        _dragCanvas = null;
     }
 
     private PileView? FindTargetPileView(CardGameView gameView, Point dropPoint)

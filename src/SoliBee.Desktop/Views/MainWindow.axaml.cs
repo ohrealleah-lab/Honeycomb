@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
@@ -16,9 +17,14 @@ public partial class MainWindow : Window
 {
     private AppCoordinator _coordinator;
     private ThemeEditorWindow? _themeEditor;
+    private HelpWindow? _helpWindow;
     private readonly ScaleTransform _contentScale = new(1.0, 1.0);
     private string _currentGameTag = "SolitaireDraw1";
     private bool _variantInitializing;
+    private DispatcherTimer? _gameSwitchTimer;
+    private DispatcherTimer? _prefSlideTimer;
+    private string _pendingAction = "";
+    private bool _revertingSelection = false;
 
     public MainWindow()
     {
@@ -42,6 +48,14 @@ public partial class MainWindow : Window
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
             ApplyFeltColor(m.Options);
+            CardView.ApplyThemeColors(m.Options);
+            CardView.InvalidateAllCardViews(this);
+        });
+
+        // Also listen to FaceCardArtChangedMessage to keep all cards in sync
+        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
+        {
+            CardView.InvalidateAllCardViews(this);
         });
 
         // Set initial background color
@@ -120,11 +134,26 @@ public partial class MainWindow : Window
         }
     }
 
-    private void NewGame_Click(object? sender, RoutedEventArgs e)
+    private bool IsGameInProgress()
+    {
+        if (this.DataContext is GameViewModel klondikeVm)
+            return klondikeVm.State != null && klondikeVm.State.MovesCount > 0 && !klondikeVm.State.HasWon;
+        if (this.DataContext is FreecellViewModel freecellVm)
+            return freecellVm.State != null && freecellVm.State.MovesCount > 0 && !freecellVm.State.HasWon;
+        if (this.DataContext is SpiderViewModel spiderVm)
+            return spiderVm.State != null && spiderVm.State.MovesCount > 0 && !spiderVm.State.HasWon;
+        if (this.DataContext is VideoPokerViewModel vpVm)
+            return vpVm.State != null && vpVm.State.Phase == VideoPokerPhase.Holding;
+        if (this.DataContext is BlackjackViewModel bjVm)
+            return bjVm.State != null && bjVm.IsPlaying;
+        return false;
+    }
+
+    private void ExecuteNewGame()
     {
         if (this.DataContext is GameViewModel klondikeVm)
             klondikeVm.InitializeGame();
-        else if (this.DataContext is BeecellViewModel freecellVm)
+        else if (this.DataContext is FreecellViewModel freecellVm)
             freecellVm.InitializeGame();
         else if (this.DataContext is SpiderViewModel spiderVm)
             spiderVm.InitializeGame();
@@ -134,11 +163,11 @@ public partial class MainWindow : Window
             bjVm.StartNewGame();
     }
 
-    private void RestartGame_Click(object? sender, RoutedEventArgs e)
+    private void ExecuteRestartGame()
     {
         if (this.DataContext is GameViewModel klondikeVm)
             klondikeVm.RestartGame();
-        else if (this.DataContext is BeecellViewModel freecellVm)
+        else if (this.DataContext is FreecellViewModel freecellVm)
             freecellVm.RestartGame();
         else if (this.DataContext is SpiderViewModel spiderVm)
             spiderVm.RestartGame();
@@ -148,12 +177,73 @@ public partial class MainWindow : Window
             bjVm.StartNewGame();
     }
 
+    private void NewGame_Click(object? sender, RoutedEventArgs e)
+    {
+        if (IsGameInProgress())
+        {
+            _pendingAction = "NewGame";
+            ConfirmActionTitle.Text = "Start New Game?";
+            ConfirmActionMessage.Text = "Are you sure you want to abandon the current game and start a new one?";
+            ConfirmActionButton.Content = "New Game";
+            ConfirmActionOverlay.IsVisible = true;
+        }
+        else
+        {
+            ExecuteNewGame();
+        }
+    }
+
+    private void RestartGame_Click(object? sender, RoutedEventArgs e)
+    {
+        if (IsGameInProgress())
+        {
+            _pendingAction = "RestartGame";
+            ConfirmActionTitle.Text = "Restart Game?";
+            ConfirmActionMessage.Text = "Are you sure you want to restart the current game?";
+            ConfirmActionButton.Content = "Restart";
+            ConfirmActionOverlay.IsVisible = true;
+        }
+        else
+        {
+            ExecuteRestartGame();
+        }
+    }
+
+    private void ConfirmAction_Click(object? sender, RoutedEventArgs e)
+    {
+        ConfirmActionOverlay.IsVisible = false;
+        if (_pendingAction == "NewGame")
+        {
+            ExecuteNewGame();
+        }
+        else if (_pendingAction == "RestartGame")
+        {
+            ExecuteRestartGame();
+        }
+        else if (_pendingAction.StartsWith("SwitchGame:"))
+        {
+            string targetTag = _pendingAction.Substring("SwitchGame:".Length);
+            _currentGameTag = targetTag;
+            _revertingSelection = true;
+            GameSelectionBox.SelectedIndex = GameModeToIndex(targetTag);
+            _revertingSelection = false;
+            ApplyGameSwitch(targetTag);
+        }
+        _pendingAction = "";
+    }
+
+    private void CancelConfirmAction_Click(object? sender, RoutedEventArgs e)
+    {
+        ConfirmActionOverlay.IsVisible = false;
+        _pendingAction = "";
+    }
+
     private void Undo_Click(object? sender, RoutedEventArgs e)
     {
         if (this.DataContext is GameViewModel klondikeVm)
             klondikeVm.UndoCommand.Execute(null);
-        else if (this.DataContext is BeecellViewModel beecellVm)
-            beecellVm.Undo();
+        else if (this.DataContext is FreecellViewModel freecellVm)
+            freecellVm.Undo();
         else if (this.DataContext is SpiderViewModel spiderVm)
             spiderVm.Undo();
         // Video Poker has no undo
@@ -163,8 +253,8 @@ public partial class MainWindow : Window
     {
         if (this.DataContext is GameViewModel klondikeVm)
             klondikeVm.FindHint();
-        else if (this.DataContext is BeecellViewModel beecellVm)
-            beecellVm.FindHint();
+        else if (this.DataContext is FreecellViewModel freecellVm)
+            freecellVm.FindHint();
         else if (this.DataContext is SpiderViewModel spiderVm)
             spiderVm.FindHint();
         // Video Poker has no hint
@@ -175,7 +265,7 @@ public partial class MainWindow : Window
         GameOptions options = this.DataContext switch
         {
             GameViewModel vm        => vm.Options,
-            BeecellViewModel vm     => vm.Options,
+            FreecellViewModel vm     => vm.Options,
             SpiderViewModel vm      => vm.Options,
             VideoPokerViewModel _   => _coordinator.GameViewModel.Options,
             _                       => _coordinator.GameViewModel.Options
@@ -186,6 +276,67 @@ public partial class MainWindow : Window
         preferencesView.ShowVegasOption = this.DataContext is GameViewModel;
         this.PreferencesContent.Content = preferencesView;
         this.PreferencesOverlay.IsVisible = true;
+        SlideInPreferences();
+    }
+
+    private void SlideInPreferences()
+    {
+        _prefSlideTimer?.Stop();
+        PreferencesPanel.RenderTransform = new TranslateTransform(360, 0);
+        double elapsed = 0;
+        _prefSlideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _prefSlideTimer.Tick += (_, _) =>
+        {
+            elapsed += 16;
+            double t    = Math.Min(1.0, elapsed / 220.0);
+            double ease = 1 - Math.Pow(1 - t, 3);
+            if (PreferencesPanel.RenderTransform is TranslateTransform tx) tx.X = 360 * (1.0 - ease);
+            if (t >= 1.0) { _prefSlideTimer!.Stop(); _prefSlideTimer = null; }
+        };
+        _prefSlideTimer.Start();
+    }
+
+    private void SlideOutAndClosePreferences()
+    {
+        _prefSlideTimer?.Stop();
+        double startX   = PreferencesPanel.RenderTransform is TranslateTransform tx0 ? tx0.X : 0;
+        double elapsed  = 0;
+        _prefSlideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _prefSlideTimer.Tick += (_, _) =>
+        {
+            elapsed += 16;
+            double t    = Math.Min(1.0, elapsed / 160.0);
+            double ease = t * t;
+            if (PreferencesPanel.RenderTransform is TranslateTransform tx) tx.X = startX + (360 - startX) * ease;
+            if (t >= 1.0)
+            {
+                _prefSlideTimer!.Stop();
+                _prefSlideTimer = null;
+                this.PreferencesOverlay.IsVisible = false;
+                this.PreferencesContent.Content   = null;
+                if (PreferencesPanel.RenderTransform is TranslateTransform tx2) tx2.X = 0;
+            }
+        };
+        _prefSlideTimer.Start();
+    }
+
+    private void Help_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_helpWindow != null) { _helpWindow.Activate(); return; }
+        _helpWindow = new HelpWindow();
+        _helpWindow.Closed += (_, _) => _helpWindow = null;
+        _helpWindow.Show(this);
+    }
+
+    private void Exit_Click(object? sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void About_Click(object? sender, RoutedEventArgs e)
+    {
+        var about = new AboutWindow();
+        about.Show(this);
     }
 
     private void ThemeEditor_Click(object? sender, RoutedEventArgs e)
@@ -201,10 +352,7 @@ public partial class MainWindow : Window
     }
 
     private void ClosePreferences_Click(object? sender, RoutedEventArgs e)
-    {
-        this.PreferencesOverlay.IsVisible = false;
-        this.PreferencesContent.Content = null;
-    }
+        => SlideOutAndClosePreferences();
 
     private void PokerVariantBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -216,125 +364,198 @@ public partial class MainWindow : Window
             vpView.OnVariantChanged();
     }
 
+    private static string GetBaseGameTag(string tag)
+    {
+        if (tag == "Freecell1" || tag == "Freecell2") return "Freecell";
+        if (tag == "Spider1" || tag == "Spider2" || tag == "Spider4") return "Spider";
+        return tag;
+    }
+
     private static int GameModeToIndex(string tag) => tag switch
     {
         "SolitaireDraw3" => 2,
+        "Freecell1"      => 3,
+        "Freecell2"      => 4,
+        "Spider1"        => 5,
+        "Spider2"        => 6,
+        "Spider4"        => 7,
+        "VideoPoker"     => 8,
+        "Blackjack"      => 9,
         "Beecell"        => 3,
-        "Spider"         => 4,
-        "VideoPoker"     => 5,
-        "Blackjack"      => 6,
+        "Freecell"       => 3,
+        "Spider"         => 5,
         _                => 1,
     };
 
     private void ResizeWindowForGame(string tag)
     {
-        this.MinWidth = tag switch
+        string baseTag = GetBaseGameTag(tag);
+        this.MinWidth = baseTag switch
         {
-            "Beecell"    => 1140,
+            "Freecell"   => 1140,
             "Spider"     => 1420,
             "VideoPoker" => 1050,
-            "Blackjack"  => 900,
+            "Blackjack"  => 1000,
             _            => 1080,
         };
+        this.MinHeight = tag == "Blackjack" ? 920 : 750;
     }
 
     private void GameSelectionBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (GameSelectionBox == null || _coordinator == null) return;
+        if (GameSelectionBox == null || _coordinator == null || _revertingSelection) return;
+        if (GameSelectionBox.SelectedItem is not ComboBoxItem item || item.Tag == null) return;
 
-        if (GameSelectionBox.SelectedItem is ComboBoxItem item && item.Tag != null)
+        var tag = item.Tag.ToString() ?? "SolitaireDraw1";
+
+        if (tag != _currentGameTag && IsGameInProgress())
         {
-            var tag = item.Tag.ToString() ?? "SolitaireDraw1";
-            SaveCurrentWindowSize();   // capture size of the game we're leaving
-            _currentGameTag = tag;
-            ResizeWindowForGame(tag);  // sets MinWidth only
-            if (tag == "SolitaireDraw1" || tag == "SolitaireDraw3")
+            _revertingSelection = true;
+            GameSelectionBox.SelectedIndex = GameModeToIndex(_currentGameTag);
+            _revertingSelection = false;
+
+            _pendingAction = "SwitchGame:" + tag;
+            ConfirmActionTitle.Text = "Switch Game?";
+            ConfirmActionMessage.Text = "Are you sure you want to abandon the current game and switch to another?";
+            ConfirmActionButton.Content = "Switch Game";
+            ConfirmActionOverlay.IsVisible = true;
+            return;
+        }
+
+        SaveCurrentWindowSize();
+        _currentGameTag = tag;
+        ResizeWindowForGame(tag);
+
+        // No existing content → switch immediately (first load, no flash)
+        if (MainContent.Content == null)
+        {
+            ApplyGameSwitch(tag);
+            return;
+        }
+
+        _gameSwitchTimer?.Stop();
+        double elapsed = 0;
+        bool switched  = false;
+        const double outMs = 150, inMs = 200;
+
+        _gameSwitchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _gameSwitchTimer.Tick += (_, _) =>
+        {
+            elapsed += 16;
+            if (!switched)
             {
-                bool wantDrawThree = (tag == "SolitaireDraw3");
-                if (_coordinator.GameViewModel.Options.IsDrawConstraintsEnabled != wantDrawThree || _coordinator.ActiveViewModel != _coordinator.GameViewModel)
+                double t = Math.Min(1.0, elapsed / outMs);
+                MainContent.Opacity = 1.0 - t;
+                if (t >= 1.0) { switched = true; elapsed = 0; ApplyGameSwitch(tag); }
+            }
+            else
+            {
+                double t = Math.Min(1.0, elapsed / inMs);
+                MainContent.Opacity = t;
+                if (t >= 1.0)
                 {
-                    _coordinator.GameViewModel.Options.IsDrawConstraintsEnabled = wantDrawThree;
-                    SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
-                    _coordinator.GameViewModel.InitializeGame();
-                }
-
-                _coordinator.SwitchToGame();
-                this.MainContent.Content = new GameView { DataContext = _coordinator.GameViewModel };
-            }
-            else if (tag == "Beecell")
-            {
-                _coordinator.SwitchToBeecell();
-                this.MainContent.Content = new BeecellView { DataContext = _coordinator.BeecellViewModel };
-            }
-            else if (tag == "Spider")
-            {
-                _coordinator.SwitchToSpider();
-                this.MainContent.Content = new SpiderView { DataContext = _coordinator.SpiderViewModel };
-            }
-            else if (tag == "VideoPoker")
-            {
-                _coordinator.SwitchToVideoPoker();
-                this.MainContent.Content = new VideoPokerView { DataContext = _coordinator.VideoPokerViewModel };
-            }
-            else if (tag == "Blackjack")
-            {
-                _coordinator.SwitchToBlackjack();
-                this.MainContent.Content = new BlackjackView { DataContext = _coordinator.BlackjackViewModel };
-            }
-
-            this.DataContext = _coordinator.ActiveViewModel;
-
-            // Restore zoom and window size for the newly selected game
-            ApplyZoom(GetGameZoom(tag));
-            RestoreWindowSizeForGame(tag);
-
-            bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
-            if (HintButton != null)
-                HintButton.IsVisible = isCardGame;
-            if (UndoButton != null)
-                UndoButton.IsVisible = isCardGame;
-
-            if (PokerVariantBox != null)
-            {
-                if (tag == "VideoPoker")
-                {
-                    _variantInitializing = true;
-                    PokerVariantBox.SelectedIndex = (int)_coordinator.VideoPokerViewModel.Options.Variant;
-                    _variantInitializing = false;
-                    PokerVariantBox.IsVisible = true;
-                }
-                else
-                {
-                    PokerVariantBox.IsVisible = false;
+                    _gameSwitchTimer!.Stop();
+                    _gameSwitchTimer = null;
+                    MainContent.Opacity = 1.0;
                 }
             }
+        };
+        _gameSwitchTimer.Start();
+    }
 
-            _coordinator.GameViewModel.Options.LastGameMode = tag;
-            SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
+    private void ApplyGameSwitch(string tag)
+    {
+        if (tag == "SolitaireDraw1" || tag == "SolitaireDraw3")
+        {
+            bool wantDrawThree = (tag == "SolitaireDraw3");
+            if (_coordinator.GameViewModel.Options.IsDrawConstraintsEnabled != wantDrawThree
+                || _coordinator.ActiveViewModel != _coordinator.GameViewModel)
+            {
+                _coordinator.GameViewModel.Options.IsDrawConstraintsEnabled = wantDrawThree;
+                SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
+                _coordinator.GameViewModel.InitializeGame();
+            }
+            _coordinator.SwitchToGame();
+            this.MainContent.Content = new GameView { DataContext = _coordinator.GameViewModel };
+        }
+        else if (tag == "Freecell1" || tag == "Freecell2")
+        {
+            int deckCount = tag == "Freecell2" ? 2 : 1;
+            var opts = _coordinator.GameViewModel.Options;
+            if (opts.FreecellDeckCount != deckCount || _coordinator.ActiveViewModel != _coordinator.FreecellViewModel)
+            {
+                opts.FreecellDeckCount = deckCount;
+                SettingsService.SaveOptions(opts);
+                _coordinator.FreecellViewModel.InitializeGame();
+            }
+            _coordinator.SwitchToFreecell();
+            this.MainContent.Content = new FreecellView { DataContext = _coordinator.FreecellViewModel };
+        }
+        else if (tag == "Spider1" || tag == "Spider2" || tag == "Spider4")
+        {
+            int suitCount = tag switch
+            {
+                "Spider2" => 2,
+                "Spider4" => 4,
+                _ => 1
+            };
+            var opts = _coordinator.GameViewModel.Options;
+            if (opts.SpiderSuitCount != suitCount || _coordinator.ActiveViewModel != _coordinator.SpiderViewModel)
+            {
+                opts.SpiderSuitCount = suitCount;
+                SettingsService.SaveOptions(opts);
+                _coordinator.SpiderViewModel.InitializeGame();
+            }
+            _coordinator.SwitchToSpider();
+            this.MainContent.Content = new SpiderView { DataContext = _coordinator.SpiderViewModel };
+        }
+        else if (tag == "VideoPoker")
+        {
+            _coordinator.SwitchToVideoPoker();
+            this.MainContent.Content = new VideoPokerView { DataContext = _coordinator.VideoPokerViewModel };
+        }
+        else if (tag == "Blackjack")
+        {
+            _coordinator.SwitchToBlackjack();
+            this.MainContent.Content = new BlackjackView { DataContext = _coordinator.BlackjackViewModel };
+        }
 
-            // Apply felt color of the active VM
-            if (_coordinator.ActiveViewModel is GameViewModel klondikeVm)
+        this.DataContext = _coordinator.ActiveViewModel;
+        ApplyZoom(GetGameZoom(tag));
+        RestoreWindowSizeForGame(tag);
+
+        bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
+        if (HintButton != null) HintButton.IsVisible = isCardGame;
+        if (UndoButton != null) UndoButton.IsVisible = isCardGame;
+        var options = SettingsService.LoadOptions();
+        string baseTag = GetBaseGameTag(tag);
+
+        if (PokerVariantBox != null)
+        {
+            if (tag == "VideoPoker")
             {
-                ApplyFeltColor(klondikeVm.Options);
+                _variantInitializing = true;
+                PokerVariantBox.SelectedIndex = (int)_coordinator.VideoPokerViewModel.Options.Variant;
+                _variantInitializing = false;
+                PokerVariantBox.IsVisible = true;
             }
-            else if (_coordinator.ActiveViewModel is BeecellViewModel freecellVm)
+            else
             {
-                ApplyFeltColor(freecellVm.Options);
-            }
-            else if (_coordinator.ActiveViewModel is SpiderViewModel spiderVm)
-            {
-                ApplyFeltColor(spiderVm.Options);
-            }
-            else if (_coordinator.ActiveViewModel is VideoPokerViewModel)
-            {
-                ApplyFeltColor(_coordinator.GameViewModel.Options);
-            }
-            else if (_coordinator.ActiveViewModel is BlackjackViewModel bjvm)
-            {
-                // Blackjack has its own felt settings; fall back to shared options for window chrome
-                ApplyFeltColor(_coordinator.GameViewModel.Options);
+                PokerVariantBox.IsVisible = false;
             }
         }
+
+        _coordinator.GameViewModel.Options.LastGameMode = tag;
+        SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
+
+        if (_coordinator.ActiveViewModel is GameViewModel klondikeVm)
+            ApplyFeltColor(klondikeVm.Options);
+        else if (_coordinator.ActiveViewModel is FreecellViewModel freecellVm)
+            ApplyFeltColor(freecellVm.Options);
+        else if (_coordinator.ActiveViewModel is SpiderViewModel spiderVm)
+            ApplyFeltColor(spiderVm.Options);
+        else
+            ApplyFeltColor(_coordinator.GameViewModel.Options);
     }
 
     // ── Per-game window size ──────────────────────────────────────────────────
@@ -344,11 +565,11 @@ public partial class MainWindow : Window
         if (_coordinator == null) return;
         var opts = _coordinator.GameViewModel.Options;
         bool maximized = WindowState == WindowState.Maximized;
-        switch (_currentGameTag)
+        switch (GetBaseGameTag(_currentGameTag))
         {
-            case "Beecell":
-                if (!maximized) { opts.BeecellWidth = Width; opts.BeecellHeight = Height; }
-                opts.BeecellMaximized = maximized;
+            case "Freecell":
+                if (!maximized) { opts.FreecellWidth = Width; opts.FreecellHeight = Height; }
+                opts.FreecellMaximized = maximized;
                 break;
             case "Spider":
                 if (!maximized) { opts.SpiderWidth = Width; opts.SpiderHeight = Height; }
@@ -373,9 +594,9 @@ public partial class MainWindow : Window
     private void RestoreWindowSizeForGame(string tag)
     {
         var opts = _coordinator.GameViewModel.Options;
-        (double w, double h, bool max) = tag switch
+        (double w, double h, bool max) = GetBaseGameTag(tag) switch
         {
-            "Beecell"    => (opts.BeecellWidth,    opts.BeecellHeight,    opts.BeecellMaximized),
+            "Freecell"   => (opts.FreecellWidth,    opts.FreecellHeight,    opts.FreecellMaximized),
             "Spider"     => (opts.SpiderWidth,     opts.SpiderHeight,     opts.SpiderMaximized),
             "VideoPoker" => (opts.VideoPokerWidth, opts.VideoPokerHeight, opts.VideoPokerMaximized),
             "Blackjack"  => (opts.BlackjackWidth,  opts.BlackjackHeight,  opts.BlackjackMaximized),
@@ -395,9 +616,9 @@ public partial class MainWindow : Window
 
     // ── Per-game zoom ─────────────────────────────────────────────────────────
 
-    private double GetGameZoom(string tag) => tag switch
+    private double GetGameZoom(string tag) => GetBaseGameTag(tag) switch
     {
-        "Beecell"    => _coordinator.GameViewModel.Options.BeecellZoom,
+        "Freecell"   => _coordinator.GameViewModel.Options.FreecellZoom,
         "Spider"     => _coordinator.GameViewModel.Options.SpiderZoom,
         "VideoPoker" => _coordinator.GameViewModel.Options.VideoPokerZoom,
         "Blackjack"  => _coordinator.GameViewModel.Options.BlackjackZoom,
@@ -408,9 +629,9 @@ public partial class MainWindow : Window
     {
         zoom = Math.Clamp(zoom, 0.5, 1.5);
         var opts = _coordinator.GameViewModel.Options;
-        switch (_currentGameTag)
+        switch (GetBaseGameTag(_currentGameTag))
         {
-            case "Beecell":    opts.BeecellZoom    = zoom; break;
+            case "Freecell":   opts.FreecellZoom    = zoom; break;
             case "Spider":     opts.SpiderZoom     = zoom; break;
             case "VideoPoker": opts.VideoPokerZoom = zoom; break;
             case "Blackjack":  opts.BlackjackZoom  = zoom; break;
@@ -431,29 +652,81 @@ public partial class MainWindow : Window
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape && PreferencesOverlay.IsVisible)
+        if (e.Key == Key.Escape)
+        {
+            if (ConfirmActionOverlay != null && ConfirmActionOverlay.IsVisible)
+            {
+                e.Handled = true;
+                ConfirmActionOverlay.IsVisible = false;
+                _pendingAction = "";
+                return;
+            }
+            if (PreferencesOverlay != null && PreferencesOverlay.IsVisible)
+            {
+                e.Handled = true;
+                SlideOutAndClosePreferences();
+                return;
+            }
+        }
+
+        if (e.Key == Key.F1)
         {
             e.Handled = true;
-            PreferencesOverlay.IsVisible = false;
-            PreferencesContent.Content = null;
+            Help_Click(null, new RoutedEventArgs());
+            return;
+        }
+        if (e.Key == Key.F2)
+        {
+            e.Handled = true;
+            Preferences_Click(null, new RoutedEventArgs());
             return;
         }
 
-        if ((e.KeyModifiers & KeyModifiers.Control) == 0) return;
-        if (e.Key == Key.OemPlus || e.Key == Key.Add)
+        if ((e.KeyModifiers & KeyModifiers.Control) != 0)
         {
-            e.Handled = true;
-            ApplyZoom(GetGameZoom(_currentGameTag) + 0.05);
-        }
-        else if (e.Key == Key.OemMinus || e.Key == Key.Subtract)
-        {
-            e.Handled = true;
-            ApplyZoom(GetGameZoom(_currentGameTag) - 0.05);
-        }
-        else if (e.Key == Key.D0 || e.Key == Key.NumPad0)
-        {
-            e.Handled = true;
-            ApplyZoom(1.0);
+            if (e.Key == Key.OemPlus || e.Key == Key.Add)
+            {
+                e.Handled = true;
+                ApplyZoom(GetGameZoom(_currentGameTag) + 0.05);
+            }
+            else if (e.Key == Key.OemMinus || e.Key == Key.Subtract)
+            {
+                e.Handled = true;
+                ApplyZoom(GetGameZoom(_currentGameTag) - 0.05);
+            }
+            else if (e.Key == Key.D0 || e.Key == Key.NumPad0)
+            {
+                e.Handled = true;
+                ApplyZoom(1.0);
+            }
+            else if (e.Key == Key.N)
+            {
+                e.Handled = true;
+                NewGame_Click(null, new RoutedEventArgs());
+            }
+            else if (e.Key == Key.R)
+            {
+                e.Handled = true;
+                RestartGame_Click(null, new RoutedEventArgs());
+            }
+            else if (e.Key == Key.Z)
+            {
+                bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
+                if (isCardGame)
+                {
+                    e.Handled = true;
+                    Undo_Click(null, new RoutedEventArgs());
+                }
+            }
+            else if (e.Key == Key.H)
+            {
+                bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
+                if (isCardGame)
+                {
+                    e.Handled = true;
+                    Hint_Click(null, new RoutedEventArgs());
+                }
+            }
         }
     }
 }

@@ -11,8 +11,8 @@ public class GameStatistics
     public int VegasHighScore { get; set; }
     public int StandardHighScore { get; set; }
 
-    // Beecell per-mode stats: keys are "standard_1deck", "vegas_1deck", "standard_2deck", "vegas_2deck"
-    public Dictionary<string, ModeStats> BeecellStatsByMode { get; set; } = new();
+    // Freecell per-mode stats: keys are "standard_1deck", "vegas_1deck", "standard_2deck", "vegas_2deck"
+    public Dictionary<string, ModeStats> FreecellStatsByMode { get; set; } = new();
 
     // Spider per-suit stats: keys are "1", "2", "4"
     public Dictionary<string, ModeStats> SpiderStatsBySuit { get; set; } = new();

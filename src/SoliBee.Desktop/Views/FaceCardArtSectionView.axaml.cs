@@ -17,10 +17,14 @@ namespace SoliBee.Desktop.Views;
 
 public partial class FaceCardArtSectionView : UserControl
 {
-    private static readonly FaceCardSlot[] BlackSlots =
+    private static readonly FaceCardSlot[] SpadesSlots =
         { FaceCardSlot.BlackAce, FaceCardSlot.BlackJack, FaceCardSlot.BlackQueen, FaceCardSlot.BlackKing };
-    private static readonly FaceCardSlot[] RedSlots =
+    private static readonly FaceCardSlot[] HeartsSlots =
         { FaceCardSlot.RedAce, FaceCardSlot.RedJack, FaceCardSlot.RedQueen, FaceCardSlot.RedKing };
+    private static readonly FaceCardSlot[] DiamondsSlots =
+        { FaceCardSlot.DiamondsAce, FaceCardSlot.DiamondsJack, FaceCardSlot.DiamondsQueen, FaceCardSlot.DiamondsKing };
+    private static readonly FaceCardSlot[] ClubsSlots =
+        { FaceCardSlot.ClubsAce, FaceCardSlot.ClubsJack, FaceCardSlot.ClubsQueen, FaceCardSlot.ClubsKing };
 
     public FaceCardArtSectionView()
     {
@@ -30,10 +34,15 @@ public partial class FaceCardArtSectionView : UserControl
 
     private void BuildGrid()
     {
-        BlackRow.Children.Clear();
-        RedRow.Children.Clear();
-        foreach (var slot in BlackSlots) BlackRow.Children.Add(BuildTile(slot));
-        foreach (var slot in RedSlots) RedRow.Children.Add(BuildTile(slot));
+        SpadesRow.Children.Clear();
+        HeartsRow.Children.Clear();
+        DiamondsRow.Children.Clear();
+        ClubsRow.Children.Clear();
+        
+        foreach (var slot in SpadesSlots) SpadesRow.Children.Add(BuildTile(slot));
+        foreach (var slot in HeartsSlots) HeartsRow.Children.Add(BuildTile(slot));
+        foreach (var slot in DiamondsSlots) DiamondsRow.Children.Add(BuildTile(slot));
+        foreach (var slot in ClubsSlots) ClubsRow.Children.Add(BuildTile(slot));
     }
 
     private Control BuildTile(FaceCardSlot slot)
