@@ -246,16 +246,16 @@ public struct GameView: View {
                 ZStack {
                     VStack(spacing: 16) {
                         // Display current active hint
-                if let hint = viewModel.activeHint {
+                if viewModel.activeHint != nil {
                     HStack {
-                        Text("💡 \(hint.description)")
+                        Text("💡")
                             .font(.system(.body, design: .monospaced))
                             .foregroundColor(.yellow)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 4)
                             .background(Color.black.opacity(0.3))
                             .cornerRadius(4)
-                        
+
                         Button("Dismiss") {
                             viewModel.clearHint()
                         }
@@ -445,7 +445,7 @@ public struct GameView: View {
                 if viewModel.isStuck && !viewModel.state.hasWon {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(viewModel.isStockExhausted ? "Stock exhausted — no moves left." : "No moves available.")
+                            Text("No moves remaining.")
                                 .font(.system(.headline, design: .monospaced))
                                 .foregroundColor(.white)
                             Text("There are no valid moves remaining.")
@@ -1003,7 +1003,7 @@ struct OptionsView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
         }
-        .frame(width: 380)
+        .frame(width: 440)
         .background(Color(NSColor.windowBackgroundColor))
     }
 }

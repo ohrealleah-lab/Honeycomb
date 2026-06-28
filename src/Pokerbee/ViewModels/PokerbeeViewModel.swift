@@ -31,6 +31,7 @@ public final class PokerbeeViewModel {
     }
 
     public var sessionChips: Int   // in-memory only, never persisted
+    private var aiChipStacks: [Int] = []  // persists AI stacks across hands
 
     public var zoomScale: CGFloat = 1.0
     public var defaultZoomScale: CGFloat = 1.0
@@ -137,6 +138,8 @@ public final class PokerbeeViewModel {
 
     public func startNewHand() {
         stopTimer()
+        // Save AI chip stacks before clearing state
+        let savedAIStacks = state.players.filter { $0.isAI }.map { $0.sessionChips }
         state = PokerbeeGameState()
         state.handNumber = statistics.handsPlayed + 1
 
@@ -146,9 +149,10 @@ public final class PokerbeeViewModel {
         players.append(PokerbeePlayer(name: "You", sessionChips: sessionChips, isAI: false))
         let aiCount = max(1, options.seatCount - 1)
         for i in 0..<aiCount {
+            let chips = i < savedAIStacks.count ? savedAIStacks[i] : options.startingChips
             players.append(PokerbeePlayer(
                 name: "AI \(i + 1)",
-                sessionChips: options.startingChips,
+                sessionChips: chips,
                 isAI: true,
                 aiDifficulty: options.aiDifficulty
             ))
@@ -250,6 +254,14 @@ public final class PokerbeeViewModel {
             return
         }
 
+        // Mark this player as having acted in the current round
+        state.actedThisRound.insert(state.players[playerIndex].id)
+
+        // A raise reopens action — everyone else must act again
+        if case .raise = action {
+            state.actedThisRound = [state.players[playerIndex].id]
+        }
+
         if state.activePlayers.count == 1 {
             awardPotToLastPlayer()
             return
@@ -274,7 +286,9 @@ public final class PokerbeeViewModel {
     private func isBettingRoundComplete() -> Bool {
         let active = state.players.filter { !$0.isFolded }
         guard active.count > 1 else { return true }
-        return active.allSatisfy { $0.currentBet == state.currentBetAmount || $0.sessionChips == 0 }
+        let allActed = active.allSatisfy { state.actedThisRound.contains($0.id) }
+        let betsEqual = active.allSatisfy { $0.currentBet == state.currentBetAmount || $0.sessionChips == 0 }
+        return allActed && betsEqual
     }
 
     private func nextActivePlayerIndex(after current: Int) -> Int {
@@ -294,11 +308,12 @@ public final class PokerbeeViewModel {
     }
 
     private func advancePhase() {
-        // Reset per-round bets
+        // Reset per-round bets and acted tracking
         for i in 0..<state.players.count {
             state.players[i].currentBet = 0
         }
         state.currentBetAmount = 0
+        state.actedThisRound = []
 
         switch state.currentPhase {
         case .preDrawBetting:

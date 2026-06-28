@@ -31,6 +31,7 @@ public final class TejasViewModel {
     }
 
     public var sessionChips: Int   // in-memory only
+    private var aiChipStacks: [Int] = []  // persists AI stacks across hands
 
     public var zoomScale: CGFloat = 1.0
     public var defaultZoomScale: CGFloat = 1.0
@@ -137,6 +138,8 @@ public final class TejasViewModel {
 
     public func startNewHand() {
         stopTimer()
+        // Save AI chip stacks before clearing state
+        let savedAIStacks = state.players.filter { $0.isAI }.map { $0.sessionChips }
         state = TejasGameState()
         state.handNumber = statistics.handsPlayed + 1
 
@@ -145,9 +148,10 @@ public final class TejasViewModel {
         players.append(TejasPlayer(name: "You", sessionChips: sessionChips, isAI: false))
         let aiCount = max(1, options.seatCount - 1)
         for i in 0..<aiCount {
+            let chips = i < savedAIStacks.count ? savedAIStacks[i] : options.startingChips
             players.append(TejasPlayer(
                 name: "AI \(i + 1)",
-                sessionChips: options.startingChips,
+                sessionChips: chips,
                 isAI: true,
                 aiDifficulty: options.aiDifficulty
             ))

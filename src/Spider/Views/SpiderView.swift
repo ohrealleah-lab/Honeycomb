@@ -208,20 +208,18 @@ public struct SpiderView: View {
                 
                 // Game Board Area
                 ZStack {
-                    viewModel.options.feltColor.primaryColor
-                    
                     VStack(spacing: 16) {
                         // Hint Banner
-                        if let hint = viewModel.activeHint {
+                        if viewModel.activeHint != nil {
                             HStack {
-                                Text("💡 \(hint.description)")
+                                Text("💡")
                                     .font(.system(.body, design: .monospaced))
                                     .foregroundColor(.yellow)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 4)
                                     .background(Color.black.opacity(0.3))
                                     .cornerRadius(4)
-                                
+
                                 Button("Dismiss") {
                                     viewModel.clearHint()
                                 }
@@ -311,10 +309,10 @@ public struct SpiderView: View {
                     if viewModel.isStuck && !viewModel.state.hasWon {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("No moves available.")
+                                Text("No moves remaining.")
                                     .font(.system(.headline, design: .monospaced))
                                     .foregroundColor(.white)
-                                Text("No valid moves remain and the stock is empty.")
+                                Text("There are no valid moves remaining.")
                                     .font(.system(.subheadline, design: .monospaced))
                                     .foregroundColor(.white.opacity(0.8))
                             }
@@ -366,7 +364,7 @@ public struct SpiderView: View {
                         .background(Color.black.opacity(0.85))
                         .cornerRadius(12)
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
-                        .frame(width: 380)
+                        .frame(width: 440)
                     }
                     
                     // Victory Cascade Overlay
@@ -710,7 +708,7 @@ struct SpiderOptionsView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
         }
-        .frame(width: 380)
+        .frame(width: 440)
         .background(Color(NSColor.windowBackgroundColor))
     }
 }

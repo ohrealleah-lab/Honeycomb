@@ -23,7 +23,7 @@ public struct EmptyPileView: View {
     
     public var body: some View {
         RoundedRectangle(cornerRadius: 10)
-            .fill(feltColor.statusBarColor)
+            .fill(Color.black.opacity(0.04))
             .frame(width: 128, height: 181)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)

@@ -236,7 +236,9 @@ public final class VideoPokerViewModel {
         guard state.hand.count == 5 else { return }
 
         let hand = state.hand
-        let result = PokerHandEvaluator.evaluate(hand)
+        let result = options.variant == .deucesWild
+            ? PokerHandEvaluator.evaluateWithDeuces(hand)
+            : PokerHandEvaluator.evaluate(hand)
 
         // Walk the pay table from top (best) to bottom and find first match
         for entry in payTable {
@@ -303,7 +305,7 @@ public final class VideoPokerViewModel {
     }
 
     public func maxBet() {
-        state.currentBet = min(5, state.sessionCredits)
+        state.currentBet = max(1, min(5, state.sessionCredits))
         if state.phase == .deal || state.phase == .result { deal() }
     }
 

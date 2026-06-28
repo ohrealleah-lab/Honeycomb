@@ -505,7 +505,8 @@ public final class GameViewModel {
     
     public func moveCards(_ cards: [Card], from sourcePile: Pile, to targetPile: Pile) {
         guard isValidMove(cards: cards, to: targetPile) else { return }
-        
+        lastMoveSourceId = sourcePile.id
+        lastMoveTargetId = targetPile.id
         saveStateForUndo()
         startTimerIfNeeded()
         playSound(named: "snap")
@@ -692,126 +693,130 @@ public final class GameViewModel {
         public let targetPileId: String
         public let description: String
     }
-    
+
     public var activeHint: HintMove? = nil
-    
+    private var hintClearTask: DispatchWorkItem?
+    private var hintQueue: [HintMove] = []
+    private var hintQueueIndex: Int = 0
+    private var lastMoveSourceId: String? = nil
+    private var lastMoveTargetId: String? = nil
+
     public func findHint() {
-        activeHint = nil
-        
-        // Priority 1: Move card to foundation (from Tableau or Waste)
-        if let topWaste = state.waste.topCard {
-            for foundation in state.foundations {
-                if isValidMove(cards: [topWaste], to: foundation) {
-                    activeHint = HintMove(
-                        card: topWaste,
-                        sourcePileId: state.waste.id,
-                        targetPileId: foundation.id,
-                        description: "Move \(topWaste.rankString)\(topWaste.suit.symbol) from Waste to Foundation."
-                    )
-                    return
-                }
-            }
-        }
-        
-        for tableauColumn in state.tableau {
-            if let topTab = tableauColumn.topCard {
-                for foundation in state.foundations {
-                    if isValidMove(cards: [topTab], to: foundation) {
-                        activeHint = HintMove(
-                            card: topTab,
-                            sourcePileId: tableauColumn.id,
-                            targetPileId: foundation.id,
-                            description: "Move \(topTab.rankString)\(topTab.suit.symbol) to Foundation."
-                        )
-                        return
-                    }
-                }
-            }
-        }
-        
-        // Priority 2: Reveal a face-down card
-        for tableauColumn in state.tableau {
-            guard let firstFaceUpIndex = tableauColumn.cards.firstIndex(where: { $0.faceUp }) else { continue }
-            guard firstFaceUpIndex > 0 else { continue }
-            
-            let dragStack = Array(tableauColumn.cards[firstFaceUpIndex..<tableauColumn.cards.count])
-            
-            for targetColumn in state.tableau {
-                if targetColumn.id != tableauColumn.id && isValidMove(cards: dragStack, to: targetColumn) {
-                    activeHint = HintMove(
-                        card: dragStack.first!,
-                        sourcePileId: tableauColumn.id,
-                        targetPileId: targetColumn.id,
-                        description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to reveal face-down card."
-                    )
-                    return
-                }
-            }
-        }
-        
-        // Priority 3: Move a card/sequence within Tableau to organize or clear space
-        if let topWaste = state.waste.topCard {
-            for targetColumn in state.tableau {
-                if isValidMove(cards: [topWaste], to: targetColumn) {
-                    activeHint = HintMove(
-                        card: topWaste,
-                        sourcePileId: state.waste.id,
-                        targetPileId: targetColumn.id,
-                        description: "Move \(topWaste.rankString)\(topWaste.suit.symbol) from Waste to Tableau."
-                    )
-                    return
-                }
-            }
-        }
-        
-        for tableauColumn in state.tableau {
-            guard let firstFaceUpIndex = tableauColumn.cards.firstIndex(where: { $0.faceUp }) else { continue }
-            guard firstFaceUpIndex == 0 else { continue }
-            
-            let dragStack = Array(tableauColumn.cards[firstFaceUpIndex..<tableauColumn.cards.count])
-            
-            for targetColumn in state.tableau {
-                if targetColumn.id != tableauColumn.id && !targetColumn.isEmpty && isValidMove(cards: dragStack, to: targetColumn) {
-                    activeHint = HintMove(
-                        card: dragStack.first!,
-                        sourcePileId: tableauColumn.id,
-                        targetPileId: targetColumn.id,
-                        description: "Organize Tableau: Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(targetColumn.topCard!.rankString)."
-                    )
-                    return
-                }
-            }
-        }
-        
-        // Priority 4: Draw from Stock
-        if !state.stock.isEmpty {
-            activeHint = HintMove(
-                card: Card(suit: .spades, rank: 1, faceUp: false),
-                sourcePileId: state.stock.id,
-                targetPileId: state.waste.id,
-                description: "Draw from Stock pile."
-            )
-            return
-        } else if !state.waste.isEmpty {
-            activeHint = HintMove(
-                card: Card(suit: .spades, rank: 1, faceUp: false),
-                sourcePileId: state.waste.id,
-                targetPileId: state.stock.id,
-                description: "Recycle Waste pile to Stock."
-            )
+        hintClearTask?.cancel()
+
+        // Cycle through existing queue if hint is still visible
+        if !hintQueue.isEmpty && activeHint != nil {
+            hintQueueIndex = (hintQueueIndex + 1) % hintQueue.count
+            activeHint = labeled(hintQueue[hintQueueIndex], index: hintQueueIndex, total: hintQueue.count)
+            scheduleHintClear()
             return
         }
-        
-        activeHint = HintMove(
-            card: Card(suit: .spades, rank: 1, faceUp: false),
-            sourcePileId: "",
-            targetPileId: "",
-            description: "No such luck, friend! Try a new game!"
-        )
+
+        hintQueue = collectHints()
+        hintQueueIndex = 0
+
+        guard !hintQueue.isEmpty else {
+            activeHint = HintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
+                sourcePileId: "", targetPileId: "", description: "No such luck, friend! Try a new game!")
+            scheduleHintClear()
+            return
+        }
+
+        activeHint = labeled(hintQueue[0], index: 0, total: hintQueue.count)
+        scheduleHintClear()
     }
-    
+
+    private func labeled(_ hint: HintMove, index: Int, total: Int) -> HintMove {
+        let prefix = total > 1 ? "[\(index + 1)/\(total)] " : ""
+        return HintMove(card: hint.card, sourcePileId: hint.sourcePileId,
+            targetPileId: hint.targetPileId, description: prefix + hint.description)
+    }
+
+    private func collectHints() -> [HintMove] {
+        var scored: [(HintMove, Int)] = []
+
+        // Foundation moves
+        if let topWaste = state.waste.topCard {
+            for foundation in state.foundations where isValidMove(cards: [topWaste], to: foundation) {
+                scored.append((HintMove(card: topWaste, sourcePileId: state.waste.id, targetPileId: foundation.id,
+                    description: "Move \(topWaste.rankString)\(topWaste.suit.symbol) from Waste to Foundation."), 1000))
+            }
+        }
+        for col in state.tableau {
+            guard let top = col.topCard else { continue }
+            for foundation in state.foundations where isValidMove(cards: [top], to: foundation) {
+                scored.append((HintMove(card: top, sourcePileId: col.id, targetPileId: foundation.id,
+                    description: "Move \(top.rankString)\(top.suit.symbol) to Foundation."), 1000))
+            }
+        }
+
+        // Reveal face-down cards (scored by number hidden below)
+        for col in state.tableau {
+            guard let firstFaceUpIdx = col.cards.firstIndex(where: { $0.faceUp }),
+                  firstFaceUpIdx > 0 else { continue }
+            let faceDownCount = firstFaceUpIdx
+            let dragStack = Array(col.cards[firstFaceUpIdx...])
+            for targetCol in state.tableau where targetCol.id != col.id && isValidMove(cards: dragStack, to: targetCol) {
+                let label = faceDownCount == 1 ? "Reveal 1 face-down card." : "Reveal \(faceDownCount) face-down cards."
+                scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
+                    description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) — \(label)"), 500 + faceDownCount * 100))
+            }
+        }
+
+        // Waste to tableau
+        if let topWaste = state.waste.topCard {
+            for targetCol in state.tableau where isValidMove(cards: [topWaste], to: targetCol) {
+                scored.append((HintMove(card: topWaste, sourcePileId: state.waste.id, targetPileId: targetCol.id,
+                    description: "Move \(topWaste.rankString)\(topWaste.suit.symbol) from Waste to Tableau."), 300))
+            }
+        }
+
+        // Tableau-to-tableau (all face-up columns — reorganization)
+        for col in state.tableau {
+            guard let firstFaceUpIdx = col.cards.firstIndex(where: { $0.faceUp }),
+                  firstFaceUpIdx == 0, !col.isEmpty else { continue }
+            let dragStack = Array(col.cards[firstFaceUpIdx...])
+            for targetCol in state.tableau where targetCol.id != col.id && !targetCol.isEmpty && isValidMove(cards: dragStack, to: targetCol) {
+                scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
+                    description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(targetCol.topCard!.rankString)\(targetCol.topCard!.suit.symbol)."), 150))
+            }
+        }
+
+        // Stock / recycle
+        if !state.stock.isEmpty {
+            scored.append((HintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
+                sourcePileId: state.stock.id, targetPileId: state.waste.id, description: "Draw from Stock pile."), 50))
+        } else if canRecycleStock && !state.waste.isEmpty {
+            scored.append((HintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
+                sourcePileId: state.waste.id, targetPileId: state.stock.id, description: "Recycle Waste pile to Stock."), 20))
+        }
+
+        // Filter reversal of the last move made, then sort best-first
+        let filtered = scored.filter { (hint, _) in
+            guard let src = lastMoveSourceId, let tgt = lastMoveTargetId else { return true }
+            return !(hint.sourcePileId == tgt && hint.targetPileId == src)
+        }
+        let candidates = filtered.isEmpty ? scored : filtered
+        return candidates.sorted { $0.1 > $1.1 }.map { $0.0 }
+    }
+
+    private func scheduleHintClear() {
+        let task = DispatchWorkItem { [weak self] in
+            self?.activeHint = nil
+            self?.hintQueue = []
+            self?.hintQueueIndex = 0
+        }
+        hintClearTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: task)
+    }
+
     public func clearHint() {
+        hintClearTask?.cancel()
         activeHint = nil
+        hintQueue = []
+        hintQueueIndex = 0
+        lastMoveSourceId = nil
+        lastMoveTargetId = nil
     }
     
     public func runAutocomplete() {

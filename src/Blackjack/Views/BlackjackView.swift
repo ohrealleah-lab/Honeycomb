@@ -5,10 +5,17 @@ public struct BlackjackView: View {
     var viewModel: BlackjackViewModel
     @State private var isShowingOptions = false
     @State private var isShowingStats   = false
-    @State private var showResultBanner = false
-    @State private var cardsVisible     = true
-    @State private var dealerFlipped    = false  // triggers hole-card flip animation
+    @State private var showResultBanner  = false
+    @State private var cardsVisible      = true
+    @State private var dealerFlipped     = false  // triggers hole-card flip animation
+    @State private var resultHideTask:   DispatchWorkItem? = nil
+    @State private var showIdlePrompt    = false
+    @State private var idlePromptTask:   DispatchWorkItem? = nil
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
+
+    private let cardScale: CGFloat = 1.4
+    private var cardW: CGFloat { 128 * cardScale }  // ≈179
+    private var cardH: CGFloat { 181 * cardScale }  // ≈253
 
     public init(viewModel: BlackjackViewModel) {
         self.viewModel = viewModel
@@ -29,7 +36,7 @@ public struct BlackjackView: View {
 
                 Divider().overlay(Color.white.opacity(0.2))
 
-                VStack(spacing: 14) {
+                VStack(spacing: 12) {
                     creditDisplay
 
                     dealerArea
@@ -40,13 +47,28 @@ public struct BlackjackView: View {
                     playerArea
                         .padding(.horizontal, 24)
 
-                    Color.clear.frame(height: 20)
-
                     actionButtons
                 }
-                .padding(.vertical, 18)
+                .padding(.vertical, 16)
+                .overlay {
+                    if viewModel.state.phase == .result {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { viewModel.deal() }
+                    }
+                }
 
                 Spacer()
+            }
+
+            // Idle prompt overlay
+            if showIdlePrompt {
+                Text("Hit Space to Deal")
+                    .font(.display(28, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 8)
+                    .opacity(showIdlePrompt ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
             }
 
             // Result banner overlay
@@ -60,31 +82,48 @@ public struct BlackjackView: View {
                 .frame(width: 0, height: 0)
                 .clipped()
         }
-        .frame(minWidth: 680, minHeight: 600)
+        .frame(minWidth: 680, minHeight: 900)
         .sheet(isPresented: $isShowingOptions) {
             BlackjackOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
         }
         .sheet(isPresented: $isShowingStats) {
             BlackjackStatsView(viewModel: viewModel)
         }
+        .onAppear {
+            if viewModel.state.phase == .betting && viewModel.state.playerHands.isEmpty {
+                withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
+            }
+        }
         .onChange(of: viewModel.state.phase) { _, newPhase in
             if newPhase == .result {
+                idlePromptTask?.cancel()
+                withAnimation(.easeInOut(duration: 0.4)) { showIdlePrompt = false }
                 dealerFlipped = true
                 showResultBanner = true
                 withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                let bannerTask = DispatchWorkItem {
                     showResultBanner = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    let hideTask = DispatchWorkItem {
                         withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false }
+                        // Cards fully faded after 0.4s — schedule idle prompt 5s after that
+                        let promptTask = DispatchWorkItem {
+                            withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
+                        }
+                        idlePromptTask = promptTask
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 5.4, execute: promptTask)
                     }
+                    resultHideTask = hideTask
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: hideTask)
                 }
+                resultHideTask = bannerTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: bannerTask)
             }
-            if newPhase == .betting {
-                dealerFlipped = false
-                showResultBanner = false
-                withAnimation(.easeIn(duration: 0.2)) { cardsVisible = true }
-            }
-            if newPhase == .playing {
+            if newPhase == .betting || newPhase == .playing {
+                resultHideTask?.cancel()
+                resultHideTask = nil
+                idlePromptTask?.cancel()
+                idlePromptTask = nil
+                withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
                 dealerFlipped = false
                 showResultBanner = false
                 withAnimation(.easeIn(duration: 0.2)) { cardsVisible = true }
@@ -163,26 +202,19 @@ public struct BlackjackView: View {
     // MARK: - Credit Display
 
     private var creditDisplay: some View {
-        HStack(spacing: 32) {
+        HStack(spacing: 24) {
             VStack(spacing: 2) {
-                Text("SESSION")
+                Text("CREDITS")
                     .font(.display(10, weight: .bold))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.sessionCredits)")
                     .font(.display(22, weight: .black))
                     .foregroundColor(.white)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 8)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.35))
-                    RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(LinearGradient(colors: [Color.white.opacity(0.07), Color.clear],
-                                             startPoint: .top, endPoint: .bottom))
-                }
-            )
+
+            Text("·")
+                .font(.display(18, weight: .bold))
+                .foregroundColor(.white.opacity(0.3))
 
             VStack(spacing: 2) {
                 Text("BET")
@@ -192,15 +224,18 @@ public struct BlackjackView: View {
                     .font(.display(22, weight: .black))
                     .foregroundColor(.yellow)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 8)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.35))
-                    RoundedRectangle(cornerRadius: 8).stroke(Color.yellow.opacity(0.4), lineWidth: 1)
-                }
-            )
         }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 10)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.35))
+                RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(colors: [Color.white.opacity(0.07), Color.clear],
+                                         startPoint: .top, endPoint: .bottom))
+            }
+        )
     }
 
     // MARK: - Dealer Area
@@ -221,15 +256,16 @@ public struct BlackjackView: View {
                 }
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { idx, card in
                     CardView(card: card)
-                        .frame(width: 77, height: 112)
+                        .scaleEffect(cardScale)
+                        .frame(width: cardW, height: cardH)
                         .opacity(cardsVisible ? 1 : 0)
                         .animation(.easeIn(duration: 0.15).delay(Double(idx) * 0.08), value: cardsVisible)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
+            .frame(maxWidth: .infinity, minHeight: cardH, alignment: .center)
         }
     }
 
@@ -259,21 +295,22 @@ public struct BlackjackView: View {
                 .font(.display(12, weight: .bold))
                 .foregroundColor(.white.opacity(0.6))
 
-            HStack(alignment: .top, spacing: 20) {
+            HStack(alignment: .top, spacing: 24) {
                 ForEach(Array(viewModel.state.playerHands.enumerated()), id: \.offset) { handIdx, hand in
                     let isActive = handIdx == viewModel.state.activeHandIndex && viewModel.state.phase == .playing
-                    VStack(spacing: 6) {
-                        HStack(spacing: 8) {
+                    VStack(spacing: 8) {
+                        HStack(spacing: 16) {
                             ForEach(Array(hand.cards.enumerated()), id: \.offset) { cardIdx, card in
                                 CardView(card: card)
-                                    .frame(width: 77, height: 112)
+                                    .scaleEffect(cardScale)
+                                    .frame(width: cardW, height: cardH)
                                     .opacity(cardsVisible ? 1 : 0)
                                     .animation(.easeIn(duration: 0.15).delay(Double(cardIdx) * 0.08), value: cardsVisible)
                             }
                         }
-                        .padding(6)
+                        .padding(8)
                         .background(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(isActive ? Color.yellow.opacity(0.85) : Color.clear, lineWidth: 2)
                         )
 
@@ -293,7 +330,7 @@ public struct BlackjackView: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 140, alignment: .center)
+            .frame(maxWidth: .infinity, minHeight: cardH + 40, alignment: .center)
         }
     }
 
@@ -319,27 +356,18 @@ public struct BlackjackView: View {
     // MARK: - Result Banner
 
     private var resultBanner: some View {
-        let summary = viewModel.state.lastResultSummary
-        let isWin = summary.contains("Win") || summary.contains("Blackjack")
-        let isBust = summary.contains("Bust") || summary.contains("Dealer Wins") || summary.contains("Loss")
-
-        return VStack(spacing: 6) {
-            Text(summary)
+        VStack(spacing: 6) {
+            Text(viewModel.state.lastResultSummary)
                 .font(.display(24, weight: .black))
-                .foregroundColor(isWin ? .yellow : (isBust ? .red.opacity(0.9) : .white))
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.black.opacity(0.75))
-                .overlay(RoundedRectangle(cornerRadius: 14)
-                    .stroke(isWin ? Color.yellow.opacity(0.6) : Color.white.opacity(0.15), lineWidth: 1.5))
-        )
-        .shadow(color: .black.opacity(0.5), radius: 12)
-        .transition(.opacity.combined(with: .scale(scale: 0.92)))
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showResultBanner)
+        .background(Color.blue.opacity(0.9))
+        .cornerRadius(8)
+        .shadow(radius: 5)
+        .transition(.opacity)
     }
 
     // MARK: - Action Buttons
@@ -349,27 +377,27 @@ public struct BlackjackView: View {
             switch viewModel.state.phase {
             case .betting, .result:
                 casinoButton("-", color: .white.opacity(0.2)) { viewModel.decreaseBet() }
-                casinoButton("BET MAX", color: .orange.opacity(0.85)) { viewModel.maxBet() }
+                stackedButton("BET MAX", hotkey: "M", color: .orange.opacity(0.85), textColor: .white) { viewModel.maxBet() }
                 casinoButton("+", color: .white.opacity(0.2)) { viewModel.increaseBet() }
                 Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
-                casinoButton("DEAL", color: .yellow, textColor: .black,
-                             disabled: viewModel.state.sessionCredits < viewModel.state.currentBet) {
+                stackedButton("DEAL", hotkey: "Space", color: .yellow, textColor: .black,
+                              disabled: viewModel.state.sessionCredits < viewModel.state.currentBet) {
                     viewModel.deal()
                 }
 
             case .playing:
-                casinoButton("HIT",   color: .green.opacity(0.85))  { viewModel.hit() }
-                casinoButton("STAND", color: .red.opacity(0.75))    { viewModel.stand() }
+                casinoButton("HIT  [Space]",   color: .green.opacity(0.85))  { viewModel.hit() }
+                casinoButton("STAND  [S]",     color: .red.opacity(0.75))    { viewModel.stand() }
                 if viewModel.canDouble {
-                    casinoButton("DOUBLE", color: .blue.opacity(0.75)) { viewModel.doubleDown() }
+                    casinoButton("DOUBLE  [D]", color: .blue.opacity(0.75)) { viewModel.doubleDown() }
                 }
                 if viewModel.canSplit {
-                    casinoButton("SPLIT", color: .purple.opacity(0.75)) { viewModel.split() }
+                    casinoButton("SPLIT  [P]", color: .purple.opacity(0.75)) { viewModel.split() }
                 }
 
             case .dealerTurn:
-                casinoButton("HIT",   color: .green.opacity(0.3),  disabled: true) {}
-                casinoButton("STAND", color: .red.opacity(0.3),    disabled: true) {}
+                casinoButton("HIT  [Space]",   color: .green.opacity(0.3), disabled: true) {}
+                casinoButton("STAND  [S]",     color: .red.opacity(0.3),   disabled: true) {}
             }
 
             if viewModel.state.sessionCredits < viewModel.state.currentBet
@@ -378,6 +406,28 @@ public struct BlackjackView: View {
                 casinoButton("REBUY", color: .red.opacity(0.8)) { viewModel.rebuy() }
             }
         }
+    }
+
+    private func stackedButton(_ label: String, hotkey: String, color: Color,
+                               textColor: Color = .white, disabled: Bool = false,
+                               action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Text(label)
+                    .font(.display(14, weight: .black))
+                    .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
+                Text("[\(hotkey)]")
+                    .font(.display(10, weight: .bold))
+                    .foregroundColor((disabled ? textColor.opacity(0.4) : textColor).opacity(0.6))
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 8)
+            .background(disabled ? Color.gray.opacity(0.3) : color)
+            .cornerRadius(6)
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.3), lineWidth: 1))
+        }
+        .buttonStyle(PressButtonStyle())
+        .disabled(disabled)
     }
 
     private func casinoButton(_ label: String, color: Color, textColor: Color = .white,

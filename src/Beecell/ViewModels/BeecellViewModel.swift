@@ -410,7 +410,8 @@ public final class BeecellViewModel {
     
     public func moveCards(_ cards: [Card], from sourcePile: Pile, to targetPile: Pile) {
         guard isValidMove(cards: cards, to: targetPile) else { return }
-        
+        lastMoveSourceId = sourcePile.id
+        lastMoveTargetId = targetPile.id
         saveStateForUndo()
         startTimerIfNeeded()
         playSound(named: "snap")
@@ -599,130 +600,127 @@ public final class BeecellViewModel {
         public let targetPileId: String
         public let description: String
     }
-    
+
     public var activeHint: HintMove? = nil
-    
+    private var hintClearTask: DispatchWorkItem?
+    private var hintQueue: [HintMove] = []
+    private var hintQueueIndex: Int = 0
+    private var lastMoveSourceId: String? = nil
+    private var lastMoveTargetId: String? = nil
+
     public func findHint() {
-        activeHint = nil
-        
-        // 1. Foundations priority
-        // Check free cells to foundation
-        for cell in state.freeCells {
-            if let topCard = cell.topCard {
-                for foundation in state.foundations {
-                    if isValidMove(cards: [topCard], to: foundation) {
-                        activeHint = HintMove(
-                            card: topCard,
-                            sourcePileId: cell.id,
-                            targetPileId: foundation.id,
-                            description: "Move \(topCard.rankString)\(topCard.suit.symbol) from Free Cell to Foundation."
-                        )
-                        return
-                    }
-                }
-            }
+        hintClearTask?.cancel()
+
+        if !hintQueue.isEmpty && activeHint != nil {
+            hintQueueIndex = (hintQueueIndex + 1) % hintQueue.count
+            activeHint = labeled(hintQueue[hintQueueIndex], index: hintQueueIndex, total: hintQueue.count)
+            scheduleHintClear()
+            return
         }
-        // Check tableau top cards to foundation
-        for column in state.tableau {
-            if let topCard = column.topCard {
-                for foundation in state.foundations {
-                    if isValidMove(cards: [topCard], to: foundation) {
-                        activeHint = HintMove(
-                            card: topCard,
-                            sourcePileId: column.id,
-                            targetPileId: foundation.id,
-                            description: "Move \(topCard.rankString)\(topCard.suit.symbol) from Tableau to Foundation."
-                        )
-                        return
-                    }
-                }
-            }
+
+        hintQueue = collectHints()
+        hintQueueIndex = 0
+
+        guard !hintQueue.isEmpty else {
+            activeHint = HintMove(card: Card(suit: .spades, rank: 1, faceUp: true),
+                sourcePileId: "", targetPileId: "", description: "No moves available. Try restarting or starting a new game.")
+            scheduleHintClear()
+            return
         }
-        
-        // 2. Tableau to Tableau sequence moves
-        for sourceCol in state.tableau {
-            // Find longest valid sequence from top of sourceCol
-            guard !sourceCol.isEmpty else { continue }
-            
-            // Go backwards from bottom to find the start of the sorted sequence
-            var seqStartIdx = sourceCol.cards.count - 1
-            while seqStartIdx > 0 {
-                let upper = sourceCol.cards[seqStartIdx - 1]
-                let lower = sourceCol.cards[seqStartIdx]
-                if upper.rank == lower.rank + 1 && upper.isRed != lower.isRed {
-                    seqStartIdx -= 1
-                } else {
-                    break
-                }
-            }
-            
-            // Try to move sequences of various lengths
-            for idx in seqStartIdx..<sourceCol.cards.count {
-                let dragStack = Array(sourceCol.cards[idx..<sourceCol.cards.count])
-                
-                for targetCol in state.tableau {
-                    if targetCol.id != sourceCol.id && isValidMove(cards: dragStack, to: targetCol) {
-                        // Avoid moving single card to empty column unless it exposes something or is useful
-                        if targetCol.isEmpty && dragStack.count == 1 && idx == 0 {
-                            continue
-                        }
-                        
-                        activeHint = HintMove(
-                            card: dragStack.first!,
-                            sourcePileId: sourceCol.id,
-                            targetPileId: targetCol.id,
-                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to Tableau."
-                        )
-                        return
-                    }
-                }
-            }
-        }
-        
-        // 3. Free cell to Tableau
-        for cell in state.freeCells {
-            if let topCard = cell.topCard {
-                for targetCol in state.tableau {
-                    if isValidMove(cards: [topCard], to: targetCol) {
-                        activeHint = HintMove(
-                            card: topCard,
-                            sourcePileId: cell.id,
-                            targetPileId: targetCol.id,
-                            description: "Move \(topCard.rankString)\(topCard.suit.symbol) from Free Cell to Tableau."
-                        )
-                        return
-                    }
-                }
-            }
-        }
-        
-        // 4. Tableau to Free Cell (as a last resort to open space)
-        for sourceCol in state.tableau {
-            if let topCard = sourceCol.topCard {
-                for cell in state.freeCells {
-                    if cell.isEmpty {
-                        activeHint = HintMove(
-                            card: topCard,
-                            sourcePileId: sourceCol.id,
-                            targetPileId: cell.id,
-                            description: "Move \(topCard.rankString)\(topCard.suit.symbol) to Free Cell to clear space."
-                        )
-                        return
-                    }
-                }
-            }
-        }
-        
-        activeHint = HintMove(
-            card: Card(suit: .spades, rank: 1, faceUp: true),
-            sourcePileId: "",
-            targetPileId: "",
-            description: "No moves available. Try restarting or starting a new game."
-        )
+
+        activeHint = labeled(hintQueue[0], index: 0, total: hintQueue.count)
+        scheduleHintClear()
     }
-    
+
+    private func labeled(_ hint: HintMove, index: Int, total: Int) -> HintMove {
+        let prefix = total > 1 ? "[\(index + 1)/\(total)] " : ""
+        return HintMove(card: hint.card, sourcePileId: hint.sourcePileId,
+            targetPileId: hint.targetPileId, description: prefix + hint.description)
+    }
+
+    private func collectHints() -> [HintMove] {
+        var scored: [(HintMove, Int)] = []
+
+        // Foundation moves (highest value)
+        for cell in state.freeCells {
+            guard let top = cell.topCard else { continue }
+            for foundation in state.foundations where isValidMove(cards: [top], to: foundation) {
+                scored.append((HintMove(card: top, sourcePileId: cell.id, targetPileId: foundation.id,
+                    description: "Move \(top.rankString)\(top.suit.symbol) from Free Cell to Foundation."), 1000))
+            }
+        }
+        for col in state.tableau {
+            guard let top = col.topCard else { continue }
+            for foundation in state.foundations where isValidMove(cards: [top], to: foundation) {
+                scored.append((HintMove(card: top, sourcePileId: col.id, targetPileId: foundation.id,
+                    description: "Move \(top.rankString)\(top.suit.symbol) to Foundation."), 1000))
+            }
+        }
+
+        // Tableau-to-tableau: score higher if it frees a column or moves a longer sequence
+        for sourceCol in state.tableau {
+            guard !sourceCol.isEmpty else { continue }
+            var seqStart = sourceCol.cards.count - 1
+            while seqStart > 0 {
+                let upper = sourceCol.cards[seqStart - 1], lower = sourceCol.cards[seqStart]
+                if upper.rank == lower.rank + 1 && upper.isRed != lower.isRed { seqStart -= 1 } else { break }
+            }
+            for idx in seqStart..<sourceCol.cards.count {
+                let dragStack = Array(sourceCol.cards[idx...])
+                for targetCol in state.tableau where targetCol.id != sourceCol.id && isValidMove(cards: dragStack, to: targetCol) {
+                    if targetCol.isEmpty && dragStack.count == 1 && idx == 0 { continue }
+                    let freesColumn = dragStack.count == sourceCol.cards.count
+                    let score = freesColumn ? 700 : 400 + dragStack.count * 20
+                    scored.append((HintMove(card: dragStack.first!, sourcePileId: sourceCol.id, targetPileId: targetCol.id,
+                        description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to Tableau."), score))
+                }
+            }
+        }
+
+        // Free cell to tableau
+        for cell in state.freeCells {
+            guard let top = cell.topCard else { continue }
+            for targetCol in state.tableau where isValidMove(cards: [top], to: targetCol) {
+                scored.append((HintMove(card: top, sourcePileId: cell.id, targetPileId: targetCol.id,
+                    description: "Move \(top.rankString)\(top.suit.symbol) from Free Cell to Tableau."), 400))
+            }
+        }
+
+        // Tableau to free cell (last resort)
+        for sourceCol in state.tableau {
+            guard let top = sourceCol.topCard else { continue }
+            for cell in state.freeCells where cell.isEmpty {
+                scored.append((HintMove(card: top, sourcePileId: sourceCol.id, targetPileId: cell.id,
+                    description: "Move \(top.rankString)\(top.suit.symbol) to Free Cell to clear space."), 100))
+                break
+            }
+        }
+
+        let filtered = scored.filter { (hint, _) in
+            guard let src = lastMoveSourceId, let tgt = lastMoveTargetId else { return true }
+            return !(hint.sourcePileId == tgt && hint.targetPileId == src)
+        }
+        let candidates = filtered.isEmpty ? scored : filtered
+        return candidates.sorted { $0.1 > $1.1 }.map { $0.0 }
+    }
+
+    private func scheduleHintClear() {
+        let task = DispatchWorkItem { [weak self] in
+            self?.activeHint = nil
+            self?.hintQueue = []
+            self?.hintQueueIndex = 0
+        }
+        hintClearTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: task)
+    }
+
     public func clearHint() {
+        hintClearTask?.cancel()
         activeHint = nil
+        hintQueue = []
+        hintQueueIndex = 0
+        lastMoveSourceId = nil
+        lastMoveTargetId = nil
     }
     
     public func runAutocomplete() {

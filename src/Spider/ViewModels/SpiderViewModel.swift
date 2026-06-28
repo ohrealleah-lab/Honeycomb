@@ -413,7 +413,8 @@ public final class SpiderViewModel {
     
     public func moveCards(_ cards: [Card], from sourcePile: Pile, to targetPile: Pile) {
         guard isValidMove(cards: cards, to: targetPile) else { return }
-        
+        lastMoveSourceId = sourcePile.id
+        lastMoveTargetId = targetPile.id
         saveStateForUndo()
         startTimerIfNeeded()
         playSound(named: "snap")
@@ -519,19 +520,18 @@ public final class SpiderViewModel {
                 // Completed run detected!
                 completedRunFound = true
                 
-                // Remove from tableau
+                // Only remove from tableau if a foundation slot is available
+                guard let fdnIdx = state.foundations.firstIndex(where: { $0.isEmpty }) else { continue }
+
                 let completedCardIDs = Set(subrange.map { $0.id })
                 state.tableau[i].cards.removeAll { completedCardIDs.contains($0.id) }
-                
+
                 // Flip top card if face down
                 if !state.tableau[i].cards.isEmpty && !state.tableau[i].cards.last!.faceUp {
                     state.tableau[i].cards[state.tableau[i].cards.count - 1].faceUp = true
                 }
-                
-                // Place in the first empty foundation pile
-                if let fdnIdx = state.foundations.firstIndex(where: { $0.isEmpty }) {
-                    state.foundations[fdnIdx].cards = subrange
-                }
+
+                state.foundations[fdnIdx].cards = subrange
                 
                 state.score += 100
                 break // check one run per cycle to be safe, loops will trigger next clears on next moves anyway
@@ -604,22 +604,31 @@ public final class SpiderViewModel {
     private func hasValidMoves() -> Bool {
         if !state.stock.isEmpty && !hasEmptyTableauColumn { return true }
 
+        let hasEmpty = state.tableau.contains { $0.isEmpty }
+
         for colIdx in 0..<state.tableau.count {
             let col = state.tableau[colIdx]
             guard !col.isEmpty else { continue }
 
-            // Find start of movable face-up sequence
+            // Find start of the longest same-suit descending run (movable as a group)
             var seqStart = col.cards.count - 1
-            while seqStart > 0 && col.cards[seqStart].faceUp {
+            while seqStart > 0 {
                 let upper = col.cards[seqStart - 1]
                 let lower = col.cards[seqStart]
-                if upper.faceUp && upper.rank == lower.rank + 1 { seqStart -= 1 } else { break }
+                if upper.faceUp && upper.rank == lower.rank + 1 && upper.suit == lower.suit {
+                    seqStart -= 1
+                } else { break }
             }
 
-            let seq = Array(col.cards[seqStart...])
-            for tgtIdx in 0..<state.tableau.count where tgtIdx != colIdx {
-                let target = state.tableau[tgtIdx]
-                if isValidMove(cards: seq, to: target) { return true }
+            // Test every sub-sequence from seqStart up to the top card
+            for start in seqStart..<col.cards.count {
+                let seq = Array(col.cards[start...])
+                // Any face-up card can move to an empty column
+                if hasEmpty && seq.first?.faceUp == true { return true }
+                for tgtIdx in 0..<state.tableau.count where tgtIdx != colIdx {
+                    let target = state.tableau[tgtIdx]
+                    if isValidMove(cards: seq, to: target) { return true }
+                }
             }
         }
         return false
@@ -638,126 +647,130 @@ public final class SpiderViewModel {
         public let targetPileId: String
         public let description: String
     }
-    
+
     public var activeHint: SpiderHintMove? = nil
-    
+    private var hintClearTask: DispatchWorkItem?
+    private var hintQueue: [SpiderHintMove] = []
+    private var hintQueueIndex: Int = 0
+    private var lastMoveSourceId: String? = nil
+    private var lastMoveTargetId: String? = nil
+
     public func findHint() {
-        activeHint = nil
-        
-        // Priority 1: Move card(s) that builds/extends matching suit sequence
-        for colIdx in 0..<10 {
+        hintClearTask?.cancel()
+
+        if !hintQueue.isEmpty && activeHint != nil {
+            hintQueueIndex = (hintQueueIndex + 1) % hintQueue.count
+            activeHint = labeled(hintQueue[hintQueueIndex], index: hintQueueIndex, total: hintQueue.count)
+            scheduleHintClear()
+            return
+        }
+
+        hintQueue = collectHints()
+        hintQueueIndex = 0
+
+        guard !hintQueue.isEmpty else {
+            activeHint = SpiderHintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
+                sourcePileId: "", targetPileId: "", description: "No moves available. Replay or deal a new game!")
+            scheduleHintClear()
+            return
+        }
+
+        activeHint = labeled(hintQueue[0], index: 0, total: hintQueue.count)
+        scheduleHintClear()
+    }
+
+    private func labeled(_ hint: SpiderHintMove, index: Int, total: Int) -> SpiderHintMove {
+        let prefix = total > 1 ? "[\(index + 1)/\(total)] " : ""
+        return SpiderHintMove(card: hint.card, sourcePileId: hint.sourcePileId,
+            targetPileId: hint.targetPileId, description: prefix + hint.description)
+    }
+
+    private func collectHints() -> [SpiderHintMove] {
+        var scored: [(SpiderHintMove, Int)] = []
+
+        for colIdx in 0..<state.tableau.count {
             let col = state.tableau[colIdx]
             guard !col.isEmpty else { continue }
-            
-            // Find all valid sub-sequences in this column
+
             for k in (0..<col.cards.count).reversed() {
-                let dragStack = Array(col.cards[k..<col.cards.count])
+                let dragStack = Array(col.cards[k...])
                 guard isValidDragSequence(dragStack) else { break }
-                
-                for targetIdx in 0..<10 {
+
+                let faceDownBelow = k  // cards below drag start that are face-down
+                let freesColumn = k == 0  // moving all cards out of this column
+
+                for targetIdx in 0..<state.tableau.count {
                     let targetCol = state.tableau[targetIdx]
                     guard targetCol.id != col.id else { continue }
-                    
-                    if let topCard = targetCol.topCard, topCard.rank == dragStack.first!.rank + 1 && topCard.suit == dragStack.first!.suit {
-                        // Found a matching suit sequence build!
-                        activeHint = SpiderHintMove(
-                            card: dragStack.first!,
-                            sourcePileId: col.id,
-                            targetPileId: targetCol.id,
-                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to matching \(topCard.rankString)\(topCard.suit.symbol)."
-                        )
-                        return
-                    }
-                }
-            }
-        }
-        
-        // Priority 2: Move sequence/card to non-empty columns (different suit build)
-        for colIdx in 0..<10 {
-            let col = state.tableau[colIdx]
-            guard !col.isEmpty else { continue }
-            
-            for k in (0..<col.cards.count).reversed() {
-                let dragStack = Array(col.cards[k..<col.cards.count])
-                guard isValidDragSequence(dragStack) else { break }
-                
-                for targetIdx in 0..<10 {
-                    let targetCol = state.tableau[targetIdx]
-                    guard targetCol.id != col.id && !targetCol.isEmpty else { continue }
-                    
-                    if let topCard = targetCol.topCard, topCard.rank == dragStack.first!.rank + 1 {
-                        activeHint = SpiderHintMove(
-                            card: dragStack.first!,
-                            sourcePileId: col.id,
-                            targetPileId: targetCol.id,
-                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(topCard.rankString)\(topCard.suit.symbol)."
-                        )
-                        return
-                    }
-                }
-            }
-        }
-        
-        // Priority 3: Move sequence/card to empty columns to clear space or expose face-down cards
-        for colIdx in 0..<10 {
-            let col = state.tableau[colIdx]
-            guard !col.isEmpty else { continue }
-            
-            for k in (0..<col.cards.count).reversed() {
-                let dragStack = Array(col.cards[k..<col.cards.count])
-                guard isValidDragSequence(dragStack) else { break }
-                
-                // Only move if it exposes a face-down card or if it's a sequence not already sitting alone in an empty column
-                let exposesCard = k > 0
-                let isAlone = k == 0 && col.cards.count == dragStack.count
-                
-                if exposesCard || !isAlone {
-                    for targetIdx in 0..<10 {
-                        let targetCol = state.tableau[targetIdx]
-                        if targetCol.isEmpty {
-                            activeHint = SpiderHintMove(
-                                card: dragStack.first!,
-                                sourcePileId: col.id,
-                                targetPileId: targetCol.id,
-                                description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to empty column."
-                            )
-                            return
+
+                    if targetCol.isEmpty {
+                        // Moving to empty column: only worthwhile if it exposes a face-down card
+                        if faceDownBelow > 0 {
+                            let label = faceDownBelow == 1 ? "Reveal 1 face-down card." : "Reveal \(faceDownBelow) face-down cards."
+                            scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
+                                description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to empty column — \(label)"),
+                                350 + faceDownBelow * 50))
+                        } else if !freesColumn {
+                            scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
+                                description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to empty column."), 200))
+                        }
+                    } else if let topCard = targetCol.topCard, topCard.rank == dragStack.first!.rank + 1 {
+                        let sameSuit = topCard.suit == dragStack.first!.suit
+                        let faceDownBonus = faceDownBelow * 100
+                        if sameSuit {
+                            // Best: extends a same-suit run
+                            let score = faceDownBelow > 0 ? 1000 + faceDownBonus : 900
+                            let label = faceDownBelow > 0 ? " — Reveal \(faceDownBelow) face-down card\(faceDownBelow > 1 ? "s" : "")." : "."
+                            scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
+                                description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) onto \(topCard.rankString)\(topCard.suit.symbol)\(label)"), score))
+                        } else {
+                            // Cross-suit build
+                            let score = faceDownBelow > 0 ? 600 + faceDownBonus : 400
+                            let label = faceDownBelow > 0 ? " — Reveal \(faceDownBelow) face-down card\(faceDownBelow > 1 ? "s" : "")." : "."
+                            scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
+                                description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(topCard.rankString)\(topCard.suit.symbol)\(label)"), score))
                         }
                     }
                 }
             }
         }
-        
-        // Priority 4: Draw from Stock
+
+        // Draw from stock
         if !state.stock.isEmpty {
             if hasEmptyTableauColumn {
-                activeHint = SpiderHintMove(
-                    card: Card(suit: .spades, rank: 1, faceUp: false),
-                    sourcePileId: "",
-                    targetPileId: "",
-                    description: "Fill all empty columns before dealing cards."
-                )
+                scored.append((SpiderHintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
+                    sourcePileId: "", targetPileId: "", description: "Fill all empty columns before dealing cards."), 25))
             } else {
-                activeHint = SpiderHintMove(
-                    card: Card(suit: .spades, rank: 1, faceUp: false),
-                    sourcePileId: state.stock.id,
-                    targetPileId: "",
-                    description: "Deal cards from the Stock pile."
-                )
+                scored.append((SpiderHintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
+                    sourcePileId: state.stock.id, targetPileId: "", description: "Deal cards from the Stock pile."), 50))
             }
-            return
         }
-        
-        activeHint = SpiderHintMove(
-            card: Card(suit: .spades, rank: 1, faceUp: false),
-            sourcePileId: "",
-            targetPileId: "",
-            description: "No moves available. Replay or deal a new game!"
-        )
+
+        let filtered = scored.filter { (hint, _) in
+            guard let src = lastMoveSourceId, let tgt = lastMoveTargetId else { return true }
+            return !(hint.sourcePileId == tgt && hint.targetPileId == src)
+        }
+        let candidates = filtered.isEmpty ? scored : filtered
+        return candidates.sorted { $0.1 > $1.1 }.map { $0.0 }
     }
-    
+
+    private func scheduleHintClear() {
+        let task = DispatchWorkItem { [weak self] in
+            self?.activeHint = nil
+            self?.hintQueue = []
+            self?.hintQueueIndex = 0
+        }
+        hintClearTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: task)
+    }
+
     public func clearHint() {
+        hintClearTask?.cancel()
         activeHint = nil
+        hintQueue = []
+        hintQueueIndex = 0
+        lastMoveSourceId = nil
+        lastMoveTargetId = nil
     }
     
     // MARK: - Zoom Controls

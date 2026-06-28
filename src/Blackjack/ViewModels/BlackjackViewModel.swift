@@ -154,10 +154,10 @@ public final class BlackjackViewModel {
         playSound(named: "shuffle")
 
         // Deal: player card, dealer card, player card, dealer hole card (face-down)
-        var p1 = popCard(faceUp: true)!
-        var d1 = popCard(faceUp: true)!
-        var p2 = popCard(faceUp: true)!
-        var d2 = popCard(faceUp: false)  // hole card
+        let p1 = popCard(faceUp: true)!
+        let d1 = popCard(faceUp: true)!
+        let p2 = popCard(faceUp: true)!
+        let d2 = popCard(faceUp: false)  // hole card
 
         state.playerHands = [BlackjackHand(cards: [p1, p2], bet: state.currentBet)]
         state.dealerCards = [d1, d2 ?? popCard(faceUp: false)!]
@@ -227,7 +227,7 @@ public final class BlackjackViewModel {
     }
 
     public func maxBet() {
-        state.currentBet = min(5, state.sessionCredits)
+        state.currentBet = max(1, min(5, state.sessionCredits))
         if state.phase == .betting || state.phase == .result { deal() }
     }
 
@@ -290,7 +290,12 @@ public final class BlackjackViewModel {
             let result: BlackjackHandResult
             var payout = 0
 
-            if playerBJ && !dealerBJ {
+            if playerBJ && dealerBJ {
+                // Both have blackjack — push
+                result = .push
+                payout = hand.bet
+                statistics.pushes += 1
+            } else if playerBJ {
                 // Blackjack pays 3:2
                 result = .blackjack
                 payout = hand.bet + Int(Double(hand.bet) * 1.5)
@@ -379,7 +384,6 @@ public final class BlackjackViewModel {
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
         state.currentBet = options.betPerHand
-        deal()
     }
 
     public func restartCurrentGame() { startNewGame() }

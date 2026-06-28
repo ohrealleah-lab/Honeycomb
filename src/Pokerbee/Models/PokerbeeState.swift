@@ -48,6 +48,7 @@ public struct PokerbeeGameState {
     public var lastWinnerName: String?
     public var lastWinningHand: String?
     public var selectedDiscardIndices: Set<Int>
+    public var actedThisRound: Set<UUID>
 
     public init() {
         self.players = []
@@ -64,6 +65,7 @@ public struct PokerbeeGameState {
         self.lastWinnerName = nil
         self.lastWinningHand = nil
         self.selectedDiscardIndices = []
+        self.actedThisRound = []
     }
 
     public var activePlayers: [PokerbeePlayer] {

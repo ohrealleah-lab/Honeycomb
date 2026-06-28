@@ -11,6 +11,7 @@ public struct VideoPokerView: View {
     @State private var showParticles    = false
     @State private var showResultBanner = false
     @State private var cardsVisible     = true
+    @State private var showIdlePrompt   = false
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
 
     public init(viewModel: VideoPokerViewModel) {
@@ -51,6 +52,15 @@ public struct VideoPokerView: View {
                 Spacer()
             }
 
+            // Idle prompt
+            if showIdlePrompt {
+                Text("Hit Space to Deal")
+                    .font(.display(28, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 8)
+                    .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
+            }
+
             // Keyboard shortcut buttons (invisible, zero-size)
             keyboardShortcuts
                 .opacity(0)
@@ -68,13 +78,21 @@ public struct VideoPokerView: View {
             if viewModel.state.phase == .holding && !viewModel.state.hand.isEmpty {
                 animateDeal()
             }
+            if viewModel.state.phase == .deal {
+                withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
+            }
         }
         .onChange(of: viewModel.state.phase) { _, newPhase in
             if newPhase == .result {
                 showResultBanner = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     showResultBanner = false
-                    withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
+                        }
+                    }
                 }
                 if viewModel.state.lastPayout > 0 {
                     winFlash = true
@@ -84,9 +102,13 @@ public struct VideoPokerView: View {
                 }
             }
             if newPhase == .holding {
+                withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
                 showResultBanner = false
                 cardsVisible = true
                 animateDeal()
+            }
+            if newPhase == .deal {
+                withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
             }
         }
     }
@@ -342,18 +364,9 @@ public struct VideoPokerView: View {
     private var holdLabels: some View {
         HStack(spacing: 16) {
             ForEach(0..<5, id: \.self) { idx in
-                let isHeld = viewModel.state.heldIndices.contains(idx)
-                Group {
-                    switch viewModel.state.phase {
-                    case .result where !viewModel.state.hand.isEmpty:
-                        Text(isHeld ? "" : "NEW")
-                            .foregroundColor(.cyan.opacity(0.75))
-                    default:
-                        Text("")
-                    }
-                }
-                .font(.display(11, weight: .black))
-                .frame(width: scaledCardW, alignment: .center)
+                Text("")
+                    .font(.display(11, weight: .black))
+                    .frame(width: scaledCardW, alignment: .center)
             }
         }
         .frame(height: 16)

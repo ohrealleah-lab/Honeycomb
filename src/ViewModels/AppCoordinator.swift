@@ -9,7 +9,6 @@ public final class AppCoordinator {
         didSet {
             UserDefaults.standard.set(gameMode.rawValue, forKey: "selectedGameMode")
             syncSharedOptions(from: oldValue, to: gameMode)
-            if gameMode == .blackjack { blackjackViewModel.deal() }
         }
     }
 
@@ -22,7 +21,6 @@ public final class AppCoordinator {
     public init() {
         let saved = UserDefaults.standard.string(forKey: "selectedGameMode") ?? GameMode.klondike.rawValue
         self.gameMode = GameMode(rawValue: saved) ?? .klondike
-        if gameMode == .blackjack { blackjackViewModel.deal() }
     }
 
     // MARK: - Shared option sync
