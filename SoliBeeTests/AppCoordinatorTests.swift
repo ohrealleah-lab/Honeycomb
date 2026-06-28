@@ -28,6 +28,10 @@ struct AppCoordinatorTests {
         UserDefaults.standard.removeObject(forKey: "solitaire_options")
         UserDefaults.standard.removeObject(forKey: "beecell_options")
         UserDefaults.standard.removeObject(forKey: "spider_options")
+        UserDefaults.standard.removeObject(forKey: "videopoker_options")
+        UserDefaults.standard.removeObject(forKey: "blackjack_options")
+        UserDefaults.standard.removeObject(forKey: "pokerbee_options")
+        UserDefaults.standard.removeObject(forKey: "tejas_options")
         
         // 1. Initialize coordinator
         let coordinator = AppCoordinator()

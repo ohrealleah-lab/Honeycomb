@@ -3,53 +3,91 @@ import AppKit
 import Observation
 
 public enum FaceCardSlot: String, Codable, CaseIterable, Identifiable {
-    case blackAce, redAce
-    case blackJack, redJack
-    case blackQueen, redQueen
-    case blackKing, redKing
+    case spadeAce, clubAce, heartAce, diamondAce
+    case spadeJack, clubJack, heartJack, diamondJack
+    case spadeQueen, clubQueen, heartQueen, diamondQueen
+    case spadeKing, clubKing, heartKing, diamondKing
 
     public var id: String { rawValue }
 
     public var rankLabel: String {
         switch self {
-        case .blackAce, .redAce:     return "A"
-        case .blackJack, .redJack:   return "J"
-        case .blackQueen, .redQueen: return "Q"
-        case .blackKing, .redKing:   return "K"
+        case .spadeAce, .clubAce, .heartAce, .diamondAce:     return "A"
+        case .spadeJack, .clubJack, .heartJack, .diamondJack:   return "J"
+        case .spadeQueen, .clubQueen, .heartQueen, .diamondQueen: return "Q"
+        case .spadeKing, .clubKing, .heartKing, .diamondKing:   return "K"
         }
     }
 
     public var rank: Int {
         switch self {
-        case .blackAce, .redAce:     return 1
-        case .blackJack, .redJack:   return 11
-        case .blackQueen, .redQueen: return 12
-        case .blackKing, .redKing:   return 13
+        case .spadeAce, .clubAce, .heartAce, .diamondAce:     return 1
+        case .spadeJack, .clubJack, .heartJack, .diamondJack:   return 11
+        case .spadeQueen, .clubQueen, .heartQueen, .diamondQueen: return 12
+        case .spadeKing, .clubKing, .heartKing, .diamondKing:   return 13
         }
     }
 
     public var isRed: Bool {
         switch self {
-        case .redAce, .redJack, .redQueen, .redKing: return true
-        default: return false
+        case .heartAce, .diamondAce, .heartJack, .diamondJack, .heartQueen, .diamondQueen, .heartKing, .diamondKing:
+            return true
+        default:
+            return false
         }
     }
 
-    public var suitSymbol: String { isRed ? "♥" : "♠" }
+    public var suitSymbol: String {
+        switch self {
+        case .spadeAce, .spadeJack, .spadeQueen, .spadeKing: return "♠"
+        case .clubAce, .clubJack, .clubQueen, .clubKing: return "♣"
+        case .heartAce, .heartJack, .heartQueen, .heartKing: return "♥"
+        case .diamondAce, .diamondJack, .diamondQueen, .diamondKing: return "♦"
+        }
+    }
 
     public var displayName: String { "\(rankLabel)\(suitSymbol)" }
 
-    public static func slot(rank: Int, isRed: Bool) -> FaceCardSlot? {
-        switch (rank, isRed) {
-        case (1,  false): return .blackAce
-        case (1,  true):  return .redAce
-        case (11, false): return .blackJack
-        case (11, true):  return .redJack
-        case (12, false): return .blackQueen
-        case (12, true):  return .redQueen
-        case (13, false): return .blackKing
-        case (13, true):  return .redKing
-        default:          return nil
+    public static func slot(rank: Int, suit: Card.Suit) -> FaceCardSlot? {
+        switch (rank, suit) {
+        case (1, .spades): return .spadeAce
+        case (1, .clubs): return .clubAce
+        case (1, .hearts): return .heartAce
+        case (1, .diamonds): return .diamondAce
+        case (11, .spades): return .spadeJack
+        case (11, .clubs): return .clubJack
+        case (11, .hearts): return .heartJack
+        case (11, .diamonds): return .diamondJack
+        case (12, .spades): return .spadeQueen
+        case (12, .clubs): return .clubQueen
+        case (12, .hearts): return .heartQueen
+        case (12, .diamonds): return .diamondQueen
+        case (13, .spades): return .spadeKing
+        case (13, .clubs): return .clubKing
+        case (13, .hearts): return .heartKing
+        case (13, .diamonds): return .diamondKing
+        default: return nil
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        switch raw {
+        case "blackAce":    self = .spadeAce
+        case "redAce":      self = .heartAce
+        case "blackJack":   self = .spadeJack
+        case "redJack":     self = .heartJack
+        case "blackQueen":  self = .spadeQueen
+        case "redQueen":    self = .heartQueen
+        case "blackKing":   self = .spadeKing
+        case "redKing":     self = .heartKing
+        default:
+            if let value = FaceCardSlot(rawValue: raw) {
+                self = value
+            } else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid FaceCardSlot raw value: \(raw)")
+            }
         }
     }
 }

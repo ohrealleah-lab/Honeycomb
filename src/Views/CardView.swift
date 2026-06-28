@@ -24,27 +24,27 @@ public struct CardView: View {
         return viewModel?.cardBackTheme ?? "Vulpera"
     }
 
-    private var isDarkMode: Bool {
+    private var customCardColors: CustomCardColorGroup {
         if let coordinator = coordinator {
             switch coordinator.gameMode {
             case .klondike:
-                return coordinator.klondikeViewModel.options.isDarkMode
+                return coordinator.klondikeViewModel.options.customCardColors
             case .beecell:
-                return coordinator.beecellViewModel.options.isDarkMode
+                return coordinator.beecellViewModel.options.customCardColors
             case .spider:
-                return coordinator.spiderViewModel.options.isDarkMode
+                return coordinator.spiderViewModel.options.customCardColors
             case .videoPoker:
-                return coordinator.videoPokerViewModel.options.isDarkMode
+                return coordinator.videoPokerViewModel.options.customCardColors
             case .blackjack:
-                return coordinator.blackjackViewModel.options.isDarkMode
+                return coordinator.blackjackViewModel.options.customCardColors
             }
         }
-        return viewModel?.options.isDarkMode ?? false
+        return viewModel?.options.customCardColors ?? CustomCardColorGroup()
     }
 
     private var outlineColor: Color {
-        if isDarkMode {
-            return Color(red: 0.3, green: 0.3, blue: 0.3)
+        if customCardColors.isEnabled {
+            return customCardColors.outlineColor
         }
         if !card.faceUp && cardBackTheme == "Dingwall" {
             // Charcoal/grey to match the Dingwall image background and silver hardware
@@ -56,13 +56,13 @@ public struct CardView: View {
     public var body: some View {
         ZStack {
             if card.faceUp {
-                CardFrontView(card: card, isDarkMode: isDarkMode)
+                CardFrontView(card: card, customCardColors: customCardColors)
             } else {
                 CardBackView(isAnimated: isAnimated)
             }
         }
         .frame(width: 128, height: 181)
-        .background(isDarkMode ? Color(red: 0.118, green: 0.118, blue: 0.118) : Color.white)
+        .background(customCardColors.isEnabled ? customCardColors.backgroundColor : Color.white)
         .cornerRadius(10)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
@@ -76,13 +76,11 @@ public struct CardView: View {
 
 struct CardFrontView: View {
     let card: Card
-    var isDarkMode: Bool = false
+    let customCardColors: CustomCardColorGroup
 
     var color: Color {
-        if isDarkMode {
-            return card.isRed
-                ? Color(red: 1.0, green: 0.267, blue: 0.267)
-                : Color(red: 0.753, green: 0.753, blue: 0.753)
+        if customCardColors.isEnabled {
+            return card.isRed ? customCardColors.redSuitColor : customCardColors.blackSuitColor
         }
         return card.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1)
     }
@@ -102,7 +100,7 @@ struct CardFrontView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             
             // Center Suit Icon(s) (Larger, takes up most of card)
-            CardCenterSuitView(suit: card.suit, rank: card.rank, color: color, isDarkMode: isDarkMode)
+            CardCenterSuitView(suit: card.suit, rank: card.rank, color: color)
                 .frame(width: 86, height: 138)
             
             // Bottom Right Index (Horizontal, inverted, decreased size)
@@ -224,13 +222,12 @@ struct CardCenterSuitView: View {
     let suit: Card.Suit
     let rank: Int
     let color: Color
-    var isDarkMode: Bool = false
 
     var body: some View {
         Group {
             if rank == 1 {
                 // Ace — use custom art if available and enabled
-                if let slot = FaceCardSlot.slot(rank: 1, isRed: suit.isRed),
+                if let slot = FaceCardSlot.slot(rank: 1, suit: suit),
                    let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
                     CustomFaceArtImageView(art: art)
                 } else {
@@ -239,61 +236,46 @@ struct CardCenterSuitView: View {
                         .foregroundColor(color)
                 }
             } else if rank == 11 {
-                // Jack — custom art overrides default image
-                if let slot = FaceCardSlot.slot(rank: 11, isRed: suit.isRed),
+                // Jack
+                if let slot = FaceCardSlot.slot(rank: 11, suit: suit),
                    let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
                     CustomFaceArtImageView(art: art)
-                } else if isDarkMode {
-                    let name = suit.isRed ? "dark_j_red" : "dark_j_grey"
-                    let path = "/Users/leah/SoliBee/\(name).png"
-                    FaceCardImageView(filename: name, absolutePath: path,
-                        fallbackView: AnyView(HighFidelityShieldView(color: color, suitSymbol: suit.symbol)), fillFrame: true)
                 } else {
-                    let path = suit.isRed ? "/Users/leah/SoliBee/red j.png" : "/Users/leah/SoliBee/J.png"
-                    let name = suit.isRed ? "red j" : "J"
-                    FaceCardImageView(
-                        filename: name,
-                        absolutePath: path,
-                        fallbackView: AnyView(HighFidelityShieldView(color: color, suitSymbol: suit.symbol))
-                    )
+                    GeometryReader { geo in
+                        Text("J")
+                            .font(.custom("Apple Chancery", size: DebugSettings.shared.faceCardFontSize))
+                            .foregroundColor(color)
+                            .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+                            .offset(y: -10)
+                    }
                 }
             } else if rank == 12 {
                 // Queen
-                if let slot = FaceCardSlot.slot(rank: 12, isRed: suit.isRed),
+                if let slot = FaceCardSlot.slot(rank: 12, suit: suit),
                    let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
                     CustomFaceArtImageView(art: art)
-                } else if isDarkMode {
-                    let name = suit.isRed ? "dark_q_red" : "dark_q_grey"
-                    let path = "/Users/leah/SoliBee/\(name).png"
-                    FaceCardImageView(filename: name, absolutePath: path,
-                        fallbackView: AnyView(HighFidelityTiaraView(color: color, suitSymbol: suit.symbol)), fillFrame: true)
                 } else {
-                    let path = suit.isRed ? "/Users/leah/SoliBee/red q.png" : "/Users/leah/SoliBee/Q.png"
-                    let name = suit.isRed ? "red q" : "Q"
-                    FaceCardImageView(
-                        filename: name,
-                        absolutePath: path,
-                        fallbackView: AnyView(HighFidelityTiaraView(color: color, suitSymbol: suit.symbol))
-                    )
+                    GeometryReader { geo in
+                        Text("Q")
+                            .font(.custom("Apple Chancery", size: DebugSettings.shared.faceCardFontSize))
+                            .foregroundColor(color)
+                            .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+                            .offset(x: -5)
+                    }
                 }
             } else if rank == 13 {
                 // King
-                if let slot = FaceCardSlot.slot(rank: 13, isRed: suit.isRed),
+                if let slot = FaceCardSlot.slot(rank: 13, suit: suit),
                    let art = CustomFaceCardArtManager.shared.enabledArt(for: slot) {
                     CustomFaceArtImageView(art: art)
-                } else if isDarkMode {
-                    let name = suit.isRed ? "dark_k_red" : "dark_k_grey"
-                    let path = "/Users/leah/SoliBee/\(name).png"
-                    FaceCardImageView(filename: name, absolutePath: path,
-                        fallbackView: AnyView(HighFidelityCrownView(color: color, suitSymbol: suit.symbol)), fillFrame: true)
                 } else {
-                    let path = suit.isRed ? "/Users/leah/SoliBee/red k.png" : "/Users/leah/SoliBee/K.png"
-                    let name = suit.isRed ? "red k" : "K"
-                    FaceCardImageView(
-                        filename: name,
-                        absolutePath: path,
-                        fallbackView: AnyView(HighFidelityCrownView(color: color, suitSymbol: suit.symbol))
-                    )
+                    GeometryReader { geo in
+                        Text("K")
+                            .font(.custom("Apple Chancery", size: DebugSettings.shared.faceCardFontSize))
+                            .foregroundColor(color)
+                            .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+                            .offset(x: -6)
+                    }
                 }
             } else {
                 // Numbered cards 2 to 10

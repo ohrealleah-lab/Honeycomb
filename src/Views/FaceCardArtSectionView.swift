@@ -199,8 +199,10 @@ struct FaceCardArtSectionView: View {
     @State private var slotToDelete: FaceCardSlot? = nil
     @State private var showingDeleteAlert = false
 
-    private let blackSlots: [FaceCardSlot] = [.blackAce, .blackJack, .blackQueen, .blackKing]
-    private let redSlots: [FaceCardSlot]   = [.redAce,   .redJack,   .redQueen,   .redKing]
+    private let spadeSlots: [FaceCardSlot]   = [.spadeAce,   .spadeJack,   .spadeQueen,   .spadeKing]
+    private let clubSlots: [FaceCardSlot]    = [.clubAce,    .clubJack,    .clubQueen,    .clubKing]
+    private let heartSlots: [FaceCardSlot]   = [.heartAce,   .heartJack,   .heartQueen,   .heartKing]
+    private let diamondSlots: [FaceCardSlot] = [.diamondAce, .diamondJack, .diamondQueen, .diamondKing]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -210,8 +212,10 @@ struct FaceCardArtSectionView: View {
                 .padding(.leading, 4)
 
             VStack(spacing: 8) {
-                slotRow(slots: blackSlots)
-                slotRow(slots: redSlots)
+                slotRow(slots: spadeSlots)
+                slotRow(slots: clubSlots)
+                slotRow(slots: heartSlots)
+                slotRow(slots: diamondSlots)
             }
         }
         .sheet(item: $pendingImport) { item in
@@ -285,6 +289,9 @@ struct FaceCardArtSectionView: View {
         let art = CustomFaceCardArtManager.shared.art(for: slot)
         return VStack(spacing: 4) {
             ZStack(alignment: .topTrailing) {
+                // Fixed-size anchor so the ZStack never resizes
+                Color.clear.frame(width: 70, height: 95)
+
                 FaceCardSlotTileView(slot: slot)
                     .onTapGesture(count: 2) {
                         if art != nil { editingExistingSlot = slot }
@@ -293,34 +300,28 @@ struct FaceCardArtSectionView: View {
                         if art == nil { selectImage(for: slot) }
                     }
 
-                if art != nil {
-                    Button {
-                        slotToDelete = slot
-                        showingDeleteAlert = true
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.red)
-                            .background(Circle().fill(Color.white))
-                            .font(.system(size: 16))
-                    }
-                    .buttonStyle(.plain)
-                    .offset(x: 5, y: -5)
-                    .help("Remove art")
+                Button {
+                    slotToDelete = slot
+                    showingDeleteAlert = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.red)
+                        .background(Circle().fill(Color.white))
+                        .font(.system(size: 16))
                 }
+                .buttonStyle(.plain)
+                .help("Remove art")
+                .opacity(art != nil ? 1 : 0)
             }
 
-            // Enable/disable toggle (only visible when art exists)
-            if let art = art {
-                Toggle("", isOn: Binding(
-                    get: { art.isEnabled },
-                    set: { CustomFaceCardArtManager.shared.setEnabled($0, for: slot) }
-                ))
-                .toggleStyle(.switch)
-                .scaleEffect(0.7)
-                .frame(height: 20)
-            } else {
-                Color.clear.frame(height: 20)
-            }
+            Toggle("", isOn: Binding(
+                get: { art?.isEnabled ?? false },
+                set: { CustomFaceCardArtManager.shared.setEnabled($0, for: slot) }
+            ))
+            .toggleStyle(.switch)
+            .scaleEffect(0.7)
+            .frame(height: 20)
+            .opacity(art != nil ? 1 : 0)
 
             Text(slot.displayName)
                 .font(.system(size: 10))

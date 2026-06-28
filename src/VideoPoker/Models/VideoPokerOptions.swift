@@ -18,16 +18,19 @@ public struct VideoPokerOptions: Codable, Equatable {
     public var feltColor: FeltColorTheme = .feltGreen
     public var cardBackTheme: String = "Vulpera"
     public var customFeltColorRevision: Int = 0
+    public var showFeltVignette: Bool = true
+    public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
 
     enum CodingKeys: String, CodingKey {
         case variant, startingCredits, betPerHand
         case isTimed, isSoundEnabled, hideHintButton, hideStatsButton, isDarkMode
-        case feltColor, cardBackTheme, customFeltColorRevision
+        case feltColor, cardBackTheme, customFeltColorRevision, showFeltVignette, customCardColors
     }
 
     public init(feltColor: FeltColorTheme = .feltGreen, cardBackTheme: String = "Vulpera") {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
+        self.customCardColors = CustomCardColorGroup()
     }
 
     public init(from decoder: Decoder) throws {
@@ -43,5 +46,7 @@ public struct VideoPokerOptions: Codable, Equatable {
         feltColor      = try c.decodeIfPresent(FeltColorTheme.self, forKey: .feltColor) ?? .feltGreen
         cardBackTheme  = try c.decodeIfPresent(String.self, forKey: .cardBackTheme) ?? "Vulpera"
         customFeltColorRevision = try c.decodeIfPresent(Int.self, forKey: .customFeltColorRevision) ?? 0
+        showFeltVignette = try c.decodeIfPresent(Bool.self, forKey: .showFeltVignette) ?? true
+        customCardColors = try c.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()
     }
 }

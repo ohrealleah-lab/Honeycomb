@@ -11,6 +11,7 @@ public struct SoliBeeTheme: Codable, Identifiable {
     public var customFeltGreen: Double
     public var customFeltBlue: Double
     public var faceArts: [CustomFaceArt]
+    public var customCardColors: CustomCardColorGroup
 
     public init(
         id: UUID = UUID(),
@@ -21,7 +22,8 @@ public struct SoliBeeTheme: Codable, Identifiable {
         customFeltRed: Double,
         customFeltGreen: Double,
         customFeltBlue: Double,
-        faceArts: [CustomFaceArt]
+        faceArts: [CustomFaceArt],
+        customCardColors: CustomCardColorGroup = CustomCardColorGroup()
     ) {
         self.id = id
         self.name = name
@@ -32,11 +34,12 @@ public struct SoliBeeTheme: Codable, Identifiable {
         self.customFeltGreen = customFeltGreen
         self.customFeltBlue = customFeltBlue
         self.faceArts = faceArts
+        self.customCardColors = customCardColors
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, cardBackTheme, isDarkMode, feltColor
-        case customFeltRed, customFeltGreen, customFeltBlue, faceArts
+        case customFeltRed, customFeltGreen, customFeltBlue, faceArts, customCardColors
     }
 
     public init(from decoder: Decoder) throws {
@@ -50,6 +53,7 @@ public struct SoliBeeTheme: Codable, Identifiable {
         customFeltGreen = try c.decodeIfPresent(Double.self, forKey: .customFeltGreen) ?? 0
         customFeltBlue  = try c.decodeIfPresent(Double.self, forKey: .customFeltBlue)  ?? 0
         faceArts       = try c.decodeIfPresent([CustomFaceArt].self, forKey: .faceArts) ?? []
+        customCardColors = try c.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()
     }
 }
 
@@ -63,15 +67,15 @@ public final class ThemeManager {
         SoliBeeTheme(name: "Pareidolic 2", cardBackTheme: "Pareidolic 2", isDarkMode: false,
                      feltColor: .custom,
                      customFeltRed: 0.5925555229187012, customFeltGreen: 0.5882400274276733, customFeltBlue: 0.8116011023521423,
-                     faceArts: []),
+                     faceArts: [], customCardColors: CustomCardColorGroup()),
         SoliBeeTheme(name: "Dingwall",     cardBackTheme: "Dingwall",     isDarkMode: false,
                      feltColor: .charcoal,
                      customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
-                     faceArts: []),
+                     faceArts: [], customCardColors: CustomCardColorGroup()),
         SoliBeeTheme(name: "Desert",       cardBackTheme: "Vulpera",      isDarkMode: false,
                      feltColor: .desert,
                      customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
-                     faceArts: []),
+                     faceArts: [], customCardColors: CustomCardColorGroup()),
     ]
 
     private init() { load() }

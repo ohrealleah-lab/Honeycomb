@@ -5,8 +5,8 @@ import SwiftUI
 /// the pending (not-yet-committed) options.
 struct ThemesSectionView: View {
     let currentCardBackTheme: String
-    let currentIsDarkMode: Bool
     let currentFeltColor: FeltColorTheme
+    let currentCustomCardColors: CustomCardColorGroup
 
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(\.dismiss) private var dismiss
@@ -108,7 +108,7 @@ struct ThemesSectionView: View {
                 Text(theme.name)
                     .font(.system(size: 13, design: .monospaced))
                     .lineLimit(1)
-                Text("\(theme.cardBackTheme)  ·  \(theme.isDarkMode ? "Dark" : "Light")")
+                Text(theme.cardBackTheme)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundColor(.secondary)
             }
@@ -153,12 +153,13 @@ struct ThemesSectionView: View {
         let theme = SoliBeeTheme(
             name: name,
             cardBackTheme: currentCardBackTheme,
-            isDarkMode: currentIsDarkMode,
+            isDarkMode: false,
             feltColor: currentFeltColor,
             customFeltRed: r,
             customFeltGreen: g,
             customFeltBlue: b,
-            faceArts: CustomFaceCardArtManager.shared.faceArts
+            faceArts: CustomFaceCardArtManager.shared.faceArts,
+            customCardColors: currentCustomCardColors
         )
         manager.addTheme(theme)
         showingSaveRow = false

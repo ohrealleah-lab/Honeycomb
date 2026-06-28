@@ -1,8 +1,17 @@
 import SwiftUI
+import CoreText
 
 @main
 struct SoliBeeApp: App {
     @State private var coordinator = AppCoordinator()
+
+    init() {
+        for name in ["Parisienne-Regular", "KaushanScript-Regular", "DancingScript-VariableFont_wght", "LilyScriptOne-Regular"] {
+            if let url = Bundle.main.url(forResource: name, withExtension: "ttf") {
+                CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+            }
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -111,6 +120,11 @@ struct SoliBeeApp: App {
             BlackjackHelpView()
         }
         .windowResizability(.contentSize)
+
+        WindowGroup("Themes Help", id: "themes-help") {
+            ThemesHelpView()
+        }
+        .windowResizability(.contentSize)
     }
 }
 
@@ -123,5 +137,6 @@ private struct HelpMenuCommands: View {
         Button("Spider Solibee Help")     { openWindow(id: "spider-help") }
         Button("Video Poker Help")        { openWindow(id: "videopoker-help") }
         Button("Blackjack Help")          { openWindow(id: "blackjack-help") }
+        Button("Themes Help")             { openWindow(id: "themes-help") }
     }
 }

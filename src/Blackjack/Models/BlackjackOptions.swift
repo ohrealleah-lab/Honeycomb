@@ -10,15 +10,18 @@ public struct BlackjackOptions: Codable, Equatable {
     public var customFeltColorRevision: Int = 0
     public var cardBackTheme: String = "Vulpera"
     public var hideStatsButton: Bool = false
+    public var showFeltVignette: Bool = true
+    public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
 
     enum CodingKeys: String, CodingKey {
         case startingCredits, betPerHand, isSoundEnabled, isTimed, isDarkMode
-        case feltColor, customFeltColorRevision, cardBackTheme, hideStatsButton
+        case feltColor, customFeltColorRevision, cardBackTheme, hideStatsButton, showFeltVignette, customCardColors
     }
 
     public init(feltColor: FeltColorTheme = .feltGreen, cardBackTheme: String = "Vulpera") {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
+        self.customCardColors = CustomCardColorGroup()
     }
 
     public init(from decoder: Decoder) throws {
@@ -32,5 +35,7 @@ public struct BlackjackOptions: Codable, Equatable {
         customFeltColorRevision = try c.decodeIfPresent(Int.self,          forKey: .customFeltColorRevision) ?? 0
         cardBackTheme          = try c.decodeIfPresent(String.self,        forKey: .cardBackTheme)          ?? "Vulpera"
         hideStatsButton        = try c.decodeIfPresent(Bool.self,          forKey: .hideStatsButton)        ?? false
+        showFeltVignette       = try c.decodeIfPresent(Bool.self,          forKey: .showFeltVignette)       ?? true
+        customCardColors       = try c.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()
     }
 }

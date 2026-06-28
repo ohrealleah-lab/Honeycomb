@@ -23,7 +23,7 @@ public struct VideoPokerView: View {
             viewModel.options.feltColor.primaryColor
                 .ignoresSafeArea()
 
-            FeltVignetteView()
+            if viewModel.options.showFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
                 toolbarView
@@ -557,14 +557,17 @@ struct VideoPokerOptionsView: View {
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
     @State private var hideStatsButton: Bool
-    @State private var isDarkMode: Bool
+    @State private var showFeltVignette: Bool
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
     @State private var customSelectedColor: Color
+    @State private var customCardColors: CustomCardColorGroup
+    @State private var showingThemes: Bool = false
 
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
+    let originalCustomCardColors: CustomCardColorGroup
 
     init(viewModel: VideoPokerViewModel, isShowingStats: Binding<Bool>) {
         self.viewModel = viewModel
@@ -576,9 +579,11 @@ struct VideoPokerOptionsView: View {
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton  = State(initialValue: viewModel.options.hideHintButton)
         _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
-        _isDarkMode      = State(initialValue: viewModel.options.isDarkMode)
+        _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _feltColor       = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme   = State(initialValue: viewModel.options.cardBackTheme)
+        _customCardColors = State(initialValue: viewModel.options.customCardColors)
+        self.originalCustomCardColors = viewModel.options.customCardColors
 
         let r = UserDefaults.standard.double(forKey: "custom_felt_red")
         let g = UserDefaults.standard.double(forKey: "custom_felt_green")
@@ -591,6 +596,7 @@ struct VideoPokerOptionsView: View {
     }
 
     var body: some View {
+        ZStack {
         VStack(spacing: 20) {
             Text("Video Poker Preferences")
                 .font(.system(size: 16, weight: .bold, design: .monospaced))
@@ -614,7 +620,6 @@ struct VideoPokerOptionsView: View {
                     Picker("Default Bet:", selection: $betPerHand) {
                         ForEach(1...5, id: \.self) { n in Text("\(n) coin\(n == 1 ? "" : "s")").tag(n) }
                     }
-                    .pickerStyle(.segmented)
                     .font(.system(.body, design: .monospaced))
 
                     Divider()
@@ -622,46 +627,36 @@ struct VideoPokerOptionsView: View {
                     Toggle("Timed Game",       isOn: $isTimed).font(.system(.body, design: .monospaced))
                     Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body, design: .monospaced))
                     Toggle("Hide Stats button",isOn: $hideStatsButton).font(.system(.body, design: .monospaced))
-                    Toggle("Dark Mode Cards",  isOn: $isDarkMode).font(.system(.body, design: .monospaced))
 
                     Divider()
 
-                    Picker("Felt Color:", selection: $feltColor) {
-                        Text("Felt Green").tag(FeltColorTheme.feltGreen)
-                        Text("Crimson").tag(FeltColorTheme.crimson)
-                        Text("Royal Blue").tag(FeltColorTheme.royalBlue)
-                        Text("Charcoal").tag(FeltColorTheme.charcoal)
-                        Text("Desert").tag(FeltColorTheme.desert)
-                        Text("Custom").tag(FeltColorTheme.custom)
-                    }
-                    .font(.system(.body, design: .monospaced))
-
-                    if feltColor == .custom {
-                        ColorPicker("Custom Color:", selection: $customSelectedColor)
-                            .font(.system(.body, design: .monospaced))
-                            .onChange(of: customSelectedColor) { _, c in
-                                let nc = NSColor(c)
-                                if let rgb = nc.usingColorSpace(.deviceRGB) {
-                                    UserDefaults.standard.set(Double(rgb.redComponent),   forKey: "custom_felt_red")
-                                    UserDefaults.standard.set(Double(rgb.greenComponent), forKey: "custom_felt_green")
-                                    UserDefaults.standard.set(Double(rgb.blueComponent),  forKey: "custom_felt_blue")
-                                }
+                    Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showingThemes = true } }) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Visual Themes")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(.primary)
+                                Text("Felt, card back, face card art, colors")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
                             }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.primary.opacity(0.02))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                        )
                     }
+                    .buttonStyle(.plain)
 
                     Divider()
-
-                    Divider()
-
-                    ThemesSectionView(
-                        currentCardBackTheme: cardBackTheme,
-                        currentIsDarkMode: isDarkMode,
-                        currentFeltColor: feltColor
-                    )
-
-                    Divider()
-
-                    CustomArtPanelView(cardBackTheme: $cardBackTheme, feltColor: $feltColor)
                 }
                 .padding(.horizontal, 24)
             }
@@ -700,10 +695,11 @@ struct VideoPokerOptionsView: View {
                     o.isTimed         = isTimed
                     o.isSoundEnabled  = isSoundEnabled
                     o.hideHintButton  = hideHintButton
-                    o.hideStatsButton = hideStatsButton
-                    o.isDarkMode      = isDarkMode
-                    o.feltColor       = feltColor
+                    o.hideStatsButton    = hideStatsButton
+                    o.showFeltVignette   = showFeltVignette
+                    o.feltColor          = feltColor
                     o.cardBackTheme   = cardBackTheme
+                    o.customCardColors = customCardColors
                     o.customFeltColorRevision += 1
                     viewModel.options = o
                     if variantChanged { viewModel.startNewGame() }
@@ -715,6 +711,36 @@ struct VideoPokerOptionsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 440)
+        .background(Color(NSColor.windowBackgroundColor))
+
+        if showingThemes {
+            ThemesOptionsView(
+                isShowing: $showingThemes,
+                feltColor: $feltColor,
+                cardBackTheme: $cardBackTheme,
+                showFeltVignette: $showFeltVignette,
+                customSelectedColor: $customSelectedColor,
+                customCardColors: $customCardColors,
+                originalRed: originalRed,
+                originalGreen: originalGreen,
+                originalBlue: originalBlue,
+                originalCustomCardColors: originalCustomCardColors,
+                onDone: {
+                    var o = viewModel.options
+                    o.showFeltVignette   = showFeltVignette
+                    o.feltColor          = feltColor
+                    o.cardBackTheme      = cardBackTheme
+                    o.customCardColors   = customCardColors
+                    o.customFeltColorRevision += 1
+                    viewModel.options = o
+                }
+            )
+            .transition(.move(edge: .trailing))
+            .frame(width: 880)
+        }
+        } // ZStack
+        .frame(width: showingThemes ? 880 : 440)
+        .animation(.easeInOut(duration: 0.2), value: showingThemes)
     }
 }
 

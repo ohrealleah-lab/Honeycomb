@@ -26,78 +26,89 @@ public final class AppCoordinator {
     // MARK: - Shared option sync
 
     private func syncSharedOptions(from old: GameMode, to new: GameMode) {
-        let isTimed:         Bool
-        let isSoundEnabled:  Bool
-        let hideHintButton:  Bool
-        let hideStatsButton: Bool
-        let isDarkMode:      Bool
+        let isTimed:           Bool
+        let isSoundEnabled:    Bool
+        let hideHintButton:    Bool
+        let hideStatsButton:   Bool
+        let showFeltVignette:  Bool
+        let customCardColors:  CustomCardColorGroup
 
         switch old {
         case .klondike:
-            isTimed         = klondikeViewModel.options.isTimed
-            isSoundEnabled  = klondikeViewModel.options.isSoundEnabled
-            hideHintButton  = klondikeViewModel.options.hideHintButton
-            hideStatsButton = klondikeViewModel.options.hideStatsButton
-            isDarkMode      = klondikeViewModel.options.isDarkMode
+            isTimed           = klondikeViewModel.options.isTimed
+            isSoundEnabled    = klondikeViewModel.options.isSoundEnabled
+            hideHintButton    = klondikeViewModel.options.hideHintButton
+            hideStatsButton   = klondikeViewModel.options.hideStatsButton
+            showFeltVignette  = klondikeViewModel.options.showFeltVignette
+            customCardColors  = klondikeViewModel.options.customCardColors
         case .beecell:
-            isTimed         = beecellViewModel.options.isTimed
-            isSoundEnabled  = beecellViewModel.options.isSoundEnabled
-            hideHintButton  = beecellViewModel.options.hideHintButton
-            hideStatsButton = beecellViewModel.options.hideStatsButton
-            isDarkMode      = beecellViewModel.options.isDarkMode
+            isTimed           = beecellViewModel.options.isTimed
+            isSoundEnabled    = beecellViewModel.options.isSoundEnabled
+            hideHintButton    = beecellViewModel.options.hideHintButton
+            hideStatsButton   = beecellViewModel.options.hideStatsButton
+            showFeltVignette  = beecellViewModel.options.showFeltVignette
+            customCardColors  = beecellViewModel.options.customCardColors
         case .spider:
-            isTimed         = spiderViewModel.options.isTimed
-            isSoundEnabled  = spiderViewModel.options.isSoundEnabled
-            hideHintButton  = spiderViewModel.options.hideHintButton
-            hideStatsButton = spiderViewModel.options.hideStatsButton
-            isDarkMode      = spiderViewModel.options.isDarkMode
+            isTimed           = spiderViewModel.options.isTimed
+            isSoundEnabled    = spiderViewModel.options.isSoundEnabled
+            hideHintButton    = spiderViewModel.options.hideHintButton
+            hideStatsButton   = spiderViewModel.options.hideStatsButton
+            showFeltVignette  = spiderViewModel.options.showFeltVignette
+            customCardColors  = spiderViewModel.options.customCardColors
         case .videoPoker:
-            isTimed         = videoPokerViewModel.options.isTimed
-            isSoundEnabled  = videoPokerViewModel.options.isSoundEnabled
-            hideHintButton  = videoPokerViewModel.options.hideHintButton
-            hideStatsButton = videoPokerViewModel.options.hideStatsButton
-            isDarkMode      = videoPokerViewModel.options.isDarkMode
+            isTimed           = videoPokerViewModel.options.isTimed
+            isSoundEnabled    = videoPokerViewModel.options.isSoundEnabled
+            hideHintButton    = videoPokerViewModel.options.hideHintButton
+            hideStatsButton   = videoPokerViewModel.options.hideStatsButton
+            showFeltVignette  = videoPokerViewModel.options.showFeltVignette
+            customCardColors  = videoPokerViewModel.options.customCardColors
         case .blackjack:
-            isTimed         = blackjackViewModel.options.isTimed
-            isSoundEnabled  = blackjackViewModel.options.isSoundEnabled
-            hideHintButton  = false
-            hideStatsButton = blackjackViewModel.options.hideStatsButton
-            isDarkMode      = blackjackViewModel.options.isDarkMode
+            isTimed           = blackjackViewModel.options.isTimed
+            isSoundEnabled    = blackjackViewModel.options.isSoundEnabled
+            hideHintButton    = false
+            hideStatsButton   = blackjackViewModel.options.hideStatsButton
+            showFeltVignette  = blackjackViewModel.options.showFeltVignette
+            customCardColors  = blackjackViewModel.options.customCardColors
         }
 
         if new != .klondike {
-            klondikeViewModel.options.isTimed         = isTimed
-            klondikeViewModel.options.isSoundEnabled  = isSoundEnabled
-            klondikeViewModel.options.hideHintButton  = hideHintButton
-            klondikeViewModel.options.hideStatsButton = hideStatsButton
-            klondikeViewModel.options.isDarkMode      = isDarkMode
+            klondikeViewModel.options.isTimed          = isTimed
+            klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
+            klondikeViewModel.options.hideHintButton   = hideHintButton
+            klondikeViewModel.options.hideStatsButton  = hideStatsButton
+            klondikeViewModel.options.showFeltVignette = showFeltVignette
+            klondikeViewModel.options.customCardColors = customCardColors
         }
         if new != .beecell {
-            beecellViewModel.options.isTimed         = isTimed
-            beecellViewModel.options.isSoundEnabled  = isSoundEnabled
-            beecellViewModel.options.hideHintButton  = hideHintButton
-            beecellViewModel.options.hideStatsButton = hideStatsButton
-            beecellViewModel.options.isDarkMode      = isDarkMode
+            beecellViewModel.options.isTimed          = isTimed
+            beecellViewModel.options.isSoundEnabled   = isSoundEnabled
+            beecellViewModel.options.hideHintButton   = hideHintButton
+            beecellViewModel.options.hideStatsButton  = hideStatsButton
+            beecellViewModel.options.showFeltVignette = showFeltVignette
+            beecellViewModel.options.customCardColors = customCardColors
         }
         if new != .spider {
-            spiderViewModel.options.isTimed         = isTimed
-            spiderViewModel.options.isSoundEnabled  = isSoundEnabled
-            spiderViewModel.options.hideHintButton  = hideHintButton
-            spiderViewModel.options.hideStatsButton = hideStatsButton
-            spiderViewModel.options.isDarkMode      = isDarkMode
+            spiderViewModel.options.isTimed          = isTimed
+            spiderViewModel.options.isSoundEnabled   = isSoundEnabled
+            spiderViewModel.options.hideHintButton   = hideHintButton
+            spiderViewModel.options.hideStatsButton  = hideStatsButton
+            spiderViewModel.options.showFeltVignette = showFeltVignette
+            spiderViewModel.options.customCardColors = customCardColors
         }
         if new != .videoPoker {
-            videoPokerViewModel.options.isTimed         = isTimed
-            videoPokerViewModel.options.isSoundEnabled  = isSoundEnabled
-            videoPokerViewModel.options.hideHintButton  = hideHintButton
-            videoPokerViewModel.options.hideStatsButton = hideStatsButton
-            videoPokerViewModel.options.isDarkMode      = isDarkMode
+            videoPokerViewModel.options.isTimed          = isTimed
+            videoPokerViewModel.options.isSoundEnabled   = isSoundEnabled
+            videoPokerViewModel.options.hideHintButton   = hideHintButton
+            videoPokerViewModel.options.hideStatsButton  = hideStatsButton
+            videoPokerViewModel.options.showFeltVignette = showFeltVignette
+            videoPokerViewModel.options.customCardColors = customCardColors
         }
         if new != .blackjack {
-            blackjackViewModel.options.isTimed         = isTimed
-            blackjackViewModel.options.isSoundEnabled  = isSoundEnabled
-            blackjackViewModel.options.hideStatsButton = hideStatsButton
-            blackjackViewModel.options.isDarkMode      = isDarkMode
+            blackjackViewModel.options.isTimed          = isTimed
+            blackjackViewModel.options.isSoundEnabled   = isSoundEnabled
+            blackjackViewModel.options.hideStatsButton  = hideStatsButton
+            blackjackViewModel.options.showFeltVignette = showFeltVignette
+            blackjackViewModel.options.customCardColors = customCardColors
         }
     }
 
@@ -193,39 +204,44 @@ public final class AppCoordinator {
             UserDefaults.standard.set(theme.customFeltGreen, forKey: "custom_felt_green")
             UserDefaults.standard.set(theme.customFeltBlue,  forKey: "custom_felt_blue")
         }
+        
+        // Save the theme's custom card colors globally so new views load it on init
+        if let encoded = try? JSONEncoder().encode(theme.customCardColors) {
+            UserDefaults.standard.set(encoded, forKey: "customCardColors")
+        }
 
         var k = klondikeViewModel.options
         k.cardBackTheme = theme.cardBackTheme
-        k.isDarkMode    = theme.isDarkMode
         k.feltColor     = theme.feltColor
+        k.customCardColors = theme.customCardColors
         k.customFeltColorRevision += 1
         klondikeViewModel.options = k
 
         var b = beecellViewModel.options
         b.cardBackTheme = theme.cardBackTheme
-        b.isDarkMode    = theme.isDarkMode
         b.feltColor     = theme.feltColor
+        b.customCardColors = theme.customCardColors
         b.customFeltColorRevision += 1
         beecellViewModel.options = b
 
         var s = spiderViewModel.options
         s.cardBackTheme = theme.cardBackTheme
-        s.isDarkMode    = theme.isDarkMode
         s.feltColor     = theme.feltColor
+        s.customCardColors = theme.customCardColors
         s.customFeltColorRevision += 1
         spiderViewModel.options = s
 
         var v = videoPokerViewModel.options
         v.cardBackTheme = theme.cardBackTheme
-        v.isDarkMode    = theme.isDarkMode
         v.feltColor     = theme.feltColor
+        v.customCardColors = theme.customCardColors
         v.customFeltColorRevision += 1
         videoPokerViewModel.options = v
 
         var bj = blackjackViewModel.options
         bj.cardBackTheme = theme.cardBackTheme
-        bj.isDarkMode    = theme.isDarkMode
         bj.feltColor     = theme.feltColor
+        bj.customCardColors = theme.customCardColors
         bj.customFeltColorRevision += 1
         blackjackViewModel.options = bj
 

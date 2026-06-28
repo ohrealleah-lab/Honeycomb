@@ -22,13 +22,19 @@ public final class SpiderViewModel {
                 UserDefaults.standard.set(options.cardBackTheme, forKey: "cardBackTheme")
                 NotificationCenter.default.post(name: .cardBackThemeDidChange, object: self, userInfo: ["cardBackTheme": options.cardBackTheme])
             }
-            if options.isDarkMode != oldValue.isDarkMode {
-                UserDefaults.standard.set(options.isDarkMode, forKey: "isDarkMode")
-                NotificationCenter.default.post(name: .darkModeDidChange, object: self, userInfo: ["isDarkMode": options.isDarkMode])
+            if options.showFeltVignette != oldValue.showFeltVignette {
+                UserDefaults.standard.set(options.showFeltVignette, forKey: "showFeltVignette")
+                NotificationCenter.default.post(name: .feltVignetteDidChange, object: self, userInfo: ["showFeltVignette": options.showFeltVignette])
+            }
+            if options.customCardColors != oldValue.customCardColors {
+                if let encoded = try? JSONEncoder().encode(options.customCardColors) {
+                    UserDefaults.standard.set(encoded, forKey: "customCardColors")
+                }
+                NotificationCenter.default.post(name: .customCardColorsDidChange, object: self, userInfo: ["customCardColors": options.customCardColors])
             }
         }
     }
-    
+
     public var statistics: SpiderStatistics {
         didSet {
             saveStatistics()
@@ -182,12 +188,27 @@ public final class SpiderViewModel {
                let globalFelt = FeltColorTheme(rawValue: globalFeltStr) {
                 decoded.feltColor = globalFelt
             }
+            if UserDefaults.standard.object(forKey: "showFeltVignette") != nil {
+                decoded.showFeltVignette = UserDefaults.standard.bool(forKey: "showFeltVignette")
+            }
+            if let dataColors = UserDefaults.standard.data(forKey: "customCardColors"),
+               let colors = try? JSONDecoder().decode(CustomCardColorGroup.self, from: dataColors) {
+                decoded.customCardColors = colors
+            }
             self.options = decoded
         } else {
             let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
             let globalFeltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
             let globalFelt = FeltColorTheme(rawValue: globalFeltStr) ?? .feltGreen
-            self.options = SpiderOptions(feltColor: globalFelt, cardBackTheme: legacyTheme)
+            var opts = SpiderOptions(feltColor: globalFelt, cardBackTheme: legacyTheme)
+            if UserDefaults.standard.object(forKey: "showFeltVignette") != nil {
+                opts.showFeltVignette = UserDefaults.standard.bool(forKey: "showFeltVignette")
+            }
+            if let dataColors = UserDefaults.standard.data(forKey: "customCardColors"),
+               let colors = try? JSONDecoder().decode(CustomCardColorGroup.self, from: dataColors) {
+                opts.customCardColors = colors
+            }
+            self.options = opts
         }
         
         // Load statistics
@@ -215,6 +236,7 @@ public final class SpiderViewModel {
         // Register for global preferences notifications
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
         
         startNewGame()
     }
@@ -241,6 +263,14 @@ public final class SpiderViewModel {
         guard let theme = notification.userInfo?["cardBackTheme"] as? String else { return }
         if self.options.cardBackTheme != theme {
             self.options.cardBackTheme = theme
+        }
+    }
+    
+    @objc private func handleCustomCardColorsNotification(_ notification: Notification) {
+        guard let sender = notification.object as? AnyObject, sender !== self else { return }
+        guard let colors = notification.userInfo?["customCardColors"] as? CustomCardColorGroup else { return }
+        if self.options.customCardColors != colors {
+            self.options.customCardColors = colors
         }
     }
     

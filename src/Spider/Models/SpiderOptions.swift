@@ -11,6 +11,8 @@ public struct SpiderOptions: Codable, Equatable {
 
     public var customFeltColorRevision: Int = 0
     public var isDarkMode: Bool = false
+    public var showFeltVignette: Bool = true
+    public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
 
     enum CodingKeys: String, CodingKey {
         case feltColor
@@ -22,6 +24,8 @@ public struct SpiderOptions: Codable, Equatable {
         case hideStatsButton
         case customFeltColorRevision
         case isDarkMode
+        case showFeltVignette
+        case customCardColors
     }
 
     public init(
@@ -33,7 +37,9 @@ public struct SpiderOptions: Codable, Equatable {
         hideHintButton: Bool = false,
         hideStatsButton: Bool = false,
         customFeltColorRevision: Int = 0,
-        isDarkMode: Bool = false
+        isDarkMode: Bool = false,
+        showFeltVignette: Bool = true,
+        customCardColors: CustomCardColorGroup = CustomCardColorGroup()
     ) {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
@@ -44,6 +50,8 @@ public struct SpiderOptions: Codable, Equatable {
         self.hideStatsButton = hideStatsButton
         self.customFeltColorRevision = customFeltColorRevision
         self.isDarkMode = isDarkMode
+        self.showFeltVignette = showFeltVignette
+        self.customCardColors = customCardColors
     }
 
     public init(from decoder: Decoder) throws {
@@ -57,5 +65,7 @@ public struct SpiderOptions: Codable, Equatable {
         self.hideStatsButton = try container.decodeIfPresent(Bool.self, forKey: .hideStatsButton) ?? false
         self.customFeltColorRevision = try container.decodeIfPresent(Int.self, forKey: .customFeltColorRevision) ?? 0
         self.isDarkMode = try container.decodeIfPresent(Bool.self, forKey: .isDarkMode) ?? false
+        self.showFeltVignette = try container.decodeIfPresent(Bool.self, forKey: .showFeltVignette) ?? true
+        self.customCardColors = try container.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()
     }
 }

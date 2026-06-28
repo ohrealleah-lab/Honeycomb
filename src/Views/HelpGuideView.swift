@@ -75,10 +75,10 @@ struct KlondikeHelpView: View {
                         text: "Click the stock to deal cards to the waste pile. In Draw 1 mode, one card is dealt at a time; in Draw 3 mode, three cards are dealt and only the top card of the waste is playable. When the stock is empty, click it to redeal from the waste (unlimited redeals in standard mode).")
 
             RuleSection(title: "Vegas Mode",
-                        text: "In Vegas scoring, each card moved to a foundation scores +5 points. A redeal of the stock costs −25 points. Try to finish with a positive score!")
+                        text: "In Vegas scoring, you start with a debt of −$52 (the cost of the deck). Each card moved to a foundation earns +$5. Redealing from the waste is not allowed — make your moves count!")
 
             RuleSection(title: "Keyboard Shortcuts",
-                        text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — Switch to Draw 1\n⌥⌘3 — Switch to Draw 3")
+                        text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — Switch to Draw 1\n⌥⌘3 — Switch to Draw 3\n💡 Hint — press again to cycle through all available hints")
         }
     }
 }
@@ -107,7 +107,7 @@ struct BeecellHelpView: View {
                         text: "Nearly every deal of FreeCell is solvable — take your time and plan ahead. Avoid filling all free cells at once, as it severely limits your options. Try to expose Aces and low cards early.")
 
             RuleSection(title: "Keyboard Shortcuts",
-                        text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move")
+                        text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n💡 Hint — press again to cycle through all available hints")
         }
     }
 }
@@ -136,7 +136,7 @@ struct SpiderHelpView: View {
                         text: "Any card or valid in-suit sequence may be placed in an empty column. Empty columns are extremely valuable — use them to juggle sequences.")
 
             RuleSection(title: "Keyboard Shortcuts",
-                        text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — 1-Suit mode\n⌥⌘2 — 2-Suit mode")
+                        text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — 1-Suit mode\n⌥⌘2 — 2-Suit mode\n💡 Hint — press again to cycle through all available hints")
         }
     }
 }
@@ -168,7 +168,7 @@ struct VideoPokerHelpView: View {
                         text: "Based on Jacks or Better with enhanced payouts for four-of-a-kind hands. Four Aces pays 80×, four 2s/3s/4s pay 40×, and other quads pay the standard 25×.")
 
             RuleSection(title: "Keyboard Shortcuts",
-                        text: "Space — Deal / Draw\n1 2 3 4 5 — Toggle hold for cards 1–5\nH — Hold all cards\nC — Clear all holds")
+                        text: "Space — Deal / Draw\n1 2 3 4 5 — Toggle hold for cards 1–5\nH — Hold all cards\nC — Clear all holds\nM — Bet Max and deal")
         }
     }
 }
@@ -192,7 +192,34 @@ struct BlackjackHelpView: View {
                         text: "You start each session with 100 credits. If your credits drop to zero, a Rebuy button adds another 100 credits to keep playing.")
 
             RuleSection(title: "Keyboard Shortcuts",
-                        text: "Space — Deal (when betting)\nSpace / H — Hit\nS — Stand\nD — Double Down\nP — Split")
+                        text: "Space — Deal\nH — Hit\nS — Stand\nD — Double Down\nP — Split\nM — Bet Max and deal")
+        }
+    }
+}
+
+struct ThemesHelpView: View {
+    var body: some View {
+        HelpShell(title: "Themes", subtitle: "Customize the look of every game") {
+            RuleSection(title: "Opening Themes",
+                        text: "In any game's Preferences, tap the Themes button to open the Themes panel. Changes preview live and apply when you close the panel.")
+
+            RuleSection(title: "Felt Color",
+                        text: "Choose from five preset felt colors — Felt Green, Crimson, Royal Blue, Charcoal, or Desert — or pick Custom to set any color you like with the color picker.")
+
+            RuleSection(title: "Felt Vignette",
+                        text: "Toggle the subtle dark vignette around the felt on or off. The setting is shared across all games.")
+
+            RuleSection(title: "Card Backs",
+                        text: "Choose a card back design from the deck selector, or upload a custom back (.jpg, .png, or .gif). GIF card backs animate on the stock pile. The selected back applies to all games.")
+
+            RuleSection(title: "Face Card Art",
+                        text: "Upload custom art for Jacks, Queens, Kings, and Aces (.jpg or .png). Drag an image onto a slot to replace that card face.")
+
+            RuleSection(title: "Custom Card Colors",
+                        text: "Override the suit, background, and outline colors on card faces independently from the felt theme.")
+
+            RuleSection(title: "Saved Themes",
+                        text: "Tap \"Save current as Theme…\" to snapshot the current card back, felt color, face art, and custom colors into a named theme. Apply any saved theme in one tap; delete it with the trash icon.")
         }
     }
 }
@@ -204,3 +231,4 @@ struct BlackjackHelpView: View {
 #Preview("Spider Help") { SpiderHelpView() }
 #Preview("Video Poker Help") { VideoPokerHelpView() }
 #Preview("Blackjack Help") { BlackjackHelpView() }
+#Preview("Themes Help") { ThemesHelpView() }

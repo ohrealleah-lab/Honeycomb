@@ -301,10 +301,14 @@ public struct CardDeckSelectorView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Row 1: Scrollable Carousel of All Decks in Stable Order
-            HStack {
-                Text("Card Deck Selection (must be .jpg or .png):")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(.primary)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Card Deck Selection")
+                        .font(.system(.body, design: .monospaced).bold())
+                    Text("(.jpg, .png, or .gif accepted):")
+                        .font(.system(.body, design: .monospaced))
+                }
+                .foregroundColor(.primary)
                 Spacer()
                 Button("Add Custom…") { selectImage() }
                     .font(.system(size: 12, design: .monospaced))

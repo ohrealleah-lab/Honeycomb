@@ -22,13 +22,19 @@ public final class GameViewModel {
                 UserDefaults.standard.set(options.cardBackTheme, forKey: "cardBackTheme")
                 NotificationCenter.default.post(name: .cardBackThemeDidChange, object: self, userInfo: ["cardBackTheme": options.cardBackTheme])
             }
-            if options.isDarkMode != oldValue.isDarkMode {
-                UserDefaults.standard.set(options.isDarkMode, forKey: "isDarkMode")
-                NotificationCenter.default.post(name: .darkModeDidChange, object: self, userInfo: ["isDarkMode": options.isDarkMode])
+            if options.showFeltVignette != oldValue.showFeltVignette {
+                UserDefaults.standard.set(options.showFeltVignette, forKey: "showFeltVignette")
+                NotificationCenter.default.post(name: .feltVignetteDidChange, object: self, userInfo: ["showFeltVignette": options.showFeltVignette])
+            }
+            if options.customCardColors != oldValue.customCardColors {
+                if let encoded = try? JSONEncoder().encode(options.customCardColors) {
+                    UserDefaults.standard.set(encoded, forKey: "customCardColors")
+                }
+                NotificationCenter.default.post(name: .customCardColorsDidChange, object: self, userInfo: ["customCardColors": options.customCardColors])
             }
         }
     }
-    
+
     public var statistics: GameStatistics {
         didSet {
             saveStatistics()
@@ -113,12 +119,11 @@ public final class GameViewModel {
     }
     
     public var maxRecycles: Int? {
-        guard options.isDrawConstraintsEnabled else { return nil }
         if options.isVegasScoring {
             return state.drawMode == .drawThree ? 1 : 0
-        } else {
-            return state.drawMode == .drawThree ? 3 : nil
         }
+        guard options.isDrawConstraintsEnabled else { return nil }
+        return state.drawMode == .drawThree ? 3 : nil
     }
     
     public var canRecycleStock: Bool {
@@ -230,8 +235,6 @@ public final class GameViewModel {
     
     public init(state: GameState = GameState()) {
         self.state = state
-        
-        // Load options and synchronize with legacy key
         if let data = UserDefaults.standard.data(forKey: "solitaire_options"),
            var decoded = try? JSONDecoder().decode(GameOptions.self, from: data) {
             if let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") {
@@ -241,12 +244,28 @@ public final class GameViewModel {
                let globalFelt = FeltColorTheme(rawValue: globalFeltStr) {
                 decoded.feltColor = globalFelt
             }
+            if UserDefaults.standard.object(forKey: "showFeltVignette") != nil {
+                decoded.showFeltVignette = UserDefaults.standard.bool(forKey: "showFeltVignette")
+            }
+            if let dataColors = UserDefaults.standard.data(forKey: "customCardColors"),
+               let colors = try? JSONDecoder().decode(CustomCardColorGroup.self, from: dataColors) {
+                decoded.customCardColors = colors
+            }
             self.options = decoded
         } else {
+            var opts = GameOptions()
             let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
             let globalFeltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
-            let globalFelt = FeltColorTheme(rawValue: globalFeltStr) ?? .feltGreen
-            self.options = GameOptions(feltColor: globalFelt, cardBackTheme: legacyTheme)
+            opts.cardBackTheme = legacyTheme
+            opts.feltColor = FeltColorTheme(rawValue: globalFeltStr) ?? .feltGreen
+            if UserDefaults.standard.object(forKey: "showFeltVignette") != nil {
+                opts.showFeltVignette = UserDefaults.standard.bool(forKey: "showFeltVignette")
+            }
+            if let dataColors = UserDefaults.standard.data(forKey: "customCardColors"),
+               let colors = try? JSONDecoder().decode(CustomCardColorGroup.self, from: dataColors) {
+                opts.customCardColors = colors
+            }
+            self.options = opts
         }
         
         // Load statistics and synchronize with legacy keys
@@ -290,6 +309,7 @@ public final class GameViewModel {
         // Register for global preferences notifications
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
         
         self.state.drawMode = self.options.drawMode
         startNewGame()
@@ -317,6 +337,14 @@ public final class GameViewModel {
         guard let theme = notification.userInfo?["cardBackTheme"] as? String else { return }
         if self.options.cardBackTheme != theme {
             self.options.cardBackTheme = theme
+        }
+    }
+    
+    @objc private func handleCustomCardColorsNotification(_ notification: Notification) {
+        guard let sender = notification.object as? AnyObject, sender !== self else { return }
+        guard let colors = notification.userInfo?["customCardColors"] as? CustomCardColorGroup else { return }
+        if self.options.customCardColors != colors {
+            self.options.customCardColors = colors
         }
     }
     

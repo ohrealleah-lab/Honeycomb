@@ -15,6 +15,8 @@ public struct GameOptions: Codable, Equatable {
     public var customFeltColorRevision: Int = 0
     public var isDarkMode: Bool = false
     public var drawMode: GameState.DrawMode = .drawThree
+    public var showFeltVignette: Bool = true
+    public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
 
     public init(
         feltColor: FeltColorTheme = .feltGreen,
@@ -29,7 +31,9 @@ public struct GameOptions: Codable, Equatable {
         deckCount: Int = 1,
         customFeltColorRevision: Int = 0,
         isDarkMode: Bool = false,
-        drawMode: GameState.DrawMode = .drawThree
+        drawMode: GameState.DrawMode = .drawThree,
+        showFeltVignette: Bool = true,
+        customCardColors: CustomCardColorGroup = CustomCardColorGroup()
     ) {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
@@ -44,6 +48,8 @@ public struct GameOptions: Codable, Equatable {
         self.customFeltColorRevision = customFeltColorRevision
         self.isDarkMode = isDarkMode
         self.drawMode = drawMode
+        self.showFeltVignette = showFeltVignette
+        self.customCardColors = customCardColors
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -60,6 +66,8 @@ public struct GameOptions: Codable, Equatable {
         case customFeltColorRevision
         case isDarkMode
         case drawMode
+        case showFeltVignette
+        case customCardColors
     }
 
     public init(from decoder: Decoder) throws {
@@ -77,6 +85,8 @@ public struct GameOptions: Codable, Equatable {
         self.customFeltColorRevision = (try? container.decode(Int.self, forKey: .customFeltColorRevision)) ?? 0
         self.isDarkMode = (try? container.decode(Bool.self, forKey: .isDarkMode)) ?? false
         self.drawMode = (try? container.decode(GameState.DrawMode.self, forKey: .drawMode)) ?? .drawThree
+        self.showFeltVignette = (try? container.decode(Bool.self, forKey: .showFeltVignette)) ?? true
+        self.customCardColors = (try? container.decode(CustomCardColorGroup.self, forKey: .customCardColors)) ?? CustomCardColorGroup()
     }
 }
 
@@ -92,5 +102,6 @@ public enum FeltColorTheme: String, Codable, CaseIterable {
 extension Notification.Name {
     public static let feltColorDidChange = Notification.Name("feltColorDidChange")
     public static let cardBackThemeDidChange = Notification.Name("cardBackThemeDidChange")
-    public static let darkModeDidChange = Notification.Name("darkModeDidChange")
+    public static let feltVignetteDidChange = Notification.Name("feltVignetteDidChange")
+    public static let customCardColorsDidChange = Notification.Name("customCardColorsDidChange")
 }
