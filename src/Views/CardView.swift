@@ -186,13 +186,18 @@ struct FaceCardImageView: View {
     let fallbackView: AnyView
     var fillFrame: Bool = false
 
+    private static var imageCache: [String: NSImage] = [:]
+
     var body: some View {
         let nsImage: NSImage? = {
+            if let cached = Self.imageCache[absolutePath] { return cached }
             if let image = NSImage(contentsOfFile: absolutePath) {
+                Self.imageCache[absolutePath] = image
                 return image
             }
             if let path = Bundle.main.path(forResource: filename, ofType: "png"),
                let image = NSImage(contentsOfFile: path) {
+                Self.imageCache[absolutePath] = image
                 return image
             }
             return nil
@@ -280,7 +285,7 @@ struct CardCenterSuitView: View {
             } else {
                 // Numbered cards 2 to 10
                 ZStack {
-                    ForEach(Array(positionsFor(rank: rank).enumerated()), id: \.offset) { _, pos in
+                    ForEach(Array((Self.suitPositions[rank] ?? []).enumerated()), id: \.offset) { _, pos in
                         Text(suit.symbol)
                             .font(.system(size: 32, weight: .bold))
                             .foregroundColor(color)
@@ -293,93 +298,17 @@ struct CardCenterSuitView: View {
         }
     }
     
-    private func positionsFor(rank: Int) -> [SuitPosition] {
-        switch rank {
-        case 2:
-            return [
-                SuitPosition(x: 0, y: -42, isUpsideDown: false),
-                SuitPosition(x: 0, y: 42, isUpsideDown: true)
-            ]
-        case 3:
-            return [
-                SuitPosition(x: 0, y: -42, isUpsideDown: false),
-                SuitPosition(x: 0, y: 0, isUpsideDown: false),
-                SuitPosition(x: 0, y: 42, isUpsideDown: true)
-            ]
-        case 4:
-            return [
-                SuitPosition(x: -26, y: -42, isUpsideDown: false),
-                SuitPosition(x: 26, y: -42, isUpsideDown: false),
-                SuitPosition(x: -26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 26, y: 42, isUpsideDown: true)
-            ]
-        case 5:
-            return [
-                SuitPosition(x: -26, y: -42, isUpsideDown: false),
-                SuitPosition(x: 26, y: -42, isUpsideDown: false),
-                SuitPosition(x: 0, y: 0, isUpsideDown: false),
-                SuitPosition(x: -26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 26, y: 42, isUpsideDown: true)
-            ]
-        case 6:
-            return [
-                SuitPosition(x: -26, y: -42, isUpsideDown: false),
-                SuitPosition(x: 26, y: -42, isUpsideDown: false),
-                SuitPosition(x: -26, y: 0, isUpsideDown: false),
-                SuitPosition(x: 26, y: 0, isUpsideDown: false),
-                SuitPosition(x: -26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 26, y: 42, isUpsideDown: true)
-            ]
-        case 7:
-            return [
-                SuitPosition(x: -26, y: -42, isUpsideDown: false),
-                SuitPosition(x: 26, y: -42, isUpsideDown: false),
-                SuitPosition(x: -26, y: 0, isUpsideDown: false),
-                SuitPosition(x: 26, y: 0, isUpsideDown: false),
-                SuitPosition(x: -26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 0, y: -21, isUpsideDown: false)
-            ]
-        case 8:
-            return [
-                SuitPosition(x: -26, y: -42, isUpsideDown: false),
-                SuitPosition(x: 26, y: -42, isUpsideDown: false),
-                SuitPosition(x: -26, y: 0, isUpsideDown: false),
-                SuitPosition(x: 26, y: 0, isUpsideDown: false),
-                SuitPosition(x: -26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 0, y: -21, isUpsideDown: false),
-                SuitPosition(x: 0, y: 21, isUpsideDown: true)
-            ]
-        case 9:
-            return [
-                SuitPosition(x: -26, y: -42, isUpsideDown: false),
-                SuitPosition(x: 26, y: -42, isUpsideDown: false),
-                SuitPosition(x: -26, y: -14, isUpsideDown: false),
-                SuitPosition(x: 26, y: -14, isUpsideDown: false),
-                SuitPosition(x: -26, y: 14, isUpsideDown: true),
-                SuitPosition(x: 26, y: 14, isUpsideDown: true),
-                SuitPosition(x: -26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 0, y: 0, isUpsideDown: false)
-            ]
-        case 10:
-            return [
-                SuitPosition(x: -26, y: -42, isUpsideDown: false),
-                SuitPosition(x: 26, y: -42, isUpsideDown: false),
-                SuitPosition(x: -26, y: -14, isUpsideDown: false),
-                SuitPosition(x: 26, y: -14, isUpsideDown: false),
-                SuitPosition(x: -26, y: 14, isUpsideDown: true),
-                SuitPosition(x: 26, y: 14, isUpsideDown: true),
-                SuitPosition(x: -26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 26, y: 42, isUpsideDown: true),
-                SuitPosition(x: 0, y: -27, isUpsideDown: false),
-                SuitPosition(x: 0, y: 27, isUpsideDown: true)
-            ]
-        default:
-            return []
-        }
-    }
+    private static let suitPositions: [Int: [SuitPosition]] = [
+        2: [SuitPosition(x: 0, y: -42, isUpsideDown: false), SuitPosition(x: 0, y: 42, isUpsideDown: true)],
+        3: [SuitPosition(x: 0, y: -42, isUpsideDown: false), SuitPosition(x: 0, y: 0, isUpsideDown: false), SuitPosition(x: 0, y: 42, isUpsideDown: true)],
+        4: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true)],
+        5: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: 0, y: 0, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true)],
+        6: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: 0, isUpsideDown: false), SuitPosition(x: 26, y: 0, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true)],
+        7: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: 0, isUpsideDown: false), SuitPosition(x: 26, y: 0, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true), SuitPosition(x: 0, y: -21, isUpsideDown: false)],
+        8: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: 0, isUpsideDown: false), SuitPosition(x: 26, y: 0, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true), SuitPosition(x: 0, y: -21, isUpsideDown: false), SuitPosition(x: 0, y: 21, isUpsideDown: true)],
+        9: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: -14, isUpsideDown: false), SuitPosition(x: 26, y: -14, isUpsideDown: false), SuitPosition(x: -26, y: 14, isUpsideDown: true), SuitPosition(x: 26, y: 14, isUpsideDown: true), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true), SuitPosition(x: 0, y: 0, isUpsideDown: false)],
+        10: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: -14, isUpsideDown: false), SuitPosition(x: 26, y: -14, isUpsideDown: false), SuitPosition(x: -26, y: 14, isUpsideDown: true), SuitPosition(x: 26, y: 14, isUpsideDown: true), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true), SuitPosition(x: 0, y: -27, isUpsideDown: false), SuitPosition(x: 0, y: 27, isUpsideDown: true)]
+    ]
 }
 
 // MARK: - Card Back Rendering (Custom Bee Theme)
@@ -390,6 +319,32 @@ struct CardBackView: View {
     var isAnimated: Bool = false
 
     static let bundleBackgroundNames: Set<String> = ["Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset"]
+
+    private static let bundleImageCache: [String: NSImage] = {
+        var cache: [String: NSImage] = [:]
+        let entries: [(String, [(String, String)])] = [
+            ("Moogle",        [("moogle", "jpg"), ("moogle", "png")]),
+            ("Dingwall",      [("dingwall", "jpg"), ("dingwall", "png")]),
+            ("Forest",        [("Forest", "png")]),
+            ("On The Water",  [("On The Water", "png")]),
+            ("Pareidolic",    [("Pareidolic", "png")]),
+            ("Pareidolic 2",  [("Pareidolic 2", "png")]),
+            ("Red Sky",       [("Red Sky", "png")]),
+            ("Sunset",        [("Sunset", "png")]),
+            ("Vulpera",       [("priest", "png"), ("priest", "jpg")]),
+        ]
+        for (key, candidates) in entries {
+            for (resource, ext) in candidates {
+                if let path = Bundle.main.path(forResource: resource, ofType: ext),
+                   let img = NSImage(contentsOfFile: path) {
+                    cache[key] = img
+                    break
+                }
+            }
+        }
+        return cache
+    }()
+
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
     @Environment(GameViewModel.self) private var viewModel: GameViewModel?
     
@@ -413,42 +368,25 @@ struct CardBackView: View {
 
     var body: some View {
         let theme = cardBackTheme
-        
+        let manager = CustomCardBackManager.shared
+
         ZStack {
-            if theme == "Moogle" {
-                // Moogle image filling the card back (zoomed by 25%)
-                if let path = Bundle.main.path(forResource: "moogle", ofType: "jpg") ?? Bundle.main.path(forResource: "moogle", ofType: "png"),
-                   let nsImage = NSImage(contentsOfFile: path) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 120, height: 173)
-                        .scaleEffect(1.25)
-                } else {
-                    Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
-                }
-            } else if theme == "Dingwall" {
-                // Dingwall image stretching the full size of the card
-                if let path = Bundle.main.path(forResource: "dingwall", ofType: "jpg") ?? Bundle.main.path(forResource: "dingwall", ofType: "png"),
-                   let nsImage = NSImage(contentsOfFile: path) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .frame(width: 128, height: 181)
-                } else {
-                    Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
-                }
-            } else if Self.bundleBackgroundNames.contains(theme) {
-                if let path = Bundle.main.path(forResource: theme, ofType: "png"),
-                   let nsImage = NSImage(contentsOfFile: path) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 128, height: 181)
-                } else {
-                    Circle().fill(Color.gray.opacity(0.3)).frame(width: 10, height: 10)
-                }
-            } else if let customBack = CustomCardBackManager.shared.customCardBacks.first(where: { $0.name == theme }) {
-                let manager = CustomCardBackManager.shared
+            if theme == "Moogle", let nsImage = Self.bundleImageCache["Moogle"] {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 120, height: 173)
+                    .scaleEffect(1.25)
+            } else if theme == "Dingwall", let nsImage = Self.bundleImageCache["Dingwall"] {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .frame(width: 128, height: 181)
+            } else if Self.bundleBackgroundNames.contains(theme), let nsImage = Self.bundleImageCache[theme] {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 128, height: 181)
+            } else if let customBack = manager.customCardBack(named: theme) {
                 if isAnimated && manager.isGIF(for: customBack.relativePath),
                    let gifURL = manager.gifURL(for: customBack.relativePath) {
                     ZStack {
@@ -473,17 +411,13 @@ struct CardBackView: View {
                 } else {
                     Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
                 }
+            } else if let nsImage = Self.bundleImageCache["Vulpera"] {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 120, height: 173)
             } else {
-                // Priest image filling the card back (Vulpera)
-                if let path = Bundle.main.path(forResource: "priest", ofType: "png") ?? Bundle.main.path(forResource: "priest", ofType: "jpg"),
-                   let nsImage = NSImage(contentsOfFile: path) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 120, height: 173)
-                } else {
-                    Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
-                }
+                Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
             }
         }
         .frame(width: 128, height: 181)
@@ -521,6 +455,28 @@ import AppKit
 struct AnimatedGIFView: NSViewRepresentable {
     let url: URL
 
+    class Coordinator: NSObject {
+        weak var imageView: NSImageView?
+        var observers: [NSObjectProtocol] = []
+
+        func startObserving() {
+            observers.append(NotificationCenter.default.addObserver(
+                forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+                self?.imageView?.animates = false
+            })
+            observers.append(NotificationCenter.default.addObserver(
+                forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+                self?.imageView?.animates = true
+            })
+        }
+
+        deinit {
+            observers.forEach { NotificationCenter.default.removeObserver($0) }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
         container.wantsLayer = true
@@ -536,6 +492,9 @@ struct AnimatedGIFView: NSViewRepresentable {
         if let image = NSImage(contentsOf: url) {
             imageView.image = image
         }
+
+        context.coordinator.imageView = imageView
+        context.coordinator.startObserving()
 
         container.addSubview(imageView)
         NSLayoutConstraint.activate([

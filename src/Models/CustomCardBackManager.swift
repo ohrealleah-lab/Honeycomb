@@ -50,7 +50,15 @@ public final class CustomCardBackManager {
         }
     }
     
-    public var customCardBacks: [CustomCardBack] = []
+    public var customCardBacks: [CustomCardBack] = [] {
+        didSet { _customCardBacksByName = Dictionary(uniqueKeysWithValues: customCardBacks.map { ($0.name, $0) }) }
+    }
+
+    @ObservationIgnored private var _customCardBacksByName: [String: CustomCardBack] = [:]
+
+    public func customCardBack(named name: String) -> CustomCardBack? {
+        _customCardBacksByName[name]
+    }
     
     public var activeDecks: [String] {
         let remainingDefaults = defaultThemes.filter { !deletedDefaultDecks.contains($0) }
