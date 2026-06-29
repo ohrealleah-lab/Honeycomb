@@ -6,6 +6,7 @@ public struct GameView: View {
     
     // Drag-and-drop state
     @State private var draggedCards: [Card] = []
+    @State private var dragSnapshot: NSImage? = nil
     @State private var dragSourcePile: Pile? = nil
     @State private var dragOffset: CGSize = .zero
     @State private var dragLocation: CGPoint = .zero
@@ -292,6 +293,7 @@ public struct GameView: View {
                                 draggedCards = stack
                                 dragSourcePile = viewModel.state.waste
                                 dragLocation = startLoc
+                                makeDragSnapshot(cards: stack)
                             }
                         },
                         onDragChanged: { translation in
@@ -333,6 +335,7 @@ public struct GameView: View {
                                     draggedCards = stack
                                     dragSourcePile = pile
                                     dragLocation = startLoc
+                                    makeDragSnapshot(cards: stack)
                                 }
                             },
                             onDragChanged: { translation in
@@ -355,7 +358,7 @@ public struct GameView: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                
+
                 // Tableau Row (7 Piles)
                 HStack(alignment: .top, spacing: stackSpacing) {
                     ForEach(viewModel.state.tableau) { pile in
@@ -368,6 +371,7 @@ public struct GameView: View {
                                     draggedCards = stack
                                     dragSourcePile = pile
                                     dragLocation = startLoc
+                                    makeDragSnapshot(cards: stack)
                                 }
                             },
                             onDragChanged: { translation in
@@ -566,9 +570,19 @@ public struct GameView: View {
             
             // Drag overlay representation (positioned globally, scaled to match board)
             if !draggedCards.isEmpty {
-                VStack(spacing: 32 - 181) {
-                    ForEach(draggedCards) { card in
-                        CardView(card: card)
+                let cardCount = CGFloat(draggedCards.count)
+                let stackHeight = 181.0 + (cardCount - 1.0) * 32.0
+                Group {
+                    if let snapshot = dragSnapshot {
+                        Image(nsImage: snapshot)
+                            .resizable()
+                            .frame(width: 128, height: stackHeight)
+                    } else {
+                        VStack(spacing: 32 - 181) {
+                            ForEach(draggedCards) { card in
+                                CardView(card: card)
+                            }
+                        }
                     }
                 }
                 .scaleEffect(viewModel.zoomScale)
@@ -581,6 +595,8 @@ public struct GameView: View {
         }
         }
         .environment(\.feltColor, viewModel.options.feltColor)
+        .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
+        .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .id(viewModel.options.customFeltColorRevision)
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                idealWidth: boardWidth * viewModel.zoomScale,
@@ -633,6 +649,22 @@ public struct GameView: View {
             window.contentMinSize = newContentSize
             window.setFrame(updatedFrame, display: true, animate: true)
         }
+    }
+
+    private func makeDragSnapshot(cards: [Card]) {
+        let cardCount = CGFloat(cards.count)
+        let stackHeight = 181.0 + (cardCount - 1.0) * 32.0
+        let content = VStack(spacing: -149) {
+            ForEach(cards) { card in
+                CardView(card: card)
+            }
+        }
+        .frame(width: 128, height: stackHeight)
+        .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
+        .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
+        let renderer = ImageRenderer(content: content)
+        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2.0
+        dragSnapshot = renderer.nsImage
     }
 
     private func handleDragEnded() {
@@ -738,6 +770,7 @@ public struct GameView: View {
         viewModel.clearHint()
         // Reset states
         draggedCards = []
+        dragSnapshot = nil
         dragSourcePile = nil
         dragOffset = .zero
     }

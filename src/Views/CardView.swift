@@ -3,51 +3,14 @@ import SwiftUI
 public struct CardView: View {
     public let card: Card
     public var isAnimated: Bool = false
-    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
-    @Environment(GameViewModel.self) private var viewModel: GameViewModel?
-
-    private var cardBackTheme: String {
-        if let coordinator = coordinator {
-            switch coordinator.gameMode {
-            case .klondike:
-                return coordinator.klondikeViewModel.cardBackTheme
-            case .beecell:
-                return coordinator.beecellViewModel.cardBackTheme
-            case .spider:
-                return coordinator.spiderViewModel.options.cardBackTheme
-            case .videoPoker:
-                return coordinator.videoPokerViewModel.options.cardBackTheme
-            case .blackjack:
-                return coordinator.blackjackViewModel.options.cardBackTheme
-            }
-        }
-        return viewModel?.cardBackTheme ?? "Vulpera"
-    }
-
-    private var customCardColors: CustomCardColorGroup {
-        if let coordinator = coordinator {
-            switch coordinator.gameMode {
-            case .klondike:
-                return coordinator.klondikeViewModel.options.customCardColors
-            case .beecell:
-                return coordinator.beecellViewModel.options.customCardColors
-            case .spider:
-                return coordinator.spiderViewModel.options.customCardColors
-            case .videoPoker:
-                return coordinator.videoPokerViewModel.options.customCardColors
-            case .blackjack:
-                return coordinator.blackjackViewModel.options.customCardColors
-            }
-        }
-        return viewModel?.options.customCardColors ?? CustomCardColorGroup()
-    }
+    @Environment(\.activeCardBackTheme) private var cardBackTheme: String
+    @Environment(\.activeCustomCardColors) private var customCardColors: CustomCardColorGroup
 
     private var outlineColor: Color {
         if customCardColors.isEnabled {
             return customCardColors.outlineColor
         }
         if !card.faceUp && cardBackTheme == "Dingwall" {
-            // Charcoal/grey to match the Dingwall image background and silver hardware
             return Color(red: 0.35, green: 0.35, blue: 0.36)
         }
         return Color.black.opacity(0.85)
@@ -345,26 +308,7 @@ struct CardBackView: View {
         return cache
     }()
 
-    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
-    @Environment(GameViewModel.self) private var viewModel: GameViewModel?
-    
-    private var cardBackTheme: String {
-        if let coordinator = coordinator {
-            switch coordinator.gameMode {
-            case .klondike:
-                return coordinator.klondikeViewModel.cardBackTheme
-            case .beecell:
-                return coordinator.beecellViewModel.cardBackTheme
-            case .spider:
-                return coordinator.spiderViewModel.options.cardBackTheme
-            case .videoPoker:
-                return coordinator.videoPokerViewModel.options.cardBackTheme
-            case .blackjack:
-                return coordinator.blackjackViewModel.options.cardBackTheme
-            }
-        }
-        return viewModel?.cardBackTheme ?? "Vulpera"
-    }
+    @Environment(\.activeCardBackTheme) private var cardBackTheme: String
 
     var body: some View {
         let theme = cardBackTheme

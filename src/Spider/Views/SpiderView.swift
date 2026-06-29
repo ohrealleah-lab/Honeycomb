@@ -395,6 +395,8 @@ public struct SpiderView: View {
             }
         }
         .environment(\.feltColor, viewModel.options.feltColor)
+        .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
+        .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .id(viewModel.options.customFeltColorRevision)
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                idealWidth: boardWidth * viewModel.zoomScale,

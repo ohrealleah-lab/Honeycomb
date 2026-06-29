@@ -69,6 +69,8 @@ public struct VideoPokerView: View {
                 .clipped()
         }
         .frame(minWidth: 720, minHeight: 660)
+        .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
+        .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .sheet(isPresented: $isShowingOptions) {
             VideoPokerOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
         }

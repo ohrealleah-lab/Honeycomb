@@ -86,6 +86,8 @@ public struct BlackjackView: View {
                 .clipped()
         }
         .frame(minWidth: 680, minHeight: 900)
+        .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
+        .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .sheet(isPresented: $isShowingOptions) {
             BlackjackOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
         }
