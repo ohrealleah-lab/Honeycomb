@@ -36,4 +36,20 @@ public struct GameStatistics: Codable, Equatable {
         guard winningGamesCount > 0 else { return 0.0 }
         return Double(totalWinningTime) / Double(winningGamesCount)
     }
+
+    enum CodingKeys: String, CodingKey {
+        case gamesPlayed, gamesWon, currentStreak, longestStreak
+        case totalWinningTime, winningGamesCount, shortestWinTime
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        gamesPlayed       = try c.decodeIfPresent(Int.self, forKey: .gamesPlayed)       ?? 0
+        gamesWon          = try c.decodeIfPresent(Int.self, forKey: .gamesWon)           ?? 0
+        currentStreak     = try c.decodeIfPresent(Int.self, forKey: .currentStreak)      ?? 0
+        longestStreak     = try c.decodeIfPresent(Int.self, forKey: .longestStreak)      ?? 0
+        totalWinningTime  = try c.decodeIfPresent(Int.self, forKey: .totalWinningTime)   ?? 0
+        winningGamesCount = try c.decodeIfPresent(Int.self, forKey: .winningGamesCount)  ?? 0
+        shortestWinTime   = try c.decodeIfPresent(Int.self, forKey: .shortestWinTime)    ?? 0
+    }
 }
