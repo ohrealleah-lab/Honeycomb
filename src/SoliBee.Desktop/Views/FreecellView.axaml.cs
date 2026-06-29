@@ -145,6 +145,10 @@ public partial class FreecellView : CardGameView
                 BindPiles(vm);
                 RefreshAllPiles();
             }
+            else if (e.PropertyName == nameof(FreecellViewModel.IsAutocompletable))
+            {
+                if (vm.IsAutocompletable) vm.Autocomplete();
+            }
             else if (e.PropertyName == nameof(FreecellViewModel.HasNoMoves))
             {
                 NoMovesBanner.IsVisible = vm.HasNoMoves;

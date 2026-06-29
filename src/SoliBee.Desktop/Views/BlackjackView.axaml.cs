@@ -564,7 +564,7 @@ public partial class BlackjackView : UserControl
 
     private void ApplyFeltColor(BlackjackViewModel vm)
     {
-        VignetteRect.IsVisible = vm.Options.IsVignetteEnabled;
+        VignetteRect.IsVisible = false;
         if (vm.Options.IsFinalFantasyMode)
         {
             BoardFeltGrid.Background = new SolidColorBrush(Colors.Black);

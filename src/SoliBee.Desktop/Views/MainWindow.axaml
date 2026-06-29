@@ -5,7 +5,9 @@
         Icon="avares://SoliBee.Desktop/Assets/AppIcon.png"
         Width="1120" Height="768"
         MinWidth="1080" MinHeight="750"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1">
 
     <Grid>
         <Grid.RowDefinitions>
@@ -16,7 +18,7 @@
         <!-- Command Bar/Navigation and Stats (Colored solid background matching macOS) -->
         <!-- Command Bar/Navigation and Stats (Colored solid background matching macOS) -->
         <Grid Grid.Row="0">
-            <Border x:Name="TopBarBorder" Padding="15,15,15,5">
+            <Border x:Name="TopBarBorder" Padding="15,35,15,5">
                 <DockPanel LastChildFill="False">
                     <!-- Buttons on the Left -->
                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -72,15 +74,6 @@
                 </DockPanel>
             </Border>
 
-            <!-- Vignette depth overlay for the title bar -->
-            <Rectangle x:Name="TopBarVignette" IsHitTestVisible="False" IsVisible="False" ZIndex="10">
-                <Rectangle.Fill>
-                    <RadialGradientBrush Center="50%,50%" Radius="0.9">
-                        <GradientStop Color="#00000000" Offset="0.6"/>
-                        <GradientStop Color="#40000000" Offset="1.0"/>
-                    </RadialGradientBrush>
-                </Rectangle.Fill>
-            </Rectangle>
         </Grid>
 
         <!-- Main Game Area -->
@@ -116,6 +109,16 @@
                 </Border>
             </Grid>
         </Grid>
+
+        <!-- App-wide Vignette depth overlay (covers both top bar and game board) -->
+        <Rectangle x:Name="VignetteOverlay" Grid.Row="0" Grid.RowSpan="2" IsHitTestVisible="False" IsVisible="False" ZIndex="90">
+            <Rectangle.Fill>
+                <RadialGradientBrush Center="50%,50%" Radius="0.8">
+                    <GradientStop Color="#00000000" Offset="0.2"/>
+                    <GradientStop Color="#60000000" Offset="1.0"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
     </Grid>
 
     <Window.Styles>

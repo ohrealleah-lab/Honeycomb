@@ -51,6 +51,8 @@ public partial class MainWindow : Window
             ApplyFeltColor(m.Options);
             CardView.ApplyThemeColors(m.Options);
             CardView.InvalidateAllCardViews(this);
+            bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
+            if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && m.Options.IsTimed;
         });
 
         // Also listen to FaceCardArtChangedMessage to keep all cards in sync
@@ -126,11 +128,16 @@ public partial class MainWindow : Window
             this.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(primaryHex));
             if (TopBarBorder != null)
             {
-                TopBarBorder.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(statusHex));
+                TopBarBorder.Background = Avalonia.Media.Brushes.Transparent;
             }
-            if (TopBarVignette != null)
+            if (VignetteOverlay != null)
             {
-                TopBarVignette.IsVisible = options.IsVignetteEnabled;
+                bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
+                VignetteOverlay.IsVisible = !isCardGame && options.IsVignetteEnabled;
+                if (VignetteOverlay.Fill is Avalonia.Media.RadialGradientBrush rgb)
+                {
+                    rgb.Radius = options.VignetteScale * 0.8;
+                }
             }
         }
         catch
@@ -530,7 +537,7 @@ public partial class MainWindow : Window
         var tag = baseTag switch
         {
             "Klondike" => opts.IsDrawConstraintsEnabled ? "SolitaireDraw3" : "SolitaireDraw1",
-            "Freecell" => opts.FreecellDeckCount == 2   ? "Freecell2"      : "Freecell1",
+            "Freecell" => "Freecell1",
             "Spider"   => opts.SpiderSuitCount switch { 2 => "Spider2", 4 => "Spider4", _ => "Spider1" },
             _          => baseTag,
         };
@@ -551,7 +558,6 @@ public partial class MainWindow : Window
 
         SaveCurrentWindowSize();
         _currentGameTag = tag;
-        ResizeWindowForGame(tag);
 
         // No existing content → switch immediately (first load, no flash)
         if (MainContent.Content == null)
@@ -648,13 +654,14 @@ public partial class MainWindow : Window
         }
 
         this.DataContext = _coordinator.ActiveViewModel;
+        ResizeWindowForGame(tag);
         ApplyZoom(GetGameZoom(tag));
         RestoreWindowSizeForGame(tag);
 
         bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
         if (HintButton != null)    HintButton.IsVisible    = isCardGame;
         if (UndoButton != null)    UndoButton.IsVisible    = isCardGame;
-        if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame;
+        if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && _coordinator.GameViewModel.Options.IsTimed;
         if (RestartButton != null) RestartButton.IsVisible = isCardGame;
         if (StatsBarPanel != null) StatsBarPanel.IsVisible = isCardGame;
         var options = SettingsService.LoadOptions();

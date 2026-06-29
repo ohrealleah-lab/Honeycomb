@@ -1255,6 +1255,29 @@ public partial class CardView : UserControl
         var gameView = FindParentGameView();
         if (gameView == null) return;
 
+        var clickCount = e.ClickCount;
+
+        // Double-click: the first click already moved this card onto the DragCanvas,
+        // so parent-walk won't find a PileView. Use _sourcePileView captured on click 1.
+        if (clickCount == 2)
+        {
+            var sourcePile = this.ParentPile ?? _sourcePileView?.Pile;
+            if (sourcePile != null && gameView.TryAutoMoveToFoundation(Card, sourcePile))
+            {
+                e.Pointer.Capture(null);
+                _isDragging = false;
+                ResetDraggedStack(gameView);
+                if (gameView.SelectedCardView != null)
+                {
+                    gameView.SelectedCardView.ClearSelection();
+                    gameView.SelectedCardView = null;
+                    gameView.SelectedSourcePile = null;
+                }
+                e.Handled = true;
+            }
+            return;
+        }
+
         PileView? pileView = null;
         Avalonia.StyledElement? parent = this.Parent;
         while (parent != null)
@@ -1264,23 +1287,6 @@ public partial class CardView : UserControl
         }
         if (pileView == null || pileView.Pile == null) return;
 
-        var clickCount = e.ClickCount;
-
-        if (clickCount == 2)
-        {
-            var sourcePile = this.ParentPile;
-            if (sourcePile != null && gameView.TryAutoMoveToFoundation(Card, sourcePile))
-            {
-                if (gameView.SelectedCardView != null)
-                {
-                    gameView.SelectedCardView.ClearSelection();
-                    gameView.SelectedCardView = null;
-                }
-                e.Handled = true;
-                return;
-            }
-        }
-        else
         {
             // Capture the source pile NOW, before drag setup detaches this card from its canvas
             var thisPile = pileView.Pile;

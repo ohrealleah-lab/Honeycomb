@@ -89,6 +89,9 @@ public partial class PreferencesView : UserControl
         FinalFantasyCheckBox.IsChecked = options.IsFinalFantasyMode;
         VignetteCheckBox.IsChecked     = options.IsVignetteEnabled;
 
+        VignetteScaleSlider.Value      = options.VignetteScale;
+        VignetteScaleValueText.Text    = options.VignetteScale.ToString("0.00");
+
         foreach (var item in FeltColorComboBox.Items.OfType<ComboBoxItem>())
         {
             if (item.Tag?.ToString() == options.FeltColor.ToString())
@@ -123,7 +126,7 @@ public partial class PreferencesView : UserControl
         CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
 
         // Game Mode section
-        if (!string.IsNullOrEmpty(ActiveGameFamily))
+        if (!string.IsNullOrEmpty(ActiveGameFamily) && ActiveGameFamily != "Freecell")
         {
             PopulateGameModeCombo(options, ActiveGameFamily);
             GameModeSection.IsVisible = true;
@@ -158,9 +161,8 @@ public partial class PreferencesView : UserControl
                 currentTag = options.IsDrawConstraintsEnabled ? "SolitaireDraw3" : "SolitaireDraw1";
                 break;
             case "Freecell":
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Deck",  Tag = "Freecell1" });
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "2 Decks", Tag = "Freecell2" });
-                currentTag = options.FreecellDeckCount == 2 ? "Freecell2" : "Freecell1";
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Deck", Tag = "Freecell1" });
+                currentTag = "Freecell1";
                 break;
             case "Spider":
                 GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Suit",  Tag = "Spider1" });
@@ -436,6 +438,21 @@ public partial class PreferencesView : UserControl
             if (!wasFF && options.IsFinalFantasyMode)
                 ApplyCardBackSelection("Priest", options);
 
+            NotifySettingsChanged(options);
+        }
+    }
+
+    private void VignetteScaleSlider_ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_initializing) return;
+
+        if (DataContext is GameOptions options)
+        {
+            options.VignetteScale = VignetteScaleSlider.Value;
+            if (VignetteScaleValueText != null)
+            {
+                VignetteScaleValueText.Text = options.VignetteScale.ToString("0.00");
+            }
             NotifySettingsChanged(options);
         }
     }

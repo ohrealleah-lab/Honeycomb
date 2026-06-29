@@ -272,7 +272,8 @@ public partial class GameViewModel : ObservableObject
         {
             // Recycle waste back to stock — guard no-ops before snapshot
             if (Waste.Cards.Count == 0) return;
-            if (Options.IsVegasScoring && State.RecyclesCount >= 1) return;
+            int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 1;
+            if (Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit) return;
 
             ClearHintCycle();
             SaveStateForUndo();
@@ -631,12 +632,19 @@ public partial class GameViewModel : ObservableObject
             if (CardCanPlayAnywhere(card)) return true;
 
         // Check buried waste cards: accessible after recycle (if allowed)
-        bool canRecycle = Waste.Cards.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= 1);
+        int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 1;
+        bool canRecycle = Waste.Cards.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
         if (canRecycle && Waste.Cards.Count > 1)
         {
             for (int i = 0; i < Waste.Cards.Count - 1; i++)
                 if (CardCanPlayAnywhere(Waste.Cards[i])) return true;
         }
+
+        // No more new cards will ever appear if stock is empty and waste can't be recycled.
+        // In that state, tableau→tableau moves only count as progress when they reveal
+        // a face-down card; reshuffling fully-visible sequences (including kings to empty
+        // columns) doesn't change what's playable.
+        bool deckExhausted = Stock.Cards.Count == 0 && (Waste.Cards.Count == 0 || !canRecycle);
 
         // Check tableau moves
         foreach (var src in Tableaus)
@@ -644,13 +652,17 @@ public partial class GameViewModel : ObservableObject
             if (src.Cards.Count == 0) continue;
             int firstFaceUp = src.Cards.FindIndex(c => c.IsFaceUp);
             if (firstFaceUp < 0) continue;
+            bool revealsHidden = firstFaceUp > 0;
             for (int i = firstFaceUp; i < src.Cards.Count; i++)
             {
                 foreach (var f in Foundations) if (CanMoveCard(src.Cards[i], f)) return true;
-                foreach (var tgt in Tableaus)
+                if (!deckExhausted || (i == firstFaceUp && revealsHidden))
                 {
-                    if (tgt.Id == src.Id) continue;
-                    if (CanMoveCard(src.Cards[i], tgt)) return true;
+                    foreach (var tgt in Tableaus)
+                    {
+                        if (tgt.Id == src.Id) continue;
+                        if (CanMoveCard(src.Cards[i], tgt)) return true;
+                    }
                 }
             }
         }

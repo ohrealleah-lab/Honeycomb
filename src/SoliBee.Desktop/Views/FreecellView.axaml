@@ -10,14 +10,12 @@
             <Rectangle.Fill>
                 <RadialGradientBrush Center="50%,50%" Radius="0.8">
                     <GradientStop Color="#00000000" Offset="0.2"/>
-                    <GradientStop Color="#73000000" Offset="1.0"/>
+                    <GradientStop Color="#60000000" Offset="1.0"/>
                 </RadialGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
 
-        <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Top" ClipToBounds="False">
-            <Grid ClipToBounds="False">
-                <StackPanel x:Name="BoardPanel" Width="1066" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,10,0,0" ClipToBounds="False">
+        <StackPanel x:Name="BoardPanel" Width="1066" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,10,0,0" ClipToBounds="False">
 
                     <!-- Top area: FreeCells (left) and Foundations (right) -->
                     <StackPanel Spacing="8" ClipToBounds="False">
@@ -68,45 +66,43 @@
                         <local:PileView x:Name="Tableau9" Grid.Column="18" IsVisible="False" />
                     </Grid>
 
+        </StackPanel>
+
+        <!-- Drag overlay -->
+        <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+        <!-- Win animation overlay -->
+        <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
+
+        <Grid x:Name="NoMovesBanner" IsVisible="False" ZIndex="5" IsHitTestVisible="True">
+            <Rectangle Fill="#60000000"/>
+            <Border Background="#1A44CC" CornerRadius="8" Padding="40,24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BoxShadow="0 0 28 10 #501A44CC, 0 4 18 0 #AA000000"
+                    RenderTransformOrigin="50%,50%">
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="NO MORE MOVES" FontSize="30" FontWeight="Black"
+                               Foreground="White" HorizontalAlignment="Center"
+                               FontFamily="Courier New, Consolas, monospace"/>
+                    <TextBlock Text="No legal moves remain."
+                               FontSize="15" Foreground="#CCFFFFff" HorizontalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,12,0,0" HorizontalAlignment="Center">
+                        <Button Content="Restart Game"
+                                Padding="28,10" FontSize="15" FontWeight="Bold"
+                                Background="#33FFFFFF" Foreground="White"
+                                BorderBrush="#60FFFFFF" BorderThickness="1"
+                                CornerRadius="6"
+                                Click="NoMovesRestart_Click"/>
+                        <Button Content="New Game"
+                                Padding="28,10" FontSize="15" FontWeight="Bold"
+                                Background="#33FFFFFF" Foreground="White"
+                                BorderBrush="#60FFFFFF" BorderThickness="1"
+                                CornerRadius="6"
+                                Click="NoMovesNewGame_Click"/>
+                    </StackPanel>
                 </StackPanel>
-
-                <!-- Drag overlay -->
-                <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
-
-                <!-- Win animation overlay -->
-                <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
-
-                <Grid x:Name="NoMovesBanner" IsVisible="False" ZIndex="5" IsHitTestVisible="True">
-                    <Rectangle Fill="#60000000"/>
-                    <Border Background="#1A44CC" CornerRadius="8" Padding="40,24"
-                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                            BoxShadow="0 0 28 10 #501A44CC, 0 4 18 0 #AA000000"
-                            RenderTransformOrigin="50%,50%">
-                        <StackPanel Spacing="8" HorizontalAlignment="Center">
-                            <TextBlock Text="NO MORE MOVES" FontSize="30" FontWeight="Black"
-                                       Foreground="White" HorizontalAlignment="Center"
-                                       FontFamily="Courier New, Consolas, monospace"/>
-                            <TextBlock Text="No legal moves remain."
-                                       FontSize="15" Foreground="#CCFFFFff" HorizontalAlignment="Center"/>
-                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,12,0,0" HorizontalAlignment="Center">
-                                <Button Content="Restart Game"
-                                        Padding="28,10" FontSize="15" FontWeight="Bold"
-                                        Background="#33FFFFFF" Foreground="White"
-                                        BorderBrush="#60FFFFFF" BorderThickness="1"
-                                        CornerRadius="6"
-                                        Click="NoMovesRestart_Click"/>
-                                <Button Content="New Game"
-                                        Padding="28,10" FontSize="15" FontWeight="Bold"
-                                        Background="#33FFFFFF" Foreground="White"
-                                        BorderBrush="#60FFFFFF" BorderThickness="1"
-                                        CornerRadius="6"
-                                        Click="NoMovesNewGame_Click"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </Grid>
-        </Viewbox>
+            </Border>
+        </Grid>
 
     </Grid>
 

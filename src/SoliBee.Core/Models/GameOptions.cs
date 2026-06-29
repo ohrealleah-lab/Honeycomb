@@ -42,6 +42,9 @@ public class GameOptions
     public double FreecellZoom     { get; set; } = 1.0;
     public double SpiderZoom      { get; set; } = 1.0;
     public double VideoPokerZoom  { get; set; } = 1.0;
+    
+    // Debug option to scale the vignette (0.5–2.0)
+    public double VignetteScale   { get; set; } = 1.0;
 
     // Per-game window size (normal/restored size + maximize flag)
     public double KlondikeWidth      { get; set; } = 1120;

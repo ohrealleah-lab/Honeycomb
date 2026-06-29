@@ -191,6 +191,7 @@ public static class SettingsService
                 if (GetValue("FreecellZoom")    is double bz)  options.FreecellZoom    = bz;
                 if (GetValue("SpiderZoom")     is double spz) options.SpiderZoom     = spz;
                 if (GetValue("VideoPokerZoom") is double vpz) options.VideoPokerZoom = vpz;
+                if (GetValue("VignetteScale")  is double vsc) options.VignetteScale  = vsc;
 
                 if (GetValue("KlondikeWidth")       is double klW)  options.KlondikeWidth       = klW;
                 if (GetValue("KlondikeHeight")      is double klH)  options.KlondikeHeight      = klH;
@@ -281,6 +282,7 @@ public static class SettingsService
                 SetValue("FreecellZoom",    options.FreecellZoom);
                 SetValue("SpiderZoom",     options.SpiderZoom);
                 SetValue("VideoPokerZoom", options.VideoPokerZoom);
+                SetValue("VignetteScale",  options.VignetteScale);
 
                 SetValue("KlondikeWidth",       options.KlondikeWidth);
                 SetValue("KlondikeHeight",      options.KlondikeHeight);

@@ -74,7 +74,7 @@
             <Rectangle.Fill>
                 <RadialGradientBrush Center="50%,50%" Radius="0.8">
                     <GradientStop Color="#00000000" Offset="0.2"/>
-                    <GradientStop Color="#73000000" Offset="1.0"/>
+                    <GradientStop Color="#60000000" Offset="1.0"/>
                 </RadialGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
