@@ -3,7 +3,7 @@
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
              x:Class="SoliBee.Desktop.Views.VideoPokerView">
 
-    <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,Auto,*">
+    <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,Auto,*,Auto">
 
         <!-- Vignette depth overlay -->
         <Rectangle x:Name="VignetteRect" Grid.RowSpan="3" IsHitTestVisible="False" ZIndex="-1">
@@ -71,31 +71,29 @@
 
         <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
         <Border x:Name="BidBar" Grid.Row="1" Background="#CC000000" CornerRadius="6"
-                HorizontalAlignment="Center" VerticalAlignment="Center"
-                Margin="0,6,0,6">
-            <StackPanel Orientation="Horizontal" Margin="0,8">
-                <StackPanel Spacing="1" Margin="28,0">
+                HorizontalAlignment="Center" Margin="0,10,0,0" Width="290" Padding="0,8">
+            <Grid ColumnDefinitions="*,Auto,*,Auto,*">
+                <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
                     <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold"
                                Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="CreditsLabel" FontSize="28" FontWeight="Black"
-                               Foreground="White" MinWidth="90" TextAlignment="Center"/>
+                               Foreground="White" HorizontalAlignment="Center"/>
                 </StackPanel>
-                <Rectangle Width="1" Fill="#40FFFFFF" Margin="0,4"/>
-                <StackPanel Spacing="1" Margin="28,0">
+                <Rectangle Grid.Column="1" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
+                <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
                     <TextBlock Text="BET" FontSize="10" FontWeight="Bold"
                                Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="BetLabel" FontSize="28" FontWeight="Black"
-                               Foreground="#FFD700" MinWidth="36" TextAlignment="Center"/>
+                               Foreground="#FFD700" HorizontalAlignment="Center"/>
                 </StackPanel>
-                <Rectangle Width="1" Fill="#40FFFFFF" Margin="0,4"/>
-                <StackPanel Spacing="1" Margin="28,0">
+                <Rectangle Grid.Column="3" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
+                <StackPanel Grid.Column="4" Spacing="1" VerticalAlignment="Center">
                     <TextBlock Text="HANDS" FontSize="10" FontWeight="Bold"
                                Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="HandsLabel" FontSize="28" FontWeight="Black"
-                               Foreground="White" MinWidth="36" TextAlignment="Center"
-                               Text="0"/>
+                               Foreground="White" HorizontalAlignment="Center" Text="0"/>
                 </StackPanel>
-            </StackPanel>
+            </Grid>
         </Border>
 
         <!-- ─── Game Area ─────────────────────────────────────────────────────── -->
@@ -228,6 +226,13 @@
             </StackPanel>
 
         </Grid>
+
+        <!-- Keyboard hint row -->
+        <TextBlock Grid.Row="3" x:Name="KeyHintLabel"
+                   Text="H=Hold All   Q=Clear All   1-5=Toggle Hold   Space/Enter/D=Deal or Draw"
+                   FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
+                   FontFamily="Courier New, Consolas, monospace"
+                   Margin="0,4,0,8"/>
     </Grid>
 
     <UserControl.Styles>

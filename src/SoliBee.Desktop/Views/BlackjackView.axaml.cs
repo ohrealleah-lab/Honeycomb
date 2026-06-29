@@ -434,6 +434,7 @@ public partial class BlackjackView : UserControl
         {
             ResultHeadline.Text = "BLACKJACK!";
             ResultSubline.Text  = netStr;
+            ResultOverlay.Background = new SolidColorBrush(Color.Parse("#1B5E20")); // Dark green
             ResultOverlay.BoxShadow = BoxShadows.Parse("0 0 28 8 #90FFD700, 0 4 18 0 #AA000000");
             ShowBanner(win: true, vm.ConsecutiveWins);
         }
@@ -441,6 +442,7 @@ public partial class BlackjackView : UserControl
         {
             ResultHeadline.Text = "YOU WIN!";
             ResultSubline.Text  = netStr;
+            ResultOverlay.Background = new SolidColorBrush(Color.Parse("#1B5E20")); // Dark green
             ResultOverlay.BoxShadow = BoxShadows.Parse("0 0 28 8 #90FFD700, 0 4 18 0 #AA000000");
             ShowBanner(win: true, vm.ConsecutiveWins);
         }
@@ -448,6 +450,7 @@ public partial class BlackjackView : UserControl
         {
             ResultHeadline.Text = "PUSH";
             ResultSubline.Text  = "Bets returned";
+            ResultOverlay.Background = new SolidColorBrush(Color.Parse("#37474F")); // Dark slate grey
             ResultOverlay.BoxShadow = BoxShadows.Parse("0 4 18 0 #AA000000");
             ShowBanner(win: false, 0);
         }
@@ -455,6 +458,7 @@ public partial class BlackjackView : UserControl
         {
             ResultHeadline.Text = "DEALER WINS";
             ResultSubline.Text  = netStr;
+            ResultOverlay.Background = new SolidColorBrush(Color.Parse("#B71C1C")); // Dark red
             ResultOverlay.BoxShadow = BoxShadows.Parse("0 4 18 0 #AA000000");
             ShowBanner(win: false, 0);
         }
@@ -564,6 +568,7 @@ public partial class BlackjackView : UserControl
         if (vm.Options.IsFinalFantasyMode)
         {
             BoardFeltGrid.Background = new SolidColorBrush(Colors.Black);
+            BidBar.Background        = new SolidColorBrush(Color.Parse("#1A1A1A"));
             return;
         }
         string hex = vm.Options.FeltColor switch
@@ -575,8 +580,18 @@ public partial class BlackjackView : UserControl
             "Custom"    => vm.Options.CustomFeltColorHex,
             _           => "#008000",
         };
-        try { BoardFeltGrid.Background = new SolidColorBrush(Color.Parse(hex)); }
-        catch { BoardFeltGrid.Background = new SolidColorBrush(Colors.DarkGreen); }
+        try
+        {
+            var felt = Color.Parse(hex);
+            BoardFeltGrid.Background = new SolidColorBrush(felt);
+            var bar = new Color(255, (byte)(felt.R / 2), (byte)(felt.G / 2), (byte)(felt.B / 2));
+            BidBar.Background = new SolidColorBrush(bar);
+        }
+        catch
+        {
+            BoardFeltGrid.Background = new SolidColorBrush(Colors.DarkGreen);
+            BidBar.Background        = new SolidColorBrush(Color.Parse("#004000"));
+        }
     }
 
     // ── Keyboard ──────────────────────────────────────────────────────────────

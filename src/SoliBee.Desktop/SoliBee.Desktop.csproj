@@ -12,6 +12,12 @@
     <Copyright>© 2026 Leahbee. All rights reserved.</Copyright>
     <Description>A solitaire suite featuring Klondike, Freecell, and Spider Solitaire.</Description>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    
+    <!-- Default Publish Settings to bundle all DLLs into a clean single EXE -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <!-- Define WINDOWS symbol when building on Windows so SoundService P/Invoke compiles in -->

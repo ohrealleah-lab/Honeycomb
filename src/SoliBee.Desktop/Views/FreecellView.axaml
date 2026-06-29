@@ -14,71 +14,99 @@
                 </RadialGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
-        <StackPanel Width="1066" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,10,0,0" ClipToBounds="False">
 
-            <!-- Top row: 4 FreeCells (left) | 4 Foundations (right) -->
-            <!-- ColDefs: 128,4,128,4,128,4,128,18,128,4,128,4,128,4,128 = 1066px -->
-            <Grid ColumnDefinitions="128,4,128,4,128,4,128,18,128,4,128,4,128,4,128" Width="1066" HorizontalAlignment="Center" ClipToBounds="False">
-                <local:PileView x:Name="FreeCell0" Grid.Column="0" />
-                <local:PileView x:Name="FreeCell1" Grid.Column="2" />
-                <local:PileView x:Name="FreeCell2" Grid.Column="4" />
-                <local:PileView x:Name="FreeCell3" Grid.Column="6" />
-                <local:PileView x:Name="Foundation0" Grid.Column="8" />
-                <local:PileView x:Name="Foundation1" Grid.Column="10" />
-                <local:PileView x:Name="Foundation2" Grid.Column="12" />
-                <local:PileView x:Name="Foundation3" Grid.Column="14" />
-            </Grid>
+        <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Top" ClipToBounds="False">
+            <Grid ClipToBounds="False">
+                <StackPanel x:Name="BoardPanel" Width="1066" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,10,0,0" ClipToBounds="False">
 
-            <!-- Bottom row: 8 Tableaus -->
-            <!-- ColDefs: 128,6,128,6,128,6,128,6,128,6,128,6,128,6,128 = 1066px -->
-            <Grid ColumnDefinitions="128,6,128,6,128,6,128,6,128,6,128,6,128,6,128" Width="1066" HorizontalAlignment="Center">
-                <local:PileView x:Name="Tableau0" Grid.Column="0" />
-                <local:PileView x:Name="Tableau1" Grid.Column="2" />
-                <local:PileView x:Name="Tableau2" Grid.Column="4" />
-                <local:PileView x:Name="Tableau3" Grid.Column="6" />
-                <local:PileView x:Name="Tableau4" Grid.Column="8" />
-                <local:PileView x:Name="Tableau5" Grid.Column="10" />
-                <local:PileView x:Name="Tableau6" Grid.Column="12" />
-                <local:PileView x:Name="Tableau7" Grid.Column="14" />
-            </Grid>
-
-        </StackPanel>
-
-        <!-- Drag overlay -->
-        <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
-
-        <!-- Win animation overlay -->
-        <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
-
-        <Grid x:Name="NoMovesBanner" IsVisible="False" ZIndex="5" IsHitTestVisible="True">
-            <Rectangle Fill="#60000000"/>
-            <Border Background="#1A44CC" CornerRadius="8" Padding="40,24"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    BoxShadow="0 0 28 10 #501A44CC, 0 4 18 0 #AA000000"
-                    RenderTransformOrigin="50%,50%">
-                <StackPanel Spacing="8" HorizontalAlignment="Center">
-                    <TextBlock Text="NO MORE MOVES" FontSize="30" FontWeight="Black"
-                               Foreground="White" HorizontalAlignment="Center"
-                               FontFamily="Courier New, Consolas, monospace"/>
-                    <TextBlock Text="No legal moves remain."
-                               FontSize="15" Foreground="#CCFFFFff" HorizontalAlignment="Center"/>
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,12,0,0" HorizontalAlignment="Center">
-                        <Button Content="Restart Game"
-                                Padding="28,10" FontSize="15" FontWeight="Bold"
-                                Background="#33FFFFFF" Foreground="White"
-                                BorderBrush="#60FFFFFF" BorderThickness="1"
-                                CornerRadius="6"
-                                Click="NoMovesRestart_Click"/>
-                        <Button Content="New Game"
-                                Padding="28,10" FontSize="15" FontWeight="Bold"
-                                Background="#33FFFFFF" Foreground="White"
-                                BorderBrush="#60FFFFFF" BorderThickness="1"
-                                CornerRadius="6"
-                                Click="NoMovesNewGame_Click"/>
+                    <!-- Top area: FreeCells (left) and Foundations (right) -->
+                    <StackPanel Spacing="8" ClipToBounds="False">
+                        <!-- TopRow1 -->
+                        <Grid x:Name="TopRow1" ColumnDefinitions="Auto,*,Auto" Width="1066" HorizontalAlignment="Center" ClipToBounds="False">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="FreeCell0" />
+                                <local:PileView x:Name="FreeCell1" />
+                                <local:PileView x:Name="FreeCell2" />
+                                <local:PileView x:Name="FreeCell3" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="Foundation0" />
+                                <local:PileView x:Name="Foundation1" />
+                                <local:PileView x:Name="Foundation2" />
+                                <local:PileView x:Name="Foundation3" />
+                            </StackPanel>
+                        </Grid>
+                        
+                        <!-- TopRow2 -->
+                        <Grid x:Name="TopRow2" ColumnDefinitions="Auto,*,Auto" Width="1066" HorizontalAlignment="Center" IsVisible="False" ClipToBounds="False">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="FreeCell4" />
+                                <local:PileView x:Name="FreeCell5" />
+                                <local:PileView x:Name="FreeCell6" />
+                                <local:PileView x:Name="FreeCell7" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="Foundation4" />
+                                <local:PileView x:Name="Foundation5" />
+                                <local:PileView x:Name="Foundation6" />
+                                <local:PileView x:Name="Foundation7" />
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
+
+                    <!-- Bottom row: Tableaus -->
+                    <Grid x:Name="TableauGrid" ColumnDefinitions="128,6,128,6,128,6,128,6,128,6,128,6,128,6,128,6,128,6,128" Width="1066" HorizontalAlignment="Center">
+                        <local:PileView x:Name="Tableau0" Grid.Column="0" />
+                        <local:PileView x:Name="Tableau1" Grid.Column="2" />
+                        <local:PileView x:Name="Tableau2" Grid.Column="4" />
+                        <local:PileView x:Name="Tableau3" Grid.Column="6" />
+                        <local:PileView x:Name="Tableau4" Grid.Column="8" />
+                        <local:PileView x:Name="Tableau5" Grid.Column="10" />
+                        <local:PileView x:Name="Tableau6" Grid.Column="12" />
+                        <local:PileView x:Name="Tableau7" Grid.Column="14" />
+                        <local:PileView x:Name="Tableau8" Grid.Column="16" IsVisible="False" />
+                        <local:PileView x:Name="Tableau9" Grid.Column="18" IsVisible="False" />
+                    </Grid>
+
                 </StackPanel>
-            </Border>
-        </Grid>
+
+                <!-- Drag overlay -->
+                <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+                <!-- Win animation overlay -->
+                <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
+
+                <Grid x:Name="NoMovesBanner" IsVisible="False" ZIndex="5" IsHitTestVisible="True">
+                    <Rectangle Fill="#60000000"/>
+                    <Border Background="#1A44CC" CornerRadius="8" Padding="40,24"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            BoxShadow="0 0 28 10 #501A44CC, 0 4 18 0 #AA000000"
+                            RenderTransformOrigin="50%,50%">
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                            <TextBlock Text="NO MORE MOVES" FontSize="30" FontWeight="Black"
+                                       Foreground="White" HorizontalAlignment="Center"
+                                       FontFamily="Courier New, Consolas, monospace"/>
+                            <TextBlock Text="No legal moves remain."
+                                       FontSize="15" Foreground="#CCFFFFff" HorizontalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,12,0,0" HorizontalAlignment="Center">
+                                <Button Content="Restart Game"
+                                        Padding="28,10" FontSize="15" FontWeight="Bold"
+                                        Background="#33FFFFFF" Foreground="White"
+                                        BorderBrush="#60FFFFFF" BorderThickness="1"
+                                        CornerRadius="6"
+                                        Click="NoMovesRestart_Click"/>
+                                <Button Content="New Game"
+                                        Padding="28,10" FontSize="15" FontWeight="Bold"
+                                        Background="#33FFFFFF" Foreground="White"
+                                        BorderBrush="#60FFFFFF" BorderThickness="1"
+                                        CornerRadius="6"
+                                        Click="NoMovesNewGame_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Viewbox>
 
     </Grid>
 

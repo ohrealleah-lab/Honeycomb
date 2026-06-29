@@ -150,32 +150,80 @@ public partial class MainWindow : Window
         return false;
     }
 
+    private void AnimateGameReset(Action resetAction)
+    {
+        if (_gameSwitchTimer != null)
+        {
+            resetAction();
+            return;
+        }
+
+        double elapsed = 0;
+        bool resetDone = false;
+        const double outMs = 120, inMs = 180;
+
+        _gameSwitchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _gameSwitchTimer.Tick += (_, _) =>
+        {
+            elapsed += 16;
+            if (!resetDone)
+            {
+                double t = Math.Min(1.0, elapsed / outMs);
+                MainContent.Opacity = 1.0 - t;
+                if (t >= 1.0)
+                {
+                    resetDone = true;
+                    elapsed = 0;
+                    resetAction();
+                }
+            }
+            else
+            {
+                double t = Math.Min(1.0, elapsed / inMs);
+                MainContent.Opacity = t;
+                if (t >= 1.0)
+                {
+                    _gameSwitchTimer!.Stop();
+                    _gameSwitchTimer = null;
+                    MainContent.Opacity = 1.0;
+                }
+            }
+        };
+        _gameSwitchTimer.Start();
+    }
+
     private void ExecuteNewGame()
     {
-        if (this.DataContext is GameViewModel klondikeVm)
-            klondikeVm.InitializeGame();
-        else if (this.DataContext is FreecellViewModel freecellVm)
-            freecellVm.InitializeGame();
-        else if (this.DataContext is SpiderViewModel spiderVm)
-            spiderVm.InitializeGame();
-        else if (this.DataContext is VideoPokerViewModel vpVm)
-            vpVm.StartNewGame();
-        else if (this.DataContext is BlackjackViewModel bjVm)
-            bjVm.StartNewGame();
+        AnimateGameReset(() =>
+        {
+            if (this.DataContext is GameViewModel klondikeVm)
+                klondikeVm.InitializeGame();
+            else if (this.DataContext is FreecellViewModel freecellVm)
+                freecellVm.InitializeGame();
+            else if (this.DataContext is SpiderViewModel spiderVm)
+                spiderVm.InitializeGame();
+            else if (this.DataContext is VideoPokerViewModel vpVm)
+                vpVm.StartNewGame();
+            else if (this.DataContext is BlackjackViewModel bjVm)
+                bjVm.StartNewGame();
+        });
     }
 
     private void ExecuteRestartGame()
     {
-        if (this.DataContext is GameViewModel klondikeVm)
-            klondikeVm.RestartGame();
-        else if (this.DataContext is FreecellViewModel freecellVm)
-            freecellVm.RestartGame();
-        else if (this.DataContext is SpiderViewModel spiderVm)
-            spiderVm.RestartGame();
-        else if (this.DataContext is VideoPokerViewModel vpVm)
-            vpVm.StartNewGame();
-        else if (this.DataContext is BlackjackViewModel bjVm)
-            bjVm.StartNewGame();
+        AnimateGameReset(() =>
+        {
+            if (this.DataContext is GameViewModel klondikeVm)
+                klondikeVm.RestartGame();
+            else if (this.DataContext is FreecellViewModel freecellVm)
+                freecellVm.RestartGame();
+            else if (this.DataContext is SpiderViewModel spiderVm)
+                spiderVm.RestartGame();
+            else if (this.DataContext is VideoPokerViewModel vpVm)
+                vpVm.StartNewGame();
+            else if (this.DataContext is BlackjackViewModel bjVm)
+                bjVm.StartNewGame();
+        });
     }
 
     private void NewGame_Click(object? sender, RoutedEventArgs e)
@@ -276,6 +324,7 @@ public partial class MainWindow : Window
             opts.FreecellDeckCount = tag == "Freecell2" ? 2 : 1;
             opts.LastGameMode = tag;
             SettingsService.SaveOptions(opts);
+            _coordinator.FreecellViewModel.InitializeGame();
             WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(opts));
         }
         else if (tag == "Spider1" || tag == "Spider2" || tag == "Spider4")
@@ -283,6 +332,7 @@ public partial class MainWindow : Window
             opts.SpiderSuitCount = tag switch { "Spider2" => 2, "Spider4" => 4, _ => 1 };
             opts.LastGameMode = tag;
             SettingsService.SaveOptions(opts);
+            _coordinator.SpiderViewModel.InitializeGame();
             WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(opts));
         }
         _currentGameTag = tag;
@@ -446,13 +496,23 @@ public partial class MainWindow : Window
         string baseTag = GetBaseGameTag(tag);
         this.MinWidth = baseTag switch
         {
-            "Freecell"   => 1140,
+            "Freecell"   => tag == "Freecell2" ? 1420 : 1140,
             "Spider"     => 1420,
             "VideoPoker" => 1050,
             "Blackjack"  => 1000,
             _            => 1080,
         };
-        this.MinHeight = tag == "Blackjack" ? 920 : 750;
+        
+        this.MinHeight = tag switch
+        {
+            "Blackjack" => 920,
+            "Freecell2" => 950,
+            "Freecell1" => 850,
+            "Spider1"   => 850,
+            "Spider2"   => 850,
+            "Spider4"   => 850,
+            _           => 750
+        };
     }
 
     private void GameSelectionBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)

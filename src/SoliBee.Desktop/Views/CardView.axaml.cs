@@ -39,8 +39,6 @@ public partial class CardView : UserControl
 
     private static GameOptions? _cachedOptions;
 
-    private CardGameView? _cachedParentGameView;
-    private bool _parentGameViewSearched;
     private static readonly Dictionary<CardGameView, List<PileView>> _pileViewListCache = new();
 
     private static readonly IReadOnlyDictionary<string, string> _houliAssets =
@@ -1178,24 +1176,17 @@ public partial class CardView : UserControl
         }
     }
 
-    private PileView? _cachedParentPileView;
-    private bool _parentPileViewSearched;
-
     public Pile? ParentPile
     {
         get
         {
-            if (!_parentPileViewSearched)
+            var parent = this.Parent;
+            while (parent != null)
             {
-                var parent = this.Parent;
-                while (parent != null)
-                {
-                    if (parent is PileView pv) { _cachedParentPileView = pv; break; }
-                    parent = parent.Parent;
-                }
-                _parentPileViewSearched = true;
+                if (parent is PileView pv) return pv.Pile;
+                parent = parent.Parent;
             }
-            return _cachedParentPileView?.Pile;
+            return null;
         }
     }
 
@@ -1248,15 +1239,13 @@ public partial class CardView : UserControl
 
     private CardGameView? FindParentGameView()
     {
-        if (_parentGameViewSearched) return _cachedParentGameView;
         Avalonia.StyledElement? parent = this.Parent;
         while (parent != null)
         {
-            if (parent is CardGameView cgv) { _cachedParentGameView = cgv; break; }
+            if (parent is CardGameView cgv) return cgv;
             parent = parent.Parent;
         }
-        _parentGameViewSearched = true;
-        return _cachedParentGameView;
+        return null;
     }
 
     private void CardView_PointerPressed(object sender, PointerPressedEventArgs e)

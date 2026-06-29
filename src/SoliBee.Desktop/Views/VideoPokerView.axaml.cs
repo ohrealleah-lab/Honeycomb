@@ -312,6 +312,7 @@ public partial class VideoPokerView : UserControl
             bool firstShow = _activeBanner != WinBanner;
             WinHandNameBlock.Text = vm.State.LastHandName;
             WinPayoutBlock.Text   = $"+{vm.State.LastPayout}";
+            WinBanner.Background  = new SolidColorBrush(Color.Parse("#1B5E20")); // Dark green for win
             ShowBanner(WinBanner);
             StartWinPulse();
             StartPayRowPulse(vm.WinningHandName);
@@ -319,6 +320,7 @@ public partial class VideoPokerView : UserControl
         }
         else if (vm.State.Phase == VideoPokerPhase.Result && vm.ShowNoWin)
         {
+            NoWinOverlay.Background = new SolidColorBrush(Color.Parse("#B71C1C")); // Dark red for loss
             ShowBanner(NoWinOverlay);
             StopWinPulse();
             StopPayRowPulse();
@@ -474,7 +476,7 @@ public partial class VideoPokerView : UserControl
             {
                 var valBlock = new TextBlock
                 {
-                    Text                = entry.Multipliers[i].ToString(),
+                    Text                = entry.Payout(i + 1).ToString(),
                     FontSize            = 12,
                     Foreground          = Brushes.White,
                     FontFamily          = new FontFamily("Courier New, Consolas, monospace"),
