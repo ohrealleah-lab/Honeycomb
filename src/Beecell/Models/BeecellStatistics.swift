@@ -14,19 +14,22 @@ public struct ModeStats: Codable, Equatable {
     public var currentStreak: Int = 0
     public var longestStreak: Int = 0
     public var highScore: Int = 0
-    
+    public var shortestWinTime: Int = 0
+
     public init(
         gamesPlayed: Int = 0,
         gamesWon: Int = 0,
         currentStreak: Int = 0,
         longestStreak: Int = 0,
-        highScore: Int = 0
+        highScore: Int = 0,
+        shortestWinTime: Int = 0
     ) {
         self.gamesPlayed = gamesPlayed
         self.gamesWon = gamesWon
         self.currentStreak = currentStreak
         self.longestStreak = longestStreak
         self.highScore = highScore
+        self.shortestWinTime = shortestWinTime
     }
     
     public var winPercentage: Double {

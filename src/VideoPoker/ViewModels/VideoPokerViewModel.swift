@@ -135,17 +135,9 @@ public final class VideoPokerViewModel {
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
-
-        dealInitialHand()
-    }
-
-    private func dealInitialHand() {
-        state.currentBet = 1
-        deal()
     }
 
     deinit {
-        stopTimer()
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -230,7 +222,6 @@ public final class VideoPokerViewModel {
 
         state.phase = .holding
         playSound(named: "shuffle")
-        startTimerIfNeeded()
     }
 
     public func toggleHold(at index: Int) {
@@ -346,24 +337,6 @@ public final class VideoPokerViewModel {
         statistics.rebuyCount += 1
     }
 
-    // MARK: - Timer
-
-    private var timer: Timer?
-
-    private func startTimerIfNeeded() {
-        guard options.isTimed, !state.isTimerActive else { return }
-        state.isTimerActive = true
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.state.timerSeconds += 1
-        }
-    }
-
-    public func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-        state.isTimerActive = false
-    }
-
     // MARK: - Statistics
 
     public func resetStatistics() {
@@ -373,10 +346,9 @@ public final class VideoPokerViewModel {
     // MARK: - AppCoordinator compatibility stubs
 
     public func startNewGame() {
-        stopTimer()
         state = VideoPokerState()
         state.sessionCredits = options.startingCredits
-        dealInitialHand()
+        state.currentBet = options.betPerHand
     }
 
     public func restartCurrentGame() { startNewGame() }

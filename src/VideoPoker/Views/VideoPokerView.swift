@@ -80,9 +80,6 @@ public struct VideoPokerView: View {
             Button("Cancel", role: .cancel) { }
         }
         .onAppear {
-            if viewModel.state.phase == .holding && !viewModel.state.hand.isEmpty {
-                animateDeal()
-            }
             if viewModel.state.phase == .deal {
                 withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
             }
@@ -128,11 +125,6 @@ public struct VideoPokerView: View {
                 toolbarButton("Stats") { isShowingStats = true }
             }
             Spacer()
-            if viewModel.options.isTimed {
-                Text(formatTime(viewModel.state.timerSeconds))
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(.white)
-            }
         }
     }
 
@@ -310,13 +302,6 @@ public struct VideoPokerView: View {
         .overlay {
             WinParticleView(active: showParticles)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .overlay {
-            if viewModel.state.phase == .result {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture { viewModel.deal() }
-            }
         }
         .overlay {
             if showResultBanner && !viewModel.state.hand.isEmpty {
@@ -557,7 +542,6 @@ struct VideoPokerOptionsView: View {
     @State private var variant: VideoPokerVariant
     @State private var startingCredits: Int
     @State private var betPerHand: Int
-    @State private var isTimed: Bool
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
     @State private var hideStatsButton: Bool
@@ -579,7 +563,6 @@ struct VideoPokerOptionsView: View {
         _variant         = State(initialValue: viewModel.options.variant)
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
         _betPerHand      = State(initialValue: viewModel.options.betPerHand)
-        _isTimed         = State(initialValue: viewModel.options.isTimed)
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton  = State(initialValue: viewModel.options.hideHintButton)
         _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
@@ -608,9 +591,7 @@ struct VideoPokerOptionsView: View {
 
             Divider()
 
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 12) {
-
+            VStack(alignment: .leading, spacing: 12) {
                     Picker("Variant:", selection: $variant) {
                         ForEach(VideoPokerVariant.allCases, id: \.self) {
                             Text($0.rawValue).tag($0)
@@ -628,7 +609,6 @@ struct VideoPokerOptionsView: View {
 
                     Divider()
 
-                    Toggle("Timed Game",       isOn: $isTimed).font(.system(.body, design: .monospaced))
                     Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body, design: .monospaced))
                     Toggle("Hide Stats button",isOn: $hideStatsButton).font(.system(.body, design: .monospaced))
 
@@ -638,15 +618,15 @@ struct VideoPokerOptionsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
                                     .foregroundColor(.primary)
                                 Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 12, design: .monospaced))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -661,10 +641,8 @@ struct VideoPokerOptionsView: View {
                     .buttonStyle(.plain)
 
                     Divider()
-                }
-                .padding(.horizontal, 24)
             }
-            .frame(maxHeight: 600)
+            .padding(.horizontal, 24)
 
             Divider()
 
@@ -696,7 +674,6 @@ struct VideoPokerOptionsView: View {
                     o.variant         = variant
                     o.startingCredits = startingCredits
                     o.betPerHand      = betPerHand
-                    o.isTimed         = isTimed
                     o.isSoundEnabled  = isSoundEnabled
                     o.hideHintButton  = hideHintButton
                     o.hideStatsButton    = hideStatsButton

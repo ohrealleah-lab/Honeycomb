@@ -13,6 +13,7 @@ public struct BeecellView: View {
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
     @State private var isShowingNewGameConfirm: Bool = false
+    @State private var pendingDeckCount: Int? = nil
     @State private var hostingWindow: NSWindow? = nil
     
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
@@ -125,26 +126,28 @@ public struct BeecellView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
                         .buttonStyle(HoverToolbarButtonStyle())
+                        .disabled(viewModel.state.hasWon)
                         .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }
 
                     // Undo
+                    let canUndo = viewModel.canUndo && !viewModel.state.hasWon
                     Button(action: { viewModel.undoLastAction() }) {
                         Text("Undo")
                             .font(.display(16))
-                            .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
+                            .foregroundColor(canUndo ? .white : .white.opacity(0.4))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(Color.white.opacity(0.15))
                             .cornerRadius(4)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 4)
-                                    .stroke(viewModel.canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
+                                    .stroke(canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
                             )
                     }
                     .buttonStyle(HoverToolbarButtonStyle())
-                    .disabled(!viewModel.canUndo)
+                    .disabled(!canUndo)
                     .focusable(false)
                     .keyboardShortcut("z", modifiers: .command)
                     
@@ -159,10 +162,10 @@ public struct BeecellView: View {
                     Button(action: { isShowingNewGameConfirm = true }) { EmptyView() }
                         .keyboardShortcut("n", modifiers: .command).frame(width: 0, height: 0).opacity(0)
 
-                    Button(action: { viewModel.options.deckCount = 1; isShowingNewGameConfirm = true }) { EmptyView() }
+                    Button(action: { pendingDeckCount = 1; isShowingNewGameConfirm = true }) { EmptyView() }
                         .keyboardShortcut("1", modifiers: .command).frame(width: 0, height: 0).opacity(0)
 
-                    Button(action: { viewModel.options.deckCount = 2; isShowingNewGameConfirm = true }) { EmptyView() }
+                    Button(action: { pendingDeckCount = 2; isShowingNewGameConfirm = true }) { EmptyView() }
                         .keyboardShortcut("2", modifiers: .command).frame(width: 0, height: 0).opacity(0)
                 }
                 .padding(.horizontal, 16)
@@ -561,8 +564,11 @@ public struct BeecellView: View {
             BeecellStatsView(viewModel: viewModel)
         }
         .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
-            Button("New Game", role: .destructive) { viewModel.startNewGame() }
-            Button("Cancel", role: .cancel) { }
+            Button("New Game", role: .destructive) {
+                if let deck = pendingDeckCount { viewModel.options.deckCount = deck; pendingDeckCount = nil }
+                viewModel.startNewGame()
+            }
+            Button("Cancel", role: .cancel) { pendingDeckCount = nil }
         }
         .background(WindowAccessor { window in
             self.hostingWindow = window
@@ -837,15 +843,15 @@ struct BeecellOptionsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
                                     .foregroundColor(.primary)
                                 Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 12, design: .monospaced))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -1006,11 +1012,18 @@ struct BeecellStatsView: View {
                     Text("\(stats.longestStreak)")
                 }
                 .font(.system(.body, design: .monospaced))
+
+                HStack {
+                    Text("Fastest Win:")
+                    Spacer()
+                    Text(stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
+                }
+                .font(.system(.body, design: .monospaced))
             }
             .padding(.horizontal, 36)
-            
+
             Divider()
-            
+
             HStack {
                 Button("Reset Stats") {
                     showingResetConfirmation = true

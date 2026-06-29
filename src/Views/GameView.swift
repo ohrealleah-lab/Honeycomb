@@ -124,26 +124,28 @@ public struct GameView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
                         .buttonStyle(HoverToolbarButtonStyle())
+                        .disabled(viewModel.state.hasWon)
                         .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }
 
                     // Undo Button
+                    let canUndo = viewModel.canUndo && !viewModel.state.hasWon
                     Button(action: { viewModel.undoLastAction() }) {
                         Text("Undo")
                             .font(.display(16))
-                            .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
+                            .foregroundColor(canUndo ? .white : .white.opacity(0.4))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(Color.white.opacity(0.15))
                             .cornerRadius(4)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 4)
-                                    .stroke(viewModel.canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
+                                    .stroke(canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
                             )
                     }
                     .buttonStyle(HoverToolbarButtonStyle())
-                    .disabled(!viewModel.canUndo)
+                    .disabled(!canUndo)
                     .focusable(false)
                     .keyboardShortcut("z", modifiers: .command)
                     
@@ -152,10 +154,10 @@ public struct GameView: View {
                     if viewModel.options.isStatusBarVisible {
                         HStack(alignment: .bottom, spacing: 20) {
                             // Games Played
-                            StatusItemView(label: "GAMES PLAYED", value: String(viewModel.gamesPlayed))
-                            
+                            StatusItemView(label: "PLAYED", value: String(viewModel.gamesPlayed))
+
                             // Games Won
-                            StatusItemView(label: "GAMES WON", value: String(viewModel.gamesWon))
+                            StatusItemView(label: "WON", value: String(viewModel.gamesWon))
                             
                             // Score / Bankroll
                             if viewModel.options.isVegasScoring {
@@ -247,6 +249,7 @@ public struct GameView: View {
                     })
                     .overlay(
                         ClickReceiver {
+                            if viewModel.state.hasWon { return }
                             if viewModel.state.stock.isEmpty && !viewModel.canRecycleStock {
                                 return
                             }
@@ -391,8 +394,8 @@ public struct GameView: View {
                 }
                 .padding(.horizontal, 20)
 
-                // Stuck Banner
-                if viewModel.isStuck && !viewModel.state.hasWon {
+                // Stuck Banner (non-Vegas)
+                if viewModel.isStuck && !viewModel.state.hasWon && !viewModel.options.isVegasScoring {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("No moves remaining.")
@@ -460,6 +463,59 @@ public struct GameView: View {
             .disabled(viewModel.isAutoplayRunning)
             .padding(.top, 20)
             
+            // Vegas game-over overlay
+            if viewModel.isStuck && !viewModel.state.hasWon && viewModel.options.isVegasScoring {
+                VStack {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Text("GAME OVER")
+                            .font(.system(size: 36, weight: .black, design: .monospaced))
+                            .foregroundColor(.orange)
+                            .shadow(radius: 3)
+
+                        Text("No moves remaining.")
+                            .font(.system(.headline, design: .monospaced))
+                            .foregroundColor(.white)
+
+                        Text("Final bankroll: \(viewModel.vegasBankrollString)")
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(viewModel.vegasBankroll >= 0 ? .green : Color(red: 1, green: 0.4, blue: 0.4))
+
+                        HStack(spacing: 12) {
+                            Button("Restart Game") {
+                                viewModel.restartCurrentGame()
+                            }
+                            .font(.system(.body, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.orange)
+                            .cornerRadius(6)
+                            .buttonStyle(.plain)
+
+                            Button("New Game") {
+                                viewModel.startNewGame()
+                            }
+                            .font(.system(.body, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.blue)
+                            .cornerRadius(6)
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(24)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange, lineWidth: 1.5))
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
             // Victory overlay (Classic Bouncing Card Cascade)
             if viewModel.state.hasWon {
                 WinAnimationView(foundations: viewModel.state.foundations) {
@@ -675,9 +731,11 @@ public struct GameView: View {
         }
         
         if let target = dropTarget, let source = dragSourcePile {
+            viewModel.clearHint()
             viewModel.moveCards(draggedCards, from: source, to: target)
         }
-        
+
+        viewModel.clearHint()
         // Reset states
         draggedCards = []
         dragSourcePile = nil
@@ -700,7 +758,7 @@ struct StatusItemView: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(label)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .font(.display(13))
                 .foregroundColor(.white.opacity(0.6))
             Text(value)
                 .font(.system(size: 20, weight: .black, design: .monospaced))
@@ -867,15 +925,15 @@ struct OptionsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
                                     .foregroundColor(.primary)
                                 Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 12, design: .monospaced))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -1061,6 +1119,13 @@ struct StatsView: View {
                     Text("Avg Winning Time:")
                     Spacer()
                     Text(stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
+                }
+                .font(.system(.body, design: .monospaced))
+
+                HStack {
+                    Text("Fastest Win:")
+                    Spacer()
+                    Text(stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
                 }
                 .font(.system(.body, design: .monospaced))
             }

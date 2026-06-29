@@ -127,7 +127,7 @@ struct ThemesSectionView: View {
                 themeToDelete = theme
             } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 12))
+                    .font(.system(size: 12, design: .monospaced))
             }
             .buttonStyle(.plain)
             .foregroundColor(.red)

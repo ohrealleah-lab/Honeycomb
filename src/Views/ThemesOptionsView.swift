@@ -26,7 +26,7 @@ struct ThemesOptionsView: View {
                 Button(action: cancel) {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
                         Text("Back")
                     }
                     .font(.system(.body, design: .monospaced))

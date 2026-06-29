@@ -7,14 +7,16 @@ public struct GameStatistics: Codable, Equatable {
     public var longestStreak: Int = 0
     public var totalWinningTime: Int = 0
     public var winningGamesCount: Int = 0
-    
+    public var shortestWinTime: Int = 0
+
     public init(
         gamesPlayed: Int = 0,
         gamesWon: Int = 0,
         currentStreak: Int = 0,
         longestStreak: Int = 0,
         totalWinningTime: Int = 0,
-        winningGamesCount: Int = 0
+        winningGamesCount: Int = 0,
+        shortestWinTime: Int = 0
     ) {
         self.gamesPlayed = gamesPlayed
         self.gamesWon = gamesWon
@@ -22,6 +24,7 @@ public struct GameStatistics: Codable, Equatable {
         self.longestStreak = longestStreak
         self.totalWinningTime = totalWinningTime
         self.winningGamesCount = winningGamesCount
+        self.shortestWinTime = shortestWinTime
     }
     
     public var winPercentage: Double {

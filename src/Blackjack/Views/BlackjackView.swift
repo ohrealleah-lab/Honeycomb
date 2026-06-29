@@ -40,24 +40,26 @@ public struct BlackjackView: View {
                 VStack(spacing: 12) {
                     creditDisplay
 
-                    dealerArea
-                        .padding(.horizontal, 24)
+                    VStack(spacing: 12) {
+                        dealerArea
+                            .padding(.horizontal, 24)
 
-                    vsLabel
+                        vsLabel
 
-                    playerArea
-                        .padding(.horizontal, 24)
+                        playerArea
+                            .padding(.horizontal, 24)
+                    }
+                    .overlay {
+                        if viewModel.state.phase == .result {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture { viewModel.deal() }
+                        }
+                    }
 
                     actionButtons
                 }
                 .padding(.vertical, 16)
-                .overlay {
-                    if viewModel.state.phase == .result {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture { viewModel.deal() }
-                    }
-                }
 
                 Spacer()
             }
@@ -149,11 +151,6 @@ public struct BlackjackView: View {
                 toolbarButton("Stats") { isShowingStats = true }
             }
             Spacer()
-            if viewModel.options.isTimed {
-                Text(formatTime(viewModel.state.timerSeconds))
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(.white)
-            }
         }
     }
 
@@ -496,7 +493,6 @@ struct BlackjackOptionsView: View {
 
     @State private var startingCredits: Int
     @State private var betPerHand: Int
-    @State private var isTimed: Bool
     @State private var isSoundEnabled: Bool
     @State private var hideStatsButton: Bool
     @State private var showFeltVignette: Bool
@@ -516,7 +512,6 @@ struct BlackjackOptionsView: View {
         self._isShowingStats = isShowingStats
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
         _betPerHand      = State(initialValue: viewModel.options.betPerHand)
-        _isTimed         = State(initialValue: viewModel.options.isTimed)
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
         _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
@@ -556,7 +551,6 @@ struct BlackjackOptionsView: View {
 
                     Divider()
 
-                    Toggle("Timed Game",        isOn: $isTimed).font(.system(.body, design: .monospaced))
                     Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body, design: .monospaced))
                     Toggle("Hide Stats button", isOn: $hideStatsButton).font(.system(.body, design: .monospaced))
 
@@ -566,15 +560,15 @@ struct BlackjackOptionsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
                                     .foregroundColor(.primary)
                                 Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 12, design: .monospaced))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -622,7 +616,6 @@ struct BlackjackOptionsView: View {
                     var o = viewModel.options
                     o.startingCredits = startingCredits
                     o.betPerHand      = betPerHand
-                    o.isTimed         = isTimed
                     o.isSoundEnabled  = isSoundEnabled
                     o.hideStatsButton   = hideStatsButton
                     o.showFeltVignette  = showFeltVignette

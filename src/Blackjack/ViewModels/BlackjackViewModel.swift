@@ -86,7 +86,6 @@ public final class BlackjackViewModel {
     }
 
     deinit {
-        stopTimer()
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -369,23 +368,6 @@ public final class BlackjackViewModel {
         state.lastResultSummary = summaryParts.joined(separator: "  ·  ")
     }
 
-    // MARK: - Timer
-
-    private var timer: Timer?
-
-    public func startTimerIfNeeded() {
-        guard options.isTimed, !state.isTimerActive else { return }
-        state.isTimerActive = true
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.state.timerSeconds += 1
-        }
-    }
-
-    public func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-        state.isTimerActive = false
-    }
 
     // MARK: - Sound
 
@@ -410,7 +392,6 @@ public final class BlackjackViewModel {
     }
 
     public func startNewGame() {
-        stopTimer()
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
         state.currentBet = options.betPerHand

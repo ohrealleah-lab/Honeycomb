@@ -35,6 +35,4 @@ public struct VideoPokerState {
     public var lastPayout: Int = 0
     public var lastHandName: String = ""
     public var handsDealt: Int = 0
-    public var timerSeconds: Int = 0
-    public var isTimerActive: Bool = false
 }

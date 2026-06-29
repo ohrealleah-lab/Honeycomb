@@ -125,26 +125,28 @@ public struct SpiderView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
                         .buttonStyle(HoverToolbarButtonStyle())
+                        .disabled(viewModel.state.hasWon)
                         .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }
 
                     // Undo
+                    let canUndo = viewModel.canUndo && !viewModel.state.hasWon
                     Button(action: { viewModel.undoLastAction() }) {
                         Text("Undo")
                             .font(.display(16))
-                            .foregroundColor(viewModel.canUndo ? .white : .white.opacity(0.4))
+                            .foregroundColor(canUndo ? .white : .white.opacity(0.4))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(Color.white.opacity(0.15))
                             .cornerRadius(4)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 4)
-                                    .stroke(viewModel.canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
+                                    .stroke(canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
                             )
                     }
                     .buttonStyle(HoverToolbarButtonStyle())
-                    .disabled(!viewModel.canUndo)
+                    .disabled(!canUndo)
                     .focusable(false)
                     .keyboardShortcut("z", modifiers: .command)
                     
@@ -595,15 +597,15 @@ struct SpiderOptionsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
                                     .foregroundColor(.primary)
                                 Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 12, design: .monospaced))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)

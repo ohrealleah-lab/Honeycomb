@@ -228,6 +228,9 @@ public final class GameViewModel {
         stats.longestStreak = max(stats.longestStreak, stats.currentStreak)
         stats.winningGamesCount += 1
         stats.totalWinningTime += timeInSeconds
+        if timeInSeconds > 0 && (stats.shortestWinTime == 0 || timeInSeconds < stats.shortestWinTime) {
+            stats.shortestWinTime = timeInSeconds
+        }
         statistics = stats
         
         UserDefaults.standard.set(stats.gamesWon, forKey: "gamesWon")

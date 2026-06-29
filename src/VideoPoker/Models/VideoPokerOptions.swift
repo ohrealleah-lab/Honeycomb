@@ -10,7 +10,6 @@ public struct VideoPokerOptions: Codable, Equatable {
     public var variant: VideoPokerVariant = .jacksOrBetter
     public var startingCredits: Int = 1000
     public var betPerHand: Int = 1          // 1–5 coins
-    public var isTimed: Bool = true
     public var isSoundEnabled: Bool = true
     public var hideHintButton: Bool = false
     public var hideStatsButton: Bool = false
@@ -23,7 +22,7 @@ public struct VideoPokerOptions: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case variant, startingCredits, betPerHand
-        case isTimed, isSoundEnabled, hideHintButton, hideStatsButton, isDarkMode
+        case isSoundEnabled, hideHintButton, hideStatsButton, isDarkMode
         case feltColor, cardBackTheme, customFeltColorRevision, showFeltVignette, customCardColors
     }
 
@@ -38,7 +37,6 @@ public struct VideoPokerOptions: Codable, Equatable {
         variant        = try c.decodeIfPresent(VideoPokerVariant.self, forKey: .variant) ?? .jacksOrBetter
         startingCredits = try c.decodeIfPresent(Int.self, forKey: .startingCredits) ?? 1000
         betPerHand     = try c.decodeIfPresent(Int.self, forKey: .betPerHand) ?? 1
-        isTimed        = try c.decodeIfPresent(Bool.self, forKey: .isTimed) ?? true
         isSoundEnabled = try c.decodeIfPresent(Bool.self, forKey: .isSoundEnabled) ?? true
         hideHintButton = try c.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
         hideStatsButton = try c.decodeIfPresent(Bool.self, forKey: .hideStatsButton) ?? false
