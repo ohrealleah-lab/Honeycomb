@@ -52,11 +52,12 @@ enum UISound {
 // MARK: - Felt Vignette
 
 struct FeltVignetteView: View {
+    var intensity: Double = 0.45
     var body: some View {
         RadialGradient(
             gradient: Gradient(colors: [
                 Color.clear,
-                Color.black.opacity(0.45)
+                Color.black.opacity(intensity)
             ]),
             center: .center,
             startRadius: 100,

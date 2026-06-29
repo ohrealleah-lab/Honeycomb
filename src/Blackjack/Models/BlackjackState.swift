@@ -39,6 +39,7 @@ public struct BlackjackState: Equatable {
     public var deck: [Card] = []
     public var sessionCredits: Int = 100
     public var currentBet: Int = 1
+    public var handsDealt: Int = 0
     public var lastResultSummary: String = ""
     public var dealerValue: Int { BlackjackState.handValue(dealerCards) }
     public var dealerVisibleValue: Int {

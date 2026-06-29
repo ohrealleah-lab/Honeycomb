@@ -205,39 +205,54 @@ public struct BlackjackView: View {
     // MARK: - Credit Display
 
     private var creditDisplay: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 32) {
             VStack(spacing: 2) {
                 Text("CREDITS")
-                    .font(.display(10, weight: .bold))
+                    .font(.display(10))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.sessionCredits)")
-                    .font(.display(22, weight: .black))
-                    .foregroundColor(.white)
+                    .font(.display(28, weight: .black))
+                    .foregroundColor(.yellow)
             }
-
-            Text("·")
-                .font(.display(18, weight: .bold))
-                .foregroundColor(.white.opacity(0.3))
 
             VStack(spacing: 2) {
                 Text("BET")
-                    .font(.display(10, weight: .bold))
+                    .font(.display(10))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.currentBet)")
-                    .font(.display(22, weight: .black))
-                    .foregroundColor(.yellow)
+                    .font(.display(28, weight: .black))
+                    .foregroundColor(viewModel.state.currentBet == 5 ? .orange : .white)
+            }
+
+            VStack(spacing: 2) {
+                Text("HANDS")
+                    .font(.display(10))
+                    .foregroundColor(.white.opacity(0.6))
+                Text("\(viewModel.state.handsDealt)")
+                    .font(.display(28, weight: .black))
+                    .foregroundColor(.white)
             }
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.35))
-                RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1)
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(LinearGradient(colors: [Color.white.opacity(0.07), Color.clear],
-                                         startPoint: .top, endPoint: .bottom))
-            }
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.black.opacity(0.35))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.5), radius: 6, x: 0, y: 3)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.18), Color.clear],
+                        startPoint: .top, endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
         )
     }
 
@@ -380,11 +395,11 @@ public struct BlackjackView: View {
             switch viewModel.state.phase {
             case .betting, .result:
                 casinoButton("-", color: .white.opacity(0.2)) { viewModel.decreaseBet() }
-                stackedButton("BET MAX", hotkey: "M", color: .orange.opacity(0.85), textColor: .white) { viewModel.maxBet() }
+                casinoButton("BET MAX  [M]", color: .orange.opacity(0.85)) { viewModel.maxBet() }
                 casinoButton("+", color: .white.opacity(0.2)) { viewModel.increaseBet() }
                 Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
-                stackedButton("DEAL", hotkey: "Space", color: .yellow, textColor: .black,
-                              disabled: viewModel.state.sessionCredits < viewModel.state.currentBet) {
+                casinoButton("DEAL  [Space]", color: .yellow,
+                             disabled: viewModel.state.sessionCredits < viewModel.state.currentBet) {
                     viewModel.deal()
                 }
 
@@ -535,7 +550,7 @@ struct BlackjackOptionsView: View {
     var body: some View {
         ZStack {
         VStack(spacing: 20) {
-            Text("Blackjack Preferences")
+            Text("Preferences")
                 .font(.system(size: 16, weight: .bold, design: .monospaced))
                 .padding(.top, 12)
 
@@ -701,6 +716,7 @@ struct BlackjackStatsView: View {
 
             HStack {
                 Button("Reset Stats") { showingResetConfirmation = true }
+                    .buttonStyle(.borderless)
                     .foregroundColor(.red)
                     .font(.system(.body, design: .monospaced))
                     .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
@@ -710,7 +726,7 @@ struct BlackjackStatsView: View {
                         Text("This will permanently clear all Blackjack statistics. This cannot be undone.")
                     }
                 Spacer()
-                Button("Done") { dismiss() }
+                Button("Close") { dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .font(.system(.body, design: .monospaced))
             }

@@ -156,8 +156,12 @@ public final class BeecellViewModel {
         modeStats.gamesWon += 1
         modeStats.currentStreak += 1
         modeStats.longestStreak = max(modeStats.longestStreak, modeStats.currentStreak)
-        if timeInSeconds > 0 && (modeStats.shortestWinTime == 0 || timeInSeconds < modeStats.shortestWinTime) {
-            modeStats.shortestWinTime = timeInSeconds
+        if timeInSeconds > 0 {
+            modeStats.totalWinningTime += timeInSeconds
+            modeStats.winningGamesCount += 1
+            if modeStats.shortestWinTime == 0 || timeInSeconds < modeStats.shortestWinTime {
+                modeStats.shortestWinTime = timeInSeconds
+            }
         }
         stats.statsByMode[currentModeKey] = modeStats
         statistics = stats

@@ -34,7 +34,7 @@ public struct GameView: View {
             viewModel.options.feltColor.primaryColor
                 .ignoresSafeArea()
 
-            if viewModel.options.showFeltVignette { FeltVignetteView() }
+            if viewModel.options.showFeltVignette { FeltVignetteView(intensity: 0.34) }
 
             VStack(spacing: 0) {
                 // Stationary Top Control and Status Panel (1.0x Scale)
@@ -169,9 +169,11 @@ public struct GameView: View {
                             
                             // Moves
                             StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
-                            
+
                             // Timer
-                            StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
+                            if viewModel.options.isTimed {
+                                StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
+                            }
                         }
                     }
                     
@@ -187,9 +189,8 @@ public struct GameView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
                 .padding(.vertical, 6)
-                .background(viewModel.options.feltColor.statusBarColor)
                 .layoutPriority(1)
-                
+
                 // Visual Divider line
                 Rectangle()
                     .fill(Color.white.opacity(0.15))
@@ -410,16 +411,28 @@ public struct GameView: View {
                                 .foregroundColor(.white.opacity(0.8))
                         }
                         Spacer()
-                        Button("New Game") { viewModel.startNewGame() }
-                            .font(.system(.body, design: .monospaced))
-                            .fontWeight(.bold)
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.yellow)
-                            .cornerRadius(6)
-                            .shadow(radius: 2)
-                            .buttonStyle(.plain)
+                        HStack(spacing: 8) {
+                            Button("Restart Game") { viewModel.restartCurrentGame() }
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.orange)
+                                .cornerRadius(6)
+                                .shadow(radius: 2)
+                                .buttonStyle(.plain)
+                            Button("New Game") { viewModel.startNewGame() }
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.yellow)
+                                .cornerRadius(6)
+                                .shadow(radius: 2)
+                                .buttonStyle(.plain)
+                        }
                     }
                     .padding(16)
                     .background(Color.orange.opacity(0.9))
@@ -1085,12 +1098,12 @@ struct StatsView: View {
         let stats = viewModel.statistics
         
         VStack(spacing: 20) {
-            Text("Statistics")
+            Text("Klondike Statistics")
                 .font(.system(size: 16, weight: .bold, design: .monospaced))
                 .padding(.top, 12)
-            
+
             Divider()
-            
+
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Games Played:")
@@ -1098,21 +1111,21 @@ struct StatsView: View {
                     Text("\(stats.gamesPlayed)")
                 }
                 .font(.system(.body, design: .monospaced))
-                
+
                 HStack {
                     Text("Games Won:")
                     Spacer()
                     Text("\(stats.gamesWon)")
                 }
                 .font(.system(.body, design: .monospaced))
-                
+
                 HStack {
                     Text("High Score:")
                     Spacer()
                     Text(viewModel.highScoreString)
                 }
                 .font(.system(.body, design: .monospaced))
-                
+
                 HStack {
                     Text("Win Percentage:")
                     Spacer()
@@ -1128,10 +1141,6 @@ struct StatsView: View {
                             .foregroundColor(viewModel.vegasBankroll >= 0 ? .green : .red)
                     }
                     .font(.system(.body, design: .monospaced))
-
-                    Button("Reset Bankroll") { viewModel.resetVegasBankroll() }
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.secondary)
                 }
 
                 HStack {
@@ -1140,14 +1149,14 @@ struct StatsView: View {
                     Text("\(stats.currentStreak)")
                 }
                 .font(.system(.body, design: .monospaced))
-                
+
                 HStack {
                     Text("Longest Streak:")
                     Spacer()
                     Text("\(stats.longestStreak)")
                 }
                 .font(.system(.body, design: .monospaced))
-                
+
                 HStack {
                     Text("Avg Winning Time:")
                     Spacer()
@@ -1163,9 +1172,9 @@ struct StatsView: View {
                 .font(.system(.body, design: .monospaced))
             }
             .padding(.horizontal, 36)
-            
+
             Divider()
-            
+
             HStack {
                 Button("Reset Stats") {
                     showingResetConfirmation = true
@@ -1183,9 +1192,16 @@ struct StatsView: View {
                 } message: {
                     Text("This will permanently clear all statistics. This cannot be undone.")
                 }
-                
+
+                if viewModel.options.isVegasScoring {
+                    Button("Reset Bankroll") { viewModel.resetVegasBankroll() }
+                        .buttonStyle(.borderless)
+                        .foregroundColor(.red)
+                        .font(.system(.body, design: .monospaced))
+                }
+
                 Spacer()
-                
+
                 Button("Close") {
                     dismiss()
                 }
@@ -1194,7 +1210,7 @@ struct StatsView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
         }
-        .frame(width: 320)
+        .frame(width: 360)
         .background(Color(NSColor.windowBackgroundColor))
     }
 }

@@ -178,6 +178,7 @@ public final class BlackjackViewModel {
         state.sessionCredits -= state.currentBet
         statistics.totalWagered += state.currentBet
         statistics.handsPlayed += 1
+        state.handsDealt += 1
 
         state.deck = freshDeck()
         playSound(named: "shuffle")

@@ -120,7 +120,7 @@ public final class GameViewModel {
     
     public var maxRecycles: Int? {
         if options.isVegasScoring {
-            return state.drawMode == .drawThree ? 1 : 0
+            return state.drawMode == .drawThree ? 2 : 1
         }
         guard options.isDrawConstraintsEnabled else { return nil }
         return state.drawMode == .drawThree ? 3 : nil
@@ -437,6 +437,8 @@ public final class GameViewModel {
         guard let initial = initialState else { return }
         stopTimer()
         undoStack.removeAll()
+        // Charge the re-deal cost before restoring state (same as starting a new game)
+        if options.isVegasScoring { vegasBankroll += initial.score }
         state = initial
         isAutocompleteAvailable = false
         isAutoplayRunning = false
@@ -677,13 +679,20 @@ public final class GameViewModel {
         // Can draw from stock or recycle waste?
         if !state.stock.isEmpty || canRecycleStock { return true }
 
+        // Stock is empty and no recycling is available — no new cards can ever be drawn.
+        // Only count moves that make real progress; pure tableau reorganization of fully
+        // face-up columns (e.g. kings shuffling between empty slots) cannot advance the
+        // game and must not prevent stuck detection.
         let allSources: [Pile] = (state.waste.topCard != nil ? [state.waste] : []) + state.tableau
         let targets: [Pile] = state.foundations + state.tableau
 
         for source in allSources {
             guard let topCard = source.topCard else { continue }
             for target in targets where target.id != source.id {
-                if isValidMove(cards: [topCard], to: target) { return true }
+                if isValidMove(cards: [topCard], to: target),
+                   isProgressiveMove(cards: [topCard], source: source, target: target) {
+                    return true
+                }
             }
             // Try multi-card tableau sequences
             if source.type == .tableau {
@@ -698,9 +707,31 @@ public final class GameViewModel {
                     }
                     guard valid else { continue }
                     for target in state.tableau where target.id != source.id {
-                        if isValidMove(cards: seq, to: target) { return true }
+                        if isValidMove(cards: seq, to: target),
+                           isProgressiveMove(cards: seq, source: source, target: target) {
+                            return true
+                        }
                     }
                 }
+            }
+        }
+        return false
+    }
+
+    // A move is progressive if it advances toward the win condition:
+    // - Moving to a foundation pile, OR
+    // - Placing the waste top card onto the tableau (it's a new card entering play), OR
+    // - Revealing a face-down card in the source tableau column.
+    // Pure tableau-to-tableau reorganization of fully face-up columns is not progressive.
+    private func isProgressiveMove(cards: [Card], source: Pile, target: Pile) -> Bool {
+        if target.type == .foundation { return true }
+        if source.type == .waste { return true }
+        if source.type == .tableau {
+            guard let colIdx = state.tableau.firstIndex(where: { $0.id == source.id }) else { return false }
+            let col = state.tableau[colIdx]
+            let remainingCount = col.cards.count - cards.count
+            if remainingCount > 0 && !col.cards[remainingCount - 1].faceUp {
+                return true
             }
         }
         return false

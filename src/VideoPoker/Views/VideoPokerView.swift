@@ -398,12 +398,12 @@ public struct VideoPokerView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.black.opacity(0.6))
+                .fill(Color.black.opacity(0.35))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.8), radius: 6, x: 0, y: 3)
+                .shadow(color: .black.opacity(0.5), radius: 6, x: 0, y: 3)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
@@ -424,12 +424,12 @@ public struct VideoPokerView: View {
             switch viewModel.state.phase {
             case .deal, .result:
                 casinoButton("-", color: .white.opacity(0.2)) { viewModel.decreaseBet() }
-                casinoButton("BET MAX", color: .orange.opacity(0.85)) { viewModel.maxBet() }
+                casinoButton("BET MAX  [M]", color: .orange.opacity(0.85)) { viewModel.maxBet() }
                 casinoButton("+", color: .white.opacity(0.2)) { viewModel.increaseBet() }
 
                 Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
 
-                casinoButton("DEAL", color: .yellow, textColor: .black,
+                casinoButton("DEAL  [Space]", color: .yellow, textColor: .black,
                              disabled: viewModel.state.sessionCredits < viewModel.state.currentBet) {
                     viewModel.deal()
                 }
@@ -484,6 +484,8 @@ public struct VideoPokerView: View {
             Button("") { toggleHoldKey(at: 2) }.keyboardShortcut("3", modifiers: [])
             Button("") { toggleHoldKey(at: 3) }.keyboardShortcut("4", modifiers: [])
             Button("") { toggleHoldKey(at: 4) }.keyboardShortcut("5", modifiers: [])
+            // M — bet max
+            Button("") { viewModel.maxBet() }.keyboardShortcut("m", modifiers: [])
             // H / C — hold all / clear
             Button("") { holdAll()    }.keyboardShortcut("h", modifiers: [])
             Button("") { clearHolds() }.keyboardShortcut("c", modifiers: [])
@@ -587,7 +589,7 @@ struct VideoPokerOptionsView: View {
     var body: some View {
         ZStack {
         VStack(spacing: 20) {
-            Text("Video Poker Preferences")
+            Text("Preferences")
                 .font(.system(size: 16, weight: .bold, design: .monospaced))
                 .padding(.top, 12)
 
@@ -759,6 +761,7 @@ struct VideoPokerStatsView: View {
 
             HStack {
                 Button("Reset Stats") { showingResetConfirmation = true }
+                    .buttonStyle(.borderless)
                     .foregroundColor(.red)
                     .font(.system(.body, design: .monospaced))
                     .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
@@ -768,7 +771,7 @@ struct VideoPokerStatsView: View {
                         Text("This will permanently clear all statistics. This cannot be undone.")
                     }
                 Spacer()
-                Button("Done") { dismiss() }
+                Button("Close") { dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .font(.system(.body, design: .monospaced))
             }

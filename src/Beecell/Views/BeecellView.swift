@@ -34,7 +34,7 @@ public struct BeecellView: View {
             viewModel.options.feltColor.primaryColor
                 .ignoresSafeArea()
 
-            if viewModel.options.showFeltVignette { FeltVignetteView() }
+            if viewModel.options.showFeltVignette { FeltVignetteView(intensity: 0.34) }
 
 
             VStack(spacing: 0) {
@@ -156,7 +156,9 @@ public struct BeecellView: View {
                     HStack(alignment: .bottom, spacing: 20) {
                         StatusItemView(label: "SCORE", value: viewModel.scoreString)
                         StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
-                        StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
+                        if viewModel.options.isTimed {
+                            StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
+                        }
                     }
                     
                     Button(action: { isShowingNewGameConfirm = true }) { EmptyView() }
@@ -171,9 +173,8 @@ public struct BeecellView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
                 .padding(.bottom, 6)
-                .background(viewModel.options.feltColor.statusBarColor)
                 .layoutPriority(1)
-                
+
                 Rectangle()
                     .fill(Color.white.opacity(0.15))
                     .frame(height: 1)
@@ -966,7 +967,7 @@ struct BeecellStatsView: View {
         let stats = viewModel.currentModeStats
         
         VStack(spacing: 20) {
-            Text("Statistics (\(viewModel.options.deckCount == 1 ? "1-Deck" : "2-Decks"))")
+            Text("Freecell Statistics (\(viewModel.options.deckCount == 1 ? "1-Deck" : "2-Decks"))")
                 .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .padding(.top, 12)
             
@@ -1016,6 +1017,13 @@ struct BeecellStatsView: View {
                 .font(.system(.body, design: .monospaced))
 
                 HStack {
+                    Text("Avg Winning Time:")
+                    Spacer()
+                    Text(stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
+                }
+                .font(.system(.body, design: .monospaced))
+
+                HStack {
                     Text("Fastest Win:")
                     Spacer()
                     Text(stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
@@ -1039,9 +1047,9 @@ struct BeecellStatsView: View {
                 } message: {
                     Text("This will permanently clear all statistics. This cannot be undone.")
                 }
-                
+
                 Spacer()
-                
+
                 Button("Close") {
                     dismiss()
                 }

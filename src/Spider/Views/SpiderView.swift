@@ -33,7 +33,7 @@ public struct SpiderView: View {
             viewModel.options.feltColor.primaryColor
                 .ignoresSafeArea()
 
-            if viewModel.options.showFeltVignette { FeltVignetteView() }
+            if viewModel.options.showFeltVignette { FeltVignetteView(intensity: 0.34) }
 
             
             VStack(spacing: 0) {
@@ -158,20 +158,22 @@ public struct SpiderView: View {
                     HStack(alignment: .bottom, spacing: 20) {
                         StatusItemView(label: "SCORE", value: viewModel.scoreString)
                         StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
-                        StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
+                        if viewModel.options.isTimed {
+                            StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
                 .padding(.bottom, 6)
-                .background(viewModel.options.feltColor.statusBarColor)
                 .layoutPriority(1)
-                
+
                 Rectangle()
                     .fill(Color.white.opacity(0.15))
                     .frame(height: 1)
-                
+
                 // Game Board Area
+                ScrollView(.horizontal, showsIndicators: false) {
                 ZStack {
                     VStack(spacing: 16) {
                         // Hint Banner
@@ -376,8 +378,9 @@ public struct SpiderView: View {
                 .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
                 .frame(width: boardWidth * viewModel.zoomScale, height: boardHeight * viewModel.zoomScale, alignment: .topLeading)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            
+            .frame(minWidth: boardWidth * viewModel.zoomScale, maxHeight: .infinity, alignment: .topLeading)
+                } // ScrollView
+
             // Drag overlay representation (positioned globally, scaled to match board)
             if !draggedCards.isEmpty {
                 VStack(spacing: 20 - 181) {
@@ -398,7 +401,7 @@ public struct SpiderView: View {
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .id(viewModel.options.customFeltColorRevision)
-        .frame(minWidth: boardWidth * viewModel.zoomScale,
+        .frame(minWidth: 760,
                idealWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
                minHeight: 73 + boardHeight * viewModel.zoomScale,
@@ -572,11 +575,12 @@ struct SpiderOptionsView: View {
             
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Picker("Difficulty / Suits:", selection: $suitCount) {
-                        Text("1 Suit (Spades)").tag(1)
-                        Text("2 Suits (♠️❤️)").tag(2)
-                        Text("4 Suits (Standard)").tag(4)
+                    Picker("Suits:", selection: $suitCount) {
+                        Text("1 (Spades)").tag(1)
+                        Text("2 (♠♥)").tag(2)
+                        Text("4 (Standard)").tag(4)
                     }
+                    .pickerStyle(.segmented)
                     .font(.system(.body, design: .monospaced))
                     
                     Divider()
@@ -720,7 +724,7 @@ struct SpiderStatsView: View {
         let stats = viewModel.currentModeStats
         
         VStack(spacing: 20) {
-            Text("Statistics (\(viewModel.options.suitCount) \(viewModel.options.suitCount == 1 ? "Suit" : "Suits"))")
+            Text("Spider Statistics (\(viewModel.options.suitCount) \(viewModel.options.suitCount == 1 ? "Suit" : "Suits"))")
                 .font(.system(size: 16, weight: .bold, design: .monospaced))
                 .padding(.top, 12)
             
@@ -768,11 +772,25 @@ struct SpiderStatsView: View {
                     Text("\(stats.longestStreak)")
                 }
                 .font(.system(.body, design: .monospaced))
+
+                HStack {
+                    Text("Avg Winning Time:")
+                    Spacer()
+                    Text(stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
+                }
+                .font(.system(.body, design: .monospaced))
+
+                HStack {
+                    Text("Fastest Win:")
+                    Spacer()
+                    Text(stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
+                }
+                .font(.system(.body, design: .monospaced))
             }
             .padding(.horizontal, 36)
-            
+
             Divider()
-            
+
             HStack {
                 Button("Reset Stats") {
                     showingResetConfirmation = true
@@ -790,9 +808,9 @@ struct SpiderStatsView: View {
                 } message: {
                     Text("This will permanently clear all statistics. This cannot be undone.")
                 }
-                
+
                 Spacer()
-                
+
                 Button("Close") {
                     dismiss()
                 }
@@ -801,7 +819,7 @@ struct SpiderStatsView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
         }
-        .frame(width: 320)
+        .frame(width: 360)
         .background(Color(NSColor.windowBackgroundColor))
     }
 }
