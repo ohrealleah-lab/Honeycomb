@@ -14,61 +14,74 @@
         </Grid.RowDefinitions>
 
         <!-- Command Bar/Navigation and Stats (Colored solid background matching macOS) -->
-        <Border x:Name="TopBarBorder" Grid.Row="0" Padding="15,15,15,5">
-            <DockPanel LastChildFill="False">
-                <!-- Buttons on the Left -->
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <ComboBox x:Name="GameSelectionBox" Classes="toolbar-combo" SelectionChanged="GameSelectionBox_SelectionChanged">
-                        <ComboBoxItem Content="Klondike"         Tag="Klondike" />
-                        <ComboBoxItem Content="Freecell"         Tag="Freecell" />
-                        <ComboBoxItem Content="Spider Solitaire" Tag="Spider" />
-                        <ComboBoxItem Content="Video Poker"      Tag="VideoPoker" />
-                        <ComboBoxItem Content="Video Blackjack"  Tag="Blackjack" />
-                    </ComboBox>
-                    <Button Content="New Game" Click="NewGame_Click" Classes="toolbar" />
-                    <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
-                    <Button Content="Options" Click="Preferences_Click" Classes="toolbar" />
-                    <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
-                    <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
-                              SelectionChanged="PokerVariantBox_SelectionChanged">
-                        <ComboBoxItem Content="Jacks or Better"/>
-                        <ComboBoxItem Content="Deuces Wild"/>
-                        <ComboBoxItem Content="Bonus Poker"/>
-                    </ComboBox>
-                    <Button x:Name="UndoButton" Content="Undo" Click="Undo_Click" Classes="toolbar" />
-                    <Button Content="Theme Editor" Click="ThemeEditor_Click" Classes="toolbar" IsVisible="False" />
-                </StackPanel>
+        <!-- Command Bar/Navigation and Stats (Colored solid background matching macOS) -->
+        <Grid Grid.Row="0">
+            <Border x:Name="TopBarBorder" Padding="15,15,15,5">
+                <DockPanel LastChildFill="False">
+                    <!-- Buttons on the Left -->
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <ComboBox x:Name="GameSelectionBox" Classes="toolbar-combo" SelectionChanged="GameSelectionBox_SelectionChanged">
+                            <ComboBoxItem Content="Klondike"         Tag="Klondike" />
+                            <ComboBoxItem Content="Freecell"         Tag="Freecell" />
+                            <ComboBoxItem Content="Spider Solitaire" Tag="Spider" />
+                            <ComboBoxItem Content="Video Poker"      Tag="VideoPoker" />
+                            <ComboBoxItem Content="Video Blackjack"  Tag="Blackjack" />
+                        </ComboBox>
+                        <Button Content="New Game" Click="NewGame_Click" Classes="toolbar" />
+                        <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
+                        <Button Content="Options" Click="Preferences_Click" Classes="toolbar" />
+                        <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
+                        <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
+                                  SelectionChanged="PokerVariantBox_SelectionChanged">
+                            <ComboBoxItem Content="Jacks or Better"/>
+                            <ComboBoxItem Content="Deuces Wild"/>
+                            <ComboBoxItem Content="Bonus Poker"/>
+                        </ComboBox>
+                        <Button x:Name="UndoButton" Content="Undo" Click="Undo_Click" Classes="toolbar" />
+                        <Button Content="Theme Editor" Click="ThemeEditor_Click" Classes="toolbar" IsVisible="False" />
+                    </StackPanel>
 
-                <!-- Stats on the Right -->
-                <StackPanel x:Name="StatsBarPanel" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="25" VerticalAlignment="Center">
-                    <!-- GAMES PLAYED -->
-                    <StackPanel Spacing="2" HorizontalAlignment="Center">
-                        <TextBlock Text="GAMES PLAYED" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding Stats.GamesPlayed}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                    <!-- Stats on the Right -->
+                    <StackPanel x:Name="StatsBarPanel" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="25" VerticalAlignment="Center">
+                        <!-- GAMES PLAYED -->
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <TextBlock Text="GAMES PLAYED" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding Stats.GamesPlayed}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <!-- GAMES WON -->
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <TextBlock Text="GAMES WON" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding Stats.GamesWon}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <!-- SCORE -->
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <TextBlock Text="SCORE" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding ScoreDisplay}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <!-- MOVES -->
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <TextBlock Text="MOVES" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding State.MovesCount}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <!-- TIME -->
+                        <StackPanel x:Name="TimeStatPanel" Spacing="2" HorizontalAlignment="Center">
+                            <TextBlock Text="TIME" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
                     </StackPanel>
-                    <!-- GAMES WON -->
-                    <StackPanel Spacing="2" HorizontalAlignment="Center">
-                        <TextBlock Text="GAMES WON" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding Stats.GamesWon}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
-                    </StackPanel>
-                    <!-- SCORE -->
-                    <StackPanel Spacing="2" HorizontalAlignment="Center">
-                        <TextBlock Text="SCORE" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding ScoreDisplay}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
-                    </StackPanel>
-                    <!-- MOVES -->
-                    <StackPanel Spacing="2" HorizontalAlignment="Center">
-                        <TextBlock Text="MOVES" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding State.MovesCount}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
-                    </StackPanel>
-                    <!-- TIME -->
-                    <StackPanel x:Name="TimeStatPanel" Spacing="2" HorizontalAlignment="Center">
-                        <TextBlock Text="TIME" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
-                    </StackPanel>
-                </StackPanel>
-            </DockPanel>
-        </Border>
+                </DockPanel>
+            </Border>
+
+            <!-- Vignette depth overlay for the title bar -->
+            <Rectangle x:Name="TopBarVignette" IsHitTestVisible="False" IsVisible="False" ZIndex="10">
+                <Rectangle.Fill>
+                    <RadialGradientBrush Center="50%,50%" Radius="0.9">
+                        <GradientStop Color="#00000000" Offset="0.6"/>
+                        <GradientStop Color="#40000000" Offset="1.0"/>
+                    </RadialGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+        </Grid>
 
         <!-- Main Game Area -->
         <Grid Grid.Row="1">

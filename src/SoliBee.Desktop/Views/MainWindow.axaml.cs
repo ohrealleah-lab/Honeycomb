@@ -128,6 +128,10 @@ public partial class MainWindow : Window
             {
                 TopBarBorder.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(statusHex));
             }
+            if (TopBarVignette != null)
+            {
+                TopBarVignette.IsVisible = options.IsVignetteEnabled;
+            }
         }
         catch
         {
