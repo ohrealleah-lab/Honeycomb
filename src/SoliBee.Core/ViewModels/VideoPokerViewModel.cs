@@ -119,8 +119,6 @@ public partial class VideoPokerViewModel : ObservableObject
             Options.CustomFeltColorHex  = m.Options.CustomFeltColorHex;
             OnPropertyChanged(nameof(Options));
         });
-
-        Deal();
     }
 
     // ── Game actions ──────────────────────────────────────────────────────────
@@ -247,7 +245,6 @@ public partial class VideoPokerViewModel : ObservableObject
             SessionCredits = Options.StartingCredits,
             CurrentBet     = Math.Clamp(Options.BetPerHand, 1, 5),
         };
-        Deal();
     }
 
     // ── Hand evaluation ───────────────────────────────────────────────────────
