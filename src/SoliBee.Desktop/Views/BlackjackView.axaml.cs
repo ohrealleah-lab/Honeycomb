@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
 using SoliBee.Core.ViewModels;
 using SoliBee.Desktop.Services;
@@ -20,8 +21,6 @@ public partial class BlackjackView : UserControl
     private DispatcherTimer? _bannerFadeTimer;
     private DispatcherTimer? _winPulseTimer;
     private DispatcherTimer? _bustFlashTimer;
-    private DispatcherTimer? _idleTimer;
-    private DispatcherTimer? _idleFadeTimer;
     private double           _winPulsePhase;
 
     private BlackjackPhase _lastPhase         = BlackjackPhase.Betting;
@@ -47,6 +46,8 @@ public partial class BlackjackView : UserControl
         if (DataContext is not BlackjackViewModel vm) return;
         vm.PropertyChanged += Vm_PropertyChanged;
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
+            Dispatcher.UIThread.InvokeAsync(() => { if (DataContext is BlackjackViewModel bvm) Refresh(bvm); }));
         if (vm.CanDeal) vm.Deal();
         Refresh(vm);
     }
@@ -56,6 +57,7 @@ public partial class BlackjackView : UserControl
         if (DataContext is BlackjackViewModel vm)
             vm.PropertyChanged -= Vm_PropertyChanged;
         TopLevel.GetTopLevel(this)?.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
+        WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         StopTimers();
     }
 
@@ -86,7 +88,6 @@ public partial class BlackjackView : UserControl
         ApplyFeltColor(vm);
 
         _lastPhase = vm.State.Phase;
-        ResetIdleTimer(vm);
     }
 
     private void PlayTransitionSounds(BlackjackViewModel vm)
@@ -553,64 +554,13 @@ public partial class BlackjackView : UserControl
         _bannerFadeTimer?.Stop();  _bannerFadeTimer  = null;
         _winPulseTimer?.Stop();    _winPulseTimer    = null;
         _bustFlashTimer?.Stop();   _bustFlashTimer   = null;
-        _idleTimer?.Stop();        _idleTimer        = null;
-        _idleFadeTimer?.Stop();    _idleFadeTimer    = null;
-    }
-
-    // ── Idle nudge ────────────────────────────────────────────────────────────
-
-    private void ResetIdleTimer(BlackjackViewModel vm)
-    {
-        _idleTimer?.Stop();
-        _idleTimer = null;
-        if (IdlePrompt.Opacity > 0) FadeOutIdlePrompt();
-        if (vm.State.Phase != BlackjackPhase.Playing) return;
-        _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        _idleTimer.Tick += (_, _) =>
-        {
-            _idleTimer!.Stop();
-            _idleTimer = null;
-            if (DataContext is BlackjackViewModel v && v.State.Phase == BlackjackPhase.Playing)
-                FadeInIdlePrompt();
-        };
-        _idleTimer.Start();
-    }
-
-    private void FadeInIdlePrompt()
-    {
-        _idleFadeTimer?.Stop();
-        double opacity = IdlePrompt.Opacity;
-        _idleFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _idleFadeTimer.Tick += (_, _) =>
-        {
-            opacity = Math.Min(1.0, opacity + 16.0 / 600.0);
-            IdlePrompt.Opacity = opacity;
-            if (opacity >= 1.0) { _idleFadeTimer!.Stop(); _idleFadeTimer = null; }
-        };
-        _idleFadeTimer.Start();
-    }
-
-    private void FadeOutIdlePrompt()
-    {
-        _idleFadeTimer?.Stop();
-        double opacity = IdlePrompt.Opacity;
-        if (opacity <= 0) return;
-        double speed = opacity / (300.0 / 16.0);
-        _idleFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _idleFadeTimer.Tick += (_, _) =>
-        {
-            opacity = Math.Max(0, opacity - speed);
-            IdlePrompt.Opacity = opacity;
-            if (opacity <= 0) { _idleFadeTimer!.Stop(); _idleFadeTimer = null; IdlePrompt.Opacity = 0; }
-        };
-        _idleFadeTimer.Start();
     }
 
     // ── Felt color ────────────────────────────────────────────────────────────
 
     private void ApplyFeltColor(BlackjackViewModel vm)
     {
-        VignetteRect.IsVisible = SoliBee.Core.Services.SettingsService.LoadOptions().IsVignetteEnabled;
+        VignetteRect.IsVisible = vm.Options.IsVignetteEnabled;
         if (vm.Options.IsFinalFantasyMode)
         {
             BoardFeltGrid.Background = new SolidColorBrush(Colors.Black);

@@ -23,9 +23,14 @@ namespace SoliBee.Desktop.Views;
 public partial class PreferencesView : UserControl
 {
     private bool _initializing = true;
+    private bool _revertingGameMode;
+    private int _confirmedGameModeIndex = -1;
     private Bitmap? _cardBackPreviewBitmap;
     private List<SoliBeeTheme> _themes = new();
     private SoliBeeTheme? _themeToDelete;
+
+    public string ActiveGameFamily { get; set; } = "";
+    public event EventHandler<string>? GameModeChangeRequested;
 
     public bool ShowVegasOption
     {
@@ -116,6 +121,17 @@ public partial class PreferencesView : UserControl
         CardOutlineColorPicker.Color = Color.Parse(options.ThemeFaceBorderNormal ?? "#D9000000");
         CardTextBlackColorPicker.Color = Color.Parse(options.ThemeTextBlackNormal ?? "#1A1A1A");
         CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
+
+        // Game Mode section
+        if (!string.IsNullOrEmpty(ActiveGameFamily))
+        {
+            PopulateGameModeCombo(options, ActiveGameFamily);
+            GameModeSection.IsVisible = true;
+        }
+        else
+        {
+            GameModeSection.IsVisible = false;
+        }
     }
 
     private void PreferencesView_Loaded(object? sender, RoutedEventArgs e)
@@ -126,6 +142,58 @@ public partial class PreferencesView : UserControl
             RefreshThemeList();
         }
         _initializing = false;
+    }
+
+    // ── Game Mode ─────────────────────────────────────────────────────────────
+
+    private void PopulateGameModeCombo(GameOptions options, string family)
+    {
+        GameModeCombo.Items.Clear();
+        string currentTag;
+        switch (family)
+        {
+            case "Klondike":
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "Draw 1", Tag = "SolitaireDraw1" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "Draw 3", Tag = "SolitaireDraw3" });
+                currentTag = options.IsDrawConstraintsEnabled ? "SolitaireDraw3" : "SolitaireDraw1";
+                break;
+            case "Freecell":
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Deck",  Tag = "Freecell1" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "2 Decks", Tag = "Freecell2" });
+                currentTag = options.FreecellDeckCount == 2 ? "Freecell2" : "Freecell1";
+                break;
+            case "Spider":
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Suit",  Tag = "Spider1" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "2 Suits", Tag = "Spider2" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "4 Suits", Tag = "Spider4" });
+                currentTag = options.SpiderSuitCount switch { 2 => "Spider2", 4 => "Spider4", _ => "Spider1" };
+                break;
+            default: return;
+        }
+        foreach (var item in GameModeCombo.Items.OfType<ComboBoxItem>())
+        {
+            if (item.Tag?.ToString() == currentTag) { GameModeCombo.SelectedItem = item; break; }
+        }
+        _confirmedGameModeIndex = GameModeCombo.SelectedIndex;
+    }
+
+    private void GameMode_Changed(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_initializing || _revertingGameMode) return;
+        if (GameModeCombo.SelectedItem is not ComboBoxItem item || item.Tag == null) return;
+        GameModeChangeRequested?.Invoke(this, item.Tag.ToString() ?? "");
+    }
+
+    public void RevertGameModeCombo()
+    {
+        _revertingGameMode = true;
+        GameModeCombo.SelectedIndex = _confirmedGameModeIndex;
+        _revertingGameMode = false;
+    }
+
+    public void CommitGameModeCombo()
+    {
+        _confirmedGameModeIndex = GameModeCombo.SelectedIndex;
     }
 
     // ── Theme List ────────────────────────────────────────────────────────────
@@ -431,7 +499,7 @@ public partial class PreferencesView : UserControl
 
     private void UpdateCardBackPreview(GameOptions options)
     {
-        bool isDingwall = options.CardBackTheme == "Dingwall";
+        bool isDingwall = options.CardBackTheme == "Dingwall" || _houliAssets.ContainsKey(options.CardBackTheme);
         var old = _cardBackPreviewBitmap;
         _cardBackPreviewBitmap = LoadCardBackBitmapForPreview(options);
         CardBackPreviewImage.Source = _cardBackPreviewBitmap;

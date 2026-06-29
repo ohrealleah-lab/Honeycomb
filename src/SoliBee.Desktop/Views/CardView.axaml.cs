@@ -29,9 +29,19 @@ public partial class CardView : UserControl
     private Dictionary<CardView, Point> _dragStartPositions = new();
     private Canvas? _dragCanvas;
 
+    private int _lastPipRank = -1;
+    private string _lastPipSuit = "";
+    private uint _lastPipArgb;
+
     private static readonly Dictionary<string, Bitmap> _bitmapCache = new();
     private static readonly Dictionary<string, Bitmap> _customBitmapCache = new();
     private static readonly Dictionary<string, (Bitmap[] Frames, int[] Durations)> _gifFrameCache = new();
+
+    private static GameOptions? _cachedOptions;
+
+    private CardGameView? _cachedParentGameView;
+    private bool _parentGameViewSearched;
+    private static readonly Dictionary<CardGameView, List<PileView>> _pileViewListCache = new();
 
     private static readonly IReadOnlyDictionary<string, string> _houliAssets =
         new Dictionary<string, string>
@@ -69,6 +79,9 @@ public partial class CardView : UserControl
 
     public static void ApplyThemeColors(SoliBee.Core.Models.GameOptions options)
     {
+        _cachedOptions = options;
+        _pipBitmapCache.Clear();
+        _aceBitmapCache.Clear();
         _brushFaceBackNormal.Color  = options.ThemeFaceBackNormal  != null ? Color.Parse(options.ThemeFaceBackNormal)  : Colors.White;
         _brushFaceBackFF.Color       = options.ThemeFaceBackFF       != null ? Color.Parse(options.ThemeFaceBackFF)       : Color.Parse("#333333");
         _brushFaceBorderNormal.Color = options.ThemeFaceBorderNormal != null ? Color.Parse(options.ThemeFaceBorderNormal) : Color.Parse("#D9000000");
@@ -386,7 +399,7 @@ public partial class CardView : UserControl
             CardFace.IsVisible = true;
             CardBack.IsVisible = false;
 
-            bool ffMode = SettingsService.LoadOptions().IsFinalFantasyMode;
+            bool ffMode = (_cachedOptions ?? SettingsService.LoadOptions()).IsFinalFantasyMode;
             // Card face background and border adapt to FF mode
             CardFace.Background       = ffMode ? _brushFaceBackFF       : _brushFaceBackNormal;
             CardFace.BorderBrush      = ffMode ? _brushFaceBorderFFCard : _brushFaceBorderNormal;
@@ -551,7 +564,7 @@ public partial class CardView : UserControl
             CardFace.IsVisible = false;
             CardBack.IsVisible = true;
 
-            bool ffMode = SettingsService.LoadOptions().IsFinalFantasyMode;
+            bool ffMode = (_cachedOptions ?? SettingsService.LoadOptions()).IsFinalFantasyMode;
             CardBack.Background       = ffMode ? _brushFaceBorderFF     : _brushFaceBackNormal;
             CardBack.BorderBrush      = ffMode ? _brushFaceBorderFF     : _brushFaceBorderNormal;
             CardBack.BorderThickness  = new Avalonia.Thickness(ffMode ? 4 : 0.75);
@@ -583,7 +596,7 @@ public partial class CardView : UserControl
         const int bitmapSize = 215; // 2.5× for HiDPI; larger for crisp rendering at 1.25× card scale
         float fontSize = _aceFontSize;
 
-        using var surface = SKSurface.Create(new SKImageInfo(bitmapSize, bitmapSize, SKColorType.Rgba8888, SKAlphaType.Premul));
+        using var surface = SKSurface.Create(new SKImageInfo(bitmapSize, bitmapSize, SKColorType.Bgra8888, SKAlphaType.Premul));
         var skCanvas = surface.Canvas;
         skCanvas.Clear(SKColors.Transparent);
 
@@ -604,12 +617,15 @@ public partial class CardView : UserControl
 
         skCanvas.DrawText(suitChar, x, y, paint);
 
-        using var image = surface.Snapshot();
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        using var stream = new MemoryStream(data.ToArray());
-        var bitmap = new Bitmap(stream);
-        _aceBitmapCache[key] = bitmap;
-        return bitmap;
+        using var skBmp = SKBitmap.FromImage(surface.Snapshot());
+        var wb = new WriteableBitmap(
+            new PixelSize(bitmapSize, bitmapSize),
+            new Vector(96, 96),
+            PixelFormat.Bgra8888, AlphaFormat.Premul);
+        using (var fb = wb.Lock())
+            Marshal.Copy(skBmp.Bytes, 0, fb.Address, skBmp.ByteCount);
+        _aceBitmapCache[key] = wb;
+        return wb;
     }
 
     private static Bitmap GetOrCreatePipBitmap(string suitChar, IBrush brush)
@@ -623,7 +639,7 @@ public partial class CardView : UserControl
         const int bitmapSize = 90; // 2.5× resolution; larger for crisp rendering at 1.25× card scale
         float fontSize = _pipFontSize;
 
-        using var surface = SKSurface.Create(new SKImageInfo(bitmapSize, bitmapSize, SKColorType.Rgba8888, SKAlphaType.Premul));
+        using var surface = SKSurface.Create(new SKImageInfo(bitmapSize, bitmapSize, SKColorType.Bgra8888, SKAlphaType.Premul));
         var skCanvas = surface.Canvas;
         skCanvas.Clear(SKColors.Transparent);
 
@@ -646,16 +662,26 @@ public partial class CardView : UserControl
 
         skCanvas.DrawText(suitChar, x, y, paint);
 
-        using var image = surface.Snapshot();
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        using var stream = new MemoryStream(data.ToArray());
-        var bitmap = new Bitmap(stream);
-        _pipBitmapCache[key] = bitmap;
-        return bitmap;
+        using var skBmp = SKBitmap.FromImage(surface.Snapshot());
+        var wb = new WriteableBitmap(
+            new PixelSize(bitmapSize, bitmapSize),
+            new Vector(96, 96),
+            PixelFormat.Bgra8888, AlphaFormat.Premul);
+        using (var fb = wb.Lock())
+            Marshal.Copy(skBmp.Bytes, 0, fb.Address, skBmp.ByteCount);
+        _pipBitmapCache[key] = wb;
+        return wb;
     }
 
     private void PopulateSuitCanvas(int rank, string suitChar, IBrush brush)
     {
+        var color = brush is SolidColorBrush scb ? scb.Color : Colors.Black;
+        uint argb = ((uint)color.A << 24) | ((uint)color.R << 16) | ((uint)color.G << 8) | color.B;
+        if (rank == _lastPipRank && suitChar == _lastPipSuit && argb == _lastPipArgb) return;
+        _lastPipRank = rank;
+        _lastPipSuit = suitChar;
+        _lastPipArgb = argb;
+
         SuitCanvas.Children.Clear();
 
         var positions = positionsFor(rank);
@@ -800,7 +826,7 @@ public partial class CardView : UserControl
 
     private void ApplyCardBackTheme()
     {
-        var options = SettingsService.LoadOptions();
+        var options = _cachedOptions ?? SettingsService.LoadOptions();
         var theme = options.CardBackTheme;
 
         string filename = "vulpera.png";
@@ -836,10 +862,8 @@ public partial class CardView : UserControl
         }
         else if (_houliAssets.TryGetValue(theme, out var houliFile))
         {
-            filename = houliFile;
-            scale    = options.CardBackScale;
-            offsetX  = options.CardBackOffsetX;
-            offsetY  = options.CardBackOffsetY;
+            filename   = houliFile;
+            isDingwall = true; // fill the card boundary, same as Dingwall
         }
         else
         {
@@ -1154,17 +1178,24 @@ public partial class CardView : UserControl
         }
     }
 
+    private PileView? _cachedParentPileView;
+    private bool _parentPileViewSearched;
+
     public Pile? ParentPile
     {
         get
         {
-            var parent = this.Parent;
-            while (parent != null)
+            if (!_parentPileViewSearched)
             {
-                if (parent is PileView pv) return pv.Pile;
-                parent = parent.Parent;
+                var parent = this.Parent;
+                while (parent != null)
+                {
+                    if (parent is PileView pv) { _cachedParentPileView = pv; break; }
+                    parent = parent.Parent;
+                }
+                _parentPileViewSearched = true;
             }
-            return null;
+            return _cachedParentPileView?.Pile;
         }
     }
 
@@ -1194,7 +1225,7 @@ public partial class CardView : UserControl
         _hintPulseTimer = null;
         _hintPulseBrush = null;
         if (CardFace == null || Card == null || !Card.IsFaceUp) return;
-        bool ffMode = SettingsService.LoadOptions().IsFinalFantasyMode;
+        bool ffMode = (_cachedOptions ?? SettingsService.LoadOptions()).IsFinalFantasyMode;
         CardFace.BorderBrush     = ffMode ? _brushFaceBorderFFCard : _brushFaceBorderNormal;
         CardFace.BorderThickness = new Thickness(ffMode ? 2.5 : 0.75);
     }
@@ -1203,7 +1234,7 @@ public partial class CardView : UserControl
     {
         if (CardFace != null)
         {
-            bool ffMode = SettingsService.LoadOptions().IsFinalFantasyMode;
+            bool ffMode = (_cachedOptions ?? SettingsService.LoadOptions()).IsFinalFantasyMode;
             CardFace.BorderBrush     = ffMode ? _brushFaceBorderFF    : _brushFaceBorderNormal;
             CardFace.BorderThickness = new Thickness(ffMode ? 2.0 : 0.75);
         }
@@ -1217,13 +1248,15 @@ public partial class CardView : UserControl
 
     private CardGameView? FindParentGameView()
     {
+        if (_parentGameViewSearched) return _cachedParentGameView;
         Avalonia.StyledElement? parent = this.Parent;
         while (parent != null)
         {
-            if (parent is CardGameView cgv) return cgv;
+            if (parent is CardGameView cgv) { _cachedParentGameView = cgv; break; }
             parent = parent.Parent;
         }
-        return null;
+        _parentGameViewSearched = true;
+        return _cachedParentGameView;
     }
 
     private void CardView_PointerPressed(object sender, PointerPressedEventArgs e)
@@ -1458,8 +1491,12 @@ public partial class CardView : UserControl
 
     private PileView? FindTargetPileView(CardGameView gameView, Point dropPoint)
     {
-        var piles = new List<PileView>();
-        FindPileViewsRecursive(gameView, piles);
+        if (!_pileViewListCache.TryGetValue(gameView, out var piles))
+        {
+            piles = new List<PileView>();
+            FindPileViewsRecursive(gameView, piles);
+            _pileViewListCache[gameView] = piles;
+        }
 
         foreach (var pv in piles)
         {

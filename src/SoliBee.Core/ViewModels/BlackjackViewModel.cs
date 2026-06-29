@@ -17,6 +17,7 @@ public partial class BlackjackViewModel : ObservableObject
     [ObservableProperty] private BlackjackStatistics _stats   = new();
 
     private List<Card> _deck                = new();
+    private int _deckIdx                    = 0;
     private static readonly Random _rng    = new();
     private int _creditsBeforeDeal          = 0;
 
@@ -62,6 +63,7 @@ public partial class BlackjackViewModel : ObservableObject
         Options.IsSoundEnabled     = shared.IsSoundEnabled;
         Options.FeltColor          = shared.FeltColor.ToString();
         Options.CustomFeltColorHex = shared.CustomFeltColorHex;
+        Options.IsVignetteEnabled  = shared.IsVignetteEnabled;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
@@ -70,6 +72,7 @@ public partial class BlackjackViewModel : ObservableObject
             Options.IsSoundEnabled     = m.Options.IsSoundEnabled;
             Options.FeltColor          = m.Options.FeltColor.ToString();
             Options.CustomFeltColorHex = m.Options.CustomFeltColorHex;
+            Options.IsVignetteEnabled  = m.Options.IsVignetteEnabled;
             OnPropertyChanged(nameof(Options));
         });
     }
@@ -80,7 +83,8 @@ public partial class BlackjackViewModel : ObservableObject
     {
         if (State.Credits < State.CurrentBet) return;
 
-        _deck = BuildAndShuffleDeck();
+        _deck    = BuildAndShuffleDeck();
+        _deckIdx = 0;
         _creditsBeforeDeal = State.Credits;
         State.Credits -= State.CurrentBet;
 
@@ -324,7 +328,7 @@ public partial class BlackjackViewModel : ObservableObject
         switch (hand.Result)
         {
             case BlackjackHandResult.Blackjack:
-                int bjReturn = hand.Bet + (hand.Bet * 3 + 1) / 2;  // ceiling(bet * 3/2)
+                int bjReturn = hand.Bet + (int)(hand.Bet * 1.5);  // floor, matches Mac 3:2 rounding
                 State.Credits += bjReturn;
                 Stats.HandsWon++;
                 Stats.Blackjacks++;
@@ -362,8 +366,7 @@ public partial class BlackjackViewModel : ObservableObject
 
     private Card DrawCard(bool faceUp)
     {
-        var card = _deck[0];
-        _deck.RemoveAt(0);
+        var card = _deck[_deckIdx++];
         return card with { IsFaceUp = faceUp };
     }
 

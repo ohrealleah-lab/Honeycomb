@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
@@ -18,7 +17,6 @@ public partial class VideoPokerViewModel : ObservableObject
     [ObservableProperty] private VideoPokerStatistics _stats = new();
 
     private List<Card> _deck = new();
-    private Timer? _timer;
 
     // ── Pay tables ────────────────────────────────────────────────────────────
 
@@ -76,7 +74,6 @@ public partial class VideoPokerViewModel : ObservableObject
     public string ScoreDisplay    => $"${State.SessionCredits}";
     public string CreditDisplay   => State.SessionCredits.ToString();
     public string BetDisplay      => State.CurrentBet.ToString();
-    public string TimeDisplay     => TimeSpan.FromSeconds(State.TimerSeconds).ToString(@"mm\:ss");
     public string ResultText      => State.Phase == VideoPokerPhase.Result && State.LastPayout > 0
                                         ? $"★  {State.LastHandName}  +{State.LastPayout}  ★"
                                         : "";
@@ -109,6 +106,7 @@ public partial class VideoPokerViewModel : ObservableObject
         Options.IsSoundEnabled      = shared.IsSoundEnabled;
         Options.FeltColor           = shared.FeltColor.ToString();
         Options.CustomFeltColorHex  = shared.CustomFeltColorHex;
+        Options.IsVignetteEnabled   = shared.IsVignetteEnabled;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
@@ -117,6 +115,7 @@ public partial class VideoPokerViewModel : ObservableObject
             Options.IsSoundEnabled      = m.Options.IsSoundEnabled;
             Options.FeltColor           = m.Options.FeltColor.ToString();
             Options.CustomFeltColorHex  = m.Options.CustomFeltColorHex;
+            Options.IsVignetteEnabled   = m.Options.IsVignetteEnabled;
             OnPropertyChanged(nameof(Options));
         });
     }
@@ -137,8 +136,6 @@ public partial class VideoPokerViewModel : ObservableObject
 
         Stats.TotalHands++;
         Stats.TotalCreditsWagered += State.CurrentBet;
-
-        if (Options.IsTimed && !State.IsTimerRunning) StartTimer();
 
         NotifyStateChanged();
     }
@@ -239,12 +236,12 @@ public partial class VideoPokerViewModel : ObservableObject
 
     public void StartNewGame()
     {
-        StopTimer();
         State = new VideoPokerState
         {
             SessionCredits = Options.StartingCredits,
             CurrentBet     = Math.Clamp(Options.BetPerHand, 1, 5),
         };
+        NotifyStateChanged();
     }
 
     // ── Hand evaluation ───────────────────────────────────────────────────────
@@ -356,25 +353,6 @@ public partial class VideoPokerViewModel : ObservableObject
             int j = rng.Next(i + 1);
             (_deck[i], _deck[j]) = (_deck[j], _deck[i]);
         }
-    }
-
-    // ── Timer ─────────────────────────────────────────────────────────────────
-
-    private void StartTimer()
-    {
-        State.IsTimerRunning = true;
-        _timer = new Timer(_ =>
-        {
-            State.TimerSeconds++;
-            OnPropertyChanged(nameof(TimeDisplay));
-        }, null, 1000, 1000);
-    }
-
-    private void StopTimer()
-    {
-        _timer?.Dispose();
-        _timer = null;
-        State.IsTimerRunning = false;
     }
 
     // ── Persistence ───────────────────────────────────────────────────────────
@@ -494,7 +472,6 @@ public partial class VideoPokerViewModel : ObservableObject
         OnPropertyChanged(nameof(ScoreDisplay));
         OnPropertyChanged(nameof(CreditDisplay));
         OnPropertyChanged(nameof(BetDisplay));
-        OnPropertyChanged(nameof(TimeDisplay));
         OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(HasWin));
         OnPropertyChanged(nameof(ShowNoWin));

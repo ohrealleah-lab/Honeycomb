@@ -41,6 +41,8 @@ public partial class FreecellViewModel : ObservableObject
     private readonly Stack<FreecellSnapshot> _undoStack = new();
     private FreecellSnapshot? _initialSnapshot;
     private System.Threading.Timer? _gameTimer;
+    private readonly SynchronizationContext? _syncContext;
+    private int _foundationCardCount;
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
     public string ScoreDisplay => State.Score.ToString();
@@ -54,6 +56,7 @@ public partial class FreecellViewModel : ObservableObject
 
     public FreecellViewModel()
     {
+        _syncContext = SynchronizationContext.Current;
         Options = SettingsService.LoadOptions();
         Stats = StatsService.LoadStats();
 
@@ -63,17 +66,20 @@ public partial class FreecellViewModel : ObservableObject
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             if (Options.FreecellDeckCount != old.FreecellDeckCount || Options.IsVegasScoring != old.IsVegasScoring)
-                InitializeGame();
+                InitializeGame(countAsNewGame: false);
         });
 
         InitializeGame();
     }
 
-    public void InitializeGame()
+    public void InitializeGame(bool countAsNewGame = true)
     {
+        bool wasAbandonedGame = State.MovesCount > 0 && !State.HasWon;
+
         _gameTimer?.Dispose();
         FreeCells.Clear();
         Foundations.Clear();
+        _foundationCardCount = 0;
         Tableaus.Clear();
         _undoStack.Clear();
 
@@ -109,7 +115,11 @@ public partial class FreecellViewModel : ObservableObject
         }
 
         var rng = new Random();
-        deck = deck.OrderBy(_ => rng.Next()).ToList();
+        for (int i = deck.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            (deck[i], deck[j]) = (deck[j], deck[i]);
+        }
 
         int tableauIndex = 0;
         foreach (var card in deck)
@@ -121,7 +131,9 @@ public partial class FreecellViewModel : ObservableObject
         var stats = StatsService.LoadStats();
         if (!stats.FreecellStatsByMode.ContainsKey(ModeKey))
             stats.FreecellStatsByMode[ModeKey] = new ModeStats();
-        stats.FreecellStatsByMode[ModeKey].GamesPlayed++;
+        if (wasAbandonedGame)
+            stats.FreecellStatsByMode[ModeKey].CurrentStreak = 0;
+        if (countAsNewGame) stats.FreecellStatsByMode[ModeKey].GamesPlayed++;
         StatsService.SaveStats(stats);
         Stats = stats;
 
@@ -135,7 +147,7 @@ public partial class FreecellViewModel : ObservableObject
             if (State != null && State.IsTimerActive && !State.HasWon)
             {
                 State.TimerSeconds++;
-                OnPropertyChanged(nameof(TimeDisplay));
+                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
             }
         }, null, 1000, 1000);
 
@@ -163,7 +175,7 @@ public partial class FreecellViewModel : ObservableObject
             if (State != null && State.IsTimerActive && !State.HasWon)
             {
                 State.TimerSeconds++;
-                OnPropertyChanged(nameof(TimeDisplay));
+                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
             }
         }, null, 1000, 1000);
 
@@ -239,6 +251,9 @@ public partial class FreecellViewModel : ObservableObject
         foreach (var card in cards)
             target.Cards.Add(card);
 
+        if (target.Type        == PileType.Foundation) _foundationCardCount += cards.Count;
+        if (sourcePile?.Type   == PileType.Foundation) _foundationCardCount -= cards.Count;
+
         UpdateScore(source.Type, target.Type, cards.Count);
         State.MovesCount++;
         CheckVictory();
@@ -280,7 +295,7 @@ public partial class FreecellViewModel : ObservableObject
 
     private void CheckVictory()
     {
-        if (Foundations.Sum(f => f.Cards.Count) == ExpectedCards && !State.HasWon)
+        if (_foundationCardCount == ExpectedCards && !State.HasWon)
         {
             State.HasWon = true;
             State.IsTimerActive = false;
@@ -294,6 +309,8 @@ public partial class FreecellViewModel : ObservableObject
             ms.CurrentStreak++;
             if (ms.CurrentStreak > ms.LongestStreak) ms.LongestStreak = ms.CurrentStreak;
             if (State.Score > ms.HighScore) ms.HighScore = State.Score;
+            if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
+                ms.ShortestWinSeconds = State.TimerSeconds;
             stats.FreecellStatsByMode[ModeKey] = ms;
             StatsService.SaveStats(stats);
             Stats = stats;
@@ -323,7 +340,7 @@ public partial class FreecellViewModel : ObservableObject
     {
         if (!IsAutocompletable) return;
 
-        while (Foundations.Sum(f => f.Cards.Count) < ExpectedCards)
+        while (_foundationCardCount < ExpectedCards)
         {
             bool moved = false;
             foreach (var tableau in Tableaus.Where(t => t.Cards.Count > 0))
@@ -483,10 +500,11 @@ public partial class FreecellViewModel : ObservableObject
             var upper = source.Cards[i];
             var lower = source.Cards[i + 1];
             if (upper.IsFaceUp && upper.Rank == lower.Rank + 1 && IsRed(upper.Suit) != IsRed(lower.Suit))
-                result.Insert(0, upper);
+                result.Add(upper);
             else
                 break;
         }
+        result.Reverse();
         return result;
     }
 
@@ -544,6 +562,7 @@ public partial class FreecellViewModel : ObservableObject
             Foundations[i].Cards.Clear();
             Foundations[i].Cards.AddRange(snapshot.Foundations[i]);
         }
+        _foundationCardCount = Foundations.Sum(f => f.Cards.Count);
         for (int i = 0; i < Tableaus.Count && i < snapshot.Tableaus.Count; i++)
         {
             Tableaus[i].Cards.Clear();

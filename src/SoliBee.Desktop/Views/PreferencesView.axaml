@@ -10,6 +10,14 @@
              ═══════════════════════════════════════════════════════════════════ -->
         <StackPanel x:Name="MainPanel" Spacing="12" Width="270" Margin="10,10,20,10">
 
+            <!-- Game Mode (hidden for Video Poker / Blackjack) -->
+            <StackPanel x:Name="GameModeSection" IsVisible="False" Spacing="6">
+                <TextBlock Text="Game Mode" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
+                <ComboBox x:Name="GameModeCombo" HorizontalAlignment="Stretch"
+                          SelectionChanged="GameMode_Changed"/>
+                <Rectangle Height="1" Fill="#30FFFFFF" Margin="0,4,0,0"/>
+            </StackPanel>
+
             <CheckBox x:Name="TimedCheckBox"        Content="Timed Game"        Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
             <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
             <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>

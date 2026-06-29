@@ -6,5 +6,5 @@ public sealed record VideoPokerPayEntry(
     VideoPokerQualifier Qualifier,
     int[] Multipliers)
 {
-    public int Payout(int bet) => bet >= 1 && bet <= 5 ? Multipliers[bet - 1] : 0;
+    public int Payout(int bet) => bet >= 1 && bet <= 5 ? Multipliers[bet - 1] * bet : 0;
 }

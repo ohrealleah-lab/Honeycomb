@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private DispatcherTimer? _prefSlideTimer;
     private string _pendingAction = "";
     private bool _revertingSelection = false;
+    private PreferencesView? _preferencesView;
 
     public MainWindow()
     {
@@ -229,6 +230,12 @@ public partial class MainWindow : Window
             _revertingSelection = false;
             ApplyGameSwitch(targetTag);
         }
+        else if (_pendingAction.StartsWith("GameMode:"))
+        {
+            string newTag = _pendingAction.Substring("GameMode:".Length);
+            _preferencesView?.CommitGameModeCombo();
+            ApplyGameModeChange(newTag);
+        }
         _pendingAction = "";
     }
 
@@ -236,6 +243,50 @@ public partial class MainWindow : Window
     {
         ConfirmActionOverlay.IsVisible = false;
         _pendingAction = "";
+    }
+
+    private void OnGameModeChangeRequested(object? sender, string newTag)
+    {
+        if (!IsGameInProgress())
+        {
+            ApplyGameModeChange(newTag);
+            return;
+        }
+        _preferencesView?.RevertGameModeCombo();
+        _pendingAction = "GameMode:" + newTag;
+        ConfirmActionTitle.Text   = "Change Game Mode?";
+        ConfirmActionMessage.Text = "Are you sure you want to abandon the current game and change mode?";
+        ConfirmActionButton.Content = "Change Mode";
+        ConfirmActionOverlay.IsVisible = true;
+    }
+
+    private void ApplyGameModeChange(string tag)
+    {
+        var opts = _coordinator.GameViewModel.Options;
+        if (tag == "SolitaireDraw1" || tag == "SolitaireDraw3")
+        {
+            opts.IsDrawConstraintsEnabled = (tag == "SolitaireDraw3");
+            opts.LastGameMode = tag;
+            SettingsService.SaveOptions(opts);
+            _coordinator.GameViewModel.InitializeGame();
+            WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(opts));
+        }
+        else if (tag == "Freecell1" || tag == "Freecell2")
+        {
+            opts.FreecellDeckCount = tag == "Freecell2" ? 2 : 1;
+            opts.LastGameMode = tag;
+            SettingsService.SaveOptions(opts);
+            WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(opts));
+        }
+        else if (tag == "Spider1" || tag == "Spider2" || tag == "Spider4")
+        {
+            opts.SpiderSuitCount = tag switch { "Spider2" => 2, "Spider4" => 4, _ => 1 };
+            opts.LastGameMode = tag;
+            SettingsService.SaveOptions(opts);
+            WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(opts));
+        }
+        _currentGameTag = tag;
+        _preferencesView?.CommitGameModeCombo();
     }
 
     private void Undo_Click(object? sender, RoutedEventArgs e)
@@ -271,10 +322,18 @@ public partial class MainWindow : Window
             _                       => _coordinator.GameViewModel.Options
         };
 
-        var preferencesView = new PreferencesView();
-        preferencesView.DataContext = options;
-        preferencesView.ShowVegasOption = this.DataContext is GameViewModel;
-        this.PreferencesContent.Content = preferencesView;
+        _preferencesView = new PreferencesView();
+        _preferencesView.DataContext = options;
+        _preferencesView.ShowVegasOption = this.DataContext is GameViewModel;
+        _preferencesView.ActiveGameFamily = this.DataContext switch
+        {
+            GameViewModel _      => "Klondike",
+            FreecellViewModel _  => "Freecell",
+            SpiderViewModel _    => "Spider",
+            _                    => "",
+        };
+        _preferencesView.GameModeChangeRequested += OnGameModeChangeRequested;
+        this.PreferencesContent.Content = _preferencesView;
         this.PreferencesOverlay.IsVisible = true;
         SlideInPreferences();
     }
@@ -366,6 +425,7 @@ public partial class MainWindow : Window
 
     private static string GetBaseGameTag(string tag)
     {
+        if (tag == "SolitaireDraw1" || tag == "SolitaireDraw3") return "Klondike";
         if (tag == "Freecell1" || tag == "Freecell2") return "Freecell";
         if (tag == "Spider1" || tag == "Spider2" || tag == "Spider4") return "Spider";
         return tag;
@@ -373,18 +433,12 @@ public partial class MainWindow : Window
 
     private static int GameModeToIndex(string tag) => tag switch
     {
-        "SolitaireDraw3" => 2,
-        "Freecell1"      => 3,
-        "Freecell2"      => 4,
-        "Spider1"        => 5,
-        "Spider2"        => 6,
-        "Spider4"        => 7,
-        "VideoPoker"     => 8,
-        "Blackjack"      => 9,
-        "Beecell"        => 3,
-        "Freecell"       => 3,
-        "Spider"         => 5,
-        _                => 1,
+        "SolitaireDraw1" or "SolitaireDraw3" or "Klondike" => 0,
+        "Freecell1"  or "Freecell2"  or "Freecell"         => 1,
+        "Spider1"    or "Spider2"    or "Spider4" or "Spider" => 2,
+        "VideoPoker"                                        => 3,
+        "Blackjack"                                         => 4,
+        _                                                   => 0,
     };
 
     private void ResizeWindowForGame(string tag)
@@ -406,9 +460,18 @@ public partial class MainWindow : Window
         if (GameSelectionBox == null || _coordinator == null || _revertingSelection) return;
         if (GameSelectionBox.SelectedItem is not ComboBoxItem item || item.Tag == null) return;
 
-        var tag = item.Tag.ToString() ?? "SolitaireDraw1";
+        var baseTag = item.Tag.ToString() ?? "Klondike";
+        // Expand base game name to the last-used mode tag for that game
+        var opts = _coordinator.GameViewModel.Options;
+        var tag = baseTag switch
+        {
+            "Klondike" => opts.IsDrawConstraintsEnabled ? "SolitaireDraw3" : "SolitaireDraw1",
+            "Freecell" => opts.FreecellDeckCount == 2   ? "Freecell2"      : "Freecell1",
+            "Spider"   => opts.SpiderSuitCount switch { 2 => "Spider2", 4 => "Spider4", _ => "Spider1" },
+            _          => baseTag,
+        };
 
-        if (tag != _currentGameTag && IsGameInProgress())
+        if (GetBaseGameTag(tag) != GetBaseGameTag(_currentGameTag) && IsGameInProgress())
         {
             _revertingSelection = true;
             GameSelectionBox.SelectedIndex = GameModeToIndex(_currentGameTag);
@@ -525,8 +588,11 @@ public partial class MainWindow : Window
         RestoreWindowSizeForGame(tag);
 
         bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
-        if (HintButton != null) HintButton.IsVisible = isCardGame;
-        if (UndoButton != null) UndoButton.IsVisible = isCardGame;
+        if (HintButton != null)    HintButton.IsVisible    = isCardGame;
+        if (UndoButton != null)    UndoButton.IsVisible    = isCardGame;
+        if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame;
+        if (RestartButton != null) RestartButton.IsVisible = isCardGame;
+        if (StatsBarPanel != null) StatsBarPanel.IsVisible = isCardGame;
         var options = SettingsService.LoadOptions();
         string baseTag = GetBaseGameTag(tag);
 

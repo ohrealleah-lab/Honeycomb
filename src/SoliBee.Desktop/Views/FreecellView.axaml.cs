@@ -228,10 +228,29 @@ public partial class FreecellView : CardGameView
         SoundService.PlayVictory();
     }
 
+    private void NoMovesNewGame_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FreecellViewModel vm) return;
+        NoMovesBanner.IsVisible = false;
+        vm.InitializeGame();
+        SoundService.PlayShuffle();
+        e.Handled = true;
+    }
+
+    private void NoMovesRestart_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FreecellViewModel vm) return;
+        NoMovesBanner.IsVisible = false;
+        vm.RestartGame();
+        SoundService.PlayShuffle();
+        e.Handled = true;
+    }
+
     private static Bitmap? _ffEmblemBitmap;
 
     private void ApplyFeltColor(GameOptions options)
     {
+        if (VignetteRect != null) VignetteRect.IsVisible = options.IsVignetteEnabled;
         if (options.IsFinalFantasyMode)
         {
             try

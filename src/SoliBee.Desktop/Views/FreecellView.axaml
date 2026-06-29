@@ -5,6 +5,15 @@
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
+        <!-- Vignette depth overlay -->
+        <Rectangle x:Name="VignetteRect" IsHitTestVisible="False" ZIndex="-1" IsVisible="False">
+            <Rectangle.Fill>
+                <RadialGradientBrush Center="50%,50%" Radius="0.8">
+                    <GradientStop Color="#00000000" Offset="0.2"/>
+                    <GradientStop Color="#73000000" Offset="1.0"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
         <StackPanel Width="1066" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,10,0,0" ClipToBounds="False">
 
             <!-- Top row: 4 FreeCells (left) | 4 Foundations (right) -->
@@ -41,15 +50,35 @@
         <!-- Win animation overlay -->
         <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
 
-        <!-- No-moves banner -->
-        <Border x:Name="NoMovesBanner" IsVisible="False"
-                Background="#CC000000" CornerRadius="8" Padding="20,12"
-                HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30">
-            <StackPanel Orientation="Horizontal" Spacing="16">
-                <TextBlock Text="No more moves available." Foreground="White" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <TextBlock Text="Start a New Game to continue." Foreground="#AAFFFFFF" FontSize="13" VerticalAlignment="Center" />
-            </StackPanel>
-        </Border>
+        <Grid x:Name="NoMovesBanner" IsVisible="False" ZIndex="5" IsHitTestVisible="True">
+            <Rectangle Fill="#60000000"/>
+            <Border Background="#1A44CC" CornerRadius="8" Padding="40,24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BoxShadow="0 0 28 10 #501A44CC, 0 4 18 0 #AA000000"
+                    RenderTransformOrigin="50%,50%">
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="NO MORE MOVES" FontSize="30" FontWeight="Black"
+                               Foreground="White" HorizontalAlignment="Center"
+                               FontFamily="Courier New, Consolas, monospace"/>
+                    <TextBlock Text="No legal moves remain."
+                               FontSize="15" Foreground="#CCFFFFff" HorizontalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,12,0,0" HorizontalAlignment="Center">
+                        <Button Content="Restart Game"
+                                Padding="28,10" FontSize="15" FontWeight="Bold"
+                                Background="#33FFFFFF" Foreground="White"
+                                BorderBrush="#60FFFFFF" BorderThickness="1"
+                                CornerRadius="6"
+                                Click="NoMovesRestart_Click"/>
+                        <Button Content="New Game"
+                                Padding="28,10" FontSize="15" FontWeight="Bold"
+                                Background="#33FFFFFF" Foreground="White"
+                                BorderBrush="#60FFFFFF" BorderThickness="1"
+                                CornerRadius="6"
+                                Click="NoMovesNewGame_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
 
     </Grid>
 

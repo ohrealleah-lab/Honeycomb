@@ -9,4 +9,5 @@ public class BlackjackOptions
     public string FeltColor { get; set; } = "FeltGreen";
     public string CustomFeltColorHex { get; set; } = "#592673";
     public bool IsFinalFantasyMode { get; set; }
+    public bool IsVignetteEnabled { get; set; } = true;
 }

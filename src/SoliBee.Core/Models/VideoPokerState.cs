@@ -12,8 +12,6 @@ public class VideoPokerState
     public int LastPayout { get; set; }
     public string LastHandName { get; set; } = "";
     public bool[] WinningCardMask { get; set; } = new bool[5];
-    public int TimerSeconds { get; set; }
-    public bool IsTimerRunning { get; set; }
 
     // Toolbar-compatible alias used by MainWindow bindings
     public int MovesCount => 0;

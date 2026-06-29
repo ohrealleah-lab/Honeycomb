@@ -9,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
 using SoliBee.Core.ViewModels;
 using SoliBee.Desktop.Services;
@@ -85,6 +86,9 @@ public partial class VideoPokerView : UserControl
         TopLevel.GetTopLevel(this)?.AddHandler(
             InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
 
+        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
+            Dispatcher.UIThread.InvokeAsync(() => { foreach (var cv in _cardViews) cv.UpdateCardFace(); }));
+
         BuildPayTable(vm);
         Refresh(vm);
     }
@@ -95,6 +99,7 @@ public partial class VideoPokerView : UserControl
             vm.PropertyChanged -= Vm_PropertyChanged;
         TopLevel.GetTopLevel(this)?.RemoveHandler(
             InputElement.KeyDownEvent, OnKeyDown);
+        WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         HideActiveBanner();
         StopCardsFade();
         StopPayRowPulse();
@@ -515,7 +520,7 @@ public partial class VideoPokerView : UserControl
 
     private void ApplyFeltColor(VideoPokerViewModel vm)
     {
-        VignetteRect.IsVisible = SoliBee.Core.Services.SettingsService.LoadOptions().IsVignetteEnabled;
+        VignetteRect.IsVisible = vm.Options.IsVignetteEnabled;
         if (vm.Options.IsFinalFantasyMode)
         {
             BoardFeltGrid.Background = new SolidColorBrush(Colors.Black);
@@ -845,6 +850,8 @@ public partial class VideoPokerView : UserControl
     private void DealDraw_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not VideoPokerViewModel vm) return;
+        if ((DateTime.UtcNow - _lastDealDrawTime).TotalMilliseconds < 400) return;
+        _lastDealDrawTime = DateTime.UtcNow;
         DoDealOrDraw(vm);
     }
 
@@ -883,13 +890,13 @@ public partial class VideoPokerView : UserControl
         _idleTimer?.Stop();
         _idleTimer = null;
         if (IdlePrompt.Opacity > 0) FadeOutIdlePrompt();
-        if (vm.State.Phase != VideoPokerPhase.Holding) return;
+        if (vm.State.Phase != VideoPokerPhase.Deal) return;
         _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _idleTimer.Tick += (_, _) =>
         {
             _idleTimer!.Stop();
             _idleTimer = null;
-            if (DataContext is VideoPokerViewModel v && v.State.Phase == VideoPokerPhase.Holding)
+            if (DataContext is VideoPokerViewModel v && v.State.Phase == VideoPokerPhase.Deal)
                 FadeInIdlePrompt();
         };
         _idleTimer.Start();

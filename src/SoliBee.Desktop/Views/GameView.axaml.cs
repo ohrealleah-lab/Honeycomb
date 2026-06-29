@@ -175,6 +175,7 @@ public partial class GameView : CardGameView
 
     private void ApplyFeltColor(GameOptions options)
     {
+        if (VignetteRect != null) VignetteRect.IsVisible = options.IsVignetteEnabled;
         if (options.IsFinalFantasyMode)
         {
             try
@@ -205,6 +206,24 @@ public partial class GameView : CardGameView
         };
         try { BoardFeltGrid.Background = new SolidColorBrush(Color.Parse(hexColor)); }
         catch { BoardFeltGrid.Background = new SolidColorBrush(Colors.DarkGreen); }
+    }
+
+    private void NoMovesNewGame_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not GameViewModel vm) return;
+        NoMovesBanner.IsVisible = false;
+        vm.InitializeGame();
+        SoundService.PlayShuffle();
+        e.Handled = true;
+    }
+
+    private void NoMovesRestart_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not GameViewModel vm) return;
+        NoMovesBanner.IsVisible = false;
+        vm.RestartGame();
+        SoundService.PlayShuffle();
+        e.Handled = true;
     }
 
     private void StockPileControl_Clicked(object? sender, EventArgs e)

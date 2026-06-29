@@ -10,6 +10,7 @@ public class GameStatistics
     public int LongestStreak { get; set; }
     public int VegasHighScore { get; set; }
     public int StandardHighScore { get; set; }
+    public int ShortestWinSeconds { get; set; }
 
     // Freecell per-mode stats: keys are "standard_1deck", "vegas_1deck", "standard_2deck", "vegas_2deck"
     public Dictionary<string, ModeStats> FreecellStatsByMode { get; set; } = new();

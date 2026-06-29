@@ -36,6 +36,8 @@ public partial class SpiderViewModel : ObservableObject
     private readonly Stack<SpiderSnapshot> _undoStack = new();
     private SpiderSnapshot? _initialSnapshot;
     private System.Threading.Timer? _gameTimer;
+    private readonly SynchronizationContext? _syncContext;
+    private int _foundationCardCount;
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
     public string ScoreDisplay => State.Score.ToString();
@@ -47,6 +49,7 @@ public partial class SpiderViewModel : ObservableObject
 
     public SpiderViewModel()
     {
+        _syncContext = SynchronizationContext.Current;
         Options = SettingsService.LoadOptions();
         Stats = StatsService.LoadStats();
 
@@ -56,7 +59,7 @@ public partial class SpiderViewModel : ObservableObject
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             if (Options.SpiderSuitCount != old.SpiderSuitCount)
-                InitializeGame();
+                InitializeGame(countAsNewGame: false);
         });
 
         for (int i = 0; i < 10; i++)
@@ -67,12 +70,15 @@ public partial class SpiderViewModel : ObservableObject
         InitializeGame();
     }
 
-    public void InitializeGame()
+    public void InitializeGame(bool countAsNewGame = true)
     {
+        bool wasAbandonedGame = State.MovesCount > 0 && !State.HasWon;
+
         _gameTimer?.Dispose();
         StockPiles.Clear();
         foreach (var t in Tableaus) t.Cards.Clear();
         foreach (var f in Foundations) f.Cards.Clear();
+        _foundationCardCount = 0;
         _undoStack.Clear();
 
         State = new GameState
@@ -86,26 +92,29 @@ public partial class SpiderViewModel : ObservableObject
 
         var deck = BuildDeck();
         var rng = new Random();
-        deck = deck.OrderBy(_ => rng.Next()).ToList();
+        for (int i = deck.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            (deck[i], deck[j]) = (deck[j], deck[i]);
+        }
 
+        int deckIdx = 0;
         for (int col = 0; col < 10; col++)
         {
             int count = col < 4 ? 6 : 5;
             for (int i = 0; i < count; i++)
             {
-                var card = deck[0];
-                deck.RemoveAt(0);
+                var card = deck[deckIdx++];
                 Tableaus[col].Cards.Add(i == count - 1 ? card with { IsFaceUp = true } : card);
             }
         }
 
-        while (deck.Count > 0)
+        while (deckIdx < deck.Count)
         {
             var stockPile = new Pile($"Stock_{StockPiles.Count}", PileType.Stock);
-            for (int i = 0; i < 10 && deck.Count > 0; i++)
+            for (int i = 0; i < 10 && deckIdx < deck.Count; i++)
             {
-                stockPile.Cards.Add(deck[0]);
-                deck.RemoveAt(0);
+                stockPile.Cards.Add(deck[deckIdx++]);
             }
             StockPiles.Add(stockPile);
         }
@@ -113,7 +122,9 @@ public partial class SpiderViewModel : ObservableObject
         var stats = StatsService.LoadStats();
         if (!stats.SpiderStatsBySuit.ContainsKey(SuitKey))
             stats.SpiderStatsBySuit[SuitKey] = new ModeStats();
-        stats.SpiderStatsBySuit[SuitKey].GamesPlayed++;
+        if (wasAbandonedGame)
+            stats.SpiderStatsBySuit[SuitKey].CurrentStreak = 0;
+        if (countAsNewGame) stats.SpiderStatsBySuit[SuitKey].GamesPlayed++;
         StatsService.SaveStats(stats);
         Stats = stats;
 
@@ -127,7 +138,7 @@ public partial class SpiderViewModel : ObservableObject
             if (State != null && State.IsTimerActive && !State.HasWon)
             {
                 State.TimerSeconds++;
-                OnPropertyChanged(nameof(TimeDisplay));
+                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
             }
         }, null, 1000, 1000);
 
@@ -155,7 +166,7 @@ public partial class SpiderViewModel : ObservableObject
             if (State != null && State.IsTimerActive && !State.HasWon)
             {
                 State.TimerSeconds++;
-                OnPropertyChanged(nameof(TimeDisplay));
+                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
             }
         }, null, 1000, 1000);
 
@@ -225,10 +236,11 @@ public partial class SpiderViewModel : ObservableObject
             var upper = source.Cards[i];
             var lower = source.Cards[i + 1];
             if (upper.IsFaceUp && upper.Suit == lower.Suit && upper.Rank == lower.Rank + 1)
-                result.Insert(0, upper);
+                result.Add(upper);
             else
                 break;
         }
+        result.Reverse();
         return result;
     }
 
@@ -282,6 +294,9 @@ public partial class SpiderViewModel : ObservableObject
 
         SaveStateForUndo();
 
+        if (!State.IsTimerActive && !State.HasWon)
+            State.IsTimerActive = true;
+
         var deal = StockPiles[0];
         StockPiles.RemoveAt(0);
 
@@ -324,6 +339,7 @@ public partial class SpiderViewModel : ObservableObject
 
                 foreach (var card in run)
                     emptyFoundation.Cards.Add(card);
+                _foundationCardCount += run.Count;
                 tableau.Cards.RemoveRange(tableau.Cards.Count - 13, 13);
                 FlipTopCard(tableau);
 
@@ -351,7 +367,7 @@ public partial class SpiderViewModel : ObservableObject
 
     private void CheckVictory()
     {
-        if (Foundations.Sum(f => f.Cards.Count) == WinCards && !State.HasWon)
+        if (_foundationCardCount == WinCards && !State.HasWon)
         {
             State.HasWon = true;
             State.IsTimerActive = false;
@@ -365,6 +381,8 @@ public partial class SpiderViewModel : ObservableObject
             ms.CurrentStreak++;
             if (ms.CurrentStreak > ms.LongestStreak) ms.LongestStreak = ms.CurrentStreak;
             if (State.Score > ms.HighScore) ms.HighScore = State.Score;
+            if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
+                ms.ShortestWinSeconds = State.TimerSeconds;
             stats.SpiderStatsBySuit[SuitKey] = ms;
             StatsService.SaveStats(stats);
             Stats = stats;
@@ -396,7 +414,7 @@ public partial class SpiderViewModel : ObservableObject
     private bool SimulateAutocomplete()
     {
         var piles = Tableaus.Select(t => t.Cards.ToList()).ToList();
-        int remaining = WinCards - Foundations.Sum(f => f.Cards.Count);
+        int remaining = WinCards - _foundationCardCount;
 
         const int maxIter = 10_000;
         for (int iter = 0; iter < maxIter && remaining > 0; iter++)
@@ -457,7 +475,7 @@ public partial class SpiderViewModel : ObservableObject
     {
         if (!IsAutocompletable) return;
 
-        while (Foundations.Sum(f => f.Cards.Count) < WinCards)
+        while (_foundationCardCount < WinCards)
         {
             TryCompleteRuns();
             CheckVictory();
@@ -632,6 +650,7 @@ public partial class SpiderViewModel : ObservableObject
             Foundations[i].Cards.Clear();
             Foundations[i].Cards.AddRange(snapshot.Foundations[i]);
         }
+        _foundationCardCount = Foundations.Sum(f => f.Cards.Count);
     }
 
     // MARK: - Felt Color

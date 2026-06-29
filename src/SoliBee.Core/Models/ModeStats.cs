@@ -7,4 +7,5 @@ public class ModeStats
     public int CurrentStreak { get; set; }
     public int LongestStreak { get; set; }
     public int HighScore { get; set; }
+    public int ShortestWinSeconds { get; set; }
 }

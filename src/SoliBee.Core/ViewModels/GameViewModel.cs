@@ -42,6 +42,9 @@ public partial class GameViewModel : ObservableObject
     private List<HintMove> _hintCycleList  = new();
     private int            _hintCycleIndex = 0;
 
+    private readonly SynchronizationContext? _syncContext;
+    private int _foundationCardCount;
+
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
 
     public string ScoreDisplay
@@ -63,13 +66,16 @@ public partial class GameViewModel : ObservableObject
 
     public GameViewModel()
     {
+        _syncContext = SynchronizationContext.Current;
         Options = SettingsService.LoadOptions();
         Stats = StatsService.LoadStats();
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
+            bool vegasChanged = m.Options.IsVegasScoring != Options.IsVegasScoring;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
+            if (vegasChanged) InitializeGame(countAsNewGame: false);
         });
 
         for (int i = 0; i < 4; i++)
@@ -85,12 +91,16 @@ public partial class GameViewModel : ObservableObject
         InitializeGame();
     }
 
-    public void InitializeGame()
+    public void InitializeGame(bool countAsNewGame = true)
     {
+        if (State.MovesCount > 0 && !State.HasWon)
+            Stats.CurrentStreak = 0;
+
         ClearHintCycle();
         Stock.Cards.Clear();
         Waste.Cards.Clear();
         foreach (var f in Foundations) f.Cards.Clear();
+        _foundationCardCount = 0;
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
@@ -128,20 +138,24 @@ public partial class GameViewModel : ObservableObject
             }
         }
 
-        // Shuffle deck
+        // Shuffle deck - Fisher-Yates O(n)
         var rng = new Random();
-        deck = deck.OrderBy(c => rng.Next()).ToList();
+        for (int i = deck.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            (deck[i], deck[j]) = (deck[j], deck[i]);
+        }
 
         // Save a copy of the shuffled deck for RestartGame
         _initialDeck = deck.Select(c => c with { IsFaceUp = false }).ToList();
 
-        // Deal cards to tableau
+        // Deal cards to tableau using index cursor (avoids O(n²) RemoveAt(0))
+        int deckIdx = 0;
         for (int i = 0; i < 7; i++)
         {
             for (int j = 0; j <= i; j++)
             {
-                var card = deck[0];
-                deck.RemoveAt(0);
+                var card = deck[deckIdx++];
 
                 // Top card is face up
                 if (j == i)
@@ -154,15 +168,15 @@ public partial class GameViewModel : ObservableObject
         }
 
         // Put remaining cards in stock
-        foreach (var card in deck)
+        for (int i = deckIdx; i < deck.Count; i++)
         {
-            Stock.Cards.Add(card);
+            Stock.Cards.Add(deck[i]);
         }
 
         IsAutocompletable = false;
         HasNoMoves = false;
 
-        Stats.GamesPlayed++;
+        if (countAsNewGame) Stats.GamesPlayed++;
         StatsService.SaveStats(Stats);
 
         // Start background timer ticking
@@ -172,10 +186,10 @@ public partial class GameViewModel : ObservableObject
             if (State != null && State.IsTimerActive && !State.HasWon)
             {
                 State.TimerSeconds++;
-                OnPropertyChanged(nameof(TimeDisplay));
+                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
             }
         }, null, 1000, 1000);
-        
+
         OnPropertyChanged(nameof(Stock));
         OnPropertyChanged(nameof(Waste));
         OnPropertyChanged(nameof(Foundations));
@@ -191,6 +205,7 @@ public partial class GameViewModel : ObservableObject
         Stock.Cards.Clear();
         Waste.Cards.Clear();
         foreach (var f in Foundations) f.Cards.Clear();
+        _foundationCardCount = 0;
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
@@ -209,13 +224,13 @@ public partial class GameViewModel : ObservableObject
 
         var deckCopy = _initialDeck.Select(c => c).ToList();
 
-        // Deal cards to tableau in the exact same order
+        // Deal cards to tableau in the exact same order using index cursor
+        int copyIdx = 0;
         for (int i = 0; i < 7; i++)
         {
             for (int j = 0; j <= i; j++)
             {
-                var card = deckCopy[0];
-                deckCopy.RemoveAt(0);
+                var card = deckCopy[copyIdx++];
 
                 // Top card is face up
                 if (j == i)
@@ -228,9 +243,9 @@ public partial class GameViewModel : ObservableObject
         }
 
         // Put remaining cards in stock
-        foreach (var card in deckCopy)
+        for (int i = copyIdx; i < deckCopy.Count; i++)
         {
-            Stock.Cards.Add(card);
+            Stock.Cards.Add(deckCopy[i]);
         }
 
         // Reset and restart background timer ticking
@@ -240,7 +255,7 @@ public partial class GameViewModel : ObservableObject
             if (State != null && State.IsTimerActive && !State.HasWon)
             {
                 State.TimerSeconds++;
-                OnPropertyChanged(nameof(TimeDisplay));
+                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
             }
         }, null, 1000, 1000);
 
@@ -392,6 +407,8 @@ public partial class GameViewModel : ObservableObject
         {
             targetPile.Cards.Add(c);
         }
+        if (targetPile.Type == PileType.Foundation) _foundationCardCount += cardsToMove.Count;
+        if (sourcePile.Type == PileType.Foundation)  _foundationCardCount -= cardsToMove.Count;
 
         // Auto flip the new top card of the source pile if it's a tableau
         bool didFlip = false;
@@ -496,6 +513,7 @@ public partial class GameViewModel : ObservableObject
             foreach (var c in snapshot.PileCards[index]) Foundations[i].Cards.Add(c);
             index++;
         }
+        _foundationCardCount = Foundations.Sum(f => f.Cards.Count);
 
         for (int i = 0; i < 7; i++)
         {
@@ -529,7 +547,7 @@ public partial class GameViewModel : ObservableObject
     {
         if (!IsAutocompletable) return;
 
-        while (Foundations.Sum(f => f.Cards.Count) < 52)
+        while (_foundationCardCount < 52)
         {
             bool movedAny = false;
             foreach (var t in Tableaus.Where(x => x.Cards.Count > 0))
@@ -558,7 +576,7 @@ public partial class GameViewModel : ObservableObject
     public void CheckVictory()
     {
         // Win is when foundations contain all 52 cards
-        if (Foundations.Sum(f => f.Cards.Count) == 52)
+        if (_foundationCardCount == 52)
         {
             if (!State.HasWon)
             {
@@ -568,9 +586,9 @@ public partial class GameViewModel : ObservableObject
                 Stats.GamesWon++;
                 Stats.CurrentStreak++;
                 if (Stats.CurrentStreak > Stats.LongestStreak)
-                {
                     Stats.LongestStreak = Stats.CurrentStreak;
-                }
+                if (Stats.ShortestWinSeconds == 0 || State.TimerSeconds < Stats.ShortestWinSeconds)
+                    Stats.ShortestWinSeconds = State.TimerSeconds;
 
                 if (Options.IsVegasScoring)
                 {

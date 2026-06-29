@@ -98,6 +98,22 @@ public static class SettingsService
         }
     }
 
+    private static void RemoveValue(string key)
+    {
+        var localSettings = GetLocalSettings();
+        if (localSettings == null) return;
+        try
+        {
+            var valuesProp = localSettings.GetType().GetProperty("Values", BindingFlags.Public | BindingFlags.Instance);
+            if (valuesProp == null) return;
+            var values = valuesProp.GetValue(localSettings);
+            if (values == null) return;
+            var removeMethod = values.GetType().GetMethod("Remove", new[] { typeof(string) });
+            removeMethod?.Invoke(values, new object[] { key });
+        }
+        catch { }
+    }
+
     public static GameOptions LoadOptions()
     {
         if (_cache != null) return _cache;
@@ -151,6 +167,8 @@ public static class SettingsService
                 if (GetValue("CardBackOffsetY") is double offsetY)
                     options.CardBackOffsetY = offsetY;
 
+                if (GetValue("IsVignetteEnabled") is bool isVignette)
+                    options.IsVignetteEnabled = isVignette;
                 if (GetValue("IsStatusBarVisible") is bool isStatusBar)
                     options.IsStatusBarVisible = isStatusBar;
 
@@ -249,6 +267,7 @@ public static class SettingsService
                 SetValue("CardBackScale", options.CardBackScale);
                 SetValue("CardBackOffsetX", options.CardBackOffsetX);
                 SetValue("CardBackOffsetY", options.CardBackOffsetY);
+                SetValue("IsVignetteEnabled", options.IsVignetteEnabled);
                 SetValue("IsStatusBarVisible", options.IsStatusBarVisible);
                 SetValue("HideHintButton", options.HideHintButton);
                 SetValue("HideStatsButton", options.HideStatsButton);
@@ -280,15 +299,16 @@ public static class SettingsService
                 SetValue("BlackjackHeight",    options.BlackjackHeight);
                 SetValue("BlackjackMaximized", options.BlackjackMaximized);
 
-                if (options.ThemeFaceBackNormal  != null) SetValue("ThemeFaceBackNormal",  options.ThemeFaceBackNormal);
-                if (options.ThemeFaceBackFF       != null) SetValue("ThemeFaceBackFF",       options.ThemeFaceBackFF);
-                if (options.ThemeFaceBorderNormal != null) SetValue("ThemeFaceBorderNormal", options.ThemeFaceBorderNormal);
-                if (options.ThemeFaceBorderFF     != null) SetValue("ThemeFaceBorderFF",     options.ThemeFaceBorderFF);
-                if (options.ThemeFaceBorderFFCard != null) SetValue("ThemeFaceBorderFFCard", options.ThemeFaceBorderFFCard);
-                if (options.ThemeTextRed          != null) SetValue("ThemeTextRed",          options.ThemeTextRed);
-                if (options.ThemeTextRedFF        != null) SetValue("ThemeTextRedFF",        options.ThemeTextRedFF);
-                if (options.ThemeTextBlackNormal  != null) SetValue("ThemeTextBlackNormal",  options.ThemeTextBlackNormal);
-                if (options.ThemeTextBlackFF      != null) SetValue("ThemeTextBlackFF",      options.ThemeTextBlackFF);
+                void WriteOrClear(string k, string? v) { if (v != null) SetValue(k, v); else RemoveValue(k); }
+                WriteOrClear("ThemeFaceBackNormal",  options.ThemeFaceBackNormal);
+                WriteOrClear("ThemeFaceBackFF",      options.ThemeFaceBackFF);
+                WriteOrClear("ThemeFaceBorderNormal",options.ThemeFaceBorderNormal);
+                WriteOrClear("ThemeFaceBorderFF",    options.ThemeFaceBorderFF);
+                WriteOrClear("ThemeFaceBorderFFCard",options.ThemeFaceBorderFFCard);
+                WriteOrClear("ThemeTextRed",         options.ThemeTextRed);
+                WriteOrClear("ThemeTextRedFF",       options.ThemeTextRedFF);
+                WriteOrClear("ThemeTextBlackNormal", options.ThemeTextBlackNormal);
+                WriteOrClear("ThemeTextBlackFF",     options.ThemeTextBlackFF);
 
                 try
                 {

@@ -19,19 +19,14 @@
                 <!-- Buttons on the Left -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                     <ComboBox x:Name="GameSelectionBox" Classes="toolbar-combo" SelectionChanged="GameSelectionBox_SelectionChanged">
-                        <ComboBoxItem Content="Game Selection" IsEnabled="False" IsVisible="False" />
-                        <ComboBoxItem Content="Klondike (Draw 1)" Tag="SolitaireDraw1" />
-                        <ComboBoxItem Content="Klondike (Draw 3)" Tag="SolitaireDraw3" />
-                        <ComboBoxItem Content="Freecell (1 Deck)" Tag="Freecell1" />
-                        <ComboBoxItem Content="Freecell (2 Decks)" Tag="Freecell2" />
-                        <ComboBoxItem Content="Spider (1 Suit)" Tag="Spider1" />
-                        <ComboBoxItem Content="Spider (2 Suits)" Tag="Spider2" />
-                        <ComboBoxItem Content="Spider (4 Suits)" Tag="Spider4" />
-                        <ComboBoxItem Content="Video Poker" Tag="VideoPoker" />
-                        <ComboBoxItem Content="Video Blackjack" Tag="Blackjack" />
+                        <ComboBoxItem Content="Klondike"         Tag="Klondike" />
+                        <ComboBoxItem Content="Freecell"         Tag="Freecell" />
+                        <ComboBoxItem Content="Spider Solitaire" Tag="Spider" />
+                        <ComboBoxItem Content="Video Poker"      Tag="VideoPoker" />
+                        <ComboBoxItem Content="Video Blackjack"  Tag="Blackjack" />
                     </ComboBox>
                     <Button Content="New Game" Click="NewGame_Click" Classes="toolbar" />
-                    <Button Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
+                    <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
                     <Button Content="Options" Click="Preferences_Click" Classes="toolbar" />
                     <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
                     <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
@@ -45,7 +40,7 @@
                 </StackPanel>
 
                 <!-- Stats on the Right -->
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="25" VerticalAlignment="Center">
+                <StackPanel x:Name="StatsBarPanel" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="25" VerticalAlignment="Center">
                     <!-- GAMES PLAYED -->
                     <StackPanel Spacing="2" HorizontalAlignment="Center">
                         <TextBlock Text="GAMES PLAYED" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
@@ -67,7 +62,7 @@
                         <TextBlock Text="{Binding State.MovesCount}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                     </StackPanel>
                     <!-- TIME -->
-                    <StackPanel Spacing="2" HorizontalAlignment="Center">
+                    <StackPanel x:Name="TimeStatPanel" Spacing="2" HorizontalAlignment="Center">
                         <TextBlock Text="TIME" FontSize="11" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                     </StackPanel>
