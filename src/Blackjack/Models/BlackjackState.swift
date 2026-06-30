@@ -41,6 +41,7 @@ public struct BlackjackState: Equatable {
     public var currentBet: Int = 1
     public var handsDealt: Int = 0
     public var lastResultSummary: String = ""
+    public var lastNetResult: Int = 0
     public var dealerValue: Int { BlackjackState.handValue(dealerCards) }
     public var dealerVisibleValue: Int {
         // Only count face-up cards during playing phase

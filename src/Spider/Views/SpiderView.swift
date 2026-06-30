@@ -304,6 +304,39 @@ public struct SpiderView: View {
                         .shadow(radius: 5)
                     }
 
+                    // Autocomplete Banner
+                    if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Victory is guaranteed!")
+                                    .font(.system(.headline, design: .monospaced))
+                                    .foregroundColor(.white)
+                                Text("All remaining cards can be sorted into foundations.")
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                            Spacer()
+                            Button("Autocomplete Game") {
+                                viewModel.runAutocomplete()
+                            }
+                            .font(.system(.body, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.yellow)
+                            .cornerRadius(6)
+                            .shadow(radius: 2)
+                            .buttonStyle(.plain)
+                        }
+                        .padding(16)
+                        .background(Color.blue.opacity(0.9))
+                        .cornerRadius(8)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        .shadow(radius: 5)
+                    }
+
                     // Empty column Stock deal warning
                     if isShowingEmptyStockWarning {
                         VStack(spacing: 12) {

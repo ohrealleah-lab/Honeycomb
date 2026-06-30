@@ -15,6 +15,7 @@ public struct VideoPokerView: View {
     @State private var showIdlePrompt   = false
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
+    @State private var spaceMonitor: Any? = nil
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
 
     public init(viewModel: VideoPokerViewModel) {
@@ -92,6 +93,24 @@ public struct VideoPokerView: View {
         .onAppear {
             if viewModel.state.phase == .deal {
                 withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
+            }
+            
+            // Add local key monitor to swallow repeat spacebar events to avoid autoplaying draw
+            spaceMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                if event.keyCode == 49 && event.isARepeat {
+                    if let firstResponder = NSApp.keyWindow?.firstResponder,
+                       firstResponder.isKind(of: NSText.self) || String(describing: type(of: firstResponder)).contains("TextView") {
+                        return event
+                    }
+                    return nil // Swallow spacebar key-repeat
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let monitor = spaceMonitor {
+                NSEvent.removeMonitor(monitor)
+                spaceMonitor = nil
             }
         }
         .onChange(of: viewModel.state.phase) { _, newPhase in
@@ -318,38 +337,38 @@ public struct VideoPokerView: View {
                 if viewModel.state.lastPayout > 0 {
                     VStack(spacing: 6) {
                         Text(viewModel.state.lastHandName)
-                            .font(.display(26, weight: .black))
-                            .foregroundColor(.yellow)
-                            .shadow(color: winFlash ? .yellow.opacity(0.85) : .clear, radius: winFlash ? 18 : 0)
+                            .font(.system(size: 30, weight: .black))
+                            .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))
                             .scaleEffect(winFlash ? 1.1 : 1.0)
                             .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
-                        Text("WIN  \(viewModel.state.lastPayout)  credits")
-                            .font(.display(16, weight: .bold))
-                            .foregroundColor(.white.opacity(0.9))
+                        Text("+\(viewModel.state.lastPayout)")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white.opacity(0.80))
                             .scaleEffect(winFlash ? 1.08 : 1.0)
                             .animation(.spring(response: 0.25, dampingFraction: 0.45).delay(0.05), value: winFlash)
                     }
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 16)
-                    .background(Color.blue.opacity(0.9))
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 14)
+                    .background(Color(red: 26/255.0, green: 68/255.0, blue: 204/255.0))
                     .cornerRadius(8)
-                    .shadow(radius: 5)
+                    .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.56), radius: 14)
+                    .shadow(color: .black.opacity(0.66), radius: 9, x: 0, y: 4)
                     .allowsHitTesting(false)
                     .transition(.opacity)
                 } else {
                     VStack(spacing: 6) {
                         Text("Not today, partner!")
-                            .font(.display(26, weight: .black))
+                            .font(.system(size: 30, weight: .black))
                             .foregroundColor(.white)
                         Text("Ante up!")
-                            .font(.display(16, weight: .bold))
-                            .foregroundColor(.white.opacity(0.85))
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white.opacity(0.80))
                     }
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 16)
-                    .background(Color.blue.opacity(0.9))
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 14)
+                    .background(Color(red: 26/255.0, green: 68/255.0, blue: 204/255.0))
                     .cornerRadius(8)
-                    .shadow(radius: 5)
+                    .shadow(color: .black.opacity(0.66), radius: 9, x: 0, y: 4)
                     .allowsHitTesting(false)
                     .transition(.opacity)
                 }

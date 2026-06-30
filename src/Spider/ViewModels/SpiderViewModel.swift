@@ -416,6 +416,7 @@ public final class SpiderViewModel {
 
         checkCompletedRuns()
         checkStuckState()
+        checkAutocompleteState()
     }
 
     // MARK: - Move Validation & Execution
@@ -478,6 +479,7 @@ public final class SpiderViewModel {
 
         checkCompletedRuns()
         checkStuckState()
+        checkAutocompleteState()
     }
 
     public func doubleClickMove(card: Card, from sourcePile: Pile) {
@@ -554,11 +556,11 @@ public final class SpiderViewModel {
             }
             
             if isValidRun {
-                // Completed run detected!
-                completedRunFound = true
-                
                 // Only remove from tableau if a foundation slot is available
                 guard let fdnIdx = state.foundations.firstIndex(where: { $0.isEmpty }) else { continue }
+                
+                // Completed run detected!
+                completedRunFound = true
 
                 let completedCardIDs = Set(subrange.map { $0.id })
                 state.tableau[i].cards.removeAll { completedCardIDs.contains($0.id) }
@@ -634,6 +636,7 @@ public final class SpiderViewModel {
         clearHint()
         checkWinState()
         checkStuckState()
+        checkAutocompleteState()
     }
     
     // MARK: - Stuck Detection
@@ -672,8 +675,56 @@ public final class SpiderViewModel {
     }
 
     public func checkStuckState() {
-        guard !state.hasWon else { isStuck = false; return }
+        guard !state.hasWon && !isAutocompleteAvailable else { isStuck = false; return }
         isStuck = !hasValidMoves()
+    }
+
+    // MARK: - Autocomplete
+
+    public func checkAutocompleteState() {
+        let totalFoundationCards = state.foundations.reduce(0) { $0 + $1.cards.count }
+        guard totalFoundationCards < 104, state.stock.isEmpty else {
+            isAutocompleteAvailable = false
+            return
+        }
+
+        // Autocomplete is safe and available whenever there is at least one safe
+        // move found by findNextAutocompleteMove.
+        isAutocompleteAvailable = !state.hasWon && findNextAutocompleteMove() != nil
+    }
+
+    public func runAutocomplete() {
+        guard isAutocompleteAvailable && !isAutoplayRunning else { return }
+        saveStateForUndo()
+        isAutoplayRunning = true
+        animateNextAutocompleteMove()
+    }
+
+    private func animateNextAutocompleteMove() {
+        guard isAutoplayRunning else { return }
+
+        if let nextMove = findNextAutocompleteMove() {
+            moveCards(nextMove.cards, from: nextMove.source, to: nextMove.target)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+                self?.animateNextAutocompleteMove()
+            }
+        } else {
+            isAutoplayRunning = false
+            checkWinState()
+        }
+    }
+
+    private func findNextAutocompleteMove() -> (cards: [Card], source: Pile, target: Pile)? {
+        for source in state.tableau where !source.cards.isEmpty {
+            guard isValidDragSequence(source.cards), let firstCard = source.cards.first else { continue }
+            for target in state.tableau where target.id != source.id {
+                if let topCard = target.topCard, topCard.suit == firstCard.suit, topCard.rank == firstCard.rank + 1 {
+                    return (source.cards, source, target)
+                }
+            }
+        }
+        return nil
     }
 
     // MARK: - Hints

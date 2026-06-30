@@ -512,12 +512,20 @@ public final class BeecellViewModel {
                 return
             }
         }
+        
+        // Try tableau columns third
+        for col in state.tableau {
+            if isValidMove(cards: [card], to: col) {
+                moveCards([card], from: sourcePile, to: col)
+                return
+            }
+        }
     }
     
     private func adjustScore(from source: Pile.PileType, to target: Pile.PileType) {
         if target == .foundation {
             state.score += 10
-        } else if source == .foundation {
+        } else if source == .foundation && target == .tableau {
             state.score = max(0, state.score - 15)
         }
         
@@ -561,6 +569,13 @@ public final class BeecellViewModel {
     
     // MARK: - Stuck Detection
 
+    private func isProgressiveMove(cards: [Card], source: Pile, target: Pile) -> Bool {
+        if target.type == .foundation { return true }
+        if source.type == .freeCell { return true }
+        if target.type == .freeCell { return true }
+        return false
+    }
+
     private func hasValidMoves() -> Bool {
         let allPiles: [Pile] = state.freeCells + state.foundations + state.tableau
 
@@ -570,7 +585,10 @@ public final class BeecellViewModel {
 
             // Try single card to all targets
             for target in allPiles where target.id != source.id {
-                if isValidMove(cards: [topCard], to: target) { return true }
+                if isValidMove(cards: [topCard], to: target),
+                   isProgressiveMove(cards: [topCard], source: source, target: target) {
+                    return true
+                }
             }
 
             // Try sequences from tableau columns
@@ -584,7 +602,10 @@ public final class BeecellViewModel {
                 if seqStart < source.cards.count - 1 {
                     let seq = Array(source.cards[seqStart..<source.cards.count])
                     for target in state.tableau where target.id != source.id {
-                        if isValidMove(cards: seq, to: target) { return true }
+                        if isValidMove(cards: seq, to: target),
+                           isProgressiveMove(cards: seq, source: source, target: target) {
+                            return true
+                        }
                     }
                 }
             }
@@ -611,24 +632,106 @@ public final class BeecellViewModel {
             return
         }
         
-        // Autocomplete is safe and available if:
-        // 1. All free cells are empty
-        // 2. All tableau piles are sorted in descending alternating order
-        let freeCellsEmpty = state.freeCells.allSatisfy { $0.cards.isEmpty }
+        isAutocompleteAvailable = !state.hasWon && canAutocompleteToCompletion()
+    }
+    
+    private func canAutocompleteToCompletion() -> Bool {
+        var tempState = self.state
+        let expectedCards = options.deckCount * 52
         
-        let tableauSorted = state.tableau.allSatisfy { pile in
-            guard pile.cards.count > 1 else { return true }
-            for i in 0..<(pile.cards.count - 1) {
-                let upper = pile.cards[i]
-                let lower = pile.cards[i+1]
-                if upper.rank != lower.rank + 1 || upper.isRed == lower.isRed {
-                    return false
-                }
+        let initialFoundationCount = tempState.foundations.reduce(0) { $0 + $1.cards.count }
+        if initialFoundationCount == expectedCards {
+            return false
+        }
+        
+        while true {
+            let foundationCount = tempState.foundations.reduce(0) { $0 + $1.cards.count }
+            if foundationCount == expectedCards {
+                return true
             }
+            
+            if let nextMove = findNextFoundationMove(in: tempState) {
+                // Apply the move to tempState
+                if let cellIdx = tempState.freeCells.firstIndex(where: { $0.id == nextMove.sourceId }) {
+                    tempState.freeCells[cellIdx].cards.removeAll { $0.id == nextMove.card.id }
+                } else if let tabIdx = tempState.tableau.firstIndex(where: { $0.id == nextMove.sourceId }) {
+                    tempState.tableau[tabIdx].cards.removeAll { $0.id == nextMove.card.id }
+                }
+                
+                if let fndIdx = tempState.foundations.firstIndex(where: { $0.id == nextMove.targetId }) {
+                    tempState.foundations[fndIdx].cards.append(nextMove.card)
+                }
+            } else {
+                return false
+            }
+        }
+    }
+    
+    private func minFoundationRank(for suit: Card.Suit, in foundations: [Pile]) -> Int {
+        let foundationsOfSuit = foundations.filter { $0.topCard?.suit == suit }
+        let nonEmptyRanks = foundationsOfSuit.map { $0.topCard?.rank ?? 0 }
+        
+        var ranks = nonEmptyRanks
+        let expectedCount = options.deckCount
+        while ranks.count < expectedCount {
+            ranks.append(0)
+        }
+        
+        return ranks.min() ?? 0
+    }
+    
+    private func isSafeFoundationMove(_ card: Card, in foundations: [Pile]) -> Bool {
+        if card.rank <= 2 {
             return true
         }
         
-        isAutocompleteAvailable = freeCellsEmpty && tableauSorted && !state.hasWon
+        let oppositeSuits: [Card.Suit] = card.isRed ? [.spades, .clubs] : [.hearts, .diamonds]
+        
+        for suit in oppositeSuits {
+            let minRank = minFoundationRank(for: suit, in: foundations)
+            if minRank < card.rank - 2 {
+                return false
+            }
+        }
+        
+        return true
+    }
+
+    private func findNextFoundationMove(in simState: BeecellState) -> (card: Card, sourceId: String, targetId: String)? {
+        // Free cells first
+        for cell in simState.freeCells {
+            if let topCard = cell.topCard {
+                for foundation in simState.foundations {
+                    if isValidFoundationMove(card: topCard, to: foundation) {
+                        if isSafeFoundationMove(topCard, in: simState.foundations) {
+                            return (topCard, cell.id, foundation.id)
+                        }
+                    }
+                }
+            }
+        }
+        // Tableau second
+        for column in simState.tableau {
+            if let topCard = column.topCard {
+                for foundation in simState.foundations {
+                    if isValidFoundationMove(card: topCard, to: foundation) {
+                        if isSafeFoundationMove(topCard, in: simState.foundations) {
+                            return (topCard, column.id, foundation.id)
+                        }
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    
+    private func isValidFoundationMove(card: Card, to foundation: Pile) -> Bool {
+        if foundation.isEmpty {
+            return card.rank == 1
+        } else {
+            guard let topCard = foundation.topCard else { return false }
+            return card.suit == topCard.suit && card.rank == topCard.rank + 1
+        }
     }
     
     public struct HintMove: Equatable {
@@ -788,7 +891,9 @@ public final class BeecellViewModel {
             if let topCard = cell.topCard {
                 for foundation in state.foundations {
                     if isValidMove(cards: [topCard], to: foundation) {
-                        return (topCard, cell, foundation)
+                        if isSafeFoundationMove(topCard, in: state.foundations) {
+                            return (topCard, cell, foundation)
+                        }
                     }
                 }
             }
@@ -798,7 +903,9 @@ public final class BeecellViewModel {
             if let topCard = column.topCard {
                 for foundation in state.foundations {
                     if isValidMove(cards: [topCard], to: foundation) {
-                        return (topCard, column, foundation)
+                        if isSafeFoundationMove(topCard, in: state.foundations) {
+                            return (topCard, column, foundation)
+                        }
                     }
                 }
             }

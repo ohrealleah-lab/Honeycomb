@@ -407,17 +407,67 @@ public struct BlackjackView: View {
     // MARK: - Result Banner
 
     private var resultBanner: some View {
-        VStack(spacing: 6) {
-            Text(viewModel.state.lastResultSummary)
-                .font(.display(24, weight: .black))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
+        let net = viewModel.state.lastNetResult
+        let anyBJ = viewModel.state.playerHands.contains { $0.result == .blackjack }
+        let anyWin = viewModel.state.playerHands.contains { $0.result == .win || $0.result == .blackjack }
+        let allPush = !viewModel.state.playerHands.isEmpty && viewModel.state.playerHands.allSatisfy { $0.result == .push }
+        
+        let headline: String
+        let subline: String
+        let isWin: Bool
+        
+        if anyBJ {
+            headline = "BLACKJACK!"
+            subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
+            isWin = true
+        } else if anyWin {
+            headline = "YOU WIN!"
+            subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
+            isWin = true
+        } else if allPush {
+            headline = "PUSH"
+            subline = "Bets returned"
+            isWin = false
+        } else {
+            headline = "DEALER WINS"
+            subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
+            isWin = false
         }
-        .padding(.horizontal, 28)
+        
+        let streak = viewModel.consecutiveWins
+        let streakText: String?
+        if streak >= 2 && isWin {
+            streakText = streak >= 5 ? "*** \(streak) WIN STREAK ***"
+                       : streak >= 3 ? "** \(streak) WIN STREAK **"
+                       :               "\(streak) wins in a row!"
+        } else {
+            streakText = nil
+        }
+        
+        return VStack(spacing: 6) {
+            Text(headline)
+                .font(.system(size: 32, weight: .black))
+                .foregroundColor(isWin ? Color(red: 1.0, green: 0.84, blue: 0.0) : .white)
+                .multilineTextAlignment(.center)
+            
+            Text(subline)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.white.opacity(0.85))
+                .multilineTextAlignment(.center)
+            
+            if let streakText = streakText {
+                Text(streakText)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.9))
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(.horizontal, 36)
         .padding(.vertical, 16)
-        .background(Color.blue.opacity(0.9))
+        .background(Color(red: 26/255.0, green: 68/255.0, blue: 204/255.0))
         .cornerRadius(8)
-        .shadow(radius: 5)
+        .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.56) : .clear, radius: 14)
+        .shadow(color: .black.opacity(0.66), radius: 9, x: 0, y: 4)
         .transition(.opacity)
     }
 

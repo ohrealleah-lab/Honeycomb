@@ -36,6 +36,7 @@ public final class BlackjackViewModel {
     public var statistics: BlackjackStatistics {
         didSet { saveStatistics() }
     }
+    public var consecutiveWins: Int = 0
 
     // MARK: - Init
 
@@ -184,13 +185,13 @@ public final class BlackjackViewModel {
         playSound(named: "shuffle")
 
         // Deal: player card, dealer card, player card, dealer hole card (face-down)
-        let p1 = popCard(faceUp: true)!
-        let d1 = popCard(faceUp: true)!
-        let p2 = popCard(faceUp: true)!
-        let d2 = popCard(faceUp: false)  // hole card
+        guard let p1 = popCard(faceUp: true),
+              let d1 = popCard(faceUp: true),
+              let p2 = popCard(faceUp: true),
+              let d2 = popCard(faceUp: false) else { return }
 
         state.playerHands = [BlackjackHand(cards: [p1, p2], bet: state.currentBet)]
-        state.dealerCards = [d1, d2 ?? popCard(faceUp: false)!]
+        state.dealerCards = [d1, d2]
         state.activeHandIndex = 0
         state.lastResultSummary = ""
         state.phase = .playing
@@ -206,6 +207,7 @@ public final class BlackjackViewModel {
     public func hit() {
         guard state.phase == .playing else { return }
         guard state.activeHandIndex < state.playerHands.count else { return }
+        guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         guard let card = popCard(faceUp: true) else { return }
 
         playSound(named: "snap")
@@ -218,12 +220,15 @@ public final class BlackjackViewModel {
 
     public func stand() {
         guard state.phase == .playing else { return }
+        guard state.activeHandIndex < state.playerHands.count else { return }
+        guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         advanceHand()
     }
 
     public func doubleDown() {
         guard state.phase == .playing else { return }
         guard canDouble else { return }
+        guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         let hand = state.playerHands[state.activeHandIndex]
         state.sessionCredits -= hand.bet
         statistics.totalWagered += hand.bet
@@ -239,6 +244,7 @@ public final class BlackjackViewModel {
 
     public func split() {
         guard state.phase == .playing, canSplit else { return }
+        guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         let originalBet = state.playerHands[0].bet
         state.sessionCredits -= originalBet
         statistics.totalWagered += originalBet
@@ -313,9 +319,11 @@ public final class BlackjackViewModel {
         let dealerBJ = state.dealerCards.count == 2 && dealerValue == 21
         var summaryParts: [String] = []
         var totalPayout = 0
+        var totalWagered = 0
 
         for i in 0..<state.playerHands.count {
             let hand = state.playerHands[i]
+            totalWagered += hand.bet
             let playerValue = hand.value
             let playerBJ = hand.isBlackjack && state.playerHands.count == 1  // BJ only counts on unsplit hand
 
@@ -369,6 +377,15 @@ public final class BlackjackViewModel {
         }
 
         state.lastResultSummary = summaryParts.joined(separator: "  ·  ")
+        state.lastNetResult = totalPayout - totalWagered
+        
+        let roundWon = state.playerHands.contains { $0.result == .win || $0.result == .blackjack }
+        let roundLost = state.playerHands.contains { $0.result == .loss || $0.result == .bust }
+        if roundWon && !roundLost {
+            consecutiveWins += 1
+        } else if roundLost {
+            consecutiveWins = 0
+        }
     }
 
 
@@ -398,6 +415,7 @@ public final class BlackjackViewModel {
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
         state.currentBet = options.betPerHand
+        consecutiveWins = 0
     }
 
     public func restartCurrentGame() { startNewGame() }

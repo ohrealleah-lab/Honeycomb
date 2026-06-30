@@ -21,6 +21,10 @@ struct TestRunner {
         SpiderTests.run()
         print("✅ SpiderTests passed.")
         
+        print("🧪 Running BeecellTests...")
+        BeecellTests.run()
+        print("✅ BeecellTests passed.")
+        
         print("🧪 Running CustomCardColorsTests...")
         CustomCardColorsTests.run()
         print("✅ CustomCardColorsTests passed.")

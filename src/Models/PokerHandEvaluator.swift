@@ -101,6 +101,13 @@ public struct PokerHandEvaluator {
 
         if wildCount == 0 || wildCount >= 4 { return evaluate(five) }
 
+        // Optimize: If all natural cards share the same suit, we only need to test
+        // substitutions matching that suit to find the best possible flush/straight flush
+        // (as well as any other rank combination). If they do not share the same suit,
+        // flushes are impossible, so we only need to test a single dummy suit.
+        let shareSuit = !naturals.isEmpty && Set(naturals.map { $0.suit }).count == 1
+        let candidateSuit = shareSuit ? naturals[0].suit : Card.Suit.spades
+
         var best = PokerHandResult(rank: .highCard, kickers: [])
 
         func fill(remaining: Int, current: [Card]) {
@@ -109,11 +116,9 @@ public struct PokerHandEvaluator {
                 if result > best { best = result }
                 return
             }
-            for suit in Card.Suit.allCases {
-                for rank in 1...13 {
-                    let sub = Card(suit: suit, rank: rank, faceUp: true)
-                    fill(remaining: remaining - 1, current: current + [sub])
-                }
+            for rank in 1...13 {
+                let sub = Card(suit: candidateSuit, rank: rank, faceUp: true)
+                fill(remaining: remaining - 1, current: current + [sub])
             }
         }
 
