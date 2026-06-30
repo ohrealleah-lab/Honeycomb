@@ -181,29 +181,8 @@ public struct BeecellView: View {
                     .frame(height: 1)
                 
                 // Game Board Area
-                ZStack {
+                ZStack(alignment: .top) {
                     VStack(spacing: 16) {
-                        // Hint Banner
-                        if viewModel.activeHint != nil {
-                            HStack {
-                                Text("💡")
-                                    .font(.system(.body, design: .monospaced))
-                                    .foregroundColor(.yellow)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 4)
-                                    .background(Color.black.opacity(0.3))
-                                    .cornerRadius(4)
-
-                                Button("Dismiss") {
-                                    viewModel.clearHint()
-                                }
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.6))
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal, 20)
-                            .transition(.slide)
-                        }
                         
                         // Top Row: Freecells (left) and Foundations (right)
                         if viewModel.options.deckCount == 1 {
@@ -527,8 +506,33 @@ public struct BeecellView: View {
                             Spacer()
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            
+            if let hint = viewModel.activeHint {
+                HStack(spacing: 8) {
+                    Text("💡")
+                        .font(.system(size: 14))
+                    Text(hint.description)
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundColor(.yellow)
+                    
+                    Button("Dismiss") {
+                        viewModel.clearHint()
                     }
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.6))
+                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.black.opacity(0.85))
+                .cornerRadius(8)
+                .shadow(color: Color.black.opacity(0.4), radius: 4, x: 0, y: 2)
+                .padding(.top, 16)
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                .zIndex(100)
+            }
+            }
                 .frame(width: boardWidth, height: boardHeight, alignment: .topLeading)
                 .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
                 .frame(width: boardWidth * viewModel.zoomScale, height: boardHeight * viewModel.zoomScale, alignment: .topLeading)
