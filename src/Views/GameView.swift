@@ -833,7 +833,7 @@ struct HintHighlightModifier: ViewModifier {
                     .stroke(isHighlighted ? Color.yellow : Color.clear, lineWidth: 3.5)
                     .shadow(color: isHighlighted ? .yellow : .clear, radius: 4)
             )
-            .animation(isHighlighted ? Animation.easeInOut(duration: 0.5).repeatCount(4, autoreverses: true) : .default, value: isHighlighted)
+            .animation(isHighlighted ? Animation.easeInOut(duration: 0.5).repeatCount(4, autoreverses: true) : nil, value: isHighlighted)
     }
 }
 
