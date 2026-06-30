@@ -17,7 +17,8 @@ public struct GameView: View {
     @State private var isShowingNewGameConfirm: Bool = false
     @State private var pendingDrawMode: GameState.DrawMode? = nil
     @State private var hostingWindow: NSWindow? = nil
-    
+    @State private var zoomController: WindowZoomController? = nil
+
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
     
     public init(viewModel: GameViewModel) {
@@ -415,10 +416,10 @@ public struct GameView: View {
                             Button("Restart Game") { viewModel.restartCurrentGame() }
                                 .font(.system(.body, design: .monospaced))
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(.black)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
-                                .background(Color.orange)
+                                .background(Color.yellow)
                                 .cornerRadius(6)
                                 .shadow(radius: 2)
                                 .buttonStyle(.plain)
@@ -435,7 +436,7 @@ public struct GameView: View {
                         }
                     }
                     .padding(16)
-                    .background(Color.orange.opacity(0.9))
+                    .background(Color.blue.opacity(0.9))
                     .cornerRadius(8)
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
@@ -487,7 +488,7 @@ public struct GameView: View {
                     VStack(spacing: 12) {
                         Text("GAME OVER")
                             .font(.system(size: 36, weight: .black, design: .monospaced))
-                            .foregroundColor(.orange)
+                            .foregroundColor(.yellow)
                             .shadow(radius: 3)
 
                         Text("No moves remaining.")
@@ -496,7 +497,7 @@ public struct GameView: View {
 
                         Text("Final bankroll: \(viewModel.vegasBankrollString)")
                             .font(.system(.body, design: .monospaced))
-                            .foregroundColor(viewModel.vegasBankroll >= 0 ? .green : Color(red: 1, green: 0.4, blue: 0.4))
+                            .foregroundColor(.yellow)
 
                         HStack(spacing: 12) {
                             Button("Restart Game") {
@@ -507,7 +508,7 @@ public struct GameView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 10)
-                            .background(Color.orange)
+                            .background(Color.blue)
                             .cornerRadius(6)
                             .buttonStyle(.plain)
 
@@ -525,9 +526,11 @@ public struct GameView: View {
                         }
                     }
                     .padding(24)
+                    .frame(maxWidth: 420)
+                    .fixedSize(horizontal: false, vertical: true)
                     .background(Color.black.opacity(0.75))
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange, lineWidth: 1.5))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -567,6 +570,8 @@ public struct GameView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(24)
+                    .frame(maxWidth: 420)
+                    .fixedSize(horizontal: false, vertical: true)
                     .background(Color.black.opacity(0.75))
                     .cornerRadius(12)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
@@ -612,10 +617,8 @@ public struct GameView: View {
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .id(viewModel.options.customFeltColorRevision)
         .frame(minWidth: boardWidth * viewModel.zoomScale,
-               idealWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
                minHeight: 73 + 950 * viewModel.zoomScale,
-               idealHeight: 73 + 950 * viewModel.zoomScale,
                maxHeight: .infinity)
         .sheet(isPresented: $isShowingOptions) {
             OptionsView(viewModel: viewModel, onViewStats: {
@@ -632,35 +635,42 @@ public struct GameView: View {
             }
             Button("Cancel", role: .cancel) { pendingDrawMode = nil }
         }
+        .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
-            resizeWindow(boardWidth: boardWidth * viewModel.zoomScale, boardHeight: (73.0 + 950.0 * viewModel.zoomScale))
+            self.zoomController = WindowZoomController(window: window)
+            snapToMinSize()
         })
-        .onChange(of: viewModel.zoomScale) {
-            resizeWindow(boardWidth: boardWidth * viewModel.zoomScale, boardHeight: (73.0 + 950.0 * viewModel.zoomScale))
-        }
-        .onChange(of: viewModel.state.tableau.count) {
-            resizeWindow(boardWidth: boardWidth * viewModel.zoomScale, boardHeight: (73.0 + 950.0 * viewModel.zoomScale))
+        .onChange(of: viewModel.zoomScale) { updateMinSize() }
+        .onChange(of: viewModel.state.tableau.count) { updateMinSize() }
+    }
+
+    private func updateMinSize() {
+        guard let window = hostingWindow else { return }
+        let z = viewModel.zoomScale
+        let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
+        let cols = CGFloat(max(viewModel.state.tableau.count, 7))
+        let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
+        let minH = 73.0 + 950.0 * z + 24
+        DispatchQueue.main.async {
+            window.contentMinSize = NSSize(width: minW, height: minH)
         }
     }
-    
-    private func resizeWindow(boardWidth: CGFloat, boardHeight: CGFloat) {
+
+    private func snapToMinSize() {
         guard let window = hostingWindow else { return }
+        let z = viewModel.zoomScale
+        let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
+        let cols = CGFloat(max(viewModel.state.tableau.count, 7))
+        let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
+        let minH = 73.0 + 950.0 * z + 24
+        let size = NSSize(width: minW, height: minH)
         DispatchQueue.main.async {
-            let currentFrame = window.frame
-            let newContentSize = NSSize(width: boardWidth, height: boardHeight)
-            let newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: newContentSize))
-            
-            let yOffset = currentFrame.height - newFrame.height
-            let updatedFrame = NSRect(
-                x: currentFrame.origin.x,
-                y: currentFrame.origin.y + yOffset,
-                width: newFrame.width,
-                height: newFrame.height
-            )
-            
-            window.contentMinSize = newContentSize
-            window.setFrame(updatedFrame, display: true, animate: true)
+            window.contentMinSize = size
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.2
+                window.animator().setContentSize(size)
+            }
         }
     }
 

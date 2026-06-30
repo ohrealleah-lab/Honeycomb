@@ -15,9 +15,10 @@ public struct BeecellView: View {
     @State private var isShowingNewGameConfirm: Bool = false
     @State private var pendingDeckCount: Int? = nil
     @State private var hostingWindow: NSWindow? = nil
-    
+    @State private var zoomController: WindowZoomController? = nil
+
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
-    
+
     public init(viewModel: BeecellViewModel) {
         self.viewModel = viewModel
     }
@@ -555,10 +556,8 @@ public struct BeecellView: View {
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .id(viewModel.options.customFeltColorRevision)
         .frame(minWidth: boardWidth * viewModel.zoomScale,
-               idealWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
                minHeight: 73 + boardHeight * viewModel.zoomScale,
-               idealHeight: 73 + boardHeight * viewModel.zoomScale,
                maxHeight: .infinity)
         .sheet(isPresented: $isShowingOptions) {
             BeecellOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
@@ -573,18 +572,47 @@ public struct BeecellView: View {
             }
             Button("Cancel", role: .cancel) { pendingDeckCount = nil }
         }
+        .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
-            resizeWindow(deckCount: viewModel.options.deckCount, zoomScale: viewModel.zoomScale)
+            self.zoomController = WindowZoomController(window: window)
+            snapToMinSize()
         })
-        .onChange(of: viewModel.options.deckCount) { _, newValue in
-            resizeWindow(deckCount: newValue, zoomScale: viewModel.zoomScale)
-        }
-        .onChange(of: viewModel.zoomScale) { _, newValue in
-            resizeWindow(deckCount: viewModel.options.deckCount, zoomScale: newValue)
+        .onChange(of: viewModel.options.deckCount) { updateMinSize() }
+        .onChange(of: viewModel.zoomScale) { updateMinSize() }
+    }
+
+    private func updateMinSize() {
+        guard let window = hostingWindow else { return }
+        let z = viewModel.zoomScale
+        let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
+        let cols = Double(viewModel.options.deckCount == 1 ? 8 : 10)
+        let boardH: CGFloat = viewModel.options.deckCount == 1 ? 950 : 1120
+        let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
+        let minH = 73.0 + boardH * z + 24
+        DispatchQueue.main.async {
+            window.contentMinSize = NSSize(width: minW, height: minH)
         }
     }
-    
+
+    private func snapToMinSize() {
+        guard let window = hostingWindow else { return }
+        let z = viewModel.zoomScale
+        let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
+        let cols = Double(viewModel.options.deckCount == 1 ? 8 : 10)
+        let boardH: CGFloat = viewModel.options.deckCount == 1 ? 950 : 1120
+        let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
+        let minH = 73.0 + boardH * z + 24
+        let size = NSSize(width: minW, height: minH)
+        DispatchQueue.main.async {
+            window.contentMinSize = size
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.2
+                window.animator().setContentSize(size)
+            }
+        }
+    }
+
     private func handleDragEnded() {
         let releaseLocation = CGPoint(
             x: dragLocation.x + dragOffset.width,
@@ -696,34 +724,6 @@ public struct BeecellView: View {
         return String(format: "%02d:%02d", minutes, seconds)
     }
     
-    private func resizeWindow(deckCount: Int, zoomScale: CGFloat) {
-        guard let window = hostingWindow else { return }
-        
-        let stackSpacing = zoomScale > 1.0 ? max(4.0, 18.0 - 14.0 * (zoomScale - 1.0)) : 18.0
-        let numCols = Double(deckCount == 1 ? 8 : 10)
-        let boardWidth = numCols * 128.0 + (numCols - 1) * stackSpacing + 40.0
-        let boardHeight: CGFloat = deckCount == 1 ? 950 : 1120
-        
-        let newWidth = boardWidth * zoomScale
-        let newHeight = 73.0 + boardHeight * zoomScale
-        
-        DispatchQueue.main.async {
-            let currentFrame = window.frame
-            let newContentSize = NSSize(width: newWidth, height: newHeight)
-            let newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: newContentSize))
-            
-            let yOffset = currentFrame.height - newFrame.height
-            let updatedFrame = NSRect(
-                x: currentFrame.origin.x,
-                y: currentFrame.origin.y + yOffset,
-                width: newFrame.width,
-                height: newFrame.height
-            )
-            
-            window.contentMinSize = newContentSize
-            window.setFrame(updatedFrame, display: true, animate: true)
-        }
-    }
 }
 
 // Window Accessor and Detecting View helpers for resizing the macOS window to match the board size
@@ -754,6 +754,44 @@ class WindowDetectingView: NSView {
         if let window = self.window {
             onWindowDetected(window)
         }
+    }
+}
+
+class WindowZoomController {
+    private weak var window: NSWindow?
+    private var previousFrame: NSRect?
+    private var eventMonitor: Any?
+
+    init(window: NSWindow) {
+        self.window = window
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard let self, let win = self.window, event.window === win, event.clickCount == 2 else { return event }
+            let contentHeight = win.contentView?.frame.height ?? 0
+            if event.locationInWindow.y > contentHeight {
+                self.toggleZoom()
+                return nil
+            }
+            return event
+        }
+    }
+
+    deinit {
+        if let monitor = eventMonitor { NSEvent.removeMonitor(monitor) }
+    }
+
+    func toggleZoom() {
+        guard let window, let screen = window.screen ?? NSScreen.main else { return }
+        if let prev = previousFrame {
+            window.setFrame(prev, display: true, animate: true)
+            previousFrame = nil
+        } else {
+            previousFrame = window.frame
+            window.setFrame(screen.visibleFrame, display: true, animate: true)
+        }
+    }
+
+    func clearZoomState() {
+        previousFrame = nil
     }
 }
 

@@ -195,9 +195,11 @@ public final class BlackjackViewModel {
         state.lastResultSummary = ""
         state.phase = .playing
 
-        // Check for player blackjack immediately
+        // Check for player blackjack — delay so the player can see their cards first
         if state.playerHands[0].isBlackjack {
-            executeDealerTurn()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                self?.executeDealerTurn()
+            }
         }
     }
 

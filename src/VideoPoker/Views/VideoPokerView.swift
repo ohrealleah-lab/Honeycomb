@@ -13,6 +13,8 @@ public struct VideoPokerView: View {
     @State private var showResultBanner = false
     @State private var cardsVisible     = true
     @State private var showIdlePrompt   = false
+    @State private var hostingWindow: NSWindow? = nil
+    @State private var zoomController: WindowZoomController? = nil
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
 
     public init(viewModel: VideoPokerViewModel) {
@@ -68,7 +70,13 @@ public struct VideoPokerView: View {
                 .frame(width: 0, height: 0)
                 .clipped()
         }
-        .frame(minWidth: 720, minHeight: 660)
+        .frame(minWidth: 905, minHeight: 762)
+        .onAppear { snapToDefaultSize() }
+        .background(WindowAccessor { window in
+            self.hostingWindow = window
+            self.zoomController = WindowZoomController(window: window)
+            snapToDefaultSize()
+        })
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .sheet(isPresented: $isShowingOptions) {
@@ -529,6 +537,18 @@ public struct VideoPokerView: View {
     private func clearHolds() {
         guard viewModel.state.phase == .holding else { return }
         viewModel.state.heldIndices.removeAll()
+    }
+
+    private func snapToDefaultSize() {
+        guard let window = hostingWindow else { return }
+        let preferred = NSSize(width: 905, height: 762)
+        DispatchQueue.main.async {
+            window.contentMinSize = preferred
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.2
+                window.animator().setContentSize(preferred)
+            }
+        }
     }
 
     private func formatTime(_ s: Int) -> String {

@@ -11,6 +11,8 @@ public struct BlackjackView: View {
     @State private var dealerFlipped     = false  // triggers hole-card flip animation
     @State private var resultHideTask:   DispatchWorkItem? = nil
     @State private var showIdlePrompt    = false
+    @State private var hostingWindow: NSWindow? = nil
+    @State private var zoomController: WindowZoomController? = nil
     @State private var idlePromptTask:   DispatchWorkItem? = nil
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
 
@@ -85,7 +87,13 @@ public struct BlackjackView: View {
                 .frame(width: 0, height: 0)
                 .clipped()
         }
-        .frame(minWidth: 680, minHeight: 900)
+        .frame(minWidth: 905, minHeight: 950)
+        .onAppear { snapToDefaultSize() }
+        .background(WindowAccessor { window in
+            self.hostingWindow = window
+            self.zoomController = WindowZoomController(window: window)
+            snapToDefaultSize()
+        })
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .sheet(isPresented: $isShowingOptions) {
@@ -307,21 +315,44 @@ public struct BlackjackView: View {
 
     // MARK: - Player Area
 
+    // Scale cards down in split mode so even 5-card hands fit in one grid column.
+    // Base card is 128×181 pt; cardScale (1.4) applies on top for the normal single-hand view.
+    private var splitCardScale: CGFloat {
+        let maxCards = viewModel.state.playerHands.map { $0.cards.count }.max() ?? 2
+        switch maxCards {
+        case ..<3: return cardScale       // 2 cards — full size
+        case 3:    return 1.0
+        case 4:    return 0.78
+        default:   return 0.65            // 5+
+        }
+    }
+    private var splitCardW: CGFloat { 128 * splitCardScale }
+    private var splitCardH: CGFloat { 181 * splitCardScale }
+
     private var playerArea: some View {
-        VStack(spacing: 8) {
+        let isSplit = viewModel.state.playerHands.count > 1
+        let scale  = isSplit ? splitCardScale : cardScale
+        let width  = isSplit ? splitCardW     : cardW
+        let height = isSplit ? splitCardH     : cardH
+        let spacing: CGFloat = isSplit ? 8 : 16
+        let columns = isSplit
+            ? [GridItem(.flexible()), GridItem(.flexible())]
+            : [GridItem(.flexible())]
+
+        return VStack(spacing: 8) {
             Text("PLAYER")
                 .font(.display(12, weight: .bold))
                 .foregroundColor(.white.opacity(0.6))
 
-            HStack(alignment: .top, spacing: 24) {
+            LazyVGrid(columns: columns, alignment: .center, spacing: 16) {
                 ForEach(Array(viewModel.state.playerHands.enumerated()), id: \.offset) { handIdx, hand in
                     let isActive = handIdx == viewModel.state.activeHandIndex && viewModel.state.phase == .playing
                     VStack(spacing: 8) {
-                        HStack(spacing: 16) {
+                        HStack(spacing: spacing) {
                             ForEach(Array(hand.cards.enumerated()), id: \.offset) { cardIdx, card in
                                 CardView(card: card)
-                                    .scaleEffect(cardScale)
-                                    .frame(width: cardW, height: cardH)
+                                    .scaleEffect(scale)
+                                    .frame(width: width, height: height)
                                     .opacity(cardsVisible ? 1 : 0)
                                     .animation(.easeIn(duration: 0.15).delay(Double(cardIdx) * 0.08), value: cardsVisible)
                             }
@@ -336,7 +367,7 @@ public struct BlackjackView: View {
                             Text("\(hand.value)")
                                 .font(.display(16, weight: .black))
                                 .foregroundColor(hand.isBust ? .red : .white)
-                            if viewModel.state.playerHands.count > 1 {
+                            if isSplit {
                                 Text("BET \(hand.bet)")
                                     .font(.display(11, weight: .bold))
                                     .foregroundColor(.yellow.opacity(0.8))
@@ -345,10 +376,12 @@ public struct BlackjackView: View {
                                 resultBadge(result)
                             }
                         }
+                        .opacity(cardsVisible ? 1 : 0)
+                        .animation(.easeOut(duration: 0.4), value: cardsVisible)
                     }
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: cardH + 40, alignment: .center)
+            .frame(maxWidth: .infinity, minHeight: cardH + 40)
         }
     }
 
@@ -495,6 +528,18 @@ public struct BlackjackView: View {
     }
 
     // MARK: - Helpers
+
+    private func snapToDefaultSize() {
+        guard let window = hostingWindow else { return }
+        let preferred = NSSize(width: 905, height: 950)
+        DispatchQueue.main.async {
+            window.contentMinSize = preferred
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.2
+                window.animator().setContentSize(preferred)
+            }
+        }
+    }
 
     private func formatTime(_ seconds: Int) -> String {
         String(format: "%d:%02d", seconds / 60, seconds % 60)

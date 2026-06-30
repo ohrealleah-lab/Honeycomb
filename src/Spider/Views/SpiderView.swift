@@ -15,7 +15,8 @@ public struct SpiderView: View {
     @State private var isShowingEmptyStockWarning: Bool = false
     @State private var isShowingNewGameConfirm: Bool = false
     @State private var hostingWindow: NSWindow? = nil
-    
+    @State private var zoomController: WindowZoomController? = nil
+
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
     
     public init(viewModel: SpiderViewModel) {
@@ -401,11 +402,9 @@ public struct SpiderView: View {
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .id(viewModel.options.customFeltColorRevision)
-        .frame(minWidth: 760,
-               idealWidth: boardWidth * viewModel.zoomScale,
+        .frame(minWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
                minHeight: 73 + boardHeight * viewModel.zoomScale,
-               idealHeight: 73 + boardHeight * viewModel.zoomScale,
                maxHeight: .infinity)
         .sheet(isPresented: $isShowingOptions) {
             SpiderOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
@@ -417,15 +416,44 @@ public struct SpiderView: View {
             Button("New Game", role: .destructive) { viewModel.startNewGame() }
             Button("Cancel", role: .cancel) { }
         }
+        .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
-            resizeWindow(zoomScale: viewModel.zoomScale)
+            self.zoomController = WindowZoomController(window: window)
+            snapToMinSize()
         })
-        .onChange(of: viewModel.zoomScale) { _, newValue in
-            resizeWindow(zoomScale: newValue)
+        .onChange(of: viewModel.zoomScale) { updateMinSize() }
+    }
+
+    private func updateMinSize() {
+        guard let window = hostingWindow else { return }
+        let z = viewModel.zoomScale
+        let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
+        let cols: Double = 10.0
+        let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
+        let minH = 73.0 + 1120.0 * z + 24
+        DispatchQueue.main.async {
+            window.contentMinSize = NSSize(width: minW, height: minH)
         }
     }
-    
+
+    private func snapToMinSize() {
+        guard let window = hostingWindow else { return }
+        let z = viewModel.zoomScale
+        let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
+        let cols: Double = 10.0
+        let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
+        let minH = 73.0 + 1120.0 * z + 24
+        let size = NSSize(width: minW, height: minH)
+        DispatchQueue.main.async {
+            window.contentMinSize = size
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.2
+                window.animator().setContentSize(size)
+            }
+        }
+    }
+
     private func handleDragEnded() {
         let releaseLocation = CGPoint(
             x: dragLocation.x + dragOffset.width,
@@ -482,34 +510,6 @@ public struct SpiderView: View {
         return String(format: "%02d:%02d", minutes, seconds)
     }
     
-    private func resizeWindow(zoomScale: CGFloat) {
-        guard let window = hostingWindow else { return }
-        
-        let stackSpacing = zoomScale > 1.0 ? max(4.0, 18.0 - 14.0 * (zoomScale - 1.0)) : 18.0
-        let numCols: Double = 10.0
-        let boardWidth = numCols * 128.0 + (numCols - 1) * stackSpacing + 40.0
-        let boardHeight: CGFloat = 1120
-        
-        let newWidth = boardWidth * zoomScale
-        let newHeight = 73.0 + boardHeight * zoomScale
-        
-        DispatchQueue.main.async {
-            let currentFrame = window.frame
-            let newContentSize = NSSize(width: newWidth, height: newHeight)
-            let newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: newContentSize))
-            
-            let yOffset = currentFrame.height - newFrame.height
-            let updatedFrame = NSRect(
-                x: currentFrame.origin.x,
-                y: currentFrame.origin.y + yOffset,
-                width: newFrame.width,
-                height: newFrame.height
-            )
-            
-            window.contentMinSize = newContentSize
-            window.setFrame(updatedFrame, display: true, animate: true)
-        }
-    }
 }
 
 // MARK: - Options Preference Dialog
