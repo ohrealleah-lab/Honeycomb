@@ -849,7 +849,7 @@ public final class SpiderViewModel {
             self?.hintQueueIndex = 0
         }
         hintClearTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: task)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
     }
 
     public func clearHint() {

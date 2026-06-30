@@ -52,6 +52,13 @@ public struct SpiderTableauView: View {
         self.onDoubleClick = onDoubleClick
     }
     
+    private func totalHeight(offset: CGFloat) -> CGFloat {
+        if pile.isEmpty {
+            return 181
+        }
+        return CGFloat(pile.cards.count - 1) * offset + 181
+    }
+    
     public var body: some View {
         let cardCount = pile.cards.count
         // Dynamically compress card overlap offset if pile gets deep to prevent clipping
@@ -88,6 +95,7 @@ public struct SpiderTableauView: View {
                     )
             }
         }
+        .frame(width: 128, height: totalHeight(offset: offset), alignment: .top)
     }
     
     private func isValidSequence(_ cards: [Card]) -> Bool {

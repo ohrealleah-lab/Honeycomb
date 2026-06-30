@@ -122,6 +122,13 @@ public struct BeecellTableauView: View {
         self.onDoubleClick = onDoubleClick
     }
     
+    private var totalHeight: CGFloat {
+        if pile.isEmpty {
+            return 181
+        }
+        return CGFloat(pile.cards.count - 1) * 32 + 181
+    }
+    
     public var body: some View {
         ZStack(alignment: .top) {
             EmptyPileView()
@@ -151,5 +158,6 @@ public struct BeecellTableauView: View {
                     )
             }
         }
+        .frame(width: 128, height: totalHeight, alignment: .top)
     }
 }

@@ -218,6 +218,13 @@ public struct TableauPileView: View {
     let onDragEnded: () -> Void
     let onDoubleClick: (Card) -> Void
     
+    private var totalHeight: CGFloat {
+        if pile.isEmpty {
+            return 181
+        }
+        return offsetForCard(at: pile.cards.count - 1) + 181
+    }
+    
     public var body: some View {
         ZStack(alignment: .top) {
             EmptyPileView()
@@ -248,6 +255,7 @@ public struct TableauPileView: View {
                     )
             }
         }
+        .frame(width: 128, height: totalHeight, alignment: .top)
     }
     
     private func offsetForCard(at index: Int) -> CGFloat {
