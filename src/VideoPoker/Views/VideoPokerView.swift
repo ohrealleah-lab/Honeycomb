@@ -16,6 +16,9 @@ public struct VideoPokerView: View {
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
     @State private var spaceMonitor: Any? = nil
+    @State private var resultAnimationTask: DispatchWorkItem? = nil
+    @State private var resultHideTask: DispatchWorkItem? = nil
+    @State private var idlePromptTask: DispatchWorkItem? = nil
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
 
     public init(viewModel: VideoPokerViewModel) {
@@ -115,16 +118,31 @@ public struct VideoPokerView: View {
         }
         .onChange(of: viewModel.state.phase) { _, newPhase in
             if newPhase == .result {
+                // Cancel any leftover tasks just in case
+                resultAnimationTask?.cancel()
+                resultHideTask?.cancel()
+                idlePromptTask?.cancel()
+                
                 showResultBanner = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                
+                let animationTask = DispatchWorkItem {
                     showResultBanner = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    
+                    let hideTask = DispatchWorkItem {
                         withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        
+                        let promptTask = DispatchWorkItem {
                             withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
                         }
+                        idlePromptTask = promptTask
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: promptTask)
                     }
+                    resultHideTask = hideTask
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: hideTask)
                 }
+                resultAnimationTask = animationTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: animationTask)
+                
                 if viewModel.state.lastPayout > 0 {
                     winFlash = true
                     showParticles = true
@@ -133,12 +151,27 @@ public struct VideoPokerView: View {
                 }
             }
             if newPhase == .holding {
+                // Cancel result animations immediately
+                resultAnimationTask?.cancel()
+                resultAnimationTask = nil
+                resultHideTask?.cancel()
+                resultHideTask = nil
+                idlePromptTask?.cancel()
+                idlePromptTask = nil
+                
                 withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
                 showResultBanner = false
                 cardsVisible = true
                 animateDeal()
             }
             if newPhase == .deal {
+                resultAnimationTask?.cancel()
+                resultAnimationTask = nil
+                resultHideTask?.cancel()
+                resultHideTask = nil
+                idlePromptTask?.cancel()
+                idlePromptTask = nil
+                
                 withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
             }
         }
