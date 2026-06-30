@@ -72,7 +72,7 @@
 
             <!-- ─── Player area ──────────────────────────────────────────────────── -->
             <StackPanel Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
-                        Margin="0,36,0,28">
+                        Margin="0,36,0,8">
                 <StackPanel x:Name="PlayerHandsContainer" Orientation="Horizontal" Spacing="16"
                             HorizontalAlignment="Center"/>
                 <TextBlock Text="YOU" FontSize="11" FontWeight="Bold"
@@ -82,9 +82,24 @@
 
             <!-- ─── Action buttons + chip bet row ───────────────────────────────── -->
             <StackPanel Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center"
-                        Spacing="10" Margin="0,20,0,12">
+                        Spacing="10" Margin="0,8,0,12">
 
-                <!-- Action buttons -->
+                <!-- Bet adjustment + Deal row (visible when not playing) -->
+                <StackPanel x:Name="BetButtonRow" Orientation="Horizontal" Spacing="8"
+                            HorizontalAlignment="Center">
+                    <Button x:Name="DecreaseBetButton" Content="− Bet" Height="46" Padding="14,0"
+                            Click="DecreaseBet_Click" Classes="bj-button bj-bet-button"/>
+                    <Button x:Name="BetMaxButton"      Content="Bet Max" Height="46" Padding="14,0"
+                            Click="BetMax_Click"      Classes="bj-button bj-bet-button"/>
+                    <Button x:Name="IncreaseBetButton" Content="+ Bet"  Height="46" Padding="14,0"
+                            Click="IncreaseBet_Click" Classes="bj-button bj-bet-button"/>
+                    <Button x:Name="DealButton"   Content="Deal  [Space]" Height="46" Padding="28,0"
+                            Click="Deal_Click"   Classes="bj-button bj-button-deal"/>
+                    <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
+                            Click="Rebuy_Click"  Classes="bj-button bj-button-rebuy" IsVisible="False"/>
+                </StackPanel>
+
+                <!-- Action buttons (visible while playing) -->
                 <StackPanel x:Name="ActionButtonRow" Orientation="Horizontal" Spacing="10"
                             HorizontalAlignment="Center">
                     <Button x:Name="HitButton"    Content="Hit  [H]"      Height="46" Padding="22,0"
@@ -95,42 +110,9 @@
                             Click="Double_Click" Classes="bj-button"/>
                     <Button x:Name="SplitButton"  Content="Split  [P]"    Height="46" Padding="16,0"
                             Click="Split_Click"  Classes="bj-button"/>
-                    <Button x:Name="DealButton"   Content="Deal  [Space]" Height="46" Padding="28,0"
-                            Click="Deal_Click"   Classes="bj-button bj-button-deal"/>
-                    <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
-                            Click="Rebuy_Click"  Classes="bj-button bj-button-rebuy" IsVisible="False"/>
-                </StackPanel>
-
-                <!-- Chip bet row -->
-                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                    <TextBlock Text="BET" FontSize="10" FontWeight="Bold" Foreground="#60FFFFFF"
-                               VerticalAlignment="Center" FontFamily="Courier New, Consolas, monospace"
-                               LetterSpacing="2" Margin="0,0,4,0"/>
-                    <Button x:Name="ChipBtn1" Content="1" Tag="1" Click="Chip_Click"
-                            IsEnabled="{Binding CanChangeBet}"
-                            Classes="bj-chip bj-chip-1"/>
-                    <Button x:Name="ChipBtn2" Content="2" Tag="2" Click="Chip_Click"
-                            IsEnabled="{Binding CanChangeBet}"
-                            Classes="bj-chip bj-chip-2"/>
-                    <Button x:Name="ChipBtn3" Content="3" Tag="3" Click="Chip_Click"
-                            IsEnabled="{Binding CanChangeBet}"
-                            Classes="bj-chip bj-chip-3"/>
-                    <Button x:Name="ChipBtn4" Content="4" Tag="4" Click="Chip_Click"
-                            IsEnabled="{Binding CanChangeBet}"
-                            Classes="bj-chip bj-chip-4"/>
-                    <Button x:Name="ChipBtn5" Content="5" Tag="5" Click="Chip_Click"
-                            IsEnabled="{Binding CanChangeBet}"
-                            Classes="bj-chip bj-chip-5"/>
                 </StackPanel>
 
             </StackPanel>
-
-            <!-- ─── Keyboard hint row ────────────────────────────────────────────── -->
-            <TextBlock Grid.Row="5" x:Name="KeyHintLabel"
-                       Text="H=Hit   S=Stand   D=Double   P=Split   Space=Deal"
-                       FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
-                       FontFamily="Courier New, Consolas, monospace"
-                       Margin="0,0,0,8"/>
 
         </Grid>
 
@@ -207,6 +189,12 @@
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
+        </Style>
+        <Style Selector="Button.bj-bet-button">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Opacity" Value="0.75"/>
+            <Setter Property="FontFamily" Value="Courier New, Consolas, monospace"/>
         </Style>
         <Style Selector="Button.bj-button-rebuy">
             <Setter Property="Background" Value="#CC664400"/>

@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using SoliBee.Core.Models;
 using SoliBee.Core.ViewModels;
 
@@ -15,9 +17,13 @@ public abstract class CardGameView : UserControl
     public abstract bool TryAutoMoveToFoundation(Card card, Pile sourcePile);
 
     private CardView? _hintedCardView;
+    private DispatcherTimer? _hintAutoDismissTimer;
 
     protected void ApplyHint(HintMove? hint, IEnumerable<PileView> allPiles)
     {
+        _hintAutoDismissTimer?.Stop();
+        _hintAutoDismissTimer = null;
+
         _hintedCardView?.ClearHint();
         _hintedCardView = null;
         if (hint == null || hint.Card.Id is "no_move" or "deal") return;
@@ -33,6 +39,16 @@ public abstract class CardGameView : UserControl
                 {
                     cv.ShowHint();
                     _hintedCardView = cv;
+
+                    _hintAutoDismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+                    _hintAutoDismissTimer.Tick += (_, _) =>
+                    {
+                        _hintAutoDismissTimer?.Stop();
+                        _hintAutoDismissTimer = null;
+                        _hintedCardView?.ClearHint();
+                        _hintedCardView = null;
+                    };
+                    _hintAutoDismissTimer.Start();
                     return;
                 }
             }

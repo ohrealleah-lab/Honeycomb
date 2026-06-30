@@ -33,6 +33,14 @@ public partial class CardView : UserControl
     private string _lastPipSuit = "";
     private uint _lastPipArgb;
 
+    // Manual double-click tracking, keyed by card identity rather than CardView instance —
+    // PointerReleased rebuilds the source pile's CardView children, so the second click of a
+    // double-click usually lands on a brand-new instance, making e.ClickCount/instance-bound
+    // state (_sourcePileView) unreliable for detecting the gesture.
+    private static DateTime _lastCardClickTime;
+    private static string?  _lastCardClickId;
+    private static Point    _lastCardClickPos;
+
     private static readonly Dictionary<string, Bitmap> _bitmapCache = new();
     private static readonly Dictionary<string, Bitmap> _customBitmapCache = new();
     private static readonly Dictionary<string, (Bitmap[] Frames, int[] Durations)> _gifFrameCache = new();
@@ -1255,14 +1263,33 @@ public partial class CardView : UserControl
         var gameView = FindParentGameView();
         if (gameView == null) return;
 
-        var clickCount = e.ClickCount;
-
-        // Double-click: the first click already moved this card onto the DragCanvas,
-        // so parent-walk won't find a PileView. Use _sourcePileView captured on click 1.
-        if (clickCount == 2)
+        PileView? pileView = null;
+        Avalonia.StyledElement? parent = this.Parent;
+        while (parent != null)
         {
-            var sourcePile = this.ParentPile ?? _sourcePileView?.Pile;
-            if (sourcePile != null && gameView.TryAutoMoveToFoundation(Card, sourcePile))
+            if (parent is PileView pv) { pileView = pv; break; }
+            parent = parent.Parent;
+        }
+        if (pileView == null || pileView.Pile == null) return;
+
+        // Manual double-click detection keyed by card identity, not CardView instance —
+        // PointerReleased rebuilds the source pile's CardView children, so the second
+        // click usually lands on a brand-new instance, making e.ClickCount unreliable.
+        var clickNow = DateTime.UtcNow;
+        var clickPos = e.GetPosition(this);
+        double ddx = clickPos.X - _lastCardClickPos.X;
+        double ddy = clickPos.Y - _lastCardClickPos.Y;
+        bool isDoubleClick = _lastCardClickId == Card.Id
+                              && (clickNow - _lastCardClickTime) < TimeSpan.FromMilliseconds(500)
+                              && (ddx * ddx + ddy * ddy) < 400;
+
+        if (isDoubleClick)
+        {
+            _lastCardClickId   = null;
+            _lastCardClickTime = DateTime.MinValue;
+
+            var sourcePile = pileView.Pile;
+            if (gameView.TryAutoMoveToFoundation(Card, sourcePile))
             {
                 e.Pointer.Capture(null);
                 _isDragging = false;
@@ -1278,14 +1305,9 @@ public partial class CardView : UserControl
             return;
         }
 
-        PileView? pileView = null;
-        Avalonia.StyledElement? parent = this.Parent;
-        while (parent != null)
-        {
-            if (parent is PileView pv) { pileView = pv; break; }
-            parent = parent.Parent;
-        }
-        if (pileView == null || pileView.Pile == null) return;
+        _lastCardClickId   = Card.Id;
+        _lastCardClickTime = clickNow;
+        _lastCardClickPos  = clickPos;
 
         {
             // Capture the source pile NOW, before drag setup detaches this card from its canvas

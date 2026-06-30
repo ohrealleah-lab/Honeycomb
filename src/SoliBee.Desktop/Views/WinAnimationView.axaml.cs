@@ -35,8 +35,15 @@ public partial class WinAnimationView : UserControl
         StopAnimation();
 
         // Show win info panel with score and time
-        WinScoreLabel.Text = string.IsNullOrEmpty(scoreText) ? "" : $"Score: {scoreText}";
-        WinTimeLabel.Text  = string.IsNullOrEmpty(timeText)  ? "" : $"Time: {timeText}";
+        bool hasScore = !string.IsNullOrEmpty(scoreText);
+        bool hasTime  = !string.IsNullOrEmpty(timeText);
+        WinStatsLabel.Text = (hasScore, hasTime) switch
+        {
+            (true, true)   => $"Score: {scoreText}  |  Time: {timeText}",
+            (true, false)  => $"Score: {scoreText}",
+            (false, true)  => $"Time: {timeText}",
+            _              => ""
+        };
         WinInfoPanel.IsVisible = true;
 
         var foundationList = foundations.ToList();

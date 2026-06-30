@@ -74,35 +74,45 @@
         <!-- Win animation overlay -->
         <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
 
-        <Grid x:Name="NoMovesBanner" IsVisible="False" ZIndex="5" IsHitTestVisible="True">
-            <Rectangle Fill="#60000000"/>
-            <Border Background="#1A44CC" CornerRadius="8" Padding="40,24"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    BoxShadow="0 0 28 10 #501A44CC, 0 4 18 0 #AA000000"
-                    RenderTransformOrigin="50%,50%">
-                <StackPanel Spacing="8" HorizontalAlignment="Center">
-                    <TextBlock Text="NO MORE MOVES" FontSize="30" FontWeight="Black"
-                               Foreground="White" HorizontalAlignment="Center"
+        <!-- Inline stuck banner -->
+        <Border x:Name="NoMovesBanner" IsVisible="False" ZIndex="5"
+                Background="#1A44CC" Padding="20,14"
+                VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="New Game" Click="NoMovesNewGame_Click"
+                        Padding="18,8" FontSize="13" FontWeight="Bold"
+                        Background="#FFD700" Foreground="#1A1A1A"
+                        BorderThickness="0" CornerRadius="4" VerticalAlignment="Center"
+                        FontFamily="Courier New, Consolas, monospace"/>
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Text="No moves remaining." FontSize="15" FontWeight="Black"
+                               Foreground="White" FontFamily="Courier New, Consolas, monospace"/>
+                    <TextBlock Text="There are no valid moves remaining."
+                               FontSize="12" Foreground="#AAFFFFFF"
                                FontFamily="Courier New, Consolas, monospace"/>
-                    <TextBlock Text="No legal moves remain."
-                               FontSize="15" Foreground="#CCFFFFff" HorizontalAlignment="Center"/>
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,12,0,0" HorizontalAlignment="Center">
-                        <Button Content="Restart Game"
-                                Padding="28,10" FontSize="15" FontWeight="Bold"
-                                Background="#33FFFFFF" Foreground="White"
-                                BorderBrush="#60FFFFFF" BorderThickness="1"
-                                CornerRadius="6"
-                                Click="NoMovesRestart_Click"/>
-                        <Button Content="New Game"
-                                Padding="28,10" FontSize="15" FontWeight="Bold"
-                                Background="#33FFFFFF" Foreground="White"
-                                BorderBrush="#60FFFFFF" BorderThickness="1"
-                                CornerRadius="6"
-                                Click="NoMovesNewGame_Click"/>
-                    </StackPanel>
                 </StackPanel>
-            </Border>
-        </Grid>
+            </DockPanel>
+        </Border>
+
+        <!-- Inline autocomplete banner -->
+        <Border x:Name="AutocompleteBanner" IsVisible="False" ZIndex="5"
+                Background="#1A44CC" Padding="20,14"
+                VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Autocomplete Game" Click="AutocompleteGame_Click"
+                        Padding="18,8" FontSize="13" FontWeight="Bold"
+                        Background="#FFD700" Foreground="#1A1A1A"
+                        BorderThickness="0" CornerRadius="4" VerticalAlignment="Center"
+                        FontFamily="Courier New, Consolas, monospace"/>
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Text="Victory is guaranteed!" FontSize="15" FontWeight="Black"
+                               Foreground="White" FontFamily="Courier New, Consolas, monospace"/>
+                    <TextBlock Text="All remaining cards can be moved to foundations."
+                               FontSize="12" Foreground="#AAFFFFFF"
+                               FontFamily="Courier New, Consolas, monospace"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
 
     </Grid>
 

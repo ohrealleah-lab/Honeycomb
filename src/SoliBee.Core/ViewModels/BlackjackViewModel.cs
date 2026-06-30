@@ -231,6 +231,18 @@ public partial class BlackjackViewModel : ObservableObject
         NotifyStateChanged();
     }
 
+    // Called when switching back to Blackjack — clears stale cards without resetting credits.
+    public void PrepareForResume()
+    {
+        if (State.Phase == BlackjackPhase.Betting) return;
+        State = new BlackjackState
+        {
+            Credits    = State.Credits,
+            CurrentBet = State.CurrentBet,
+            Phase      = BlackjackPhase.Betting,
+        };
+    }
+
     public void StartNewGame()
     {
         Options.BetPerHand = State.CurrentBet;

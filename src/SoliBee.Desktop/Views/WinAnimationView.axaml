@@ -10,6 +10,7 @@
         <!-- Win info panel (top layer) -->
         <Border x:Name="WinInfoPanel"
                 Background="#D2000000" CornerRadius="12" Padding="48,32"
+                BorderBrush="#FFD700" BorderThickness="3"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 BoxShadow="0 8 40 0 #80000000">
             <StackPanel Spacing="10" HorizontalAlignment="Center">
@@ -19,13 +20,8 @@
                            FontFamily="Courier New, Consolas, monospace"
                            HorizontalAlignment="Center"/>
 
-                <TextBlock x:Name="WinScoreLabel"
-                           FontSize="20" Foreground="White"
-                           FontFamily="Courier New, Consolas, monospace"
-                           HorizontalAlignment="Center"/>
-
-                <TextBlock x:Name="WinTimeLabel"
-                           FontSize="15" Foreground="#AAFFFFFF"
+                <TextBlock x:Name="WinStatsLabel"
+                           FontSize="18" Foreground="White"
                            FontFamily="Courier New, Consolas, monospace"
                            HorizontalAlignment="Center"/>
 

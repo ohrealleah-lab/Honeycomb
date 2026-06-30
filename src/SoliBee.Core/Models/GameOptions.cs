@@ -53,15 +53,15 @@ public class GameOptions
     public double FreecellWidth       { get; set; } = 1200;
     public double FreecellHeight      { get; set; } = 768;
     public bool   FreecellMaximized   { get; set; } = false;
-    public double SpiderWidth        { get; set; } = 1460;
+    public double SpiderWidth        { get; set; } = 1500;
     public double SpiderHeight       { get; set; } = 768;
     public bool   SpiderMaximized    { get; set; } = false;
-    public double VideoPokerWidth    { get; set; } = 1090;
-    public double VideoPokerHeight   { get; set; } = 768;
+    public double VideoPokerWidth    { get; set; } = 1000;
+    public double VideoPokerHeight   { get; set; } = 700;
     public bool   VideoPokerMaximized { get; set; } = false;
     public double BlackjackZoom      { get; set; } = 1.0;
-    public double BlackjackWidth     { get; set; } = 1060;
-    public double BlackjackHeight    { get; set; } = 940;
+    public double BlackjackWidth     { get; set; } = 1000;
+    public double BlackjackHeight    { get; set; } = 700;
     public bool   BlackjackMaximized { get; set; } = false;
 
     // Theme editor color overrides — null means use the compiled default

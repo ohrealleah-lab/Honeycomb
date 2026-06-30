@@ -71,6 +71,12 @@ public partial class MainWindow : Window
         this.KeyDown += OnWindowKeyDown;
         this.Closing += (_, _) => SaveCurrentWindowSize();
 
+        // Ensure the window has OS focus/activation immediately — without this, the
+        // first click after launch can get consumed by window activation itself,
+        // which leaves BeginMoveDrag's native move-loop from registering cleanly and
+        // breaks double-click-to-maximize until some other click "wakes" the window.
+        this.Opened += (_, _) => this.Activate();
+
         // Preload custom art into display-resolution cache before first scroll
         this.Loaded += (_, _) =>
         {
@@ -125,19 +131,24 @@ public partial class MainWindow : Window
 
         try
         {
+            bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
+
             this.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(primaryHex));
+
             if (TopBarBorder != null)
-            {
                 TopBarBorder.Background = Avalonia.Media.Brushes.Transparent;
-            }
+
+            // Solitaire: title bar vignette rendered behind buttons (first child of Row 0 Grid).
+            // Per-game VignetteRect (ZIndex=-1) handles the board — cards stay unaffected.
+            if (TitleBarVignetteRect != null)
+                TitleBarVignetteRect.IsVisible = isCardGame && options.IsVignetteEnabled;
+
+            // VP/BJ: full-window overlay (ZIndex=90). Not used for solitaire.
             if (VignetteOverlay != null)
             {
-                bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
                 VignetteOverlay.IsVisible = !isCardGame && options.IsVignetteEnabled;
                 if (VignetteOverlay.Fill is Avalonia.Media.RadialGradientBrush rgb)
-                {
                     rgb.Radius = options.VignetteScale * 0.8;
-                }
             }
         }
         catch
@@ -235,6 +246,48 @@ public partial class MainWindow : Window
             else if (this.DataContext is BlackjackViewModel bjVm)
                 bjVm.StartNewGame();
         });
+    }
+
+    private DateTime _lastTopBarClickTime;
+    private Avalonia.Point _lastTopBarClickPos;
+
+    private void TopBar_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        // Don't drag/maximize when the click originated inside an interactive control
+        var src = e.Source as Avalonia.Controls.Control;
+        while (src != null && src != TopBarBorder)
+        {
+            if (src is Button || src is ComboBox || src is ComboBoxItem) return;
+            src = src.Parent as Avalonia.Controls.Control;
+        }
+
+        // Manual double-click detection: BeginMoveDrag below runs a blocking native
+        // move-loop on the first click, which can desync Avalonia's own ClickCount
+        // tracking for the second click. Track timing/position ourselves instead.
+        var now = DateTime.UtcNow;
+        var pos = e.GetPosition(this);
+        double dx = pos.X - _lastTopBarClickPos.X;
+        double dy = pos.Y - _lastTopBarClickPos.Y;
+        bool isDoubleClick = (now - _lastTopBarClickTime) < TimeSpan.FromMilliseconds(500)
+                              && (dx * dx + dy * dy) < 64;
+
+        if (isDoubleClick)
+        {
+            _lastTopBarClickTime = DateTime.MinValue;
+            e.Pointer.Capture(null);
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+            return;
+        }
+
+        _lastTopBarClickTime = now;
+        _lastTopBarClickPos  = pos;
+        // Release any implicit pointer capture before starting the native move-drag —
+        // otherwise the capture can linger and swallow the next click's PointerPressed.
+        e.Pointer.Capture(null);
+        BeginMoveDrag(e);
     }
 
     private void NewGame_Click(object? sender, RoutedEventArgs e)
@@ -504,25 +557,25 @@ public partial class MainWindow : Window
 
     private void ResizeWindowForGame(string tag)
     {
+        // Min widths derived from card layout: card=128px, gaps per game
+        // Klondike: 7×128 + 6×18 + margins ≈ 1060
+        // Spider:   10×128 + 9×12 + margins ≈ 1450 (ScrollViewer handles taller stacks)
+        // Freecell1: board=1066 + padding ≈ 1120
+        // Freecell2: board=1334 + padding ≈ 1390
         string baseTag = GetBaseGameTag(tag);
         this.MinWidth = baseTag switch
         {
-            "Freecell"   => tag == "Freecell2" ? 1420 : 1140,
-            "Spider"     => 1420,
-            "VideoPoker" => 1050,
-            "Blackjack"  => 1000,
-            _            => 1080,
+            "Freecell"   => tag == "Freecell2" ? 1390 : 1120,
+            "Spider"     => 1450,
+            "VideoPoker" => 700,
+            "Blackjack"  => 700,
+            _            => 1060,
         };
-        
-        this.MinHeight = tag switch
+        this.MinHeight = baseTag switch
         {
-            "Blackjack" => 920,
-            "Freecell2" => 950,
-            "Freecell1" => 850,
-            "Spider1"   => 850,
-            "Spider2"   => 850,
-            "Spider4"   => 850,
-            _           => 750
+            "VideoPoker" => 580,
+            "Blackjack"  => 580,
+            _            => 640,
         };
     }
 
@@ -650,6 +703,7 @@ public partial class MainWindow : Window
         else if (tag == "Blackjack")
         {
             _coordinator.SwitchToBlackjack();
+            _coordinator.BlackjackViewModel.PrepareForResume();
             this.MainContent.Content = new BlackjackView { DataContext = _coordinator.BlackjackViewModel };
         }
 

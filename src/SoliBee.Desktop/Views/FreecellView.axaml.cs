@@ -147,7 +147,7 @@ public partial class FreecellView : CardGameView
             }
             else if (e.PropertyName == nameof(FreecellViewModel.IsAutocompletable))
             {
-                if (vm.IsAutocompletable) vm.Autocomplete();
+                AutocompleteBanner.IsVisible = vm.IsAutocompletable;
             }
             else if (e.PropertyName == nameof(FreecellViewModel.HasNoMoves))
             {
@@ -243,10 +243,19 @@ public partial class FreecellView : CardGameView
         SoundService.PlayVictory();
     }
 
+    private void AutocompleteGame_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FreecellViewModel vm) return;
+        AutocompleteBanner.IsVisible = false;
+        vm.Autocomplete();
+        e.Handled = true;
+    }
+
     private void NoMovesNewGame_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not FreecellViewModel vm) return;
         NoMovesBanner.IsVisible = false;
+        AutocompleteBanner.IsVisible = false;
         vm.InitializeGame();
         SoundService.PlayShuffle();
         e.Handled = true;
@@ -256,6 +265,7 @@ public partial class FreecellView : CardGameView
     {
         if (DataContext is not FreecellViewModel vm) return;
         NoMovesBanner.IsVisible = false;
+        AutocompleteBanner.IsVisible = false;
         vm.RestartGame();
         SoundService.PlayShuffle();
         e.Handled = true;

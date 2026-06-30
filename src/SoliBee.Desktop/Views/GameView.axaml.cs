@@ -108,8 +108,8 @@ public partial class GameView : CardGameView
             }
             else if (e.PropertyName == nameof(GameViewModel.IsAutocompletable))
             {
-                if (DataContext is GameViewModel vm && vm.IsAutocompletable)
-                    vm.Autocomplete();
+                if (DataContext is GameViewModel vm)
+                    AutocompleteBanner.IsVisible = vm.IsAutocompletable;
             }
             else if (e.PropertyName == nameof(GameViewModel.Stock))
             {
@@ -208,10 +208,19 @@ public partial class GameView : CardGameView
         catch { BoardFeltGrid.Background = new SolidColorBrush(Colors.DarkGreen); }
     }
 
+    private void AutocompleteGame_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not GameViewModel vm) return;
+        AutocompleteBanner.IsVisible = false;
+        vm.Autocomplete();
+        e.Handled = true;
+    }
+
     private void NoMovesNewGame_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not GameViewModel vm) return;
         NoMovesBanner.IsVisible = false;
+        AutocompleteBanner.IsVisible = false;
         vm.InitializeGame();
         SoundService.PlayShuffle();
         e.Handled = true;
@@ -221,6 +230,7 @@ public partial class GameView : CardGameView
     {
         if (DataContext is not GameViewModel vm) return;
         NoMovesBanner.IsVisible = false;
+        AutocompleteBanner.IsVisible = false;
         vm.RestartGame();
         SoundService.PlayShuffle();
         e.Handled = true;

@@ -83,7 +83,6 @@ public partial class BlackjackView : UserControl
         RebuildDealerCards(vm);
         RebuildPlayerHands(vm);
         UpdateButtons(vm);
-        UpdateChipHighlight(vm);
         UpdateResult(vm);
         ApplyFeltColor(vm);
 
@@ -135,8 +134,8 @@ public partial class BlackjackView : UserControl
         for (int i = 0; i < cards.Count; i++)
         {
             var cv = new CardView { Card = cards[i], IsHitTestVisible = false };
-            var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 160, Height = 226, Child = cv };
-            if (i > 0) vb.Margin = new Avalonia.Thickness(-30, 0, 0, 0);
+            var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 190, Height = 268.375, Child = cv };
+            if (i > 0) vb.Margin = new Avalonia.Thickness(-35.625, 0, 0, 0);
             DealerCardsPanel.Children.Add(vb);
 
             bool isNew = i >= _prevDealerIds.Count || _prevDealerIds[i] != newIds[i];
@@ -204,8 +203,8 @@ public partial class BlackjackView : UserControl
             for (int ci = 0; ci < hand.Cards.Count; ci++)
             {
                 var cv = new CardView { Card = hand.Cards[ci], IsHitTestVisible = false };
-                var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 160, Height = 226, Child = cv };
-                if (ci > 0) vb.Margin = new Avalonia.Thickness(-30, 0, 0, 0);
+                var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 190, Height = 268.375, Child = cv };
+                if (ci > 0) vb.Margin = new Avalonia.Thickness(-35.625, 0, 0, 0);
                 cardRow.Children.Add(vb);
 
                 bool isNew = ci >= prevIds.Count || prevIds[ci] != newIds[ci];
@@ -363,12 +362,14 @@ public partial class BlackjackView : UserControl
         bool playing = vm.State.Phase == BlackjackPhase.Playing;
         bool canDeal = vm.CanDeal;
 
+        bool notPlaying = !playing;
         HitButton.IsVisible    = playing;
         StandButton.IsVisible  = playing;
         DoubleButton.IsVisible = playing;
-        SplitButton.IsVisible  = playing;
-        DealButton.IsVisible   = canDeal || vm.State.Phase == BlackjackPhase.Betting;
-        RebuyButton.IsVisible  = vm.NeedsRebuy && canDeal;
+        SplitButton.IsVisible  = playing && vm.CanSplit;
+        BetButtonRow.IsVisible = notPlaying;
+        DealButton.IsVisible   = notPlaying && !vm.NeedsRebuy;
+        RebuyButton.IsVisible  = vm.NeedsRebuy && notPlaying;
 
         if (playing)
         {
@@ -380,34 +381,6 @@ public partial class BlackjackView : UserControl
 
         DealButton.Content = vm.State.Phase == BlackjackPhase.Result ? "Deal Again" : "Deal";
 
-        // Show keyboard hints only when betting/result (not during play — avoid clutter)
-        KeyHintLabel.Opacity = playing ? 0.0 : 1.0;
-    }
-
-    // ── Chip highlight ────────────────────────────────────────────────────────
-
-    private void UpdateChipHighlight(BlackjackViewModel vm)
-    {
-        int bet = vm.State.CurrentBet;
-        SetChipSelected(ChipBtn1, bet == 1);
-        SetChipSelected(ChipBtn2, bet == 2);
-        SetChipSelected(ChipBtn3, bet == 3);
-        SetChipSelected(ChipBtn4, bet == 4);
-        SetChipSelected(ChipBtn5, bet == 5);
-    }
-
-    private static void SetChipSelected(Button btn, bool selected)
-    {
-        if (selected)
-        {
-            btn.BorderThickness = new Avalonia.Thickness(3);
-            btn.Opacity = 1.0;
-        }
-        else
-        {
-            btn.BorderThickness = new Avalonia.Thickness(2);
-            btn.Opacity = 0.65;
-        }
     }
 
     // ── Result overlay ────────────────────────────────────────────────────────
@@ -432,11 +405,20 @@ public partial class BlackjackView : UserControl
 
         if (anyBJ)
         {
-            ResultHeadline.Text = "BLACKJACK!";
-            ResultSubline.Text  = netStr;
-            ResultOverlay.Background = new SolidColorBrush(Color.Parse("#1B5E20")); // Dark green
-            ResultOverlay.BoxShadow = BoxShadows.Parse("0 0 28 8 #90FFD700, 0 4 18 0 #AA000000");
-            ShowBanner(win: true, vm.ConsecutiveWins);
+            // Delay banner so the user can see the blackjack hand before the result appears
+            string capturedNet = netStr;
+            int capturedWins = vm.ConsecutiveWins;
+            var bjDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            bjDelay.Tick += (_, _) =>
+            {
+                bjDelay.Stop();
+                ResultHeadline.Text = "BLACKJACK!";
+                ResultSubline.Text  = capturedNet;
+                ResultOverlay.Background = new SolidColorBrush(Color.Parse("#1B5E20"));
+                ResultOverlay.BoxShadow = BoxShadows.Parse("0 0 28 8 #90FFD700, 0 4 18 0 #AA000000");
+                ShowBanner(win: true, capturedWins);
+            };
+            bjDelay.Start();
         }
         else if (anyWin)
         {
@@ -449,7 +431,7 @@ public partial class BlackjackView : UserControl
         else if (allPush)
         {
             ResultHeadline.Text = "PUSH";
-            ResultSubline.Text  = "Bets returned";
+            ResultSubline.Text  = "Bet Returned";
             ResultOverlay.Background = new SolidColorBrush(Color.Parse("#37474F")); // Dark slate grey
             ResultOverlay.BoxShadow = BoxShadows.Parse("0 4 18 0 #AA000000");
             ShowBanner(win: false, 0);
@@ -655,21 +637,29 @@ public partial class BlackjackView : UserControl
         SoundService.PlaySnap();
     }
 
-    private void Chip_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not BlackjackViewModel vm) return;
-        if (sender is Button btn && btn.Tag is string tagStr && int.TryParse(tagStr, out int amount))
-        {
-            vm.SetBet(amount);
-            SoundService.PlaySnap();
-        }
-    }
-
     private void Rebuy_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
         vm.Rebuy();
         SoundService.PlaySnap();
+    }
+
+    private void DecreaseBet_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not BlackjackViewModel vm) return;
+        vm.DecreaseBet();
+    }
+
+    private void IncreaseBet_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not BlackjackViewModel vm) return;
+        vm.IncreaseBet();
+    }
+
+    private void BetMax_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not BlackjackViewModel vm) return;
+        vm.BetMax();
     }
 
     private void ResultOverlay_PointerPressed(object? sender, PointerPressedEventArgs e)

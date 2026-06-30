@@ -105,31 +105,31 @@
 
                     <StackPanel x:Name="CardsRow" Orientation="Horizontal" Spacing="0" HorizontalAlignment="Center">
 
-                        <Grid x:Name="CardSlot0" Width="160" Height="226"
+                        <Grid x:Name="CardSlot0" Width="190" Height="268.375"
                               Tag="0" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <Viewbox Stretch="Uniform">
                                 <local:CardView x:Name="Card0View" IsHitTestVisible="False" Width="128" Height="181"/>
                             </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot1" Width="160" Height="226" Margin="-50,0,0,0"
+                        <Grid x:Name="CardSlot1" Width="190" Height="268.375" Margin="-59.375,0,0,0"
                               Tag="1" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <Viewbox Stretch="Uniform">
                                 <local:CardView x:Name="Card1View" IsHitTestVisible="False" Width="128" Height="181"/>
                             </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot2" Width="160" Height="226" Margin="-50,0,0,0"
+                        <Grid x:Name="CardSlot2" Width="190" Height="268.375" Margin="-59.375,0,0,0"
                               Tag="2" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <Viewbox Stretch="Uniform">
                                 <local:CardView x:Name="Card2View" IsHitTestVisible="False" Width="128" Height="181"/>
                             </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot3" Width="160" Height="226" Margin="-50,0,0,0"
+                        <Grid x:Name="CardSlot3" Width="190" Height="268.375" Margin="-59.375,0,0,0"
                               Tag="3" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <Viewbox Stretch="Uniform">
                                 <local:CardView x:Name="Card3View" IsHitTestVisible="False" Width="128" Height="181"/>
                             </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot4" Width="160" Height="226" Margin="-50,0,0,0"
+                        <Grid x:Name="CardSlot4" Width="190" Height="268.375" Margin="-59.375,0,0,0"
                               Tag="4" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
                             <Viewbox Stretch="Uniform">
                                 <local:CardView x:Name="Card4View" IsHitTestVisible="False" Width="128" Height="181"/>
