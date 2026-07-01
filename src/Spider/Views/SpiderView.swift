@@ -175,7 +175,7 @@ public struct SpiderView: View {
 
                 // Game Board Area
                 ScrollView(.horizontal, showsIndicators: false) {
-                ZStack(alignment: .top) {
+                ZStack {
                     VStack(spacing: 16) {
                         
                         // Top Row: Stock (left) and 8 Completed Foundations (right)
@@ -385,31 +385,6 @@ public struct SpiderView: View {
                             Spacer()
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            
-            if let hint = viewModel.activeHint {
-                HStack(spacing: 8) {
-                    Text("💡")
-                        .font(.system(size: 14))
-                    Text(hint.description)
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundColor(.yellow)
-                    
-                    Button("Dismiss") {
-                        viewModel.clearHint()
-                    }
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.6))
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.black.opacity(0.85))
-                .cornerRadius(8)
-                .shadow(color: Color.black.opacity(0.4), radius: 4, x: 0, y: 2)
-                .padding(.top, 16)
-                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                .zIndex(100)
             }
             }
                 .frame(width: boardWidth, height: boardHeight, alignment: .topLeading)
