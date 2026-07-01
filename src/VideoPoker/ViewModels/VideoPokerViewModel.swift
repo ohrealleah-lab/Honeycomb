@@ -288,6 +288,9 @@ public final class VideoPokerViewModel {
 
         switch entry.qualifier {
         case .none:
+            if options.variant == .deucesWild && entry.rank == .royalFlush {
+                return !hand.contains { $0.rank == 2 }
+            }
             return true
 
         case .jacksOrBetter:
@@ -301,7 +304,7 @@ public final class VideoPokerViewModel {
         case .deucesWild:
             // A wild royal flush contains at least one 2; natural royals are handled by .none above
             if entry.handName == "Five of a Kind" {
-                return result.kickers.count == 1
+                return result.kickers.count == 2 && result.kickers[1] == 15
             }
             return hand.contains { $0.rank == 2 }
 

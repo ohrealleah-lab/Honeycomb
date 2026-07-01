@@ -213,6 +213,7 @@ public struct FoundationPileView: View {
 public struct TableauPileView: View {
     let pile: Pile
     let draggedCardIDs: Set<UUID>
+    let activeHint: GameViewModel.HintMove?
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -226,11 +227,27 @@ public struct TableauPileView: View {
     }
     
     public var body: some View {
+        let isSource = activeHint?.sourcePileId == pile.id
+        let isTarget = activeHint?.targetPileId == pile.id
+        let hintStartIndex = isSource ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
+        
         ZStack(alignment: .top) {
             EmptyPileView()
+                .modifier(HintHighlightModifier(isHighlighted: isTarget && pile.isEmpty))
             
             ForEach(Array(pile.cards.enumerated()), id: \.element.id) { index, card in
+                let isCardHighlighted: Bool = {
+                    if let startIndex = hintStartIndex {
+                        return index >= startIndex
+                    }
+                    if isTarget {
+                        return index == pile.cards.count - 1
+                    }
+                    return false
+                }()
+                
                 CardView(card: card)
+                    .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: offsetForCard(at: index))
                     .gesture(

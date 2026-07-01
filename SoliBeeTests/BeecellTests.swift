@@ -6,6 +6,8 @@ struct BeecellTests {
         testBeecellAutocompleteAvailableWhenWinnable()
         testBeecellAutocompleteNotAvailableWhenBlocked()
         testBeecellAutocompleteNotAvailableWhenUnsafe()
+        testBeecellHintLogic()
+        testBeecellCardHighlightIndexComputation()
     }
     
     static func testBeecellAutocompleteNotAvailableAtStart() {
@@ -187,5 +189,135 @@ struct BeecellTests {
         
         viewModel.checkAutocompleteState()
         assert(!viewModel.isAutocompleteAvailable, "Autocomplete should not trigger when resolving the board requires unsafe moves (e.g. 7 of Diamonds when Clubs is at 4)")
+    }
+    
+    static func testBeecellHintLogic() {
+        let viewModel = BeecellViewModel()
+        
+        let freeCells = [
+            Pile(id: "free_0", type: .freeCell),
+            Pile(id: "free_1", type: .freeCell),
+            Pile(id: "free_2", type: .freeCell),
+            Pile(id: "free_3", type: .freeCell)
+        ]
+        
+        var foundations: [Pile] = []
+        let suits: [Card.Suit] = [.hearts, .diamonds, .spades, .clubs]
+        for (idx, suit) in suits.enumerated() {
+            foundations.append(Pile(id: "fnd_\(idx)", type: .foundation, cards: []))
+        }
+        
+        var tableau: [Pile] = []
+        let cards = [
+            Card(suit: .spades, rank: 10, faceUp: true),
+            Card(suit: .diamonds, rank: 12, faceUp: true),
+            Card(suit: .hearts, rank: 4, faceUp: true),
+            Card(suit: .hearts, rank: 11, faceUp: true),
+            Card(suit: .diamonds, rank: 13, faceUp: true),
+            Card(suit: .spades, rank: 7, faceUp: true),
+            Card(suit: .spades, rank: 1, faceUp: true)
+        ]
+        tableau.append(Pile(id: "tab_0", type: .tableau, cards: cards))
+        
+        while tableau.count < 8 {
+            tableau.append(Pile(id: "tab_\(tableau.count)", type: .tableau, cards: []))
+        }
+        
+        viewModel.state = BeecellState(
+            freeCells: freeCells,
+            foundations: foundations,
+            tableau: tableau,
+            score: 0,
+            movesCount: 0,
+            timerSeconds: 0,
+            isTimerActive: false,
+            hasWon: false
+        )
+        
+        viewModel.findHint()
+        
+        print("Test Hint ID: \(viewModel.activeHint?.card.id.uuidString ?? "nil")")
+        print("Tableau 0 Card 6 ID: \(viewModel.state.tableau[0].cards[6].id.uuidString)")
+        assert(viewModel.activeHint != nil, "Hint should be found")
+        assert(viewModel.activeHint?.card.id == viewModel.state.tableau[0].cards[6].id, "Hint card should match Ace of Spades")
+    }
+    
+    static func testBeecellCardHighlightIndexComputation() {
+        let viewModel = BeecellViewModel()
+        
+        let freeCells = [
+            Pile(id: "free_0", type: .freeCell),
+            Pile(id: "free_1", type: .freeCell),
+            Pile(id: "free_2", type: .freeCell),
+            Pile(id: "free_3", type: .freeCell)
+        ]
+        
+        var foundations: [Pile] = []
+        let suits: [Card.Suit] = [.hearts, .diamonds, .spades, .clubs]
+        for (idx, suit) in suits.enumerated() {
+            foundations.append(Pile(id: "fnd_\(idx)", type: .foundation, cards: []))
+        }
+        
+        var tableau: [Pile] = []
+        let cards = [
+            Card(suit: .spades, rank: 10, faceUp: true),
+            Card(suit: .diamonds, rank: 12, faceUp: true),
+            Card(suit: .hearts, rank: 4, faceUp: true),
+            Card(suit: .hearts, rank: 11, faceUp: true),
+            Card(suit: .diamonds, rank: 13, faceUp: true),
+            Card(suit: .spades, rank: 7, faceUp: true),
+            Card(suit: .spades, rank: 1, faceUp: true)
+        ]
+        tableau.append(Pile(id: "tab_0", type: .tableau, cards: cards))
+        
+        while tableau.count < 8 {
+            tableau.append(Pile(id: "tab_\(tableau.count)", type: .tableau, cards: []))
+        }
+        
+        viewModel.state = BeecellState(
+            freeCells: freeCells,
+            foundations: foundations,
+            tableau: tableau,
+            score: 0,
+            movesCount: 0,
+            timerSeconds: 0,
+            isTimerActive: false,
+            hasWon: false
+        )
+        
+        viewModel.findHint()
+        
+        guard let activeHint = viewModel.activeHint else {
+            assertionFailure("Hint should be found")
+            return
+        }
+        
+        let pile = viewModel.state.tableau[0]
+        let isSource = activeHint.sourcePileId == pile.id
+        let isTarget = activeHint.targetPileId == pile.id
+        let hintStartIndex = isSource ? pile.cards.firstIndex(where: { $0.id == activeHint.card.id }) : nil
+        
+        print("hintStartIndex is \(hintStartIndex ?? -1)")
+        
+        var highlights: [Bool] = []
+        for index in 0..<pile.cards.count {
+            let isCardHighlighted: Bool = {
+                if let startIndex = hintStartIndex {
+                    return index >= startIndex
+                }
+                if isTarget {
+                    return index == pile.cards.count - 1
+                }
+                return false
+            }()
+            highlights.append(isCardHighlighted)
+            print("Card[\(index)] (\(pile.cards[index].rankString)\(pile.cards[index].suit.symbol)) isHighlighted: \(isCardHighlighted)")
+        }
+        
+        // Assert only the Ace of Spades (index 6) is highlighted
+        assert(highlights[6] == true, "Ace of Spades should be highlighted")
+        for idx in 0..<6 {
+            assert(highlights[idx] == false, "Card at index \(idx) should not be highlighted")
+        }
     }
 }

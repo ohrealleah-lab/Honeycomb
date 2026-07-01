@@ -643,7 +643,9 @@ public struct BeecellView: View {
                 }
                 return c1.distanceX < c2.distanceX
             }
-            dropTarget = sorted.first?.pile
+            if let best = sorted.first, best.accepts {
+                dropTarget = best.pile
+            }
         }
         
         // 2. Check Free Cells and Foundations if no Tableau was targetable
@@ -697,7 +699,9 @@ public struct BeecellView: View {
                     }
                     return c1.distance < c2.distance
                 }
-                dropTarget = sorted.first?.pile
+                if let best = sorted.first, best.accepts {
+                    dropTarget = best.pile
+                }
             }
         }
         

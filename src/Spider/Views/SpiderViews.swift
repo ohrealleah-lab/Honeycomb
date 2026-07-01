@@ -31,6 +31,7 @@ public struct SpiderStockView: View {
 public struct SpiderTableauView: View {
     let pile: Pile
     let draggedCardIDs: Set<UUID>
+    let activeHint: SpiderViewModel.SpiderHintMove?
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -39,6 +40,7 @@ public struct SpiderTableauView: View {
     public init(
         pile: Pile,
         draggedCardIDs: Set<UUID>,
+        activeHint: SpiderViewModel.SpiderHintMove?,
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void,
@@ -46,6 +48,7 @@ public struct SpiderTableauView: View {
     ) {
         self.pile = pile
         self.draggedCardIDs = draggedCardIDs
+        self.activeHint = activeHint
         self.onDragStarted = onDragStarted
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
@@ -64,11 +67,27 @@ public struct SpiderTableauView: View {
         // Dynamically compress card overlap offset if pile gets deep to prevent clipping
         let offset: CGFloat = cardCount > 10 ? max(12.0, 32.0 - CGFloat(cardCount - 10) * 1.5) : 32.0
         
+        let isSource = activeHint?.sourcePileId == pile.id
+        let isTarget = activeHint?.targetPileId == pile.id
+        let hintStartIndex = isSource ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
+        
         ZStack(alignment: .top) {
             EmptyPileView()
+                .modifier(HintHighlightModifier(isHighlighted: isTarget && pile.isEmpty))
             
             ForEach(Array(pile.cards.enumerated()), id: \.element.id) { index, card in
+                let isCardHighlighted: Bool = {
+                    if let startIndex = hintStartIndex {
+                        return index >= startIndex
+                    }
+                    if isTarget {
+                        return index == pile.cards.count - 1
+                    }
+                    return false
+                }()
+                
                 CardView(card: card)
+                    .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: CGFloat(index) * offset)
                     .gesture(

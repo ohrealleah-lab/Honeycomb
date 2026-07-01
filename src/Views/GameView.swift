@@ -301,7 +301,7 @@ public struct GameView: View {
                             viewModel.doubleClickMoveToFoundation(card: card, from: viewModel.state.waste)
                         }
                     )
-                    .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.waste.id || viewModel.activeHint?.targetPileId == viewModel.state.waste.id))
+                    .modifier(HintHighlightModifier(isHighlighted: (viewModel.activeHint?.sourcePileId == viewModel.state.waste.id || viewModel.activeHint?.targetPileId == viewModel.state.waste.id) && viewModel.activeHint?.sourcePileId != viewModel.state.stock.id && viewModel.activeHint?.targetPileId != viewModel.state.stock.id))
                     .background(GeometryReader { geo in
                         Color.clear
                             .onAppear {
@@ -360,6 +360,7 @@ public struct GameView: View {
                         TableauPileView(
                             pile: pile,
                             draggedCardIDs: Set(draggedCards.map { $0.id }),
+                            activeHint: viewModel.activeHint,
                             onDragStarted: { card, stack, startLoc in
                                 viewModel.clearHint()
                                 if draggedCards.isEmpty {
@@ -379,7 +380,6 @@ public struct GameView: View {
                                 viewModel.doubleClickMoveToFoundation(card: card, from: pile)
                             }
                         )
-                        .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == pile.id || viewModel.activeHint?.targetPileId == pile.id))
                         .background(GeometryReader { geo in
                             Color.clear
                                 .onAppear {
@@ -720,7 +720,9 @@ public struct GameView: View {
                 }
                 return c1.distanceX < c2.distanceX
             }
-            dropTarget = sorted.first?.pile
+            if let best = sorted.first, best.accepts {
+                dropTarget = best.pile
+            }
         }
         
         // 2. Check Foundations and other top-row piles if no Tableau was targetable
@@ -774,7 +776,9 @@ public struct GameView: View {
                     }
                     return c1.distance < c2.distance
                 }
-                dropTarget = sorted.first?.pile
+                if let best = sorted.first, best.accepts {
+                    dropTarget = best.pile
+                }
             }
         }
         

@@ -294,6 +294,7 @@ public final class BlackjackViewModel {
     }
 
     public func executeDealerTurn() {
+        guard state.phase == .playing else { return }
         state.phase = .dealerTurn
 
         // Reveal hole card

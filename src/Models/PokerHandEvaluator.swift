@@ -40,7 +40,7 @@ public struct PokerHandEvaluator {
 
         // Five of a Kind (only reachable with wild-card substitution)
         if groupCounts == [5] {
-            return PokerHandResult(rank: .fourOfAKind, kickers: [groups[0].key])
+            return PokerHandResult(rank: .fourOfAKind, kickers: [groups[0].key, 15])
         }
 
         // Four of a Kind

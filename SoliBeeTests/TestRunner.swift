@@ -29,6 +29,8 @@ struct TestRunner {
         CustomCardColorsTests.run()
         print("✅ CustomCardColorsTests passed.")
         
+        VideoPokerAndBlackjackTests.run()
+        
         print("🎉 ALL TESTS PASSED SUCCESSFULLY!")
     }
 }

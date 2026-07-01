@@ -137,6 +137,7 @@ public struct BeecellTableauView: View {
         let isTarget = activeHint?.targetPileId == pile.id
         let hintStartIndex = isSource ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
         
+
         ZStack(alignment: .top) {
             EmptyPileView()
                 .modifier(HintHighlightModifier(isHighlighted: isTarget && pile.isEmpty))
@@ -153,9 +154,9 @@ public struct BeecellTableauView: View {
                 }()
                 
                 CardView(card: card)
+                    .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: CGFloat(index) * 32)
-                    .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .gesture(
                         DragGesture(minimumDistance: 5, coordinateSpace: .global)
                             .onChanged { val in

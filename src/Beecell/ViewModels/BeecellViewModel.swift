@@ -240,6 +240,8 @@ public final class BeecellViewModel {
         NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
         
         startNewGame()
+        
+
     }
     
     deinit {
