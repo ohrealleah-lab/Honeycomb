@@ -101,6 +101,7 @@ public struct BeecellFoundationView: View {
 public struct BeecellTableauView: View {
     let pile: Pile
     let draggedCardIDs: Set<UUID>
+    let activeHint: BeecellViewModel.HintMove?
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -109,6 +110,7 @@ public struct BeecellTableauView: View {
     public init(
         pile: Pile,
         draggedCardIDs: Set<UUID>,
+        activeHint: BeecellViewModel.HintMove?,
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void,
@@ -116,6 +118,7 @@ public struct BeecellTableauView: View {
     ) {
         self.pile = pile
         self.draggedCardIDs = draggedCardIDs
+        self.activeHint = activeHint
         self.onDragStarted = onDragStarted
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
@@ -130,13 +133,29 @@ public struct BeecellTableauView: View {
     }
     
     public var body: some View {
+        let isSource = activeHint?.sourcePileId == pile.id
+        let isTarget = activeHint?.targetPileId == pile.id
+        let hintStartIndex = isSource ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
+        
         ZStack(alignment: .top) {
             EmptyPileView()
+                .modifier(HintHighlightModifier(isHighlighted: isTarget && pile.isEmpty))
             
             ForEach(Array(pile.cards.enumerated()), id: \.element.id) { index, card in
+                let isCardHighlighted: Bool = {
+                    if let startIndex = hintStartIndex {
+                        return index >= startIndex
+                    }
+                    if isTarget {
+                        return index == pile.cards.count - 1
+                    }
+                    return false
+                }()
+                
                 CardView(card: card)
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: CGFloat(index) * 32)
+                    .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .gesture(
                         DragGesture(minimumDistance: 5, coordinateSpace: .global)
                             .onChanged { val in

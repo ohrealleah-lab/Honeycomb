@@ -385,6 +385,7 @@ public struct BeecellView: View {
                                 BeecellTableauView(
                                     pile: pile,
                                     draggedCardIDs: Set(draggedCards.map { $0.id }),
+                                    activeHint: viewModel.activeHint,
                                     onDragStarted: { card, stack, startLoc in
                                         viewModel.clearHint()
                                         if draggedCards.isEmpty {
@@ -403,7 +404,6 @@ public struct BeecellView: View {
                                         viewModel.doubleClickMove(card: card, from: pile)
                                     }
                                 )
-                                .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == pile.id || viewModel.activeHint?.targetPileId == pile.id))
                                 .background(GeometryReader { geo in
                                     Color.clear
                                         .onAppear { pileFrames[pile.id] = geo.frame(in: .global) }
