@@ -83,6 +83,20 @@ public struct GameView: View {
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                     .focusable(false)
 
+                    // New Game Button
+                    Button(action: { isShowingNewGameConfirm = true }) {
+                        Text("New Game")
+                            .font(.display(16))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(4)
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                    }
+                    .buttonStyle(HoverToolbarButtonStyle())
+                    .focusable(false)
+
                     // Options Button
                     Button(action: { isShowingOptions = true }) {
                         Text("Options")
@@ -607,7 +621,7 @@ public struct GameView: View {
         .sheet(isPresented: $isShowingStats) {
             StatsView(viewModel: viewModel)
         }
-        .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
+        .confirmationDialog("Start a new game? Your current game will end.", isPresented: $isShowingNewGameConfirm) {
             Button("New Game", role: .destructive) {
                 if let mode = pendingDrawMode { viewModel.state.drawMode = mode; pendingDrawMode = nil }
                 viewModel.startNewGame()
