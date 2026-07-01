@@ -393,49 +393,6 @@ public struct GameView: View {
                 }
                 .padding(.horizontal, 20)
 
-                // Stuck Banner (non-Vegas)
-                if viewModel.isStuck && !viewModel.state.hasWon && !viewModel.options.isVegasScoring {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("No moves remaining.")
-                                .font(.system(.headline, design: .monospaced))
-                                .foregroundColor(.white)
-                            Text("There are no valid moves remaining.")
-                                .font(.system(.subheadline, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.8))
-                        }
-                        Spacer()
-                        HStack(spacing: 8) {
-                            Button("Restart Game") { viewModel.restartCurrentGame() }
-                                .font(.system(.body, design: .monospaced))
-                                .fontWeight(.bold)
-                                .foregroundColor(.black)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.yellow)
-                                .cornerRadius(6)
-                                .shadow(radius: 2)
-                                .buttonStyle(.plain)
-                            Button("New Game") { viewModel.startNewGame() }
-                                .font(.system(.body, design: .monospaced))
-                                .fontWeight(.bold)
-                                .foregroundColor(.black)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.yellow)
-                                .cornerRadius(6)
-                                .shadow(radius: 2)
-                                .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(16)
-                    .background(Color.blue.opacity(0.9))
-                    .cornerRadius(8)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .shadow(radius: 5)
-                }
-
                 // Autocomplete Banner — inline below the tableau so it sits under the lowest cards
                 if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning {
                     HStack {
@@ -474,8 +431,8 @@ public struct GameView: View {
             .disabled(viewModel.isAutoplayRunning)
             .padding(.top, 20)
             
-            // Vegas game-over overlay
-            if viewModel.isStuck && !viewModel.state.hasWon && viewModel.options.isVegasScoring {
+            // Game-over overlay (both Vegas and non-Vegas)
+            if viewModel.isStuck && !viewModel.state.hasWon {
                 VStack {
                     Spacer()
                     VStack(spacing: 12) {
@@ -488,13 +445,15 @@ public struct GameView: View {
                             .font(.system(.headline, design: .monospaced))
                             .foregroundColor(.white)
 
-                        Text("Final bankroll: \(viewModel.vegasBankrollString)")
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.yellow)
+                        if viewModel.options.isVegasScoring {
+                            Text("Final bankroll: \(viewModel.vegasBankrollString)")
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundColor(.yellow)
+                        }
 
                         HStack(spacing: 12) {
-                            Button("Restart Game") {
-                                viewModel.restartCurrentGame()
+                            Button("New Game") {
+                                viewModel.startNewGame()
                             }
                             .font(.system(.body, design: .monospaced))
                             .fontWeight(.bold)
@@ -505,8 +464,8 @@ public struct GameView: View {
                             .cornerRadius(6)
                             .buttonStyle(.plain)
 
-                            Button("New Game") {
-                                viewModel.startNewGame()
+                            Button("Restart Game") {
+                                viewModel.restartCurrentGame()
                             }
                             .font(.system(.body, design: .monospaced))
                             .fontWeight(.bold)

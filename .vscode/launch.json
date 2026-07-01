@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:SoliBee}",
+            "name": "Debug SoliBee",
+            "target": "SoliBee",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug SoliBee"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:SoliBee}",
+            "name": "Release SoliBee",
+            "target": "SoliBee",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release SoliBee"
+        }
+    ]
+}
