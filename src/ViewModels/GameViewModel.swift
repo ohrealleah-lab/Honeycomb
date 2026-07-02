@@ -692,20 +692,6 @@ public final class GameViewModel {
                    isProgressiveMove(cards: [topCard], source: source, target: target) {
                     return true
                 }
-                // Lookahead: tableau-to-tableau that exposes a foundation-eligible card
-                if source.type == .tableau && target.type == .tableau {
-                    guard let colIdx = state.tableau.firstIndex(where: { $0.id == source.id }) else { continue }
-                    let col = state.tableau[colIdx]
-                    let remainingCount = col.cards.count - 1
-                    if remainingCount > 0 {
-                        let exposedCard = col.cards[remainingCount - 1]
-                        for foundation in state.foundations {
-                            if isValidMove(cards: [exposedCard], to: foundation) {
-                                return true
-                            }
-                        }
-                    }
-                }
             }
             // Try multi-card tableau sequences
             if source.type == .tableau {
