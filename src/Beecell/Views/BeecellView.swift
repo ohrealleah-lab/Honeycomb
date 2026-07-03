@@ -606,7 +606,7 @@ public struct BeecellView: View {
             snapToMinSize()
         })
         .onChange(of: viewModel.options.deckCount) { updateMinSize() }
-        .onChange(of: viewModel.zoomScale) { updateMinSize() }
+        .onChange(of: viewModel.zoomScale) { snapToMinSize() }
     }
 
     private func updateMinSize() {

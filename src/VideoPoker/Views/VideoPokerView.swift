@@ -9,9 +9,10 @@ public struct VideoPokerView: View {
     @State private var winFlash         = false
     @State private var cardVisible: [Bool] = Array(repeating: false, count: 5)
     @State private var cardRotation: [Double] = Array(repeating: 0, count: 5)
-    @State private var showParticles    = false
-    @State private var showResultBanner = false
-    @State private var cardsVisible     = true
+    @State private var showParticles         = false
+    @State private var showResultBanner      = false
+    @State private var cardsVisible          = true
+    @State private var showCardBackPlaceholders = true
     @State private var showIdlePrompt   = false
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
@@ -69,7 +70,11 @@ public struct VideoPokerView: View {
                 Text("Hit Space to Deal")
                     .font(.display(28, weight: .bold))
                     .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.5), radius: 8)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.55))
+                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
                     .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
             }
 
@@ -87,7 +92,7 @@ public struct VideoPokerView: View {
             self.zoomController = WindowZoomController(window: window)
             snapToMinSize()
         })
-        .onChange(of: viewModel.zoomScale) { updateMinSize() }
+        .onChange(of: viewModel.zoomScale) { snapToMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .sheet(isPresented: $isShowingOptions) {
@@ -137,8 +142,10 @@ public struct VideoPokerView: View {
                     
                     let hideTask = DispatchWorkItem {
                         withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false }
-                        
+
                         let promptTask = DispatchWorkItem {
+                            showCardBackPlaceholders = true
+                            withAnimation(.easeInOut(duration: 0.4)) { cardsVisible = true }
                             withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
                         }
                         idlePromptTask = promptTask
@@ -165,9 +172,10 @@ public struct VideoPokerView: View {
                 resultHideTask = nil
                 idlePromptTask?.cancel()
                 idlePromptTask = nil
-                
+
                 withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
                 showResultBanner = false
+                showCardBackPlaceholders = false
                 cardsVisible = true
                 animateDeal()
             }
@@ -178,7 +186,9 @@ public struct VideoPokerView: View {
                 resultHideTask = nil
                 idlePromptTask?.cancel()
                 idlePromptTask = nil
-                
+
+                showCardBackPlaceholders = true
+                cardsVisible = true
                 withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
             }
         }
@@ -330,17 +340,11 @@ public struct VideoPokerView: View {
 
     private var handArea: some View {
         HStack(spacing: 16) {
-            if viewModel.state.hand.isEmpty {
-                // Placeholder slots before first deal
+            if viewModel.state.hand.isEmpty || showCardBackPlaceholders {
                 ForEach(0..<5, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
+                        .scaleEffect(cardScale)
                         .frame(width: scaledCardW, height: scaledCardH)
-                        .overlay(
-                            Image(systemName: "suit.spade.fill")
-                                .foregroundColor(.white.opacity(0.08))
-                                .font(.system(size: 36))
-                        )
                 }
             } else {
                 ForEach(Array(viewModel.state.hand.enumerated()), id: \.offset) { idx, card in

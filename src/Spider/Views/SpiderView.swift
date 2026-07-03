@@ -482,7 +482,7 @@ public struct SpiderView: View {
             self.zoomController = WindowZoomController(window: window)
             snapToMinSize()
         })
-        .onChange(of: viewModel.zoomScale) { updateMinSize() }
+        .onChange(of: viewModel.zoomScale) { snapToMinSize() }
     }
 
     private func updateMinSize() {

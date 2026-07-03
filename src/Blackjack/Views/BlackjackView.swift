@@ -7,8 +7,9 @@ public struct BlackjackView: View {
     @State private var isShowingStats   = false
     @State private var isShowingNewGameConfirm = false
     @State private var showResultBanner  = false
-    @State private var cardsVisible      = true
-    @State private var dealerFlipped     = false  // triggers hole-card flip animation
+    @State private var cardsVisible           = true
+    @State private var showCardBackPlaceholders = false
+    @State private var dealerFlipped          = false  // triggers hole-card flip animation
     @State private var resultHideTask:   DispatchWorkItem? = nil
     @State private var showIdlePrompt    = false
     @State private var hostingWindow: NSWindow? = nil
@@ -74,7 +75,11 @@ public struct BlackjackView: View {
                 Text("Hit Space to Deal")
                     .font(.display(28, weight: .bold))
                     .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.5), radius: 8)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.55))
+                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
                     .opacity(showIdlePrompt ? 1 : 0)
                     .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
             }
@@ -98,7 +103,7 @@ public struct BlackjackView: View {
             self.zoomController = WindowZoomController(window: window)
             snapToMinSize()
         })
-        .onChange(of: viewModel.zoomScale) { updateMinSize() }
+        .onChange(of: viewModel.zoomScale) { snapToMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .sheet(isPresented: $isShowingOptions) {
@@ -127,12 +132,14 @@ public struct BlackjackView: View {
                     showResultBanner = false
                     let hideTask = DispatchWorkItem {
                         withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false }
-                        // Cards fully faded after 0.4s — schedule idle prompt 5s after that
+                        // Cards fully faded — show card backs then schedule idle prompt
                         let promptTask = DispatchWorkItem {
+                            showCardBackPlaceholders = true
+                            withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
                             withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
                         }
                         idlePromptTask = promptTask
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 5.4, execute: promptTask)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: promptTask)
                     }
                     resultHideTask = hideTask
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: hideTask)
@@ -148,6 +155,7 @@ public struct BlackjackView: View {
                 withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
                 dealerFlipped = false
                 showResultBanner = false
+                showCardBackPlaceholders = false
                 withAnimation(.easeIn(duration: 0.2)) { cardsVisible = true }
             }
             if newPhase == .dealerTurn {
@@ -288,12 +296,20 @@ public struct BlackjackView: View {
             }
 
             HStack(spacing: 16) {
-                ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { idx, card in
-                    CardView(card: card)
-                        .scaleEffect(cardScale)
-                        .frame(width: cardW, height: cardH)
-                        .opacity(cardsVisible ? 1 : 0)
-                        .animation(.easeIn(duration: 0.15).delay(Double(idx) * 0.08), value: cardsVisible)
+                if viewModel.state.dealerCards.isEmpty || showCardBackPlaceholders {
+                    ForEach(0..<2, id: \.self) { _ in
+                        CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
+                            .scaleEffect(cardScale)
+                            .frame(width: cardW, height: cardH)
+                    }
+                } else {
+                    ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { idx, card in
+                        CardView(card: card)
+                            .scaleEffect(cardScale)
+                            .frame(width: cardW, height: cardH)
+                            .opacity(cardsVisible ? 1 : 0)
+                            .animation(.easeIn(duration: 0.15).delay(Double(idx) * 0.08), value: cardsVisible)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, minHeight: cardH, alignment: .center)
@@ -349,6 +365,17 @@ public struct BlackjackView: View {
                 .font(.display(12, weight: .bold))
                 .foregroundColor(.white.opacity(0.6))
 
+            if viewModel.state.playerHands.isEmpty || showCardBackPlaceholders {
+                HStack(spacing: 16) {
+                    ForEach(0..<2, id: \.self) { _ in
+                        CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
+                            .scaleEffect(cardScale)
+                            .frame(width: cardW, height: cardH)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: cardH + 40)
+            } else {
+
             LazyVGrid(columns: columns, alignment: .center, spacing: 16) {
                 ForEach(Array(viewModel.state.playerHands.enumerated()), id: \.offset) { handIdx, hand in
                     let isActive = handIdx == viewModel.state.activeHandIndex && viewModel.state.phase == .playing
@@ -387,6 +414,7 @@ public struct BlackjackView: View {
                 }
             }
             .frame(maxWidth: .infinity, minHeight: cardH + 40)
+            } // end else (playerHands non-empty)
         }
     }
 
