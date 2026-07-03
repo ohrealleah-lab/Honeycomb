@@ -186,12 +186,6 @@ public struct GameView: View {
                     
                     if viewModel.options.isStatusBarVisible {
                         HStack(alignment: .bottom, spacing: 20) {
-                            // Games Played
-                            StatusItemView(label: "PLAYED", value: String(viewModel.gamesPlayed))
-
-                            // Games Won
-                            StatusItemView(label: "WON", value: String(viewModel.gamesWon))
-                            
                             // Score / Bankroll
                             if viewModel.options.isVegasScoring {
                                 StatusItemView(label: "BANKROLL", value: viewModel.vegasBankrollString)
@@ -296,6 +290,7 @@ public struct GameView: View {
                         wasteDisplayCount: viewModel.state.wasteDisplayCount,
                         stackSpacing: stackSpacing,
                         draggedCardIDs: Set(draggedCards.map { $0.id }),
+                        isHinted: (viewModel.activeHint?.sourcePileId == viewModel.state.waste.id || viewModel.activeHint?.targetPileId == viewModel.state.waste.id) && viewModel.activeHint?.sourcePileId != viewModel.state.stock.id && viewModel.activeHint?.targetPileId != viewModel.state.stock.id,
                         onDragStarted: { card, stack, startLoc in
                             viewModel.clearHint()
                             if draggedCards.isEmpty {
@@ -315,7 +310,6 @@ public struct GameView: View {
                             viewModel.doubleClickMoveToFoundation(card: card, from: viewModel.state.waste)
                         }
                     )
-                    .modifier(HintHighlightModifier(isHighlighted: (viewModel.activeHint?.sourcePileId == viewModel.state.waste.id || viewModel.activeHint?.targetPileId == viewModel.state.waste.id) && viewModel.activeHint?.sourcePileId != viewModel.state.stock.id && viewModel.activeHint?.targetPileId != viewModel.state.stock.id))
                     .background(GeometryReader { geo in
                         Color.clear
                             .onAppear {

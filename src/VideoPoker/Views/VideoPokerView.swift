@@ -60,6 +60,9 @@ public struct VideoPokerView: View {
 
                 Spacer()
             }
+            .frame(width: 905, height: 762, alignment: .topLeading)
+            .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
+            .frame(width: 905 * viewModel.zoomScale, height: 762 * viewModel.zoomScale, alignment: .topLeading)
 
             // Idle prompt
             if showIdlePrompt {
@@ -76,13 +79,15 @@ public struct VideoPokerView: View {
                 .frame(width: 0, height: 0)
                 .clipped()
         }
-        .frame(minWidth: 905, minHeight: 762)
-        .onAppear { snapToDefaultSize() }
+        .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
+               minHeight: 762 * viewModel.zoomScale, maxHeight: .infinity)
+        .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            snapToDefaultSize()
+            snapToMinSize()
         })
+        .onChange(of: viewModel.zoomScale) { updateMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .sheet(isPresented: $isShowingOptions) {
@@ -593,14 +598,24 @@ public struct VideoPokerView: View {
         viewModel.state.heldIndices.removeAll()
     }
 
-    private func snapToDefaultSize() {
+    private func updateMinSize() {
         guard let window = hostingWindow else { return }
-        let preferred = NSSize(width: 905, height: 762)
+        let z = viewModel.zoomScale
+        let size = NSSize(width: 905 * z, height: 762 * z)
         DispatchQueue.main.async {
-            window.contentMinSize = preferred
+            window.contentMinSize = size
+        }
+    }
+
+    private func snapToMinSize() {
+        guard let window = hostingWindow else { return }
+        let z = viewModel.zoomScale
+        let size = NSSize(width: 905 * z, height: 762 * z)
+        DispatchQueue.main.async {
+            window.contentMinSize = size
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.animator().setContentSize(preferred)
+                window.animator().setContentSize(size)
             }
         }
     }

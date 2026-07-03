@@ -90,6 +90,7 @@ public struct WastePileView: View {
     let wasteDisplayCount: Int
     let stackSpacing: CGFloat
     let draggedCardIDs: Set<UUID>
+    let isHinted: Bool
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -110,7 +111,9 @@ public struct WastePileView: View {
                                 .opacity(0)
                             
                             ForEach(Array(cardsToShow.enumerated()), id: \.element.id) { index, card in
+                                let isTopCard = index == cardsToShow.count - 1
                                 CardView(card: card)
+                                    .modifier(HintHighlightModifier(isHighlighted: isHinted && isTopCard))
                                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                                     .offset(x: CGFloat(index) * 42)
                                     .transition(.asymmetric(
@@ -146,6 +149,7 @@ public struct WastePileView: View {
                         if let topCard = pile.topCard {
                             CardView(card: topCard)
                                 .id(topCard.id)
+                                .modifier(HintHighlightModifier(isHighlighted: isHinted))
                                 .opacity(draggedCardIDs.contains(topCard.id) ? 0.0 : 1.0)
                                 .transition(.asymmetric(
                                     insertion: .offset(x: -(128 + stackSpacing)).combined(with: .opacity),

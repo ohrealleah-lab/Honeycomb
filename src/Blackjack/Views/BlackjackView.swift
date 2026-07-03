@@ -65,6 +65,9 @@ public struct BlackjackView: View {
 
                 Spacer()
             }
+            .frame(width: 905, height: 950, alignment: .topLeading)
+            .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
+            .frame(width: 905 * viewModel.zoomScale, height: 950 * viewModel.zoomScale, alignment: .topLeading)
 
             // Idle prompt overlay
             if showIdlePrompt {
@@ -87,13 +90,15 @@ public struct BlackjackView: View {
                 .frame(width: 0, height: 0)
                 .clipped()
         }
-        .frame(minWidth: 905, minHeight: 950)
-        .onAppear { snapToDefaultSize() }
+        .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
+               minHeight: 950 * viewModel.zoomScale, maxHeight: .infinity)
+        .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            snapToDefaultSize()
+            snapToMinSize()
         })
+        .onChange(of: viewModel.zoomScale) { updateMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .sheet(isPresented: $isShowingOptions) {
@@ -579,14 +584,24 @@ public struct BlackjackView: View {
 
     // MARK: - Helpers
 
-    private func snapToDefaultSize() {
+    private func updateMinSize() {
         guard let window = hostingWindow else { return }
-        let preferred = NSSize(width: 905, height: 950)
+        let z = viewModel.zoomScale
+        let size = NSSize(width: 905 * z, height: 950 * z)
         DispatchQueue.main.async {
-            window.contentMinSize = preferred
+            window.contentMinSize = size
+        }
+    }
+
+    private func snapToMinSize() {
+        guard let window = hostingWindow else { return }
+        let z = viewModel.zoomScale
+        let size = NSSize(width: 905 * z, height: 950 * z)
+        DispatchQueue.main.async {
+            window.contentMinSize = size
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.animator().setContentSize(preferred)
+                window.animator().setContentSize(size)
             }
         }
     }

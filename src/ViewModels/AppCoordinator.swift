@@ -9,6 +9,7 @@ public final class AppCoordinator {
         didSet {
             UserDefaults.standard.set(gameMode.rawValue, forKey: "selectedGameMode")
             syncSharedOptions(from: oldValue, to: gameMode)
+            startNewGame()
         }
     }
 
@@ -163,37 +164,41 @@ public final class AppCoordinator {
 
     public func zoomIn() {
         switch gameMode {
-        case .klondike:  klondikeViewModel.zoomIn()
-        case .beecell:   beecellViewModel.zoomIn()
-        case .spider:    spiderViewModel.zoomIn()
-        case .videoPoker, .blackjack: break
+        case .klondike:   klondikeViewModel.zoomIn()
+        case .beecell:    beecellViewModel.zoomIn()
+        case .spider:     spiderViewModel.zoomIn()
+        case .videoPoker: videoPokerViewModel.zoomIn()
+        case .blackjack:  blackjackViewModel.zoomIn()
         }
     }
 
     public func zoomOut() {
         switch gameMode {
-        case .klondike:  klondikeViewModel.zoomOut()
-        case .beecell:   beecellViewModel.zoomOut()
-        case .spider:    spiderViewModel.zoomOut()
-        case .videoPoker, .blackjack: break
+        case .klondike:   klondikeViewModel.zoomOut()
+        case .beecell:    beecellViewModel.zoomOut()
+        case .spider:     spiderViewModel.zoomOut()
+        case .videoPoker: videoPokerViewModel.zoomOut()
+        case .blackjack:  blackjackViewModel.zoomOut()
         }
     }
 
     public func resetZoom() {
         switch gameMode {
-        case .klondike:  klondikeViewModel.resetZoom()
-        case .beecell:   beecellViewModel.resetZoom()
-        case .spider:    spiderViewModel.resetZoom()
-        case .videoPoker, .blackjack: break
+        case .klondike:   klondikeViewModel.resetZoom()
+        case .beecell:    beecellViewModel.resetZoom()
+        case .spider:     spiderViewModel.resetZoom()
+        case .videoPoker: videoPokerViewModel.resetZoom()
+        case .blackjack:  blackjackViewModel.resetZoom()
         }
     }
 
     public func makeCurrentZoomDefault() {
         switch gameMode {
-        case .klondike:  klondikeViewModel.makeCurrentZoomDefault()
-        case .beecell:   beecellViewModel.makeCurrentZoomDefault()
-        case .spider:    spiderViewModel.makeCurrentZoomDefault()
-        case .videoPoker, .blackjack: break
+        case .klondike:   klondikeViewModel.makeCurrentZoomDefault()
+        case .beecell:    beecellViewModel.makeCurrentZoomDefault()
+        case .spider:     spiderViewModel.makeCurrentZoomDefault()
+        case .videoPoker: videoPokerViewModel.makeCurrentZoomDefault()
+        case .blackjack:  blackjackViewModel.makeCurrentZoomDefault()
         }
     }
 

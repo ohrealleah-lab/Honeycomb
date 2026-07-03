@@ -81,6 +81,15 @@ public final class BlackjackViewModel {
         state.sessionCredits = options.startingCredits
         state.currentBet = options.betPerHand
 
+        if let saved = UserDefaults.standard.value(forKey: "blackjack_defaultZoomScale") as? Double {
+            self.defaultZoomScale = CGFloat(saved)
+        }
+        if let saved = UserDefaults.standard.value(forKey: "blackjack_zoomScale") as? Double {
+            self.zoomScale = CGFloat(saved)
+        } else {
+            self.zoomScale = self.defaultZoomScale
+        }
+
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
@@ -422,8 +431,18 @@ public final class BlackjackViewModel {
     public func restartCurrentGame() { startNewGame() }
     public func undoLastAction() {}
     public var canUndo: Bool { false }
-    public func zoomIn() {}
-    public func zoomOut() {}
-    public func resetZoom() {}
-    public func makeCurrentZoomDefault() {}
+
+    // MARK: - Zoom
+    public var zoomScale: CGFloat = 1.0 {
+        didSet { UserDefaults.standard.set(Double(zoomScale), forKey: "blackjack_zoomScale") }
+    }
+    public var defaultZoomScale: CGFloat = 1.0
+
+    public func zoomIn() { zoomScale = min(2.0, zoomScale + 0.1) }
+    public func zoomOut() { zoomScale = max(0.6, zoomScale - 0.1) }
+    public func resetZoom() { zoomScale = defaultZoomScale }
+    public func makeCurrentZoomDefault() {
+        defaultZoomScale = zoomScale
+        UserDefaults.standard.set(Double(defaultZoomScale), forKey: "blackjack_defaultZoomScale")
+    }
 }
