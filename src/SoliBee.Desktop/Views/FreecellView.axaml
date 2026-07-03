@@ -1,0 +1,119 @@
+<local:CardGameView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.FreecellView"
+             ClipToBounds="False">
+
+    <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
+        <!-- Vignette depth overlay -->
+        <Rectangle x:Name="VignetteRect" IsHitTestVisible="False" ZIndex="-1" IsVisible="False">
+            <Rectangle.Fill>
+                <RadialGradientBrush Center="50%,50%" Radius="0.8">
+                    <GradientStop Color="#00000000" Offset="0.2"/>
+                    <GradientStop Color="#60000000" Offset="1.0"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <StackPanel x:Name="BoardPanel" Width="1066" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,10,0,0" ClipToBounds="False">
+
+                    <!-- Top area: FreeCells (left) and Foundations (right) -->
+                    <StackPanel Spacing="8" ClipToBounds="False">
+                        <!-- TopRow1 -->
+                        <Grid x:Name="TopRow1" ColumnDefinitions="Auto,*,Auto" Width="1066" HorizontalAlignment="Center" ClipToBounds="False">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="FreeCell0" />
+                                <local:PileView x:Name="FreeCell1" />
+                                <local:PileView x:Name="FreeCell2" />
+                                <local:PileView x:Name="FreeCell3" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="Foundation0" />
+                                <local:PileView x:Name="Foundation1" />
+                                <local:PileView x:Name="Foundation2" />
+                                <local:PileView x:Name="Foundation3" />
+                            </StackPanel>
+                        </Grid>
+                        
+                        <!-- TopRow2 -->
+                        <Grid x:Name="TopRow2" ColumnDefinitions="Auto,*,Auto" Width="1066" HorizontalAlignment="Center" IsVisible="False" ClipToBounds="False">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="FreeCell4" />
+                                <local:PileView x:Name="FreeCell5" />
+                                <local:PileView x:Name="FreeCell6" />
+                                <local:PileView x:Name="FreeCell7" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="Foundation4" />
+                                <local:PileView x:Name="Foundation5" />
+                                <local:PileView x:Name="Foundation6" />
+                                <local:PileView x:Name="Foundation7" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Bottom row: Tableaus -->
+                    <Grid x:Name="TableauGrid" ColumnDefinitions="128,6,128,6,128,6,128,6,128,6,128,6,128,6,128,6,128,6,128" Width="1066" HorizontalAlignment="Center">
+                        <local:PileView x:Name="Tableau0" Grid.Column="0" />
+                        <local:PileView x:Name="Tableau1" Grid.Column="2" />
+                        <local:PileView x:Name="Tableau2" Grid.Column="4" />
+                        <local:PileView x:Name="Tableau3" Grid.Column="6" />
+                        <local:PileView x:Name="Tableau4" Grid.Column="8" />
+                        <local:PileView x:Name="Tableau5" Grid.Column="10" />
+                        <local:PileView x:Name="Tableau6" Grid.Column="12" />
+                        <local:PileView x:Name="Tableau7" Grid.Column="14" />
+                        <local:PileView x:Name="Tableau8" Grid.Column="16" IsVisible="False" />
+                        <local:PileView x:Name="Tableau9" Grid.Column="18" IsVisible="False" />
+                    </Grid>
+
+        </StackPanel>
+
+        <!-- Drag overlay -->
+        <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+        <!-- Win animation overlay -->
+        <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
+
+        <!-- Inline stuck banner -->
+        <Border x:Name="NoMovesBanner" IsVisible="False" ZIndex="5"
+                Background="#1A44CC" Padding="20,14"
+                VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="New Game" Click="NoMovesNewGame_Click"
+                        Padding="18,8" FontSize="13" FontWeight="Bold"
+                        Background="#FFD700" Foreground="#1A1A1A"
+                        BorderThickness="0" CornerRadius="4" VerticalAlignment="Center"
+                        FontFamily="Courier New, Consolas, monospace"/>
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Text="No moves remaining." FontSize="15" FontWeight="Black"
+                               Foreground="White" FontFamily="Courier New, Consolas, monospace"/>
+                    <TextBlock Text="There are no valid moves remaining."
+                               FontSize="12" Foreground="#AAFFFFFF"
+                               FontFamily="Courier New, Consolas, monospace"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Inline autocomplete banner -->
+        <Border x:Name="AutocompleteBanner" IsVisible="False" ZIndex="5"
+                Background="#1A44CC" Padding="20,14"
+                VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Autocomplete Game" Click="AutocompleteGame_Click"
+                        Padding="18,8" FontSize="13" FontWeight="Bold"
+                        Background="#FFD700" Foreground="#1A1A1A"
+                        BorderThickness="0" CornerRadius="4" VerticalAlignment="Center"
+                        FontFamily="Courier New, Consolas, monospace"/>
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Text="Victory is guaranteed!" FontSize="15" FontWeight="Black"
+                               Foreground="White" FontFamily="Courier New, Consolas, monospace"/>
+                    <TextBlock Text="All remaining cards can be moved to foundations."
+                               FontSize="12" Foreground="#AAFFFFFF"
+                               FontFamily="Courier New, Consolas, monospace"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+    </Grid>
+
+</local:CardGameView>

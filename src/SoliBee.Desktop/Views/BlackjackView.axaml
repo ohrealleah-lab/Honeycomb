@@ -1,0 +1,247 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.BlackjackView">
+
+    <Grid>
+        <!-- The actual game board felt grid -->
+        <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto,*,Auto,Auto">
+
+            <!-- Vignette depth overlay -->
+            <Rectangle x:Name="VignetteRect" Grid.RowSpan="6" IsHitTestVisible="False" ZIndex="-1">
+                <Rectangle.Fill>
+                    <RadialGradientBrush Center="50%,50%" Radius="0.8">
+                        <GradientStop Color="#00000000" Offset="0.2"/>
+                        <GradientStop Color="#B2000000" Offset="1.0"/>
+                    </RadialGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
+            <Border x:Name="BidBar" Grid.Row="0" Background="#CC000000" CornerRadius="6"
+                    HorizontalAlignment="Center" Margin="0,10,0,0" Width="290" Padding="0,8">
+                <Grid ColumnDefinitions="*,Auto,*,Auto,*">
+                    <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
+                        <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold"
+                                   Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="CreditsLabel" FontSize="28" FontWeight="Black"
+                                   Foreground="White" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <Rectangle Grid.Column="1" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
+                    <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
+                        <TextBlock Text="BET" FontSize="10" FontWeight="Bold"
+                                   Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="BetLabel" FontSize="28" FontWeight="Black"
+                                   Foreground="#FFD700" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <Rectangle Grid.Column="3" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
+                    <StackPanel Grid.Column="4" Spacing="1" VerticalAlignment="Center">
+                        <TextBlock Text="HANDS" FontSize="10" FontWeight="Bold"
+                                   Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="HandsLabel" FontSize="28" FontWeight="Black"
+                                   Foreground="White" HorizontalAlignment="Center" Text="0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ─── Dealer area ──────────────────────────────────────────────────── -->
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
+                        Margin="0,28,0,28">
+                <TextBlock Text="DEALER" FontSize="11" FontWeight="Bold"
+                           Foreground="#80FFFFFF" HorizontalAlignment="Center"
+                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2" IsVisible="False"/>
+                <StackPanel x:Name="DealerCardsPanel" Orientation="Horizontal"
+                            HorizontalAlignment="Center"/>
+                <Border x:Name="DealerValuePill" Background="#99000000" CornerRadius="10"
+                        Padding="14,4" HorizontalAlignment="Center" IsVisible="False">
+                    <TextBlock x:Name="DealerValueLabel" FontSize="15" FontWeight="Bold"
+                               Foreground="White"
+                               FontFamily="Courier New, Consolas, monospace"/>
+                </Border>
+            </StackPanel>
+
+            <!-- ─── VS divider ───────────────────────────────────────────────────── -->
+            <Grid Grid.Row="2" Margin="0,4">
+                <Rectangle Height="1" Fill="#30FFFFFF" VerticalAlignment="Center"/>
+                <Border Background="Transparent" HorizontalAlignment="Center" Padding="14,0">
+                    <TextBlock Text="VS" FontSize="10" FontWeight="Bold"
+                               Foreground="#55FFFFFF" LetterSpacing="3"
+                               FontFamily="Courier New, Consolas, monospace"/>
+                </Border>
+            </Grid>
+
+            <!-- ─── Player area ──────────────────────────────────────────────────── -->
+            <StackPanel Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
+                        Margin="0,36,0,8">
+                <StackPanel x:Name="PlayerHandsContainer" Orientation="Horizontal" Spacing="16"
+                            HorizontalAlignment="Center"/>
+                <TextBlock Text="YOU" FontSize="11" FontWeight="Bold"
+                           Foreground="#80FFFFFF" HorizontalAlignment="Center"
+                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2" IsVisible="False"/>
+            </StackPanel>
+
+            <!-- ─── Action buttons + chip bet row ───────────────────────────────── -->
+            <StackPanel Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center"
+                        Spacing="10" Margin="0,8,0,12">
+
+                <!-- Bet adjustment + Deal row (visible when not playing) -->
+                <StackPanel x:Name="BetButtonRow" Orientation="Horizontal" Spacing="8"
+                            HorizontalAlignment="Center">
+                    <Button x:Name="DecreaseBetButton" Content="− Bet" Height="46" Padding="14,0"
+                            Click="DecreaseBet_Click" Classes="bj-button bj-bet-button"/>
+                    <Button x:Name="BetMaxButton"      Content="Bet Max" Height="46" Padding="14,0"
+                            Click="BetMax_Click"      Classes="bj-button bj-bet-button"/>
+                    <Button x:Name="IncreaseBetButton" Content="+ Bet"  Height="46" Padding="14,0"
+                            Click="IncreaseBet_Click" Classes="bj-button bj-bet-button"/>
+                    <Button x:Name="DealButton"   Content="Deal  [Space]" Height="46" Padding="28,0"
+                            Click="Deal_Click"   Classes="bj-button bj-button-deal"/>
+                    <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
+                            Click="Rebuy_Click"  Classes="bj-button bj-button-rebuy" IsVisible="False"/>
+                </StackPanel>
+
+                <!-- Action buttons (visible while playing) -->
+                <StackPanel x:Name="ActionButtonRow" Orientation="Horizontal" Spacing="10"
+                            HorizontalAlignment="Center">
+                    <Button x:Name="HitButton"    Content="Hit  [H]"      Height="46" Padding="22,0"
+                            Click="Hit_Click"    Classes="bj-button"/>
+                    <Button x:Name="StandButton"  Content="Stand  [S]"    Height="46" Padding="22,0"
+                            Click="Stand_Click"  Classes="bj-button"/>
+                    <Button x:Name="DoubleButton" Content="Double  [D]"   Height="46" Padding="16,0"
+                            Click="Double_Click" Classes="bj-button"/>
+                    <Button x:Name="SplitButton"  Content="Split  [P]"    Height="46" Padding="16,0"
+                            Click="Split_Click"  Classes="bj-button"/>
+                </StackPanel>
+
+            </StackPanel>
+
+        </Grid>
+
+
+        <!-- ─── Particle burst canvas (layered over the entire board) ─── -->
+        <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False" ZIndex="50"/>
+
+        <!-- ─── Result overlay (layered over the entire board) ─── -->
+        <Border x:Name="ResultOverlay" IsVisible="False"
+                Background="#1A44CC" CornerRadius="8" Padding="36,16"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                BoxShadow="0 0 28 8 #60FFD700, 0 4 18 0 #AA000000"
+                RenderTransformOrigin="50%,50%"
+                IsHitTestVisible="True"
+                PointerPressed="ResultOverlay_PointerPressed">
+            <StackPanel Spacing="6">
+                <TextBlock x:Name="ResultHeadline" FontSize="32" FontWeight="Black"
+                           Foreground="#FFD700" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="ResultSubline"  FontSize="18" FontWeight="Bold"
+                           Foreground="White" Opacity="0.85" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="ResultStreak"   FontSize="14" FontWeight="Bold"
+                           Foreground="#FFD700" Opacity="0.9" HorizontalAlignment="Center"
+                           IsVisible="False"/>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+
+    <UserControl.Styles>
+        <Style Selector="Button.bj-button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#65FFFFFF" Offset="0"/>
+                        <GradientStop Color="#35FFFFFF" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#A0FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.bj-button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#85FFFFFF" Offset="0"/>
+                        <GradientStop Color="#55FFFFFF" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.bj-button-deal">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC4CAF50" Offset="0"/>
+                        <GradientStop Color="#CC2E7D32" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AA81C784"/>
+        </Style>
+        <Style Selector="Button.bj-button-deal:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC66BB6A" Offset="0"/>
+                        <GradientStop Color="#CC388E3C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.bj-bet-button">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Opacity" Value="0.75"/>
+            <Setter Property="FontFamily" Value="Courier New, Consolas, monospace"/>
+        </Style>
+        <Style Selector="Button.bj-button-rebuy">
+            <Setter Property="Background" Value="#CC664400"/>
+            <Setter Property="BorderBrush" Value="#FFAA44"/>
+        </Style>
+
+        <!-- Chip buttons -->
+        <Style Selector="Button.bj-chip">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="CornerRadius" Value="22"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Black"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.bj-chip:disabled">
+            <Setter Property="Opacity" Value="0.35"/>
+        </Style>
+        <Style Selector="Button.bj-chip-1">
+            <Setter Property="Background" Value="#CCCCCC"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+            <Setter Property="BorderBrush" Value="#888888"/>
+        </Style>
+        <Style Selector="Button.bj-chip-2">
+            <Setter Property="Background" Value="#1565C0"/>
+            <Setter Property="BorderBrush" Value="#90CAF9"/>
+        </Style>
+        <Style Selector="Button.bj-chip-3">
+            <Setter Property="Background" Value="#B71C1C"/>
+            <Setter Property="BorderBrush" Value="#EF9A9A"/>
+        </Style>
+        <Style Selector="Button.bj-chip-4">
+            <Setter Property="Background" Value="#1B5E20"/>
+            <Setter Property="BorderBrush" Value="#A5D6A7"/>
+        </Style>
+        <Style Selector="Button.bj-chip-5">
+            <Setter Property="Background" Value="#E65100"/>
+            <Setter Property="BorderBrush" Value="#FFCC80"/>
+        </Style>
+        <Style Selector="Button.bj-chip:pointerover /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.85"/>
+        </Style>
+    </UserControl.Styles>
+
+</UserControl>

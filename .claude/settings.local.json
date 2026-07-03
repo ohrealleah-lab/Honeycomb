@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "PowerShell(dotnet build src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Debug --no-restore 2>&1)",
+      "PowerShell(& \"C:\\\\Program Files\\\\dotnet\\\\dotnet.exe\" build src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Debug --no-restore 2>&1)",
+      "PowerShell(& \"C:\\\\Program Files\\\\dotnet\\\\dotnet.exe\" publish src/SoliBee.Desktop/SoliBee.Desktop.csproj /p:PublishProfile=win-x64 2>&1)",
+      "PowerShell(& \"C:\\\\Program Files\\\\dotnet\\\\dotnet.exe\" publish src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o src/SoliBee.Desktop/bin/publish/win-x64 2>&1)",
+      "PowerShell(Get-ChildItem \"src\\\\SoliBee.Desktop\\\\bin\\\\publish\\\\win-x64\\\\\" | Select-Object Name, @{N='MB';E={[math]::Round\\($_.Length/1MB,1\\)}})",
+      "PowerShell(Stop-Process -Name \"SoliBee.Desktop\" -ErrorAction SilentlyContinue)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(cmd.exe /c \"dotnet build src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Debug 2>&1\")",
+      "Bash(cmd.exe /c \"cd C:\\\\\\\\Users\\\\\\\\leah\\\\\\\\SolibeeWin && dotnet build src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Debug\")",
+      "Bash(cmd /c \"cd /d C:\\\\\\\\Users\\\\\\\\leah\\\\\\\\SolibeeWin && dotnet build src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Debug 2>&1\")",
+      "Bash(/mnt/c/Windows/System32/cmd.exe /c \"cd /d C:\\\\\\\\Users\\\\\\\\leah\\\\\\\\SolibeeWin && dotnet build src\\\\\\\\SoliBee.Desktop\\\\\\\\SoliBee.Desktop.csproj -c Debug > build_out.txt 2>&1 && type build_out.txt\")",
+      "Bash(\"/c/Program Files/dotnet/dotnet.exe\" build src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Debug)",
+      "Bash(\"/c/Program Files/dotnet/dotnet.exe\" publish src/SoliBee.Desktop/SoliBee.Desktop.csproj -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true)",
+      "Bash(taskkill //F //IM SoliBee.Desktop.exe)",
+      "mcp__Claude_in_Chrome__list_connected_browsers",
+      "Bash(start \"C:\\\\Users\\\\leah\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-leah-SolibeeWin\\\\3e249aec-b7bd-4ca5-ad15-59a9adc6aa48\\\\scratchpad\\\\ui_reference.html\")",
+      "PowerShell(taskkill /F /IM SoliBee.Desktop.exe 2>$null)",
+      "PowerShell(Start-Process \"src\\\\SoliBee.Desktop\\\\bin\\\\Debug\\\\net8.0\\\\win-x64\\\\SoliBee.Desktop.exe\")",
+      "PowerShell(exit 0)",
+      "PowerShell(dotnet run --project C:\\\\Users\\\\leah\\\\SolibeeWin\\\\src\\\\SoliBee.Desktop\\\\SoliBee.Desktop.csproj)",
+      "PowerShell(& \"C:\\\\Program Files\\\\dotnet\\\\dotnet.exe\" run --project C:\\\\Users\\\\leah\\\\SolibeeWin\\\\src\\\\SoliBee.Desktop\\\\SoliBee.Desktop.csproj)",
+      "PowerShell(Get-Content \"$env:LOCALAPPDATA\\\\SoliBee\\\\options.json\" -ErrorAction SilentlyContinue | Select-String \"Vignette|VideoPoker|Blackjack\")",
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\SoliBee\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Content \"$env:LOCALAPPDATA\\\\SoliBee\\\\settings.json\" | Select-String \"Vignette|Width|Height|Maximized\")",
+      "PowerShell(Get-Content \"$env:LOCALAPPDATA\\\\SoliBee\\\\videopoker_options.json\"; Write-Output \"---\"; Get-Content \"$env:LOCALAPPDATA\\\\SoliBee\\\\blackjack_options.json\")",
+      "Bash(xargs wc -l)",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git fetch *)",
+      "Bash(git checkout *)"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.Views.FaceCardArtSectionView">
+  <Grid>
+    <StackPanel Spacing="4">
+      <StackPanel x:Name="SpadesRow" Orientation="Horizontal" Spacing="4" />
+      <StackPanel x:Name="HeartsRow" Orientation="Horizontal" Spacing="4" />
+      <StackPanel x:Name="DiamondsRow" Orientation="Horizontal" Spacing="4" />
+      <StackPanel x:Name="ClubsRow" Orientation="Horizontal" Spacing="4" />
+    </StackPanel>
+
+    <!-- Confirm delete overlay -->
+    <Grid x:Name="ConfirmDeleteOverlay" Background="#D0000000" IsVisible="False"
+          HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+      <Border Background="#2E2E2E" CornerRadius="8" Padding="15"
+              VerticalAlignment="Center" HorizontalAlignment="Center"
+              BoxShadow="0 4 15 0 #A0000000">
+        <StackPanel Spacing="12" Width="210">
+          <TextBlock Text="Remove Face Card Art" FontSize="14" FontWeight="Bold"
+                     Foreground="White" HorizontalAlignment="Center" />
+          <TextBlock Text="Remove the custom art for this slot? This cannot be undone."
+                     FontSize="11" Foreground="LightGray" TextWrapping="Wrap"
+                     HorizontalAlignment="Center" TextAlignment="Center" />
+          <Grid ColumnDefinitions="*, *" Margin="0,4,0,0">
+            <Button Content="Cancel" Click="CancelDelete_Click" Grid.Column="0"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Background="#444444" Foreground="White" Margin="0,0,4,0" />
+            <Button Content="Remove" Click="ConfirmDelete_Click" Grid.Column="1"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Background="#882222" Foreground="White" Margin="4,0,0,0" />
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

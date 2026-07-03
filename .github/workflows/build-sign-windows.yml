@@ -1,0 +1,90 @@
+name: Build and Sign (Windows)
+
+# Runs on pushes to main and the active port branch, all version tags,
+# PRs targeting main, and on-demand via workflow_dispatch.
+on:
+  push:
+    branches: [main, '004-windows-port']
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  build-sign:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish win-x64
+        run: dotnet publish src/SoliBee.Desktop/SoliBee.Desktop.csproj /p:PublishProfile=win-x64
+
+      # ── Signing (skipped when CERT_PFX_BASE64 secret is absent) ────────────
+      # To enable: add CERT_PFX_BASE64 (base64-encoded PFX) and CERT_PASSWORD
+      # as repository secrets under Settings → Secrets and variables → Actions.
+      # Generate the base64 value with:
+      #   [Convert]::ToBase64String([IO.File]::ReadAllBytes('your-cert.pfx')) | Set-Clipboard
+
+      - name: Decode certificate
+        if: ${{ secrets.CERT_PFX_BASE64 != '' }}
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String('${{ secrets.CERT_PFX_BASE64 }}')
+          [IO.File]::WriteAllBytes('cert.pfx', $bytes)
+
+      - name: Sign executable
+        if: ${{ secrets.CERT_PFX_BASE64 != '' }}
+        shell: pwsh
+        env:
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+        run: |
+          $tool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin' `
+                    -Recurse -Filter signtool.exe |
+                  Sort-Object FullName -Descending |
+                  Select-Object -First 1 -ExpandProperty FullName
+          & $tool sign `
+            /fd SHA256 `
+            /td SHA256 `
+            /tr http://timestamp.digicert.com `
+            /f cert.pfx `
+            /p $env:CERT_PASSWORD `
+            src\SoliBee.Desktop\bin\publish\win-x64\SoliBee.Desktop.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Remove certificate
+        if: always()
+        shell: pwsh
+        run: Remove-Item cert.pfx -ErrorAction SilentlyContinue
+
+      # ── Artifact ────────────────────────────────────────────────────────────
+
+      - name: Package
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path src\SoliBee.Desktop\bin\publish\win-x64\* `
+            -DestinationPath SoliBee-win-x64.zip
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: SoliBee-win-x64.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SoliBee-win-x64
+          path: SoliBee-win-x64.zip
+          retention-days: 30

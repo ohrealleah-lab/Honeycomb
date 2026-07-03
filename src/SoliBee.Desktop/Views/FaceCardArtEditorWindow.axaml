@@ -1,0 +1,97 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SoliBee.Desktop.Views.FaceCardArtEditorWindow"
+        Title="Edit Face Card Art"
+        Width="340" Height="510"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E"
+        ShowInTaskbar="False">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Card preview -->
+        <Border Grid.Row="0" HorizontalAlignment="Center" Margin="0,18,0,12">
+            <Border x:Name="CardFacePreview"
+                    Width="128" Height="181"
+                    Background="White"
+                    BorderBrush="#D9000000" BorderThickness="0.75"
+                    CornerRadius="10" ClipToBounds="True"
+                    BoxShadow="0 2 8 0 #40000000">
+                <Grid>
+                    <!-- Top-left rank/suit -->
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Left" VerticalAlignment="Top"
+                                Spacing="2" Margin="4,2,0,0">
+                        <TextBlock x:Name="PreviewRankText"
+                                   FontSize="17" FontWeight="Bold"
+                                   FontFamily="Courier New, Consolas, monospace" />
+                        <TextBlock x:Name="PreviewSuitText"
+                                   FontSize="14" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Center art area -->
+                    <Grid Width="86" Height="138"
+                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                          ClipToBounds="True">
+                        <Image x:Name="PreviewImage"
+                               Width="70" Height="60"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Bottom-right rank/suit (rotated 180°) -->
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                Spacing="2" Margin="0,0,4,2"
+                                RenderTransformOrigin="50%,50%">
+                        <StackPanel.RenderTransform>
+                            <RotateTransform Angle="180" />
+                        </StackPanel.RenderTransform>
+                        <TextBlock x:Name="PreviewRankTextBottom"
+                                   FontSize="17" FontWeight="Bold"
+                                   FontFamily="Courier New, Consolas, monospace" />
+                        <TextBlock x:Name="PreviewSuitTextBottom"
+                                   FontSize="14" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- Sliders -->
+        <StackPanel Grid.Row="1" Spacing="5" Margin="20,0">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Scale:" Foreground="White" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
+                <TextBlock x:Name="ScaleValueText" Text="1.00" Foreground="#C0C0C0" FontSize="12" VerticalAlignment="Center" />
+            </StackPanel>
+            <Slider x:Name="ScaleSlider" Minimum="0.1" Maximum="3.0" Value="1.0"
+                    ValueChanged="Slider_Changed" />
+
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Horizontal Offset:" Foreground="White" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
+                <TextBlock x:Name="OffsetXValueText" Text="0" Foreground="#C0C0C0" FontSize="12" VerticalAlignment="Center" />
+            </StackPanel>
+            <Slider x:Name="OffsetXSlider" Minimum="-100" Maximum="100" Value="0"
+                    ValueChanged="Slider_Changed" />
+
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Vertical Offset:" Foreground="White" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
+                <TextBlock x:Name="OffsetYValueText" Text="0" Foreground="#C0C0C0" FontSize="12" VerticalAlignment="Center" />
+            </StackPanel>
+            <Slider x:Name="OffsetYSlider" Minimum="-100" Maximum="100" Value="0"
+                    ValueChanged="Slider_Changed" />
+        </StackPanel>
+
+        <!-- Save / Cancel -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" Margin="20,12,20,20">
+            <Button Content="Cancel" Click="Cancel_Click"
+                    Grid.Column="0"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Background="#444444" Foreground="White" Margin="0,0,4,0" />
+            <Button Content="Save" Click="Save_Click"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Background="#226622" Foreground="White" Margin="4,0,0,0" />
+        </Grid>
+    </Grid>
+</Window>
