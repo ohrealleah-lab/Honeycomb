@@ -551,6 +551,11 @@ public final class GameViewModel {
         } else if sourcePile.type == .waste {
             state.waste.cards.removeAll { cardIDs.contains($0.id) }
             state.wasteDisplayCount = max(0, state.wasteDisplayCount - cardIDs.count)
+            // If the current batch is fully played but older waste cards remain,
+            // re-expose the previous layer so they are visible and playable.
+            if state.wasteDisplayCount == 0 && !state.waste.cards.isEmpty {
+                state.wasteDisplayCount = state.drawMode == .drawOne ? 1 : min(3, state.waste.cards.count)
+            }
         } else if sourcePile.type == .tableau {
             if let idx = state.tableau.firstIndex(where: { $0.id == sourcePile.id }) {
                 state.tableau[idx].cards.removeAll { cardIDs.contains($0.id) }
@@ -742,7 +747,7 @@ public final class GameViewModel {
             isStockExhausted = false
             return
         }
-        isStockExhausted = state.stock.isEmpty && state.waste.isEmpty
+        isStockExhausted = state.stock.isEmpty && !canRecycleStock
         isStuck = !hasValidMoves()
     }
 

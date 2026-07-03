@@ -14,6 +14,8 @@ public struct BeecellView: View {
     @State private var isShowingStats: Bool = false
     @State private var isShowingNewGameConfirm: Bool = false
     @State private var pendingDeckCount: Int? = nil
+    @State private var dismissedAutocompleteBanner: Bool = false
+    @State private var dismissedStuckBanner: Bool = false
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
 
@@ -413,75 +415,105 @@ public struct BeecellView: View {
                         }
                         .padding(.horizontal, 20)
 
-                        // Stuck Banner
-                        if viewModel.isStuck && !viewModel.state.hasWon {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("No moves remaining.")
-                                        .font(.system(.headline, design: .monospaced))
-                                        .foregroundColor(.white)
-                                    Text("There are no valid moves remaining.")
-                                        .font(.system(.subheadline, design: .monospaced))
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                                Spacer()
-                                Button("New Game") { viewModel.startNewGame() }
-                                    .font(.system(.body, design: .monospaced))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.black)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color.yellow)
-                                    .cornerRadius(6)
-                                    .shadow(radius: 2)
-                                    .buttonStyle(.plain)
-                            }
-                            .padding(16)
-                            .background(Color.orange.opacity(0.9))
-                            .cornerRadius(8)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 16)
-                            .shadow(radius: 5)
-                        }
-
-                        // Autocomplete Banner — inline below the tableau so it sits under the lowest cards
-                        if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Victory is guaranteed!")
-                                        .font(.system(.headline, design: .monospaced))
-                                        .foregroundColor(.white)
-                                    Text("All remaining cards can be moved to foundations.")
-                                        .font(.system(.subheadline, design: .monospaced))
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                                Spacer()
-                                Button("Autocomplete Game") {
-                                    viewModel.runAutocomplete()
-                                }
-                                .font(.system(.body, design: .monospaced))
-                                .fontWeight(.bold)
-                                .foregroundColor(.black)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.yellow)
-                                .cornerRadius(6)
-                                .shadow(radius: 2)
-                                .buttonStyle(.plain)
-                            }
-                            .padding(16)
-                            .background(Color.blue.opacity(0.9))
-                            .cornerRadius(8)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 16)
-                            .shadow(radius: 5)
-                        }
-
                         Spacer()
                     }
                     .disabled(viewModel.isAutoplayRunning)
                     .padding(.top, 20)
                     
+                    // Stuck overlay — centered
+                    if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
+                        VStack {
+                            Spacer()
+                            ZStack(alignment: .topTrailing) {
+                                VStack(spacing: 16) {
+                                    VStack(spacing: 4) {
+                                        Text("No Moves Remaining")
+                                            .font(.system(.headline, design: .monospaced))
+                                            .foregroundColor(.white)
+                                        Text("There are no valid moves remaining.")
+                                            .font(.system(.subheadline, design: .monospaced))
+                                            .foregroundColor(.white.opacity(0.8))
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    Button("New Game") { viewModel.startNewGame() }
+                                        .font(.system(.body, design: .monospaced))
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.black)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 10)
+                                        .background(Color.yellow)
+                                        .cornerRadius(6)
+                                        .buttonStyle(.plain)
+                                }
+                                .padding(24)
+                                .frame(maxWidth: 360)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .background(Color.black.opacity(0.75))
+                                .cornerRadius(12)
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange, lineWidth: 1.5))
+                                .shadow(radius: 8)
+
+                                Button(action: { dismissedStuckBanner = true }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
+                                .buttonStyle(.plain)
+                                .padding(10)
+                            }
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+
+                    // Autocomplete overlay — centered
+                    if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning && !dismissedAutocompleteBanner {
+                        VStack {
+                            Spacer()
+                            ZStack(alignment: .topTrailing) {
+                                VStack(spacing: 16) {
+                                    VStack(spacing: 4) {
+                                        Text("Victory is guaranteed!")
+                                            .font(.system(.headline, design: .monospaced))
+                                            .foregroundColor(.white)
+                                        Text("All remaining cards can be sorted into foundations.")
+                                            .font(.system(.subheadline, design: .monospaced))
+                                            .foregroundColor(.white.opacity(0.8))
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    Button("Autocomplete Game") {
+                                        viewModel.runAutocomplete()
+                                    }
+                                    .font(.system(.body, design: .monospaced))
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.black)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(Color.yellow)
+                                    .cornerRadius(6)
+                                    .shadow(radius: 2)
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(24)
+                                .frame(maxWidth: 360)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .background(Color.blue.opacity(0.9))
+                                .cornerRadius(12)
+                                .shadow(radius: 8)
+
+                                Button(action: { dismissedAutocompleteBanner = true }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
+                                .buttonStyle(.plain)
+                                .padding(10)
+                            }
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+
                     // Victory Cascade Overlay (reusing SoliBee's bouncing card animation)
                     if viewModel.state.hasWon {
                         WinAnimationView(foundations: viewModel.state.foundations) {
@@ -565,6 +597,8 @@ public struct BeecellView: View {
             }
             Button("Cancel", role: .cancel) { pendingDeckCount = nil }
         }
+        .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
+        .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window

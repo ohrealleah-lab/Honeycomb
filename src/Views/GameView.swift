@@ -15,6 +15,9 @@ public struct GameView: View {
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
     @State private var isShowingNewGameConfirm: Bool = false
+    @State private var isShowingRestartConfirm: Bool = false
+    @State private var dismissedAutocompleteBanner: Bool = false
+    @State private var dismissedStuckBanner: Bool = false
     @State private var pendingDrawMode: GameState.DrawMode? = nil
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
@@ -86,6 +89,20 @@ public struct GameView: View {
                     // New Game Button
                     Button(action: { isShowingNewGameConfirm = true }) {
                         Text("New Game")
+                            .font(.display(16))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.15))
+                            .cornerRadius(4)
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                    }
+                    .buttonStyle(HoverToolbarButtonStyle())
+                    .focusable(false)
+
+                    // Restart Button
+                    Button(action: { isShowingRestartConfirm = true }) {
+                        Text("Restart")
                             .font(.display(16))
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
@@ -223,12 +240,9 @@ public struct GameView: View {
                             .rotationEffect(.degrees(isShuffling ? -4 : 0))
                         if viewModel.isStockExhausted {
                             Text("Stock\nExhausted")
-                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                .font(.system(size: 17, weight: .bold, design: .monospaced))
                                 .multilineTextAlignment(.center)
                                 .foregroundColor(.white)
-                                .padding(6)
-                                .background(Color.orange.opacity(0.85))
-                                .cornerRadius(6)
                         }
                     }
                     .frame(width: 128, height: 181)
@@ -393,96 +407,121 @@ public struct GameView: View {
                 }
                 .padding(.horizontal, 20)
 
-                // Autocomplete Banner — inline below the tableau so it sits under the lowest cards
-                if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Victory is guaranteed!")
-                                .font(.system(.headline, design: .monospaced))
-                                .foregroundColor(.white)
-                            Text("All remaining cards can be moved to foundations.")
-                                .font(.system(.subheadline, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.8))
-                        }
-                        Spacer()
-                        Button("Autocomplete Game") {
-                            viewModel.runAutocomplete()
-                        }
-                        .font(.system(.body, design: .monospaced))
-                        .fontWeight(.bold)
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.yellow)
-                        .cornerRadius(6)
-                        .shadow(radius: 2)
-                        .buttonStyle(.plain)
-                    }
-                    .padding(16)
-                    .background(Color.blue.opacity(0.9))
-                    .cornerRadius(8)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .shadow(radius: 5)
-                }
-
                 Spacer()
             }
             .disabled(viewModel.isAutoplayRunning)
             .padding(.top, 20)
             
             // Game-over overlay (both Vegas and non-Vegas)
-            if viewModel.isStuck && !viewModel.state.hasWon {
+            if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
                 VStack {
                     Spacer()
-                    VStack(spacing: 12) {
-                        Text("GAME OVER")
-                            .font(.system(size: 36, weight: .black, design: .monospaced))
-                            .foregroundColor(.yellow)
-                            .shadow(radius: 3)
-
-                        Text("No moves remaining.")
-                            .font(.system(.headline, design: .monospaced))
-                            .foregroundColor(.white)
-
-                        if viewModel.options.isVegasScoring {
-                            Text("Final bankroll: \(viewModel.vegasBankrollString)")
-                                .font(.system(.body, design: .monospaced))
+                    ZStack(alignment: .topTrailing) {
+                        VStack(spacing: 12) {
+                            Text("GAME OVER")
+                                .font(.system(size: 36, weight: .black, design: .monospaced))
                                 .foregroundColor(.yellow)
-                        }
+                                .shadow(radius: 3)
 
-                        HStack(spacing: 12) {
-                            Button("New Game") {
-                                viewModel.startNewGame()
-                            }
-                            .font(.system(.body, design: .monospaced))
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.blue)
-                            .cornerRadius(6)
-                            .buttonStyle(.plain)
+                            Text("No moves remaining.")
+                                .font(.system(.headline, design: .monospaced))
+                                .foregroundColor(.white)
 
-                            Button("Restart Game") {
-                                viewModel.restartCurrentGame()
+                            if viewModel.options.isVegasScoring {
+                                Text("Final bankroll: \(viewModel.vegasBankrollString)")
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.yellow)
                             }
-                            .font(.system(.body, design: .monospaced))
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.blue)
-                            .cornerRadius(6)
-                            .buttonStyle(.plain)
+
+                            HStack(spacing: 12) {
+                                Button("New Game") {
+                                    viewModel.startNewGame()
+                                }
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.blue)
+                                .cornerRadius(6)
+                                .buttonStyle(.plain)
+
+                                Button("Restart Game") {
+                                    viewModel.restartCurrentGame()
+                                }
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.blue)
+                                .cornerRadius(6)
+                                .buttonStyle(.plain)
+                            }
                         }
+                        .padding(24)
+                        .frame(maxWidth: 420)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .background(Color.black.opacity(0.75))
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
+
+                        Button(action: { dismissedStuckBanner = true }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(10)
                     }
-                    .padding(24)
-                    .frame(maxWidth: 420)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .background(Color.black.opacity(0.75))
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            // Autocomplete overlay — centered
+            if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning && !dismissedAutocompleteBanner {
+                VStack {
+                    Spacer()
+                    ZStack(alignment: .topTrailing) {
+                        VStack(spacing: 16) {
+                            VStack(spacing: 4) {
+                                Text("Victory is guaranteed!")
+                                    .font(.system(.headline, design: .monospaced))
+                                    .foregroundColor(.white)
+                                Text("All remaining cards can be moved to foundations.")
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .foregroundColor(.white.opacity(0.8))
+                                    .multilineTextAlignment(.center)
+                            }
+                            Button("Autocomplete Game") {
+                                viewModel.runAutocomplete()
+                            }
+                            .font(.system(.body, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.yellow)
+                            .cornerRadius(6)
+                            .shadow(radius: 2)
+                            .buttonStyle(.plain)
+                        }
+                        .padding(24)
+                        .frame(maxWidth: 360)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .background(Color.blue.opacity(0.9))
+                        .cornerRadius(12)
+                        .shadow(radius: 8)
+
+                        Button(action: { dismissedAutocompleteBanner = true }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(10)
+                    }
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -580,6 +619,10 @@ public struct GameView: View {
         .sheet(isPresented: $isShowingStats) {
             StatsView(viewModel: viewModel)
         }
+        .confirmationDialog("Restart this game from the beginning?", isPresented: $isShowingRestartConfirm) {
+            Button("Restart Game", role: .destructive) { viewModel.restartCurrentGame() }
+            Button("Cancel", role: .cancel) { }
+        }
         .confirmationDialog("Start a new game? Your current game will end.", isPresented: $isShowingNewGameConfirm) {
             Button("New Game", role: .destructive) {
                 if let mode = pendingDrawMode { viewModel.state.drawMode = mode; pendingDrawMode = nil }
@@ -587,6 +630,8 @@ public struct GameView: View {
             }
             Button("Cancel", role: .cancel) { pendingDrawMode = nil }
         }
+        .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
+        .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window

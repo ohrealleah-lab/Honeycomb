@@ -40,12 +40,14 @@ public struct VideoPokerView: View {
 
                 Divider().overlay(Color.white.opacity(0.2))
 
-                payTableGrid
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 6)
+                if !viewModel.options.hideBetBoard {
+                    payTableGrid
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 6)
 
-                Divider().overlay(Color.white.opacity(0.1))
+                    Divider().overlay(Color.white.opacity(0.1))
+                }
 
                 VStack(spacing: 16) {
                     creditDisplay
@@ -621,6 +623,7 @@ struct VideoPokerOptionsView: View {
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
     @State private var hideStatsButton: Bool
+    @State private var hideBetBoard: Bool
     @State private var showFeltVignette: Bool
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
@@ -642,6 +645,7 @@ struct VideoPokerOptionsView: View {
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton  = State(initialValue: viewModel.options.hideHintButton)
         _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        _hideBetBoard    = State(initialValue: viewModel.options.hideBetBoard)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _feltColor       = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme   = State(initialValue: viewModel.options.cardBackTheme)
@@ -687,6 +691,7 @@ struct VideoPokerOptionsView: View {
 
                     Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body, design: .monospaced))
                     Toggle("Hide Stats button",isOn: $hideStatsButton).font(.system(.body, design: .monospaced))
+                    Toggle("Hide Bet Board",   isOn: $hideBetBoard).font(.system(.body, design: .monospaced))
 
                     Divider()
 
@@ -752,7 +757,8 @@ struct VideoPokerOptionsView: View {
                     o.betPerHand      = betPerHand
                     o.isSoundEnabled  = isSoundEnabled
                     o.hideHintButton  = hideHintButton
-                    o.hideStatsButton    = hideStatsButton
+                    o.hideStatsButton = hideStatsButton
+                    o.hideBetBoard    = hideBetBoard
                     o.showFeltVignette   = showFeltVignette
                     o.feltColor          = feltColor
                     o.cardBackTheme   = cardBackTheme

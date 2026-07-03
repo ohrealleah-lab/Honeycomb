@@ -13,6 +13,7 @@ public struct VideoPokerOptions: Codable, Equatable {
     public var isSoundEnabled: Bool = true
     public var hideHintButton: Bool = false
     public var hideStatsButton: Bool = false
+    public var hideBetBoard: Bool = false
     public var isDarkMode: Bool = false
     public var feltColor: FeltColorTheme = .feltGreen
     public var cardBackTheme: String = "Vulpera"
@@ -22,7 +23,7 @@ public struct VideoPokerOptions: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case variant, startingCredits, betPerHand
-        case isSoundEnabled, hideHintButton, hideStatsButton, isDarkMode
+        case isSoundEnabled, hideHintButton, hideStatsButton, hideBetBoard, isDarkMode
         case feltColor, cardBackTheme, customFeltColorRevision, showFeltVignette, customCardColors
     }
 
@@ -40,6 +41,7 @@ public struct VideoPokerOptions: Codable, Equatable {
         isSoundEnabled = try c.decodeIfPresent(Bool.self, forKey: .isSoundEnabled) ?? true
         hideHintButton = try c.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
         hideStatsButton = try c.decodeIfPresent(Bool.self, forKey: .hideStatsButton) ?? false
+        hideBetBoard   = try c.decodeIfPresent(Bool.self, forKey: .hideBetBoard) ?? false
         isDarkMode     = try c.decodeIfPresent(Bool.self, forKey: .isDarkMode) ?? false
         feltColor      = try c.decodeIfPresent(FeltColorTheme.self, forKey: .feltColor) ?? .feltGreen
         cardBackTheme  = try c.decodeIfPresent(String.self, forKey: .cardBackTheme) ?? "Vulpera"
