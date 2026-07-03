@@ -33,7 +33,14 @@
       "Bash(git init *)",
       "Bash(git remote *)",
       "Bash(git fetch *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(git commit *)",
+      "Bash(git config *)",
+      "Bash(git merge *)",
+      "Bash(MSYS_NO_PATHCONV=1 git show 'origin/004-windows-port:.gitignore')",
+      "Bash(MSYS_NO_PATHCONV=1 git rev-parse a45ca35:src/SoliBee.Desktop/Assets/dingwall.jpg)",
+      "Bash(MSYS_NO_PATHCONV=1 git rev-parse origin/004-windows-port:src/SoliBee.Desktop/Assets/dingwall.jpg)",
+      "Bash(echo \"done, exit: $?\")"
     ]
   }
 }
