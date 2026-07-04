@@ -20,7 +20,7 @@ Solibee supports five fully implemented, distinct games selectable via the **Gam
 * **Classic Win Animation**: The cards will flow from the foundations, and you will feel alive again.
 
 ### 2. Freecell Solitaire
-* **Modes**: Supports both **1-Deck** (8 columns, 4 free cells, 4 foundations) and **2-Deck** (10 columns, 4 free cells, 8 foundations) options.
+* **1-Deck**: 8 columns, 4 free cells, 4 foundations
 * **Rules & Scoring**: Open card placement strategy with move limits based on the number of empty free cells and tableau spaces.
 
 ### 3. Spider Solitaire
