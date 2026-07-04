@@ -18,6 +18,25 @@ namespace SoliBee.Desktop.Views;
 
 public partial class GameView : CardGameView
 {
+    // Column gap narrows above 1.0x zoom so columns don't overflow horizontally; floors at 4px.
+    public void ApplyZoomGap(double zoom)
+    {
+        const double baseGap = 18;
+        double gap = zoom <= 1.0 ? baseGap : Math.Max(4, baseGap - (baseGap - 4) * (zoom - 1.0));
+        SetColumnGaps(TopRowGrid, gap);
+        SetColumnGaps(TableauRowGrid, gap);
+        double totalWidth = 7 * 128 + 6 * gap;
+        TopRowGrid.Width = totalWidth;
+        TableauRowGrid.Width = totalWidth;
+        BoardPanel.Width = totalWidth;
+    }
+
+    private static void SetColumnGaps(Grid grid, double gap)
+    {
+        for (int i = 1; i < grid.ColumnDefinitions.Count; i += 2)
+            grid.ColumnDefinitions[i] = new ColumnDefinition(gap, GridUnitType.Pixel);
+    }
+
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
         if (DataContext is not GameViewModel vm || cards.Count == 0) return false;
@@ -84,6 +103,7 @@ public partial class GameView : CardGameView
         WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
+        CardView.ClearPileViewCache(this);
     }
 
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
@@ -106,10 +126,11 @@ public partial class GameView : CardGameView
                     VictoryOverlay.IsVisible = false;
                 }
             }
-            else if (e.PropertyName == nameof(GameViewModel.IsAutocompletable))
+            else if (e.PropertyName == nameof(GameViewModel.IsAutocompletable) ||
+                     e.PropertyName == nameof(GameViewModel.IsAutoplayRunning))
             {
                 if (DataContext is GameViewModel vm)
-                    AutocompleteBanner.IsVisible = vm.IsAutocompletable;
+                    AutocompleteBanner.IsVisible = vm.IsAutocompletable && !vm.IsAutoplayRunning;
             }
             else if (e.PropertyName == nameof(GameViewModel.Stock))
             {
@@ -151,6 +172,11 @@ public partial class GameView : CardGameView
         });
     }
 
+    protected override void ClearActiveHint()
+    {
+        if (DataContext is GameViewModel vm) vm.ClearHintCycle();
+    }
+
     private void BindPiles(GameViewModel vm)
     {
         StockPileControl.Pile = vm.Stock;
@@ -175,7 +201,6 @@ public partial class GameView : CardGameView
 
     private void ApplyFeltColor(GameOptions options)
     {
-        if (VignetteRect != null) VignetteRect.IsVisible = options.IsVignetteEnabled;
         if (options.IsFinalFantasyMode)
         {
             try
@@ -194,18 +219,10 @@ public partial class GameView : CardGameView
             return;
         }
 
-        string hexColor = options.FeltColor switch
-        {
-            FeltColorTheme.FeltGreen => "#008000",
-            FeltColorTheme.Crimson => "#8C0C26",
-            FeltColorTheme.RoyalBlue => "#1A3380",
-            FeltColorTheme.Charcoal => "#2E2E2E",
-            FeltColorTheme.Desert => "#C2967A",
-            FeltColorTheme.Custom => options.CustomFeltColorHex,
-            _ => "#008000"
-        };
-        try { BoardFeltGrid.Background = new SolidColorBrush(Color.Parse(hexColor)); }
-        catch { BoardFeltGrid.Background = new SolidColorBrush(Colors.DarkGreen); }
+        // Transparent, not an opaque repaint: the window background behind (MainWindow.ApplyFeltColor)
+        // already carries this same felt color, and staying transparent here lets the single
+        // app-wide vignette overlay (rendered behind the board content) show through in the gaps.
+        BoardFeltGrid.Background = Brushes.Transparent;
     }
 
     private void AutocompleteGame_Click(object? sender, RoutedEventArgs e)
@@ -233,6 +250,18 @@ public partial class GameView : CardGameView
         AutocompleteBanner.IsVisible = false;
         vm.RestartGame();
         SoundService.PlayShuffle();
+        e.Handled = true;
+    }
+
+    private void NoMovesDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        NoMovesBanner.IsVisible = false;
+        e.Handled = true;
+    }
+
+    private void AutocompleteDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        AutocompleteBanner.IsVisible = false;
         e.Handled = true;
     }
 

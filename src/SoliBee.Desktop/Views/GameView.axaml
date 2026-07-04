@@ -5,22 +5,13 @@
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
-        <!-- Vignette depth overlay -->
-        <Rectangle x:Name="VignetteRect" IsHitTestVisible="False" ZIndex="-1" IsVisible="False">
-            <Rectangle.Fill>
-                <RadialGradientBrush Center="50%,50%" Radius="0.8">
-                    <GradientStop Color="#00000000" Offset="0.2"/>
-                    <GradientStop Color="#60000000" Offset="1.0"/>
-                </RadialGradientBrush>
-            </Rectangle.Fill>
-        </Rectangle>
         <!-- Center container for the entire playing board, aligned towards the top to reduce space with the menu -->
-        <StackPanel Width="1004" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,30,0,0" ClipToBounds="False">
+        <StackPanel x:Name="BoardPanel" Width="1004" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,30,0,0" ClipToBounds="False">
             <!-- Top row: Stock, Waste, and Foundations, aligned to Grid columns -->
-            <Grid ColumnDefinitions="128,18,128,18,128,18,128,18,128,18,128,18,128" Width="1004" HorizontalAlignment="Center" ClipToBounds="False">
+            <Grid x:Name="TopRowGrid" ColumnDefinitions="128,18,128,18,128,18,128,18,128,18,128,18,128" Width="1004" HorizontalAlignment="Center" ClipToBounds="False">
                 <!-- Stock -->
                 <local:PileView x:Name="StockPileControl" Grid.Column="0" Clicked="StockPileControl_Clicked" />
-                
+
                 <!-- Waste -->
                 <local:PileView x:Name="WastePileControl" Grid.Column="2" />
 
@@ -32,7 +23,7 @@
             </Grid>
 
             <!-- Bottom row: Tableaus -->
-            <Grid ColumnDefinitions="128,18,128,18,128,18,128,18,128,18,128,18,128" Width="1004" HorizontalAlignment="Center">
+            <Grid x:Name="TableauRowGrid" ColumnDefinitions="128,18,128,18,128,18,128,18,128,18,128,18,128" Width="1004" HorizontalAlignment="Center">
                 <local:PileView x:Name="Tableau0" Grid.Column="0" />
                 <local:PileView x:Name="Tableau1" Grid.Column="2" />
                 <local:PileView x:Name="Tableau2" Grid.Column="4" />
@@ -51,49 +42,65 @@
 
         <!-- Inline stuck banner -->
         <Border x:Name="NoMovesBanner" IsVisible="False" ZIndex="5"
-                Background="#1A44CC" Padding="20,14"
-                VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Button Content="Restart Game" Click="NoMovesRestart_Click"
-                            Padding="18,8" FontSize="13" FontWeight="Bold"
-                            Background="#FFD700" Foreground="#1A1A1A"
-                            BorderThickness="0" CornerRadius="4"
-                            FontFamily="Courier New, Consolas, monospace"/>
-                    <Button Content="New Game" Click="NoMovesNewGame_Click"
-                            Padding="18,8" FontSize="13" FontWeight="Bold"
-                            Background="#FFD700" Foreground="#1A1A1A"
-                            BorderThickness="0" CornerRadius="4"
-                            FontFamily="Courier New, Consolas, monospace"/>
+                Background="#E61A44CC" CornerRadius="12" Padding="28,22"
+                BorderBrush="#FFD700" BorderThickness="2" BoxShadow="0 8 30 0 #80000000"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid>
+                <StackPanel Spacing="14" HorizontalAlignment="Center">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center">
+                        <TextBlock Text="No moves remaining." FontSize="18" FontWeight="Black"
+                                   Foreground="White" HorizontalAlignment="Center" FontFamily="Courier New, Consolas, monospace"/>
+                        <TextBlock Text="There are no valid moves remaining."
+                                   FontSize="14" Foreground="#AAFFFFFF" HorizontalAlignment="Center"
+                                   FontFamily="Courier New, Consolas, monospace"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                        <Button Content="Restart Game" Click="NoMovesRestart_Click"
+                                Padding="18,8" FontSize="13" FontWeight="Bold"
+                                Background="#FFD700" Foreground="#1A1A1A"
+                                BorderThickness="0" CornerRadius="4"
+                                FontFamily="Courier New, Consolas, monospace"/>
+                        <Button Content="New Game" Click="NoMovesNewGame_Click"
+                                Padding="18,8" FontSize="13" FontWeight="Bold"
+                                Background="#FFD700" Foreground="#1A1A1A"
+                                BorderThickness="0" CornerRadius="4"
+                                FontFamily="Courier New, Consolas, monospace"/>
+                    </StackPanel>
                 </StackPanel>
-                <StackPanel Spacing="2" VerticalAlignment="Center">
-                    <TextBlock Text="No moves remaining." FontSize="15" FontWeight="Black"
-                               Foreground="White" FontFamily="Courier New, Consolas, monospace"/>
-                    <TextBlock Text="There are no valid moves remaining."
-                               FontSize="12" Foreground="#AAFFFFFF"
-                               FontFamily="Courier New, Consolas, monospace"/>
-                </StackPanel>
-            </DockPanel>
+                <Button Content="&#x2715;" Click="NoMovesDismiss_Click"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Width="24" Height="24" Padding="0" FontSize="13" FontWeight="Bold"
+                        Background="Transparent" Foreground="#AAFFFFFF"
+                        BorderThickness="0" CornerRadius="12" Margin="0,-14,-20,0"/>
+            </Grid>
         </Border>
 
         <!-- Inline autocomplete banner -->
         <Border x:Name="AutocompleteBanner" IsVisible="False" ZIndex="5"
-                Background="#1A44CC" Padding="20,14"
-                VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
-            <DockPanel>
-                <Button DockPanel.Dock="Right" Content="Autocomplete Game" Click="AutocompleteGame_Click"
-                        Padding="18,8" FontSize="13" FontWeight="Bold"
-                        Background="#FFD700" Foreground="#1A1A1A"
-                        BorderThickness="0" CornerRadius="4" VerticalAlignment="Center"
-                        FontFamily="Courier New, Consolas, monospace"/>
-                <StackPanel Spacing="2" VerticalAlignment="Center">
-                    <TextBlock Text="Victory is guaranteed!" FontSize="15" FontWeight="Black"
-                               Foreground="White" FontFamily="Courier New, Consolas, monospace"/>
-                    <TextBlock Text="All remaining cards can be moved to foundations."
-                               FontSize="12" Foreground="#AAFFFFFF"
-                               FontFamily="Courier New, Consolas, monospace"/>
+                Background="#E61A44CC" CornerRadius="12" Padding="28,22"
+                BorderBrush="#FFD700" BorderThickness="2" BoxShadow="0 8 30 0 #80000000"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid>
+                <StackPanel Spacing="14" HorizontalAlignment="Center">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center">
+                        <TextBlock Text="Victory is guaranteed!" FontSize="18" FontWeight="Black"
+                                   Foreground="White" HorizontalAlignment="Center" FontFamily="Courier New, Consolas, monospace"/>
+                        <TextBlock Text="All remaining cards can be moved to foundations."
+                                   FontSize="14" Foreground="#AAFFFFFF" HorizontalAlignment="Center"
+                                   FontFamily="Courier New, Consolas, monospace"/>
+                    </StackPanel>
+                    <Button Content="Autocomplete Game" Click="AutocompleteGame_Click"
+                            Padding="18,8" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"
+                            Background="#FFD700" Foreground="#1A1A1A"
+                            BorderThickness="0" CornerRadius="4"
+                            FontFamily="Courier New, Consolas, monospace"/>
                 </StackPanel>
-            </DockPanel>
+                <Button Content="&#x2715;" Click="AutocompleteDismiss_Click"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Width="24" Height="24" Padding="0" FontSize="13" FontWeight="Bold"
+                        Background="Transparent" Foreground="#AAFFFFFF"
+                        BorderThickness="0" CornerRadius="12" Margin="0,-14,-20,0"/>
+            </Grid>
         </Border>
 
     </Grid>

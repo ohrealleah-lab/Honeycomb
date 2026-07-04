@@ -142,7 +142,7 @@ public partial class CardView : UserControl
     private readonly TranslateTransform _slideTx = new();
     private const int SlideSteps = 9;
 
-    private DispatcherTimer? _hintPulseTimer;
+    private readonly HintPulseAnimation _hintPulse = new();
     private SolidColorBrush? _hintPulseBrush;
 
     public void BeginSlideIn(double fromX, double fromY, int durationMs = 180, bool fadeIn = false)
@@ -386,8 +386,7 @@ public partial class CardView : UserControl
             _slideAnimTimer?.Stop();
             _slideAnimTimer = null;
             RenderTransform = null;
-            _hintPulseTimer?.Stop();
-            _hintPulseTimer = null;
+            _hintPulse.Stop();
         };
     }
 
@@ -855,13 +854,6 @@ public partial class CardView : UserControl
             offsetX = options.CardBackOffsetX;
             offsetY = options.CardBackOffsetY;
         }
-        else if (theme == "Priest")
-        {
-            filename = "priest.png";
-            scale = options.CardBackScale;
-            offsetX = options.CardBackOffsetX;
-            offsetY = options.CardBackOffsetY;
-        }
         else if (theme == "Vulpera")
         {
             filename = "vulpera.png";
@@ -1203,30 +1195,32 @@ public partial class CardView : UserControl
     public void ShowHint()
     {
         if (CardFace == null || Card == null || !Card.IsFaceUp) return;
-        _hintPulseTimer?.Stop();
         _hintPulseBrush = new SolidColorBrush(Color.Parse("#FFD700"));
         CardFace.BorderBrush     = _hintPulseBrush;
-        CardFace.BorderThickness = new Thickness(3);
-        double phase = 0;
-        _hintPulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _hintPulseTimer.Tick += (_, _) =>
+        CardFace.BorderThickness = new Thickness(3.5);
+        _hintPulse.Start(alpha =>
         {
-            phase += 0.08;
-            byte alpha = (byte)(160 + (int)(95 * Math.Sin(phase)));
-            _hintPulseBrush!.Color = Color.FromArgb(alpha, 0xFF, 0xD7, 0x00);
-        };
-        _hintPulseTimer.Start();
+            byte a = (byte)(160 + (int)(95 * alpha));
+            _hintPulseBrush!.Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00);
+            CardFace.BoxShadow = new BoxShadows(new BoxShadow
+            {
+                OffsetX = 0, OffsetY = 0, Blur = 4, Spread = 0,
+                Color = Color.FromArgb((byte)(a * 0.8), 0xFF, 0xD7, 0x00)
+            });
+        });
     }
 
     public void ClearHint()
     {
-        _hintPulseTimer?.Stop();
-        _hintPulseTimer = null;
+        _hintPulse.Stop();
         _hintPulseBrush = null;
         if (CardFace == null || Card == null || !Card.IsFaceUp) return;
         bool ffMode = (_cachedOptions ?? SettingsService.LoadOptions()).IsFinalFantasyMode;
         CardFace.BorderBrush     = ffMode ? _brushFaceBorderFFCard : _brushFaceBorderNormal;
         CardFace.BorderThickness = new Thickness(ffMode ? 2.5 : 0.75);
+        CardFace.BoxShadow       = ffMode
+            ? new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = -5, Blur = 6, Spread = 0, Color = _ffShadowColor })
+            : new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = 1.5, Blur = 1.5, Spread = 0, Color = _normalShadowColor });
     }
 
     public void ClearSelection()
@@ -1505,6 +1499,12 @@ public partial class CardView : UserControl
         _sourcePileView = null;
         _dragCanvas = null;
     }
+
+    // MainWindow constructs a brand-new GameView/FreecellView/SpiderView on every
+    // game switch (deck-count/draw-mode/suit-count change included), so without this
+    // the cache below would keep a strong reference to every discarded CardGameView
+    // (plus its full pile list) forever. Call from each view's Unloaded handler.
+    public static void ClearPileViewCache(CardGameView gameView) => _pileViewListCache.Remove(gameView);
 
     private PileView? FindTargetPileView(CardGameView gameView, Point dropPoint)
     {

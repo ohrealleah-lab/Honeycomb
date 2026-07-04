@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
 using SoliBee.Core.Models;
 using SoliBee.Core.ViewModels;
 using SoliBee.Desktop.Services;
@@ -23,6 +24,9 @@ public partial class PileView : UserControl
 
     public event EventHandler? Clicked;
 
+    private readonly HintPulseAnimation _hintPulse = new();
+    private SolidColorBrush? _hintPulseBrush;
+
     static PileView()
     {
         PileProperty.Changed.AddClassHandler<PileView>((x, e) => x.OnPileChanged(e));
@@ -32,6 +36,43 @@ public partial class PileView : UserControl
     {
         InitializeComponent();
         this.Loaded += (s, e) => UpdateCardsLayout();
+        this.Unloaded += (s, e) => _hintPulse.Stop();
+    }
+
+    // Whole-pile hint highlight — used for foundation / free cell / stock / waste,
+    // which hold at most one playable card at a time and don't need per-card granularity.
+    public void ShowHint()
+    {
+        if (HintHighlightBorder == null) return;
+        // Match the fanned waste-pile canvas width (draw-three mode) instead of the
+        // fixed single-card size, so the highlight surrounds every fanned card.
+        if (CardsCanvas != null)
+        {
+            HintHighlightBorder.Width  = CardsCanvas.Width;
+            HintHighlightBorder.Height = CardsCanvas.Height;
+        }
+        HintHighlightBorder.IsVisible = true;
+        _hintPulseBrush = new SolidColorBrush(Color.Parse("#FFD700"));
+        HintHighlightBorder.BorderBrush = _hintPulseBrush;
+        _hintPulse.Start(alpha =>
+        {
+            byte a = (byte)(160 + (int)(95 * alpha));
+            _hintPulseBrush!.Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00);
+            HintHighlightBorder.BoxShadow = new BoxShadows(new BoxShadow
+            {
+                OffsetX = 0, OffsetY = 0, Blur = 4, Spread = 0,
+                Color = Color.FromArgb((byte)(a * 0.8), 0xFF, 0xD7, 0x00)
+            });
+        });
+    }
+
+    public void ClearHint()
+    {
+        _hintPulse.Stop();
+        _hintPulseBrush = null;
+        if (HintHighlightBorder == null) return;
+        HintHighlightBorder.IsVisible = false;
+        HintHighlightBorder.BoxShadow = default;
     }
 
     private void OnPileChanged(AvaloniaPropertyChangedEventArgs e)
@@ -102,12 +143,19 @@ public partial class PileView : UserControl
 
                 if (cardsToShow == 0)
                 {
-                    // Batch exhausted — prompt user to draw again
-                    CardsCanvas.Children.Clear();
-                    EmptyOutline.IsVisible = true;
-                    CardsCanvas.Width  = 128;
-                    CardsCanvas.Height = 181;
-                    return;
+                    if (Pile.Cards.Count == 0)
+                    {
+                        // Waste is genuinely empty — prompt user to draw again
+                        CardsCanvas.Children.Clear();
+                        EmptyOutline.IsVisible = true;
+                        CardsCanvas.Width  = 128;
+                        CardsCanvas.Height = 181;
+                        return;
+                    }
+
+                    // Current draw batch fully played — peel back to the older waste
+                    // layer underneath and expose just its top card (no new 3-fan).
+                    cardsToShow = 1;
                 }
 
                 int startIndex = Pile.Cards.Count - cardsToShow;

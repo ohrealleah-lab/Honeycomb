@@ -129,6 +129,7 @@ public partial class VideoPokerViewModel : ObservableObject
         State.HeldSlots        = new bool[5];
         State.WinningCardMask  = new bool[5];
         State.Phase            = VideoPokerPhase.Holding;
+        State.ResultBannerShown = false;
 
         BuildAndShuffleDeck();
         State.Hand = _deck.Take(5).Select(c => c with { IsFaceUp = true }).ToList();
@@ -165,6 +166,7 @@ public partial class VideoPokerViewModel : ObservableObject
         {
             Stats.WinningHands++;
             Stats.TotalCreditsWon += payout;
+            if (payout > Stats.BiggestPay) Stats.BiggestPay = payout;
             var key = entry!.HandName;
             Stats.HandCounts[key] = Stats.HandCounts.GetValueOrDefault(key) + 1;
         }
@@ -224,6 +226,8 @@ public partial class VideoPokerViewModel : ObservableObject
     public void Rebuy()
     {
         State.SessionCredits += Options.StartingCredits;
+        Stats.Rebuys++;
+        SaveStatistics();
         NotifyStateChanged();
     }
 
@@ -372,6 +376,9 @@ public partial class VideoPokerViewModel : ObservableObject
                 JsonSerializer.Serialize(Options, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { }
+        // Options is the same live instance Preferences edits directly (single consumer,
+        // no cross-ViewModel broadcast needed) — notify so the view refreshes immediately.
+        OnPropertyChanged(nameof(Options));
     }
 
     private static VideoPokerOptions LoadOptions()
@@ -397,6 +404,12 @@ public partial class VideoPokerViewModel : ObservableObject
                 JsonSerializer.Serialize(Stats, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { }
+    }
+
+    public void ResetStats()
+    {
+        Stats = new VideoPokerStatistics();
+        SaveStatistics();
     }
 
     private static VideoPokerStatistics LoadStatistics()

@@ -5,7 +5,7 @@
 
     <Grid>
         <!-- The actual game board felt grid -->
-        <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto,*,Auto,Auto">
+        <Grid x:Name="BoardFeltGrid" RowDefinitions="*,Auto,Auto,Auto,Auto,*">
 
             <!-- Vignette depth overlay -->
             <Rectangle x:Name="VignetteRect" Grid.RowSpan="6" IsHitTestVisible="False" ZIndex="-1">
@@ -18,8 +18,11 @@
             </Rectangle>
 
             <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
+            <!-- Lives in the top spacer row, centered vertically, so it sits centered
+                 between the title bar and the dealer cards instead of pinned to the
+                 top of that gap (it was previously its own fixed Auto row). -->
             <Border x:Name="BidBar" Grid.Row="0" Background="#CC000000" CornerRadius="6"
-                    HorizontalAlignment="Center" Margin="0,10,0,0" Width="290" Padding="0,8">
+                    HorizontalAlignment="Center" VerticalAlignment="Center" Width="290" Padding="0,8">
                 <Grid ColumnDefinitions="*,Auto,*,Auto,*">
                     <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
                         <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold"
@@ -45,54 +48,68 @@
             </Border>
 
             <!-- ─── Dealer area ──────────────────────────────────────────────────── -->
-            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
-                        Margin="0,28,0,28">
-                <TextBlock Text="DEALER" FontSize="11" FontWeight="Bold"
+            <!-- Top margin trimmed from 28 to 9 (and Spacing 12→4) to make room for the
+                 count label without changing this block's total height, so the VS line
+                 and button row don't shift. -->
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4"
+                        Margin="0,9,0,14">
+                <TextBlock x:Name="DealerCountLabel" Text="DEALER" FontSize="11" FontWeight="Bold"
                            Foreground="#80FFFFFF" HorizontalAlignment="Center"
-                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2" IsVisible="False"/>
+                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2"/>
                 <StackPanel x:Name="DealerCardsPanel" Orientation="Horizontal"
-                            HorizontalAlignment="Center"/>
-                <Border x:Name="DealerValuePill" Background="#99000000" CornerRadius="10"
-                        Padding="14,4" HorizontalAlignment="Center" IsVisible="False">
-                    <TextBlock x:Name="DealerValueLabel" FontSize="15" FontWeight="Bold"
-                               Foreground="White"
-                               FontFamily="Courier New, Consolas, monospace"/>
-                </Border>
+                            HorizontalAlignment="Center" Background="Transparent"
+                            PointerPressed="CardBack_PointerPressed"/>
             </StackPanel>
 
             <!-- ─── VS divider ───────────────────────────────────────────────────── -->
-            <Grid Grid.Row="2" Margin="0,4">
+            <Grid Grid.Row="2" Margin="0,2">
                 <Rectangle Height="1" Fill="#30FFFFFF" VerticalAlignment="Center"/>
                 <Border Background="Transparent" HorizontalAlignment="Center" Padding="14,0">
                     <TextBlock Text="VS" FontSize="10" FontWeight="Bold"
                                Foreground="#55FFFFFF" LetterSpacing="3"
                                FontFamily="Courier New, Consolas, monospace"/>
                 </Border>
+
+                <!-- Idle nudge prompt — centered over the VS divider -->
+                <Border x:Name="IdlePrompt" Opacity="0" IsHitTestVisible="False" ZIndex="10"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#80000000" Padding="24,16" CornerRadius="8">
+                    <TextBlock Text="Hit Space to Deal" HorizontalAlignment="Center"
+                               FontSize="32" FontWeight="Black" Foreground="White"/>
+                </Border>
             </Grid>
 
             <!-- ─── Player area ──────────────────────────────────────────────────── -->
-            <StackPanel Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
-                        Margin="0,36,0,8">
-                <StackPanel x:Name="PlayerHandsContainer" Orientation="Horizontal" Spacing="16"
-                            HorizontalAlignment="Center"/>
-                <TextBlock Text="YOU" FontSize="11" FontWeight="Bold"
+            <!-- Top margin trimmed from 14 to 0 (and Spacing 12→4) to make room for the
+                 count label above the cards (moved from below, to match the dealer side)
+                 without changing this block's total height. -->
+            <StackPanel Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4"
+                        Margin="0,0,0,8">
+                <TextBlock x:Name="PlayerCountLabel" Text="PLAYER" FontSize="11" FontWeight="Bold"
                            Foreground="#80FFFFFF" HorizontalAlignment="Center"
-                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2" IsVisible="False"/>
+                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2"/>
+                <StackPanel x:Name="PlayerHandsContainer" Orientation="Horizontal" Spacing="16"
+                            HorizontalAlignment="Center" Background="Transparent"
+                            PointerPressed="CardBack_PointerPressed"/>
             </StackPanel>
 
             <!-- ─── Action buttons + chip bet row ───────────────────────────────── -->
+            <!-- Top margin trimmed from 8 to 3 — Player's top margin alone (14) wasn't
+                 quite enough budget to absorb its new count label, so the last few
+                 pixels are borrowed here to keep the overall board height (and button
+                 position) unchanged. -->
             <StackPanel Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center"
-                        Spacing="10" Margin="0,8,0,12">
+                        Spacing="10" Margin="0,3,0,12">
 
                 <!-- Bet adjustment + Deal row (visible when not playing) -->
                 <StackPanel x:Name="BetButtonRow" Orientation="Horizontal" Spacing="8"
                             HorizontalAlignment="Center">
                     <Button x:Name="DecreaseBetButton" Content="− Bet" Height="46" Padding="14,0"
-                            Click="DecreaseBet_Click" Classes="bj-button bj-bet-button"/>
+                            Click="DecreaseBet_Click" Classes="bj-button"/>
                     <Button x:Name="BetMaxButton"      Content="Bet Max" Height="46" Padding="14,0"
-                            Click="BetMax_Click"      Classes="bj-button bj-bet-button"/>
+                            Click="BetMax_Click"      Classes="bj-button"/>
                     <Button x:Name="IncreaseBetButton" Content="+ Bet"  Height="46" Padding="14,0"
-                            Click="IncreaseBet_Click" Classes="bj-button bj-bet-button"/>
+                            Click="IncreaseBet_Click" Classes="bj-button"/>
                     <Button x:Name="DealButton"   Content="Deal  [Space]" Height="46" Padding="28,0"
                             Click="Deal_Click"   Classes="bj-button bj-button-deal"/>
                     <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
@@ -133,6 +150,12 @@
                            Foreground="#FFD700" HorizontalAlignment="Center"/>
                 <TextBlock x:Name="ResultSubline"  FontSize="18" FontWeight="Bold"
                            Foreground="White" Opacity="0.85" HorizontalAlignment="Center"/>
+                <StackPanel Spacing="1" Margin="0,2,0,0">
+                    <TextBlock x:Name="ResultDealerTotal" FontSize="14" FontWeight="SemiBold"
+                               Foreground="White" Opacity="0.65" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="ResultPlayerTotal" FontSize="14" FontWeight="SemiBold"
+                               Foreground="White" Opacity="0.65" HorizontalAlignment="Center"/>
+                </StackPanel>
                 <TextBlock x:Name="ResultStreak"   FontSize="14" FontWeight="Bold"
                            Foreground="#FFD700" Opacity="0.9" HorizontalAlignment="Center"
                            IsVisible="False"/>
@@ -189,12 +212,6 @@
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
-        </Style>
-        <Style Selector="Button.bj-bet-button">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Opacity" Value="0.75"/>
-            <Setter Property="FontFamily" Value="Courier New, Consolas, monospace"/>
         </Style>
         <Style Selector="Button.bj-button-rebuy">
             <Setter Property="Background" Value="#CC664400"/>

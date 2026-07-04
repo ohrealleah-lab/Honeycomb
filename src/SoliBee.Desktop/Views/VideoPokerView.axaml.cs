@@ -42,6 +42,8 @@ public partial class VideoPokerView : UserControl
 
     // Banner fade state
     private Border? _activeBanner;
+    private DispatcherTimer? _resultShowTimer;
+    private bool _resultRevealed;
     private DispatcherTimer? _bannerDelayTimer;
     private DispatcherTimer? _bannerFadeTimer;
 
@@ -100,6 +102,7 @@ public partial class VideoPokerView : UserControl
         TopLevel.GetTopLevel(this)?.RemoveHandler(
             InputElement.KeyDownEvent, OnKeyDown);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
+        _resultShowTimer?.Stop(); _resultShowTimer = null;
         HideActiveBanner();
         StopCardsFade();
         StopPayRowPulse();
@@ -125,6 +128,7 @@ public partial class VideoPokerView : UserControl
 
     private void Refresh(VideoPokerViewModel vm)
     {
+        PayTableBar.IsVisible = !vm.Options.HideBetBoard;
         UpdateCards(vm);
         UpdateHoldBadges(vm);
         UpdateControls(vm);
@@ -307,26 +311,66 @@ public partial class VideoPokerView : UserControl
 
     private void UpdateResult(VideoPokerViewModel vm)
     {
-        if (vm.State.Phase == VideoPokerPhase.Result && vm.HasWin)
+        bool isWin   = vm.State.Phase == VideoPokerPhase.Result && vm.HasWin;
+        bool isNoWin = vm.State.Phase == VideoPokerPhase.Result && vm.ShowNoWin;
+
+        if (isWin || isNoWin)
         {
-            bool firstShow = _activeBanner != WinBanner;
-            WinHandNameBlock.Text = vm.State.LastHandName;
-            WinPayoutBlock.Text   = $"+{vm.State.LastPayout}";
-            WinBanner.Background  = new SolidColorBrush(Color.Parse("#1B5E20")); // Dark green for win
-            ShowBanner(WinBanner);
-            StartWinPulse();
-            StartPayRowPulse(vm.WinningHandName);
-            if (firstShow) WinParticleSystem.Burst(ParticleCanvas);
-        }
-        else if (vm.State.Phase == VideoPokerPhase.Result && vm.ShowNoWin)
-        {
-            NoWinOverlay.Background = new SolidColorBrush(Color.Parse("#B71C1C")); // Dark red for loss
-            ShowBanner(NoWinOverlay);
-            StopWinPulse();
-            StopPayRowPulse();
+            // The banner/fade sequence already fully played for this result in a
+            // previous View instance (e.g. the player switched to another game and
+            // back — MainWindow recreates VideoPokerView on every switch, so none of
+            // this view's own fields remember that). Jump straight to the settled
+            // card-back state instead of replaying the whole reveal from scratch.
+            if (vm.State.ResultBannerShown)
+            {
+                _resultRevealed = true;
+                for (int i = 0; i < 5; i++)
+                {
+                    _cardViews[i].Card = _blankCard;
+                    _prevVpHandIds[i]  = _blankCard.Id;
+                }
+                CardsRow.Opacity = 1.0;
+                return;
+            }
+
+            // Already counting down to reveal (or already revealed) this same result —
+            // Refresh() re-runs UpdateResult on every property change while Result phase
+            // persists, so don't restart the countdown each time.
+            if (_resultShowTimer != null || _resultRevealed) return;
+
+            _resultShowTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+            _resultShowTimer.Tick += (_, _) =>
+            {
+                _resultShowTimer!.Stop();
+                _resultShowTimer = null;
+                _resultRevealed  = true;
+
+                if (isWin)
+                {
+                    bool firstShow = _activeBanner != WinBanner;
+                    WinHandNameBlock.Text = vm.State.LastHandName;
+                    WinPayoutBlock.Text   = $"+{vm.State.LastPayout}";
+                    WinBanner.Background  = new SolidColorBrush(Color.Parse("#1A3380")); // Dark blue for win
+                    ShowBanner(WinBanner);
+                    StartWinPulse();
+                    StartPayRowPulse(vm.WinningHandName);
+                    if (firstShow) WinParticleSystem.Burst(ParticleCanvas);
+                }
+                else
+                {
+                    NoWinOverlay.Background = new SolidColorBrush(Color.Parse("#B71C1C")); // Dark red for loss
+                    ShowBanner(NoWinOverlay);
+                    StopWinPulse();
+                    StopPayRowPulse();
+                }
+            };
+            _resultShowTimer.Start();
         }
         else
         {
+            _resultShowTimer?.Stop();
+            _resultShowTimer = null;
+            _resultRevealed  = false;
             HideActiveBanner();
         }
     }
@@ -335,7 +379,7 @@ public partial class VideoPokerView : UserControl
     {
         if (_activeBanner == banner)
         {
-            // Already visible — restart the delay so player has a fresh 1.5 s
+            // Already visible — restart the delay so player has a fresh 5 s
             StartBannerDelay();
             return;
         }
@@ -349,7 +393,7 @@ public partial class VideoPokerView : UserControl
     private void StartBannerDelay()
     {
         _bannerDelayTimer?.Stop();
-        _bannerDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+        _bannerDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5000) };
         _bannerDelayTimer.Tick += (_, _) =>
         {
             _bannerDelayTimer!.Stop();
@@ -416,7 +460,19 @@ public partial class VideoPokerView : UserControl
             {
                 _cardsFadeTimer!.Stop();
                 _cardsFadeTimer = null;
-                CardsRow.Opacity = 0;
+
+                // Reload the card-back placeholders (same as the initial "ready to
+                // draw" screen) instead of leaving the row blank until the next deal.
+                for (int i = 0; i < 5; i++)
+                {
+                    _cardViews[i].Card    = _blankCard;
+                    _prevVpHandIds[i]     = _blankCard.Id;
+                }
+                CardsRow.Opacity = 1.0;
+
+                // Mark this result as fully presented on the ViewModel (not just this
+                // View instance) so switching games and back doesn't replay the banner.
+                if (DataContext is VideoPokerViewModel vm) vm.State.ResultBannerShown = true;
                 return;
             }
             CardsRow.Opacity = opacity;
@@ -819,7 +875,7 @@ public partial class VideoPokerView : UserControl
         if (!int.TryParse(g.Tag?.ToString(), out var idx)) return;
         if (DataContext is not VideoPokerViewModel vm) return;
 
-        if (vm.State.Phase == VideoPokerPhase.Result)
+        if (vm.State.Phase == VideoPokerPhase.Result || vm.State.Phase == VideoPokerPhase.Deal)
         {
             DealFromResult();
             e.Handled = true;

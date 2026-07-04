@@ -12,6 +12,9 @@ public class GameStatistics
     public int StandardHighScore { get; set; }
     public int ShortestWinSeconds { get; set; }
 
+    // Sum of TimerSeconds across all Klondike wins — divide by GamesWon for "Avg Winning Time".
+    public int TotalWinSeconds { get; set; }
+
     // Freecell per-mode stats: keys are "standard_1deck", "vegas_1deck", "standard_2deck", "vegas_2deck"
     public Dictionary<string, ModeStats> FreecellStatsByMode { get; set; } = new();
 

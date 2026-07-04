@@ -24,6 +24,9 @@ public partial class SpiderViewModel : ObservableObject
     private bool _isAutocompletable;
 
     [ObservableProperty]
+    private bool _isAutoplayRunning;
+
+    [ObservableProperty]
     private bool _hasNoMoves;
 
     [ObservableProperty]
@@ -39,9 +42,21 @@ public partial class SpiderViewModel : ObservableObject
     private readonly SynchronizationContext? _syncContext;
     private int _foundationCardCount;
 
+    private List<HintMove> _hintCycleList  = new();
+    private int            _hintCycleIndex = 0;
+
+    // Tracks the last card move so hints can filter out its exact reversal.
+    private string? _lastMoveSourcePileId;
+    private string? _lastMoveTargetPileId;
+
+    private System.Threading.Timer? _autocompleteTimer;
+    // Windows-fork deviation: once autocomplete has ever run this game, Undo stays
+    // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
+    private bool _autocompleteLocked;
+
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
     public string ScoreDisplay => State.Score.ToString();
-    public bool CanUndo => _undoStack.Count > 0;
+    public bool CanUndo => _undoStack.Count > 0 && !_autocompleteLocked && !State.HasWon;
 
     private string SuitKey => Options.SpiderSuitCount.ToString();
     private const int TotalFoundations = 8;
@@ -58,7 +73,7 @@ public partial class SpiderViewModel : ObservableObject
             var old = Options;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
-            if (Options.SpiderSuitCount != old.SpiderSuitCount)
+            if (Options.SpiderSuitCount != old.SpiderSuitCount || Options.IsVegasScoring != old.IsVegasScoring)
                 InitializeGame(countAsNewGame: false);
         });
 
@@ -74,6 +89,11 @@ public partial class SpiderViewModel : ObservableObject
     {
         bool wasAbandonedGame = State.MovesCount > 0 && !State.HasWon;
 
+        _autocompleteTimer?.Dispose();
+        _autocompleteTimer = null;
+        IsAutoplayRunning = false;
+        _autocompleteLocked = false;
+
         _gameTimer?.Dispose();
         StockPiles.Clear();
         foreach (var t in Tableaus) t.Cards.Clear();
@@ -81,9 +101,13 @@ public partial class SpiderViewModel : ObservableObject
         _foundationCardCount = 0;
         _undoStack.Clear();
 
+        // Vegas scoring carries the running bankroll forward across deals (like Klondike),
+        // subtracting a fresh buy-in rather than resetting to a fixed floor each new game.
+        int startScore = Options.IsVegasScoring ? State.Score - 500 : 500;
+
         State = new GameState
         {
-            Score = Options.IsVegasScoring ? -500 : 500,
+            Score = startScore,
             MovesCount = 0,
             TimerSeconds = 0,
             IsTimerActive = false,
@@ -130,7 +154,9 @@ public partial class SpiderViewModel : ObservableObject
 
         IsAutocompletable = false;
         HasNoMoves = false;
-        ActiveHint = null;
+        ClearHintCycle();
+        _lastMoveSourcePileId = null;
+        _lastMoveTargetPileId = null;
         _initialSnapshot = CaptureSnapshot();
 
         _gameTimer = new System.Threading.Timer(_ =>
@@ -159,7 +185,13 @@ public partial class SpiderViewModel : ObservableObject
         State.HasWon = false;
         IsAutocompletable = false;
         HasNoMoves = false;
-        ActiveHint = null;
+        ClearHintCycle();
+        _lastMoveSourcePileId = null;
+        _lastMoveTargetPileId = null;
+        _autocompleteTimer?.Dispose();
+        _autocompleteTimer = null;
+        IsAutoplayRunning = false;
+        _autocompleteLocked = false;
 
         _gameTimer = new System.Threading.Timer(_ =>
         {
@@ -269,7 +301,9 @@ public partial class SpiderViewModel : ObservableObject
         CheckVictory();
         CheckAutocomplete();
         CheckDeadlock();
-        ActiveHint = null;
+        ClearHintCycle();
+        _lastMoveSourcePileId = source.Id;
+        _lastMoveTargetPileId = target.Id;
 
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(Foundations));
@@ -311,7 +345,7 @@ public partial class SpiderViewModel : ObservableObject
         CheckVictory();
         CheckAutocomplete();
         CheckDeadlock();
-        ActiveHint = null;
+        ClearHintCycle();
 
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(StockPiles));
@@ -383,122 +417,93 @@ public partial class SpiderViewModel : ObservableObject
             if (State.Score > ms.HighScore) ms.HighScore = State.Score;
             if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
                 ms.ShortestWinSeconds = State.TimerSeconds;
+            ms.TotalWinSeconds += State.TimerSeconds;
             stats.SpiderStatsBySuit[SuitKey] = ms;
             StatsService.SaveStats(stats);
             Stats = stats;
         }
     }
 
+    // Resets only the current suit-count bucket, leaving Klondike's and Freecell's
+    // data (and Spider's other suit-count buckets) untouched.
+    public void ResetStats()
+    {
+        var stats = StatsService.LoadStats();
+        stats.SpiderStatsBySuit[SuitKey] = new ModeStats();
+        StatsService.SaveStats(stats);
+        Stats = stats;
+    }
+
     // MARK: - Autocomplete
 
     private void CheckAutocomplete()
     {
-        if (StockPiles.Count != 0 || State.HasWon) { IsAutocompletable = false; return; }
-
-        // Every card must be face-up and every pile must be a single same-suit descending run —
-        // these are the only sequences the autocomplete algorithm can move.
-        bool prerequisite = Tableaus.All(t =>
-        {
-            if (t.Cards.Any(c => !c.IsFaceUp)) return false;
-            for (int i = 0; i < t.Cards.Count - 1; i++)
-                if (t.Cards[i].Suit != t.Cards[i + 1].Suit || t.Cards[i].Rank != t.Cards[i + 1].Rank + 1)
-                    return false;
-            return true;
-        });
-        if (!prerequisite) { IsAutocompletable = false; return; }
-
-        // Simulate the algorithm to confirm it won't stall (e.g. K-sequences with no empty staging pile)
-        IsAutocompletable = SimulateAutocomplete();
+        if (StockPiles.Count != 0 || _foundationCardCount >= WinCards) { IsAutocompletable = false; return; }
+        IsAutocompletable = FindNextAutocompleteMove() != null;
     }
 
-    private bool SimulateAutocomplete()
+    // Spider doesn't merge to foundations directly — it merges whole same-suit columns onto
+    // each other, and relies on TryCompleteRuns() (called inside MoveSequence) to auto-sweep
+    // any newly-formed complete K→A run. A source column only qualifies if its entire stack
+    // (not just the topmost movable run) is already one coherent same-suit descending sequence.
+    private (Pile Source, Pile Target)? FindNextAutocompleteMove()
     {
-        var piles = Tableaus.Select(t => t.Cards.ToList()).ToList();
-        int remaining = WinCards - _foundationCardCount;
-
-        const int maxIter = 10_000;
-        for (int iter = 0; iter < maxIter && remaining > 0; iter++)
+        foreach (var src in Tableaus)
         {
-            // Collect any complete 13-card same-suit runs
-            bool collected = false;
-            for (int i = 0; i < piles.Count; i++)
-            {
-                if (piles[i].Count < 13) continue;
-                var run = piles[i].GetRange(piles[i].Count - 13, 13);
-                if (!IsCompleteRun(run)) continue;
-                piles[i].RemoveRange(piles[i].Count - 13, 13);
-                remaining -= 13;
-                collected = true;
-                break;
-            }
-            if (collected) continue;
+            if (src.Cards.Count == 0) continue;
+            if (GetMovableSequence(src).Count != src.Cards.Count) continue;
 
-            // Try to move a same-suit sequence
-            bool moved = false;
-            for (int si = 0; si < piles.Count && !moved; si++)
+            var sourceHighest = src.Cards[0];
+            foreach (var tgt in Tableaus)
             {
-                if (piles[si].Count == 0) continue;
-                int seqLen = SimSeqLen(piles[si]);
-                int seqBottomRank = piles[si][piles[si].Count - seqLen].Rank;
-                for (int ti = 0; ti < piles.Count && !moved; ti++)
-                {
-                    if (ti == si) continue;
-                    bool canPlace = piles[ti].Count == 0
-                        || seqBottomRank == piles[ti].Last().Rank - 1;
-                    if (!canPlace) continue;
-                    var seg = piles[si].GetRange(piles[si].Count - seqLen, seqLen);
-                    piles[si].RemoveRange(piles[si].Count - seqLen, seqLen);
-                    piles[ti].AddRange(seg);
-                    moved = true;
-                }
+                if (tgt.Id == src.Id || tgt.Cards.Count == 0) continue;
+                var targetTop = tgt.Cards.Last();
+                if (targetTop.Suit == sourceHighest.Suit && targetTop.Rank == sourceHighest.Rank + 1)
+                    return (src, tgt);
             }
-            if (!moved) return false;
         }
-        return remaining == 0;
-    }
-
-    // Length of the same-suit descending sequence at the top of a pile
-    private static int SimSeqLen(List<Card> pile)
-    {
-        int len = 1;
-        for (int i = pile.Count - 2; i >= 0; i--)
-        {
-            if (pile[i].Suit == pile[i + 1].Suit && pile[i].Rank == pile[i + 1].Rank + 1)
-                len++;
-            else break;
-        }
-        return len;
+        return null;
     }
 
     [RelayCommand]
     public void Autocomplete()
     {
-        if (!IsAutocompletable) return;
+        if (!IsAutocompletable || IsAutoplayRunning) return;
 
-        while (_foundationCardCount < WinCards)
+        // One bundled undo snapshot for the whole sequence — SaveStateForUndo() no-ops
+        // for every move made once IsAutoplayRunning is true. Once autocomplete has
+        // started, Undo stays disabled for the rest of the game (see CanUndo).
+        SaveStateForUndo();
+        _autocompleteLocked = true;
+        OnPropertyChanged(nameof(CanUndo));
+        IsAutoplayRunning = true;
+        ScheduleNextAutocompleteMove();
+    }
+
+    private void ScheduleNextAutocompleteMove()
+    {
+        _autocompleteTimer?.Dispose();
+        _autocompleteTimer = new System.Threading.Timer(_ =>
         {
-            TryCompleteRuns();
-            CheckVictory();
-            if (State.HasWon) break;
+            _syncContext?.Post(_ => AnimateNextAutocompleteMove(), null);
+        }, null, 150, Timeout.Infinite);
+    }
 
-            bool moved = false;
-            foreach (var src in Tableaus.Where(t => t.Cards.Count > 0))
-            {
-                var seq = GetMovableSequence(src);
-                if (seq.Count < 1) continue;
-                foreach (var tgt in Tableaus)
-                {
-                    if (tgt.Id == src.Id) continue;
-                    if (CanMoveSequence(seq, tgt))
-                    {
-                        MoveSequence(seq, src, tgt);
-                        moved = true;
-                        break;
-                    }
-                }
-                if (moved) break;
-            }
-            if (!moved) break;
+    private void AnimateNextAutocompleteMove()
+    {
+        var move = FindNextAutocompleteMove();
+        if (move != null)
+        {
+            var (src, tgt) = move.Value;
+            MoveSequence(src.Cards.ToList(), src, tgt);
+            ScheduleNextAutocompleteMove();
+        }
+        else
+        {
+            _autocompleteTimer?.Dispose();
+            _autocompleteTimer = null;
+            IsAutoplayRunning = false;
+            CheckVictory();
         }
     }
 
@@ -506,7 +511,7 @@ public partial class SpiderViewModel : ObservableObject
 
     private void CheckDeadlock()
     {
-        if (State.HasWon) return;
+        if (State.HasWon || IsAutocompletable) { HasNoMoves = false; return; }
         HasNoMoves = !HasAnyLegalMoves();
     }
 
@@ -528,63 +533,122 @@ public partial class SpiderViewModel : ObservableObject
 
     // MARK: - Hint
 
+    // Public so the view can clear the queue when a hint's on-screen timer expires
+    // (auto-dismiss), matching the rule that the next Hint press starts fresh.
+    public void ClearHintCycle()
+    {
+        _hintCycleList.Clear();
+        _hintCycleIndex = 0;
+        ActiveHint      = null;
+    }
+
     [RelayCommand]
     public void FindHint()
     {
-        ActiveHint = null;
-
-        foreach (var src in Tableaus)
+        if (_hintCycleList.Count == 0)
         {
-            var seq = GetMovableSequence(src);
-            if (seq.Count == 13 && IsCompleteRun(seq))
-            {
-                var emptyF = Foundations.FirstOrDefault(f => f.Cards.Count == 0);
-                if (emptyF != null)
-                {
-                    ActiveHint = new HintMove(seq[0], src.Id, emptyF.Id, $"Complete run ready for Foundation.");
-                    return;
-                }
-            }
+            _hintCycleList  = CollectAllHints();
+            _hintCycleIndex = 0;
         }
 
-        foreach (var src in Tableaus)
-        {
-            var seq = GetMovableSequence(src);
-            if (seq.Count == 0) continue;
-            foreach (var tgt in Tableaus)
-            {
-                if (tgt.Id == src.Id) continue;
-                if (seq.Count > 1 && CanMoveSequence(seq, tgt))
-                {
-                    ActiveHint = new HintMove(seq[0], src.Id, tgt.Id, $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence.");
-                    return;
-                }
-            }
-        }
+        if (_hintCycleList.Count == 0) { ActiveHint = null; return; }
 
+        int shownIndex = _hintCycleIndex;
+        var hint       = _hintCycleList[shownIndex];
+        _hintCycleIndex = (_hintCycleIndex + 1) % _hintCycleList.Count;
+        ActiveHint      = hint with { Index = shownIndex + 1, Total = _hintCycleList.Count };
+    }
+
+    private List<HintMove> CollectAllHints()
+    {
+        var scored = new List<(int Score, HintMove Hint)>();
+
+        // Evaluate every valid drag sequence in each column — every suffix of the column's
+        // maximal movable run is itself a legal draggable sequence starting further down.
         foreach (var src in Tableaus)
         {
             if (src.Cards.Count == 0) continue;
-            var card = src.Cards.Last();
-            var single = new List<Card> { card };
+            var maxSeq = GetMovableSequence(src);
+            if (maxSeq.Count == 0) continue;
+            int firstFaceUpIdx = src.Cards.FindIndex(c => c.IsFaceUp);
+
             foreach (var tgt in Tableaus)
             {
                 if (tgt.Id == src.Id) continue;
-                if (CanMoveSequence(single, tgt))
+
+                if (tgt.Cards.Count == 0)
                 {
-                    ActiveHint = new HintMove(card, src.Id, tgt.Id, $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)}.");
-                    return;
+                    // Priority 5/6: sequence → empty column
+                    for (int len = maxSeq.Count; len >= 1; len--)
+                    {
+                        var subSeq = maxSeq.GetRange(maxSeq.Count - len, len);
+                        int startIdx = src.Cards.Count - len;
+                        bool revealsHidden = startIdx == firstFaceUpIdx && firstFaceUpIdx > 0;
+                        bool emptiesColumn = src.Cards.Count - len == 0;
+
+                        if (revealsHidden)
+                        {
+                            scored.Add((350 + firstFaceUpIdx * 50, new HintMove(subSeq[0], src.Id, tgt.Id,
+                                $"Move {RankStr(subSeq[0].Rank)}{SuitStr(subSeq[0].Suit)} sequence.")));
+                            break;
+                        }
+                        if (emptiesColumn) continue; // suppressed — try a shorter, partial sequence instead
+                        scored.Add((200, new HintMove(subSeq[0], src.Id, tgt.Id,
+                            $"Move {RankStr(subSeq[0].Rank)}{SuitStr(subSeq[0].Suit)} sequence.")));
+                        break;
+                    }
+                }
+                else
+                {
+                    // Priority 1-4: continuation onto a non-empty column (same-suit or cross-suit)
+                    for (int len = maxSeq.Count; len >= 1; len--)
+                    {
+                        var subSeq = maxSeq.GetRange(maxSeq.Count - len, len);
+                        if (!CanMoveSequence(subSeq, tgt)) continue;
+
+                        int startIdx        = src.Cards.Count - len;
+                        bool revealsHidden   = startIdx == firstFaceUpIdx && firstFaceUpIdx > 0;
+                        bool sameSuit        = subSeq[0].Suit == tgt.Cards.Last().Suit;
+                        int score = (sameSuit, revealsHidden) switch
+                        {
+                            (true,  true)  => 1000 + firstFaceUpIdx * 100,
+                            (true,  false) => 900,
+                            (false, true)  => 600 + firstFaceUpIdx * 100,
+                            (false, false) => 400,
+                        };
+                        scored.Add((score, new HintMove(subSeq[0], src.Id, tgt.Id,
+                            $"Move {RankStr(subSeq[0].Rank)}{SuitStr(subSeq[0].Suit)} sequence.")));
+                        break;
+                    }
                 }
             }
         }
 
-        if (CanDealFromStock)
+        // Priority 7/8: deal from stock
+        if (StockPiles.Count > 0)
         {
-            ActiveHint = new HintMove(new Card("deal", CardSuit.Spades, 1, false), "", "", "Deal from stock.");
-            return;
+            var dealCard = new Card("deal", CardSuit.Spades, 1, false);
+            if (Tableaus.All(t => t.Cards.Count > 0))
+                scored.Add((50, new HintMove(dealCard, "", "", "Deal from stock.")));
+            else
+                scored.Add((25, new HintMove(dealCard, "", "", "Fill all empty columns before dealing cards.")));
         }
 
-        ActiveHint = new HintMove(new Card("no_move", CardSuit.Spades, 1, true), "", "", "No moves available.");
+        var hints = scored.OrderByDescending(s => s.Score).Select(s => s.Hint).ToList();
+
+        // Last-move filter: drop the exact reversal of the last move (source/target swapped).
+        // If that empties the list, fall back to the unfiltered one so something is always shown.
+        if (_lastMoveSourcePileId != null && _lastMoveTargetPileId != null)
+        {
+            var filtered = hints.Where(h =>
+                !(h.SourcePileId == _lastMoveTargetPileId && h.TargetPileId == _lastMoveSourcePileId)).ToList();
+            if (filtered.Count > 0) hints = filtered;
+        }
+
+        if (hints.Count == 0)
+            hints.Add(new HintMove(new Card("no_move", CardSuit.Spades, 1, true), "", "", "No moves available."));
+
+        return hints;
     }
 
     // MARK: - Undo
@@ -592,10 +656,27 @@ public partial class SpiderViewModel : ObservableObject
     [RelayCommand]
     public void Undo()
     {
-        if (_undoStack.Count == 0) return;
+        if (_undoStack.Count == 0 || State.HasWon) return;
         RestoreSnapshot(_undoStack.Pop());
-        ActiveHint = null;
+        ClearHintCycle();
+        _lastMoveSourcePileId = null;
+        _lastMoveTargetPileId = null;
         HasNoMoves = false;
+
+        // A win disposes _gameTimer (see CheckVictory); undoing past that win leaves
+        // State.HasWon false again, so the timer must be recreated here or TimeDisplay
+        // freezes for the rest of the session. Dispose is idempotent, so it's safe to
+        // call again even if the timer wasn't the disposed one.
+        _gameTimer?.Dispose();
+        _gameTimer = new System.Threading.Timer(_ =>
+        {
+            if (State != null && State.IsTimerActive && !State.HasWon)
+            {
+                State.TimerSeconds++;
+                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
+            }
+        }, null, 1000, 1000);
+
         CheckAutocomplete();
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(StockPiles));
@@ -607,6 +688,10 @@ public partial class SpiderViewModel : ObservableObject
 
     private void SaveStateForUndo()
     {
+        // No-op during autoplay so every move it makes bundles into the single
+        // pre-autocomplete snapshot already pushed when Autocomplete() started.
+        if (IsAutoplayRunning) return;
+
         _undoStack.Push(CaptureSnapshot());
         OnPropertyChanged(nameof(CanUndo));
     }

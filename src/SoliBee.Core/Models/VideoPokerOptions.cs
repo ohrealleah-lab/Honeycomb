@@ -6,8 +6,7 @@ public class VideoPokerOptions
     public int StartingCredits { get; set; } = 100;
     public int BetPerHand { get; set; } = 1;
     public bool IsSoundEnabled { get; set; } = true;
-    public bool HideStatsButton { get; set; }
-    public bool HideHintButton { get; set; }
+    public bool HideBetBoard { get; set; }
     public string CardBackTheme { get; set; } = "Vulpera";
     public string FeltColor { get; set; } = "FeltGreen";
     public string CustomFeltColorHex { get; set; } = "#592673";

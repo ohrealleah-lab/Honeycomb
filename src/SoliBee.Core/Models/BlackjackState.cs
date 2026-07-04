@@ -58,4 +58,10 @@ public class BlackjackState
     public int                 CurrentBet      { get; set; } = 1;
     public bool                IsSplit         { get; set; }
     public int                 LastNetResult   { get; set; }
+
+    // Set once the win/lose banner has fully played and faded for the current result,
+    // so switching games and back doesn't replay it from scratch — the View is
+    // recreated on every game switch and would otherwise have no memory of having
+    // already shown it. Reset on the next Deal().
+    public bool                ResultBannerShown { get; set; }
 }

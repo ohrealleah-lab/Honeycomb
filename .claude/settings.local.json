@@ -40,7 +40,31 @@
       "Bash(MSYS_NO_PATHCONV=1 git show 'origin/004-windows-port:.gitignore')",
       "Bash(MSYS_NO_PATHCONV=1 git rev-parse a45ca35:src/SoliBee.Desktop/Assets/dingwall.jpg)",
       "Bash(MSYS_NO_PATHCONV=1 git rev-parse origin/004-windows-port:src/SoliBee.Desktop/Assets/dingwall.jpg)",
-      "Bash(echo \"done, exit: $?\")"
+      "Bash(echo \"done, exit: $?\")",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(xargs grep -l \"run\\\\|launch\" -i)",
+      "Bash(find / -iname \"Button.xaml\" 2>/dev/null | grep -i fluent | head -5; find \"$HOME\" -ipath \"*Avalonia.Themes.Fluent*\" -iname \"*.xaml\" 2>/dev/null | head -5)",
+      "Bash(\"/c/Program Files/dotnet/dotnet.exe\" build src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Debug --no-restore)",
+      "Bash(\"/c/Program Files/dotnet/dotnet.exe\" build src/SoliBee.Core/SoliBee.Core.csproj -c Debug --no-restore)",
+      "Bash(awk '/public void RestartGame/,0' src/SoliBee.Core/ViewModels/GameViewModel.cs)",
+      "Bash(awk 'NR==106,NR==216' src/SoliBee.Core/ViewModels/GameViewModel.cs)",
+      "PowerShell(Start-Process \"C:\\\\Users\\\\Leahbee\\\\SolibeeWin\\\\src\\\\SoliBee.Desktop\\\\bin\\\\Debug\\\\net8.0\\\\win-x64\\\\SoliBee.Desktop.exe\")",
+      "Bash(tasklist //FI \"IMAGENAME eq SoliBee.Desktop.exe\")",
+      "Read(//c/Users/Leahbee/SolibeeWin/**)",
+      "PowerShell(Get-Process -Id 10104)",
+      "Bash(stat -c '%Y %n' \"C:\\\\Users\\\\Leahbee\\\\SolibeeWin\\\\src\\\\SoliBee.Desktop\\\\bin\\\\Debug\\\\net8.0\\\\win-x64\\\\SoliBee.Desktop.exe\" *)",
+      "Bash(ffmpeg -version)",
+      "Bash(where winget *)",
+      "Bash(/c/Users/Leahbee/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe -y -i 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\vmware-Leahbee\\\\VMwareDnD\\\\9ad9a20b\\\\bug.mov' -vf fps=4 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Leahbee-SolibeeWin\\\\38efad22-86d8-4e1d-8328-46b0c1b561d4\\\\scratchpad\\\\bugframe_%03d.png')",
+      "Bash(/c/Users/Leahbee/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe -y -ss 5.0 -i 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\vmware-Leahbee\\\\VMwareDnD\\\\9ad9a20b\\\\bug.mov' -vf fps=10 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Leahbee-SolibeeWin\\\\38efad22-86d8-4e1d-8328-46b0c1b561d4\\\\scratchpad\\\\end_%03d.png')",
+      "Bash(/c/Users/Leahbee/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe -y -i 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\vmware-Leahbee\\\\VMwareDnD\\\\9ad9a20b\\\\bug.mov' -vf fps=10 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Leahbee-SolibeeWin\\\\38efad22-86d8-4e1d-8328-46b0c1b561d4\\\\scratchpad\\\\all_%03d.png')",
+      "Bash(/c/Users/Leahbee/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe -y -i 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\vmware-Leahbee\\\\VMwareDnD\\\\9ad9a20b\\\\bug.mov' 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Leahbee-SolibeeWin\\\\38efad22-86d8-4e1d-8328-46b0c1b561d4\\\\scratchpad\\\\native_%03d.png')",
+      "Bash(/c/Users/Leahbee/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe -y -i 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\vmware-Leahbee\\\\VMwareDnD\\\\9ad9a20b\\\\bug.mov' -ss 5.5 -vf fps=10 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Leahbee-SolibeeWin\\\\38efad22-86d8-4e1d-8328-46b0c1b561d4\\\\scratchpad\\\\tail_%03d.png')",
+      "Bash(/c/Users/Leahbee/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe -y -i 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\vmware-Leahbee\\\\VMwareDnD\\\\9ad9a20b\\\\bug.mov' -ss 6.0 -vf fps=10 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Leahbee-SolibeeWin\\\\38efad22-86d8-4e1d-8328-46b0c1b561d4\\\\scratchpad\\\\tail2_%03d.png')",
+      "Bash(/c/Users/Leahbee/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe -i 'C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\vmware-Leahbee\\\\VMwareDnD\\\\9849a5c3\\\\bug.mov')",
+      "PowerShell(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Leahbee-SolibeeWin\\\\38efad22-86d8-4e1d-8328-46b0c1b561d4\\\\scratchpad\\\\find_line.ps1\")",
+      "PowerShell(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Leahbee-SolibeeWin\\\\38efad22-86d8-4e1d-8328-46b0c1b561d4\\\\scratchpad\\\\find_line3.ps1\")"
     ]
   }
 }

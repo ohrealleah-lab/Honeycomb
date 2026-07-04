@@ -2,6 +2,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SoliBee.Desktop.Views.WinAnimationView">
 
+    <UserControl.Styles>
+        <!-- FluentTheme's default :pointerover state overrides the Button's own Background/
+             BorderBrush with its own theme resources, making a custom-colored button go
+             transparent on hover unless explicitly overridden (see MainWindow's toolbar buttons
+             for the same pattern). -->
+        <Style Selector="Button.play-again:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#CC3366CC" />
+            <Setter Property="BorderBrush" Value="#AADDEEFF" />
+        </Style>
+    </UserControl.Styles>
+
     <Grid>
         <!-- Bouncing card canvas (bottom layer) -->
         <Canvas x:Name="AnimationCanvas" Background="#18000000"
@@ -26,18 +37,23 @@
                            HorizontalAlignment="Center"/>
 
                 <Button x:Name="PlayAgainButton"
-                        Content="Play Again"
+                        Classes="play-again"
                         Click="PlayAgain_Click"
                         HorizontalAlignment="Center"
                         HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
                         Width="170" Height="46"
                         Margin="0,14,0,0"
                         Background="#CC2255AA"
                         Foreground="White"
                         CornerRadius="6"
-                        FontSize="16" FontWeight="Bold"
-                        FontFamily="Courier New, Consolas, monospace"
-                        BorderBrush="#88DDEEFF" BorderThickness="1"/>
+                        BorderBrush="#88DDEEFF" BorderThickness="1">
+                    <TextBlock Text="Play Again"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               FontSize="16" FontWeight="Bold"
+                               FontFamily="Courier New, Consolas, monospace"/>
+                </Button>
 
             </StackPanel>
         </Border>

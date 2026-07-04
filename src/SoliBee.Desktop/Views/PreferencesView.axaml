@@ -10,6 +10,13 @@
              ═══════════════════════════════════════════════════════════════════ -->
         <StackPanel x:Name="MainPanel" Spacing="12" Width="270" Margin="10,10,20,10">
 
+            <StackPanel.Styles>
+                <Style Selector="CheckBox">
+                    <Setter Property="Padding" Value="6,0,0,0" />
+                    <Setter Property="MinHeight" Value="24" />
+                </Style>
+            </StackPanel.Styles>
+
             <!-- Game Mode (hidden for Video Poker / Blackjack) -->
             <StackPanel x:Name="GameModeSection" IsVisible="False" Spacing="6">
                 <TextBlock Text="Game Mode" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
@@ -18,28 +25,21 @@
                 <Rectangle Height="1" Fill="#30FFFFFF" Margin="0,4,0,0"/>
             </StackPanel>
 
-            <CheckBox x:Name="TimedCheckBox"        Content="Timed Game"        Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
-            <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
-            <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
-            <CheckBox x:Name="FinalFantasyCheckBox" Content="Final Fantasy Mode" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" IsVisible="False"/>
-
-            <!-- Vignette Scale Slider (Debug option) -->
-            <StackPanel Spacing="2" Margin="0,4,0,0">
-                <TextBlock Text="Vignette Scale:" FontSize="13" Foreground="White"/>
-                <Grid ColumnDefinitions="*,Auto">
-                    <Slider x:Name="VignetteScaleSlider" Minimum="0.5" Maximum="2.0" 
-                            ValueChanged="VignetteScaleSlider_ValueChanged"
-                            VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" x:Name="VignetteScaleValueText" Text="1.00" 
-                               Width="35" Foreground="White" FontSize="12"
-                               VerticalAlignment="Center" Margin="5,0,0,0" TextAlignment="Right"/>
-                </Grid>
+            <StackPanel Spacing="2">
+                <CheckBox x:Name="TimedCheckBox"        Content="Timed Game"        Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
+                <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
+                <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
+                <CheckBox x:Name="FinalFantasyCheckBox" Content="Final Fantasy Mode" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" IsVisible="False"/>
+                <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
+                <CheckBox x:Name="HideStatsCheckBox" Content="Hide Stats button" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
+                <CheckBox x:Name="HideZoomCheckBox"  Content="Hide Zoom Controls" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
+                <CheckBox x:Name="HideBetBoardCheckBox" Content="Hide Bet Board" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" IsVisible="False"/>
             </StackPanel>
 
-            <Rectangle Height="1" Fill="#30FFFFFF" Margin="0,4,0,4"/>
+            <Rectangle x:Name="VisualThemesDivider" Height="1" Fill="#30FFFFFF" Margin="0,4,0,4"/>
 
-            <!-- Themes navigation row -->
-            <Button Click="OpenThemes_Click"
+            <!-- Themes navigation row (not applicable to Video Poker) -->
+            <Button x:Name="VisualThemesButton" Click="OpenThemes_Click"
                     Background="#2A2A2A" Foreground="White"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                     Padding="12,10" CornerRadius="6"

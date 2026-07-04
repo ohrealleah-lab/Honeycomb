@@ -9,4 +9,6 @@ public class BlackjackStatistics
     public int Blackjacks { get; set; }
     public int TotalCreditsWon { get; set; }
     public int TotalCreditsWagered { get; set; }
+    public int BiggestPay { get; set; }
+    public int Rebuys { get; set; }
 }

@@ -30,6 +30,7 @@ public partial class PreferencesView : UserControl
     private SoliBeeTheme? _themeToDelete;
 
     public string ActiveGameFamily { get; set; } = "";
+    public VideoPokerViewModel? VideoPokerVm { get; set; }
     public event EventHandler<string>? GameModeChangeRequested;
 
     public bool ShowVegasOption
@@ -51,7 +52,6 @@ public partial class PreferencesView : UserControl
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Vulpera",         Tag = "Vulpera" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Dingwall",         Tag = "Dingwall" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Moogle",           Tag = "Moogle" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Priest",           Tag = "Priest" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Forest",           Tag = "Forest" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "On the Water",     Tag = "On the Water" });
         CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Pareidolic",       Tag = "Pareidolic" });
@@ -67,17 +67,46 @@ public partial class PreferencesView : UserControl
 
     // ── Themes panel navigation ───────────────────────────────────────────────
 
+    // Video Poker's top-level DataContext is its own VideoPokerOptions, but Visual
+    // Themes (felt, card back, face art, colors) is shared GameOptions state that
+    // already propagates into VideoPokerOptions via OptionsChangedMessage — so while
+    // the sub-panel is open we swap DataContext to a fresh GameOptions clone, then
+    // swap back (and re-sync the main panel) on the way out.
+    private VideoPokerOptions? _vpOptionsBeforeThemes;
+
     private void OpenThemes_Click(object? sender, RoutedEventArgs e)
     {
         MainPanel.IsVisible   = false;
         ThemesPanel.IsVisible = true;
-        if (DataContext is GameOptions opts) RefreshThemeList();
+
+        if (DataContext is VideoPokerOptions vpOptions)
+        {
+            _vpOptionsBeforeThemes = vpOptions;
+            DataContext = SettingsService.LoadOptions();
+        }
+
+        if (DataContext is GameOptions opts)
+        {
+            _initializing = true;
+            SyncUIFromOptions(opts);
+            _initializing = false;
+            RefreshThemeList();
+        }
     }
 
     private void CloseThemes_Click(object? sender, RoutedEventArgs e)
     {
         ThemesPanel.IsVisible = false;
         MainPanel.IsVisible   = true;
+
+        if (_vpOptionsBeforeThemes != null)
+        {
+            DataContext = _vpOptionsBeforeThemes;
+            _vpOptionsBeforeThemes = null;
+            _initializing = true;
+            SyncUIFromVideoPokerOptions((VideoPokerOptions)DataContext);
+            _initializing = false;
+        }
     }
 
     // Syncs all UI controls to match the provided options. Call inside _initializing guard.
@@ -88,9 +117,9 @@ public partial class PreferencesView : UserControl
         VegasCheckBox.IsChecked        = options.IsVegasScoring;
         FinalFantasyCheckBox.IsChecked = options.IsFinalFantasyMode;
         VignetteCheckBox.IsChecked     = options.IsVignetteEnabled;
-
-        VignetteScaleSlider.Value      = options.VignetteScale;
-        VignetteScaleValueText.Text    = options.VignetteScale.ToString("0.00");
+        HideHintCheckBox.IsChecked     = options.HideHintButton;
+        HideStatsCheckBox.IsChecked    = options.HideStatsButton;
+        HideZoomCheckBox.IsChecked     = options.HideZoomControls;
 
         foreach (var item in FeltColorComboBox.Items.OfType<ComboBoxItem>())
         {
@@ -126,7 +155,7 @@ public partial class PreferencesView : UserControl
         CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
 
         // Game Mode section
-        if (!string.IsNullOrEmpty(ActiveGameFamily) && ActiveGameFamily != "Freecell")
+        if (!string.IsNullOrEmpty(ActiveGameFamily) && ActiveGameFamily != "Freecell" && ActiveGameFamily != "VideoPoker")
         {
             PopulateGameModeCombo(options, ActiveGameFamily);
             GameModeSection.IsVisible = true;
@@ -144,7 +173,30 @@ public partial class PreferencesView : UserControl
             SyncUIFromOptions(options);
             RefreshThemeList();
         }
+        else if (DataContext is VideoPokerOptions vpOptions)
+        {
+            SyncUIFromVideoPokerOptions(vpOptions);
+        }
         _initializing = false;
+    }
+
+    // Video Poker has its own separate options model — only a handful of settings
+    // (sound, bet-board visibility) are VP-specific; Hide Hint/Stats are global
+    // (shared GameOptions) and Visual Themes is available same as every other game.
+    private void SyncUIFromVideoPokerOptions(VideoPokerOptions options)
+    {
+        TimedCheckBox.IsVisible        = false;
+        VegasCheckBox.IsVisible        = false;
+        FinalFantasyCheckBox.IsVisible = false;
+        HideBetBoardCheckBox.IsVisible = true;
+
+        SoundCheckBox.IsChecked        = options.IsSoundEnabled;
+        HideBetBoardCheckBox.IsChecked = options.HideBetBoard;
+
+        var shared = SettingsService.LoadOptions();
+        HideHintCheckBox.IsChecked     = shared.HideHintButton;
+        HideStatsCheckBox.IsChecked    = shared.HideStatsButton;
+        HideZoomCheckBox.IsChecked     = shared.HideZoomControls;
     }
 
     // ── Game Mode ─────────────────────────────────────────────────────────────
@@ -431,29 +483,34 @@ public partial class PreferencesView : UserControl
             options.IsSoundEnabled     = SoundCheckBox.IsChecked        ?? false;
             options.IsVegasScoring     = VegasCheckBox.IsChecked        ?? false;
             options.IsVignetteEnabled  = VignetteCheckBox.IsChecked     ?? true;
+            options.HideHintButton     = HideHintCheckBox.IsChecked     ?? false;
+            options.HideStatsButton    = HideStatsCheckBox.IsChecked    ?? false;
+            options.HideZoomControls   = HideZoomCheckBox.IsChecked     ?? false;
 
             bool wasFF = options.IsFinalFantasyMode;
             options.IsFinalFantasyMode = FinalFantasyCheckBox.IsChecked ?? false;
 
             if (!wasFF && options.IsFinalFantasyMode)
-                ApplyCardBackSelection("Priest", options);
+                ApplyCardBackSelection("Vulpera", options);
 
             NotifySettingsChanged(options);
         }
-    }
-
-    private void VignetteScaleSlider_ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
-    {
-        if (_initializing) return;
-
-        if (DataContext is GameOptions options)
+        else if (DataContext is VideoPokerOptions vpOptions)
         {
-            options.VignetteScale = VignetteScaleSlider.Value;
-            if (VignetteScaleValueText != null)
-            {
-                VignetteScaleValueText.Text = options.VignetteScale.ToString("0.00");
-            }
-            NotifySettingsChanged(options);
+            vpOptions.IsSoundEnabled  = SoundCheckBox.IsChecked        ?? false;
+            vpOptions.HideBetBoard    = HideBetBoardCheckBox.IsChecked ?? false;
+
+            // Hide Hint/Stats/Zoom are global — write to the shared GameOptions so every
+            // game (Klondike/Freecell/Spider/Blackjack too) picks up the change too.
+            var shared = SettingsService.LoadOptions();
+            shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
+            shared.HideStatsButton   = HideStatsCheckBox.IsChecked ?? false;
+            shared.HideZoomControls  = HideZoomCheckBox.IsChecked  ?? false;
+            NotifySettingsChanged(shared);
+
+            // vpOptions is the live VideoPokerViewModel.Options instance, so mutations
+            // above already apply — SaveOptions() persists to disk and notifies the view.
+            VideoPokerVm?.SaveOptions();
         }
     }
 
@@ -492,14 +549,13 @@ public partial class PreferencesView : UserControl
     }
 
     private static bool IsBuiltInCardBack(string name) =>
-        name is "Vulpera" or "Dingwall" or "Moogle" or "Priest"
+        name is "Vulpera" or "Dingwall" or "Moogle"
              or "Forest" or "On the Water" or "Pareidolic" or "Pareidolic 2"
              or "Red Sky" or "Sunset";
 
     private static (double Scale, double OffsetX, double OffsetY) BuiltInCardBackDefaults(string name) => name switch
     {
         "Moogle"           => (1.25,               0, 0),
-        "Priest"           => (1.0715080915178572,  0, 0.6333705357142776),
         _                  => (1.0,                 0, 0),
     };
 

@@ -228,6 +228,8 @@ public partial class BlackjackViewModel : ObservableObject
     public void Rebuy()
     {
         State.Credits += Options.StartingCredits;
+        Stats.Rebuys++;
+        SaveStatistics();
         NotifyStateChanged();
     }
 
@@ -254,7 +256,6 @@ public partial class BlackjackViewModel : ObservableObject
             CurrentBet = Math.Clamp(Options.BetPerHand, 1, 5),
             Phase      = BlackjackPhase.Betting,
         };
-        Deal();
     }
 
     // ── Internal logic ────────────────────────────────────────────────────────
@@ -345,11 +346,14 @@ public partial class BlackjackViewModel : ObservableObject
                 Stats.HandsWon++;
                 Stats.Blackjacks++;
                 Stats.TotalCreditsWon += bjReturn;
+                if (bjReturn > Stats.BiggestPay) Stats.BiggestPay = bjReturn;
                 break;
             case BlackjackHandResult.Won:
-                State.Credits += hand.Bet * 2;
+                int wonReturn = hand.Bet * 2;
+                State.Credits += wonReturn;
                 Stats.HandsWon++;
-                Stats.TotalCreditsWon += hand.Bet * 2;
+                Stats.TotalCreditsWon += wonReturn;
+                if (wonReturn > Stats.BiggestPay) Stats.BiggestPay = wonReturn;
                 break;
             case BlackjackHandResult.Push:
                 State.Credits += hand.Bet;
@@ -405,6 +409,12 @@ public partial class BlackjackViewModel : ObservableObject
     {
         try { Directory.CreateDirectory(DataDir); File.WriteAllText(StatisticsPath, JsonSerializer.Serialize(Stats, new JsonSerializerOptions { WriteIndented = true })); }
         catch { }
+    }
+
+    public void ResetStats()
+    {
+        Stats = new BlackjackStatistics();
+        SaveStatistics();
     }
 
     private static BlackjackStatistics LoadStatistics()

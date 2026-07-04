@@ -18,6 +18,24 @@ namespace SoliBee.Desktop.Views;
 
 public partial class FreecellView : CardGameView
 {
+    // Column gap narrows above 1.0x zoom so columns don't overflow horizontally; floors at 4px.
+    public void ApplyZoomGap(double zoom)
+    {
+        if (DataContext is not FreecellViewModel vm) return;
+        const double baseGap = 6;
+        double gap = zoom <= 1.0 ? baseGap : Math.Max(4, baseGap - (baseGap - 4) * (zoom - 1.0));
+        for (int i = 1; i < TableauGrid.ColumnDefinitions.Count; i += 2)
+            TableauGrid.ColumnDefinitions[i] = new ColumnDefinition(gap, GridUnitType.Pixel);
+
+        int deckCount = vm.Options.FreecellDeckCount;
+        int columns = deckCount == 2 ? 10 : 8;
+        double width = columns * 128 + (columns - 1) * gap;
+        BoardPanel.Width = width;
+        TopRow1.Width = width;
+        TopRow2.Width = width;
+        TableauGrid.Width = width;
+    }
+
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
         if (DataContext is not FreecellViewModel vm) return false;
@@ -108,6 +126,8 @@ public partial class FreecellView : CardGameView
         if (DataContext is FreecellViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
+        WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
+        CardView.ClearPileViewCache(this);
     }
 
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
@@ -145,9 +165,10 @@ public partial class FreecellView : CardGameView
                 BindPiles(vm);
                 RefreshAllPiles();
             }
-            else if (e.PropertyName == nameof(FreecellViewModel.IsAutocompletable))
+            else if (e.PropertyName == nameof(FreecellViewModel.IsAutocompletable) ||
+                     e.PropertyName == nameof(FreecellViewModel.IsAutoplayRunning))
             {
-                AutocompleteBanner.IsVisible = vm.IsAutocompletable;
+                AutocompleteBanner.IsVisible = vm.IsAutocompletable && !vm.IsAutoplayRunning;
             }
             else if (e.PropertyName == nameof(FreecellViewModel.HasNoMoves))
             {
@@ -158,6 +179,11 @@ public partial class FreecellView : CardGameView
                 ApplyHint(vm.ActiveHint, AllPileViews());
             }
         });
+    }
+
+    protected override void ClearActiveHint()
+    {
+        if (DataContext is FreecellViewModel vm) vm.ClearHintCycle();
     }
 
     private IEnumerable<PileView> AllPileViews() =>
@@ -271,11 +297,22 @@ public partial class FreecellView : CardGameView
         e.Handled = true;
     }
 
+    private void NoMovesDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        NoMovesBanner.IsVisible = false;
+        e.Handled = true;
+    }
+
+    private void AutocompleteDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        AutocompleteBanner.IsVisible = false;
+        e.Handled = true;
+    }
+
     private static Bitmap? _ffEmblemBitmap;
 
     private void ApplyFeltColor(GameOptions options)
     {
-        if (VignetteRect != null) VignetteRect.IsVisible = options.IsVignetteEnabled;
         if (options.IsFinalFantasyMode)
         {
             try
@@ -294,17 +331,9 @@ public partial class FreecellView : CardGameView
             return;
         }
 
-        string hexColor = options.FeltColor switch
-        {
-            FeltColorTheme.FeltGreen => "#008000",
-            FeltColorTheme.Crimson => "#8C0C26",
-            FeltColorTheme.RoyalBlue => "#1A3380",
-            FeltColorTheme.Charcoal => "#2E2E2E",
-            FeltColorTheme.Desert => "#C2967A",
-            FeltColorTheme.Custom => options.CustomFeltColorHex,
-            _ => "#008000"
-        };
-        try { BoardFeltGrid.Background = new SolidColorBrush(Avalonia.Media.Color.Parse(hexColor)); }
-        catch { BoardFeltGrid.Background = new SolidColorBrush(Avalonia.Media.Colors.DarkGreen); }
+        // Transparent, not an opaque repaint: the window background behind (MainWindow.ApplyFeltColor)
+        // already carries this same felt color, and staying transparent here lets the single
+        // app-wide vignette overlay (rendered behind the board content) show through in the gaps.
+        BoardFeltGrid.Background = Brushes.Transparent;
     }
 }

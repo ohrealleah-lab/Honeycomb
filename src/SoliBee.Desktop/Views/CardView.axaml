@@ -51,9 +51,17 @@
 
         <!-- Card Back (Face Down) -->
         <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="0.75" CornerRadius="10" IsVisible="False" Padding="0" Background="White" BoxShadow="0 4 16 0 #60000000, 0 2 4 0 #80000000" ClipToBounds="True">
-            <Grid x:Name="CardBackGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Grid>
+            <!-- Themes like Moogle apply a scale/offset RenderTransform to CardBackImage
+                 that can push it well past the card's own bounds; ClipToBounds on the
+                 outer Border doesn't reliably clip a child's RenderTransform overflow,
+                 which was covering the thin border stroke. This inner Border (inset 1px,
+                 same rounded-corner clipping trick CardFace/CardBack already use) guarantees
+                 the border always stays visible on top. -->
+            <Border Margin="1" CornerRadius="9" ClipToBounds="True">
+                <Grid x:Name="CardBackGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
         </Border>
     </Grid>
 </UserControl>

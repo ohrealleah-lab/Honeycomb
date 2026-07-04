@@ -178,6 +178,9 @@ public static class SettingsService
                 if (GetValue("HideStatsButton") is bool hideStats)
                     options.HideStatsButton = hideStats;
 
+                if (GetValue("HideZoomControls") is bool hideZoom)
+                    options.HideZoomControls = hideZoom;
+
                 if (GetValue("FreecellDeckCount") is int freecellDeck)
                     options.FreecellDeckCount = freecellDeck;
 
@@ -192,6 +195,12 @@ public static class SettingsService
                 if (GetValue("SpiderZoom")     is double spz) options.SpiderZoom     = spz;
                 if (GetValue("VideoPokerZoom") is double vpz) options.VideoPokerZoom = vpz;
                 if (GetValue("VignetteScale")  is double vsc) options.VignetteScale  = vsc;
+
+                if (GetValue("KlondikeDefaultZoom")   is double kdz)  options.KlondikeDefaultZoom   = kdz;
+                if (GetValue("FreecellDefaultZoom")    is double bdz)  options.FreecellDefaultZoom    = bdz;
+                if (GetValue("SpiderDefaultZoom")     is double sdz) options.SpiderDefaultZoom     = sdz;
+                if (GetValue("VideoPokerDefaultZoom") is double vdz) options.VideoPokerDefaultZoom = vdz;
+                if (GetValue("BlackjackDefaultZoom")  is double jdz) options.BlackjackDefaultZoom  = jdz;
 
                 if (GetValue("KlondikeWidth")       is double klW)  options.KlondikeWidth       = klW;
                 if (GetValue("KlondikeHeight")      is double klH)  options.KlondikeHeight      = klH;
@@ -272,6 +281,7 @@ public static class SettingsService
                 SetValue("IsStatusBarVisible", options.IsStatusBarVisible);
                 SetValue("HideHintButton", options.HideHintButton);
                 SetValue("HideStatsButton", options.HideStatsButton);
+                SetValue("HideZoomControls", options.HideZoomControls);
                 SetValue("FreecellDeckCount", options.FreecellDeckCount);
                 SetValue("SpiderSuitCount", options.SpiderSuitCount);
 
@@ -283,6 +293,12 @@ public static class SettingsService
                 SetValue("SpiderZoom",     options.SpiderZoom);
                 SetValue("VideoPokerZoom", options.VideoPokerZoom);
                 SetValue("VignetteScale",  options.VignetteScale);
+
+                SetValue("KlondikeDefaultZoom",   options.KlondikeDefaultZoom);
+                SetValue("FreecellDefaultZoom",    options.FreecellDefaultZoom);
+                SetValue("SpiderDefaultZoom",     options.SpiderDefaultZoom);
+                SetValue("VideoPokerDefaultZoom", options.VideoPokerDefaultZoom);
+                SetValue("BlackjackDefaultZoom",  options.BlackjackDefaultZoom);
 
                 SetValue("KlondikeWidth",       options.KlondikeWidth);
                 SetValue("KlondikeHeight",      options.KlondikeHeight);

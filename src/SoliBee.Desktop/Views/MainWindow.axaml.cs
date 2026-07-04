@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -22,10 +24,10 @@ public partial class MainWindow : Window
     private string _currentGameTag = "SolitaireDraw1";
     private bool _variantInitializing;
     private DispatcherTimer? _gameSwitchTimer;
-    private DispatcherTimer? _prefSlideTimer;
     private string _pendingAction = "";
     private bool _revertingSelection = false;
     private PreferencesView? _preferencesView;
+    private INotifyPropertyChanged? _hintTrackedVm;
 
     public MainWindow()
     {
@@ -53,6 +55,11 @@ public partial class MainWindow : Window
             CardView.InvalidateAllCardViews(this);
             bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
             if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && m.Options.IsTimed;
+            // Hint is solitaire-only (no hint logic exists for VP/Blackjack), but Stats
+            // is tracked for every game, so it isn't gated by isCardGame.
+            if (HintButton != null)    HintButton.IsVisible    = isCardGame && !m.Options.HideHintButton;
+            if (StatsButton != null)   StatsButton.IsVisible   = !m.Options.HideStatsButton;
+            if (ZoomButton != null)    ZoomButton.IsVisible    = !m.Options.HideZoomControls;
         });
 
         // Also listen to FaceCardArtChangedMessage to keep all cards in sync
@@ -75,7 +82,21 @@ public partial class MainWindow : Window
         // first click after launch can get consumed by window activation itself,
         // which leaves BeginMoveDrag's native move-loop from registering cleanly and
         // breaks double-click-to-maximize until some other click "wakes" the window.
-        this.Opened += (_, _) => this.Activate();
+        this.Opened += (_, _) =>
+        {
+            this.Activate();
+
+            // Anchor to the top of the screen (horizontally centered) instead of
+            // full-screen centering — the taller default board heights otherwise
+            // push the title bar above the visible screen area on smaller displays.
+            var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+            if (screen != null && WindowState != WindowState.Maximized)
+            {
+                var wa = screen.WorkingArea;
+                double x = wa.X + (wa.Width - Width) / 2;
+                Position = new PixelPoint((int)x, wa.Y);
+            }
+        };
 
         // Preload custom art into display-resolution cache before first scroll
         this.Loaded += (_, _) =>
@@ -138,15 +159,19 @@ public partial class MainWindow : Window
             if (TopBarBorder != null)
                 TopBarBorder.Background = Avalonia.Media.Brushes.Transparent;
 
-            // Solitaire: title bar vignette rendered behind buttons (first child of Row 0 Grid).
-            // Per-game VignetteRect (ZIndex=-1) handles the board — cards stay unaffected.
-            if (TitleBarVignetteRect != null)
-                TitleBarVignetteRect.IsVisible = isCardGame && options.IsVignetteEnabled;
-
-            // VP/BJ: full-window overlay (ZIndex=90). Not used for solitaire.
+            // Single app-wide overlay (spans both rows) so the vignette is one continuous
+            // gradient across the title bar and the board, not two independently-scaled
+            // ones that visibly seam at the row boundary. Solitaire boards have a
+            // transparent background (the window felt color shows through), so the
+            // overlay sits behind the board/toolbar content (negative ZIndex) and only
+            // shows in the gaps — cards and buttons stay fully unobscured. Video Poker
+            // / Blackjack paint an opaque board, so the overlay must sit in front
+            // (ZIndex 90) to be visible at all; the toolbar row (ZIndex 100) and any
+            // modal overlays (ZIndex 95) still render above it in that case.
             if (VignetteOverlay != null)
             {
-                VignetteOverlay.IsVisible = !isCardGame && options.IsVignetteEnabled;
+                VignetteOverlay.IsVisible = options.IsVignetteEnabled;
+                VignetteOverlay.ZIndex = isCardGame ? -5 : 90;
                 if (VignetteOverlay.Fill is Avalonia.Media.RadialGradientBrush rgb)
                     rgb.Radius = options.VignetteScale * 0.8;
             }
@@ -348,6 +373,15 @@ public partial class MainWindow : Window
             _preferencesView?.CommitGameModeCombo();
             ApplyGameModeChange(newTag);
         }
+        else if (_pendingAction == "ResetStats")
+        {
+            if (this.DataContext is GameViewModel klondikeVm) klondikeVm.ResetStats();
+            else if (this.DataContext is FreecellViewModel freecellVm) freecellVm.ResetStats();
+            else if (this.DataContext is SpiderViewModel spiderVm) spiderVm.ResetStats();
+            else if (this.DataContext is BlackjackViewModel blackjackVm) blackjackVm.ResetStats();
+            else if (this.DataContext is VideoPokerViewModel videoPokerVm) videoPokerVm.ResetStats();
+            PopulateStatsPanel();
+        }
         _pendingAction = "";
     }
 
@@ -425,72 +459,233 @@ public partial class MainWindow : Window
         // Video Poker has no hint
     }
 
+    private void Stats_Click(object? sender, RoutedEventArgs e)
+    {
+        ShowStatsPanel();
+    }
+
+    private void ShowStatsPanel()
+    {
+        PopulateStatsPanel();
+        StatsOverlay.IsVisible = true;
+    }
+
+    private void CloseStats_Click(object? sender, RoutedEventArgs e)
+    {
+        StatsOverlay.IsVisible = false;
+    }
+
+    private void ResetStats_Click(object? sender, RoutedEventArgs e)
+    {
+        _pendingAction = "ResetStats";
+        ConfirmActionTitle.Text     = "Reset Statistics?";
+        ConfirmActionMessage.Text   = "This will permanently clear all statistics. This cannot be undone.";
+        ConfirmActionButton.Content = "Reset";
+        ConfirmActionOverlay.IsVisible = true;
+    }
+
+    private static string FormatKlondikeScore(int rawScore, bool vegas)
+    {
+        if (!vegas) return rawScore.ToString();
+        int dollars = rawScore / 100;
+        int abs     = Math.Abs(dollars);
+        return dollars < 0 ? $"-${abs}.00" : $"${abs}.00";
+    }
+
+    private static Grid BuildStatRow(string label, string value)
+    {
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        grid.Children.Add(new TextBlock { Text = label, Foreground = Brushes.White });
+        var valueBlock = new TextBlock { Text = value, Foreground = Brushes.White, FontWeight = FontWeight.Bold };
+        Grid.SetColumn(valueBlock, 1);
+        grid.Children.Add(valueBlock);
+        return grid;
+    }
+
+    private void PopulateBlackjackStats(BlackjackViewModel vm)
+    {
+        StatsFixedRows.IsVisible   = false;
+        StatsDynamicRows.IsVisible = true;
+        StatsTitleText.Text = "Blackjack Statistics";
+
+        var s = vm.Stats;
+        double winRate = s.HandsPlayed > 0 ? 100.0 * s.HandsWon / s.HandsPlayed : 0.0;
+        double rtp     = s.TotalCreditsWagered > 0 ? 100.0 * s.TotalCreditsWon / s.TotalCreditsWagered : 0.0;
+
+        StatsDynamicRows.Children.Clear();
+        StatsDynamicRows.Children.Add(BuildStatRow("Hands Played",  s.HandsPlayed.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Hands Won",     s.HandsWon.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Hands Lost",    s.HandsLost.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Pushes",        s.HandsPushed.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Blackjacks",    s.Blackjacks.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Win Rate",      $"{winRate:0.0}%"));
+        StatsDynamicRows.Children.Add(BuildStatRow("Total Wagered", s.TotalCreditsWagered.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Total Paid",    s.TotalCreditsWon.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Biggest Pay",   s.BiggestPay.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("RTP",           $"{rtp:0.0}%"));
+        StatsDynamicRows.Children.Add(BuildStatRow("Rebuys",        s.Rebuys.ToString()));
+    }
+
+    private void PopulateVideoPokerStats(VideoPokerViewModel vm)
+    {
+        StatsFixedRows.IsVisible   = false;
+        StatsDynamicRows.IsVisible = true;
+        StatsTitleText.Text = "Video Poker Statistics";
+
+        var s = vm.Stats;
+        double winRate      = s.TotalHands > 0 ? 100.0 * s.WinningHands / s.TotalHands : 0.0;
+        double rtp          = s.TotalCreditsWagered > 0 ? 100.0 * s.TotalCreditsWon / s.TotalCreditsWagered : 0.0;
+        int    royalFlushes = s.HandCounts.GetValueOrDefault("Royal Flush");
+
+        StatsDynamicRows.Children.Clear();
+        StatsDynamicRows.Children.Add(BuildStatRow("Hands Played",   s.TotalHands.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Hands Won",      s.WinningHands.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Win Rate",       $"{winRate:0.0}%"));
+        StatsDynamicRows.Children.Add(BuildStatRow("Biggest Pay",    s.BiggestPay.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Total Wagered",  s.TotalCreditsWagered.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Total Paid",     s.TotalCreditsWon.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("RTP",            $"{rtp:0.0}%"));
+        StatsDynamicRows.Children.Add(BuildStatRow("Royal Flushes",  royalFlushes.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow("Rebuys",         s.Rebuys.ToString()));
+    }
+
+    private void PopulateStatsPanel()
+    {
+        if (this.DataContext is BlackjackViewModel blackjackVm)
+        {
+            PopulateBlackjackStats(blackjackVm);
+            return;
+        }
+        if (this.DataContext is VideoPokerViewModel videoPokerVm)
+        {
+            PopulateVideoPokerStats(videoPokerVm);
+            return;
+        }
+
+        StatsFixedRows.IsVisible   = true;
+        StatsDynamicRows.IsVisible = false;
+
+        string title;
+        int gamesPlayed, gamesWon, currentStreak, longestStreak, fastestWinSec, totalWinSec;
+        string highScoreText;
+
+        if (this.DataContext is GameViewModel klondikeVm)
+        {
+            title = "Klondike Statistics";
+            var s = klondikeVm.Stats;
+            gamesPlayed   = s.GamesPlayed;
+            gamesWon      = s.GamesWon;
+            currentStreak = s.CurrentStreak;
+            longestStreak = s.LongestStreak;
+            fastestWinSec = s.ShortestWinSeconds;
+            totalWinSec   = s.TotalWinSeconds;
+            highScoreText = FormatKlondikeScore(
+                klondikeVm.Options.IsVegasScoring ? s.VegasHighScore : s.StandardHighScore,
+                klondikeVm.Options.IsVegasScoring);
+        }
+        else if (this.DataContext is FreecellViewModel freecellVm)
+        {
+            string deckLabel = freecellVm.Options.FreecellDeckCount == 2 ? "2-Decks" : "1-Deck";
+            title = $"Freecell Statistics ({deckLabel})";
+            string modeKey = $"{(freecellVm.Options.IsVegasScoring ? "vegas" : "standard")}_{freecellVm.Options.FreecellDeckCount}deck";
+            var ms = freecellVm.Stats.FreecellStatsByMode.TryGetValue(modeKey, out var m) ? m : new ModeStats();
+            gamesPlayed   = ms.GamesPlayed;
+            gamesWon      = ms.GamesWon;
+            currentStreak = ms.CurrentStreak;
+            longestStreak = ms.LongestStreak;
+            fastestWinSec = ms.ShortestWinSeconds;
+            totalWinSec   = ms.TotalWinSeconds;
+            highScoreText = ms.HighScore.ToString();
+        }
+        else if (this.DataContext is SpiderViewModel spiderVm)
+        {
+            string suitLabel = spiderVm.Options.SpiderSuitCount switch { 2 => "2 Suits", 4 => "4 Suits", _ => "1 Suit" };
+            title = $"Spider Statistics ({suitLabel})";
+            string suitKey = spiderVm.Options.SpiderSuitCount.ToString();
+            var ms = spiderVm.Stats.SpiderStatsBySuit.TryGetValue(suitKey, out var m) ? m : new ModeStats();
+            gamesPlayed   = ms.GamesPlayed;
+            gamesWon      = ms.GamesWon;
+            currentStreak = ms.CurrentStreak;
+            longestStreak = ms.LongestStreak;
+            fastestWinSec = ms.ShortestWinSeconds;
+            totalWinSec   = ms.TotalWinSeconds;
+            highScoreText = ms.HighScore.ToString();
+        }
+        else
+        {
+            return; // Video Poker / Blackjack have no stats panel
+        }
+
+        StatsTitleText.Text        = title;
+        StatsGamesPlayedText.Text  = gamesPlayed.ToString();
+        StatsGamesWonText.Text     = gamesWon.ToString();
+        StatsHighScoreText.Text    = highScoreText;
+        double winPct = gamesPlayed > 0 ? 100.0 * gamesWon / gamesPlayed : 0.0;
+        StatsWinPctText.Text       = $"{winPct:0.0}%";
+        StatsCurrentStreakText.Text = currentStreak.ToString();
+        StatsLongestStreakText.Text = longestStreak.ToString();
+        StatsAvgWinTimeText.Text   = gamesWon > 0 ? $"{totalWinSec / gamesWon}s" : "--";
+        StatsFastestWinText.Text  = gamesWon > 0 ? $"{fastestWinSec}s" : "--";
+    }
+
     private void Preferences_Click(object? sender, RoutedEventArgs e)
     {
-        GameOptions options = this.DataContext switch
-        {
-            GameViewModel vm        => vm.Options,
-            FreecellViewModel vm     => vm.Options,
-            SpiderViewModel vm      => vm.Options,
-            VideoPokerViewModel _   => _coordinator.GameViewModel.Options,
-            _                       => _coordinator.GameViewModel.Options
-        };
-
         _preferencesView = new PreferencesView();
-        _preferencesView.DataContext = options;
-        _preferencesView.ShowVegasOption = this.DataContext is GameViewModel;
-        _preferencesView.ActiveGameFamily = this.DataContext switch
+
+        if (this.DataContext is VideoPokerViewModel vpVm)
         {
-            GameViewModel _      => "Klondike",
-            FreecellViewModel _  => "Freecell",
-            SpiderViewModel _    => "Spider",
-            _                    => "",
-        };
+            // Video Poker's Options has a single consumer (this ViewModel), unlike the
+            // card games' shared GameOptions/OptionsChangedMessage broadcast — so there's
+            // no old-vs-new diffing to break by sharing the live instance directly.
+            // PreferencesView calls vpVm.SaveOptions() to persist and refresh the view.
+            _preferencesView.DataContext = vpVm.Options;
+            _preferencesView.VideoPokerVm = vpVm;
+            _preferencesView.ActiveGameFamily = "VideoPoker";
+        }
+        else
+        {
+            GameOptions options = this.DataContext switch
+            {
+                GameViewModel vm      => vm.Options,
+                FreecellViewModel vm  => vm.Options,
+                SpiderViewModel vm    => vm.Options,
+                _                     => _coordinator.GameViewModel.Options
+            };
+            // Clone, don't share the live instance — otherwise each ViewModel's
+            // OptionsChangedMessage handler compares the object to itself and never
+            // detects a change for whichever game is currently active.
+            _preferencesView.DataContext = options.Clone();
+            _preferencesView.ActiveGameFamily = this.DataContext switch
+            {
+                GameViewModel _      => "Klondike",
+                FreecellViewModel _  => "Freecell",
+                SpiderViewModel _    => "Spider",
+                _                    => "",
+            };
+        }
+
+        _preferencesView.ShowVegasOption = this.DataContext is GameViewModel;
         _preferencesView.GameModeChangeRequested += OnGameModeChangeRequested;
         this.PreferencesContent.Content = _preferencesView;
         this.PreferencesOverlay.IsVisible = true;
+        // The overlay only covers the game area (Grid.Row="1"), not the toolbar
+        // (its own Grid.Row="0" with ZIndex="100"), so toolbar buttons stay
+        // clickable underneath unless explicitly disabled here.
+        this.TopBarBorder.IsEnabled = false;
         SlideInPreferences();
     }
 
     private void SlideInPreferences()
     {
-        _prefSlideTimer?.Stop();
-        PreferencesPanel.RenderTransform = new TranslateTransform(360, 0);
-        double elapsed = 0;
-        _prefSlideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _prefSlideTimer.Tick += (_, _) =>
-        {
-            elapsed += 16;
-            double t    = Math.Min(1.0, elapsed / 220.0);
-            double ease = 1 - Math.Pow(1 - t, 3);
-            if (PreferencesPanel.RenderTransform is TranslateTransform tx) tx.X = 360 * (1.0 - ease);
-            if (t >= 1.0) { _prefSlideTimer!.Stop(); _prefSlideTimer = null; }
-        };
-        _prefSlideTimer.Start();
+        // Just appear centered — PreferencesPanel is already Horizontal/VerticalAlignment="Center".
+        PreferencesPanel.RenderTransform = null;
     }
 
     private void SlideOutAndClosePreferences()
     {
-        _prefSlideTimer?.Stop();
-        double startX   = PreferencesPanel.RenderTransform is TranslateTransform tx0 ? tx0.X : 0;
-        double elapsed  = 0;
-        _prefSlideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _prefSlideTimer.Tick += (_, _) =>
-        {
-            elapsed += 16;
-            double t    = Math.Min(1.0, elapsed / 160.0);
-            double ease = t * t;
-            if (PreferencesPanel.RenderTransform is TranslateTransform tx) tx.X = startX + (360 - startX) * ease;
-            if (t >= 1.0)
-            {
-                _prefSlideTimer!.Stop();
-                _prefSlideTimer = null;
-                this.PreferencesOverlay.IsVisible = false;
-                this.PreferencesContent.Content   = null;
-                if (PreferencesPanel.RenderTransform is TranslateTransform tx2) tx2.X = 0;
-            }
-        };
-        _prefSlideTimer.Start();
+        this.PreferencesOverlay.IsVisible = false;
+        this.PreferencesContent.Content   = null;
+        this.TopBarBorder.IsEnabled = true;
     }
 
     private void Help_Click(object? sender, RoutedEventArgs e)
@@ -527,6 +722,18 @@ public partial class MainWindow : Window
     private void ClosePreferences_Click(object? sender, RoutedEventArgs e)
         => SlideOutAndClosePreferences();
 
+    private void ViewStats_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        SlideOutAndClosePreferences();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            ShowStatsPanel();
+        };
+        timer.Start();
+    }
+
     private void PokerVariantBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_variantInitializing) return;
@@ -557,26 +764,9 @@ public partial class MainWindow : Window
 
     private void ResizeWindowForGame(string tag)
     {
-        // Min widths derived from card layout: card=128px, gaps per game
-        // Klondike: 7×128 + 6×18 + margins ≈ 1060
-        // Spider:   10×128 + 9×12 + margins ≈ 1450 (ScrollViewer handles taller stacks)
-        // Freecell1: board=1066 + padding ≈ 1120
-        // Freecell2: board=1334 + padding ≈ 1390
-        string baseTag = GetBaseGameTag(tag);
-        this.MinWidth = baseTag switch
-        {
-            "Freecell"   => tag == "Freecell2" ? 1390 : 1120,
-            "Spider"     => 1450,
-            "VideoPoker" => 700,
-            "Blackjack"  => 700,
-            _            => 1060,
-        };
-        this.MinHeight = baseTag switch
-        {
-            "VideoPoker" => 580,
-            "Blackjack"  => 580,
-            _            => 640,
-        };
+        var (minW, minH) = ComputeBoardMinSize(tag, GetGameZoom(tag));
+        this.MinWidth = minW;
+        this.MinHeight = minH;
     }
 
     private void GameSelectionBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -712,8 +902,19 @@ public partial class MainWindow : Window
         ApplyZoom(GetGameZoom(tag));
         RestoreWindowSizeForGame(tag);
 
+        // Re-point the hint-availability tracker at whichever viewmodel is now active,
+        // so the Hint button disables itself the moment a deadlock leaves no legal moves.
+        if (_hintTrackedVm != null) _hintTrackedVm.PropertyChanged -= OnHintTrackedVmPropertyChanged;
+        _hintTrackedVm = _coordinator.ActiveViewModel as INotifyPropertyChanged;
+        if (_hintTrackedVm != null) _hintTrackedVm.PropertyChanged += OnHintTrackedVmPropertyChanged;
+        UpdateHintButtonEnabled();
+
         bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
-        if (HintButton != null)    HintButton.IsVisible    = isCardGame;
+        // Hint is solitaire-only (no hint logic exists for VP/Blackjack), but Stats is
+        // tracked for every game, so it isn't gated by isCardGame.
+        if (HintButton != null)    HintButton.IsVisible    = isCardGame && !_coordinator.GameViewModel.Options.HideHintButton;
+        if (StatsButton != null)   StatsButton.IsVisible   = !_coordinator.GameViewModel.Options.HideStatsButton;
+        if (ZoomButton != null)    ZoomButton.IsVisible    = !_coordinator.GameViewModel.Options.HideZoomControls;
         if (UndoButton != null)    UndoButton.IsVisible    = isCardGame;
         if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && _coordinator.GameViewModel.Options.IsTimed;
         if (RestartButton != null) RestartButton.IsVisible = isCardGame;
@@ -747,6 +948,24 @@ public partial class MainWindow : Window
             ApplyFeltColor(spiderVm.Options);
         else
             ApplyFeltColor(_coordinator.GameViewModel.Options);
+    }
+
+    private void OnHintTrackedVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GameViewModel.HasNoMoves))
+            UpdateHintButtonEnabled();
+    }
+
+    private void UpdateHintButtonEnabled()
+    {
+        bool hasNoMoves = _coordinator.ActiveViewModel switch
+        {
+            GameViewModel g     => g.HasNoMoves,
+            FreecellViewModel f => f.HasNoMoves,
+            SpiderViewModel s   => s.HasNoMoves,
+            _                   => false,
+        };
+        if (HintButton != null) HintButton.IsEnabled = !hasNoMoves;
     }
 
     // ── Per-game window size ──────────────────────────────────────────────────
@@ -784,6 +1003,11 @@ public partial class MainWindow : Window
 
     private void RestoreWindowSizeForGame(string tag)
     {
+        // Cancel any in-flight zoom-driven resize animation from ApplyZoom above —
+        // the game-switch restore takes precedence and should apply immediately.
+        _windowResizeTimer?.Stop();
+        _windowResizeTimer = null;
+
         var opts = _coordinator.GameViewModel.Options;
         (double w, double h, bool max) = GetBaseGameTag(tag) switch
         {
@@ -816,9 +1040,102 @@ public partial class MainWindow : Window
         _            => _coordinator.GameViewModel.Options.KlondikeZoom,
     };
 
+    private double GetGameDefaultZoom(string tag) => GetBaseGameTag(tag) switch
+    {
+        "Freecell"   => _coordinator.GameViewModel.Options.FreecellDefaultZoom,
+        "Spider"     => _coordinator.GameViewModel.Options.SpiderDefaultZoom,
+        "VideoPoker" => _coordinator.GameViewModel.Options.VideoPokerDefaultZoom,
+        "Blackjack"  => _coordinator.GameViewModel.Options.BlackjackDefaultZoom,
+        _            => _coordinator.GameViewModel.Options.KlondikeDefaultZoom,
+    };
+
+    private void MakeCurrentZoomDefault()
+    {
+        var opts = _coordinator.GameViewModel.Options;
+        double zoom = GetGameZoom(_currentGameTag);
+        switch (GetBaseGameTag(_currentGameTag))
+        {
+            case "Freecell":   opts.FreecellDefaultZoom    = zoom; break;
+            case "Spider":     opts.SpiderDefaultZoom     = zoom; break;
+            case "VideoPoker": opts.VideoPokerDefaultZoom = zoom; break;
+            case "Blackjack":  opts.BlackjackDefaultZoom  = zoom; break;
+            default:           opts.KlondikeDefaultZoom   = zoom; break;
+        }
+        SettingsService.SaveOptions(opts);
+    }
+
+    private (double minWidth, double minHeight) ComputeBoardMinSize(string tag, double zoom)
+    {
+        // Base minimums are the same values used before the zoom feature existed —
+        // scaling them by zoom keeps the 1.0x defaults exactly as they were (avoids
+        // ballooning the window/pushing the title bar off-screen at startup) while
+        // still growing the floor at higher zoom levels.
+        string baseTag = GetBaseGameTag(tag);
+        double baseMinWidth = baseTag switch
+        {
+            "Freecell"   => tag == "Freecell2" ? 1390 : 1120,
+            "Spider"     => 1450,
+            "VideoPoker" => 700,
+            "Blackjack"  => 700,
+            _            => 1060,
+        };
+        double baseMinHeight = baseTag switch
+        {
+            "VideoPoker" => 580,
+            // Must match GameOptions.BlackjackHeight's default (950) — that's the actual
+            // content height needed to fit dealer/player cards + action buttons without
+            // clipping; a lower floor let the window (and saved BlackjackHeight) shrink
+            // below what the board needs.
+            "Blackjack"  => 950,
+            _            => 640,
+        };
+        return (baseMinWidth * zoom, baseMinHeight * zoom);
+    }
+
+    private DispatcherTimer? _windowResizeTimer;
+
+    // Scales the window's *current* size by the zoom delta (rather than jumping to an
+    // absolute size), so whatever aspect ratio the window currently has — the default,
+    // or one the user manually resized to — is preserved as zoom changes, growing on
+    // zoom-in and shrinking on zoom-out.
+    private void SnapWindowToZoom(double oldZoom, double newZoom)
+    {
+        var (minW, minH) = ComputeBoardMinSize(_currentGameTag, newZoom);
+        this.MinWidth = minW;
+        this.MinHeight = minH;
+
+        if (WindowState == WindowState.Maximized) return;
+
+        double ratio = oldZoom > 0 ? newZoom / oldZoom : 1.0;
+        double targetW = Math.Max(minW, Width * ratio);
+        double targetH = Math.Max(minH, Height * ratio);
+        if (targetW == Width && targetH == Height) return;
+
+        double startW = Width, startH = Height;
+
+        _windowResizeTimer?.Stop();
+        double elapsed = 0;
+        const double durationMs = 200;
+        _windowResizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _windowResizeTimer.Tick += (_, _) =>
+        {
+            elapsed += 16;
+            double t = Math.Min(1.0, elapsed / durationMs);
+            Width  = startW + (targetW - startW) * t;
+            Height = startH + (targetH - startH) * t;
+            if (t >= 1.0)
+            {
+                _windowResizeTimer!.Stop();
+                _windowResizeTimer = null;
+            }
+        };
+        _windowResizeTimer.Start();
+    }
+
     private void ApplyZoom(double zoom)
     {
-        zoom = Math.Clamp(zoom, 0.5, 1.5);
+        zoom = Math.Clamp(zoom, 0.6, 2.0);
+        double oldZoom = GetGameZoom(_currentGameTag);
         var opts = _coordinator.GameViewModel.Options;
         switch (GetBaseGameTag(_currentGameTag))
         {
@@ -831,13 +1148,43 @@ public partial class MainWindow : Window
         _contentScale.ScaleX = zoom;
         _contentScale.ScaleY = zoom;
         SettingsService.SaveOptions(opts);
+        ApplyZoomGap(zoom);
+        SnapWindowToZoom(oldZoom, zoom);
     }
+
+    private void ApplyZoomGap(double zoom)
+    {
+        switch (GetBaseGameTag(_currentGameTag))
+        {
+            case "Klondike":
+                (MainContent.Content as GameView)?.ApplyZoomGap(zoom);
+                break;
+            case "Freecell":
+                (MainContent.Content as FreecellView)?.ApplyZoomGap(zoom);
+                break;
+            case "Spider":
+                (MainContent.Content as SpiderView)?.ApplyZoomGap(zoom);
+                break;
+        }
+    }
+
+    private void ZoomIn_Click(object? sender, RoutedEventArgs e) =>
+        ApplyZoom(GetGameZoom(_currentGameTag) + 0.1);
+
+    private void ZoomOut_Click(object? sender, RoutedEventArgs e) =>
+        ApplyZoom(GetGameZoom(_currentGameTag) - 0.1);
+
+    private void ResetZoom_Click(object? sender, RoutedEventArgs e) =>
+        ApplyZoom(GetGameDefaultZoom(_currentGameTag));
+
+    private void MakeCurrentZoomDefault_Click(object? sender, RoutedEventArgs e) =>
+        MakeCurrentZoomDefault();
 
     private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
         if ((e.KeyModifiers & KeyModifiers.Control) == 0) return;
         e.Handled = true;
-        double step = e.Delta.Y > 0 ? 0.05 : -0.05;
+        double step = e.Delta.Y > 0 ? 0.1 : -0.1;
         ApplyZoom(GetGameZoom(_currentGameTag) + step);
     }
 
@@ -878,17 +1225,17 @@ public partial class MainWindow : Window
             if (e.Key == Key.OemPlus || e.Key == Key.Add)
             {
                 e.Handled = true;
-                ApplyZoom(GetGameZoom(_currentGameTag) + 0.05);
+                ApplyZoom(GetGameZoom(_currentGameTag) + 0.1);
             }
             else if (e.Key == Key.OemMinus || e.Key == Key.Subtract)
             {
                 e.Handled = true;
-                ApplyZoom(GetGameZoom(_currentGameTag) - 0.05);
+                ApplyZoom(GetGameZoom(_currentGameTag) - 0.1);
             }
             else if (e.Key == Key.D0 || e.Key == Key.NumPad0)
             {
                 e.Handled = true;
-                ApplyZoom(1.0);
+                ApplyZoom(GetGameDefaultZoom(_currentGameTag));
             }
             else if (e.Key == Key.N)
             {
@@ -903,7 +1250,7 @@ public partial class MainWindow : Window
             else if (e.Key == Key.Z)
             {
                 bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
-                if (isCardGame)
+                if (isCardGame && UndoButton?.IsEnabled != false)
                 {
                     e.Handled = true;
                     Undo_Click(null, new RoutedEventArgs());
@@ -912,7 +1259,7 @@ public partial class MainWindow : Window
             else if (e.Key == Key.H)
             {
                 bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
-                if (isCardGame)
+                if (isCardGame && HintButton?.IsEnabled != false)
                 {
                     e.Handled = true;
                     Hint_Click(null, new RoutedEventArgs());

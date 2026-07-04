@@ -13,5 +13,10 @@
 
         <!-- Programmatic container for overlaying card stack views -->
         <Canvas x:Name="CardsCanvas" Width="128" Height="181" HorizontalAlignment="Left" VerticalAlignment="Top" ClipToBounds="False" />
+
+        <!-- Whole-pile hint highlight (foundation / free cell / stock / waste) -->
+        <Border x:Name="HintHighlightBorder" Width="128" Height="181" IsVisible="False" IsHitTestVisible="False"
+                BorderBrush="#FFD700" BorderThickness="3.5" CornerRadius="10" Background="Transparent"
+                HorizontalAlignment="Left" VerticalAlignment="Top" />
     </Grid>
 </UserControl>

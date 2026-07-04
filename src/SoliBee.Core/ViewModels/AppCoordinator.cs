@@ -108,14 +108,15 @@ public partial class AppCoordinator : ObservableObject
     public void ResetStatistics()
     {
         if (ActiveViewModel is GameViewModel gvm)
-        {
-            gvm.Stats = new GameStatistics();
-            StatsService.SaveStats(gvm.Stats);
-        }
+            gvm.ResetStats();
         else if (ActiveViewModel is FreecellViewModel bvm)
             bvm.ResetStatistics();
         else if (ActiveViewModel is SpiderViewModel svm)
             svm.ResetStatistics();
+        else if (ActiveViewModel is BlackjackViewModel bjvm)
+            bjvm.ResetStats();
+        else if (ActiveViewModel is VideoPokerViewModel vpvm)
+            vpvm.ResetStats();
     }
 
     [RelayCommand]

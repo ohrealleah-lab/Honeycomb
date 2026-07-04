@@ -20,6 +20,16 @@ namespace SoliBee.Desktop.Views;
 
 public partial class SpiderView : CardGameView
 {
+    // Column gap narrows above 1.0x zoom so columns don't overflow horizontally; floors at 4px.
+    public void ApplyZoomGap(double zoom)
+    {
+        const double baseGap = 12;
+        double gap = zoom <= 1.0 ? baseGap : Math.Max(4, baseGap - (baseGap - 4) * (zoom - 1.0));
+        for (int i = 1; i < BoardGrid.ColumnDefinitions.Count; i += 2)
+            BoardGrid.ColumnDefinitions[i] = new ColumnDefinition(gap, GridUnitType.Pixel);
+        BoardGrid.Width = 10 * 128 + 9 * gap;
+    }
+
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
         if (DataContext is not SpiderViewModel vm) return false;
@@ -81,6 +91,8 @@ public partial class SpiderView : CardGameView
         if (DataContext is SpiderViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
+        WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
+        CardView.ClearPileViewCache(this);
     }
 
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
@@ -138,6 +150,11 @@ public partial class SpiderView : CardGameView
             {
                 NoMovesBanner.IsVisible = vm.HasNoMoves;
             }
+            else if (e.PropertyName == nameof(SpiderViewModel.IsAutocompletable) ||
+                     e.PropertyName == nameof(SpiderViewModel.IsAutoplayRunning))
+            {
+                AutocompleteBanner.IsVisible = vm.IsAutocompletable && !vm.IsAutoplayRunning;
+            }
             else if (e.PropertyName == nameof(SpiderViewModel.ActiveHint))
             {
                 ApplyHint(vm.ActiveHint, AllPileViews());
@@ -165,6 +182,11 @@ public partial class SpiderView : CardGameView
                 Foundation7.UpdateCardsLayout();
             }
         });
+    }
+
+    protected override void ClearActiveHint()
+    {
+        if (DataContext is SpiderViewModel vm) vm.ClearHintCycle();
     }
 
     private IEnumerable<PileView> AllPileViews() =>
@@ -253,6 +275,7 @@ public partial class SpiderView : CardGameView
     {
         if (DataContext is not SpiderViewModel vm) return;
         NoMovesBanner.IsVisible = false;
+        AutocompleteBanner.IsVisible = false;
         vm.InitializeGame();
         SoundService.PlayShuffle();
         e.Handled = true;
@@ -262,8 +285,29 @@ public partial class SpiderView : CardGameView
     {
         if (DataContext is not SpiderViewModel vm) return;
         NoMovesBanner.IsVisible = false;
+        AutocompleteBanner.IsVisible = false;
         vm.RestartGame();
         SoundService.PlayShuffle();
+        e.Handled = true;
+    }
+
+    private void AutocompleteGame_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SpiderViewModel vm) return;
+        AutocompleteBanner.IsVisible = false;
+        vm.Autocomplete();
+        e.Handled = true;
+    }
+
+    private void NoMovesDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        NoMovesBanner.IsVisible = false;
+        e.Handled = true;
+    }
+
+    private void AutocompleteDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        AutocompleteBanner.IsVisible = false;
         e.Handled = true;
     }
 
@@ -271,7 +315,6 @@ public partial class SpiderView : CardGameView
 
     private void ApplyFeltColor(GameOptions options)
     {
-        if (VignetteRect != null) VignetteRect.IsVisible = options.IsVignetteEnabled;
         if (options.IsFinalFantasyMode)
         {
             try
@@ -290,17 +333,9 @@ public partial class SpiderView : CardGameView
             return;
         }
 
-        string hexColor = options.FeltColor switch
-        {
-            FeltColorTheme.FeltGreen => "#008000",
-            FeltColorTheme.Crimson => "#8C0C26",
-            FeltColorTheme.RoyalBlue => "#1A3380",
-            FeltColorTheme.Charcoal => "#2E2E2E",
-            FeltColorTheme.Desert => "#C2967A",
-            FeltColorTheme.Custom => options.CustomFeltColorHex,
-            _ => "#008000"
-        };
-        try { BoardFeltGrid.Background = new SolidColorBrush(Avalonia.Media.Color.Parse(hexColor)); }
-        catch { BoardFeltGrid.Background = new SolidColorBrush(Avalonia.Media.Colors.DarkGreen); }
+        // Transparent, not an opaque repaint: the window background behind (MainWindow.ApplyFeltColor)
+        // already carries this same felt color, and staying transparent here lets the single
+        // app-wide vignette overlay (rendered behind the board content) show through in the gaps.
+        BoardFeltGrid.Background = Brushes.Transparent;
     }
 }

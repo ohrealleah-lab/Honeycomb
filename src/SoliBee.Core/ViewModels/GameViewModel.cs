@@ -24,6 +24,9 @@ public partial class GameViewModel : ObservableObject
     private bool _isAutocompletable;
 
     [ObservableProperty]
+    private bool _isAutoplayRunning;
+
+    [ObservableProperty]
     private bool _hasNoMoves;
 
     [ObservableProperty]
@@ -42,8 +45,17 @@ public partial class GameViewModel : ObservableObject
     private List<HintMove> _hintCycleList  = new();
     private int            _hintCycleIndex = 0;
 
+    // Tracks the last card move so hints can filter out its exact reversal.
+    private string? _lastMoveSourcePileId;
+    private string? _lastMoveTargetPileId;
+
     private readonly SynchronizationContext? _syncContext;
     private int _foundationCardCount;
+
+    private System.Threading.Timer? _autocompleteTimer;
+    // Windows-fork deviation: once autocomplete has ever run this game, Undo stays
+    // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
+    private bool _autocompleteLocked;
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
 
@@ -97,6 +109,12 @@ public partial class GameViewModel : ObservableObject
             Stats.CurrentStreak = 0;
 
         ClearHintCycle();
+        _lastMoveSourcePileId = null;
+        _lastMoveTargetPileId = null;
+        _autocompleteTimer?.Dispose();
+        _autocompleteTimer = null;
+        IsAutoplayRunning = false;
+        _autocompleteLocked = false;
         Stock.Cards.Clear();
         Waste.Cards.Clear();
         foreach (var f in Foundations) f.Cards.Clear();
@@ -195,11 +213,19 @@ public partial class GameViewModel : ObservableObject
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(TimeDisplay));
+        OnPropertyChanged(nameof(CanUndo));
     }
 
     public void RestartGame()
     {
         if (!_initialDeck.Any()) return;
+
+        _lastMoveSourcePileId = null;
+        _lastMoveTargetPileId = null;
+        _autocompleteTimer?.Dispose();
+        _autocompleteTimer = null;
+        IsAutoplayRunning = false;
+        _autocompleteLocked = false;
 
         // Clear everything
         Stock.Cards.Clear();
@@ -264,6 +290,7 @@ public partial class GameViewModel : ObservableObject
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(TimeDisplay));
+        OnPropertyChanged(nameof(CanUndo));
     }
 
     public void DrawCard()
@@ -294,6 +321,7 @@ public partial class GameViewModel : ObservableObject
             CheckDeadlock();
             OnPropertyChanged(nameof(Stock));
             OnPropertyChanged(nameof(Waste));
+            OnPropertyChanged(nameof(CanUndo));
             return;
         }
 
@@ -321,6 +349,7 @@ public partial class GameViewModel : ObservableObject
         CheckDeadlock();
         OnPropertyChanged(nameof(Stock));
         OnPropertyChanged(nameof(Waste));
+        OnPropertyChanged(nameof(CanUndo));
     }
 
     public bool CanMoveCard(Card card, Pile targetPile)
@@ -396,6 +425,9 @@ public partial class GameViewModel : ObservableObject
         var sourcePile = FindPileContaining(card);
         int index = sourcePile.Cards.IndexOf(card);
 
+        _lastMoveSourcePileId = sourcePile.Id;
+        _lastMoveTargetPileId = targetPile.Id;
+
         // Extract cards from the index to the end
         var cardsToMove = sourcePile.Cards.GetRange(index, sourcePile.Cards.Count - index);
         sourcePile.Cards.RemoveRange(index, sourcePile.Cards.Count - index);
@@ -432,10 +464,13 @@ public partial class GameViewModel : ObservableObject
         CheckVictory();
         CheckAutocomplete();
         CheckDeadlock();
-        OnPropertyChanged(nameof(Stock));
-        OnPropertyChanged(nameof(Waste));
+        // MoveCard never touches Stock, so don't notify it — doing so made the
+        // stock pile re-render (and visibly jitter) on every unrelated tableau move.
+        if (sourcePile == Waste || targetPile == Waste)
+            OnPropertyChanged(nameof(Waste));
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(Tableaus));
+        OnPropertyChanged(nameof(CanUndo));
     }
 
     private void UpdateScoreForMove(PileType source, PileType target, bool didFlip = false)
@@ -467,6 +502,10 @@ public partial class GameViewModel : ObservableObject
 
     public void SaveStateForUndo()
     {
+        // No-op during autoplay so every move it makes bundles into the single
+        // pre-autocomplete snapshot already pushed when Autocomplete() started.
+        if (IsAutoplayRunning) return;
+
         var snapshot = new GameStateSnapshot
         {
             Score              = State.Score,
@@ -490,8 +529,10 @@ public partial class GameViewModel : ObservableObject
     [RelayCommand]
     public void Undo()
     {
-        if (_undoStack.Count == 0) return;
+        if (_undoStack.Count == 0 || State.HasWon) return;
         ClearHintCycle();
+        _lastMoveSourcePileId = null;
+        _lastMoveTargetPileId = null;
 
         var snapshot = _undoStack.Pop();
         State.Score = snapshot.Score;
@@ -540,38 +581,71 @@ public partial class GameViewModel : ObservableObject
         {
             if (t.Cards.Any(c => !c.IsFaceUp)) { IsAutocompletable = false; return; }
         }
+        int total = Tableaus.Sum(t => t.Cards.Count) + Foundations.Sum(f => f.Cards.Count);
+        if (total != 52) { IsAutocompletable = false; return; }
         IsAutocompletable = !State.HasWon;
     }
 
     [RelayCommand]
     public void Autocomplete()
     {
-        if (!IsAutocompletable) return;
+        if (!IsAutocompletable || IsAutoplayRunning) return;
 
-        while (_foundationCardCount < 52)
+        // One bundled undo snapshot for the whole sequence — SaveStateForUndo() no-ops
+        // for every move made once IsAutoplayRunning is true. Once autocomplete has
+        // started, Undo stays disabled for the rest of the game (see CanUndo).
+        SaveStateForUndo();
+        _autocompleteLocked = true;
+        OnPropertyChanged(nameof(CanUndo));
+        IsAutoplayRunning = true;
+        ScheduleNextAutocompleteMove();
+    }
+
+    private void ScheduleNextAutocompleteMove()
+    {
+        _autocompleteTimer?.Dispose();
+        _autocompleteTimer = new System.Threading.Timer(_ =>
         {
-            bool movedAny = false;
-            foreach (var t in Tableaus.Where(x => x.Cards.Count > 0))
-            {
-                var card = t.Cards.Last();
-                foreach (var f in Foundations)
-                {
-                    if (CanMoveCard(card, f))
-                    {
-                        MoveCard(card, f);
-                        movedAny = true;
-                        break;
-                    }
-                }
-                if (movedAny) break;
-            }
+            _syncContext?.Post(_ => AnimateNextAutocompleteMove(), null);
+        }, null, 150, Timeout.Infinite);
+    }
 
-            if (!movedAny)
-            {
-                // Prevent infinite loop if something goes wrong
-                break;
-            }
+    private void AnimateNextAutocompleteMove()
+    {
+        var move = FindNextFoundationMove();
+        if (move != null)
+        {
+            MoveCard(move.Value.Card, move.Value.Foundation);
+            ScheduleNextAutocompleteMove();
         }
+        else
+        {
+            _autocompleteTimer?.Dispose();
+            _autocompleteTimer = null;
+            IsAutoplayRunning = false;
+            CheckVictory();
+        }
+    }
+
+    // Waste top → foundation first, then each tableau's top card, left to right.
+    private (Card Card, Pile Foundation)? FindNextFoundationMove()
+    {
+        if (Waste.Cards.Count > 0)
+        {
+            var wasteTop = Waste.Cards.Last();
+            foreach (var f in Foundations)
+                if (CanMoveCard(wasteTop, f)) return (wasteTop, f);
+        }
+
+        foreach (var t in Tableaus)
+        {
+            if (t.Cards.Count == 0) continue;
+            var card = t.Cards.Last();
+            foreach (var f in Foundations)
+                if (CanMoveCard(card, f)) return (card, f);
+        }
+
+        return null;
     }
 
     public void CheckVictory()
@@ -590,6 +664,7 @@ public partial class GameViewModel : ObservableObject
                     Stats.LongestStreak = Stats.CurrentStreak;
                 if (Stats.ShortestWinSeconds == 0 || State.TimerSeconds < Stats.ShortestWinSeconds)
                     Stats.ShortestWinSeconds = State.TimerSeconds;
+                Stats.TotalWinSeconds += State.TimerSeconds;
 
                 if (Options.IsVegasScoring)
                 {
@@ -611,9 +686,26 @@ public partial class GameViewModel : ObservableObject
         }
     }
 
+    // Reload fresh first so we don't clobber Freecell/Spider's data in the shared
+    // stats file with this ViewModel's (possibly stale) in-memory snapshot.
+    public void ResetStats()
+    {
+        var stats = StatsService.LoadStats();
+        stats.GamesPlayed        = 0;
+        stats.GamesWon           = 0;
+        stats.CurrentStreak      = 0;
+        stats.LongestStreak      = 0;
+        stats.VegasHighScore     = 0;
+        stats.StandardHighScore  = 0;
+        stats.ShortestWinSeconds = 0;
+        stats.TotalWinSeconds    = 0;
+        StatsService.SaveStats(stats);
+        Stats = stats;
+    }
+
     private void CheckDeadlock()
     {
-        if (State.HasWon) return;
+        if (State.HasWon || IsAutocompletable) { HasNoMoves = false; return; }
         HasNoMoves = !HasAnyLegalMoves();
     }
 
@@ -699,11 +791,15 @@ public partial class GameViewModel : ObservableObject
 
         if (_hintCycleList.Count == 0) { ActiveHint = null; return; }
 
-        ActiveHint      = _hintCycleList[_hintCycleIndex];
+        int shownIndex = _hintCycleIndex;
+        var hint       = _hintCycleList[shownIndex];
         _hintCycleIndex = (_hintCycleIndex + 1) % _hintCycleList.Count;
+        ActiveHint      = hint with { Index = shownIndex + 1, Total = _hintCycleList.Count };
     }
 
-    private void ClearHintCycle()
+    // Public so the view can clear the queue when a hint's on-screen timer expires
+    // (auto-dismiss), matching the rule that the next Hint press starts fresh.
+    public void ClearHintCycle()
     {
         _hintCycleList.Clear();
         _hintCycleIndex = 0;
@@ -712,55 +808,107 @@ public partial class GameViewModel : ObservableObject
 
     private List<HintMove> CollectAllHints()
     {
-        var hints    = new List<HintMove>();
+        var scored   = new List<(int Score, HintMove Hint)>();
         var wasteTop = Waste.Cards.Count > 0 ? Waste.Cards.Last() : null;
 
-        // 1. Waste top → foundation
+        // Priority 1 (1000): any card (waste top or tableau top) → Foundation
         if (wasteTop != null)
             foreach (var f in Foundations)
                 if (CanMoveCard(wasteTop, f))
-                    hints.Add(new HintMove(wasteTop, Waste.Id, f.Id,
-                        $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} to Foundation."));
+                    scored.Add((1000, new HintMove(wasteTop, Waste.Id, f.Id,
+                        $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} to Foundation.")));
 
-        // 2. Tableau top → foundation
         foreach (var src in Tableaus)
         {
             if (src.Cards.Count == 0) continue;
             var card = src.Cards.Last();
             foreach (var f in Foundations)
                 if (CanMoveCard(card, f))
-                    hints.Add(new HintMove(card, src.Id, f.Id,
-                        $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} to Foundation."));
+                    scored.Add((1000, new HintMove(card, src.Id, f.Id,
+                        $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} to Foundation.")));
         }
 
-        // 3. Waste top → tableau
-        if (wasteTop != null)
-            foreach (var t in Tableaus)
-                if (CanMoveCard(wasteTop, t))
-                    hints.Add(new HintMove(wasteTop, Waste.Id, t.Id,
-                        $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} from waste."));
-
-        // 4. Tableau sequence → tableau (most face-down cards to uncover first)
-        foreach (var src in Tableaus.OrderByDescending(t => t.Cards.Count(c => !c.IsFaceUp)))
+        // Priority 2 (500 + hidden×100) / Priority 4 (150): tableau → tableau
+        foreach (var src in Tableaus)
         {
             if (src.Cards.Count == 0) continue;
             int firstFaceUp = src.Cards.FindIndex(c => c.IsFaceUp);
             if (firstFaceUp < 0) continue;
             var seq = src.Cards.GetRange(firstFaceUp, src.Cards.Count - firstFaceUp);
+            bool revealsHidden = firstFaceUp > 0;
+            int hiddenCount    = firstFaceUp;
+
             foreach (var tgt in Tableaus)
             {
                 if (tgt.Id == src.Id) continue;
-                if (CanMoveCard(seq[0], tgt))
-                    hints.Add(new HintMove(seq[0], src.Id, tgt.Id,
-                        $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence."));
+                if (!CanMoveCard(seq[0], tgt)) continue;
+
+                if (revealsHidden)
+                {
+                    scored.Add((500 + hiddenCount * 100, new HintMove(seq[0], src.Id, tgt.Id,
+                        $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence.")));
+                }
+                else if (tgt.Cards.Count > 0)
+                {
+                    // Plain, all-face-up moves onto an empty column (e.g. King to empty) are
+                    // suppressed here — they're only surfaced later if nothing else is legal.
+                    scored.Add((150, new HintMove(seq[0], src.Id, tgt.Id,
+                        $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence.")));
+                }
             }
         }
 
-        // 5. Draw from stock
-        if (Stock.Cards.Count > 0)
-            hints.Add(new HintMove(new Card("deal", CardSuit.Spades, 1, false), Stock.Id, "", "Draw from stock."));
+        // Priority 3 (300): waste top → tableau
+        if (wasteTop != null)
+            foreach (var t in Tableaus)
+                if (CanMoveCard(wasteTop, t))
+                    scored.Add((300, new HintMove(wasteTop, Waste.Id, t.Id,
+                        $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} from waste.")));
 
-        // No moves fallback
+        // Priority 5 (50): draw from stock
+        if (Stock.Cards.Count > 0)
+            scored.Add((50, new HintMove(new Card("deal", CardSuit.Spades, 1, false), Stock.Id, "", "Draw from stock.")));
+
+        // Priority 6 (20): recycle waste back to stock — only when stock is empty and legal
+        if (Stock.Cards.Count == 0 && Waste.Cards.Count > 0)
+        {
+            int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 1;
+            bool canRecycle = !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
+            if (canRecycle)
+                scored.Add((20, new HintMove(new Card("recycle", CardSuit.Spades, 1, false), Waste.Id, Stock.Id,
+                    "Recycle waste back to stock.")));
+        }
+
+        var hints = scored.OrderByDescending(s => s.Score).Select(s => s.Hint).ToList();
+
+        // King-to-empty-column fallback: only surfaced when it's the only legal move at all.
+        if (hints.Count == 0)
+        {
+            foreach (var src in Tableaus)
+            {
+                if (src.Cards.Count == 0) continue;
+                int firstFaceUp = src.Cards.FindIndex(c => c.IsFaceUp);
+                if (firstFaceUp < 0) continue;
+                var seq = src.Cards.GetRange(firstFaceUp, src.Cards.Count - firstFaceUp);
+                foreach (var tgt in Tableaus)
+                {
+                    if (tgt.Id == src.Id || tgt.Cards.Count != 0) continue;
+                    if (CanMoveCard(seq[0], tgt))
+                        hints.Add(new HintMove(seq[0], src.Id, tgt.Id,
+                            $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence."));
+                }
+            }
+        }
+
+        // Last-move filter: drop the exact reversal of the last move (source/target swapped).
+        // If that empties the list, fall back to the unfiltered one so something is always shown.
+        if (_lastMoveSourcePileId != null && _lastMoveTargetPileId != null)
+        {
+            var filtered = hints.Where(h =>
+                !(h.SourcePileId == _lastMoveTargetPileId && h.TargetPileId == _lastMoveSourcePileId)).ToList();
+            if (filtered.Count > 0) hints = filtered;
+        }
+
         if (hints.Count == 0)
             hints.Add(new HintMove(new Card("no_move", CardSuit.Spades, 1, true), "", "", "No moves available."));
 
@@ -774,7 +922,7 @@ public partial class GameViewModel : ObservableObject
         CardSuit.Diamonds => "♦", CardSuit.Clubs => "♣", _ => ""
     };
 
-    public bool CanUndo => _undoStack.Count > 0;
+    public bool CanUndo => _undoStack.Count > 0 && !_autocompleteLocked && !State.HasWon;
 
     private Pile FindPileContaining(Card card)
     {

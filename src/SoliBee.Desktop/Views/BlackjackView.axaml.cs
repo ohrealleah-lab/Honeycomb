@@ -17,15 +17,25 @@ namespace SoliBee.Desktop.Views;
 
 public partial class BlackjackView : UserControl
 {
+    private DispatcherTimer? _resultShowTimer;
     private DispatcherTimer? _bannerDelayTimer;
     private DispatcherTimer? _bannerFadeTimer;
     private DispatcherTimer? _winPulseTimer;
     private DispatcherTimer? _bustFlashTimer;
+    private DispatcherTimer? _cardsFadeTimer;
+    private DispatcherTimer? _idleTimer;
+    private DispatcherTimer? _idleFadeTimer;
     private double           _winPulsePhase;
 
     private BlackjackPhase _lastPhase         = BlackjackPhase.Betting;
     private bool           _resultSoundPlayed = false;
     private int            _prevBustCount     = 0;
+
+    // True once the post-result card fade has completed and card-back placeholders
+    // are showing in place of the (stale) finished hand, until the next Deal().
+    private bool _cardsFadedOut = false;
+
+    private static readonly Card _blankCard = new("__bj_blank__", CardSuit.Spades, 0, false);
 
     // Deal animation — track card IDs to detect newly-added cards each refresh
     private List<string>       _prevDealerIds  = new();
@@ -48,7 +58,6 @@ public partial class BlackjackView : UserControl
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
             Dispatcher.UIThread.InvokeAsync(() => { if (DataContext is BlackjackViewModel bvm) Refresh(bvm); }));
-        if (vm.CanDeal) vm.Deal();
         Refresh(vm);
     }
 
@@ -80,11 +89,24 @@ public partial class BlackjackView : UserControl
         // Phase-transition sounds
         PlayTransitionSounds(vm);
 
+        // Leaving Result (e.g. the next Deal() started a new hand) — stop showing
+        // the post-fade card-back placeholders and resume normal card rendering.
+        if (vm.State.Phase != BlackjackPhase.Result) _cardsFadedOut = false;
+
+        // The banner/fade sequence already fully played for this result in a previous
+        // View instance (e.g. the player switched to another game and back — the View
+        // is recreated on every game switch, so this instance's own _cardsFadedOut
+        // starts false with no memory of it). Jump straight to the settled card-back
+        // state instead of replaying the whole hand + banner from scratch.
+        if (vm.State.Phase == BlackjackPhase.Result && vm.State.ResultBannerShown)
+            _cardsFadedOut = true;
+
         RebuildDealerCards(vm);
         RebuildPlayerHands(vm);
         UpdateButtons(vm);
         UpdateResult(vm);
         ApplyFeltColor(vm);
+        ResetIdleTimer(vm);
 
         _lastPhase = vm.State.Phase;
     }
@@ -123,13 +145,38 @@ public partial class BlackjackView : UserControl
 
     // ── Dealer cards ──────────────────────────────────────────────────────────
 
+    private static Viewbox MakeCardVisual(CardView cv, int index)
+    {
+        var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 190, Height = 268.375, Child = cv };
+        if (index > 0) vb.Margin = new Avalonia.Thickness(-35.625, 0, 0, 0);
+        return vb;
+    }
+
+    private bool ShowingBlankCards(BlackjackViewModel vm) =>
+        vm.State.Phase == BlackjackPhase.Betting ||
+        (_cardsFadedOut && vm.State.Phase == BlackjackPhase.Result);
+
     private void RebuildDealerCards(BlackjackViewModel vm)
     {
         DealerCardsPanel.Children.Clear();
 
+        if (ShowingBlankCards(vm))
+        {
+            DealerCountLabel.Text = "DEALER";
+            for (int i = 0; i < 2; i++)
+                DealerCardsPanel.Children.Add(MakeCardVisual(new CardView { Card = _blankCard, IsHitTestVisible = false }, i));
+            _prevDealerIds = new();
+            return;
+        }
+
         var cards   = vm.State.DealerHand.Cards;
         var newIds  = cards.Select(c => c.Id).ToList();
         int stagger = 0;
+
+        // Only the face-up cards count toward the displayed total — the hole card
+        // stays hidden from this count until it's flipped during the dealer's turn.
+        var (visibleValue, _) = vm.State.DealerHand.ComputeVisibleValue();
+        DealerCountLabel.Text = $"DEALER  {visibleValue}";
 
         for (int i = 0; i < cards.Count; i++)
         {
@@ -143,35 +190,46 @@ public partial class BlackjackView : UserControl
         }
 
         _prevDealerIds = newIds;
-
-        bool isDuringPlay = vm.State.Phase == BlackjackPhase.Playing;
-        var (visVal, visSoft)   = vm.State.DealerHand.ComputeVisibleValue();
-        var (fullVal, fullSoft) = vm.State.DealerHand.ComputeValue();
-
-        if (cards.Count == 0)
-        {
-            DealerValuePill.IsVisible = false;
-        }
-        else if (isDuringPlay)
-        {
-            DealerValuePill.IsVisible = false;
-        }
-        else
-        {
-            DealerValuePill.IsVisible = true;
-            bool bust = fullVal > 21;
-            DealerValueLabel.Text = bust ? $"{fullVal}  BUST" : $"{fullVal}{(fullSoft ? "*" : "")}";
-            DealerValueLabel.Foreground = bust
-                ? new SolidColorBrush(Color.Parse("#FF6666"))
-                : Brushes.White;
-        }
     }
 
     // ── Player hands ──────────────────────────────────────────────────────────
 
+    // Scale factor for a split hand's card size, keyed by card count. A hand's total
+    // rendered width (first card + each overlapping card after it) is capped at the
+    // width of a fresh 2-card hand, so no matter how many cards a hand grows to via
+    // Hit, it never grows wider than its starting footprint — which means it can
+    // never overlap the other split hand sitting beside it, and its cards never
+    // overlap the board edge either.
+    private const double CardBaseWidth    = 190;
+    private const double CardOverlapWidth = 154.375; // width each additional overlapping card adds
+
+    private static double CardScaleForHandSize(int cardCount)
+    {
+        if (cardCount <= 2) return 1.0;
+        double unscaledWidth   = CardBaseWidth + (cardCount - 1) * CardOverlapWidth;
+        double twoCardWidth    = CardBaseWidth + CardOverlapWidth;
+        return Math.Min(1.0, twoCardWidth / unscaledWidth);
+    }
+
     private void RebuildPlayerHands(BlackjackViewModel vm)
     {
         PlayerHandsContainer.Children.Clear();
+
+        if (ShowingBlankCards(vm))
+        {
+            PlayerCountLabel.Text = "PLAYER";
+            var cardRow = new StackPanel { Orientation = Orientation.Horizontal };
+            for (int i = 0; i < 2; i++)
+                cardRow.Children.Add(MakeCardVisual(new CardView { Card = _blankCard, IsHitTestVisible = false }, i));
+            PlayerHandsContainer.Children.Add(cardRow);
+            _prevPlayerIds = new();
+            _prevBustCount = 0;
+            return;
+        }
+
+        PlayerCountLabel.Text = vm.State.PlayerHands.Count > 1
+            ? $"PLAYER  {string.Join(" / ", vm.State.PlayerHands.Select(h => h.ComputeValue().Value))}"
+            : $"PLAYER  {vm.State.PlayerHands[0].ComputeValue().Value}";
 
         // Grow tracking list as needed
         while (_prevPlayerIds.Count < vm.State.PlayerHands.Count)
@@ -184,27 +242,29 @@ public partial class BlackjackView : UserControl
         {
             var hand    = vm.State.PlayerHands[hi];
             bool active = vm.State.Phase == BlackjackPhase.Playing && hi == vm.State.ActiveHandIndex;
-            bool result = vm.State.Phase == BlackjackPhase.Result;
 
-            var (val, soft) = hand.ComputeValue();
+            var (val, _) = hand.ComputeValue();
             bool bust = val > 21;
             if (bust) bustCount++;
-
-            string valueText = bust ? $"{val}  BUST"
-                             : soft ? $"{val}*"
-                                    : $"{val}";
 
             var prevIds = hi < _prevPlayerIds.Count ? _prevPlayerIds[hi] : new List<string>();
             var newIds  = hand.Cards.Select(c => c.Id).ToList();
             int stagger = 0;
 
-            // Cards row
+            // Cards row — shrink card size as a split hand grows, so a long hand
+            // never pushes its outer cards past the window edge; single (unsplit)
+            // hands always stay at full size.
+            double scale = vm.State.IsSplit ? CardScaleForHandSize(hand.Cards.Count) : 1.0;
+            double cardWidth  = CardBaseWidth * scale;
+            double cardHeight = 268.375 * scale;
+            double overlap    = -(CardBaseWidth - CardOverlapWidth) * scale;
+
             var cardRow = new StackPanel { Orientation = Orientation.Horizontal };
             for (int ci = 0; ci < hand.Cards.Count; ci++)
             {
                 var cv = new CardView { Card = hand.Cards[ci], IsHitTestVisible = false };
-                var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 190, Height = 268.375, Child = cv };
-                if (ci > 0) vb.Margin = new Avalonia.Thickness(-35.625, 0, 0, 0);
+                var vb = new Viewbox { Stretch = Stretch.Uniform, Width = cardWidth, Height = cardHeight, Child = cv };
+                if (ci > 0) vb.Margin = new Avalonia.Thickness(overlap, 0, 0, 0);
                 cardRow.Children.Add(vb);
 
                 bool isNew = ci >= prevIds.Count || prevIds[ci] != newIds[ci];
@@ -214,84 +274,8 @@ public partial class BlackjackView : UserControl
             if (hi < _prevPlayerIds.Count) _prevPlayerIds[hi] = newIds;
             else _prevPlayerIds.Add(newIds);
 
-            // Value pill
-            var valuePill = new Border
-            {
-                Background   = bust
-                    ? new SolidColorBrush(Color.FromArgb(0xCC, 0xAA, 0x00, 0x00))
-                    : new SolidColorBrush(Color.FromArgb(0x99, 0x00, 0x00, 0x00)),
-                CornerRadius = new Avalonia.CornerRadius(10),
-                Padding      = new Avalonia.Thickness(12, 3),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                IsVisible    = hand.Cards.Count > 0,
-                Child = new TextBlock
-                {
-                    Text       = valueText,
-                    FontSize   = 14,
-                    FontWeight = FontWeight.Bold,
-                    Foreground = bust
-                        ? new SolidColorBrush(Color.Parse("#FF9999"))
-                        : Brushes.White,
-                    FontFamily = new FontFamily("Courier New, Consolas, monospace"),
-                }
-            };
-
-            // Result badge (shown after hand ends)
-            Border? resultBadge = null;
-            if (result && hand.Result != BlackjackHandResult.Pending)
-            {
-                string badgeText = hand.Result switch
-                {
-                    BlackjackHandResult.Blackjack => "BLACKJACK",
-                    BlackjackHandResult.Won       => $"+{hand.Bet}",
-                    BlackjackHandResult.Push      => "PUSH",
-                    BlackjackHandResult.Lost      => $"-{hand.Bet}",
-                    _                             => "",
-                };
-                var badgeFg = hand.Result switch
-                {
-                    BlackjackHandResult.Blackjack or BlackjackHandResult.Won
-                        => new SolidColorBrush(Color.Parse("#FFD700")),
-                    BlackjackHandResult.Push
-                        => (IBrush)Brushes.White,
-                    _   => new SolidColorBrush(Color.Parse("#FF6666")),
-                };
-                resultBadge = new Border
-                {
-                    Background   = new SolidColorBrush(Color.FromArgb(0xCC, 0x00, 0x00, 0x00)),
-                    CornerRadius = new Avalonia.CornerRadius(8),
-                    Padding      = new Avalonia.Thickness(10, 2),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Child = new TextBlock
-                    {
-                        Text       = badgeText,
-                        FontSize   = 13,
-                        FontWeight = FontWeight.Bold,
-                        Foreground = badgeFg,
-                        FontFamily = new FontFamily("Courier New, Consolas, monospace"),
-                    }
-                };
-            }
-
             var inner = new StackPanel { Spacing = 5 };
             inner.Children.Add(cardRow);
-            if (resultBadge != null)
-            {
-                // Side-by-side so total height matches the pill-only case
-                var pillRow = new StackPanel
-                {
-                    Orientation         = Orientation.Horizontal,
-                    Spacing             = 6,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                };
-                pillRow.Children.Add(valuePill);
-                pillRow.Children.Add(resultBadge);
-                inner.Children.Add(pillRow);
-            }
-            else
-            {
-                inner.Children.Add(valuePill);
-            }
 
             var container = new Border
             {
@@ -305,13 +289,16 @@ public partial class BlackjackView : UserControl
             // Track the bust border for the flash animation
             if (bust) newBustBorder = container;
 
-            // Outer column — includes "YOUR TURN" indicator for split
+            // Outer column — includes "YOUR TURN" indicator for split.
+            // Always reserve the label's slot (even when blank) so both split hands'
+            // card rows stay vertically aligned instead of the active hand's cards
+            // shifting down by the label's height.
             var outer = new StackPanel { Spacing = 3, HorizontalAlignment = HorizontalAlignment.Center };
-            if (active && vm.State.IsSplit)
+            if (vm.State.IsSplit)
             {
                 outer.Children.Add(new TextBlock
                 {
-                    Text                = "▶  YOUR TURN",
+                    Text                = active ? "▶  YOUR TURN" : " ",
                     FontSize            = 10,
                     FontWeight          = FontWeight.Bold,
                     Foreground          = new SolidColorBrush(Color.FromArgb(0xCC, 0xFF, 0xFF, 0x44)),
@@ -363,6 +350,7 @@ public partial class BlackjackView : UserControl
         bool canDeal = vm.CanDeal;
 
         bool notPlaying = !playing;
+        ActionButtonRow.IsVisible = playing;
         HitButton.IsVisible    = playing;
         StandButton.IsVisible  = playing;
         DoubleButton.IsVisible = playing;
@@ -385,6 +373,12 @@ public partial class BlackjackView : UserControl
 
     // ── Result overlay ────────────────────────────────────────────────────────
 
+    private static string FormatHandTotal(BlackjackHand hand)
+    {
+        var (value, _) = hand.ComputeValue();
+        return hand.IsBust ? $"{value} (Bust)" : value.ToString();
+    }
+
     private void UpdateResult(BlackjackViewModel vm)
     {
         if (vm.State.Phase != BlackjackPhase.Result)
@@ -392,6 +386,9 @@ public partial class BlackjackView : UserControl
             if (_lastPhase == BlackjackPhase.Result) HideBanner();
             return;
         }
+
+        // Already fully played out (see Refresh) — don't replay the reveal/banner.
+        if (vm.State.ResultBannerShown) return;
 
         // Don't restart the banner if we're already showing it for this result
         if (_lastPhase == BlackjackPhase.Result) return;
@@ -403,47 +400,68 @@ public partial class BlackjackView : UserControl
 
         string netStr = net > 0 ? $"+{net} credits" : net < 0 ? $"{net} credits" : "Even";
 
+        ResultDealerTotal.Text = $"Dealer: {FormatHandTotal(vm.State.DealerHand)}";
+        ResultPlayerTotal.Text = vm.State.PlayerHands.Count > 1
+            ? $"Player: {string.Join(" / ", vm.State.PlayerHands.Select(FormatHandTotal))}"
+            : $"Player: {FormatHandTotal(vm.State.PlayerHands[0])}";
+
+        string headline, subline, background, boxShadow;
+        bool win;
+        int streak;
+
         if (anyBJ)
         {
-            // Delay banner so the user can see the blackjack hand before the result appears
-            string capturedNet = netStr;
-            int capturedWins = vm.ConsecutiveWins;
-            var bjDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-            bjDelay.Tick += (_, _) =>
-            {
-                bjDelay.Stop();
-                ResultHeadline.Text = "BLACKJACK!";
-                ResultSubline.Text  = capturedNet;
-                ResultOverlay.Background = new SolidColorBrush(Color.Parse("#1B5E20"));
-                ResultOverlay.BoxShadow = BoxShadows.Parse("0 0 28 8 #90FFD700, 0 4 18 0 #AA000000");
-                ShowBanner(win: true, capturedWins);
-            };
-            bjDelay.Start();
+            headline   = "BLACKJACK!";
+            subline    = netStr;
+            background = "#1B5E20";
+            boxShadow  = "0 0 28 8 #90FFD700, 0 4 18 0 #AA000000";
+            win        = true;
+            streak     = vm.ConsecutiveWins;
         }
         else if (anyWin)
         {
-            ResultHeadline.Text = "YOU WIN!";
-            ResultSubline.Text  = netStr;
-            ResultOverlay.Background = new SolidColorBrush(Color.Parse("#1B5E20")); // Dark green
-            ResultOverlay.BoxShadow = BoxShadows.Parse("0 0 28 8 #90FFD700, 0 4 18 0 #AA000000");
-            ShowBanner(win: true, vm.ConsecutiveWins);
+            headline   = "YOU WIN!";
+            subline    = netStr;
+            background = "#1B5E20"; // Dark green
+            boxShadow  = "0 0 28 8 #90FFD700, 0 4 18 0 #AA000000";
+            win        = true;
+            streak     = vm.ConsecutiveWins;
         }
         else if (allPush)
         {
-            ResultHeadline.Text = "PUSH";
-            ResultSubline.Text  = "Bet Returned";
-            ResultOverlay.Background = new SolidColorBrush(Color.Parse("#37474F")); // Dark slate grey
-            ResultOverlay.BoxShadow = BoxShadows.Parse("0 4 18 0 #AA000000");
-            ShowBanner(win: false, 0);
+            headline   = "PUSH";
+            subline    = "Bet Returned";
+            background = "#37474F"; // Dark slate grey
+            boxShadow  = "0 4 18 0 #AA000000";
+            win        = false;
+            streak     = 0;
         }
         else
         {
-            ResultHeadline.Text = "DEALER WINS";
-            ResultSubline.Text  = netStr;
-            ResultOverlay.Background = new SolidColorBrush(Color.Parse("#B71C1C")); // Dark red
-            ResultOverlay.BoxShadow = BoxShadows.Parse("0 4 18 0 #AA000000");
-            ShowBanner(win: false, 0);
+            headline   = "DEALER WINS";
+            subline    = netStr;
+            background = "#B71C1C"; // Dark red
+            boxShadow  = "0 4 18 0 #AA000000";
+            win        = false;
+            streak     = 0;
         }
+
+        // Every outcome (including a natural Blackjack) waits the same 1.5s after the
+        // result is known before the banner appears, so the player always gets a beat
+        // to see the final hand before it's covered.
+        _resultShowTimer?.Stop();
+        _resultShowTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+        _resultShowTimer.Tick += (_, _) =>
+        {
+            _resultShowTimer!.Stop();
+            _resultShowTimer = null;
+            ResultHeadline.Text = headline;
+            ResultSubline.Text  = subline;
+            ResultOverlay.Background = new SolidColorBrush(Color.Parse(background));
+            ResultOverlay.BoxShadow  = BoxShadows.Parse(boxShadow);
+            ShowBanner(win, streak);
+        };
+        _resultShowTimer.Start();
     }
 
     private void ShowBanner(bool win, int streak)
@@ -471,7 +489,7 @@ public partial class BlackjackView : UserControl
         else StopWinPulse();
 
         _bannerDelayTimer?.Stop();
-        _bannerDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };
+        _bannerDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5000) };
         _bannerDelayTimer.Tick += (_, _) =>
         {
             _bannerDelayTimer!.Stop();
@@ -496,6 +514,7 @@ public partial class BlackjackView : UserControl
                 ResultOverlay.IsVisible = false;
                 ResultOverlay.Opacity   = 1.0;
                 StopWinPulse();
+                StartCardsFade();
                 return;
             }
             ResultOverlay.Opacity = opacity;
@@ -503,13 +522,56 @@ public partial class BlackjackView : UserControl
         _bannerFadeTimer.Start();
     }
 
+    // ── Post-result card fade ────────────────────────────────────────────────
+
+    private void StartCardsFade()
+    {
+        _cardsFadeTimer?.Stop();
+        double opacity = 1.0;
+        _cardsFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _cardsFadeTimer.Tick += (_, _) =>
+        {
+            opacity -= 0.025; // ~640 ms total
+            if (opacity <= 0)
+            {
+                _cardsFadeTimer!.Stop();
+                _cardsFadeTimer = null;
+                DealerCardsPanel.Opacity      = 1.0;
+                PlayerHandsContainer.Opacity  = 1.0;
+                _cardsFadedOut = true;
+                if (DataContext is BlackjackViewModel vm)
+                {
+                    // Mark this result as fully presented on the ViewModel (not just this
+                    // View instance) so switching games and back doesn't replay the banner.
+                    vm.State.ResultBannerShown = true;
+                    RebuildDealerCards(vm);
+                    RebuildPlayerHands(vm);
+                }
+                return;
+            }
+            DealerCardsPanel.Opacity     = opacity;
+            PlayerHandsContainer.Opacity = opacity;
+        };
+        _cardsFadeTimer.Start();
+    }
+
+    private void StopCardsFade()
+    {
+        _cardsFadeTimer?.Stop();
+        _cardsFadeTimer = null;
+        DealerCardsPanel.Opacity     = 1.0;
+        PlayerHandsContainer.Opacity = 1.0;
+    }
+
     private void HideBanner()
     {
+        _resultShowTimer?.Stop();  _resultShowTimer  = null;
         _bannerDelayTimer?.Stop(); _bannerDelayTimer = null;
         _bannerFadeTimer?.Stop();  _bannerFadeTimer  = null;
         ResultOverlay.IsVisible = false;
         ResultOverlay.Opacity   = 1.0;
         StopWinPulse();
+        StopCardsFade();
     }
 
     private void StartWinPulse()
@@ -536,10 +598,63 @@ public partial class BlackjackView : UserControl
 
     private void StopTimers()
     {
+        _resultShowTimer?.Stop();  _resultShowTimer  = null;
         _bannerDelayTimer?.Stop(); _bannerDelayTimer = null;
         _bannerFadeTimer?.Stop();  _bannerFadeTimer  = null;
         _winPulseTimer?.Stop();    _winPulseTimer    = null;
         _bustFlashTimer?.Stop();   _bustFlashTimer   = null;
+        _cardsFadeTimer?.Stop();   _cardsFadeTimer   = null;
+        _idleTimer?.Stop();        _idleTimer        = null;
+        _idleFadeTimer?.Stop();    _idleFadeTimer    = null;
+    }
+
+    // ── Idle nudge ────────────────────────────────────────────────────────────
+
+    private void ResetIdleTimer(BlackjackViewModel vm)
+    {
+        _idleTimer?.Stop();
+        _idleTimer = null;
+        if (IdlePrompt.Opacity > 0) FadeOutIdlePrompt();
+        if (vm.State.Phase != BlackjackPhase.Betting) return;
+        _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _idleTimer.Tick += (_, _) =>
+        {
+            _idleTimer!.Stop();
+            _idleTimer = null;
+            if (DataContext is BlackjackViewModel v && v.State.Phase == BlackjackPhase.Betting)
+                FadeInIdlePrompt();
+        };
+        _idleTimer.Start();
+    }
+
+    private void FadeInIdlePrompt()
+    {
+        _idleFadeTimer?.Stop();
+        double opacity = IdlePrompt.Opacity;
+        _idleFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _idleFadeTimer.Tick += (_, _) =>
+        {
+            opacity = Math.Min(1.0, opacity + 16.0 / 600.0);
+            IdlePrompt.Opacity = opacity;
+            if (opacity >= 1.0) { _idleFadeTimer!.Stop(); _idleFadeTimer = null; }
+        };
+        _idleFadeTimer.Start();
+    }
+
+    private void FadeOutIdlePrompt()
+    {
+        _idleFadeTimer?.Stop();
+        double opacity = IdlePrompt.Opacity;
+        if (opacity <= 0) return;
+        double speed = opacity / (300.0 / 16.0);
+        _idleFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _idleFadeTimer.Tick += (_, _) =>
+        {
+            opacity = Math.Max(0, opacity - speed);
+            IdlePrompt.Opacity = opacity;
+            if (opacity <= 0) { _idleFadeTimer!.Stop(); _idleFadeTimer = null; IdlePrompt.Opacity = 0; }
+        };
+        _idleFadeTimer.Start();
     }
 
     // ── Felt color ────────────────────────────────────────────────────────────
@@ -608,6 +723,20 @@ public partial class BlackjackView : UserControl
         if (DataContext is not BlackjackViewModel vm) return;
         vm.Deal();
         SoundService.PlayShuffle();
+    }
+
+    // Clicking the card backs deals a hand at the current bet, same as pressing
+    // Deal/Space — mirrors the same click-to-deal behavior already wired up for
+    // Video Poker's card slots. Matches whatever makes the Deal button itself
+    // visible/clickable (Betting, Result/"Deal Again", etc.), not just the initial
+    // Betting phase — otherwise clicking cards to start the next hand after a
+    // finished hand wouldn't work.
+    private void CardBack_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is not BlackjackViewModel vm || !vm.CanDeal) return;
+        vm.Deal();
+        SoundService.PlayShuffle();
+        e.Handled = true;
     }
 
     private void Hit_Click(object? sender, RoutedEventArgs e)

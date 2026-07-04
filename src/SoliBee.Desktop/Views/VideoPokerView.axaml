@@ -3,10 +3,10 @@
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
              x:Class="SoliBee.Desktop.Views.VideoPokerView">
 
-    <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,Auto,*,Auto">
+    <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto">
 
         <!-- Vignette depth overlay -->
-        <Rectangle x:Name="VignetteRect" Grid.RowSpan="3" IsHitTestVisible="False" ZIndex="-1">
+        <Rectangle x:Name="VignetteRect" Grid.RowSpan="2" IsHitTestVisible="False" ZIndex="-1">
             <Rectangle.Fill>
                 <RadialGradientBrush Center="50%,50%" Radius="0.8">
                     <GradientStop Color="#00000000" Offset="0.2"/>
@@ -69,38 +69,49 @@
                 </Grid>
         </Border>
 
-        <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
-        <Border x:Name="BidBar" Grid.Row="1" Background="#CC000000" CornerRadius="6"
-                HorizontalAlignment="Center" Margin="0,10,0,0" Width="290" Padding="0,8">
-            <Grid ColumnDefinitions="*,Auto,*,Auto,*">
-                <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
-                    <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold"
-                               Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="CreditsLabel" FontSize="28" FontWeight="Black"
-                               Foreground="White" HorizontalAlignment="Center"/>
-                </StackPanel>
-                <Rectangle Grid.Column="1" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
-                <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
-                    <TextBlock Text="BET" FontSize="10" FontWeight="Bold"
-                               Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="BetLabel" FontSize="28" FontWeight="Black"
-                               Foreground="#FFD700" HorizontalAlignment="Center"/>
-                </StackPanel>
-                <Rectangle Grid.Column="3" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
-                <StackPanel Grid.Column="4" Spacing="1" VerticalAlignment="Center">
-                    <TextBlock Text="HANDS" FontSize="10" FontWeight="Bold"
-                               Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="HandsLabel" FontSize="28" FontWeight="Black"
-                               Foreground="White" HorizontalAlignment="Center" Text="0"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
         <!-- ─── Game Area ─────────────────────────────────────────────────────── -->
-        <Grid Grid.Row="2" RowDefinitions="*,*">
+        <!-- Cards and buttons sit in their own Auto rows, one fixed gap apart, flanked
+             by spacer * rows that keep the whole block centered in the window. Under
+             the old "*,*" split, cards and buttons were each independently centered in
+             their own half — that gap is mathematically fixed at half the leftover
+             window space no matter how the two star rows are weighted against each
+             other, so it can't be tuned by a ratio; an explicit margin is the only way
+             to set it directly.
+             The Credits/Bet/Hands bar now lives in the top spacer row too (instead of
+             its own fixed Auto row right under the pay table), centered vertically in
+             the same leftover space, so it sits centered between the pay table and the
+             cards rather than pinned to the top of that gap. -->
+        <Grid Grid.Row="1" RowDefinitions="*,Auto,Auto,*">
 
-            <!-- Cards + overlays — centered in the * row -->
-            <Grid Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+            <!-- Credits / Bet / Hands bar — centered in the top spacer row -->
+            <Border x:Name="BidBar" Grid.Row="0" Background="#CC000000" CornerRadius="6"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" Width="290" Padding="0,8">
+                <Grid ColumnDefinitions="*,Auto,*,Auto,*">
+                    <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
+                        <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold"
+                                   Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="CreditsLabel" FontSize="28" FontWeight="Black"
+                                   Foreground="White" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <Rectangle Grid.Column="1" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
+                    <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
+                        <TextBlock Text="BET" FontSize="10" FontWeight="Bold"
+                                   Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="BetLabel" FontSize="28" FontWeight="Black"
+                                   Foreground="#FFD700" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <Rectangle Grid.Column="3" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
+                    <StackPanel Grid.Column="4" Spacing="1" VerticalAlignment="Center">
+                        <TextBlock Text="HANDS" FontSize="10" FontWeight="Bold"
+                                   Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="HandsLabel" FontSize="28" FontWeight="Black"
+                                   Foreground="White" HorizontalAlignment="Center" Text="0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Cards + overlays — centered in the Auto row -->
+            <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
                   Margin="0,28,0,0">
 
                     <StackPanel x:Name="CardsRow" Orientation="Horizontal" Spacing="0" HorizontalAlignment="Center">
@@ -138,6 +149,14 @@
 
                     </StackPanel>
 
+                    <!-- Idle nudge prompt — overlays across the card row -->
+                    <Border x:Name="IdlePrompt" Opacity="0" IsHitTestVisible="False" ZIndex="10"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Background="#80000000" Padding="24,16" CornerRadius="8">
+                        <TextBlock Text="Hit Space to Deal" HorizontalAlignment="Center"
+                                   FontSize="32" FontWeight="Black" Foreground="White"/>
+                    </Border>
+
                     <!-- Overlay layer -->
                     <Grid Height="226" VerticalAlignment="Top">
 
@@ -160,13 +179,13 @@
                         <Border x:Name="WinBanner" IsVisible="False"
                                 Background="#1A44CC" CornerRadius="8" Padding="32,14"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
-                                BoxShadow="0 0 28 8 #90FFD700, 0 4 18 0 #AA000000"
+                                BoxShadow="0 4 18 0 #AA000000"
                                 RenderTransformOrigin="50%,50%"
                                 IsHitTestVisible="True"
                                 PointerPressed="WinBanner_PointerPressed">
                             <StackPanel Spacing="6">
                                 <TextBlock x:Name="WinHandNameBlock"
-                                           FontSize="30" FontWeight="Black" Foreground="#FFD700"
+                                           FontSize="30" FontWeight="Black" Foreground="White"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock x:Name="WinPayoutBlock"
                                            FontSize="22" FontWeight="Bold" Foreground="White" Opacity="0.80"
@@ -177,20 +196,11 @@
                     </Grid>
                 </Grid>
 
-            <!-- Idle nudge prompt -->
-            <Border x:Name="IdlePrompt" Grid.Row="1" Opacity="0" IsHitTestVisible="False" ZIndex="10"
-                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0"
-                    Background="#AA000000" CornerRadius="8" Padding="20,10">
-                <TextBlock Text="Place Your Bid, Partner"
-                           FontSize="13" FontWeight="Bold" Foreground="#FFD700"
-                           FontFamily="Courier New, Consolas, monospace"/>
-            </Border>
-
             <!-- Particle burst canvas -->
-            <Canvas x:Name="ParticleCanvas" Grid.RowSpan="2" IsHitTestVisible="False" ZIndex="50"/>
+            <Canvas x:Name="ParticleCanvas" Grid.Row="1" Grid.RowSpan="2" IsHitTestVisible="False" ZIndex="50"/>
 
-            <!-- Buttons — centered in the lower * row -->
-            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
+            <!-- Buttons — sit directly below the cards, in their own Auto row -->
+            <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8" Margin="0,24,0,0">
 
                 <StackPanel x:Name="ButtonRow" Orientation="Horizontal" Spacing="10"
                             HorizontalAlignment="Center">
@@ -228,7 +238,7 @@
         </Grid>
 
         <!-- Keyboard hint row -->
-        <TextBlock Grid.Row="3" x:Name="KeyHintLabel"
+        <TextBlock Grid.Row="2" x:Name="KeyHintLabel"
                    Text="H=Hold All   Q=Clear All   1-5=Toggle Hold   Space/Enter/D=Deal or Draw"
                    FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
                    FontFamily="Courier New, Consolas, monospace"

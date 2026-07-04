@@ -8,6 +8,8 @@ public class VideoPokerStatistics
     public int WinningHands { get; set; }
     public long TotalCreditsWon { get; set; }
     public long TotalCreditsWagered { get; set; }
+    public int BiggestPay { get; set; }
+    public int Rebuys { get; set; }
     public Dictionary<string, int> HandCounts { get; set; } = new();
 
     // Toolbar-compatible aliases used by MainWindow bindings
