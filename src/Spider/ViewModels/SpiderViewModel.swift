@@ -773,6 +773,8 @@ public final class SpiderViewModel {
             targetPileId: hint.targetPileId, description: prefix + hint.description)
     }
 
+    public var hasHintsAvailable: Bool { !collectHints().isEmpty }
+
     private func collectHints() -> [SpiderHintMove] {
         var scored: [(SpiderHintMove, Int)] = []
 

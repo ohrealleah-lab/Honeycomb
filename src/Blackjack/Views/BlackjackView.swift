@@ -10,7 +10,8 @@ public struct BlackjackView: View {
     @State private var cardsVisible           = true
     @State private var showCardBackPlaceholders = false
     @State private var dealerFlipped          = false  // triggers hole-card flip animation
-    @State private var resultHideTask:   DispatchWorkItem? = nil
+    @State private var resultHideTask:     DispatchWorkItem? = nil
+    @State private var resultCardHideTask: DispatchWorkItem? = nil
     @State private var showIdlePrompt    = false
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
@@ -80,6 +81,7 @@ public struct BlackjackView: View {
                     .background(Color.black.opacity(0.55))
                     .cornerRadius(8)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    .allowsHitTesting(false)
                     .opacity(showIdlePrompt ? 1 : 0)
                     .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
             }
@@ -126,12 +128,11 @@ public struct BlackjackView: View {
                 idlePromptTask?.cancel()
                 withAnimation(.easeInOut(duration: 0.4)) { showIdlePrompt = false }
                 dealerFlipped = true
-                showResultBanner = true
                 withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { showResultBanner = true }
                 let bannerTask = DispatchWorkItem {
-                    showResultBanner = false
                     let hideTask = DispatchWorkItem {
-                        withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false }
+                        withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false; showResultBanner = false }
                         // Cards fully faded — show card backs then schedule idle prompt
                         let promptTask = DispatchWorkItem {
                             showCardBackPlaceholders = true
@@ -141,15 +142,17 @@ public struct BlackjackView: View {
                         idlePromptTask = promptTask
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: promptTask)
                     }
-                    resultHideTask = hideTask
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: hideTask)
+                    resultCardHideTask = hideTask
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: hideTask)
                 }
                 resultHideTask = bannerTask
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: bannerTask)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: bannerTask)
             }
             if newPhase == .betting || newPhase == .playing {
                 resultHideTask?.cancel()
                 resultHideTask = nil
+                resultCardHideTask?.cancel()
+                resultCardHideTask = nil
                 idlePromptTask?.cancel()
                 idlePromptTask = nil
                 withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
@@ -301,6 +304,7 @@ public struct BlackjackView: View {
                         CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
                             .scaleEffect(cardScale)
                             .frame(width: cardW, height: cardH)
+                            .onTapGesture { viewModel.deal() }
                     }
                 } else {
                     ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { idx, card in
@@ -338,32 +342,49 @@ public struct BlackjackView: View {
 
     // Scale cards down in split mode so even 5-card hands fit in one grid column.
     // Base card is 128×181 pt; cardScale (1.4) applies on top for the normal single-hand view.
-    private var splitCardScale: CGFloat {
+    private var playerCardScale: CGFloat {
         let maxCards = viewModel.state.playerHands.map { $0.cards.count }.max() ?? 2
-        switch maxCards {
-        case ..<3: return cardScale       // 2 cards — full size
-        case 3:    return 1.0
-        case 4:    return 0.78
-        default:   return 0.65            // 5+
+        let isSplit = viewModel.state.playerHands.count > 1
+        if isSplit {
+            switch maxCards {
+            case ..<3: return cardScale
+            case 3:    return 1.0
+            case 4:    return 0.78
+            default:   return 0.65
+            }
+        } else {
+            switch maxCards {
+            case ..<5: return cardScale   // 2–4 cards — full size
+            case 5:    return 0.85
+            default:   return 0.70        // 6+
+            }
         }
     }
-    private var splitCardW: CGFloat { 128 * splitCardScale }
-    private var splitCardH: CGFloat { 181 * splitCardScale }
+    private var playerCardW: CGFloat { 128 * playerCardScale }
+    private var playerCardH: CGFloat { 181 * playerCardScale }
 
     private var playerArea: some View {
         let isSplit = viewModel.state.playerHands.count > 1
-        let scale  = isSplit ? splitCardScale : cardScale
-        let width  = isSplit ? splitCardW     : cardW
-        let height = isSplit ? splitCardH     : cardH
+        let scale  = playerCardScale
+        let width  = playerCardW
+        let height = playerCardH
         let spacing: CGFloat = isSplit ? 8 : 16
         let columns = isSplit
             ? [GridItem(.flexible()), GridItem(.flexible())]
             : [GridItem(.flexible())]
 
         return VStack(spacing: 8) {
-            Text("PLAYER")
-                .font(.display(12, weight: .bold))
-                .foregroundColor(.white.opacity(0.6))
+            HStack(spacing: 8) {
+                Text("PLAYER")
+                    .font(.display(12, weight: .bold))
+                    .foregroundColor(.white.opacity(0.6))
+                if !viewModel.state.playerHands.isEmpty && !showCardBackPlaceholders {
+                    let label = viewModel.state.playerHands.map { "\($0.value)" }.joined(separator: " / ")
+                    Text(label)
+                        .font(.display(14, weight: .bold))
+                        .foregroundColor(.white.opacity(0.85))
+                }
+            }
 
             if viewModel.state.playerHands.isEmpty || showCardBackPlaceholders {
                 HStack(spacing: 16) {
@@ -371,6 +392,7 @@ public struct BlackjackView: View {
                         CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
                             .scaleEffect(cardScale)
                             .frame(width: cardW, height: cardH)
+                            .onTapGesture { viewModel.deal() }
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: cardH + 40)
@@ -392,28 +414,20 @@ public struct BlackjackView: View {
                         .padding(8)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(isActive ? Color.yellow.opacity(0.85) : Color.clear, lineWidth: 2)
+                                .stroke(isSplit && isActive ? Color.yellow.opacity(0.85) : Color.clear, lineWidth: 2)
                         )
 
-                        HStack(spacing: 6) {
-                            Text("\(hand.value)")
-                                .font(.display(16, weight: .black))
-                                .foregroundColor(hand.isBust ? .red : .white)
-                            if isSplit {
-                                Text("BET \(hand.bet)")
-                                    .font(.display(11, weight: .bold))
-                                    .foregroundColor(.yellow.opacity(0.8))
-                            }
-                            if let result = hand.result {
-                                resultBadge(result)
-                            }
+                        if isSplit {
+                            Text("BET \(hand.bet)")
+                                .font(.display(11, weight: .bold))
+                                .foregroundColor(.yellow.opacity(0.8))
+                                .opacity(cardsVisible ? 1 : 0)
+                                .animation(.easeOut(duration: 0.4), value: cardsVisible)
                         }
-                        .opacity(cardsVisible ? 1 : 0)
-                        .animation(.easeOut(duration: 0.4), value: cardsVisible)
                     }
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: cardH + 40)
+            .frame(maxWidth: .infinity, minHeight: playerCardH + 40)
             } // end else (playerHands non-empty)
         }
     }
@@ -462,7 +476,8 @@ public struct BlackjackView: View {
             subline = "Bets returned"
             isWin = false
         } else {
-            headline = "DEALER WINS"
+            let playerBust = !viewModel.state.playerHands.isEmpty && viewModel.state.playerHands.allSatisfy { $0.isBust }
+            headline = playerBust ? "BUST! DEALER WINS" : "DEALER WINS"
             subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
             isWin = false
         }
@@ -477,17 +492,28 @@ public struct BlackjackView: View {
             streakText = nil
         }
         
+        let dealerVal = viewModel.state.dealerValue
+        let playerVal = viewModel.state.playerHands.map { $0.value }.max() ?? 0
+
         return VStack(spacing: 6) {
             Text(headline)
                 .font(.system(size: 32, weight: .black))
                 .foregroundColor(isWin ? Color(red: 1.0, green: 0.84, blue: 0.0) : .white)
                 .multilineTextAlignment(.center)
-            
+
             Text(subline)
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(.white.opacity(0.85))
                 .multilineTextAlignment(.center)
-            
+
+            VStack(spacing: 2) {
+                Text("Dealer: \(dealerVal)")
+                Text("Player: \(playerVal)")
+            }
+            .font(.system(size: 14, weight: .bold))
+            .foregroundColor(.white.opacity(0.7))
+            .multilineTextAlignment(.center)
+
             if let streakText = streakText {
                 Text(streakText)
                     .font(.system(size: 14, weight: .bold))

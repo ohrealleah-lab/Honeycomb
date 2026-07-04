@@ -75,6 +75,7 @@ public struct VideoPokerView: View {
                     .background(Color.black.opacity(0.55))
                     .cornerRadius(8)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    .allowsHitTesting(false)
                     .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
             }
 
@@ -135,13 +136,11 @@ public struct VideoPokerView: View {
                 resultHideTask?.cancel()
                 idlePromptTask?.cancel()
                 
-                showResultBanner = true
-                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { showResultBanner = true }
+
                 let animationTask = DispatchWorkItem {
-                    showResultBanner = false
-                    
                     let hideTask = DispatchWorkItem {
-                        withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false }
+                        withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false; showResultBanner = false }
 
                         let promptTask = DispatchWorkItem {
                             showCardBackPlaceholders = true
@@ -152,16 +151,18 @@ public struct VideoPokerView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: promptTask)
                     }
                     resultHideTask = hideTask
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: hideTask)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: hideTask)
                 }
                 resultAnimationTask = animationTask
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: animationTask)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: animationTask)
                 
                 if viewModel.state.lastPayout > 0 {
-                    winFlash = true
-                    showParticles = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { winFlash = false }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        winFlash = true
+                        showParticles = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { winFlash = false }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+                    }
                 }
             }
             if newPhase == .holding {
@@ -345,6 +346,7 @@ public struct VideoPokerView: View {
                     CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
                         .scaleEffect(cardScale)
                         .frame(width: scaledCardW, height: scaledCardH)
+                        .onTapGesture { viewModel.deal() }
                 }
             } else {
                 ForEach(Array(viewModel.state.hand.enumerated()), id: \.offset) { idx, card in

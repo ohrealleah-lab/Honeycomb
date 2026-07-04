@@ -142,7 +142,7 @@ public struct SpiderView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
                         }
                         .buttonStyle(HoverToolbarButtonStyle())
-                        .disabled(viewModel.state.hasWon)
+                        .disabled(viewModel.state.hasWon || !viewModel.hasHintsAvailable)
                         .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }

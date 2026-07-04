@@ -798,6 +798,8 @@ public final class GameViewModel {
             targetPileId: hint.targetPileId, description: prefix + hint.description)
     }
 
+    public var hasHintsAvailable: Bool { !collectHints().isEmpty }
+
     private func collectHints() -> [HintMove] {
         var scored: [(HintMove, Int)] = []
 
