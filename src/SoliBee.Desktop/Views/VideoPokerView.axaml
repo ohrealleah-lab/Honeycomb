@@ -207,11 +207,11 @@
                     <Button x:Name="HoldAllButton"
                             Content="Hold All  [H]" Height="46" Padding="20,0"
                             IsEnabled="{Binding IsHolding}"
-                            Click="HoldAll_Click" Classes="vp-button"/>
+                            Click="HoldAll_Click" Classes="vp-button vp-button-hold"/>
                     <Button x:Name="ClearButton"
                             Content="Clear  [Q]" Height="46" Padding="20,0"
                             IsEnabled="{Binding IsHolding}"
-                            Click="ClearAll_Click" Classes="vp-button"/>
+                            Click="ClearAll_Click" Classes="vp-button vp-button-clear"/>
                     <Button x:Name="DealDrawButton"
                             Content="{Binding DealDrawLabel}" Height="46" Padding="28,0"
                             Click="DealDraw_Click" Classes="vp-button vp-button-draw"/>
@@ -297,6 +297,52 @@
         <Style Selector="Button.vp-button-rebuy">
             <Setter Property="Background" Value="#CC664400"/>
             <Setter Property="BorderBrush" Value="#FFAA44"/>
+        </Style>
+
+        <!-- Hold All / Clear get the same opaque, color-coded treatment as Draw so their
+             text stays readable against the felt instead of blending into it. -->
+        <Style Selector="Button.vp-button-hold">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC2196F3" Offset="0"/>
+                        <GradientStop Color="#CC1565C0" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AA90CAF9"/>
+        </Style>
+        <Style Selector="Button.vp-button-hold:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC42A5F5" Offset="0"/>
+                        <GradientStop Color="#CC1976D2" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.vp-button-clear">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCE53935" Offset="0"/>
+                        <GradientStop Color="#CCB71C1C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AAEF9A9A"/>
+        </Style>
+        <Style Selector="Button.vp-button-clear:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCEF5350" Offset="0"/>
+                        <GradientStop Color="#CCC62828" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style Selector="Button.vp-bet-button">
             <Setter Property="FontSize" Value="12"/>

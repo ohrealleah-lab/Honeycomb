@@ -120,13 +120,13 @@
                 <StackPanel x:Name="ActionButtonRow" Orientation="Horizontal" Spacing="10"
                             HorizontalAlignment="Center">
                     <Button x:Name="HitButton"    Content="Hit  [H]"      Height="46" Padding="22,0"
-                            Click="Hit_Click"    Classes="bj-button"/>
+                            Click="Hit_Click"    Classes="bj-button bj-button-hit"/>
                     <Button x:Name="StandButton"  Content="Stand  [S]"    Height="46" Padding="22,0"
-                            Click="Stand_Click"  Classes="bj-button"/>
+                            Click="Stand_Click"  Classes="bj-button bj-button-stand"/>
                     <Button x:Name="DoubleButton" Content="Double  [D]"   Height="46" Padding="16,0"
-                            Click="Double_Click" Classes="bj-button"/>
+                            Click="Double_Click" Classes="bj-button bj-button-double"/>
                     <Button x:Name="SplitButton"  Content="Split  [P]"    Height="46" Padding="16,0"
-                            Click="Split_Click"  Classes="bj-button"/>
+                            Click="Split_Click"  Classes="bj-button bj-button-split"/>
                 </StackPanel>
 
             </StackPanel>
@@ -216,6 +216,96 @@
         <Style Selector="Button.bj-button-rebuy">
             <Setter Property="Background" Value="#CC664400"/>
             <Setter Property="BorderBrush" Value="#FFAA44"/>
+        </Style>
+
+        <!-- Action buttons color-coded by move, so they read clearly against the felt
+             instead of blending into it like the old translucent-white style did. -->
+        <Style Selector="Button.bj-button-hit">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC4CAF50" Offset="0"/>
+                        <GradientStop Color="#CC2E7D32" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AA81C784"/>
+        </Style>
+        <Style Selector="Button.bj-button-hit:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC66BB6A" Offset="0"/>
+                        <GradientStop Color="#CC388E3C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.bj-button-stand">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCE53935" Offset="0"/>
+                        <GradientStop Color="#CCB71C1C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AAEF9A9A"/>
+        </Style>
+        <Style Selector="Button.bj-button-stand:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCEF5350" Offset="0"/>
+                        <GradientStop Color="#CCC62828" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.bj-button-double">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC2196F3" Offset="0"/>
+                        <GradientStop Color="#CC1565C0" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AA90CAF9"/>
+        </Style>
+        <Style Selector="Button.bj-button-double:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC42A5F5" Offset="0"/>
+                        <GradientStop Color="#CC1976D2" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.bj-button-split">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC9C27B0" Offset="0"/>
+                        <GradientStop Color="#CC6A1B9A" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AACE93D8"/>
+        </Style>
+        <Style Selector="Button.bj-button-split:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCAB47BC" Offset="0"/>
+                        <GradientStop Color="#CC7B1FA2" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- Chip buttons -->
