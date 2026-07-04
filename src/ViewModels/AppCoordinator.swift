@@ -32,7 +32,6 @@ public final class AppCoordinator {
         let hideStatsButton:   Bool
         let showFeltVignette:  Bool
         let customCardColors:  CustomCardColorGroup
-        let isDarkMode:        Bool
         let isTimed:           Bool
 
         switch old {
@@ -42,7 +41,6 @@ public final class AppCoordinator {
             hideStatsButton   = klondikeViewModel.options.hideStatsButton
             showFeltVignette  = klondikeViewModel.options.showFeltVignette
             customCardColors  = klondikeViewModel.options.customCardColors
-            isDarkMode        = klondikeViewModel.options.isDarkMode
             isTimed           = klondikeViewModel.options.isTimed
         case .beecell:
             isSoundEnabled    = beecellViewModel.options.isSoundEnabled
@@ -50,7 +48,6 @@ public final class AppCoordinator {
             hideStatsButton   = beecellViewModel.options.hideStatsButton
             showFeltVignette  = beecellViewModel.options.showFeltVignette
             customCardColors  = beecellViewModel.options.customCardColors
-            isDarkMode        = beecellViewModel.options.isDarkMode
             isTimed           = beecellViewModel.options.isTimed
         case .spider:
             isSoundEnabled    = spiderViewModel.options.isSoundEnabled
@@ -58,7 +55,6 @@ public final class AppCoordinator {
             hideStatsButton   = spiderViewModel.options.hideStatsButton
             showFeltVignette  = spiderViewModel.options.showFeltVignette
             customCardColors  = spiderViewModel.options.customCardColors
-            isDarkMode        = spiderViewModel.options.isDarkMode
             isTimed           = spiderViewModel.options.isTimed
         case .videoPoker:
             isSoundEnabled    = videoPokerViewModel.options.isSoundEnabled
@@ -66,7 +62,6 @@ public final class AppCoordinator {
             hideStatsButton   = videoPokerViewModel.options.hideStatsButton
             showFeltVignette  = videoPokerViewModel.options.showFeltVignette
             customCardColors  = videoPokerViewModel.options.customCardColors
-            isDarkMode        = videoPokerViewModel.options.isDarkMode
             isTimed           = true
         case .blackjack:
             isSoundEnabled    = blackjackViewModel.options.isSoundEnabled
@@ -74,7 +69,6 @@ public final class AppCoordinator {
             hideStatsButton   = blackjackViewModel.options.hideStatsButton
             showFeltVignette  = blackjackViewModel.options.showFeltVignette
             customCardColors  = blackjackViewModel.options.customCardColors
-            isDarkMode        = blackjackViewModel.options.isDarkMode
             isTimed           = true
         }
 
@@ -84,7 +78,6 @@ public final class AppCoordinator {
             klondikeViewModel.options.hideStatsButton  = hideStatsButton
             klondikeViewModel.options.showFeltVignette = showFeltVignette
             klondikeViewModel.options.customCardColors = customCardColors
-            klondikeViewModel.options.isDarkMode       = isDarkMode
             klondikeViewModel.options.isTimed          = isTimed
         }
         if old != .beecell {
@@ -93,7 +86,6 @@ public final class AppCoordinator {
             beecellViewModel.options.hideStatsButton  = hideStatsButton
             beecellViewModel.options.showFeltVignette = showFeltVignette
             beecellViewModel.options.customCardColors = customCardColors
-            beecellViewModel.options.isDarkMode       = isDarkMode
             beecellViewModel.options.isTimed          = isTimed
         }
         if old != .spider {
@@ -102,7 +94,6 @@ public final class AppCoordinator {
             spiderViewModel.options.hideStatsButton  = hideStatsButton
             spiderViewModel.options.showFeltVignette = showFeltVignette
             spiderViewModel.options.customCardColors = customCardColors
-            spiderViewModel.options.isDarkMode       = isDarkMode
             spiderViewModel.options.isTimed          = isTimed
         }
         if old != .videoPoker {
@@ -111,14 +102,12 @@ public final class AppCoordinator {
             videoPokerViewModel.options.hideStatsButton  = hideStatsButton
             videoPokerViewModel.options.showFeltVignette = showFeltVignette
             videoPokerViewModel.options.customCardColors = customCardColors
-            videoPokerViewModel.options.isDarkMode       = isDarkMode
         }
         if old != .blackjack {
             blackjackViewModel.options.isSoundEnabled   = isSoundEnabled
             blackjackViewModel.options.hideStatsButton  = hideStatsButton
             blackjackViewModel.options.showFeltVignette = showFeltVignette
             blackjackViewModel.options.customCardColors = customCardColors
-            blackjackViewModel.options.isDarkMode       = isDarkMode
         }
     }
 

@@ -13,7 +13,6 @@ public struct GameOptions: Codable, Equatable {
     public var deckCount: Int = 1
     
     public var customFeltColorRevision: Int = 0
-    public var isDarkMode: Bool = false
     public var drawMode: GameState.DrawMode = .drawThree
     public var showFeltVignette: Bool = true
     public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
@@ -30,7 +29,6 @@ public struct GameOptions: Codable, Equatable {
         hideStatsButton: Bool = false,
         deckCount: Int = 1,
         customFeltColorRevision: Int = 0,
-        isDarkMode: Bool = false,
         drawMode: GameState.DrawMode = .drawThree,
         showFeltVignette: Bool = true,
         customCardColors: CustomCardColorGroup = CustomCardColorGroup()
@@ -46,7 +44,6 @@ public struct GameOptions: Codable, Equatable {
         self.hideStatsButton = hideStatsButton
         self.deckCount = deckCount
         self.customFeltColorRevision = customFeltColorRevision
-        self.isDarkMode = isDarkMode
         self.drawMode = drawMode
         self.showFeltVignette = showFeltVignette
         self.customCardColors = customCardColors
@@ -64,7 +61,6 @@ public struct GameOptions: Codable, Equatable {
         case hideStatsButton
         case deckCount
         case customFeltColorRevision
-        case isDarkMode
         case drawMode
         case showFeltVignette
         case customCardColors
@@ -83,7 +79,6 @@ public struct GameOptions: Codable, Equatable {
         self.hideStatsButton = (try? container.decode(Bool.self, forKey: .hideStatsButton)) ?? false
         self.deckCount = (try? container.decode(Int.self, forKey: .deckCount)) ?? 1
         self.customFeltColorRevision = (try? container.decode(Int.self, forKey: .customFeltColorRevision)) ?? 0
-        self.isDarkMode = (try? container.decode(Bool.self, forKey: .isDarkMode)) ?? false
         self.drawMode = (try? container.decode(GameState.DrawMode.self, forKey: .drawMode)) ?? .drawThree
         self.showFeltVignette = (try? container.decode(Bool.self, forKey: .showFeltVignette)) ?? true
         self.customCardColors = (try? container.decode(CustomCardColorGroup.self, forKey: .customCardColors)) ?? CustomCardColorGroup()

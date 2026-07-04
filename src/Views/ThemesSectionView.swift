@@ -153,7 +153,6 @@ struct ThemesSectionView: View {
         let theme = SoliBeeTheme(
             name: name,
             cardBackTheme: currentCardBackTheme,
-            isDarkMode: false,
             feltColor: currentFeltColor,
             customFeltRed: r,
             customFeltGreen: g,

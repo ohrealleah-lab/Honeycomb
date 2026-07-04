@@ -5,7 +5,6 @@ public struct SoliBeeTheme: Codable, Identifiable {
     public var id: UUID
     public var name: String
     public var cardBackTheme: String
-    public var isDarkMode: Bool
     public var feltColor: FeltColorTheme
     public var customFeltRed: Double
     public var customFeltGreen: Double
@@ -17,7 +16,6 @@ public struct SoliBeeTheme: Codable, Identifiable {
         id: UUID = UUID(),
         name: String,
         cardBackTheme: String,
-        isDarkMode: Bool,
         feltColor: FeltColorTheme,
         customFeltRed: Double,
         customFeltGreen: Double,
@@ -28,7 +26,6 @@ public struct SoliBeeTheme: Codable, Identifiable {
         self.id = id
         self.name = name
         self.cardBackTheme = cardBackTheme
-        self.isDarkMode = isDarkMode
         self.feltColor = feltColor
         self.customFeltRed = customFeltRed
         self.customFeltGreen = customFeltGreen
@@ -38,7 +35,7 @@ public struct SoliBeeTheme: Codable, Identifiable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, cardBackTheme, isDarkMode, feltColor
+        case id, name, cardBackTheme, feltColor
         case customFeltRed, customFeltGreen, customFeltBlue, faceArts, customCardColors
     }
 
@@ -47,7 +44,6 @@ public struct SoliBeeTheme: Codable, Identifiable {
         id             = try c.decode(UUID.self,            forKey: .id)
         name           = try c.decode(String.self,          forKey: .name)
         cardBackTheme  = try c.decode(String.self,          forKey: .cardBackTheme)
-        isDarkMode     = try c.decode(Bool.self,            forKey: .isDarkMode)
         feltColor      = try c.decode(FeltColorTheme.self,  forKey: .feltColor)
         customFeltRed   = try c.decodeIfPresent(Double.self, forKey: .customFeltRed)   ?? 0
         customFeltGreen = try c.decodeIfPresent(Double.self, forKey: .customFeltGreen) ?? 0
@@ -64,16 +60,13 @@ public final class ThemeManager {
     public var themes: [SoliBeeTheme] = []
 
     private static let defaultThemes: [SoliBeeTheme] = [
-        SoliBeeTheme(name: "Pareidolic 2", cardBackTheme: "Pareidolic 2", isDarkMode: false,
-                     feltColor: .custom,
+        SoliBeeTheme(name: "Pareidolic 2", cardBackTheme: "Pareidolic 2", feltColor: .custom,
                      customFeltRed: 0.5925555229187012, customFeltGreen: 0.5882400274276733, customFeltBlue: 0.8116011023521423,
                      faceArts: [], customCardColors: CustomCardColorGroup()),
-        SoliBeeTheme(name: "Dingwall",     cardBackTheme: "Dingwall",     isDarkMode: false,
-                     feltColor: .charcoal,
+        SoliBeeTheme(name: "Dingwall",     cardBackTheme: "Dingwall",     feltColor: .charcoal,
                      customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
                      faceArts: [], customCardColors: CustomCardColorGroup()),
-        SoliBeeTheme(name: "Desert",       cardBackTheme: "Vulpera",      isDarkMode: false,
-                     feltColor: .desert,
+        SoliBeeTheme(name: "Desert",       cardBackTheme: "Vulpera",      feltColor: .desert,
                      customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
                      faceArts: [], customCardColors: CustomCardColorGroup()),
     ]

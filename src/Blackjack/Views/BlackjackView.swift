@@ -10,8 +10,9 @@ public struct BlackjackView: View {
     @State private var cardsVisible           = true
     @State private var showCardBackPlaceholders = false
     @State private var dealerFlipped          = false  // triggers hole-card flip animation
-    @State private var resultHideTask:     DispatchWorkItem? = nil
-    @State private var resultCardHideTask: DispatchWorkItem? = nil
+    @State private var resultBannerShowTask: DispatchWorkItem? = nil
+    @State private var resultHideTask:       DispatchWorkItem? = nil
+    @State private var resultCardHideTask:   DispatchWorkItem? = nil
     @State private var showIdlePrompt    = false
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
@@ -129,7 +130,9 @@ public struct BlackjackView: View {
                 withAnimation(.easeInOut(duration: 0.4)) { showIdlePrompt = false }
                 dealerFlipped = true
                 withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { showResultBanner = true }
+                let bannerShowTask = DispatchWorkItem { showResultBanner = true }
+                resultBannerShowTask = bannerShowTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: bannerShowTask)
                 let bannerTask = DispatchWorkItem {
                     let hideTask = DispatchWorkItem {
                         withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false; showResultBanner = false }
@@ -149,6 +152,8 @@ public struct BlackjackView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: bannerTask)
             }
             if newPhase == .betting || newPhase == .playing {
+                resultBannerShowTask?.cancel()
+                resultBannerShowTask = nil
                 resultHideTask?.cancel()
                 resultHideTask = nil
                 resultCardHideTask?.cancel()

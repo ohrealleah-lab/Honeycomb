@@ -17,9 +17,11 @@ public struct VideoPokerView: View {
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
     @State private var spaceMonitor: Any? = nil
-    @State private var resultAnimationTask: DispatchWorkItem? = nil
-    @State private var resultHideTask: DispatchWorkItem? = nil
-    @State private var idlePromptTask: DispatchWorkItem? = nil
+    @State private var resultBannerShowTask: DispatchWorkItem? = nil
+    @State private var resultWinFlashTask:   DispatchWorkItem? = nil
+    @State private var resultAnimationTask:  DispatchWorkItem? = nil
+    @State private var resultHideTask:       DispatchWorkItem? = nil
+    @State private var idlePromptTask:       DispatchWorkItem? = nil
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
 
     public init(viewModel: VideoPokerViewModel) {
@@ -132,11 +134,15 @@ public struct VideoPokerView: View {
         .onChange(of: viewModel.state.phase) { _, newPhase in
             if newPhase == .result {
                 // Cancel any leftover tasks just in case
+                resultBannerShowTask?.cancel()
+                resultWinFlashTask?.cancel()
                 resultAnimationTask?.cancel()
                 resultHideTask?.cancel()
                 idlePromptTask?.cancel()
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { showResultBanner = true }
+
+                let bannerShowTask = DispatchWorkItem { showResultBanner = true }
+                resultBannerShowTask = bannerShowTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: bannerShowTask)
 
                 let animationTask = DispatchWorkItem {
                     let hideTask = DispatchWorkItem {
@@ -157,16 +163,22 @@ public struct VideoPokerView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: animationTask)
                 
                 if viewModel.state.lastPayout > 0 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    let winFlashTask = DispatchWorkItem {
                         winFlash = true
                         showParticles = true
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { winFlash = false }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
                     }
+                    resultWinFlashTask = winFlashTask
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: winFlashTask)
                 }
             }
             if newPhase == .holding {
                 // Cancel result animations immediately
+                resultBannerShowTask?.cancel()
+                resultBannerShowTask = nil
+                resultWinFlashTask?.cancel()
+                resultWinFlashTask = nil
                 resultAnimationTask?.cancel()
                 resultAnimationTask = nil
                 resultHideTask?.cancel()
@@ -181,6 +193,10 @@ public struct VideoPokerView: View {
                 animateDeal()
             }
             if newPhase == .deal {
+                resultBannerShowTask?.cancel()
+                resultBannerShowTask = nil
+                resultWinFlashTask?.cancel()
+                resultWinFlashTask = nil
                 resultAnimationTask?.cancel()
                 resultAnimationTask = nil
                 resultHideTask?.cancel()

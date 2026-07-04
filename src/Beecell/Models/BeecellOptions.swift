@@ -10,7 +10,6 @@ public struct BeecellOptions: Codable, Equatable {
     public var hideStatsButton: Bool = false
 
     public var customFeltColorRevision: Int = 0
-    public var isDarkMode: Bool = false
     public var showFeltVignette: Bool = true
     public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
 
@@ -23,7 +22,6 @@ public struct BeecellOptions: Codable, Equatable {
         case hideHintButton
         case hideStatsButton
         case customFeltColorRevision
-        case isDarkMode
         case showFeltVignette
         case customCardColors
     }
@@ -37,7 +35,6 @@ public struct BeecellOptions: Codable, Equatable {
         hideHintButton: Bool = false,
         hideStatsButton: Bool = false,
         customFeltColorRevision: Int = 0,
-        isDarkMode: Bool = false,
         showFeltVignette: Bool = true,
         customCardColors: CustomCardColorGroup = CustomCardColorGroup()
     ) {
@@ -49,7 +46,6 @@ public struct BeecellOptions: Codable, Equatable {
         self.hideHintButton = hideHintButton
         self.hideStatsButton = hideStatsButton
         self.customFeltColorRevision = customFeltColorRevision
-        self.isDarkMode = isDarkMode
         self.showFeltVignette = showFeltVignette
         self.customCardColors = customCardColors
     }
@@ -64,7 +60,6 @@ public struct BeecellOptions: Codable, Equatable {
         self.hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
         self.hideStatsButton = try container.decodeIfPresent(Bool.self, forKey: .hideStatsButton) ?? false
         self.customFeltColorRevision = try container.decodeIfPresent(Int.self, forKey: .customFeltColorRevision) ?? 0
-        self.isDarkMode = try container.decodeIfPresent(Bool.self, forKey: .isDarkMode) ?? false
         self.showFeltVignette = try container.decodeIfPresent(Bool.self, forKey: .showFeltVignette) ?? true
         self.customCardColors = try container.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()
     }
