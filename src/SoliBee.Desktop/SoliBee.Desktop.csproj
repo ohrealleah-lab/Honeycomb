@@ -25,6 +25,12 @@
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
   </PropertyGroup>
 
+  <!-- Release publish shouldn't ship .pdb debug-symbol files alongside the exe.
+       Scoped to Release only so Debug builds still get symbols for local debugging. -->
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- Embed all assets except WAV files (those must live on disk for winmm.dll playback) -->
     <AvaloniaResource Include="Assets/**" Exclude="Assets/*.wav" />
@@ -47,4 +53,14 @@
   <ItemGroup>
     <ProjectReference Include="..\SoliBee.Core\SoliBee.Core.csproj" />
   </ItemGroup>
+
+  <!-- Zip the publish output (exe + Assets) into a single archive alongside it,
+       so `dotnet publish` produces one file ready to hand off/upload. -->
+  <Target Name="ZipPublishOutput" AfterTargets="Publish">
+    <PropertyGroup>
+      <PublishZipFile>$(PublishDir)..\SoliBee-$(RuntimeIdentifier).zip</PublishZipFile>
+    </PropertyGroup>
+    <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(PublishZipFile)" Overwrite="true" />
+    <Message Importance="high" Text="Zipped publish output to $(PublishZipFile)" />
+  </Target>
 </Project>
