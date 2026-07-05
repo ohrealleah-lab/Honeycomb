@@ -11,7 +11,7 @@
             <Grid>
                 <!-- Top-Left Value & Suit Display (Horizontal) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="2" Margin="4,2,0,0">
-                    <TextBlock x:Name="RankText" FontSize="17" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="Black" />
+                    <TextBlock x:Name="RankText" FontSize="17" FontFamily="Segoe UI" FontWeight="Bold" Foreground="Black" />
                     <TextBlock x:Name="MiniSuitText" FontSize="14" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" Foreground="Black" VerticalAlignment="Center" />
                 </StackPanel>
 
@@ -43,7 +43,7 @@
                     <StackPanel.RenderTransform>
                         <RotateTransform Angle="180" />
                     </StackPanel.RenderTransform>
-                    <TextBlock x:Name="RankTextBottom" FontSize="17" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="Black" />
+                    <TextBlock x:Name="RankTextBottom" FontSize="17" FontFamily="Segoe UI" FontWeight="Bold" Foreground="Black" />
                     <TextBlock x:Name="MiniSuitTextBottom" FontSize="14" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" Foreground="Black" VerticalAlignment="Center" />
                 </StackPanel>
             </Grid>

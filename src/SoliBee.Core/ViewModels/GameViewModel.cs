@@ -42,6 +42,17 @@ public partial class GameViewModel : ObservableObject
     private System.Threading.Timer? _gameTimer;
     private int _vegasGameStartScore;
 
+    // Set by PauseTimerForSwitch when the timer was actually running at the moment this
+    // game was switched away from, so ResumeTimerForSwitch only restarts it if it was
+    // genuinely paused (not, say, a fresh/unstarted or already-won game).
+    private bool _timerPausedForSwitch;
+
+    // Bankroll immediately before this deal's buy-in was subtracted, captured in
+    // InitializeGame. RestartGame (replay the same deal) restores to this instead of
+    // to the post-buy-in starting score, so replaying a deal is free — only playing
+    // a genuinely new deal (InitializeGame) costs a fresh buy-in.
+    private int _vegasBalanceBeforeDeal;
+
     private List<HintMove> _hintCycleList  = new();
     private int            _hintCycleIndex = 0;
 
@@ -122,6 +133,7 @@ public partial class GameViewModel : ObservableObject
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
+        _vegasBalanceBeforeDeal = State.Score;
         int startScore = Options.IsVegasScoring ? State.Score - 5200 : 0;
         _vegasGameStartScore = startScore;
 
@@ -235,8 +247,11 @@ public partial class GameViewModel : ObservableObject
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
-        _vegasGameStartScore = Options.IsVegasScoring ? -5200 : 0;
-        State.Score = _vegasGameStartScore;
+        // Restart replays the same deal for free — restore the bankroll to what it
+        // was before this deal's buy-in, reversing both the buy-in and any in-game
+        // foundation gains, rather than charging a fresh buy-in like a new deal would.
+        State.Score = Options.IsVegasScoring ? _vegasBalanceBeforeDeal : 0;
+        _vegasGameStartScore = State.Score;
         OnPropertyChanged(nameof(ScoreDisplay));
         State.MovesCount = 0;
         State.TimerSeconds = 0;
@@ -291,6 +306,28 @@ public partial class GameViewModel : ObservableObject
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(TimeDisplay));
         OnPropertyChanged(nameof(CanUndo));
+    }
+
+    // Called by AppCoordinator when switching away to a different game — the background
+    // _gameTimer keeps running regardless of which game's View is on screen, so without
+    // this it silently piles up TimerSeconds for however long the player is away,
+    // corrupting ShortestWinSeconds/TotalWinSeconds on the next win.
+    public void PauseTimerForSwitch()
+    {
+        if (State.IsTimerActive)
+        {
+            State.IsTimerActive = false;
+            _timerPausedForSwitch = true;
+        }
+    }
+
+    public void ResumeTimerForSwitch()
+    {
+        if (_timerPausedForSwitch)
+        {
+            State.IsTimerActive = true;
+            _timerPausedForSwitch = false;
+        }
     }
 
     public void DrawCard()
@@ -662,9 +699,18 @@ public partial class GameViewModel : ObservableObject
                 Stats.CurrentStreak++;
                 if (Stats.CurrentStreak > Stats.LongestStreak)
                     Stats.LongestStreak = Stats.CurrentStreak;
-                if (Stats.ShortestWinSeconds == 0 || State.TimerSeconds < Stats.ShortestWinSeconds)
-                    Stats.ShortestWinSeconds = State.TimerSeconds;
-                Stats.TotalWinSeconds += State.TimerSeconds;
+
+                // TimerSeconds only actually ticks when Options.IsTimed is true (see
+                // the State.IsTimerActive gating on every move above) — otherwise it
+                // stays 0 for the whole game. Recording that 0 here would permanently
+                // pin "Fastest Win" to a bogus 0s (since no real time is ever < 0) and
+                // silently deflate "Avg Winning Time", so skip both when untimed.
+                if (Options.IsTimed)
+                {
+                    if (Stats.ShortestWinSeconds == 0 || State.TimerSeconds < Stats.ShortestWinSeconds)
+                        Stats.ShortestWinSeconds = State.TimerSeconds;
+                    Stats.TotalWinSeconds += State.TimerSeconds;
+                }
 
                 if (Options.IsVegasScoring)
                 {
@@ -734,8 +780,9 @@ public partial class GameViewModel : ObservableObject
 
         // No more new cards will ever appear if stock is empty and waste can't be recycled.
         // In that state, tableau→tableau moves only count as progress when they reveal
-        // a face-down card; reshuffling fully-visible sequences (including kings to empty
-        // columns) doesn't change what's playable.
+        // a face-down card, or expose a face-up card underneath that's immediately
+        // playable to a foundation — reshuffling otherwise (e.g. a run that doesn't
+        // uncover anything new) doesn't change what's playable.
         bool deckExhausted = Stock.Cards.Count == 0 && (Waste.Cards.Count == 0 || !canRecycle);
 
         // Check tableau moves
@@ -748,7 +795,12 @@ public partial class GameViewModel : ObservableObject
             for (int i = firstFaceUp; i < src.Cards.Count; i++)
             {
                 foreach (var f in Foundations) if (CanMoveCard(src.Cards[i], f)) return true;
-                if (!deckExhausted || (i == firstFaceUp && revealsHidden))
+
+                bool exposesHiddenCard = i == firstFaceUp && revealsHidden;
+                bool exposesFoundationMove = i > 0 && src.Cards[i - 1].IsFaceUp &&
+                    Foundations.Any(f => CanMoveCard(src.Cards[i - 1], f));
+
+                if (!deckExhausted || exposesHiddenCard || exposesFoundationMove)
                 {
                     foreach (var tgt in Tableaus)
                     {

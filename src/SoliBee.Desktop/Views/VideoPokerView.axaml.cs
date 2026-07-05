@@ -29,14 +29,11 @@ public partial class VideoPokerView : UserControl
 
     // Animation state
     private CancellationTokenSource? _dealAnimCts;
-    private DispatcherTimer? _winPulseTimer;
 
     // Deal / draw slide animation — track previous hand IDs to detect new cards
     private readonly string[] _prevVpHandIds = new string[]
         { "__vp_blank__", "__vp_blank__", "__vp_blank__", "__vp_blank__", "__vp_blank__" };
     private readonly DispatcherTimer?[] _dealStaggerTimers = new DispatcherTimer?[5];
-    private double _winPulsePhase;
-    private SolidColorBrush? _winGlowBrush;
     private DispatcherTimer? _creditAnimTimer;
     private int _displayedCredits = -1;
 
@@ -347,20 +344,16 @@ public partial class VideoPokerView : UserControl
 
                 if (isWin)
                 {
-                    bool firstShow = _activeBanner != WinBanner;
-                    WinHandNameBlock.Text = vm.State.LastHandName;
-                    WinPayoutBlock.Text   = $"+{vm.State.LastPayout}";
-                    WinBanner.Background  = new SolidColorBrush(Color.Parse("#1A3380")); // Dark blue for win
+                    WinHandNameBlock.Text = $"You win! {vm.State.LastHandName}";
+                    WinPayoutBlock.Text   = $"+{vm.State.LastPayout} credits";
+                    WinBanner.Background  = new SolidColorBrush(Color.Parse("#1A44CC")); // Dark blue for win
                     ShowBanner(WinBanner);
-                    StartWinPulse();
                     StartPayRowPulse(vm.WinningHandName);
-                    if (firstShow) WinParticleSystem.Burst(ParticleCanvas);
                 }
                 else
                 {
                     NoWinOverlay.Background = new SolidColorBrush(Color.Parse("#B71C1C")); // Dark red for loss
                     ShowBanner(NoWinOverlay);
-                    StopWinPulse();
                     StopPayRowPulse();
                 }
             };
@@ -373,6 +366,26 @@ public partial class VideoPokerView : UserControl
             _resultRevealed  = false;
             HideActiveBanner();
         }
+    }
+
+    // Dev-only banner preview, wired to the toolbar's local-only "Banners" dropdown
+    // (the dropdown itself is only made visible in DEBUG builds — see MainWindow).
+    public void DebugShowWinBanner()
+    {
+        _resultShowTimer?.Stop();
+        _resultShowTimer = null;
+        WinHandNameBlock.Text = "You win! Royal Flush";
+        WinPayoutBlock.Text   = "+250 credits";
+        WinBanner.Background  = new SolidColorBrush(Color.Parse("#1A44CC"));
+        ShowBanner(WinBanner);
+    }
+
+    public void DebugShowLossBanner()
+    {
+        _resultShowTimer?.Stop();
+        _resultShowTimer = null;
+        NoWinOverlay.Background = new SolidColorBrush(Color.Parse("#B71C1C"));
+        ShowBanner(NoWinOverlay);
     }
 
     private void ShowBanner(Border banner)
@@ -421,7 +434,6 @@ public partial class VideoPokerView : UserControl
                     _activeBanner.Opacity   = 1.0;
                     _activeBanner = null;
                 }
-                StopWinPulse();
                 StartCardsFade();
                 return;
             }
@@ -443,7 +455,6 @@ public partial class VideoPokerView : UserControl
             _activeBanner.Opacity   = 1.0;
             _activeBanner = null;
         }
-        StopWinPulse();
         StopPayRowPulse();
         StopCardsFade();
     }
@@ -521,7 +532,7 @@ public partial class VideoPokerView : UserControl
                 Text         = entry.HandName,
                 FontSize     = 12,
                 Foreground   = Brushes.White,
-                FontFamily   = new FontFamily("Courier New, Consolas, monospace"),
+                FontFamily   = new FontFamily("Segoe UI"),
                 TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
             };
             Grid.SetColumn(nameBlock, 0);
@@ -535,7 +546,7 @@ public partial class VideoPokerView : UserControl
                     Text                = entry.Payout(i + 1).ToString(),
                     FontSize            = 12,
                     Foreground          = Brushes.White,
-                    FontFamily          = new FontFamily("Courier New, Consolas, monospace"),
+                    FontFamily          = new FontFamily("Segoe UI"),
                     HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 };
                 Grid.SetColumn(valBlock, i + 1);
@@ -703,46 +714,6 @@ public partial class VideoPokerView : UserControl
 
         try { await Task.WhenAll(tasks); }
         catch (OperationCanceledException) { }
-    }
-
-    // ── Win pulse ─────────────────────────────────────────────────────────────
-
-    private void StartWinPulse()
-    {
-        _winPulseTimer?.Stop();
-        _winPulsePhase = 0;
-        WinBanner.RenderTransform = new ScaleTransform(1.0, 1.0);
-        _winGlowBrush = new SolidColorBrush(Color.Parse("#FFD700"));
-        WinBanner.BorderBrush     = _winGlowBrush;
-        WinBanner.BorderThickness = new Avalonia.Thickness(2);
-
-        _winPulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _winPulseTimer.Tick += (_, _) =>
-        {
-            _winPulsePhase += 0.045;
-            double scale = 1.0 + Math.Sin(_winPulsePhase) * 0.028;
-            if (WinBanner.RenderTransform is ScaleTransform st)
-            {
-                st.ScaleX = scale;
-                st.ScaleY = scale;
-            }
-            byte alpha = (byte)(80 + (int)(175 * (0.5 + 0.5 * Math.Sin(_winPulsePhase * 1.3))));
-            _winGlowBrush!.Color = Color.FromArgb(alpha, 0xFF, 0xD7, 0x00);
-        };
-        _winPulseTimer.Start();
-    }
-
-    private void StopWinPulse()
-    {
-        _winPulseTimer?.Stop();
-        _winPulseTimer = null;
-        _winGlowBrush  = null;
-        if (WinBanner != null)
-        {
-            WinBanner.RenderTransform = null;
-            WinBanner.BorderThickness = new Avalonia.Thickness(0);
-            WinBanner.BorderBrush     = Brushes.Transparent;
-        }
     }
 
     // ── Pay row pulse ─────────────────────────────────────────────────────────

@@ -15,7 +15,9 @@ public class GameStatistics
     // Sum of TimerSeconds across all Klondike wins — divide by GamesWon for "Avg Winning Time".
     public int TotalWinSeconds { get; set; }
 
-    // Freecell per-mode stats: keys are "standard_1deck", "vegas_1deck", "standard_2deck", "vegas_2deck"
+    // Freecell per-mode stats: keys are "standard_1deck", "standard_2deck". Freecell has
+    // no Vegas mode of its own; any legacy "vegas_*" entries are merged in by
+    // StatsService.MigrateFreecellVegasStats.
     public Dictionary<string, ModeStats> FreecellStatsByMode { get; set; } = new();
 
     // Spider per-suit stats: keys are "1", "2", "4"

@@ -62,27 +62,34 @@ public partial class AppCoordinator : ObservableObject
 
     public void SwitchToGame()
     {
+        PauseTimer(ActiveViewModel);
         ActiveViewModel = GameViewModel;
+        GameViewModel.ResumeTimerForSwitch();
         SaveLastMode("Klondike");
         OnPropertyChanged(nameof(CanUndo));
     }
 
     public void SwitchToFreecell()
     {
+        PauseTimer(ActiveViewModel);
         ActiveViewModel = FreecellViewModel;
+        FreecellViewModel.ResumeTimerForSwitch();
         SaveLastMode("Freecell");
         OnPropertyChanged(nameof(CanUndo));
     }
 
     public void SwitchToSpider()
     {
+        PauseTimer(ActiveViewModel);
         ActiveViewModel = SpiderViewModel;
+        SpiderViewModel.ResumeTimerForSwitch();
         SaveLastMode("Spider");
         OnPropertyChanged(nameof(CanUndo));
     }
 
     public void SwitchToVideoPoker()
     {
+        PauseTimer(ActiveViewModel);
         ActiveViewModel = VideoPokerViewModel;
         SaveLastMode("VideoPoker");
         OnPropertyChanged(nameof(CanUndo));
@@ -90,9 +97,23 @@ public partial class AppCoordinator : ObservableObject
 
     public void SwitchToBlackjack()
     {
+        PauseTimer(ActiveViewModel);
         ActiveViewModel = BlackjackViewModel;
         SaveLastMode("Blackjack");
         OnPropertyChanged(nameof(CanUndo));
+    }
+
+    // The background game timer in GameViewModel/FreecellViewModel/SpiderViewModel keeps
+    // ticking regardless of which game's View is on screen, so it must be explicitly
+    // paused whenever we're about to switch away from whichever game is currently active.
+    private static void PauseTimer(object? viewModel)
+    {
+        switch (viewModel)
+        {
+            case GameViewModel gvm: gvm.PauseTimerForSwitch(); break;
+            case FreecellViewModel bvm: bvm.PauseTimerForSwitch(); break;
+            case SpiderViewModel svm: svm.PauseTimerForSwitch(); break;
+        }
     }
 
     [RelayCommand]
@@ -110,9 +131,9 @@ public partial class AppCoordinator : ObservableObject
         if (ActiveViewModel is GameViewModel gvm)
             gvm.ResetStats();
         else if (ActiveViewModel is FreecellViewModel bvm)
-            bvm.ResetStatistics();
+            bvm.ResetStats();
         else if (ActiveViewModel is SpiderViewModel svm)
-            svm.ResetStatistics();
+            svm.ResetStats();
         else if (ActiveViewModel is BlackjackViewModel bjvm)
             bjvm.ResetStats();
         else if (ActiveViewModel is VideoPokerViewModel vpvm)

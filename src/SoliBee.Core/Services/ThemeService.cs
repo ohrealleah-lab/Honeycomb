@@ -151,6 +151,7 @@ public static class ThemeService
         foreach (var snap in theme.FaceArts)
         {
             if (!Enum.TryParse<FaceCardSlot>(snap.Slot, out var slot)) continue;
+            if (!PathSafety.IsSafeFileName(snap.RelativePath)) continue;
             var fullPath = Path.Combine(artDir, snap.RelativePath);
             if (!File.Exists(fullPath)) continue; // prune silently if file is missing
 

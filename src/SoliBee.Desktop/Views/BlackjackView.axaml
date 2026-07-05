@@ -55,7 +55,7 @@
                         Margin="0,9,0,14">
                 <TextBlock x:Name="DealerCountLabel" Text="DEALER" FontSize="11" FontWeight="Bold"
                            Foreground="#80FFFFFF" HorizontalAlignment="Center"
-                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2"/>
+                           FontFamily="Segoe UI" LetterSpacing="2"/>
                 <StackPanel x:Name="DealerCardsPanel" Orientation="Horizontal"
                             HorizontalAlignment="Center" Background="Transparent"
                             PointerPressed="CardBack_PointerPressed"/>
@@ -67,7 +67,7 @@
                 <Border Background="Transparent" HorizontalAlignment="Center" Padding="14,0">
                     <TextBlock Text="VS" FontSize="10" FontWeight="Bold"
                                Foreground="#55FFFFFF" LetterSpacing="3"
-                               FontFamily="Courier New, Consolas, monospace"/>
+                               FontFamily="Segoe UI"/>
                 </Border>
 
                 <!-- Idle nudge prompt — centered over the VS divider -->
@@ -87,7 +87,7 @@
                         Margin="0,0,0,8">
                 <TextBlock x:Name="PlayerCountLabel" Text="PLAYER" FontSize="11" FontWeight="Bold"
                            Foreground="#80FFFFFF" HorizontalAlignment="Center"
-                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2"/>
+                           FontFamily="Segoe UI" LetterSpacing="2"/>
                 <StackPanel x:Name="PlayerHandsContainer" Orientation="Horizontal" Spacing="16"
                             HorizontalAlignment="Center" Background="Transparent"
                             PointerPressed="CardBack_PointerPressed"/>
@@ -147,18 +147,18 @@
                 PointerPressed="ResultOverlay_PointerPressed">
             <StackPanel Spacing="6">
                 <TextBlock x:Name="ResultHeadline" FontSize="32" FontWeight="Black"
-                           Foreground="#FFD700" HorizontalAlignment="Center"/>
+                           Foreground="#FFD700" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
                 <TextBlock x:Name="ResultSubline"  FontSize="18" FontWeight="Bold"
-                           Foreground="White" Opacity="0.85" HorizontalAlignment="Center"/>
+                           Foreground="White" Opacity="0.85" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
                 <StackPanel Spacing="1" Margin="0,2,0,0">
                     <TextBlock x:Name="ResultDealerTotal" FontSize="14" FontWeight="SemiBold"
-                               Foreground="White" Opacity="0.65" HorizontalAlignment="Center"/>
+                               Foreground="White" Opacity="0.65" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
                     <TextBlock x:Name="ResultPlayerTotal" FontSize="14" FontWeight="SemiBold"
-                               Foreground="White" Opacity="0.65" HorizontalAlignment="Center"/>
+                               Foreground="White" Opacity="0.65" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
                 </StackPanel>
                 <TextBlock x:Name="ResultStreak"   FontSize="14" FontWeight="Bold"
                            Foreground="#FFD700" Opacity="0.9" HorizontalAlignment="Center"
-                           IsVisible="False"/>
+                           IsVisible="False" FontFamily="Segoe UI"/>
             </StackPanel>
         </Border>
 

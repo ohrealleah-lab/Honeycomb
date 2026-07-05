@@ -53,24 +53,53 @@
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>
+                        <Button x:Name="DebugBannerButton" Content="Banners" Classes="toolbar" IsVisible="False">
+                            <Button.Flyout>
+                                <MenuFlyout>
+                                    <MenuItem Header="Klondike">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Klondike:Win" />
+                                        <MenuItem Header="Loss (No Moves)" Click="DebugBanner_Click" Tag="Klondike:Loss" />
+                                        <MenuItem Header="Autocomplete" Click="DebugBanner_Click" Tag="Klondike:Autocomplete" />
+                                    </MenuItem>
+                                    <MenuItem Header="Freecell">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Freecell:Win" />
+                                        <MenuItem Header="Loss (No Moves)" Click="DebugBanner_Click" Tag="Freecell:Loss" />
+                                        <MenuItem Header="Autocomplete" Click="DebugBanner_Click" Tag="Freecell:Autocomplete" />
+                                    </MenuItem>
+                                    <MenuItem Header="Spider">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Spider:Win" />
+                                        <MenuItem Header="Loss (No Moves)" Click="DebugBanner_Click" Tag="Spider:Loss" />
+                                        <MenuItem Header="Autocomplete" Click="DebugBanner_Click" Tag="Spider:Autocomplete" />
+                                    </MenuItem>
+                                    <MenuItem Header="Video Poker">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="VideoPoker:Win" />
+                                        <MenuItem Header="Loss" Click="DebugBanner_Click" Tag="VideoPoker:Loss" />
+                                    </MenuItem>
+                                    <MenuItem Header="Blackjack">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Blackjack:Win" />
+                                        <MenuItem Header="Loss" Click="DebugBanner_Click" Tag="Blackjack:Loss" />
+                                    </MenuItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
                     </StackPanel>
 
                     <!-- Stats on the Right -->
                     <StackPanel x:Name="StatsBarPanel" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="25" VerticalAlignment="Center">
                         <!-- SCORE -->
                         <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <TextBlock Text="SCORE" FontSize="14" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding ScoreDisplay}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="SCORE" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding ScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- MOVES -->
                         <StackPanel Spacing="2" HorizontalAlignment="Center">
-                            <TextBlock Text="MOVES" FontSize="14" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding State.MovesCount}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="MOVES" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding State.MovesCount}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- TIME -->
                         <StackPanel x:Name="TimeStatPanel" Spacing="2" HorizontalAlignment="Center">
-                            <TextBlock Text="TIME" FontSize="14" FontFamily="Courier New, Consolas, monospace" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Courier New, Consolas, monospace" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="TIME" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>
                 </DockPanel>

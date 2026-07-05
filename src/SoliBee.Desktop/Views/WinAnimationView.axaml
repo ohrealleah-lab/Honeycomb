@@ -2,60 +2,50 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SoliBee.Desktop.Views.WinAnimationView">
 
-    <UserControl.Styles>
-        <!-- FluentTheme's default :pointerover state overrides the Button's own Background/
-             BorderBrush with its own theme resources, making a custom-colored button go
-             transparent on hover unless explicitly overridden (see MainWindow's toolbar buttons
-             for the same pattern). -->
-        <Style Selector="Button.play-again:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#CC3366CC" />
-            <Setter Property="BorderBrush" Value="#AADDEEFF" />
-        </Style>
-    </UserControl.Styles>
-
     <Grid>
         <!-- Bouncing card canvas (bottom layer) -->
         <Canvas x:Name="AnimationCanvas" Background="#18000000"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
-        <!-- Win info panel (top layer) -->
+        <!-- Win info panel (top layer) — same blue/gold scheme as the Autocomplete
+             banner (Background #1A44CC, yellow button) for consistency. -->
         <Border x:Name="WinInfoPanel"
-                Background="#D2000000" CornerRadius="12" Padding="48,32"
-                BorderBrush="#FFD700" BorderThickness="3"
+                Background="#1A44CC" CornerRadius="12" Padding="48,32"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
-                BoxShadow="0 8 40 0 #80000000">
-            <StackPanel Spacing="10" HorizontalAlignment="Center">
+                BoxShadow="0 0 28 8 #90FFD700, 0 8 40 0 #80000000">
+            <Grid>
+                <StackPanel Spacing="10" HorizontalAlignment="Center">
 
-                <TextBlock Text="YOU WIN!"
-                           FontSize="44" FontWeight="Black" Foreground="#FFD700"
-                           FontFamily="Courier New, Consolas, monospace"
-                           HorizontalAlignment="Center"/>
+                    <TextBlock Text="You win!"
+                               FontSize="44" FontWeight="Black" Foreground="#FFD700"
+                               FontFamily="Segoe UI"
+                               HorizontalAlignment="Center"/>
 
-                <TextBlock x:Name="WinStatsLabel"
-                           FontSize="18" Foreground="White"
-                           FontFamily="Courier New, Consolas, monospace"
-                           HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="WinStatsLabel"
+                               FontSize="18" Foreground="White"
+                               FontFamily="Segoe UI"
+                               HorizontalAlignment="Center"/>
 
-                <Button x:Name="PlayAgainButton"
-                        Classes="play-again"
-                        Click="PlayAgain_Click"
-                        HorizontalAlignment="Center"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Width="170" Height="46"
-                        Margin="0,14,0,0"
-                        Background="#CC2255AA"
-                        Foreground="White"
-                        CornerRadius="6"
-                        BorderBrush="#88DDEEFF" BorderThickness="1">
-                    <TextBlock Text="Play Again"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               FontSize="16" FontWeight="Bold"
-                               FontFamily="Courier New, Consolas, monospace"/>
-                </Button>
+                    <Button x:Name="PlayAgainButton"
+                            Click="PlayAgain_Click"
+                            HorizontalAlignment="Center"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Width="170" Height="46"
+                            Margin="0,14,0,0"
+                            Background="#FFD700"
+                            Foreground="Black"
+                            BorderThickness="0" CornerRadius="4">
+                        <TextBlock Text="Play Again"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   FontSize="20" FontWeight="Bold"
+                                   FontFamily="Segoe UI"/>
+                    </Button>
 
-            </StackPanel>
+                </StackPanel>
+                <Button Classes="banner-close" Content="&#x2715;" Click="Close_Click" Margin="0,-20,-32,0"/>
+            </Grid>
         </Border>
     </Grid>
 

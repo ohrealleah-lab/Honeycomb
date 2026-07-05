@@ -15,7 +15,7 @@
                        FontSize="32" FontWeight="Black"
                        Foreground="White"
                        HorizontalAlignment="Center"
-                       FontFamily="Courier New, Consolas, monospace" />
+                       FontFamily="Segoe UI" />
 
             <TextBlock Text="Solitaire Suite"
                        FontSize="13" FontWeight="SemiBold"

@@ -87,7 +87,7 @@
 
                 <!-- ─── SAVED THEMES ──────────────────────────────────────────── -->
                 <TextBlock Text="SAVED THEMES" FontSize="10" FontWeight="Bold" Foreground="#60FFFFFF"
-                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2" Margin="0,4,0,0"/>
+                           FontFamily="Segoe UI" LetterSpacing="2" Margin="0,4,0,0"/>
                 <Rectangle Height="1" Fill="#20FFFFFF"/>
 
                 <Button x:Name="SaveThemeButton" Content="Save Theme…"
@@ -100,7 +100,7 @@
 
                 <!-- ─── CARD DECK ─────────────────────────────────────────────── -->
                 <TextBlock Text="CARD DECK" FontSize="10" FontWeight="Bold" Foreground="#60FFFFFF"
-                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2" Margin="0,6,0,0"/>
+                           FontFamily="Segoe UI" LetterSpacing="2" Margin="0,6,0,0"/>
                 <Rectangle Height="1" Fill="#20FFFFFF"/>
 
                 <Grid ColumnDefinitions="*, 12, Auto">
@@ -137,7 +137,7 @@
 
                 <!-- ─── APPEARANCE ────────────────────────────────────────────── -->
                 <TextBlock Text="APPEARANCE" FontSize="10" FontWeight="Bold" Foreground="#60FFFFFF"
-                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2" Margin="0,6,0,0"/>
+                           FontFamily="Segoe UI" LetterSpacing="2" Margin="0,6,0,0"/>
                 <Rectangle Height="1" Fill="#20FFFFFF"/>
 
                 <TextBlock Text="Felt Color:" FontWeight="Bold" Foreground="White" Margin="0,2,0,0"/>
@@ -167,7 +167,7 @@
 
                 <!-- ─── CUSTOM CARD ART ───────────────────────────────────────── -->
                 <TextBlock Text="CUSTOM CARD ART" FontSize="10" FontWeight="Bold" Foreground="#60FFFFFF"
-                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2" Margin="0,4,0,0"/>
+                           FontFamily="Segoe UI" LetterSpacing="2" Margin="0,4,0,0"/>
                 <Rectangle Height="1" Fill="#20FFFFFF"/>
 
                 <TextBlock Text="Tap a tile to upload art. Tap again to adjust." FontSize="10" Foreground="#A0A0A0" Margin="0,2,0,0"/>
@@ -175,7 +175,7 @@
 
                 <!-- ─── CUSTOM CARD COLOR ─────────────────────────────────────── -->
                 <TextBlock Text="CUSTOM CARD COLOR" FontSize="10" FontWeight="Bold" Foreground="#60FFFFFF"
-                           FontFamily="Courier New, Consolas, monospace" LetterSpacing="2" Margin="0,12,0,0"/>
+                           FontFamily="Segoe UI" LetterSpacing="2" Margin="0,12,0,0"/>
                 <Rectangle Height="1" Fill="#20FFFFFF"/>
 
                 <!-- Grid of Color Pickers -->

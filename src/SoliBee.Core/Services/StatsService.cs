@@ -67,6 +67,38 @@ public static class StatsService
         return new GameStatistics();
     }
 
+    // Freecell used to inherit Klondike's shared Vegas-mode flag and record stats under
+    // "vegas_1deck"/"vegas_2deck" keys, even though Freecell never actually had its own
+    // Vegas scoring. Now that FreecellViewModel.ModeKey always resolves to "standard_*",
+    // those old buckets would otherwise sit unreachable in the stats file forever — fold
+    // their totals into the standard bucket instead of losing the play history.
+    public static void MigrateFreecellVegasStats(GameStatistics stats)
+    {
+        foreach (var deckSuffix in new[] { "1deck", "2deck" })
+        {
+            string vegasKey = $"vegas_{deckSuffix}";
+            if (!stats.FreecellStatsByMode.TryGetValue(vegasKey, out var vegas)) continue;
+
+            string standardKey = $"standard_{deckSuffix}";
+            if (!stats.FreecellStatsByMode.TryGetValue(standardKey, out var standard))
+            {
+                standard = new ModeStats();
+                stats.FreecellStatsByMode[standardKey] = standard;
+            }
+
+            standard.GamesPlayed     += vegas.GamesPlayed;
+            standard.GamesWon        += vegas.GamesWon;
+            standard.LongestStreak   = Math.Max(standard.LongestStreak, vegas.LongestStreak);
+            standard.HighScore       = Math.Max(standard.HighScore, vegas.HighScore);
+            standard.TotalWinSeconds += vegas.TotalWinSeconds;
+            if (vegas.ShortestWinSeconds > 0 &&
+                (standard.ShortestWinSeconds == 0 || vegas.ShortestWinSeconds < standard.ShortestWinSeconds))
+                standard.ShortestWinSeconds = vegas.ShortestWinSeconds;
+
+            stats.FreecellStatsByMode.Remove(vegasKey);
+        }
+    }
+
     public static void SaveStats(GameStatistics stats)
     {
         try

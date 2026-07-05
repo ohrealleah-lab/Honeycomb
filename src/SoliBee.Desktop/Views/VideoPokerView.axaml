@@ -33,11 +33,11 @@
                                 <ColumnDefinition Width="32"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0"/>
-                            <TextBlock x:Name="PayColHdr1"  Text="1" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="1" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="PayColHdr2"  Text="2" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="2" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="PayColHdr3"  Text="3" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="3" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="PayColHdr4"  Text="4" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="4" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="PayColHdr5"  Text="5" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="5" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr1"  Text="1" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="1" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr2"  Text="2" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="2" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr3"  Text="3" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="3" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr4"  Text="4" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="4" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr5"  Text="5" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="5" HorizontalAlignment="Center"/>
                         </Grid>
                         <StackPanel x:Name="PayTablePanelLeft" Spacing="1"/>
                     </StackPanel>
@@ -57,11 +57,11 @@
                                 <ColumnDefinition Width="32"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0"/>
-                            <TextBlock x:Name="PayColHdrR1" Text="1" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="1" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="PayColHdrR2" Text="2" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="2" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="PayColHdrR3" Text="3" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="3" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="PayColHdrR4" Text="4" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="4" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="PayColHdrR5" Text="5" FontSize="11" Foreground="#60FFFFFF" FontFamily="Courier New, Consolas, monospace" Grid.Column="5" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR1" Text="1" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="1" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR2" Text="2" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="2" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR3" Text="3" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="3" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR4" Text="4" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="4" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR5" Text="5" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="5" HorizontalAlignment="Center"/>
                         </Grid>
                         <StackPanel x:Name="PayTablePanelRight" Spacing="1"/>
                     </StackPanel>
@@ -169,27 +169,27 @@
                             <StackPanel Spacing="6">
                                 <TextBlock Text="Not today, partner!"
                                            FontSize="30" FontWeight="Black" Foreground="White"
-                                           HorizontalAlignment="Center"/>
+                                           HorizontalAlignment="Center" FontFamily="Segoe UI"/>
                                 <TextBlock Text="Ante up!"
                                            FontSize="22" FontWeight="Bold" Foreground="White" Opacity="0.80"
-                                           HorizontalAlignment="Center"/>
+                                           HorizontalAlignment="Center" FontFamily="Segoe UI"/>
                             </StackPanel>
                         </Border>
 
                         <Border x:Name="WinBanner" IsVisible="False"
                                 Background="#1A44CC" CornerRadius="8" Padding="32,14"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
-                                BoxShadow="0 4 18 0 #AA000000"
+                                BoxShadow="0 0 28 8 #90FFD700, 0 4 18 0 #AA000000"
                                 RenderTransformOrigin="50%,50%"
                                 IsHitTestVisible="True"
                                 PointerPressed="WinBanner_PointerPressed">
                             <StackPanel Spacing="6">
                                 <TextBlock x:Name="WinHandNameBlock"
                                            FontSize="30" FontWeight="Black" Foreground="White"
-                                           HorizontalAlignment="Center"/>
+                                           HorizontalAlignment="Center" FontFamily="Segoe UI"/>
                                 <TextBlock x:Name="WinPayoutBlock"
                                            FontSize="22" FontWeight="Bold" Foreground="White" Opacity="0.80"
-                                           HorizontalAlignment="Center"/>
+                                           HorizontalAlignment="Center" FontFamily="Segoe UI"/>
                             </StackPanel>
                         </Border>
 
@@ -241,7 +241,7 @@
         <TextBlock Grid.Row="2" x:Name="KeyHintLabel"
                    Text="H=Hold All   Q=Clear All   1-5=Toggle Hold   Space/Enter/D=Deal or Draw"
                    FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
-                   FontFamily="Courier New, Consolas, monospace"
+                   FontFamily="Segoe UI"
                    Margin="0,4,0,8"/>
     </Grid>
 
@@ -357,7 +357,7 @@
             <Setter Property="BorderBrush" Value="#44FFD700"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontFamily" Value="Courier New, Consolas, monospace"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
     </UserControl.Styles>

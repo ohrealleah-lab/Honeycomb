@@ -84,8 +84,11 @@ public static class FaceCardArtService
         {
             try
             {
-                var p = GetFullPath(art);
-                if (File.Exists(p)) File.Delete(p);
+                if (PathSafety.IsSafeFileName(art.RelativePath))
+                {
+                    var p = GetFullPath(art);
+                    if (File.Exists(p)) File.Delete(p);
+                }
             }
             catch { }
             _arts.Remove(art);
@@ -106,8 +109,13 @@ public static class FaceCardArtService
         return _arts.AsReadOnly();
     }
 
+    // Returns a path guaranteed not to exist if RelativePath isn't a safe bare
+    // filename, so callers' File.Exists checks fail closed instead of resolving
+    // outside _artDir.
     public static string GetFullPath(CustomFaceArt art) =>
-        Path.Combine(_artDir, art.RelativePath);
+        PathSafety.IsSafeFileName(art.RelativePath)
+            ? Path.Combine(_artDir, art.RelativePath)
+            : Path.Combine(_artDir, "__invalid_face_art_path__");
 
     public static bool IsGif(CustomFaceArt art) =>
         art.RelativePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);

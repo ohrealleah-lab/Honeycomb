@@ -69,7 +69,19 @@
       "Bash(powershell -Command \"Get-ChildItem 'C:/Users/Leahbee/SolibeeWin/src/SoliBee.Desktop/bin/Release/net8.0/win-x64/publish/' | Select-Object Name, Length | Format-Table -AutoSize\")",
       "PowerShell(git fetch origin)",
       "PowerShell(git push origin master:004-windows-port)",
-      "PowerShell(git add \"src/SoliBee.Desktop/Views/BlackjackView.axaml\" \"src/SoliBee.Desktop/Views/VideoPokerView.axaml\" \".claude/settings.local.json\")"
+      "PowerShell(git add \"src/SoliBee.Desktop/Views/BlackjackView.axaml\" \"src/SoliBee.Desktop/Views/VideoPokerView.axaml\" \".claude/settings.local.json\")",
+      "PowerShell(git push origin master)",
+      "PowerShell(explorer.exe \"C:\\\\Users\\\\Leahbee\\\\SolibeeWin\\\\src\\\\SoliBee.Desktop\\\\bin\\\\Release\\\\net8.0\\\\win-x64\")",
+      "PowerShell(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Leahbee\\\\Desktop\\\\Publish-SoliBee.ps1\")",
+      "PowerShell(Get-Command powershell.exe)",
+      "PowerShell(Get-Command pwsh.exe -ErrorAction SilentlyContinue)",
+      "Bash(tasklist)",
+      "Skill(code-review)",
+      "Skill(code-review:*)",
+      "Bash(xargs -I {} sh -c 'echo \"{}:\"; grep -c \"Content=\\\\\"&#x2715;\\\\\"\" \"{}\"')",
+      "Bash(grep -v \"//\\\\|Binary\")",
+      "Bash(grep -n 'NoMovesStatsLabel.Text = \\\\$\"Score' src/SoliBee.Desktop/Views/GameView.axaml.cs src/SoliBee.Desktop/Views/FreecellView.axaml.cs src/SoliBee.Desktop/Views/SpiderView.axaml.cs)",
+      "Bash(git rev-list *)"
     ]
   }
 }

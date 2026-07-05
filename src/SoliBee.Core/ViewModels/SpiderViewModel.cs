@@ -42,6 +42,11 @@ public partial class SpiderViewModel : ObservableObject
     private readonly SynchronizationContext? _syncContext;
     private int _foundationCardCount;
 
+    // Set by PauseTimerForSwitch when the timer was actually running at the moment this
+    // game was switched away from, so ResumeTimerForSwitch only restarts it if it was
+    // genuinely paused (not, say, a fresh/unstarted or already-won game).
+    private bool _timerPausedForSwitch;
+
     private List<HintMove> _hintCycleList  = new();
     private int            _hintCycleIndex = 0;
 
@@ -53,6 +58,13 @@ public partial class SpiderViewModel : ObservableObject
     // Windows-fork deviation: once autocomplete has ever run this game, Undo stays
     // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
     private bool _autocompleteLocked;
+
+    // SuitKey of the game currently in progress, captured at the end of each
+    // InitializeGame call. Needed because callers (suit-count change) mutate Options
+    // *before* calling InitializeGame — so by the time this method recomputes SuitKey
+    // to decide whether an abandoned game broke a streak, it would otherwise reflect
+    // the *new* suit count being switched to, not the one just abandoned.
+    private string? _lastGameSuitKey;
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
     public string ScoreDisplay => State.Score.ToString();
@@ -147,10 +159,16 @@ public partial class SpiderViewModel : ObservableObject
         if (!stats.SpiderStatsBySuit.ContainsKey(SuitKey))
             stats.SpiderStatsBySuit[SuitKey] = new ModeStats();
         if (wasAbandonedGame)
-            stats.SpiderStatsBySuit[SuitKey].CurrentStreak = 0;
+        {
+            string abandonedSuitKey = _lastGameSuitKey ?? SuitKey;
+            if (!stats.SpiderStatsBySuit.ContainsKey(abandonedSuitKey))
+                stats.SpiderStatsBySuit[abandonedSuitKey] = new ModeStats();
+            stats.SpiderStatsBySuit[abandonedSuitKey].CurrentStreak = 0;
+        }
         if (countAsNewGame) stats.SpiderStatsBySuit[SuitKey].GamesPlayed++;
         StatsService.SaveStats(stats);
         Stats = stats;
+        _lastGameSuitKey = SuitKey;
 
         IsAutocompletable = false;
         HasNoMoves = false;
@@ -207,6 +225,28 @@ public partial class SpiderViewModel : ObservableObject
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(TimeDisplay));
         OnPropertyChanged(nameof(CanUndo));
+    }
+
+    // Called by AppCoordinator when switching away to a different game — the background
+    // _gameTimer keeps running regardless of which game's View is on screen, so without
+    // this it silently piles up TimerSeconds for however long the player is away,
+    // corrupting ShortestWinSeconds/TotalWinSeconds on the next win.
+    public void PauseTimerForSwitch()
+    {
+        if (State.IsTimerActive)
+        {
+            State.IsTimerActive = false;
+            _timerPausedForSwitch = true;
+        }
+    }
+
+    public void ResumeTimerForSwitch()
+    {
+        if (_timerPausedForSwitch)
+        {
+            State.IsTimerActive = true;
+            _timerPausedForSwitch = false;
+        }
     }
 
     // MARK: - Deck Building
@@ -282,7 +322,7 @@ public partial class SpiderViewModel : ObservableObject
 
         SaveStateForUndo();
 
-        if (!State.IsTimerActive && !State.HasWon)
+        if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
             State.IsTimerActive = true;
 
         var cardIds = new HashSet<string>(cards.Select(c => c.Id));
@@ -328,7 +368,7 @@ public partial class SpiderViewModel : ObservableObject
 
         SaveStateForUndo();
 
-        if (!State.IsTimerActive && !State.HasWon)
+        if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
             State.IsTimerActive = true;
 
         var deal = StockPiles[0];
@@ -415,9 +455,18 @@ public partial class SpiderViewModel : ObservableObject
             ms.CurrentStreak++;
             if (ms.CurrentStreak > ms.LongestStreak) ms.LongestStreak = ms.CurrentStreak;
             if (State.Score > ms.HighScore) ms.HighScore = State.Score;
-            if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
-                ms.ShortestWinSeconds = State.TimerSeconds;
-            ms.TotalWinSeconds += State.TimerSeconds;
+
+            // TimerSeconds only actually ticks when Options.IsTimed is true (see the
+            // State.IsTimerActive gating on every move above) — otherwise it stays 0
+            // for the whole game. Recording that 0 here would permanently pin "Fastest
+            // Win" to a bogus 0s and silently deflate "Avg Winning Time", so skip both
+            // when untimed.
+            if (Options.IsTimed)
+            {
+                if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
+                    ms.ShortestWinSeconds = State.TimerSeconds;
+                ms.TotalWinSeconds += State.TimerSeconds;
+            }
             stats.SpiderStatsBySuit[SuitKey] = ms;
             StatsService.SaveStats(stats);
             Stats = stats;
@@ -747,14 +796,6 @@ public partial class SpiderViewModel : ObservableObject
         Options.CustomFeltColorRevision++;
         SettingsService.SaveOptions(Options);
         WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(Options));
-    }
-
-    public void ResetStatistics()
-    {
-        var stats = StatsService.LoadStats();
-        stats.SpiderStatsBySuit.Remove(SuitKey);
-        StatsService.SaveStats(stats);
-        Stats = stats;
     }
 
     // MARK: - Helpers

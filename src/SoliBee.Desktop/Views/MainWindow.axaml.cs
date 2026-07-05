@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     private string _pendingAction = "";
     private bool _revertingSelection = false;
     private PreferencesView? _preferencesView;
+    private bool _closePreferencesAfterModeConfirm;
     private INotifyPropertyChanged? _hintTrackedVm;
 
     public MainWindow()
@@ -46,6 +47,11 @@ public partial class MainWindow : Window
 
         // Restore the last game the user had open; SelectionChanged handler sets content + DataContext
         GameSelectionBox.SelectedIndex = GameModeToIndex(_coordinator.GameViewModel.Options.LastGameMode);
+
+#if DEBUG
+        // Local-dev-only banner review menu — never visible in a published Release build.
+        DebugBannerButton.IsVisible = true;
+#endif
 
         // Register to listen to OptionsChangedMessage to keep Window background color in sync
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
@@ -372,6 +378,11 @@ public partial class MainWindow : Window
             string newTag = _pendingAction.Substring("GameMode:".Length);
             _preferencesView?.CommitGameModeCombo();
             ApplyGameModeChange(newTag);
+            if (_closePreferencesAfterModeConfirm)
+            {
+                _closePreferencesAfterModeConfirm = false;
+                SlideOutAndClosePreferences();
+            }
         }
         else if (_pendingAction == "ResetStats")
         {
@@ -388,22 +399,14 @@ public partial class MainWindow : Window
     private void CancelConfirmAction_Click(object? sender, RoutedEventArgs e)
     {
         ConfirmActionOverlay.IsVisible = false;
-        _pendingAction = "";
-    }
-
-    private void OnGameModeChangeRequested(object? sender, string newTag)
-    {
-        if (!IsGameInProgress())
+        if (_pendingAction.StartsWith("GameMode:"))
         {
-            ApplyGameModeChange(newTag);
-            return;
+            // The Preferences panel is still open behind this dialog (see
+            // ClosePreferences_Click) — just snap the combo back, keep it open.
+            _preferencesView?.RevertGameModeCombo();
+            _closePreferencesAfterModeConfirm = false;
         }
-        _preferencesView?.RevertGameModeCombo();
-        _pendingAction = "GameMode:" + newTag;
-        ConfirmActionTitle.Text   = "Change Game Mode?";
-        ConfirmActionMessage.Text = "Are you sure you want to abandon the current game and change mode?";
-        ConfirmActionButton.Content = "Change Mode";
-        ConfirmActionOverlay.IsVisible = true;
+        _pendingAction = "";
     }
 
     private void ApplyGameModeChange(string tag)
@@ -587,7 +590,8 @@ public partial class MainWindow : Window
         {
             string deckLabel = freecellVm.Options.FreecellDeckCount == 2 ? "2-Decks" : "1-Deck";
             title = $"Freecell Statistics ({deckLabel})";
-            string modeKey = $"{(freecellVm.Options.IsVegasScoring ? "vegas" : "standard")}_{freecellVm.Options.FreecellDeckCount}deck";
+            // Freecell has no Vegas mode of its own — always the "standard" bucket (see FreecellViewModel.ModeKey).
+            string modeKey = $"standard_{freecellVm.Options.FreecellDeckCount}deck";
             var ms = freecellVm.Stats.FreecellStatsByMode.TryGetValue(modeKey, out var m) ? m : new ModeStats();
             gamesPlayed   = ms.GamesPlayed;
             gamesWon      = ms.GamesWon;
@@ -665,7 +669,6 @@ public partial class MainWindow : Window
         }
 
         _preferencesView.ShowVegasOption = this.DataContext is GameViewModel;
-        _preferencesView.GameModeChangeRequested += OnGameModeChangeRequested;
         this.PreferencesContent.Content = _preferencesView;
         this.PreferencesOverlay.IsVisible = true;
         // The overlay only covers the game area (Grid.Row="1"), not the toolbar
@@ -720,7 +723,32 @@ public partial class MainWindow : Window
     }
 
     private void ClosePreferences_Click(object? sender, RoutedEventArgs e)
-        => SlideOutAndClosePreferences();
+    {
+        // The game-mode dropdown (Draw 1/3, deck/suit count) only records the pending
+        // selection live — actually applying it (and confirming abandonment of an
+        // in-progress game, if needed) is deferred until OK is clicked here, so picking
+        // a different mode while browsing Preferences doesn't itself trigger a reset.
+        if (_preferencesView != null && _preferencesView.TryGetPendingGameModeChange(out string? newTag))
+        {
+            if (!IsGameInProgress())
+            {
+                _preferencesView.CommitGameModeCombo();
+                ApplyGameModeChange(newTag!);
+                SlideOutAndClosePreferences();
+            }
+            else
+            {
+                _closePreferencesAfterModeConfirm = true;
+                _pendingAction = "GameMode:" + newTag;
+                ConfirmActionTitle.Text     = "Change Game Mode?";
+                ConfirmActionMessage.Text   = "Are you sure you want to abandon the current game and change mode?";
+                ConfirmActionButton.Content = "Change Mode";
+                ConfirmActionOverlay.IsVisible = true;
+            }
+            return;
+        }
+        SlideOutAndClosePreferences();
+    }
 
     private void ViewStats_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -844,8 +872,7 @@ public partial class MainWindow : Window
         if (tag == "SolitaireDraw1" || tag == "SolitaireDraw3")
         {
             bool wantDrawThree = (tag == "SolitaireDraw3");
-            if (_coordinator.GameViewModel.Options.IsDrawConstraintsEnabled != wantDrawThree
-                || _coordinator.ActiveViewModel != _coordinator.GameViewModel)
+            if (_coordinator.GameViewModel.Options.IsDrawConstraintsEnabled != wantDrawThree)
             {
                 _coordinator.GameViewModel.Options.IsDrawConstraintsEnabled = wantDrawThree;
                 SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
@@ -858,7 +885,7 @@ public partial class MainWindow : Window
         {
             int deckCount = tag == "Freecell2" ? 2 : 1;
             var opts = _coordinator.GameViewModel.Options;
-            if (opts.FreecellDeckCount != deckCount || _coordinator.ActiveViewModel != _coordinator.FreecellViewModel)
+            if (opts.FreecellDeckCount != deckCount)
             {
                 opts.FreecellDeckCount = deckCount;
                 SettingsService.SaveOptions(opts);
@@ -876,7 +903,7 @@ public partial class MainWindow : Window
                 _ => 1
             };
             var opts = _coordinator.GameViewModel.Options;
-            if (opts.SpiderSuitCount != suitCount || _coordinator.ActiveViewModel != _coordinator.SpiderViewModel)
+            if (opts.SpiderSuitCount != suitCount)
             {
                 opts.SpiderSuitCount = suitCount;
                 SettingsService.SaveOptions(opts);
@@ -948,6 +975,63 @@ public partial class MainWindow : Window
             ApplyFeltColor(spiderVm.Options);
         else
             ApplyFeltColor(_coordinator.GameViewModel.Options);
+    }
+
+    // Local-dev-only banner review menu — switches to the requested game (if needed)
+    // and fires the requested banner on it, so every win/loss/autocomplete banner can
+    // be eyeballed without having to actually play each game into that state. The
+    // dropdown that invokes this is only made visible in DEBUG builds (see constructor).
+    private void DebugBanner_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem menuItem || menuItem.Tag is not string tag) return;
+        var parts = tag.Split(':');
+        if (parts.Length != 2) return;
+        string game = parts[0], kind = parts[1];
+
+        string gameTag = game switch
+        {
+            "Klondike"   => _coordinator.GameViewModel.Options.IsDrawConstraintsEnabled ? "SolitaireDraw3" : "SolitaireDraw1",
+            "Freecell"   => "Freecell1",
+            "Spider"     => _coordinator.GameViewModel.Options.SpiderSuitCount switch { 2 => "Spider2", 4 => "Spider4", _ => "Spider1" },
+            _            => game,
+        };
+
+        if (GetBaseGameTag(gameTag) != GetBaseGameTag(_currentGameTag))
+        {
+            SaveCurrentWindowSize();
+            _currentGameTag = gameTag;
+            ApplyGameSwitch(gameTag);
+            _revertingSelection = true;
+            GameSelectionBox.SelectedIndex = GameModeToIndex(gameTag);
+            _revertingSelection = false;
+        }
+
+        switch (MainContent.Content)
+        {
+            case GameView gv:
+                if (kind == "Win") gv.DebugShowWinBanner();
+                else if (kind == "Loss") gv.DebugShowLossBanner();
+                else if (kind == "Autocomplete") gv.DebugShowAutocompleteBanner();
+                break;
+            case FreecellView fv:
+                if (kind == "Win") fv.DebugShowWinBanner();
+                else if (kind == "Loss") fv.DebugShowLossBanner();
+                else if (kind == "Autocomplete") fv.DebugShowAutocompleteBanner();
+                break;
+            case SpiderView sv:
+                if (kind == "Win") sv.DebugShowWinBanner();
+                else if (kind == "Loss") sv.DebugShowLossBanner();
+                else if (kind == "Autocomplete") sv.DebugShowAutocompleteBanner();
+                break;
+            case VideoPokerView vpv:
+                if (kind == "Win") vpv.DebugShowWinBanner();
+                else if (kind == "Loss") vpv.DebugShowLossBanner();
+                break;
+            case BlackjackView bjv:
+                if (kind == "Win") bjv.DebugShowResultBanner(true);
+                else if (kind == "Loss") bjv.DebugShowResultBanner(false);
+                break;
+        }
     }
 
     private void OnHintTrackedVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -1195,8 +1279,10 @@ public partial class MainWindow : Window
             if (ConfirmActionOverlay != null && ConfirmActionOverlay.IsVisible)
             {
                 e.Handled = true;
-                ConfirmActionOverlay.IsVisible = false;
-                _pendingAction = "";
+                // Route through the same handler as the Cancel button so a pending
+                // game-mode change (see ClosePreferences_Click) gets reverted here too,
+                // instead of just hiding the overlay and leaving the combo/flag stale.
+                CancelConfirmAction_Click(sender, e);
                 return;
             }
             if (PreferencesOverlay != null && PreferencesOverlay.IsVisible)

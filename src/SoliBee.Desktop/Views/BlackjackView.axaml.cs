@@ -20,12 +20,10 @@ public partial class BlackjackView : UserControl
     private DispatcherTimer? _resultShowTimer;
     private DispatcherTimer? _bannerDelayTimer;
     private DispatcherTimer? _bannerFadeTimer;
-    private DispatcherTimer? _winPulseTimer;
     private DispatcherTimer? _bustFlashTimer;
     private DispatcherTimer? _cardsFadeTimer;
     private DispatcherTimer? _idleTimer;
     private DispatcherTimer? _idleFadeTimer;
-    private double           _winPulsePhase;
 
     private BlackjackPhase _lastPhase         = BlackjackPhase.Betting;
     private bool           _resultSoundPlayed = false;
@@ -43,6 +41,9 @@ public partial class BlackjackView : UserControl
 
     // Active chip button highlight tracking
     private static readonly SolidColorBrush _chipHighlight = new(Color.FromArgb(0x50, 0xFF, 0xFF, 0xFF));
+
+    // Active split-hand border — cached rather than allocated per RebuildPlayerHands call
+    private static readonly SolidColorBrush _activeSplitHandBorder = new(Color.FromRgb(0xFF, 0xCC, 0x00));
 
     public BlackjackView()
     {
@@ -277,12 +278,14 @@ public partial class BlackjackView : UserControl
             var inner = new StackPanel { Spacing = 5 };
             inner.Children.Add(cardRow);
 
+            bool showActiveBorder = active && vm.State.IsSplit;
             var container = new Border
             {
                 Child           = inner,
                 Padding         = new Avalonia.Thickness(6, 4),
                 CornerRadius    = new Avalonia.CornerRadius(6),
-                BorderThickness = new Avalonia.Thickness(0),
+                BorderThickness = new Avalonia.Thickness(showActiveBorder ? 3 : 0),
+                BorderBrush     = showActiveBorder ? _activeSplitHandBorder : null,
                 Background      = null,
             };
 
@@ -303,7 +306,7 @@ public partial class BlackjackView : UserControl
                     FontWeight          = FontWeight.Bold,
                     Foreground          = new SolidColorBrush(Color.FromArgb(0xCC, 0xFF, 0xFF, 0x44)),
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    FontFamily          = new FontFamily("Courier New, Consolas, monospace"),
+                    FontFamily          = new FontFamily("Segoe UI"),
                     LetterSpacing       = 1,
                 });
             }
@@ -411,25 +414,25 @@ public partial class BlackjackView : UserControl
 
         if (anyBJ)
         {
-            headline   = "BLACKJACK!";
+            headline   = "Blackjack!";
             subline    = netStr;
-            background = "#1B5E20";
+            background = "#1A44CC";
             boxShadow  = "0 0 28 8 #90FFD700, 0 4 18 0 #AA000000";
             win        = true;
             streak     = vm.ConsecutiveWins;
         }
         else if (anyWin)
         {
-            headline   = "YOU WIN!";
+            headline   = "You win!";
             subline    = netStr;
-            background = "#1B5E20"; // Dark green
+            background = "#1A44CC"; // Dark blue, matches the Autocomplete/You Win banner scheme
             boxShadow  = "0 0 28 8 #90FFD700, 0 4 18 0 #AA000000";
             win        = true;
             streak     = vm.ConsecutiveWins;
         }
         else if (allPush)
         {
-            headline   = "PUSH";
+            headline   = "Push";
             subline    = "Bet Returned";
             background = "#37474F"; // Dark slate grey
             boxShadow  = "0 4 18 0 #AA000000";
@@ -438,7 +441,7 @@ public partial class BlackjackView : UserControl
         }
         else
         {
-            headline   = "DEALER WINS";
+            headline   = "Not today, partner!";
             subline    = netStr;
             background = "#B71C1C"; // Dark red
             boxShadow  = "0 4 18 0 #AA000000";
@@ -464,6 +467,21 @@ public partial class BlackjackView : UserControl
         _resultShowTimer.Start();
     }
 
+    // Dev-only banner preview, wired to the toolbar's local-only "Banners" dropdown
+    // (the dropdown itself is only made visible in DEBUG builds — see MainWindow).
+    public void DebugShowResultBanner(bool win)
+    {
+        _resultShowTimer?.Stop();
+        _resultShowTimer = null;
+        ResultDealerTotal.Text    = "Dealer: 20";
+        ResultPlayerTotal.Text    = "Player: 21";
+        ResultHeadline.Text       = win ? "You win!" : "Not today, partner!";
+        ResultSubline.Text        = win ? "+50 credits" : "-50 credits";
+        ResultOverlay.Background  = new SolidColorBrush(Color.Parse(win ? "#1A44CC" : "#B71C1C"));
+        ResultOverlay.BoxShadow   = BoxShadows.Parse(win ? "0 0 28 8 #90FFD700, 0 4 18 0 #AA000000" : "0 4 18 0 #AA000000");
+        ShowBanner(win, streak: 0);
+    }
+
     private void ShowBanner(bool win, int streak)
     {
         if (streak >= 2)
@@ -482,11 +500,7 @@ public partial class BlackjackView : UserControl
         ResultOverlay.IsVisible = true;
 
         if (win)
-        {
-            StartWinPulse();
             WinParticleSystem.Burst(ParticleCanvas);
-        }
-        else StopWinPulse();
 
         _bannerDelayTimer?.Stop();
         _bannerDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5000) };
@@ -513,7 +527,6 @@ public partial class BlackjackView : UserControl
                 _bannerFadeTimer = null;
                 ResultOverlay.IsVisible = false;
                 ResultOverlay.Opacity   = 1.0;
-                StopWinPulse();
                 StartCardsFade();
                 return;
             }
@@ -570,30 +583,7 @@ public partial class BlackjackView : UserControl
         _bannerFadeTimer?.Stop();  _bannerFadeTimer  = null;
         ResultOverlay.IsVisible = false;
         ResultOverlay.Opacity   = 1.0;
-        StopWinPulse();
         StopCardsFade();
-    }
-
-    private void StartWinPulse()
-    {
-        _winPulseTimer?.Stop();
-        _winPulsePhase = 0;
-        ResultOverlay.RenderTransform = new ScaleTransform(1.0, 1.0);
-        _winPulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _winPulseTimer.Tick += (_, _) =>
-        {
-            _winPulsePhase += 0.045;
-            double scale = 1.0 + Math.Sin(_winPulsePhase) * 0.025;
-            if (ResultOverlay.RenderTransform is ScaleTransform st)
-            { st.ScaleX = scale; st.ScaleY = scale; }
-        };
-        _winPulseTimer.Start();
-    }
-
-    private void StopWinPulse()
-    {
-        _winPulseTimer?.Stop(); _winPulseTimer = null;
-        ResultOverlay.RenderTransform = null;
     }
 
     private void StopTimers()
@@ -601,7 +591,6 @@ public partial class BlackjackView : UserControl
         _resultShowTimer?.Stop();  _resultShowTimer  = null;
         _bannerDelayTimer?.Stop(); _bannerDelayTimer = null;
         _bannerFadeTimer?.Stop();  _bannerFadeTimer  = null;
-        _winPulseTimer?.Stop();    _winPulseTimer    = null;
         _bustFlashTimer?.Stop();   _bustFlashTimer   = null;
         _cardsFadeTimer?.Stop();   _cardsFadeTimer   = null;
         _idleTimer?.Stop();        _idleTimer        = null;

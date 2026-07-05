@@ -25,7 +25,7 @@
                                 Spacing="2" Margin="4,2,0,0">
                         <TextBlock x:Name="PreviewRankText"
                                    FontSize="17" FontWeight="Bold"
-                                   FontFamily="Courier New, Consolas, monospace" />
+                                   FontFamily="Segoe UI" />
                         <TextBlock x:Name="PreviewSuitText"
                                    FontSize="14" VerticalAlignment="Center" />
                     </StackPanel>
@@ -50,7 +50,7 @@
                         </StackPanel.RenderTransform>
                         <TextBlock x:Name="PreviewRankTextBottom"
                                    FontSize="17" FontWeight="Bold"
-                                   FontFamily="Courier New, Consolas, monospace" />
+                                   FontFamily="Segoe UI" />
                         <TextBlock x:Name="PreviewSuitTextBottom"
                                    FontSize="14" VerticalAlignment="Center" />
                     </StackPanel>

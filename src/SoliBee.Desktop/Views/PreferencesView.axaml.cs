@@ -23,7 +23,6 @@ namespace SoliBee.Desktop.Views;
 public partial class PreferencesView : UserControl
 {
     private bool _initializing = true;
-    private bool _revertingGameMode;
     private int _confirmedGameModeIndex = -1;
     private Bitmap? _cardBackPreviewBitmap;
     private List<SoliBeeTheme> _themes = new();
@@ -31,7 +30,6 @@ public partial class PreferencesView : UserControl
 
     public string ActiveGameFamily { get; set; } = "";
     public VideoPokerViewModel? VideoPokerVm { get; set; }
-    public event EventHandler<string>? GameModeChangeRequested;
 
     public bool ShowVegasOption
     {
@@ -231,18 +229,27 @@ public partial class PreferencesView : UserControl
         _confirmedGameModeIndex = GameModeCombo.SelectedIndex;
     }
 
+    // The dropdown only records the pending selection here — the actual game-mode
+    // change (and its "abandon current game?" confirmation, if needed) is deferred
+    // until the user clicks OK on the Preferences panel. See MainWindow.ClosePreferences_Click.
     private void GameMode_Changed(object? sender, SelectionChangedEventArgs e)
     {
-        if (_initializing || _revertingGameMode) return;
-        if (GameModeCombo.SelectedItem is not ComboBoxItem item || item.Tag == null) return;
-        GameModeChangeRequested?.Invoke(this, item.Tag.ToString() ?? "");
+    }
+
+    // Returns true and the newly-selected tag if the game-mode combo's selection
+    // differs from what was in effect when Preferences was opened (or last committed).
+    public bool TryGetPendingGameModeChange(out string? newTag)
+    {
+        newTag = null;
+        if (GameModeCombo.SelectedItem is not ComboBoxItem item || item.Tag == null) return false;
+        if (GameModeCombo.SelectedIndex == _confirmedGameModeIndex) return false;
+        newTag = item.Tag.ToString();
+        return true;
     }
 
     public void RevertGameModeCombo()
     {
-        _revertingGameMode = true;
         GameModeCombo.SelectedIndex = _confirmedGameModeIndex;
-        _revertingGameMode = false;
     }
 
     public void CommitGameModeCombo()
@@ -621,7 +628,7 @@ public partial class PreferencesView : UserControl
                 return new Bitmap(AssetLoader.Open(new Uri($"avares://SoliBee.Desktop/Assets/{assetFile}")));
 
             var customBack = options.CustomCardBacks.Find(c => c.Name == theme);
-            if (customBack != null)
+            if (customBack != null && PathSafety.IsSafeFileName(customBack.FileName))
             {
                 var path = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -709,11 +716,14 @@ public partial class PreferencesView : UserControl
         var customBack = options.CustomCardBacks.Find(c => c.Name == themeToDelete);
         if (customBack == null) return;
 
-        var destDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SoliBee", "CardBacks");
-        var filePath = Path.Combine(destDir, customBack.FileName);
-        try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
+        if (PathSafety.IsSafeFileName(customBack.FileName))
+        {
+            var destDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SoliBee", "CardBacks");
+            var filePath = Path.Combine(destDir, customBack.FileName);
+            try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
+        }
 
         options.CustomCardBacks.Remove(customBack);
         options.CardBackTheme = "Vulpera";
@@ -783,8 +793,22 @@ public partial class PreferencesView : UserControl
             {
                 if (isGif)
                 {
+                    // The ".gif" extension alone doesn't guarantee the picked file is
+                    // actually a GIF — check the standard GIF87a/GIF89a magic header
+                    // before writing it into the app's data folder.
+                    using var memStream = new MemoryStream();
+                    await sourceStream.CopyToAsync(memStream);
+                    memStream.Position = 0;
+
+                    var header = new byte[6];
+                    int read = await memStream.ReadAsync(header, 0, header.Length);
+                    string signature = read == header.Length ? System.Text.Encoding.ASCII.GetString(header) : "";
+                    if (signature != "GIF87a" && signature != "GIF89a")
+                        throw new InvalidDataException("Selected file is not a valid GIF image.");
+
+                    memStream.Position = 0;
                     using var destStream = File.Create(destPath);
-                    await sourceStream.CopyToAsync(destStream);
+                    await memStream.CopyToAsync(destStream);
                 }
                 else
                 {

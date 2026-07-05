@@ -94,6 +94,7 @@ public partial class GameView : CardGameView
             BindPiles(vm);
         }
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
+        VictoryOverlay.CloseRequested += VictoryOverlay_CloseRequested;
     }
 
     private void GameView_Unloaded(object? sender, RoutedEventArgs e)
@@ -103,12 +104,18 @@ public partial class GameView : CardGameView
         WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
+        VictoryOverlay.CloseRequested -= VictoryOverlay_CloseRequested;
         CardView.ClearPileViewCache(this);
     }
 
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
     {
         if (DataContext is GameViewModel vm) vm.InitializeGame();
+    }
+
+    private void VictoryOverlay_CloseRequested(object? sender, EventArgs e)
+    {
+        VictoryOverlay.IsVisible = false;
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -162,7 +169,11 @@ public partial class GameView : CardGameView
             }
             else if (e.PropertyName == nameof(GameViewModel.HasNoMoves))
             {
-                if (DataContext is GameViewModel vm) NoMovesBanner.IsVisible = vm.HasNoMoves;
+                if (DataContext is GameViewModel vm)
+                {
+                    if (vm.HasNoMoves) NoMovesStatsLabel.Text = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
+                    NoMovesBanner.IsVisible = vm.HasNoMoves;
+                }
             }
             else if (e.PropertyName == nameof(GameViewModel.ActiveHint))
             {
@@ -317,5 +328,25 @@ public partial class GameView : CardGameView
             VictoryOverlay.StartAnimation();
         SoundService.PlayVictory();
     }
+
+    // Dev-only banner preview, wired to the toolbar's local-only "Banners" dropdown
+    // (the dropdown itself is only made visible in DEBUG builds — see MainWindow).
+    public void DebugShowWinBanner()
+    {
+        VictoryOverlay.IsVisible = true;
+        if (DataContext is GameViewModel vm)
+            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.TimeDisplay);
+        else
+            VictoryOverlay.StartAnimation();
+    }
+
+    public void DebugShowLossBanner()
+    {
+        if (DataContext is GameViewModel vm)
+            NoMovesStatsLabel.Text = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
+        NoMovesBanner.IsVisible = true;
+    }
+
+    public void DebugShowAutocompleteBanner() => AutocompleteBanner.IsVisible = true;
 
 }

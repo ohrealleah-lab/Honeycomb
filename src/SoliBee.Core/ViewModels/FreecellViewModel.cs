@@ -50,6 +50,11 @@ public partial class FreecellViewModel : ObservableObject
     private readonly SynchronizationContext? _syncContext;
     private int _foundationCardCount;
 
+    // Set by PauseTimerForSwitch when the timer was actually running at the moment this
+    // game was switched away from, so ResumeTimerForSwitch only restarts it if it was
+    // genuinely paused (not, say, a fresh/unstarted or already-won game).
+    private bool _timerPausedForSwitch;
+
     private List<HintMove> _hintCycleList  = new();
     private int            _hintCycleIndex = 0;
 
@@ -62,11 +67,20 @@ public partial class FreecellViewModel : ObservableObject
     // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
     private bool _autocompleteLocked;
 
+    // ModeKey of the game that's currently in progress, captured at the end of each
+    // InitializeGame call. Needed because callers (deck-count change) mutate Options
+    // *before* calling InitializeGame — so by the time this method recomputes ModeKey
+    // to decide whether an abandoned game broke a streak, it would otherwise reflect
+    // the *new* mode being switched to, not the one just abandoned.
+    private string? _lastGameModeKey;
+
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
     public string ScoreDisplay => State.Score.ToString();
     public bool CanUndo => _undoStack.Count > 0 && !_autocompleteLocked && !State.HasWon;
 
-    private string ModeKey => $"{(Options.IsVegasScoring ? "vegas" : "standard")}_{Options.FreecellDeckCount}deck";
+    // Freecell has no Vegas-mode option of its own — Options.IsVegasScoring is shared
+    // with Klondike/Spider, but Freecell always uses standard scoring regardless of it.
+    private string ModeKey => $"standard_{Options.FreecellDeckCount}deck";
     private int ExpectedCards => Options.FreecellDeckCount * 52;
     private int NumTableaus => Options.FreecellDeckCount == 1 ? 8 : 10;
     private int NumFreeCells => Options.FreecellDeckCount == 1 ? 4 : 8;
@@ -77,13 +91,15 @@ public partial class FreecellViewModel : ObservableObject
         _syncContext = SynchronizationContext.Current;
         Options = SettingsService.LoadOptions();
         Stats = StatsService.LoadStats();
+        StatsService.MigrateFreecellVegasStats(Stats);
+        StatsService.SaveStats(Stats);
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
             var old = Options;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
-            if (Options.FreecellDeckCount != old.FreecellDeckCount || Options.IsVegasScoring != old.IsVegasScoring)
+            if (Options.FreecellDeckCount != old.FreecellDeckCount)
                 InitializeGame(countAsNewGame: false);
         });
 
@@ -116,9 +132,8 @@ public partial class FreecellViewModel : ObservableObject
         for (int i = 0; i < NumTableaus; i++)
             Tableaus.Add(new Pile($"Tableau_{i}", PileType.Tableau));
 
-        // Vegas scoring carries the running bankroll forward across deals (like Klondike),
-        // subtracting a fresh buy-in rather than resetting to a fixed floor each new game.
-        int startScore = Options.IsVegasScoring ? State.Score - 5200 * Options.FreecellDeckCount : 0;
+        // Freecell has no Vegas buy-in — every new game starts at a clean 0.
+        int startScore = 0;
 
         State = new GameState
         {
@@ -162,10 +177,16 @@ public partial class FreecellViewModel : ObservableObject
         if (!stats.FreecellStatsByMode.ContainsKey(ModeKey))
             stats.FreecellStatsByMode[ModeKey] = new ModeStats();
         if (wasAbandonedGame)
-            stats.FreecellStatsByMode[ModeKey].CurrentStreak = 0;
+        {
+            string abandonedModeKey = _lastGameModeKey ?? ModeKey;
+            if (!stats.FreecellStatsByMode.ContainsKey(abandonedModeKey))
+                stats.FreecellStatsByMode[abandonedModeKey] = new ModeStats();
+            stats.FreecellStatsByMode[abandonedModeKey].CurrentStreak = 0;
+        }
         if (countAsNewGame) stats.FreecellStatsByMode[ModeKey].GamesPlayed++;
         StatsService.SaveStats(stats);
         Stats = stats;
+        _lastGameModeKey = ModeKey;
 
         _initialSnapshot = CaptureSnapshot();
         IsAutocompletable = false;
@@ -219,6 +240,28 @@ public partial class FreecellViewModel : ObservableObject
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(TimeDisplay));
         OnPropertyChanged(nameof(CanUndo));
+    }
+
+    // Called by AppCoordinator when switching away to a different game — the background
+    // _gameTimer keeps running regardless of which game's View is on screen, so without
+    // this it silently piles up TimerSeconds for however long the player is away,
+    // corrupting ShortestWinSeconds/TotalWinSeconds on the next win.
+    public void PauseTimerForSwitch()
+    {
+        if (State.IsTimerActive)
+        {
+            State.IsTimerActive = false;
+            _timerPausedForSwitch = true;
+        }
+    }
+
+    public void ResumeTimerForSwitch()
+    {
+        if (_timerPausedForSwitch)
+        {
+            State.IsTimerActive = true;
+            _timerPausedForSwitch = false;
+        }
     }
 
     // MARK: - Move Limits
@@ -275,7 +318,7 @@ public partial class FreecellViewModel : ObservableObject
 
         SaveStateForUndo();
 
-        if (!State.IsTimerActive && !State.HasWon)
+        if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
             State.IsTimerActive = true;
 
         var cardIds = new HashSet<string>(cards.Select(c => c.Id));
@@ -306,16 +349,8 @@ public partial class FreecellViewModel : ObservableObject
 
     private void UpdateScore(PileType source, PileType target, int cardCount)
     {
-        if (Options.IsVegasScoring)
-        {
-            if (target == PileType.Foundation) State.Score += 500 * cardCount;
-            else if (source == PileType.Foundation) State.Score -= 500 * cardCount;
-        }
-        else
-        {
-            if (target == PileType.Foundation) State.Score += 10 * cardCount;
-            else if (source == PileType.Foundation) State.Score = Math.Max(0, State.Score - 15 * cardCount);
-        }
+        if (target == PileType.Foundation) State.Score += 10 * cardCount;
+        else if (source == PileType.Foundation) State.Score = Math.Max(0, State.Score - 15 * cardCount);
         OnPropertyChanged(nameof(ScoreDisplay));
     }
 
@@ -337,9 +372,18 @@ public partial class FreecellViewModel : ObservableObject
             ms.CurrentStreak++;
             if (ms.CurrentStreak > ms.LongestStreak) ms.LongestStreak = ms.CurrentStreak;
             if (State.Score > ms.HighScore) ms.HighScore = State.Score;
-            if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
-                ms.ShortestWinSeconds = State.TimerSeconds;
-            ms.TotalWinSeconds += State.TimerSeconds;
+
+            // TimerSeconds only actually ticks when Options.IsTimed is true (see the
+            // State.IsTimerActive gating on every move above) — otherwise it stays 0
+            // for the whole game. Recording that 0 here would permanently pin "Fastest
+            // Win" to a bogus 0s and silently deflate "Avg Winning Time", so skip both
+            // when untimed.
+            if (Options.IsTimed)
+            {
+                if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
+                    ms.ShortestWinSeconds = State.TimerSeconds;
+                ms.TotalWinSeconds += State.TimerSeconds;
+            }
             stats.FreecellStatsByMode[ModeKey] = ms;
             StatsService.SaveStats(stats);
             Stats = stats;
@@ -776,14 +820,6 @@ public partial class FreecellViewModel : ObservableObject
         Options.CustomFeltColorRevision++;
         SettingsService.SaveOptions(Options);
         WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(Options));
-    }
-
-    public void ResetStatistics()
-    {
-        var stats = StatsService.LoadStats();
-        stats.FreecellStatsByMode.Remove(ModeKey);
-        StatsService.SaveStats(stats);
-        Stats = stats;
     }
 
     // MARK: - Helpers

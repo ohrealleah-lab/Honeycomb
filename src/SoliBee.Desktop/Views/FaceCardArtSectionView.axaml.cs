@@ -82,7 +82,7 @@ public partial class FaceCardArtSectionView : UserControl
         topLeft.Children.Add(new TextBlock
         {
             Text = rankLabel, FontSize = 9, FontWeight = FontWeight.Bold,
-            Foreground = brush, FontFamily = new FontFamily("Courier New, Consolas, monospace")
+            Foreground = brush, FontFamily = new FontFamily("Segoe UI")
         });
         topLeft.Children.Add(new TextBlock
         {
@@ -122,7 +122,7 @@ public partial class FaceCardArtSectionView : UserControl
                 Foreground = brush,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                FontFamily = new FontFamily("Courier New, Consolas, monospace")
+                FontFamily = new FontFamily("Segoe UI")
             });
         }
         innerGrid.Children.Add(centerGrid);
@@ -141,7 +141,7 @@ public partial class FaceCardArtSectionView : UserControl
         bottomRight.Children.Add(new TextBlock
         {
             Text = rankLabel, FontSize = 9, FontWeight = FontWeight.Bold,
-            Foreground = brush, FontFamily = new FontFamily("Courier New, Consolas, monospace")
+            Foreground = brush, FontFamily = new FontFamily("Segoe UI")
         });
         bottomRight.Children.Add(new TextBlock
         {

@@ -11,6 +11,7 @@ namespace SoliBee.Desktop.Views;
 public partial class WinAnimationView : UserControl
 {
     public event EventHandler? PlayAgainRequested;
+    public event EventHandler? CloseRequested;
 
     private DispatcherTimer? _timer;
     private readonly List<BouncingCard> _activeCards = new();
@@ -30,20 +31,27 @@ public partial class WinAnimationView : UserControl
         InitializeComponent();
     }
 
-    public void StartAnimation(IEnumerable<Pile> foundations, string scoreText = "", string timeText = "")
+    // Shared by the win banner here and the "No Moves Remaining" banners in
+    // GameView/FreecellView/SpiderView, so the score/time line always reads the same way.
+    public static string FormatStatsLine(string scoreText, string timeText)
     {
-        StopAnimation();
-
-        // Show win info panel with score and time
         bool hasScore = !string.IsNullOrEmpty(scoreText);
         bool hasTime  = !string.IsNullOrEmpty(timeText);
-        WinStatsLabel.Text = (hasScore, hasTime) switch
+        return (hasScore, hasTime) switch
         {
             (true, true)   => $"Score: {scoreText}  |  Time: {timeText}",
             (true, false)  => $"Score: {scoreText}",
             (false, true)  => $"Time: {timeText}",
             _              => ""
         };
+    }
+
+    public void StartAnimation(IEnumerable<Pile> foundations, string scoreText = "", string timeText = "")
+    {
+        StopAnimation();
+
+        // Show win info panel with score and time
+        WinStatsLabel.Text = FormatStatsLine(scoreText, timeText);
         WinInfoPanel.IsVisible = true;
 
         var foundationList = foundations.ToList();
@@ -168,6 +176,14 @@ public partial class WinAnimationView : UserControl
     private void PlayAgain_Click(object? sender, RoutedEventArgs e)
     {
         PlayAgainRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Dismisses the win banner without starting a new game — same "look but don't
+    // force a decision" pattern as the No Moves Remaining banner's close button.
+    private void Close_Click(object? sender, RoutedEventArgs e)
+    {
+        StopAnimation();
+        CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 }
 
