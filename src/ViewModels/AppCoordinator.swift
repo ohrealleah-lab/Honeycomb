@@ -8,8 +8,14 @@ public final class AppCoordinator {
     public var gameMode: GameMode {
         didSet {
             UserDefaults.standard.set(gameMode.rawValue, forKey: "selectedGameMode")
+            // Stop the outgoing game's timer — state and credits are preserved
+            switch oldValue {
+            case .klondike:   klondikeViewModel.stopTimer()
+            case .beecell:    beecellViewModel.stopTimer()
+            case .spider:     spiderViewModel.stopTimer()
+            case .videoPoker, .blackjack: break
+            }
             syncSharedOptions(from: oldValue, to: gameMode)
-            startNewGame()
         }
     }
 
@@ -27,12 +33,13 @@ public final class AppCoordinator {
     // MARK: - Shared option sync
 
     private func syncSharedOptions(from old: GameMode, to new: GameMode) {
-        let isSoundEnabled:    Bool
-        let hideHintButton:    Bool
-        let hideStatsButton:   Bool
-        let showFeltVignette:  Bool
-        let customCardColors:  CustomCardColorGroup
-        let isTimed:           Bool
+        let isSoundEnabled:   Bool
+        let hideHintButton:   Bool
+        let hideStatsButton:  Bool
+        let showFeltVignette: Bool
+        let customCardColors: CustomCardColorGroup
+        // isTimed is only read from solitaire games — VP/BJ don't have a real timer preference
+        let isTimed:          Bool?
 
         switch old {
         case .klondike:
@@ -62,14 +69,14 @@ public final class AppCoordinator {
             hideStatsButton   = videoPokerViewModel.options.hideStatsButton
             showFeltVignette  = videoPokerViewModel.options.showFeltVignette
             customCardColors  = videoPokerViewModel.options.customCardColors
-            isTimed           = true
+            isTimed           = nil  // don't propagate VP's timer concept to solitaire games
         case .blackjack:
             isSoundEnabled    = blackjackViewModel.options.isSoundEnabled
             hideHintButton    = false
             hideStatsButton   = blackjackViewModel.options.hideStatsButton
             showFeltVignette  = blackjackViewModel.options.showFeltVignette
             customCardColors  = blackjackViewModel.options.customCardColors
-            isTimed           = true
+            isTimed           = nil  // don't propagate BJ's timer concept to solitaire games
         }
 
         if old != .klondike {
@@ -78,7 +85,7 @@ public final class AppCoordinator {
             klondikeViewModel.options.hideStatsButton  = hideStatsButton
             klondikeViewModel.options.showFeltVignette = showFeltVignette
             klondikeViewModel.options.customCardColors = customCardColors
-            klondikeViewModel.options.isTimed          = isTimed
+            if let isTimed { klondikeViewModel.options.isTimed = isTimed }
         }
         if old != .beecell {
             beecellViewModel.options.isSoundEnabled   = isSoundEnabled
@@ -86,7 +93,7 @@ public final class AppCoordinator {
             beecellViewModel.options.hideStatsButton  = hideStatsButton
             beecellViewModel.options.showFeltVignette = showFeltVignette
             beecellViewModel.options.customCardColors = customCardColors
-            beecellViewModel.options.isTimed          = isTimed
+            if let isTimed { beecellViewModel.options.isTimed = isTimed }
         }
         if old != .spider {
             spiderViewModel.options.isSoundEnabled   = isSoundEnabled
@@ -94,7 +101,7 @@ public final class AppCoordinator {
             spiderViewModel.options.hideStatsButton  = hideStatsButton
             spiderViewModel.options.showFeltVignette = showFeltVignette
             spiderViewModel.options.customCardColors = customCardColors
-            spiderViewModel.options.isTimed          = isTimed
+            if let isTimed { spiderViewModel.options.isTimed = isTimed }
         }
         if old != .videoPoker {
             videoPokerViewModel.options.isSoundEnabled   = isSoundEnabled
@@ -274,6 +281,22 @@ public final class AppCoordinator {
             spiderViewModel.state.hasWon = true
         case .videoPoker, .blackjack:
             break   // no card-cascade win animation for poker/casino modes
+        }
+    }
+
+    // MARK: - Debug banner triggers
+
+    public func debugFireBanner(_ kind: DebugBannerKind, for game: GameMode) {
+        let delay: Double = (gameMode != game) ? 0.35 : 0
+        if gameMode != game { gameMode = game }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            switch game {
+            case .klondike:   self.klondikeViewModel.debugBannerRequest   = kind
+            case .beecell:    self.beecellViewModel.debugBannerRequest    = kind
+            case .spider:     self.spiderViewModel.debugBannerRequest     = kind
+            case .videoPoker: self.videoPokerViewModel.debugBannerRequest = kind
+            case .blackjack:  self.blackjackViewModel.debugBannerRequest  = kind
+            }
         }
     }
 }

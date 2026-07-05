@@ -56,30 +56,31 @@ public struct VideoPokerView: View {
                     creditDisplay
                     resultLabel
                     handArea
+                        .overlay {
+                            if showIdlePrompt {
+                                Text("Hit Space to Deal")
+                                    .font(.display(28, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(Color.black.opacity(0.55))
+                                    .cornerRadius(8)
+                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
+                                    .allowsHitTesting(false)
+                                    .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
+                            }
+                        }
                     holdLabels
                     actionButtons
                 }
-                .padding(24)
+                .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
 
                 Spacer()
             }
             .frame(width: 905, height: 762, alignment: .topLeading)
             .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
             .frame(width: 905 * viewModel.zoomScale, height: 762 * viewModel.zoomScale, alignment: .topLeading)
-
-            // Idle prompt
-            if showIdlePrompt {
-                Text("Hit Space to Deal")
-                    .font(.display(28, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.55))
-                    .cornerRadius(8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
-                    .allowsHitTesting(false)
-                    .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
-            }
 
             // Keyboard shortcut buttons (invisible, zero-size)
             keyboardShortcuts
@@ -209,6 +210,18 @@ public struct VideoPokerView: View {
                 withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
             }
         }
+        .onChange(of: viewModel.debugBannerRequest) { _, kind in
+            guard let kind else { return }
+            viewModel.debugBannerRequest = nil
+            resultBannerShowTask?.cancel()
+            resultWinFlashTask?.cancel()
+            resultAnimationTask?.cancel()
+            resultHideTask?.cancel()
+            showResultBanner = false
+            winFlash = false
+            viewModel.debugSetupBannerState(kind)
+            showResultBanner = true
+        }
     }
 
     // MARK: - Toolbar
@@ -280,7 +293,7 @@ public struct VideoPokerView: View {
 
         return VStack(spacing: 0) {
             Text(viewModel.options.variant.rawValue.uppercased())
-                .font(.system(size: 11, weight: .black, design: .monospaced))
+                .font(.system(size: 11, weight: .black))
                 .foregroundColor(.yellow)
                 .padding(.vertical, 5)
                 .padding(.horizontal, 12)
@@ -306,7 +319,7 @@ public struct VideoPokerView: View {
                 Text("").frame(width: 118, alignment: .leading)
                 ForEach(1...5, id: \.self) { coins in
                     Text(coins == 5 ? "MAX" : "\(coins)")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundColor(coins == viewModel.state.currentBet ? .orange : .white.opacity(0.45))
                         .frame(width: 34, alignment: .center)
                 }
@@ -320,7 +333,7 @@ public struct VideoPokerView: View {
                 let isWinner = viewModel.state.phase == .result && entry.handName == viewModel.state.lastHandName
                 HStack(spacing: 0) {
                     Text(entry.handName)
-                        .font(.system(size: 10, weight: isWinner ? .black : .regular, design: .monospaced))
+                        .font(.system(size: 10, weight: isWinner ? .black : .regular))
                         .foregroundColor(isWinner ? .black : .white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -328,7 +341,7 @@ public struct VideoPokerView: View {
                     ForEach(0..<5, id: \.self) { i in
                         let total = entry.multipliers[i] * (i + 1)
                         Text("\(total)")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundColor(isWinner ? .black : (i + 1 == viewModel.state.currentBet ? .yellow : .white.opacity(0.65)))
                             .frame(width: 34, alignment: .center)
                     }
@@ -397,40 +410,52 @@ public struct VideoPokerView: View {
         .overlay {
             if showResultBanner && !viewModel.state.hand.isEmpty {
                 if viewModel.state.lastPayout > 0 {
-                    VStack(spacing: 6) {
-                        Text(viewModel.state.lastHandName)
-                            .font(.system(size: 30, weight: .black))
-                            .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))
+                    let streak = viewModel.statistics.currentStreak
+                    let streakText: String? = streak >= 2
+                        ? (streak >= 5 ? "*** \(streak) WIN STREAK ***"
+                           : streak >= 3 ? "** \(streak) WIN STREAK **"
+                           : "\(streak) wins in a row!")
+                        : nil
+                    VStack(spacing: 8) {
+                        Text("\(viewModel.state.lastHandName)!")
+                            .font(.system(size: 36, weight: .black))
+                            .foregroundColor(.yellow)
                             .scaleEffect(winFlash ? 1.1 : 1.0)
                             .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
-                        Text("+\(viewModel.state.lastPayout)")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.white.opacity(0.80))
-                            .scaleEffect(winFlash ? 1.08 : 1.0)
-                            .animation(.spring(response: 0.25, dampingFraction: 0.45).delay(0.05), value: winFlash)
+                        Text("+\(viewModel.state.lastPayout) Credits")
+                            .font(.system(.body))
+                            .foregroundColor(.white)
+                        if let streakText {
+                            Text(streakText)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.yellow.opacity(0.9))
+                                .multilineTextAlignment(.center)
+                        }
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 14)
-                    .background(Color(red: 26/255.0, green: 68/255.0, blue: 204/255.0))
-                    .cornerRadius(8)
-                    .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.56), radius: 14)
-                    .shadow(color: .black.opacity(0.66), radius: 9, x: 0, y: 4)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+                    .frame(maxWidth: 280)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(12)
+                    .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
                     .allowsHitTesting(false)
                     .transition(.opacity)
                 } else {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 8) {
                         Text("Not today, partner!")
-                            .font(.system(size: 30, weight: .black))
+                            .font(.system(size: 36, weight: .black))
+                            .foregroundColor(.yellow)
+                        Text("-\(viewModel.state.currentBet) credits")
+                            .font(.system(.body))
                             .foregroundColor(.white)
-                        Text("Ante up!")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.white.opacity(0.80))
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 14)
-                    .background(Color(red: 26/255.0, green: 68/255.0, blue: 204/255.0))
-                    .cornerRadius(8)
-                    .shadow(color: .black.opacity(0.66), radius: 9, x: 0, y: 4)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+                    .frame(maxWidth: 420)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(12)
                     .allowsHitTesting(false)
                     .transition(.opacity)
                 }
@@ -703,7 +728,7 @@ struct VideoPokerOptionsView: View {
         ZStack {
         VStack(spacing: 20) {
             Text("Preferences")
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .font(.system(size: 16, weight: .bold))
                 .padding(.top, 12)
 
             Divider()
@@ -714,21 +739,21 @@ struct VideoPokerOptionsView: View {
                             Text($0.rawValue).tag($0)
                         }
                     }
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
 
                     Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 100...10000, step: 100)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Picker("Default Bet:", selection: $betPerHand) {
                         ForEach(1...5, id: \.self) { n in Text("\(n) coin\(n == 1 ? "" : "s")").tag(n) }
                     }
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
 
                     Divider()
 
-                    Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body, design: .monospaced))
-                    Toggle("Hide Stats button",isOn: $hideStatsButton).font(.system(.body, design: .monospaced))
-                    Toggle("Hide Bet Board",   isOn: $hideBetBoard).font(.system(.body, design: .monospaced))
+                    Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body))
+                    Toggle("Hide Stats button",isOn: $hideStatsButton).font(.system(.body))
+                    Toggle("Hide Bet Board",   isOn: $hideBetBoard).font(.system(.body))
 
                     Divider()
 
@@ -736,15 +761,15 @@ struct VideoPokerOptionsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 15, weight: .bold))
                                     .foregroundColor(.primary)
                                 Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12, design: .monospaced))
+                                    .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -782,7 +807,7 @@ struct VideoPokerOptionsView: View {
                     Text("View Stats").foregroundColor(.blue).underline()
                 }
                 .buttonStyle(.plain)
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 Spacer()
 
@@ -854,7 +879,7 @@ struct VideoPokerStatsView: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("Video Poker Statistics")
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .font(.system(size: 16, weight: .bold))
                 .padding(.top, 16)
 
             Divider()
@@ -863,6 +888,8 @@ struct VideoPokerStatsView: View {
                 statRow("Hands Played",  "\(viewModel.statistics.handsPlayed)")
                 statRow("Hands Won",     "\(viewModel.statistics.handsWon)")
                 statRow("Win Rate",      String(format: "%.1f%%", viewModel.statistics.winRate * 100))
+                statRow("Cur. Streak",   "\(viewModel.statistics.currentStreak)")
+                statRow("Best Streak",   "\(viewModel.statistics.longestStreak)")
                 statRow("Biggest Pay",   "\(viewModel.statistics.biggestPayout)")
                 statRow("Total Wagered", "\(viewModel.statistics.totalWagered)")
                 statRow("Total Paid",    "\(viewModel.statistics.totalPaidOut)")
@@ -878,7 +905,7 @@ struct VideoPokerStatsView: View {
                 Button("Reset Stats") { showingResetConfirmation = true }
                     .buttonStyle(.borderless)
                     .foregroundColor(.red)
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
                     .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
                         Button("Reset", role: .destructive) { viewModel.resetStatistics() }
                         Button("Cancel", role: .cancel) {}
@@ -888,7 +915,7 @@ struct VideoPokerStatsView: View {
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.defaultAction)
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
@@ -898,9 +925,9 @@ struct VideoPokerStatsView: View {
 
     private func statRow(_ label: String, _ value: String) -> some View {
         HStack {
-            Text(label).font(.system(.body, design: .monospaced))
+            Text(label).font(.system(.body))
             Spacer()
-            Text(value).font(.system(.body, design: .monospaced)).fontWeight(.bold)
+            Text(value).font(.system(.body)).fontWeight(.bold)
         }
     }
 }

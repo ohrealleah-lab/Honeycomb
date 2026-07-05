@@ -276,6 +276,8 @@ public final class VideoPokerViewModel {
                 let payout = entry.payout(bet: state.currentBet)
                 state.lastHandName = entry.handName
                 state.lastPayout = payout
+                statistics.currentStreak += 1
+                statistics.longestStreak = max(statistics.longestStreak, statistics.currentStreak)
                 if payout > 0 {
                     state.sessionCredits += payout
                     statistics.handsWon += 1
@@ -290,6 +292,7 @@ public final class VideoPokerViewModel {
 
         state.lastHandName = "No Win"
         state.lastPayout = 0
+        statistics.currentStreak = 0
     }
 
     private func matches(result: PokerHandResult, hand: [Card], entry: VideoPokerPayEntry) -> Bool {
@@ -356,6 +359,36 @@ public final class VideoPokerViewModel {
 
     public func resetStatistics() {
         statistics = VideoPokerStatistics()
+    }
+
+    public var debugBannerRequest: DebugBannerKind? = nil
+
+    public func debugSetupBannerState(_ kind: DebugBannerKind) {
+        let royalFlush: [Card] = [
+            Card(suit: .hearts, rank: 1,  faceUp: true),
+            Card(suit: .hearts, rank: 13, faceUp: true),
+            Card(suit: .hearts, rank: 12, faceUp: true),
+            Card(suit: .hearts, rank: 11, faceUp: true),
+            Card(suit: .hearts, rank: 10, faceUp: true),
+        ]
+        let rags: [Card] = [
+            Card(suit: .hearts,   rank: 2, faceUp: true),
+            Card(suit: .spades,   rank: 5, faceUp: true),
+            Card(suit: .diamonds, rank: 9, faceUp: true),
+            Card(suit: .clubs,    rank: 3, faceUp: true),
+            Card(suit: .hearts,   rank: 7, faceUp: true),
+        ]
+        switch kind {
+        case .win:
+            state.hand = royalFlush
+            state.lastHandName = "Royal Flush"
+            state.lastPayout = 250
+        case .loss:
+            state.hand = rags
+            state.lastHandName = "No Win"
+            state.lastPayout = 0
+        default: break
+        }
     }
 
     // MARK: - AppCoordinator compatibility stubs

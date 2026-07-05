@@ -18,6 +18,8 @@ public struct GameView: View {
     @State private var isShowingRestartConfirm: Bool = false
     @State private var dismissedAutocompleteBanner: Bool = false
     @State private var dismissedStuckBanner: Bool = false
+    @State private var dismissedWinBanner: Bool = false
+    @State private var winPulse: Bool = false
     @State private var pendingDrawMode: GameState.DrawMode? = nil
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
@@ -234,7 +236,7 @@ public struct GameView: View {
                             .rotationEffect(.degrees(isShuffling ? -4 : 0))
                         if viewModel.isStockExhausted {
                             Text("Stock\nExhausted")
-                                .font(.system(size: 17, weight: .bold, design: .monospaced))
+                                .font(.system(size: 17, weight: .bold))
                                 .multilineTextAlignment(.center)
                                 .foregroundColor(.white)
                         }
@@ -412,18 +414,18 @@ public struct GameView: View {
                     Spacer()
                     ZStack(alignment: .topTrailing) {
                         VStack(spacing: 12) {
-                            Text("GAME OVER")
-                                .font(.system(size: 36, weight: .black, design: .monospaced))
+                            Text("Game Over")
+                                .font(.system(size: 36, weight: .black))
                                 .foregroundColor(.yellow)
                                 .shadow(radius: 3)
 
                             Text("No moves remaining.")
-                                .font(.system(.headline, design: .monospaced))
+                                .font(.system(.headline))
                                 .foregroundColor(.white)
 
                             if viewModel.options.isVegasScoring {
                                 Text("Final bankroll: \(viewModel.vegasBankrollString)")
-                                    .font(.system(.body, design: .monospaced))
+                                    .font(.system(.body))
                                     .foregroundColor(.yellow)
                             }
 
@@ -431,7 +433,7 @@ public struct GameView: View {
                                 Button("New Game") {
                                     viewModel.startNewGame()
                                 }
-                                .font(.system(.body, design: .monospaced))
+                                .font(.system(.body))
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20)
@@ -443,7 +445,7 @@ public struct GameView: View {
                                 Button("Restart Game") {
                                     viewModel.restartCurrentGame()
                                 }
-                                .font(.system(.body, design: .monospaced))
+                                .font(.system(.body))
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20)
@@ -453,12 +455,13 @@ public struct GameView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(24)
-                        .frame(maxWidth: 420)
+                        .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+                        .frame(maxWidth: 280)
                         .fixedSize(horizontal: false, vertical: true)
                         .background(Color.black.opacity(0.75))
                         .cornerRadius(12)
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
+                        .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                         Button(action: { dismissedStuckBanner = true }) {
                             Image(systemName: "xmark.circle.fill")
@@ -478,35 +481,34 @@ public struct GameView: View {
                 VStack {
                     Spacer()
                     ZStack(alignment: .topTrailing) {
-                        VStack(spacing: 16) {
-                            VStack(spacing: 4) {
-                                Text("Victory is guaranteed!")
-                                    .font(.system(.headline, design: .monospaced))
-                                    .foregroundColor(.white)
-                                Text("All remaining cards can be moved to foundations.")
-                                    .font(.system(.subheadline, design: .monospaced))
-                                    .foregroundColor(.white.opacity(0.8))
-                                    .multilineTextAlignment(.center)
-                            }
+                        VStack(spacing: 12) {
+                            Text("Victory is guaranteed!")
+                                .font(.system(size: 36, weight: .black))
+                                .foregroundColor(.yellow)
+                                .multilineTextAlignment(.center)
+                            Text("All remaining cards can be moved to foundations.")
+                                .font(.system(.body))
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.center)
                             Button("Autocomplete Game") {
                                 viewModel.runAutocomplete()
                             }
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(.body))
                             .fontWeight(.bold)
-                            .foregroundColor(.black)
+                            .foregroundColor(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 10)
-                            .background(Color.yellow)
+                            .background(Color.blue)
                             .cornerRadius(6)
-                            .shadow(radius: 2)
                             .buttonStyle(.plain)
                         }
-                        .padding(24)
-                        .frame(maxWidth: 360)
+                        .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+                        .frame(maxWidth: 280)
                         .fixedSize(horizontal: false, vertical: true)
-                        .background(Color.blue.opacity(0.9))
+                        .background(Color.black.opacity(0.75))
                         .cornerRadius(12)
-                        .shadow(radius: 8)
+                        .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                         Button(action: { dismissedAutocompleteBanner = true }) {
                             Image(systemName: "xmark.circle.fill")
@@ -527,42 +529,58 @@ public struct GameView: View {
                     // Optional finish callback (e.g. log win)
                 }
                 .ignoresSafeArea()
-                
-                VStack {
-                    Spacer()
-                    VStack(spacing: 12) {
-                        Text("YOU WIN!")
-                            .font(.system(size: 40, weight: .black, design: .monospaced))
-                            .foregroundColor(.yellow)
-                            .shadow(radius: 3)
 
-                        Text(viewModel.options.isVegasScoring
-                             ? "Bankroll: \(viewModel.vegasBankrollString) | Time: \(formatTime(viewModel.state.timerSeconds))"
-                             : "Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.white)
+                if !dismissedWinBanner {
+                    VStack {
+                        Spacer()
+                        ZStack(alignment: .topTrailing) {
+                            VStack(spacing: 12) {
+                                Text("You win!")
+                                    .font(.system(size: 40, weight: .black))
+                                    .foregroundColor(.yellow)
+                                    .scaleEffect(winPulse ? 1.06 : 1.0)
+                                    .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: winPulse)
+                                    .onAppear { winPulse = true }
+                                    .onDisappear { winPulse = false }
 
-                        Button("Play Again") {
-                            viewModel.startNewGame()
+                                Text(viewModel.options.isVegasScoring
+                                     ? "Bankroll: \(viewModel.vegasBankrollString) | Time: \(formatTime(viewModel.state.timerSeconds))"
+                                     : "Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
+                                    .font(.system(.body))
+                                    .foregroundColor(.white)
+
+                                Button("Play Again") {
+                                    viewModel.startNewGame()
+                                }
+                                .font(.system(.body))
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.blue)
+                                .cornerRadius(6)
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 24)
+                            .frame(maxWidth: 360)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .background(Color.black.opacity(0.75))
+                            .cornerRadius(12)
+                            .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+
+                            Button(action: { dismissedWinBanner = true }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
+                            .buttonStyle(.plain)
+                            .padding(10)
                         }
-                        .font(.system(.body, design: .monospaced))
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color.blue)
-                        .cornerRadius(6)
-                        .buttonStyle(.plain)
+                        Spacer()
                     }
-                    .padding(24)
-                    .frame(maxWidth: 420)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .background(Color.black.opacity(0.75))
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
-                    Spacer()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             }
             .frame(width: boardWidth, height: 950, alignment: .topLeading)
@@ -626,6 +644,31 @@ public struct GameView: View {
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
+        .onChange(of: viewModel.state.hasWon) { _, newVal in if newVal { dismissedWinBanner = false } }
+        .onChange(of: viewModel.debugBannerRequest) { _, kind in
+            guard let kind else { return }
+            viewModel.debugBannerRequest = nil
+            switch kind {
+            case .win:
+                let suits: [Card.Suit] = [.spades, .clubs, .diamonds, .hearts]
+                viewModel.state.foundations = suits.map { suit in
+                    let cards = (1...13).map { Card(suit: suit, rank: $0, faceUp: true) }
+                    return Pile(id: "foundation_\(suit.rawValue)", type: .foundation, cards: cards)
+                }
+                viewModel.state.hasWon = true
+                dismissedWinBanner = false
+            case .stuck:
+                viewModel.state.hasWon = false
+                dismissedStuckBanner = false
+                viewModel.isStuck = true
+            case .autocomplete:
+                viewModel.state.hasWon = false
+                dismissedAutocompleteBanner = false
+                viewModel.isAutocompleteAvailable = true
+            case .loss:
+                break
+            }
+        }
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
@@ -812,7 +855,7 @@ struct StatusItemView: View {
                 .font(.display(13))
                 .foregroundColor(.white.opacity(0.6))
             Text(value)
-                .font(.system(size: 20, weight: .black, design: .monospaced))
+                .font(.system(size: 20, weight: .black))
                 .foregroundColor(.white)
         }
     }
@@ -940,7 +983,7 @@ struct OptionsView: View {
         ZStack {
         VStack(spacing: 20) {
             Text("Preferences")
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .font(.system(size: 16, weight: .bold))
                 .padding(.top, 12)
             
             Divider()
@@ -956,19 +999,19 @@ struct OptionsView: View {
                     Divider()
 
                     Toggle("Timed Game", isOn: $isTimed)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Toggle("Sound Effects", isOn: $isSoundEnabled)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Toggle("Vegas Scoring Mode", isOn: $isVegasScoring)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Toggle("Hide Hint button", isOn: $hideHintButton)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Toggle("Hide Stats button", isOn: $hideStatsButton)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Divider()
 
@@ -976,15 +1019,15 @@ struct OptionsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 15, weight: .bold))
                                     .foregroundColor(.primary)
                                 Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12, design: .monospaced))
+                                    .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -1026,7 +1069,7 @@ struct OptionsView: View {
                     Text("View Stats")
                         .underline()
                         .foregroundColor(.blue)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
                 }
                 .buttonStyle(.plain)
                 
@@ -1104,7 +1147,7 @@ struct StatsView: View {
         
         VStack(spacing: 20) {
             Text("Klondike Statistics")
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .font(.system(size: 16, weight: .bold))
                 .padding(.top, 12)
 
             Divider()
@@ -1115,28 +1158,28 @@ struct StatsView: View {
                     Spacer()
                     Text("\(stats.gamesPlayed)")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 HStack {
                     Text("Games Won:")
                     Spacer()
                     Text("\(stats.gamesWon)")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 HStack {
                     Text("High Score:")
                     Spacer()
                     Text(viewModel.highScoreString)
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 HStack {
                     Text("Win Percentage:")
                     Spacer()
                     Text(String(format: "%.1f%%", stats.winPercentage))
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 if viewModel.options.isVegasScoring {
                     HStack {
@@ -1145,7 +1188,7 @@ struct StatsView: View {
                         Text(viewModel.vegasBankrollString)
                             .foregroundColor(viewModel.vegasBankroll >= 0 ? .green : .red)
                     }
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
                 }
 
                 HStack {
@@ -1153,28 +1196,28 @@ struct StatsView: View {
                     Spacer()
                     Text("\(stats.currentStreak)")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 HStack {
                     Text("Longest Streak:")
                     Spacer()
                     Text("\(stats.longestStreak)")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 HStack {
                     Text("Avg Winning Time:")
                     Spacer()
                     Text(stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 HStack {
                     Text("Fastest Win:")
                     Spacer()
                     Text(stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
             }
             .padding(.horizontal, 36)
 
@@ -1186,7 +1229,7 @@ struct StatsView: View {
                 }
                 .buttonStyle(.borderless)
                 .foregroundColor(.red)
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
                 .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
                     Button("Reset", role: .destructive) {
                         let emptyStats = GameStatistics()
@@ -1202,7 +1245,7 @@ struct StatsView: View {
                     Button("Reset Bankroll") { viewModel.resetVegasBankroll() }
                         .buttonStyle(.borderless)
                         .foregroundColor(.red)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
                 }
 
                 Spacer()

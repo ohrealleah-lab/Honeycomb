@@ -7,12 +7,12 @@ struct CustomCardColorSectionView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Custom Card Color")
-                    .font(.system(.body, design: .monospaced).bold())
+                    .font(.system(.body).bold())
                 Spacer()
                 Button("Reset") {
                     customCardColors.reset()
                 }
-                .font(.system(size: 12, design: .monospaced))
+                .font(.system(size: 12))
                 .buttonStyle(.plain)
                 .foregroundColor(.red)
             }
@@ -20,7 +20,7 @@ struct CustomCardColorSectionView: View {
             VStack(spacing: 8) {
                 HStack {
                     Text("Card Background")
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
                     Spacer()
                     ColorPicker("", selection: $customCardColors.backgroundColor)
                         .labelsHidden()
@@ -28,7 +28,7 @@ struct CustomCardColorSectionView: View {
                 
                 HStack {
                     Text("Card Outline")
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
                     Spacer()
                     ColorPicker("", selection: $customCardColors.outlineColor)
                         .labelsHidden()
@@ -36,7 +36,7 @@ struct CustomCardColorSectionView: View {
                 
                 HStack {
                     Text("Black Suit Text")
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
                     Spacer()
                     ColorPicker("", selection: $customCardColors.blackSuitColor)
                         .labelsHidden()
@@ -44,7 +44,7 @@ struct CustomCardColorSectionView: View {
                 
                 HStack {
                     Text("Red Suit Text")
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
                     Spacer()
                     ColorPicker("", selection: $customCardColors.redSuitColor)
                         .labelsHidden()

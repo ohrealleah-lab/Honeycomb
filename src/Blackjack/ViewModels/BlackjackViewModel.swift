@@ -36,7 +36,6 @@ public final class BlackjackViewModel {
     public var statistics: BlackjackStatistics {
         didSet { saveStatistics() }
     }
-    public var consecutiveWins: Int = 0
 
     // MARK: - Init
 
@@ -378,7 +377,7 @@ public final class BlackjackViewModel {
             let label: String
             switch result {
             case .blackjack: label = "Blackjack! 🃏"
-            case .win:       label = state.playerHands.count > 1 ? "Hand \(i+1): Win" : "You Win!"
+            case .win:       label = state.playerHands.count > 1 ? "Hand \(i+1): Win" : "You win!"
             case .loss:      label = state.playerHands.count > 1 ? "Hand \(i+1): Loss" : "Dealer Wins"
             case .push:      label = state.playerHands.count > 1 ? "Hand \(i+1): Push" : "Push"
             case .bust:      label = state.playerHands.count > 1 ? "Hand \(i+1): Bust" : "Bust!"
@@ -392,9 +391,10 @@ public final class BlackjackViewModel {
         let roundWon = state.playerHands.contains { $0.result == .win || $0.result == .blackjack }
         let roundLost = state.playerHands.contains { $0.result == .loss || $0.result == .bust }
         if roundWon && !roundLost {
-            consecutiveWins += 1
+            statistics.currentStreak += 1
+            statistics.longestStreak = max(statistics.longestStreak, statistics.currentStreak)
         } else if roundLost {
-            consecutiveWins = 0
+            statistics.currentStreak = 0
         }
     }
 
@@ -421,14 +421,49 @@ public final class BlackjackViewModel {
         statistics = BlackjackStatistics()
     }
 
+    public var debugBannerRequest: DebugBannerKind? = nil
+
+    public func debugSetupBannerState(_ kind: DebugBannerKind) {
+        switch kind {
+        case .win:
+            var hand = BlackjackHand(
+                cards: [Card(suit: .hearts, rank: 10, faceUp: true),
+                        Card(suit: .spades, rank: 10, faceUp: true)],
+                bet: 50)
+            hand.result = .win
+            state.playerHands = [hand]
+            state.dealerCards  = [Card(suit: .diamonds, rank: 9, faceUp: true),
+                                  Card(suit: .clubs,    rank: 8, faceUp: true)]
+            state.lastNetResult    = 100
+            state.lastResultSummary = "You win!"
+        case .loss:
+            var hand = BlackjackHand(
+                cards: [Card(suit: .hearts, rank: 8, faceUp: true),
+                        Card(suit: .spades, rank: 7, faceUp: true)],
+                bet: 50)
+            hand.result = .loss
+            state.playerHands = [hand]
+            state.dealerCards  = [Card(suit: .diamonds, rank: 10, faceUp: true),
+                                  Card(suit: .clubs,    rank: 10, faceUp: true)]
+            state.lastNetResult    = -50
+            state.lastResultSummary = "Dealer Wins"
+        default: break
+        }
+    }
+
     public func startNewGame() {
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
         state.currentBet = options.betPerHand
-        consecutiveWins = 0
+        statistics.currentStreak = 0
     }
 
-    public func restartCurrentGame() { startNewGame() }
+    public func restartCurrentGame() {
+        state = BlackjackState()
+        state.sessionCredits = options.startingCredits
+        state.currentBet = options.betPerHand
+        // streak preserved — restart replays the same session
+    }
     public func undoLastAction() {}
     public var canUndo: Bool { false }
 

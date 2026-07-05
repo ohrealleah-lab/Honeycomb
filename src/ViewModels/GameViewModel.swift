@@ -73,6 +73,7 @@ public final class GameViewModel {
 
     // Vegas bankroll — cumulative score within a session only; resets on app launch
     public var vegasBankroll: Int = 0
+    private var vegasBankrollAtGameStart: Int = 0
 
     public func resetVegasBankroll() {
         vegasBankroll = 0
@@ -409,7 +410,10 @@ public final class GameViewModel {
         
         // 6. Set State
         let initialScore = options.isVegasScoring ? -5200 : 0
-        if options.isVegasScoring { vegasBankroll += initialScore }
+        if options.isVegasScoring {
+            vegasBankroll += initialScore
+            vegasBankrollAtGameStart = vegasBankroll
+        }
         state = GameState(
             stock: stock,
             waste: waste,
@@ -436,8 +440,8 @@ public final class GameViewModel {
         guard let initial = initialState else { return }
         stopTimer()
         undoStack.removeAll()
-        // Charge the re-deal cost before restoring state (same as starting a new game)
-        if options.isVegasScoring { vegasBankroll += initial.score }
+        // Restore bankroll to pre-game value — restart replays the same deal, no re-deal charge
+        if options.isVegasScoring { vegasBankroll = vegasBankrollAtGameStart }
         state = initial
         isAutocompleteAvailable = false
         isAutoplayRunning = false
@@ -800,6 +804,8 @@ public final class GameViewModel {
 
     public var hasHintsAvailable: Bool { !collectHints().isEmpty }
 
+    public var debugBannerRequest: DebugBannerKind? = nil
+
     private func collectHints() -> [HintMove] {
         var scored: [(HintMove, Int)] = []
 
@@ -979,5 +985,6 @@ public final class GameViewModel {
     public func resetStatistics() {
         gamesWon = 0
         gamesPlayed = 0
+        highScore = options.isVegasScoring ? -5200 : 0
     }
 }

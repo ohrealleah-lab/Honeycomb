@@ -55,7 +55,7 @@ struct FaceCardSlotTileView: View {
             Text(slot.suitSymbol).font(.system(size: 30)).foregroundColor(cardColor)
         } else {
             VStack(spacing: 0) {
-                Text(slot.rankLabel).font(.system(size: 20, weight: .bold, design: .monospaced)).foregroundColor(cardColor)
+                Text(slot.rankLabel).font(.system(size: 20, weight: .bold)).foregroundColor(cardColor)
                 Text(slot.suitSymbol).font(.system(size: 14)).foregroundColor(cardColor)
             }
         }
@@ -110,7 +110,7 @@ struct FaceCardArtEditorView: View {
 
                     // Corner indices
                     HStack(alignment: .center, spacing: 1) {
-                        Text(slot.rankLabel).font(.system(size: 17, weight: .bold, design: .monospaced))
+                        Text(slot.rankLabel).font(.system(size: 17, weight: .bold))
                         Text(slot.suitSymbol).font(.system(size: 14))
                     }
                     .foregroundColor(cardColor)
@@ -118,7 +118,7 @@ struct FaceCardArtEditorView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
                     HStack(alignment: .center, spacing: 1) {
-                        Text(slot.rankLabel).font(.system(size: 17, weight: .bold, design: .monospaced))
+                        Text(slot.rankLabel).font(.system(size: 17, weight: .bold))
                         Text(slot.suitSymbol).font(.system(size: 14))
                     }
                     .foregroundColor(cardColor)
@@ -183,7 +183,7 @@ struct FaceCardArtEditorView: View {
             HStack {
                 Text(label).font(.caption).foregroundColor(.white.opacity(0.7))
                 Spacer()
-                Text(format).font(.caption).foregroundColor(.white).monospaced()
+                Text(format).font(.caption).foregroundColor(.white)
             }
             Slider(value: value, in: range).frame(width: 200)
         }

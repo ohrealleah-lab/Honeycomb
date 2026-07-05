@@ -16,6 +16,7 @@ public struct BeecellView: View {
     @State private var pendingDeckCount: Int? = nil
     @State private var dismissedAutocompleteBanner: Bool = false
     @State private var dismissedStuckBanner: Bool = false
+    @State private var winPulse: Bool = false
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
 
@@ -425,33 +426,49 @@ public struct BeecellView: View {
                         VStack {
                             Spacer()
                             ZStack(alignment: .topTrailing) {
-                                VStack(spacing: 16) {
-                                    VStack(spacing: 4) {
-                                        Text("No Moves Remaining")
-                                            .font(.system(.headline, design: .monospaced))
-                                            .foregroundColor(.white)
-                                        Text("There are no valid moves remaining.")
-                                            .font(.system(.subheadline, design: .monospaced))
-                                            .foregroundColor(.white.opacity(0.8))
-                                            .multilineTextAlignment(.center)
-                                    }
-                                    Button("New Game") { viewModel.startNewGame() }
-                                        .font(.system(.body, design: .monospaced))
+                                VStack(spacing: 12) {
+                                    Text("Game Over")
+                                        .font(.system(size: 36, weight: .black))
+                                        .foregroundColor(.yellow)
+                                        .shadow(radius: 3)
+
+                                    Text("No moves remaining.")
+                                        .font(.system(.headline))
+                                        .foregroundColor(.white)
+
+                                    HStack(spacing: 12) {
+                                        Button("New Game") {
+                                            viewModel.startNewGame()
+                                        }
+                                        .font(.system(.body))
                                         .fontWeight(.bold)
-                                        .foregroundColor(.black)
+                                        .foregroundColor(.white)
                                         .padding(.horizontal, 20)
                                         .padding(.vertical, 10)
-                                        .background(Color.yellow)
+                                        .background(Color.blue)
                                         .cornerRadius(6)
                                         .buttonStyle(.plain)
+
+                                        Button("Restart Game") {
+                                            viewModel.restartCurrentGame()
+                                        }
+                                        .font(.system(.body))
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 10)
+                                        .background(Color.blue)
+                                        .cornerRadius(6)
+                                        .buttonStyle(.plain)
+                                    }
                                 }
-                                .padding(24)
-                                .frame(maxWidth: 360)
+                                .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+                                .frame(maxWidth: 280)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .background(Color.black.opacity(0.75))
                                 .cornerRadius(12)
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange, lineWidth: 1.5))
-                                .shadow(radius: 8)
+                                .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                                 Button(action: { dismissedStuckBanner = true }) {
                                     Image(systemName: "xmark.circle.fill")
@@ -471,35 +488,34 @@ public struct BeecellView: View {
                         VStack {
                             Spacer()
                             ZStack(alignment: .topTrailing) {
-                                VStack(spacing: 16) {
-                                    VStack(spacing: 4) {
-                                        Text("Victory is guaranteed!")
-                                            .font(.system(.headline, design: .monospaced))
-                                            .foregroundColor(.white)
-                                        Text("All remaining cards can be sorted into foundations.")
-                                            .font(.system(.subheadline, design: .monospaced))
-                                            .foregroundColor(.white.opacity(0.8))
-                                            .multilineTextAlignment(.center)
-                                    }
+                                VStack(spacing: 12) {
+                                    Text("Victory is guaranteed!")
+                                        .font(.system(size: 36, weight: .black))
+                                        .foregroundColor(.yellow)
+                                        .multilineTextAlignment(.center)
+                                    Text("All remaining cards can be sorted into foundations.")
+                                        .font(.system(.body))
+                                        .foregroundColor(.white)
+                                        .multilineTextAlignment(.center)
                                     Button("Autocomplete Game") {
                                         viewModel.runAutocomplete()
                                     }
-                                    .font(.system(.body, design: .monospaced))
+                                    .font(.system(.body))
                                     .fontWeight(.bold)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.white)
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 10)
-                                    .background(Color.yellow)
+                                    .background(Color.blue)
                                     .cornerRadius(6)
-                                    .shadow(radius: 2)
                                     .buttonStyle(.plain)
                                 }
-                                .padding(24)
-                                .frame(maxWidth: 360)
+                                .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+                                .frame(maxWidth: 280)
                                 .fixedSize(horizontal: false, vertical: true)
-                                .background(Color.blue.opacity(0.9))
+                                .background(Color.black.opacity(0.75))
                                 .cornerRadius(12)
-                                .shadow(radius: 8)
+                                .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                                 Button(action: { dismissedAutocompleteBanner = true }) {
                                     Image(systemName: "xmark.circle.fill")
@@ -524,19 +540,22 @@ public struct BeecellView: View {
                         VStack {
                             Spacer()
                             VStack(spacing: 12) {
-                                Text("YOU WIN!")
-                                    .font(.system(size: 40, weight: .black, design: .monospaced))
+                                Text("You win!")
+                                    .font(.system(size: 40, weight: .black))
                                     .foregroundColor(.yellow)
-                                    .shadow(radius: 3)
+                                    .scaleEffect(winPulse ? 1.06 : 1.0)
+                                    .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: winPulse)
+                                    .onAppear { winPulse = true }
+                                    .onDisappear { winPulse = false }
 
                                 Text("Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
-                                    .font(.system(.body, design: .monospaced))
+                                    .font(.system(.body))
                                     .foregroundColor(.white)
 
                                 Button("Play Again") {
                                     viewModel.startNewGame()
                                 }
-                                .font(.system(.body, design: .monospaced))
+                                .font(.system(.body))
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20)
@@ -545,10 +564,13 @@ public struct BeecellView: View {
                                 .cornerRadius(6)
                                 .buttonStyle(.plain)
                             }
-                            .padding(24)
+                            .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+                            .frame(maxWidth: 360)
+                            .fixedSize(horizontal: false, vertical: true)
                             .background(Color.black.opacity(0.75))
                             .cornerRadius(12)
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
+                            .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
                             Spacer()
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -599,6 +621,31 @@ public struct BeecellView: View {
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
+        .onChange(of: viewModel.debugBannerRequest) { _, kind in
+            guard let kind else { return }
+            viewModel.debugBannerRequest = nil
+            switch kind {
+            case .win:
+                let suits: [Card.Suit] = [.spades, .clubs, .diamonds, .hearts]
+                let count = max(viewModel.state.foundations.count, 4)
+                viewModel.state.foundations = (0..<count).map { i in
+                    let suit = suits[i % suits.count]
+                    let cards = (1...13).map { Card(suit: suit, rank: $0, faceUp: true) }
+                    return Pile(id: "foundation_\(i)", type: .foundation, cards: cards)
+                }
+                viewModel.state.hasWon = true
+            case .stuck:
+                viewModel.state.hasWon = false
+                dismissedStuckBanner = false
+                viewModel.isStuck = true
+            case .autocomplete:
+                viewModel.state.hasWon = false
+                dismissedAutocompleteBanner = false
+                viewModel.isAutocompleteAvailable = true
+            case .loss:
+                break
+            }
+        }
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
@@ -882,7 +929,7 @@ struct BeecellOptionsView: View {
         ZStack {
         VStack(spacing: 20) {
             Text("Preferences")
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .font(.system(size: 16, weight: .bold))
                 .padding(.top, 12)
 
             Divider()
@@ -898,16 +945,16 @@ struct BeecellOptionsView: View {
                     Divider()
 
                     Toggle("Timed Game", isOn: $isTimed)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Toggle("Sound Effects", isOn: $isSoundEnabled)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Toggle("Hide Hint button", isOn: $hideHintButton)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Toggle("Hide Stats button", isOn: $hideStatsButton)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Divider()
 
@@ -915,15 +962,15 @@ struct BeecellOptionsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 15, weight: .bold))
                                     .foregroundColor(.primary)
                                 Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12, design: .monospaced))
+                                    .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -967,7 +1014,7 @@ struct BeecellOptionsView: View {
                         .underline()
                 }
                 .buttonStyle(.plain)
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
                 
                 Spacer()
                 
@@ -1037,7 +1084,7 @@ struct BeecellStatsView: View {
         
         VStack(spacing: 20) {
             Text("Freecell Statistics (\(viewModel.options.deckCount == 1 ? "1-Deck" : "2-Decks"))")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.system(size: 14, weight: .bold))
                 .padding(.top, 12)
             
             Divider()
@@ -1048,56 +1095,56 @@ struct BeecellStatsView: View {
                     Spacer()
                     Text("\(stats.gamesPlayed)")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
                 
                 HStack {
                     Text("Games Won:")
                     Spacer()
                     Text("\(stats.gamesWon)")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
                 
                 HStack {
                     Text("High Score:")
                     Spacer()
                     Text(viewModel.highScoreString)
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
                 
                 HStack {
                     Text("Win Percentage:")
                     Spacer()
                     Text(String(format: "%.1f%%", stats.winPercentage))
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
                 
                 HStack {
                     Text("Current Streak:")
                     Spacer()
                     Text("\(stats.currentStreak)")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
                 
                 HStack {
                     Text("Longest Streak:")
                     Spacer()
                     Text("\(stats.longestStreak)")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 HStack {
                     Text("Avg Winning Time:")
                     Spacer()
                     Text(stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 HStack {
                     Text("Fastest Win:")
                     Spacer()
                     Text(stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
                 }
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
             }
             .padding(.horizontal, 36)
 
@@ -1109,7 +1156,7 @@ struct BeecellStatsView: View {
                 }
                 .buttonStyle(.borderless)
                 .foregroundColor(.red)
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
                 .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
                     Button("Reset", role: .destructive) { viewModel.resetStatistics() }
                     Button("Cancel", role: .cancel) {}

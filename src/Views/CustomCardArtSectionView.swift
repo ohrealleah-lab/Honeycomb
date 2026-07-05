@@ -150,7 +150,7 @@ struct CustomCardBackEditorView: View {
                     Text(String(format: "%.0f px", offsetX))
                         .font(.caption)
                         .foregroundColor(.white)
-                        .monospaced()
+                        
                 }
                 Slider(value: $offsetX, in: -100.0...100.0, step: 1.0)
                     .frame(width: 200)
@@ -166,7 +166,7 @@ struct CustomCardBackEditorView: View {
                     Text(String(format: "%.0f px", offsetY))
                         .font(.caption)
                         .foregroundColor(.white)
-                        .monospaced()
+                        
                 }
                 Slider(value: $offsetY, in: -100.0...100.0, step: 1.0)
                     .frame(width: 200)
@@ -182,7 +182,7 @@ struct CustomCardBackEditorView: View {
                     Text(String(format: "%.2fx", scale))
                         .font(.caption)
                         .foregroundColor(.white)
-                        .monospaced()
+                        
                 }
                 Slider(value: $scale, in: 0.5...3.0, step: 0.05)
                     .frame(width: 200)
@@ -276,7 +276,7 @@ struct DeckItemView: View {
             .frame(width: 66, height: 91)
             
             Text(name)
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: 10))
                 .foregroundColor(.primary)
                 .lineLimit(1)
                 .frame(width: 75)
@@ -304,14 +304,14 @@ public struct CardDeckSelectorView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Card Deck Selection")
-                        .font(.system(.body, design: .monospaced).bold())
+                        .font(.system(.body).bold())
                     Text("(.jpg, .png, or .gif accepted):")
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
                 }
                 .foregroundColor(.primary)
                 Spacer()
                 Button("Add Custom…") { selectImage() }
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(size: 12))
                     .buttonStyle(.plain)
                     .foregroundColor(.accentColor)
             }

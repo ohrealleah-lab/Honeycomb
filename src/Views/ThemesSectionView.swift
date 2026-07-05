@@ -22,14 +22,14 @@ struct ThemesSectionView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Themes")
-                    .font(.system(.body, design: .monospaced).bold())
+                    .font(.system(.body).bold())
                 Spacer()
                 Button("Save current as Theme…") {
                     newThemeName = ""
                     saveError = nil
                     showingSaveRow = true
                 }
-                .font(.system(size: 12, design: .monospaced))
+                .font(.system(size: 12))
                 .buttonStyle(.plain)
                 .foregroundColor(.accentColor)
             }
@@ -56,14 +56,14 @@ struct ThemesSectionView: View {
 
                 if let err = saveError {
                     Text(err)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 11))
                         .foregroundColor(.red)
                 }
             }
 
             if manager.themes.isEmpty {
                 Text("No saved themes yet.")
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .padding(.vertical, 4)
             } else {
@@ -106,10 +106,10 @@ struct ThemesSectionView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(theme.name)
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(.system(size: 13))
                     .lineLimit(1)
                 Text(theme.cardBackTheme)
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
 
@@ -127,7 +127,7 @@ struct ThemesSectionView: View {
                 themeToDelete = theme
             } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(size: 12))
             }
             .buttonStyle(.plain)
             .foregroundColor(.red)

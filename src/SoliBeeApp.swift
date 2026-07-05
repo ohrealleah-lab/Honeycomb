@@ -57,7 +57,7 @@ struct SoliBeeApp: App {
 
                 Divider()
 
-                Button("Play Winning Animation") {
+                Button("Roll that beautiful bee footage") {
                     coordinator.triggerWinAnimation()
                 }
             }
@@ -70,6 +70,10 @@ struct SoliBeeApp: App {
 
             CommandGroup(replacing: .help) {
                 HelpMenuCommands()
+            }
+
+            CommandMenu("Banners") {
+                DebugBannerCommands(coordinator: coordinator)
             }
 
             CommandGroup(replacing: .toolbar) {

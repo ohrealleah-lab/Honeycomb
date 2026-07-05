@@ -26,10 +26,10 @@ struct ThemesOptionsView: View {
                 Button(action: cancel) {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                            .font(.system(size: 13, weight: .semibold))
                         Text("Back")
                     }
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.accentColor)
@@ -37,12 +37,12 @@ struct ThemesOptionsView: View {
                 Spacer()
 
                 Text("Themes")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .font(.system(size: 16, weight: .bold))
 
                 Spacer()
 
                 Button("Done") { onDone(); isShowing = false; dismiss() }
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
                     .buttonStyle(.plain)
                     .foregroundColor(.accentColor)
             }
@@ -65,7 +65,7 @@ struct ThemesOptionsView: View {
 
                     HStack(spacing: 8) {
                         Text("Felt Color:")
-                            .font(.system(.body, design: .monospaced).bold())
+                            .font(.system(.body).bold())
 
                         Picker("", selection: $feltColor) {
                             Text("Felt Green").tag(FeltColorTheme.feltGreen)
@@ -75,7 +75,7 @@ struct ThemesOptionsView: View {
                             Text("Desert").tag(FeltColorTheme.desert)
                             Text("Custom").tag(FeltColorTheme.custom)
                         }
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
                         .fixedSize()
 
                         if feltColor == .custom {
@@ -99,7 +99,7 @@ struct ThemesOptionsView: View {
                     Divider()
 
                     Toggle("Felt Vignette", isOn: $showFeltVignette)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Divider()
 
@@ -111,9 +111,9 @@ struct ThemesOptionsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(spacing: 4) {
                         Text("Add Custom Card Art")
-                            .font(.system(.body, design: .monospaced).bold())
+                            .font(.system(.body).bold())
                         Text("(.jpg or .png accepted):")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(.body))
                     }
                     .foregroundColor(.primary)
 

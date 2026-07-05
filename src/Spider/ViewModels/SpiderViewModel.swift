@@ -775,6 +775,8 @@ public final class SpiderViewModel {
 
     public var hasHintsAvailable: Bool { !collectHints().isEmpty }
 
+    public var debugBannerRequest: DebugBannerKind? = nil
+
     private func collectHints() -> [SpiderHintMove] {
         var scored: [(SpiderHintMove, Int)] = []
 

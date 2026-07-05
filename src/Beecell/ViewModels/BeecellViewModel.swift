@@ -782,6 +782,8 @@ public final class BeecellViewModel {
 
     public var hasHintsAvailable: Bool { !collectHints().isEmpty }
 
+    public var debugBannerRequest: DebugBannerKind? = nil
+
     private func collectHints() -> [HintMove] {
         var scored: [(HintMove, Int)] = []
 

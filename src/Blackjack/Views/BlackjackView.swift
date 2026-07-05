@@ -7,6 +7,7 @@ public struct BlackjackView: View {
     @State private var isShowingStats   = false
     @State private var isShowingNewGameConfirm = false
     @State private var showResultBanner  = false
+    @State private var bannerWinFlash    = false
     @State private var cardsVisible           = true
     @State private var showCardBackPlaceholders = false
     @State private var dealerFlipped          = false  // triggers hole-card flip animation
@@ -169,6 +170,19 @@ public struct BlackjackView: View {
             if newPhase == .dealerTurn {
                 dealerFlipped = true
             }
+        }
+        .onChange(of: viewModel.debugBannerRequest) { _, kind in
+            guard let kind else { return }
+            viewModel.debugBannerRequest = nil
+            resultBannerShowTask?.cancel()
+            resultHideTask?.cancel()
+            resultCardHideTask?.cancel()
+            showResultBanner = false
+            cardsVisible = true
+            showCardBackPlaceholders = false
+            dealerFlipped = true
+            viewModel.debugSetupBannerState(kind)
+            showResultBanner = true
         }
     }
 
@@ -469,25 +483,25 @@ public struct BlackjackView: View {
         let isWin: Bool
         
         if anyBJ {
-            headline = "BLACKJACK!"
+            headline = "Blackjack!"
             subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
             isWin = true
         } else if anyWin {
-            headline = "YOU WIN!"
+            headline = "You win!"
             subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
             isWin = true
         } else if allPush {
-            headline = "PUSH"
+            headline = "Push"
             subline = "Bets returned"
             isWin = false
         } else {
             let playerBust = !viewModel.state.playerHands.isEmpty && viewModel.state.playerHands.allSatisfy { $0.isBust }
-            headline = playerBust ? "BUST! DEALER WINS" : "DEALER WINS"
+            headline = playerBust ? "Bust! Not today, partner!" : "Not today, partner!"
             subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
             isWin = false
         }
         
-        let streak = viewModel.consecutiveWins
+        let streak = viewModel.statistics.currentStreak
         let streakText: String?
         if streak >= 2 && isWin {
             streakText = streak >= 5 ? "*** \(streak) WIN STREAK ***"
@@ -500,15 +514,19 @@ public struct BlackjackView: View {
         let dealerVal = viewModel.state.dealerValue
         let playerVal = viewModel.state.playerHands.map { $0.value }.max() ?? 0
 
-        return VStack(spacing: 6) {
+        return VStack(spacing: 8) {
             Text(headline)
-                .font(.system(size: 32, weight: .black))
-                .foregroundColor(isWin ? Color(red: 1.0, green: 0.84, blue: 0.0) : .white)
+                .font(.system(size: 36, weight: .black))
+                .foregroundColor(.yellow)
                 .multilineTextAlignment(.center)
+                .scaleEffect(isWin && bannerWinFlash ? 1.06 : 1.0)
+                .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: bannerWinFlash)
+                .onAppear { if isWin { bannerWinFlash = true } }
+                .onDisappear { bannerWinFlash = false }
 
             Text(subline)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.white.opacity(0.85))
+                .font(.system(.body))
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
 
             VStack(spacing: 2) {
@@ -522,16 +540,17 @@ public struct BlackjackView: View {
             if let streakText = streakText {
                 Text(streakText)
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.9))
+                    .foregroundColor(.yellow.opacity(0.9))
                     .multilineTextAlignment(.center)
             }
         }
-        .padding(.horizontal, 36)
-        .padding(.vertical, 16)
-        .background(Color(red: 26/255.0, green: 68/255.0, blue: 204/255.0))
-        .cornerRadius(8)
-        .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.56) : .clear, radius: 14)
-        .shadow(color: .black.opacity(0.66), radius: 9, x: 0, y: 4)
+        .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+        .frame(maxWidth: isWin ? 280 : 420)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(Color.black.opacity(0.75))
+        .cornerRadius(12)
+        .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5) : .clear, radius: 16)
         .transition(.opacity)
     }
 
@@ -720,7 +739,7 @@ struct BlackjackOptionsView: View {
         ZStack {
         VStack(spacing: 20) {
             Text("Preferences")
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .font(.system(size: 16, weight: .bold))
                 .padding(.top, 12)
 
             Divider()
@@ -728,17 +747,17 @@ struct BlackjackOptionsView: View {
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 12) {
                     Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 10...10000, step: 10)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.body))
 
                     Picker("Default Bet:", selection: $betPerHand) {
                         ForEach(1...5, id: \.self) { n in Text("\(n) coin\(n == 1 ? "" : "s")").tag(n) }
                     }
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
 
                     Divider()
 
-                    Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body, design: .monospaced))
-                    Toggle("Hide Stats button", isOn: $hideStatsButton).font(.system(.body, design: .monospaced))
+                    Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body))
+                    Toggle("Hide Stats button", isOn: $hideStatsButton).font(.system(.body))
 
                     Divider()
 
@@ -746,15 +765,15 @@ struct BlackjackOptionsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 15, weight: .bold))
                                     .foregroundColor(.primary)
                                 Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12, design: .monospaced))
+                                    .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -794,7 +813,7 @@ struct BlackjackOptionsView: View {
                     Text("View Stats").foregroundColor(.blue).underline()
                 }
                 .buttonStyle(.plain)
-                .font(.system(.body, design: .monospaced))
+                .font(.system(.body))
 
                 Spacer()
 
@@ -861,7 +880,7 @@ struct BlackjackStatsView: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("Blackjack Statistics")
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .font(.system(size: 16, weight: .bold))
                 .padding(.top, 16)
 
             Divider()
@@ -872,7 +891,9 @@ struct BlackjackStatsView: View {
                 statRow("Hands Lost",    "\(viewModel.statistics.handsLost)")
                 statRow("Pushes",        "\(viewModel.statistics.pushes)")
                 statRow("Blackjacks",    "\(viewModel.statistics.blackjacks)")
-                statRow("Win Rate",      String(format: "%.1f%%", viewModel.statistics.winRate * 100))
+                statRow("Win Rate",       String(format: "%.1f%%", viewModel.statistics.winRate * 100))
+                statRow("Cur. Streak",   "\(viewModel.statistics.currentStreak)")
+                statRow("Best Streak",   "\(viewModel.statistics.longestStreak)")
                 statRow("Total Wagered", "\(viewModel.statistics.totalWagered)")
                 statRow("Total Paid",    "\(viewModel.statistics.totalPaidOut)")
                 statRow("Biggest Pay",   "\(viewModel.statistics.biggestPayout)")
@@ -887,7 +908,7 @@ struct BlackjackStatsView: View {
                 Button("Reset Stats") { showingResetConfirmation = true }
                     .buttonStyle(.borderless)
                     .foregroundColor(.red)
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
                     .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
                         Button("Reset", role: .destructive) { viewModel.resetStatistics() }
                         Button("Cancel", role: .cancel) {}
@@ -897,7 +918,7 @@ struct BlackjackStatsView: View {
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.defaultAction)
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
@@ -907,9 +928,9 @@ struct BlackjackStatsView: View {
 
     private func statRow(_ label: String, _ value: String) -> some View {
         HStack {
-            Text(label).font(.system(.body, design: .monospaced))
+            Text(label).font(.system(.body))
             Spacer()
-            Text(value).font(.system(.body, design: .monospaced)).fontWeight(.bold)
+            Text(value).font(.system(.body)).fontWeight(.bold)
         }
     }
 }
