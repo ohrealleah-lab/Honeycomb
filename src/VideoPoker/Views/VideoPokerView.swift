@@ -113,8 +113,16 @@ public struct VideoPokerView: View {
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
-        .sheet(isPresented: $isShowingOptions) {
-            VideoPokerOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
+        .overlay {
+            if isShowingOptions {
+                Color.clear
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .overlay(
+                        VideoPokerOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions)
+                    )
+                    .transition(.opacity)
+            }
         }
         .sheet(isPresented: $isShowingStats) {
             VideoPokerStatsView(viewModel: viewModel)
@@ -691,7 +699,7 @@ public struct VideoPokerView: View {
 struct VideoPokerOptionsView: View {
     @Bindable var viewModel: VideoPokerViewModel
     @Binding var isShowingStats: Bool
-    @Environment(\.dismiss) private var dismiss
+    @Binding var isPresented: Bool
 
     @State private var variant: VideoPokerVariant
     @State private var startingCredits: Int
@@ -710,11 +718,15 @@ struct VideoPokerOptionsView: View {
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
+    let originalFeltColor: FeltColorTheme
+    let originalCardBackTheme: String
+    let originalShowFeltVignette: Bool
     let originalCustomCardColors: CustomCardColorGroup
 
-    init(viewModel: VideoPokerViewModel, isShowingStats: Binding<Bool>) {
+    init(viewModel: VideoPokerViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>) {
         self.viewModel = viewModel
         self._isShowingStats = isShowingStats
+        self._isPresented = isPresented
         _variant         = State(initialValue: viewModel.options.variant)
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
         _betPerHand      = State(initialValue: viewModel.options.betPerHand)
@@ -726,6 +738,9 @@ struct VideoPokerOptionsView: View {
         _feltColor       = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme   = State(initialValue: viewModel.options.cardBackTheme)
         _customCardColors = State(initialValue: viewModel.options.customCardColors)
+        self.originalFeltColor = viewModel.options.feltColor
+        self.originalCardBackTheme = viewModel.options.cardBackTheme
+        self.originalShowFeltVignette = viewModel.options.showFeltVignette
         self.originalCustomCardColors = viewModel.options.customCardColors
 
         let r = UserDefaults.standard.double(forKey: "custom_felt_red")
@@ -808,14 +823,21 @@ struct VideoPokerOptionsView: View {
                     UserDefaults.standard.set(originalRed,   forKey: "custom_felt_red")
                     UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
                     UserDefaults.standard.set(originalBlue,  forKey: "custom_felt_blue")
-                    dismiss()
+                    // Revert any theme changes that were live-previewed via the Themes sub-panel.
+                    var revertedOpts = viewModel.options
+                    revertedOpts.feltColor = originalFeltColor
+                    revertedOpts.cardBackTheme = originalCardBackTheme
+                    revertedOpts.showFeltVignette = originalShowFeltVignette
+                    revertedOpts.customCardColors = originalCustomCardColors
+                    viewModel.options = revertedOpts
+                    isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
                 Button(action: {
-                    dismiss()
+                    isPresented = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { isShowingStats = true }
                 }) {
                     Text("View Stats").foregroundColor(.blue).underline()
@@ -842,7 +864,7 @@ struct VideoPokerOptionsView: View {
                     o.customFeltColorRevision += 1
                     viewModel.options = o
                     if variantChanged { viewModel.startNewGame() }
-                    dismiss()
+                    isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)
             }
@@ -850,11 +872,13 @@ struct VideoPokerOptionsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 440)
+        .fixedSize(horizontal: false, vertical: true)
         .background(Color(NSColor.windowBackgroundColor))
 
         if showingThemes {
             ThemesOptionsView(
                 isShowing: $showingThemes,
+                isOptionsPresented: $isPresented,
                 feltColor: $feltColor,
                 cardBackTheme: $cardBackTheme,
                 showFeltVignette: $showFeltVignette,
@@ -864,13 +888,13 @@ struct VideoPokerOptionsView: View {
                 originalGreen: originalGreen,
                 originalBlue: originalBlue,
                 originalCustomCardColors: originalCustomCardColors,
-                onDone: {
+                onCommit: { bumpFeltRevision in
                     var o = viewModel.options
                     o.showFeltVignette   = showFeltVignette
                     o.feltColor          = feltColor
                     o.cardBackTheme      = cardBackTheme
                     o.customCardColors   = customCardColors
-                    o.customFeltColorRevision += 1
+                    if bumpFeltRevision { o.customFeltColorRevision += 1 }
                     viewModel.options = o
                 }
             )

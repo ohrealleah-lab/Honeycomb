@@ -79,7 +79,7 @@ public final class BlackjackViewModel {
         }
 
         state.sessionCredits = options.startingCredits
-        state.currentBet = options.betPerHand
+        state.currentBet = 1
 
         if let saved = UserDefaults.standard.value(forKey: "blackjack_defaultZoomScale") as? Double {
             self.defaultZoomScale = CGFloat(saved)
@@ -163,6 +163,11 @@ public final class BlackjackViewModel {
             && state.sessionCredits >= hand.bet
     }
 
+    public var canRebuy: Bool {
+        (state.phase == .betting || state.phase == .result)
+            && state.sessionCredits < state.currentBet
+    }
+
     public var activeHand: BlackjackHand? {
         guard state.activeHandIndex < state.playerHands.count else { return nil }
         return state.playerHands[state.activeHandIndex]
@@ -242,6 +247,7 @@ public final class BlackjackViewModel {
         guard state.phase == .playing else { return }
         guard state.activeHandIndex < state.playerHands.count else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
+        guard !state.playerHands[state.activeHandIndex].isSplitAce else { return }
         advanceHand()
     }
 
@@ -287,24 +293,32 @@ public final class BlackjackViewModel {
         playSound(named: "snap")
 
         // Split Aces: each hand gets exactly the one card just dealt, then must stand.
+        // Delay the auto-resolve so the player has a moment to see both hands' cards
+        // before the round jumps to the dealer's turn.
         if isAces {
-            executeDealerTurn()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                self?.executeDealerTurn()
+            }
         }
     }
 
-    public func maxBet() {
-        state.currentBet = max(1, min(5, state.sessionCredits))
-        if state.phase == .betting || state.phase == .result { deal() }
+    public func addToBet(_ amount: Int) {
+        guard state.phase == .betting || state.phase == .result else { return }
+        if amount != 1 && state.currentBet == 1 {
+            state.currentBet = max(1, min(amount, state.sessionCredits))
+        } else {
+            state.currentBet = max(1, min(state.currentBet + amount, state.sessionCredits))
+        }
     }
 
-    public func increaseBet() {
+    public func doubleBet() {
         guard state.phase == .betting || state.phase == .result else { return }
-        state.currentBet = min(5, state.currentBet + 1)
+        state.currentBet = max(1, min(state.currentBet * 2, state.sessionCredits))
     }
 
-    public func decreaseBet() {
+    public func clearBet() {
         guard state.phase == .betting || state.phase == .result else { return }
-        state.currentBet = max(1, state.currentBet - 1)
+        state.currentBet = 1
     }
 
     public func rebuy() {
@@ -341,6 +355,12 @@ public final class BlackjackViewModel {
 
         evaluateAllHands()
         state.phase = .result
+
+        // Keep the bet at its last wagered amount for the next hand if still affordable,
+        // otherwise fall back to the 1 credit minimum.
+        if state.currentBet > state.sessionCredits {
+            state.currentBet = 1
+        }
     }
 
     private func evaluateAllHands() {
@@ -365,9 +385,9 @@ public final class BlackjackViewModel {
                 payout = hand.bet
                 statistics.pushes += 1
             } else if playerBJ {
-                // Blackjack pays 3:2
+                // Blackjack pays 3:1
                 result = .blackjack
-                payout = hand.bet + Int(Double(hand.bet) * 1.5)
+                payout = hand.bet + hand.bet * 3
                 statistics.blackjacks += 1
                 statistics.handsWon += 1
                 playSound(named: "victory")
@@ -474,14 +494,14 @@ public final class BlackjackViewModel {
     public func startNewGame() {
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
-        state.currentBet = options.betPerHand
+        state.currentBet = 1
         statistics.currentStreak = 0
     }
 
     public func restartCurrentGame() {
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
-        state.currentBet = options.betPerHand
+        state.currentBet = 1
         // streak preserved — restart replays the same session
     }
     public func undoLastAction() {}

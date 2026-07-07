@@ -2,7 +2,6 @@ import Foundation
 
 public struct BlackjackOptions: Codable, Equatable {
     public var startingCredits: Int = 100
-    public var betPerHand: Int = 1
     public var isSoundEnabled: Bool = true
     public var feltColor: FeltColorTheme = .feltGreen
     public var customFeltColorRevision: Int = 0
@@ -12,7 +11,7 @@ public struct BlackjackOptions: Codable, Equatable {
     public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
 
     enum CodingKeys: String, CodingKey {
-        case startingCredits, betPerHand, isSoundEnabled
+        case startingCredits, isSoundEnabled
         case feltColor, customFeltColorRevision, cardBackTheme, hideStatsButton, showFeltVignette, customCardColors
     }
 
@@ -25,7 +24,6 @@ public struct BlackjackOptions: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         startingCredits        = try c.decodeIfPresent(Int.self,           forKey: .startingCredits)        ?? 100
-        betPerHand             = try c.decodeIfPresent(Int.self,           forKey: .betPerHand)             ?? 1
         isSoundEnabled         = try c.decodeIfPresent(Bool.self,          forKey: .isSoundEnabled)         ?? true
         feltColor              = try c.decodeIfPresent(FeltColorTheme.self, forKey: .feltColor)             ?? .feltGreen
         customFeltColorRevision = try c.decodeIfPresent(Int.self,          forKey: .customFeltColorRevision) ?? 0

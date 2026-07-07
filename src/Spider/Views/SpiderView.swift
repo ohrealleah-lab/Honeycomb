@@ -487,8 +487,16 @@ public struct SpiderView: View {
                maxWidth: .infinity,
                minHeight: 73 + boardHeight * viewModel.zoomScale,
                maxHeight: .infinity)
-        .sheet(isPresented: $isShowingOptions) {
-            SpiderOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
+        .overlay {
+            if isShowingOptions {
+                Color.clear
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .overlay(
+                        SpiderOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions)
+                    )
+                    .transition(.opacity)
+            }
         }
         .sheet(isPresented: $isShowingStats) {
             SpiderStatsView(viewModel: viewModel)
@@ -632,8 +640,8 @@ public struct SpiderView: View {
 struct SpiderOptionsView: View {
     @Bindable var viewModel: SpiderViewModel
     @Binding var isShowingStats: Bool
-    @Environment(\.dismiss) private var dismiss
-    
+    @Binding var isPresented: Bool
+
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
     @State private var suitCount: Int
@@ -649,11 +657,15 @@ struct SpiderOptionsView: View {
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
+    let originalFeltColor: FeltColorTheme
+    let originalCardBackTheme: String
+    let originalShowFeltVignette: Bool
     let originalCustomCardColors: CustomCardColorGroup
 
-    init(viewModel: SpiderViewModel, isShowingStats: Binding<Bool>) {
+    init(viewModel: SpiderViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>) {
         self.viewModel = viewModel
         self._isShowingStats = isShowingStats
+        self._isPresented = isPresented
         _feltColor = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme = State(initialValue: viewModel.options.cardBackTheme)
         _suitCount = State(initialValue: viewModel.options.suitCount)
@@ -663,8 +675,11 @@ struct SpiderOptionsView: View {
         _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _customCardColors = State(initialValue: viewModel.options.customCardColors)
+        self.originalFeltColor = viewModel.options.feltColor
+        self.originalCardBackTheme = viewModel.options.cardBackTheme
+        self.originalShowFeltVignette = viewModel.options.showFeltVignette
         self.originalCustomCardColors = viewModel.options.customCardColors
-        
+
         let r = UserDefaults.standard.double(forKey: "custom_felt_red")
         let g = UserDefaults.standard.double(forKey: "custom_felt_green")
         let b = UserDefaults.standard.double(forKey: "custom_felt_blue")
@@ -754,14 +769,21 @@ struct SpiderOptionsView: View {
                     UserDefaults.standard.set(originalRed, forKey: "custom_felt_red")
                     UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
                     UserDefaults.standard.set(originalBlue, forKey: "custom_felt_blue")
-                    dismiss()
+                    // Revert any theme changes that were live-previewed via the Themes sub-panel.
+                    var revertedOpts = viewModel.options
+                    revertedOpts.feltColor = originalFeltColor
+                    revertedOpts.cardBackTheme = originalCardBackTheme
+                    revertedOpts.showFeltVignette = originalShowFeltVignette
+                    revertedOpts.customCardColors = originalCustomCardColors
+                    viewModel.options = revertedOpts
+                    isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
-                
+
                 Spacer()
-                
+
                 Button(action: {
-                    dismiss()
+                    isPresented = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                         isShowingStats = true
                     }
@@ -787,9 +809,9 @@ struct SpiderOptionsView: View {
                     updatedOpts.showFeltVignette = showFeltVignette
                     updatedOpts.customCardColors = customCardColors
                     updatedOpts.customFeltColorRevision += 1
-                    
+
                     viewModel.options = updatedOpts
-                    dismiss()
+                    isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)
             }
@@ -797,11 +819,13 @@ struct SpiderOptionsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 440)
+        .fixedSize(horizontal: false, vertical: true)
         .background(Color(NSColor.windowBackgroundColor))
 
         if showingThemes {
             ThemesOptionsView(
                 isShowing: $showingThemes,
+                isOptionsPresented: $isPresented,
                 feltColor: $feltColor,
                 cardBackTheme: $cardBackTheme,
                 showFeltVignette: $showFeltVignette,
@@ -811,13 +835,13 @@ struct SpiderOptionsView: View {
                 originalGreen: originalGreen,
                 originalBlue: originalBlue,
                 originalCustomCardColors: originalCustomCardColors,
-                onDone: {
+                onCommit: { bumpFeltRevision in
                     var updatedOpts = viewModel.options
                     updatedOpts.feltColor = feltColor
                     updatedOpts.cardBackTheme = cardBackTheme
                     updatedOpts.showFeltVignette = showFeltVignette
                     updatedOpts.customCardColors = customCardColors
-                    updatedOpts.customFeltColorRevision += 1
+                    if bumpFeltRevision { updatedOpts.customFeltColorRevision += 1 }
                     viewModel.options = updatedOpts
                 }
             )
