@@ -636,11 +636,11 @@ public struct GameView: View {
             Button("Cancel", role: .cancel) { }
         }
         .confirmationDialog("Start a new game? Your current game will end.", isPresented: $isShowingNewGameConfirm) {
+            Button("Cancel", role: .cancel) { pendingDrawMode = nil }
             Button("New Game", role: .destructive) {
                 if let mode = pendingDrawMode { viewModel.state.drawMode = mode; pendingDrawMode = nil }
                 viewModel.startNewGame()
             }
-            Button("Cancel", role: .cancel) { pendingDrawMode = nil }
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }

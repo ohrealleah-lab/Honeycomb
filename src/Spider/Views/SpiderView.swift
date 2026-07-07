@@ -494,8 +494,8 @@ public struct SpiderView: View {
             SpiderStatsView(viewModel: viewModel)
         }
         .confirmationDialog("Start a new game? Your current game will end.", isPresented: $isShowingNewGameConfirm) {
-            Button("New Game", role: .destructive) { viewModel.startNewGame() }
             Button("Cancel", role: .cancel) { }
+            Button("New Game", role: .destructive) { viewModel.startNewGame() }
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }

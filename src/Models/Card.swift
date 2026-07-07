@@ -36,6 +36,11 @@ public struct Card: Identifiable, Equatable, Hashable, Codable {
     public var isRed: Bool { suit.isRed }
     public var isBlack: Bool { !suit.isRed }
     
+    public var isFaceCard: Bool {
+        rank == 11 || rank == 12 || rank == 13
+    }
+
+    
     public var rankString: String {
         switch rank {
         case 1: return "A"

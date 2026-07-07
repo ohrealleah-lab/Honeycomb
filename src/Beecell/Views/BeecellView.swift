@@ -626,11 +626,11 @@ public struct BeecellView: View {
             BeecellStatsView(viewModel: viewModel)
         }
         .confirmationDialog("Start a new game? Your current game will end.", isPresented: $isShowingNewGameConfirm) {
+            Button("Cancel", role: .cancel) { pendingDeckCount = nil }
             Button("New Game", role: .destructive) {
                 if let deck = pendingDeckCount { viewModel.options.deckCount = deck; pendingDeckCount = nil }
                 viewModel.startNewGame()
             }
-            Button("Cancel", role: .cancel) { pendingDeckCount = nil }
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }

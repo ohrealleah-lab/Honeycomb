@@ -136,8 +136,8 @@ public struct BlackjackView: View {
             BlackjackStatsView(viewModel: viewModel)
         }
         .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
-            Button("New Game", role: .destructive) { viewModel.startNewGame() }
             Button("Cancel", role: .cancel) { }
+            Button("New Game", role: .destructive) { viewModel.startNewGame() }
         }
         .onAppear {
             if viewModel.state.phase == .betting && viewModel.state.playerHands.isEmpty {
