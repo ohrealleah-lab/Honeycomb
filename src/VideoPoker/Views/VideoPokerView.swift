@@ -24,6 +24,10 @@ public struct VideoPokerView: View {
     @State private var idlePromptTask:       DispatchWorkItem? = nil
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
 
+    // The toolbar stays fixed size regardless of zoom; only the board below it scales.
+    static let toolbarHeight: CGFloat = 73
+    static let boardBaseHeight: CGFloat = 762 - toolbarHeight
+
     public init(viewModel: VideoPokerViewModel) {
         self.viewModel = viewModel
     }
@@ -36,6 +40,7 @@ public struct VideoPokerView: View {
             if viewModel.options.showFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
+                // Stationary toolbar — never scales with zoom
                 toolbarView
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -43,44 +48,48 @@ public struct VideoPokerView: View {
 
                 Divider().overlay(Color.white.opacity(0.2))
 
-                if !viewModel.options.hideBetBoard {
-                    payTableGrid
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 6)
+                // Scaled board area
+                VStack(spacing: 0) {
+                    if !viewModel.options.hideBetBoard {
+                        payTableGrid
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                            .padding(.bottom, 6)
 
-                    Divider().overlay(Color.white.opacity(0.1))
-                }
+                        Divider().overlay(Color.white.opacity(0.1))
+                    }
 
-                VStack(spacing: 16) {
-                    creditDisplay
-                    resultLabel
-                    handArea
-                        .overlay {
-                            if showIdlePrompt {
-                                Text("Hit Space to Deal")
-                                    .font(.display(28, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 10)
-                                    .background(Color.black.opacity(0.55))
-                                    .cornerRadius(8)
-                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
-                                    .allowsHitTesting(false)
-                                    .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
+                    VStack(spacing: 16) {
+                        creditDisplay
+                        resultLabel
+                        handArea
+                            .overlay {
+                                if showIdlePrompt {
+                                    Text("Hit Space to Deal")
+                                        .font(.display(28, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 10)
+                                        .background(Color.black.opacity(0.55))
+                                        .cornerRadius(8)
+                                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
+                                        .allowsHitTesting(false)
+                                        .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
+                                }
                             }
-                        }
-                    holdLabels
-                    actionButtons
-                }
-                .padding(.horizontal, 12)
-                    .padding(.vertical, 24)
+                        holdLabels
+                        actionButtons
+                    }
+                    .padding(.horizontal, 12)
+                        .padding(.vertical, 24)
 
-                Spacer()
+                    Spacer()
+                }
+                .frame(width: 905, height: Self.boardBaseHeight, alignment: .topLeading)
+                .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
+                .frame(width: 905 * viewModel.zoomScale, height: Self.boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
             }
-            .frame(width: 905, height: 762, alignment: .topLeading)
-            .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
-            .frame(width: 905 * viewModel.zoomScale, height: 762 * viewModel.zoomScale, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             // Keyboard shortcut buttons (invisible, zero-size)
             keyboardShortcuts
@@ -89,12 +98,17 @@ public struct VideoPokerView: View {
                 .clipped()
         }
         .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
-               minHeight: 762 * viewModel.zoomScale, maxHeight: .infinity)
+               minHeight: Self.toolbarHeight + Self.boardBaseHeight * viewModel.zoomScale, maxHeight: .infinity)
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            snapToMinSize()
+            coordinator?.activeWindow = window
+            if let saved = viewModel.defaultWindowSize {
+                snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
+            } else {
+                snapToMinSize()
+            }
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
@@ -432,10 +446,9 @@ public struct VideoPokerView: View {
                                 .multilineTextAlignment(.center)
                         }
                     }
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 20)
                     .padding(.vertical, 24)
-                    .frame(maxWidth: 280)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .fixedSize()
                     .background(Color.black.opacity(0.75))
                     .cornerRadius(12)
                     .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
@@ -648,18 +661,19 @@ public struct VideoPokerView: View {
     private func updateMinSize() {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: 762 * z)
+        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + Self.boardBaseHeight * z)
         DispatchQueue.main.async {
             window.contentMinSize = size
         }
     }
 
-    private func snapToMinSize() {
+    private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: 762 * z)
+        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + Self.boardBaseHeight * z)
+        let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
         DispatchQueue.main.async {
-            window.contentMinSize = size
+            window.contentMinSize = minSize
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
                 window.animator().setContentSize(size)

@@ -8,6 +8,7 @@ public final class BlackjackViewModel {
     public var options: BlackjackOptions {
         didSet {
             saveOptions()
+            UISound.isEnabled = options.isSoundEnabled
             if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
                 UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
                 NotificationCenter.default.post(name: .feltColorDidChange, object: self, userInfo: [
@@ -89,9 +90,16 @@ public final class BlackjackViewModel {
             self.zoomScale = self.defaultZoomScale
         }
 
+        if let savedWidth = UserDefaults.standard.value(forKey: "blackjack_defaultWindowWidth") as? Double,
+           let savedHeight = UserDefaults.standard.value(forKey: "blackjack_defaultWindowHeight") as? Double {
+            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
+        }
+
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
+
+        UISound.isEnabled = self.options.isSoundEnabled
     }
 
     deinit {
@@ -149,7 +157,10 @@ public final class BlackjackViewModel {
     public var canDouble: Bool {
         guard state.activeHandIndex < state.playerHands.count else { return false }
         let hand = state.playerHands[state.activeHandIndex]
-        return hand.cards.count == 2 && state.sessionCredits >= hand.bet
+        return hand.cards.count == 2
+            && !hand.isSplitAce
+            && (9...11).contains(hand.value)
+            && state.sessionCredits >= hand.bet
     }
 
     public var activeHand: BlackjackHand? {
@@ -216,6 +227,7 @@ public final class BlackjackViewModel {
         guard state.phase == .playing else { return }
         guard state.activeHandIndex < state.playerHands.count else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
+        guard !state.playerHands[state.activeHandIndex].isSplitAce else { return }
         guard let card = popCard(faceUp: true) else { return }
 
         playSound(named: "snap")
@@ -259,17 +271,25 @@ public final class BlackjackViewModel {
 
         let card0 = state.playerHands[0].cards[0]
         let card1 = state.playerHands[0].cards[1]
+        let isAces = card0.rank == 1
 
         // Draw a second card for each split hand
         let extra0 = popCard(faceUp: true) ?? card0
         let extra1 = popCard(faceUp: true) ?? card1
 
-        state.playerHands = [
-            BlackjackHand(cards: [card0, extra0], bet: originalBet),
-            BlackjackHand(cards: [card1, extra1], bet: originalBet)
-        ]
+        var hand0 = BlackjackHand(cards: [card0, extra0], bet: originalBet)
+        var hand1 = BlackjackHand(cards: [card1, extra1], bet: originalBet)
+        hand0.isSplitAce = isAces
+        hand1.isSplitAce = isAces
+
+        state.playerHands = [hand0, hand1]
         state.activeHandIndex = 0
         playSound(named: "snap")
+
+        // Split Aces: each hand gets exactly the one card just dealt, then must stand.
+        if isAces {
+            executeDealerTurn()
+        }
     }
 
     public func maxBet() {
@@ -479,5 +499,14 @@ public final class BlackjackViewModel {
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "blackjack_defaultZoomScale")
+    }
+
+    // MARK: - Default Window Size
+    public var defaultWindowSize: CGSize?
+
+    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
+        defaultWindowSize = size
+        UserDefaults.standard.set(Double(size.width), forKey: "blackjack_defaultWindowWidth")
+        UserDefaults.standard.set(Double(size.height), forKey: "blackjack_defaultWindowHeight")
     }
 }

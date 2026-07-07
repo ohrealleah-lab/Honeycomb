@@ -203,7 +203,7 @@ struct BeecellTests {
         
         var foundations: [Pile] = []
         let suits: [Card.Suit] = [.hearts, .diamonds, .spades, .clubs]
-        for (idx, suit) in suits.enumerated() {
+        for (idx, _) in suits.enumerated() {
             foundations.append(Pile(id: "fnd_\(idx)", type: .foundation, cards: []))
         }
         
@@ -254,7 +254,7 @@ struct BeecellTests {
         
         var foundations: [Pile] = []
         let suits: [Card.Suit] = [.hearts, .diamonds, .spades, .clubs]
-        for (idx, suit) in suits.enumerated() {
+        for (idx, _) in suits.enumerated() {
             foundations.append(Pile(id: "fnd_\(idx)", type: .foundation, cards: []))
         }
         

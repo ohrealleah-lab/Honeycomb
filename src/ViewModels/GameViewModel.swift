@@ -10,6 +10,7 @@ public final class GameViewModel {
     public var options: GameOptions {
         didSet {
             saveOptions()
+            UISound.isEnabled = options.isSoundEnabled
             handleOptionsChanged(oldValue: oldValue)
             if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
                 UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
@@ -121,7 +122,7 @@ public final class GameViewModel {
     
     public var maxRecycles: Int? {
         if options.isVegasScoring {
-            return state.drawMode == .drawThree ? 2 : 1
+            return state.drawMode == .drawThree ? 2 : 0
         }
         return nil
     }
@@ -270,7 +271,7 @@ public final class GameViewModel {
             }
             self.options = opts
         }
-        
+
         // Load statistics and synchronize with legacy keys
         let legacyWon = UserDefaults.standard.integer(forKey: "gamesWon")
         let legacyPlayed = UserDefaults.standard.integer(forKey: "gamesPlayed")
@@ -308,7 +309,15 @@ public final class GameViewModel {
         } else {
             self.zoomScale = self.defaultZoomScale
         }
-        
+
+        // Load default window size setting
+        if let savedWidth = UserDefaults.standard.value(forKey: "defaultWindowWidth") as? Double,
+           let savedHeight = UserDefaults.standard.value(forKey: "defaultWindowHeight") as? Double {
+            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
+        }
+
+        UISound.isEnabled = self.options.isSoundEnabled
+
         // Register for global preferences notifications
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
@@ -981,7 +990,16 @@ public final class GameViewModel {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "defaultZoomScale")
     }
-    
+
+    // MARK: - Default Window Size
+    public var defaultWindowSize: CGSize?
+
+    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
+        defaultWindowSize = size
+        UserDefaults.standard.set(Double(size.width), forKey: "defaultWindowWidth")
+        UserDefaults.standard.set(Double(size.height), forKey: "defaultWindowHeight")
+    }
+
     public func resetStatistics() {
         gamesWon = 0
         gamesPlayed = 0

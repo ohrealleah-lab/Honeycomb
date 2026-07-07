@@ -39,10 +39,14 @@ struct HoverToolbarButtonStyle: ButtonStyle {
 // MARK: - UI Sound
 
 enum UISound {
+    static var isEnabled: Bool = true
+
     static func click() {
+        guard isEnabled else { return }
         NSSound(named: "Tink")?.play()
     }
     static func tick() {
+        guard isEnabled else { return }
         let sound = NSSound(named: "Pop")
         sound?.volume = 0.25
         sound?.play()

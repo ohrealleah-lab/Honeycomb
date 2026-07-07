@@ -19,6 +19,7 @@ public struct BlackjackHand: Equatable {
     public var cards: [Card]
     public var bet: Int
     public var isDoubled: Bool = false
+    public var isSplitAce: Bool = false
     public var result: BlackjackHandResult? = nil
 
     public init(cards: [Card], bet: Int) {

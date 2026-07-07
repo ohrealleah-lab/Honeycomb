@@ -8,6 +8,7 @@ public final class VideoPokerViewModel {
     public var options: VideoPokerOptions {
         didSet {
             saveOptions()
+            UISound.isEnabled = options.isSoundEnabled
             if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
                 UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
                 NotificationCenter.default.post(name: .feltColorDidChange, object: self, userInfo: [
@@ -141,9 +142,16 @@ public final class VideoPokerViewModel {
             self.zoomScale = self.defaultZoomScale
         }
 
+        if let savedWidth = UserDefaults.standard.value(forKey: "videopoker_defaultWindowWidth") as? Double,
+           let savedHeight = UserDefaults.standard.value(forKey: "videopoker_defaultWindowHeight") as? Double {
+            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
+        }
+
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
+
+        UISound.isEnabled = self.options.isSoundEnabled
     }
 
     deinit {
@@ -415,5 +423,14 @@ public final class VideoPokerViewModel {
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "videopoker_defaultZoomScale")
+    }
+
+    // MARK: - Default Window Size
+    public var defaultWindowSize: CGSize?
+
+    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
+        defaultWindowSize = size
+        UserDefaults.standard.set(Double(size.width), forKey: "videopoker_defaultWindowWidth")
+        UserDefaults.standard.set(Double(size.height), forKey: "videopoker_defaultWindowHeight")
     }
 }

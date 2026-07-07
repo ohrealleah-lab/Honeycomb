@@ -25,7 +25,7 @@ public struct GameView: View {
     @State private var zoomController: WindowZoomController? = nil
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
-    
+
     public init(viewModel: GameViewModel) {
         self.viewModel = viewModel
     }
@@ -673,7 +673,12 @@ public struct GameView: View {
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            snapToMinSize()
+            coordinator?.activeWindow = window
+            if let saved = viewModel.defaultWindowSize {
+                snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
+            } else {
+                snapToMinSize()
+            }
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
         .onChange(of: viewModel.state.tableau.count) { updateMinSize() }
@@ -691,16 +696,17 @@ public struct GameView: View {
         }
     }
 
-    private func snapToMinSize() {
+    private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
         let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
         let cols = CGFloat(max(viewModel.state.tableau.count, 7))
         let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
         let minH = 73.0 + 950.0 * z + 24
-        let size = NSSize(width: minW, height: minH)
+        let minSize = NSSize(width: minW, height: minH)
+        let size = overrideSize.map { NSSize(width: max($0.width, minW), height: max($0.height, minH)) } ?? minSize
         DispatchQueue.main.async {
-            window.contentMinSize = size
+            window.contentMinSize = minSize
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
                 window.animator().setContentSize(size)

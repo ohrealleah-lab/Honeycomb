@@ -97,6 +97,10 @@ struct SoliBeeApp: App {
                 Button("Make Current Zoom Default") {
                     coordinator.makeCurrentZoomDefault()
                 }
+
+                Button("Make Current Window Size Default") {
+                    coordinator.makeCurrentWindowSizeDefault()
+                }
             }
         }
 

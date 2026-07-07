@@ -16,6 +16,7 @@ public struct BeecellView: View {
     @State private var pendingDeckCount: Int? = nil
     @State private var dismissedAutocompleteBanner: Bool = false
     @State private var dismissedStuckBanner: Bool = false
+    @State private var dismissedWinBanner: Bool = false
     @State private var winPulse: Bool = false
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
@@ -200,7 +201,7 @@ public struct BeecellView: View {
                 // Game Board Area
                 ZStack {
                     VStack(spacing: 16) {
-                        
+
                         // Top Row: Freecells (left) and Foundations (right)
                         if viewModel.options.deckCount == 1 {
                             HStack(spacing: 0) {
@@ -536,44 +537,56 @@ public struct BeecellView: View {
                             // Win recorded inside VM checkWinState
                         }
                         .ignoresSafeArea()
-                        
+
+                        if !dismissedWinBanner {
                         VStack {
                             Spacer()
-                            VStack(spacing: 12) {
-                                Text("You win!")
-                                    .font(.system(size: 40, weight: .black))
-                                    .foregroundColor(.yellow)
-                                    .scaleEffect(winPulse ? 1.06 : 1.0)
-                                    .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: winPulse)
-                                    .onAppear { winPulse = true }
-                                    .onDisappear { winPulse = false }
+                            ZStack(alignment: .topTrailing) {
+                                VStack(spacing: 12) {
+                                    Text("You win!")
+                                        .font(.system(size: 40, weight: .black))
+                                        .foregroundColor(.yellow)
+                                        .scaleEffect(winPulse ? 1.06 : 1.0)
+                                        .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: winPulse)
+                                        .onAppear { winPulse = true }
+                                        .onDisappear { winPulse = false }
 
-                                Text("Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
+                                    Text("Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
+                                        .font(.system(.body))
+                                        .foregroundColor(.white)
+
+                                    Button("Play Again") {
+                                        viewModel.startNewGame()
+                                    }
                                     .font(.system(.body))
+                                    .fontWeight(.bold)
                                     .foregroundColor(.white)
-
-                                Button("Play Again") {
-                                    viewModel.startNewGame()
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(Color.blue)
+                                    .cornerRadius(6)
+                                    .buttonStyle(.plain)
                                 }
-                                .font(.system(.body))
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.blue)
-                                .cornerRadius(6)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 24)
+                                .frame(maxWidth: 360)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .background(Color.black.opacity(0.75))
+                                .cornerRadius(12)
+                                .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+
+                                Button(action: { dismissedWinBanner = true }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
                                 .buttonStyle(.plain)
+                                .padding(10)
                             }
-                            .padding(.horizontal, 12)
-                    .padding(.vertical, 24)
-                            .frame(maxWidth: 360)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .background(Color.black.opacity(0.75))
-                            .cornerRadius(12)
-                            .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
                             Spacer()
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
             }
             }
                 .frame(width: boardWidth, height: boardHeight, alignment: .topLeading)
@@ -621,6 +634,7 @@ public struct BeecellView: View {
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
+        .onChange(of: viewModel.state.hasWon) { _, newVal in if newVal { dismissedWinBanner = false } }
         .onChange(of: viewModel.debugBannerRequest) { _, kind in
             guard let kind else { return }
             viewModel.debugBannerRequest = nil
@@ -634,6 +648,7 @@ public struct BeecellView: View {
                     return Pile(id: "foundation_\(i)", type: .foundation, cards: cards)
                 }
                 viewModel.state.hasWon = true
+                dismissedWinBanner = false
             case .stuck:
                 viewModel.state.hasWon = false
                 dismissedStuckBanner = false
@@ -650,7 +665,12 @@ public struct BeecellView: View {
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            snapToMinSize()
+            coordinator?.activeWindow = window
+            if let saved = viewModel.defaultWindowSize {
+                snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
+            } else {
+                snapToMinSize()
+            }
         })
         .onChange(of: viewModel.options.deckCount) { updateMinSize() }
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
@@ -669,7 +689,7 @@ public struct BeecellView: View {
         }
     }
 
-    private func snapToMinSize() {
+    private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
         let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
@@ -677,9 +697,10 @@ public struct BeecellView: View {
         let boardH: CGFloat = viewModel.options.deckCount == 1 ? 950 : 1120
         let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
         let minH = 73.0 + boardH * z + 24
-        let size = NSSize(width: minW, height: minH)
+        let minSize = NSSize(width: minW, height: minH)
+        let size = overrideSize.map { NSSize(width: max($0.width, minW), height: max($0.height, minH)) } ?? minSize
         DispatchQueue.main.async {
-            window.contentMinSize = size
+            window.contentMinSize = minSize
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
                 window.animator().setContentSize(size)

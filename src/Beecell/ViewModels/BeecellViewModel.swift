@@ -10,6 +10,7 @@ public final class BeecellViewModel {
     public var options: BeecellOptions {
         didSet {
             saveOptions()
+            UISound.isEnabled = options.isSoundEnabled
             handleOptionsChanged(oldValue: oldValue)
             if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
                 UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
@@ -233,7 +234,15 @@ public final class BeecellViewModel {
         } else {
             self.zoomScale = self.defaultZoomScale
         }
-        
+
+        // Load default window size setting
+        if let savedWidth = UserDefaults.standard.value(forKey: "beecell_defaultWindowWidth") as? Double,
+           let savedHeight = UserDefaults.standard.value(forKey: "beecell_defaultWindowHeight") as? Double {
+            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
+        }
+
+        UISound.isEnabled = self.options.isSoundEnabled
+
         // Register for global preferences notifications
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
@@ -958,7 +967,16 @@ public final class BeecellViewModel {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "beecell_defaultZoomScale")
     }
-    
+
+    // MARK: - Default Window Size
+    public var defaultWindowSize: CGSize?
+
+    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
+        defaultWindowSize = size
+        UserDefaults.standard.set(Double(size.width), forKey: "beecell_defaultWindowWidth")
+        UserDefaults.standard.set(Double(size.height), forKey: "beecell_defaultWindowHeight")
+    }
+
     public func resetStatistics() {
         statistics = BeecellStatistics()
     }

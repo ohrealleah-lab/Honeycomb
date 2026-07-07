@@ -25,9 +25,25 @@ public final class AppCoordinator {
     public let videoPokerViewModel = VideoPokerViewModel()
     public let blackjackViewModel  = BlackjackViewModel()
 
+    // The NSWindow currently hosting the active game mode's view, kept up to date
+    // by each game view's WindowAccessor so window-level actions (e.g. "make current
+    // window size default") can be triggered from menu commands that don't own a window.
+    @ObservationIgnored public weak var activeWindow: NSWindow?
+
     public init() {
         let saved = UserDefaults.standard.string(forKey: "selectedGameMode") ?? GameMode.klondike.rawValue
         self.gameMode = GameMode(rawValue: saved) ?? .klondike
+
+        // Each view model sets UISound.isEnabled from its own persisted setting as it
+        // initializes above; re-assert it from the actually-active mode here so the
+        // last view model to init doesn't silently win if settings ever drift out of sync.
+        switch gameMode {
+        case .klondike:   UISound.isEnabled = klondikeViewModel.options.isSoundEnabled
+        case .beecell:    UISound.isEnabled = beecellViewModel.options.isSoundEnabled
+        case .spider:     UISound.isEnabled = spiderViewModel.options.isSoundEnabled
+        case .videoPoker: UISound.isEnabled = videoPokerViewModel.options.isSoundEnabled
+        case .blackjack:  UISound.isEnabled = blackjackViewModel.options.isSoundEnabled
+        }
     }
 
     // MARK: - Shared option sync
@@ -195,6 +211,18 @@ public final class AppCoordinator {
         case .spider:     spiderViewModel.makeCurrentZoomDefault()
         case .videoPoker: videoPokerViewModel.makeCurrentZoomDefault()
         case .blackjack:  blackjackViewModel.makeCurrentZoomDefault()
+        }
+    }
+
+    public func makeCurrentWindowSizeDefault() {
+        guard let window = activeWindow else { return }
+        let size = window.contentView?.frame.size ?? window.frame.size
+        switch gameMode {
+        case .klondike:   klondikeViewModel.makeCurrentWindowSizeDefault(size)
+        case .beecell:    beecellViewModel.makeCurrentWindowSizeDefault(size)
+        case .spider:     spiderViewModel.makeCurrentWindowSizeDefault(size)
+        case .videoPoker: videoPokerViewModel.makeCurrentWindowSizeDefault(size)
+        case .blackjack:  blackjackViewModel.makeCurrentWindowSizeDefault(size)
         }
     }
 
