@@ -273,7 +273,7 @@ public partial class SpiderView : CardGameView
         _winTriggered = true;
         VictoryOverlay.IsVisible = true;
         if (DataContext is SpiderViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.Options.IsTimed ? vm.TimeDisplay : "");
+            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
         else
             VictoryOverlay.StartAnimation();
         SoundService.PlaySolitaireWin();
@@ -285,7 +285,7 @@ public partial class SpiderView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         if (DataContext is SpiderViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.Options.IsTimed ? vm.TimeDisplay : "");
+            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
         else
             VictoryOverlay.StartAnimation();
     }

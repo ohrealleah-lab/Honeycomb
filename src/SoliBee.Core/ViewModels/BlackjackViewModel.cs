@@ -32,16 +32,19 @@ public partial class BlackjackViewModel : ObservableObject
 
     public bool CanHit    => ActiveHand is { } h && !h.IsComplete;
     public bool CanStand  => ActiveHand is { } h && !h.IsComplete;
-    public bool CanDouble => ActiveHand is { } h && h.Cards.Count == 2 && !h.IsComplete && State.Credits >= h.Bet
+    // No Stress Mode's free play has no real credits to check against — Double/Split
+    // behave as if the player always has enough.
+    public bool CanDouble => ActiveHand is { } h && h.Cards.Count == 2 && !h.IsComplete
+                             && (Options.IsNoStressMode || State.Credits >= h.Bet)
                              && h.ComputeValue().Value is 9 or 10 or 11;
     public bool CanSplit  => !State.IsSplit
                              && ActiveHand is { } h && h.Cards.Count == 2 && !h.IsComplete
                              && h.Cards[0].Rank == h.Cards[1].Rank
-                             && State.Credits >= h.Bet;
+                             && (Options.IsNoStressMode || State.Credits >= h.Bet);
     public bool CanDeal        => State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result;
     public bool IsPlaying      => State.Phase == BlackjackPhase.Playing;
     public bool CanChangeBet   => State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result;
-    public bool CanRebuy       => CanChangeBet && State.Credits < State.CurrentBet;
+    public bool CanRebuy       => CanChangeBet && !Options.IsNoStressMode && State.Credits < State.CurrentBet;
     public bool CanUndo        => false;
 
     public string CreditDisplay => State.Credits.ToString();
@@ -65,6 +68,7 @@ public partial class BlackjackViewModel : ObservableObject
         Options.FeltColor          = shared.FeltColor.ToString();
         Options.CustomFeltColorHex = shared.CustomFeltColorHex;
         Options.IsVignetteEnabled  = shared.IsVignetteEnabled;
+        Options.IsNoStressMode     = shared.IsNoStressMode;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
@@ -74,7 +78,9 @@ public partial class BlackjackViewModel : ObservableObject
             Options.FeltColor          = m.Options.FeltColor.ToString();
             Options.CustomFeltColorHex = m.Options.CustomFeltColorHex;
             Options.IsVignetteEnabled  = m.Options.IsVignetteEnabled;
+            Options.IsNoStressMode     = m.Options.IsNoStressMode;
             OnPropertyChanged(nameof(Options));
+            NotifyStateChanged();
         });
     }
 
@@ -82,12 +88,13 @@ public partial class BlackjackViewModel : ObservableObject
 
     public void Deal()
     {
-        if (State.Credits < State.CurrentBet) return;
+        bool freePlay = Options.IsNoStressMode;
+        if (!freePlay && State.Credits < State.CurrentBet) return;
 
         _deck    = BuildAndShuffleDeck();
         _deckIdx = 0;
         _creditsBeforeDeal = State.Credits;
-        State.Credits -= State.CurrentBet;
+        if (!freePlay) State.Credits -= State.CurrentBet;
 
         var playerHand = new BlackjackHand { Bet = State.CurrentBet };
         var dealerHand = new BlackjackHand();
@@ -108,7 +115,7 @@ public partial class BlackjackViewModel : ObservableObject
         };
 
         Stats.HandsPlayed++;
-        Stats.TotalCreditsWagered += State.CurrentBet;
+        if (!freePlay) Stats.TotalCreditsWagered += State.CurrentBet;
 
         // Dealer blackjack — push if player also has a natural, otherwise player loses
         if (dealerHand.IsBlackjack)
@@ -151,10 +158,14 @@ public partial class BlackjackViewModel : ObservableObject
 
     public void DoubleDown()
     {
+        bool freePlay = Options.IsNoStressMode;
         var hand = ActiveHand;
-        if (hand == null || hand.Cards.Count != 2 || State.Credits < hand.Bet) return;
-        State.Credits -= hand.Bet;
-        Stats.TotalCreditsWagered += hand.Bet;
+        if (hand == null || hand.Cards.Count != 2 || (!freePlay && State.Credits < hand.Bet)) return;
+        if (!freePlay)
+        {
+            State.Credits -= hand.Bet;
+            Stats.TotalCreditsWagered += hand.Bet;
+        }
         hand.Bet *= 2;
         hand.IsDoubled = true;
         hand.Cards.Add(DrawCard(faceUp: true));
@@ -163,13 +174,17 @@ public partial class BlackjackViewModel : ObservableObject
 
     public void Split()
     {
+        bool freePlay = Options.IsNoStressMode;
         var hand = ActiveHand;
-        if (hand == null || hand.Cards.Count != 2 || State.Credits < hand.Bet || State.IsSplit) return;
+        if (hand == null || hand.Cards.Count != 2 || (!freePlay && State.Credits < hand.Bet) || State.IsSplit) return;
 
         bool splitAces = hand.Cards[0].Rank == 1;
 
-        State.Credits -= hand.Bet;
-        Stats.TotalCreditsWagered += hand.Bet;
+        if (!freePlay)
+        {
+            State.Credits -= hand.Bet;
+            Stats.TotalCreditsWagered += hand.Bet;
+        }
 
         var hand2 = new BlackjackHand { Bet = hand.Bet, FromSplit = true };
         hand2.Cards.Add(hand.Cards[1]);
@@ -341,25 +356,35 @@ public partial class BlackjackViewModel : ObservableObject
 
     private void ApplyPayout(BlackjackHand hand)
     {
+        // No Stress Mode's free play still shows the win/loss/streak, but never
+        // touches credits or the money-based stats — only hand-count stats count.
+        bool freePlay = Options.IsNoStressMode;
+
         switch (hand.Result)
         {
             case BlackjackHandResult.Blackjack:
                 int bjReturn = hand.Bet + hand.Bet * 3;  // 3:1 payout (bet returned + 3x bet profit)
-                State.Credits += bjReturn;
                 Stats.HandsWon++;
                 Stats.Blackjacks++;
-                Stats.TotalCreditsWon += bjReturn;
-                if (bjReturn > Stats.BiggestPay) Stats.BiggestPay = bjReturn;
+                if (!freePlay)
+                {
+                    State.Credits += bjReturn;
+                    Stats.TotalCreditsWon += bjReturn;
+                    if (bjReturn > Stats.BiggestPay) Stats.BiggestPay = bjReturn;
+                }
                 break;
             case BlackjackHandResult.Won:
                 int wonReturn = hand.Bet * 2;
-                State.Credits += wonReturn;
                 Stats.HandsWon++;
-                Stats.TotalCreditsWon += wonReturn;
-                if (wonReturn > Stats.BiggestPay) Stats.BiggestPay = wonReturn;
+                if (!freePlay)
+                {
+                    State.Credits += wonReturn;
+                    Stats.TotalCreditsWon += wonReturn;
+                    if (wonReturn > Stats.BiggestPay) Stats.BiggestPay = wonReturn;
+                }
                 break;
             case BlackjackHandResult.Push:
-                State.Credits += hand.Bet;
+                if (!freePlay) State.Credits += hand.Bet;
                 Stats.HandsPushed++;
                 break;
             case BlackjackHandResult.Lost:

@@ -60,11 +60,9 @@ public partial class MainWindow : Window
             CardView.ApplyThemeColors(m.Options);
             CardView.InvalidateAllCardViews(this);
             bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
-            if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && m.Options.IsTimed;
-            // Hint is solitaire-only (no hint logic exists for VP/Blackjack), but Stats
-            // is tracked for every game, so it isn't gated by isCardGame.
+            if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && !m.Options.IsNoStressMode;
+            // Hint is solitaire-only (no hint logic exists for VP/Blackjack).
             if (HintButton != null)    HintButton.IsVisible    = isCardGame && !m.Options.HideHintButton;
-            if (StatsButton != null)   StatsButton.IsVisible   = !m.Options.HideStatsButton;
             if (ZoomButton != null)    ZoomButton.IsVisible    = !m.Options.HideZoomControls;
         });
 
@@ -158,26 +156,22 @@ public partial class MainWindow : Window
 
         try
         {
-            bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
-
             this.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(primaryHex));
 
             if (TopBarBorder != null)
                 TopBarBorder.Background = Avalonia.Media.Brushes.Transparent;
 
-            // Single app-wide overlay (spans both rows) so the vignette is one continuous
-            // gradient across the title bar and the board, not two independently-scaled
-            // ones that visibly seam at the row boundary. Solitaire boards have a
-            // transparent background (the window felt color shows through), so the
-            // overlay sits behind the board/toolbar content (negative ZIndex) and only
-            // shows in the gaps — cards and buttons stay fully unobscured. Video Poker
-            // / Blackjack paint an opaque board, so the overlay must sit in front
-            // (ZIndex 90) to be visible at all; the toolbar row (ZIndex 100) and any
-            // modal overlays (ZIndex 95) still render above it in that case.
+            // Always sits behind everything (negative ZIndex) and only shows through in
+            // the gaps — the title bar row never has anything opaque over it, so the
+            // vignette shows there for every game. Row 1 (the board) is transparent for
+            // solitaire, so it shows there too; Video Poker/Blackjack paint an opaque
+            // board over it instead, which naturally hides this row-1 portion — those
+            // two games render their own local vignette rectangle behind their board's
+            // button rows instead (see BlackjackView/VideoPokerView).
             if (VignetteOverlay != null)
             {
                 VignetteOverlay.IsVisible = options.IsVignetteEnabled;
-                VignetteOverlay.ZIndex = isCardGame ? -5 : 90;
+                VignetteOverlay.ZIndex = -5;
                 if (VignetteOverlay.Fill is Avalonia.Media.RadialGradientBrush rgb)
                     rgb.Radius = options.VignetteScale * 0.8;
             }
@@ -464,11 +458,6 @@ public partial class MainWindow : Window
         else if (this.DataContext is SpiderViewModel spiderVm)
             spiderVm.FindHint();
         // Video Poker has no hint
-    }
-
-    private void Stats_Click(object? sender, RoutedEventArgs e)
-    {
-        ShowStatsPanel();
     }
 
     private void ShowStatsPanel()
@@ -970,13 +959,11 @@ public partial class MainWindow : Window
         UpdateHintButtonEnabled();
 
         bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
-        // Hint is solitaire-only (no hint logic exists for VP/Blackjack), but Stats is
-        // tracked for every game, so it isn't gated by isCardGame.
+        // Hint is solitaire-only (no hint logic exists for VP/Blackjack).
         if (HintButton != null)    HintButton.IsVisible    = isCardGame && !_coordinator.GameViewModel.Options.HideHintButton;
-        if (StatsButton != null)   StatsButton.IsVisible   = !_coordinator.GameViewModel.Options.HideStatsButton;
         if (ZoomButton != null)    ZoomButton.IsVisible    = !_coordinator.GameViewModel.Options.HideZoomControls;
         if (UndoButton != null)    UndoButton.IsVisible    = isCardGame;
-        if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && _coordinator.GameViewModel.Options.IsTimed;
+        if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
         if (RestartButton != null) RestartButton.IsVisible = isCardGame;
         if (StatsBarPanel != null) StatsBarPanel.IsVisible = isCardGame;
         var options = SettingsService.LoadOptions();

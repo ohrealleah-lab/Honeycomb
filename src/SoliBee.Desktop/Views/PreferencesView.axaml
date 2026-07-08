@@ -26,14 +26,12 @@
             </StackPanel>
 
             <StackPanel Spacing="2">
-                <CheckBox x:Name="TimedCheckBox"        Content="Timed Game"        Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
+                <CheckBox x:Name="NoStressModeCheckBox" Content="No Stress Mode"     Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
                 <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
                 <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
                 <CheckBox x:Name="FinalFantasyCheckBox" Content="Final Fantasy Mode" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" IsVisible="False"/>
                 <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
-                <CheckBox x:Name="HideStatsCheckBox" Content="Hide Stats button" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
                 <CheckBox x:Name="HideZoomCheckBox"  Content="Hide Zoom Controls" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White"/>
-                <CheckBox x:Name="HideBetBoardCheckBox" Content="Hide Bet Board" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="White" IsVisible="False"/>
             </StackPanel>
 
             <Rectangle x:Name="VisualThemesDivider" Height="1" Fill="#30FFFFFF" Margin="0,4,0,4"/>

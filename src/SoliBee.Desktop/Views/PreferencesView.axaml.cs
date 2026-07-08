@@ -122,13 +122,12 @@ public partial class PreferencesView : UserControl
     // Syncs all UI controls to match the provided options. Call inside _initializing guard.
     private void SyncUIFromOptions(GameOptions options)
     {
-        TimedCheckBox.IsChecked        = options.IsTimed;
+        NoStressModeCheckBox.IsChecked = options.IsNoStressMode;
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
         VegasCheckBox.IsChecked        = options.IsVegasScoring;
         FinalFantasyCheckBox.IsChecked = options.IsFinalFantasyMode;
         VignetteCheckBox.IsChecked     = options.IsVignetteEnabled;
         HideHintCheckBox.IsChecked     = options.HideHintButton;
-        HideStatsCheckBox.IsChecked    = options.HideStatsButton;
         HideZoomCheckBox.IsChecked     = options.HideZoomControls;
 
         foreach (var item in FeltColorComboBox.Items.OfType<ComboBoxItem>())
@@ -209,12 +208,12 @@ public partial class PreferencesView : UserControl
             vpOptions.StartingCredits    = orig.StartingCredits;
             vpOptions.BetPerHand         = orig.BetPerHand;
             vpOptions.IsSoundEnabled     = orig.IsSoundEnabled;
-            vpOptions.HideBetBoard       = orig.HideBetBoard;
             vpOptions.CardBackTheme      = orig.CardBackTheme;
             vpOptions.FeltColor          = orig.FeltColor;
             vpOptions.CustomFeltColorHex = orig.CustomFeltColorHex;
             vpOptions.IsFinalFantasyMode = orig.IsFinalFantasyMode;
             vpOptions.IsVignetteEnabled  = orig.IsVignetteEnabled;
+            vpOptions.IsNoStressMode     = orig.IsNoStressMode;
             VideoPokerVm?.SaveOptions();
 
             if (_originalSharedOptionsForVideoPoker != null)
@@ -251,21 +250,18 @@ public partial class PreferencesView : UserControl
     }
 
     // Video Poker has its own separate options model — only a handful of settings
-    // (sound, bet-board visibility) are VP-specific; Hide Hint/Stats are global
-    // (shared GameOptions) and Visual Themes is available same as every other game.
+    // (sound) are VP-specific; No Stress Mode/Hide Hint/Zoom are global (shared
+    // GameOptions) and Visual Themes is available same as every other game.
     private void SyncUIFromVideoPokerOptions(VideoPokerOptions options)
     {
-        TimedCheckBox.IsVisible        = false;
         VegasCheckBox.IsVisible        = false;
         FinalFantasyCheckBox.IsVisible = false;
-        HideBetBoardCheckBox.IsVisible = true;
 
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
-        HideBetBoardCheckBox.IsChecked = options.HideBetBoard;
 
         var shared = SettingsService.LoadOptions();
+        NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
         HideHintCheckBox.IsChecked     = shared.HideHintButton;
-        HideStatsCheckBox.IsChecked    = shared.HideStatsButton;
         HideZoomCheckBox.IsChecked     = shared.HideZoomControls;
     }
 
@@ -558,12 +554,11 @@ public partial class PreferencesView : UserControl
 
         if (DataContext is GameOptions options)
         {
-            options.IsTimed            = TimedCheckBox.IsChecked        ?? false;
+            options.IsNoStressMode     = NoStressModeCheckBox.IsChecked ?? false;
             options.IsSoundEnabled     = SoundCheckBox.IsChecked        ?? false;
             options.IsVegasScoring     = VegasCheckBox.IsChecked        ?? false;
             options.IsVignetteEnabled  = VignetteCheckBox.IsChecked     ?? true;
             options.HideHintButton     = HideHintCheckBox.IsChecked     ?? false;
-            options.HideStatsButton    = HideStatsCheckBox.IsChecked    ?? false;
             options.HideZoomControls   = HideZoomCheckBox.IsChecked     ?? false;
 
             bool wasFF = options.IsFinalFantasyMode;
@@ -577,13 +572,12 @@ public partial class PreferencesView : UserControl
         else if (DataContext is VideoPokerOptions vpOptions)
         {
             vpOptions.IsSoundEnabled  = SoundCheckBox.IsChecked        ?? false;
-            vpOptions.HideBetBoard    = HideBetBoardCheckBox.IsChecked ?? false;
 
-            // Hide Hint/Stats/Zoom are global — write to the shared GameOptions so every
-            // game (Klondike/Freecell/Spider/Blackjack too) picks up the change too.
+            // No Stress Mode/Hide Hint/Zoom are global — write to the shared GameOptions
+            // so every game (Klondike/Freecell/Spider/Blackjack too) picks up the change.
             var shared = SettingsService.LoadOptions();
+            shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
             shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
-            shared.HideStatsButton   = HideStatsCheckBox.IsChecked ?? false;
             shared.HideZoomControls  = HideZoomCheckBox.IsChecked  ?? false;
             NotifySettingsChanged(shared);
 

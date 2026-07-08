@@ -34,7 +34,6 @@
                         <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
                         <Button Content="Options" Click="Preferences_Click" Classes="toolbar" />
                         <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
-                        <Button x:Name="StatsButton" Content="Stats" Click="Stats_Click" Classes="toolbar" />
                         <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
                                   SelectionChanged="PokerVariantBox_SelectionChanged">
                             <ComboBoxItem Content="Jacks or Better"/>

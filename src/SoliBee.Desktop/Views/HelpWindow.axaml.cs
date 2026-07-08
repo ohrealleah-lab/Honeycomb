@@ -25,6 +25,9 @@ public partial class HelpWindow : Window
     private void GoTo_Blackjack(object? sender, RoutedEventArgs e) =>
         BlackjackAnchor.BringIntoView();
 
+    private void GoTo_NoStress(object? sender, RoutedEventArgs e) =>
+        NoStressAnchor.BringIntoView();
+
     private void GoTo_Themes(object? sender, RoutedEventArgs e) =>
         ThemesAnchor.BringIntoView();
 

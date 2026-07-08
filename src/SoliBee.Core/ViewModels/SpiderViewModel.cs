@@ -340,7 +340,7 @@ public partial class SpiderViewModel : ObservableObject
 
         SaveStateForUndo();
 
-        if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
+        if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
             State.IsTimerActive = true;
 
         var cardIds = new HashSet<string>(cards.Select(c => c.Id));
@@ -385,7 +385,7 @@ public partial class SpiderViewModel : ObservableObject
 
         SaveStateForUndo();
 
-        if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
+        if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
             State.IsTimerActive = true;
 
         var deal = StockPiles[0];
@@ -472,12 +472,12 @@ public partial class SpiderViewModel : ObservableObject
             if (ms.CurrentStreak > ms.LongestStreak) ms.LongestStreak = ms.CurrentStreak;
             if (State.Score > ms.HighScore) ms.HighScore = State.Score;
 
-            // TimerSeconds only actually ticks when Options.IsTimed is true (see the
+            // TimerSeconds only actually ticks when No Stress Mode is off (see the
             // State.IsTimerActive gating on every move above) — otherwise it stays 0
             // for the whole game. Recording that 0 here would permanently pin "Fastest
             // Win" to a bogus 0s and silently deflate "Avg Winning Time", so skip both
             // when untimed.
-            if (Options.IsTimed)
+            if (!Options.IsNoStressMode)
             {
                 if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
                     ms.ShortestWinSeconds = State.TimerSeconds;

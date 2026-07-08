@@ -5,18 +5,8 @@
 
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto">
 
-        <!-- Vignette depth overlay -->
-        <Rectangle x:Name="VignetteRect" Grid.RowSpan="2" IsHitTestVisible="False" ZIndex="-1">
-            <Rectangle.Fill>
-                <RadialGradientBrush Center="50%,50%" Radius="0.8">
-                    <GradientStop Color="#00000000" Offset="0.2"/>
-                    <GradientStop Color="#B2000000" Offset="1.0"/>
-                </RadialGradientBrush>
-            </Rectangle.Fill>
-        </Rectangle>
-
         <!-- ─── Pay Table Bar (top) ──────────────────────────────────────────── -->
-        <Border x:Name="PayTableBar" Grid.Row="0" Background="#CC000000" Padding="12,6,12,8" Margin="0,14,0,6">
+        <Border x:Name="PayTableBar" Grid.Row="0" Background="Transparent" Padding="12,6,12,8" Margin="0,14,0,6">
 
                 <!-- Two-column pay table -->
                 <Grid ColumnDefinitions="*,12,*">
@@ -169,7 +159,7 @@
                                     <TextBlock Text="Not today, partner!"
                                                FontSize="36" FontWeight="Black" Foreground="#FFD600"
                                                HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <StackPanel x:Name="NoWinPayoutRow" Orientation="Horizontal" HorizontalAlignment="Center">
                                         <TextBlock Text="-" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
                                         <TextBlock Text="{Binding BetDisplay}" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
                                         <TextBlock Text=" credits" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
@@ -234,7 +224,7 @@
                             Click="Rebuy_Click" Classes="vp-button vp-button-rebuy"/>
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <StackPanel x:Name="BetButtonRow" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                     <Button Content="− Bet" Height="34" Padding="14,0"
                             IsEnabled="{Binding IsDealing}"
                             Click="DecreaseBet_Click" Classes="vp-button vp-bet-button"/>

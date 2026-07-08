@@ -17,7 +17,6 @@ public class GameOptions
     public List<CustomCardBack> CustomCardBacks { get; set; } = new();
     public FeltColorTheme FeltColor { get; set; } = FeltColorTheme.FeltGreen;
     public string CardBackTheme { get; set; } = "Vulpera";
-    public bool IsTimed { get; set; } = true;
     public bool IsSoundEnabled { get; set; } = true;
     public bool IsVegasScoring { get; set; } = false;
     public bool IsDrawConstraintsEnabled { get; set; } = false;
@@ -29,12 +28,14 @@ public class GameOptions
     public double CardBackOffsetY { get; set; } = 0.0;
     public bool IsStatusBarVisible { get; set; } = true;
     public bool HideHintButton { get; set; } = false;
-    public bool HideStatsButton { get; set; } = false;
     public bool HideZoomControls { get; set; } = false;
     public int FreecellDeckCount { get; set; } = 1;
     public int SpiderSuitCount { get; set; } = 1;
 
     public bool IsVignetteEnabled { get; set; } = true;
+    // Turns off timers (solitaire) and enables free play (VP/Blackjack — hides the
+    // credit/bet board and betting controls; hands are played without wagering).
+    public bool IsNoStressMode { get; set; } = false;
     public bool HasAppliedDefaultTheme { get; set; } = false;
     public string LastGameMode { get; set; } = "SolitaireDraw1";
 

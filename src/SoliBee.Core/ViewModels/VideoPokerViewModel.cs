@@ -74,15 +74,19 @@ public partial class VideoPokerViewModel : ObservableObject
     public string ScoreDisplay    => $"${State.SessionCredits}";
     public string CreditDisplay   => State.SessionCredits.ToString();
     public string BetDisplay      => State.CurrentBet.ToString();
+    // No Stress Mode's free play still announces the winning hand, just without a
+    // credit amount attached (no credits are ever earned in free play).
     public string ResultText      => State.Phase == VideoPokerPhase.Result && State.LastPayout > 0
-                                        ? $"★  {State.LastHandName}  +{State.LastPayout}  ★"
+                                        ? Options.IsNoStressMode
+                                            ? $"★  {State.LastHandName}  ★"
+                                            : $"★  {State.LastHandName}  +{State.LastPayout}  ★"
                                         : "";
     public bool   HasWin          => State.Phase == VideoPokerPhase.Result && State.LastPayout > 0;
     public bool   ShowNoWin       => State.Phase == VideoPokerPhase.Result && State.LastPayout == 0 && State.Hand.Count > 0;
     public bool   CanUndo         => false;
     public bool   IsDealing       => State.Phase == VideoPokerPhase.Deal || State.Phase == VideoPokerPhase.Result;
     public bool   IsHolding       => State.Phase == VideoPokerPhase.Holding;
-    public bool   NeedsRebuy      => State.SessionCredits < State.CurrentBet;
+    public bool   NeedsRebuy      => !Options.IsNoStressMode && State.SessionCredits < State.CurrentBet;
     public string DealDrawLabel   => IsHolding ? "Draw  [D]" : "Deal  [D]";
     public string VariantName     => Options.Variant switch
     {
@@ -107,6 +111,7 @@ public partial class VideoPokerViewModel : ObservableObject
         Options.FeltColor           = shared.FeltColor.ToString();
         Options.CustomFeltColorHex  = shared.CustomFeltColorHex;
         Options.IsVignetteEnabled   = shared.IsVignetteEnabled;
+        Options.IsNoStressMode      = shared.IsNoStressMode;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
@@ -116,7 +121,9 @@ public partial class VideoPokerViewModel : ObservableObject
             Options.FeltColor           = m.Options.FeltColor.ToString();
             Options.CustomFeltColorHex  = m.Options.CustomFeltColorHex;
             Options.IsVignetteEnabled   = m.Options.IsVignetteEnabled;
+            Options.IsNoStressMode      = m.Options.IsNoStressMode;
             OnPropertyChanged(nameof(Options));
+            NotifyStateChanged();
         });
     }
 
@@ -124,8 +131,9 @@ public partial class VideoPokerViewModel : ObservableObject
 
     public void Deal()
     {
-        if (State.SessionCredits < State.CurrentBet) return;
-        State.SessionCredits  -= State.CurrentBet;
+        bool freePlay = Options.IsNoStressMode;
+        if (!freePlay && State.SessionCredits < State.CurrentBet) return;
+        if (!freePlay) State.SessionCredits -= State.CurrentBet;
         State.HeldSlots        = new bool[5];
         State.WinningCardMask  = new bool[5];
         State.Phase            = VideoPokerPhase.Holding;
@@ -136,7 +144,7 @@ public partial class VideoPokerViewModel : ObservableObject
         _deck = _deck.Skip(5).ToList();
 
         Stats.TotalHands++;
-        Stats.TotalCreditsWagered += State.CurrentBet;
+        if (!freePlay) Stats.TotalCreditsWagered += State.CurrentBet;
 
         NotifyStateChanged();
     }
@@ -144,6 +152,7 @@ public partial class VideoPokerViewModel : ObservableObject
     public void Draw()
     {
         if (State.Phase != VideoPokerPhase.Holding) return;
+        bool freePlay = Options.IsNoStressMode;
 
         int drawIdx  = 0;
         var drawPile = _deck.ToList();
@@ -156,17 +165,22 @@ public partial class VideoPokerViewModel : ObservableObject
         var (entry, payout) = EvaluateHand(State.Hand.ToArray());
         State.LastPayout      = payout;
         State.LastHandName    = entry?.HandName ?? "";
-        State.SessionCredits += payout;
+        if (!freePlay) State.SessionCredits += payout;
         State.WinningCardMask = payout > 0
             ? GetWinningCardMask(State.Hand, entry!.Rank, Options.Variant == VideoPokerVariant.DeucesWild)
             : new bool[5];
         State.Phase           = VideoPokerPhase.Result;
 
+        // No Stress Mode's free play still tracks/shows wins and hand frequency
+        // (streaks, "winning hand" display), but never touches money-based stats.
         if (payout > 0)
         {
             Stats.WinningHands++;
-            Stats.TotalCreditsWon += payout;
-            if (payout > Stats.BiggestPay) Stats.BiggestPay = payout;
+            if (!freePlay)
+            {
+                Stats.TotalCreditsWon += payout;
+                if (payout > Stats.BiggestPay) Stats.BiggestPay = payout;
+            }
             var key = entry!.HandName;
             Stats.HandCounts[key] = Stats.HandCounts.GetValueOrDefault(key) + 1;
         }

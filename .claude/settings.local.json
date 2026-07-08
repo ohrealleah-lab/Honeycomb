@@ -94,7 +94,8 @@
       "Bash(gh repo *)",
       "Bash(gh pr *)",
       "Bash(env)",
-      "Bash(git credential *)"
+      "Bash(git credential *)",
+      "Bash(rm -f /tmp/pr_body.json /tmp/pr_result.json /tmp/existing_pr.json)"
     ]
   }
 }

@@ -131,8 +131,8 @@ public static class SettingsService
                 if (GetValue("CardBackTheme") is string cardBack)
                     options.CardBackTheme = cardBack;
 
-                if (GetValue("IsTimed") is bool isTimed)
-                    options.IsTimed = isTimed;
+                if (GetValue("IsNoStressMode") is bool isNoStress)
+                    options.IsNoStressMode = isNoStress;
 
                 if (GetValue("IsSoundEnabled") is bool isSound)
                     options.IsSoundEnabled = isSound;
@@ -174,9 +174,6 @@ public static class SettingsService
 
                 if (GetValue("HideHintButton") is bool hideHint)
                     options.HideHintButton = hideHint;
-
-                if (GetValue("HideStatsButton") is bool hideStats)
-                    options.HideStatsButton = hideStats;
 
                 if (GetValue("HideZoomControls") is bool hideZoom)
                     options.HideZoomControls = hideZoom;
@@ -268,7 +265,7 @@ public static class SettingsService
             {
                 SetValue("FeltColor", options.FeltColor.ToString());
                 SetValue("CardBackTheme", options.CardBackTheme);
-                SetValue("IsTimed", options.IsTimed);
+                SetValue("IsNoStressMode", options.IsNoStressMode);
                 SetValue("IsSoundEnabled", options.IsSoundEnabled);
                 SetValue("IsVegasScoring", options.IsVegasScoring);
                 SetValue("IsDrawConstraintsEnabled", options.IsDrawConstraintsEnabled);
@@ -280,7 +277,6 @@ public static class SettingsService
                 SetValue("IsVignetteEnabled", options.IsVignetteEnabled);
                 SetValue("IsStatusBarVisible", options.IsStatusBarVisible);
                 SetValue("HideHintButton", options.HideHintButton);
-                SetValue("HideStatsButton", options.HideStatsButton);
                 SetValue("HideZoomControls", options.HideZoomControls);
                 SetValue("FreecellDeckCount", options.FreecellDeckCount);
                 SetValue("SpiderSuitCount", options.SpiderSuitCount);

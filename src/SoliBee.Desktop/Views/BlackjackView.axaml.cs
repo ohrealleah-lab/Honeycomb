@@ -351,8 +351,9 @@ public partial class BlackjackView : UserControl
 
     private void UpdateButtons(BlackjackViewModel vm)
     {
-        bool playing = vm.State.Phase == BlackjackPhase.Playing;
-        bool canDeal = vm.CanDeal;
+        bool playing  = vm.State.Phase == BlackjackPhase.Playing;
+        bool canDeal  = vm.CanDeal;
+        bool freePlay = vm.Options.IsNoStressMode;
 
         ActionButtonRow.IsVisible = playing;
         HitButton.IsVisible    = playing;
@@ -360,6 +361,12 @@ public partial class BlackjackView : UserControl
         DoubleButton.IsVisible = playing && vm.CanDouble;
         SplitButton.IsVisible  = playing && vm.CanSplit;
         BetButtonRow.IsVisible = vm.CanChangeBet;
+        // No Stress Mode's free play has no bet to place, so the credits/bet readout
+        // and every betting control disappear — only Deal (to start the next hand)
+        // and the in-hand action buttons above remain.
+        BidBar.IsVisible        = !freePlay;
+        ChipButtonRow.IsVisible = !freePlay;
+        ClearBetButton.IsVisible = !freePlay;
         DealButton.IsVisible   = vm.CanDeal && !vm.CanRebuy;
         RebuyButton.IsVisible  = vm.CanRebuy;
         RebuyDivider.IsVisible = vm.CanRebuy;
@@ -403,7 +410,11 @@ public partial class BlackjackView : UserControl
         bool anyWin  = vm.State.PlayerHands.Any(h => h.Result is BlackjackHandResult.Won or BlackjackHandResult.Blackjack);
         bool allPush = vm.State.PlayerHands.All(h => h.Result == BlackjackHandResult.Push);
 
-        string netStr = net > 0 ? $"+{net} credits" : net < 0 ? $"{net} credits" : "Even";
+        // No Stress Mode's free play doesn't track credits at all — the streak and
+        // winning-hand values (shown via headline/streak/hand totals below) still
+        // display normally, just without a credit amount attached.
+        bool freePlay = vm.Options.IsNoStressMode;
+        string netStr = freePlay ? "" : net > 0 ? $"+{net} credits" : net < 0 ? $"{net} credits" : "Even";
 
         ResultDealerTotal.Text = $"Dealer: {FormatHandTotal(vm.State.DealerHand)}";
         ResultPlayerTotal.Text = vm.State.PlayerHands.Count > 1
@@ -433,7 +444,7 @@ public partial class BlackjackView : UserControl
         else if (allPush)
         {
             headline   = "Push";
-            subline    = "Bets returned";
+            subline    = freePlay ? "" : "Bets returned";
             background = "#BF000000";
             win        = false;
             streak     = 0;
@@ -656,11 +667,13 @@ public partial class BlackjackView : UserControl
 
     private void ApplyFeltColor(BlackjackViewModel vm)
     {
-        VignetteRect.IsVisible = false;
+        // BoardFeltGrid no longer paints its own background — it lets the shared
+        // window-level felt color + vignette (see MainWindow.ApplyFeltColor) show
+        // through underneath, so the same continuous gradient spans the title bar and
+        // the board with no seam. BidBar keeps its own darker panel for text contrast.
         if (vm.Options.IsFinalFantasyMode)
         {
-            BoardFeltGrid.Background = new SolidColorBrush(Colors.Black);
-            BidBar.Background        = new SolidColorBrush(Color.Parse("#1A1A1A"));
+            BidBar.Background = new SolidColorBrush(Color.Parse("#1A1A1A"));
             return;
         }
         string hex = vm.Options.FeltColor switch
@@ -675,13 +688,11 @@ public partial class BlackjackView : UserControl
         try
         {
             var felt = Color.Parse(hex);
-            BoardFeltGrid.Background = new SolidColorBrush(felt);
             var bar = new Color(255, (byte)(felt.R / 2), (byte)(felt.G / 2), (byte)(felt.B / 2));
             BidBar.Background = new SolidColorBrush(bar);
         }
         catch
         {
-            BoardFeltGrid.Background = new SolidColorBrush(Colors.DarkGreen);
             BidBar.Background        = new SolidColorBrush(Color.Parse("#004000"));
         }
     }

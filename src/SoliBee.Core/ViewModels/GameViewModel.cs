@@ -358,7 +358,7 @@ public partial class GameViewModel : ObservableObject
                 Stock.Cards.Add(card with { IsFaceUp = false });
             }
             Waste.Cards.Clear();
-            if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
+            if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
                 State.IsTimerActive = true;
             State.MovesCount++;
             CheckDeadlock();
@@ -385,7 +385,7 @@ public partial class GameViewModel : ObservableObject
             Waste.Cards.Add(drawn[i]);
         State.WasteDrawBatchSize = cardsToDraw;
 
-        if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
+        if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
             State.IsTimerActive = true;
         State.MovesCount++;
         CheckAutocomplete();
@@ -501,7 +501,7 @@ public partial class GameViewModel : ObservableObject
         // Update score
         UpdateScoreForMove(sourcePile.Type, targetPile.Type, didFlip);
 
-        if (!State.IsTimerActive && !State.HasWon && Options.IsTimed)
+        if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
             State.IsTimerActive = true;
         State.MovesCount++;
         CheckVictory();
@@ -706,12 +706,12 @@ public partial class GameViewModel : ObservableObject
                 if (Stats.CurrentStreak > Stats.LongestStreak)
                     Stats.LongestStreak = Stats.CurrentStreak;
 
-                // TimerSeconds only actually ticks when Options.IsTimed is true (see
-                // the State.IsTimerActive gating on every move above) — otherwise it
-                // stays 0 for the whole game. Recording that 0 here would permanently
-                // pin "Fastest Win" to a bogus 0s (since no real time is ever < 0) and
+                // TimerSeconds only actually ticks when No Stress Mode is off (see the
+                // State.IsTimerActive gating on every move above) — otherwise it stays 0
+                // for the whole game. Recording that 0 here would permanently pin
+                // "Fastest Win" to a bogus 0s (since no real time is ever < 0) and
                 // silently deflate "Avg Winning Time", so skip both when untimed.
-                if (Options.IsTimed)
+                if (!Options.IsNoStressMode)
                 {
                     if (Stats.ShortestWinSeconds == 0 || State.TimerSeconds < Stats.ShortestWinSeconds)
                         Stats.ShortestWinSeconds = State.TimerSeconds;

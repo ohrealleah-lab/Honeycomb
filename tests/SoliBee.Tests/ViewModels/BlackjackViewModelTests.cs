@@ -13,6 +13,7 @@ public class BlackjackViewModelTests
     public void TestBlackjackPaysThreeToOne()
     {
         var vm = new BlackjackViewModel();
+        vm.Options.IsNoStressMode = false; // pin against whatever's actually persisted on disk
         vm.State.Phase          = BlackjackPhase.Playing;
         vm.State.Credits        = 100;
         vm.State.ActiveHandIndex = 0;
@@ -37,6 +38,7 @@ public class BlackjackViewModelTests
     public void TestRegularWinStillPaysOneToOne()
     {
         var vm = new BlackjackViewModel();
+        vm.Options.IsNoStressMode = false;
         vm.State.Phase           = BlackjackPhase.Playing;
         vm.State.Credits         = 100;
         vm.State.ActiveHandIndex = 0;
@@ -60,6 +62,7 @@ public class BlackjackViewModelTests
     public void TestPushReturnsOriginalBetOnly()
     {
         var vm = new BlackjackViewModel();
+        vm.Options.IsNoStressMode = false;
         vm.State.Phase           = BlackjackPhase.Playing;
         vm.State.Credits         = 100;
         vm.State.ActiveHandIndex = 0;
@@ -203,6 +206,7 @@ public class BlackjackViewModelTests
     public void TestCanRebuyOnlyWhenShortOnCreditsInBettingOrResultPhase()
     {
         var vm = new BlackjackViewModel();
+        vm.Options.IsNoStressMode = false;
 
         vm.State.Phase      = BlackjackPhase.Betting;
         vm.State.Credits    = 5;
@@ -221,6 +225,83 @@ public class BlackjackViewModelTests
 
         vm.State.Phase = BlackjackPhase.DealerTurn;
         Assert.False(vm.CanRebuy); // never offered mid-hand
+    }
+
+    // ── No Stress Mode: free play bypasses credits entirely ────────────────────
+
+    [Fact]
+    public void TestFreePlayDealBypassesCreditCheck()
+    {
+        var vm = new BlackjackViewModel();
+        vm.Options.IsNoStressMode = true;
+        vm.State.Phase      = BlackjackPhase.Betting;
+        vm.State.Credits    = 0;
+        vm.State.CurrentBet = 50;
+
+        vm.Deal();
+
+        Assert.Equal(BlackjackPhase.Playing, vm.State.Phase);
+        Assert.Equal(0, vm.State.Credits); // never deducted
+    }
+
+    [Fact]
+    public void TestFreePlayStillTracksWinsAndStreaksButNotCredits()
+    {
+        var vm = new BlackjackViewModel();
+        vm.Options.IsNoStressMode = true;
+        vm.State.Phase           = BlackjackPhase.Playing;
+        vm.State.Credits         = 100;
+        vm.State.ActiveHandIndex = 0;
+        int handsWonBefore = vm.Stats.HandsWon;
+
+        var hand = new BlackjackHand { Bet = 10, Result = BlackjackHandResult.Won };
+        hand.Cards.Add(new Card("p1", CardSuit.Spades, 10, true));
+        hand.Cards.Add(new Card("p2", CardSuit.Spades, 9, true));
+        vm.State.PlayerHands = new() { hand };
+
+        var dealerHand = new BlackjackHand();
+        dealerHand.Cards.Add(new Card("d1", CardSuit.Hearts, 10, true));
+        dealerHand.Cards.Add(new Card("d2", CardSuit.Hearts, 7, true));
+        vm.State.DealerHand = dealerHand;
+
+        vm.Stand();
+
+        Assert.Equal(100, vm.State.Credits);                // no credits earned
+        Assert.Equal(handsWonBefore + 1, vm.Stats.HandsWon); // win still tracked
+        Assert.Equal(1, vm.ConsecutiveWins);                 // streak still tracked
+    }
+
+    [Fact]
+    public void TestFreePlayCanRebuyIsAlwaysFalse()
+    {
+        var vm = new BlackjackViewModel();
+        vm.Options.IsNoStressMode = true;
+        vm.State.Phase      = BlackjackPhase.Betting;
+        vm.State.Credits    = 0;
+        vm.State.CurrentBet = 50;
+
+        Assert.False(vm.CanRebuy);
+    }
+
+    [Fact]
+    public void TestFreePlayDoubleAndSplitIgnoreCreditRequirement()
+    {
+        var vm = new BlackjackViewModel();
+        vm.Options.IsNoStressMode = true;
+        vm.State.Phase           = BlackjackPhase.Playing;
+        vm.State.Credits         = 0;
+        vm.State.ActiveHandIndex = 0;
+
+        var hand = new BlackjackHand { Bet = 10 };
+        hand.Cards.Add(new Card("p1", CardSuit.Spades, 5, true));
+        hand.Cards.Add(new Card("p2", CardSuit.Hearts, 5, true));
+        vm.State.PlayerHands = new() { hand };
+        vm.State.DealerHand  = new BlackjackHand();
+        vm.State.DealerHand.Cards.Add(new Card("d1", CardSuit.Clubs, 9, true));
+        vm.State.DealerHand.Cards.Add(new Card("d2", CardSuit.Clubs, 2, false));
+
+        Assert.True(vm.CanDouble); // hand totals 10 — normally needs Credits >= Bet
+        Assert.True(vm.CanSplit);  // same rank — normally needs Credits >= Bet
     }
 
     // ── Dealer-turn re-entrancy guard ───────────────────────────────────────────

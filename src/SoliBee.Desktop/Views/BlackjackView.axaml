@@ -7,16 +7,6 @@
         <!-- The actual game board felt grid -->
         <Grid x:Name="BoardFeltGrid" RowDefinitions="*,Auto,Auto,Auto,Auto,*">
 
-            <!-- Vignette depth overlay -->
-            <Rectangle x:Name="VignetteRect" Grid.RowSpan="6" IsHitTestVisible="False" ZIndex="-1">
-                <Rectangle.Fill>
-                    <RadialGradientBrush Center="50%,50%" Radius="0.8">
-                        <GradientStop Color="#00000000" Offset="0.2"/>
-                        <GradientStop Color="#B2000000" Offset="1.0"/>
-                    </RadialGradientBrush>
-                </Rectangle.Fill>
-            </Rectangle>
-
             <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
             <!-- Lives in the top spacer row, centered vertically, so it sits centered
                  between the title bar and the dealer cards instead of pinned to the
@@ -104,7 +94,7 @@
                 <!-- Bet chips + actions (visible when not playing), split into two rows: -->
                 <StackPanel x:Name="BetButtonRow" Spacing="8" HorizontalAlignment="Center">
                     <!-- Row 1: flat chip buttons — 1/5/10/25 add to the bet, 2X doubles it -->
-                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                    <StackPanel x:Name="ChipButtonRow" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                         <Button x:Name="Chip1Button"  Content="1"  Tag="1"  Click="Chip_Click" Classes="bj-chip bj-chip-1"/>
                         <Button x:Name="Chip5Button"  Content="5"  Tag="5"  Click="Chip_Click" Classes="bj-chip bj-chip-2"/>
                         <Button x:Name="Chip10Button" Content="10" Tag="10" Click="Chip_Click" Classes="bj-chip bj-chip-3"/>

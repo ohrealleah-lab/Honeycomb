@@ -125,7 +125,11 @@ public partial class VideoPokerView : UserControl
 
     private void Refresh(VideoPokerViewModel vm)
     {
-        PayTableBar.IsVisible = !vm.Options.HideBetBoard;
+        // No Stress Mode's free play has no bet to place, so the pay table (whose
+        // payouts scale with bet), credits/bet readout, and betting controls all
+        // disappear — only Hold/Clear/Deal remain (see UpdateControls).
+        PayTableBar.IsVisible = !vm.Options.IsNoStressMode;
+        BidBar.IsVisible      = !vm.Options.IsNoStressMode;
         UpdateCards(vm);
         UpdateHoldBadges(vm);
         UpdateControls(vm);
@@ -282,9 +286,10 @@ public partial class VideoPokerView : UserControl
     private void UpdateControls(VideoPokerViewModel vm)
     {
         AnimateCreditsTo(vm.CreditDisplay);
-        BetLabel.Text         = vm.BetDisplay;
-        HandsLabel.Text       = vm.Stats.TotalHands.ToString();
-        RebuyButton.IsVisible = vm.NeedsRebuy;
+        BetLabel.Text          = vm.BetDisplay;
+        HandsLabel.Text        = vm.Stats.TotalHands.ToString();
+        RebuyButton.IsVisible  = vm.NeedsRebuy;
+        BetButtonRow.IsVisible = !vm.Options.IsNoStressMode;
 
         var slotCursor = vm.IsHolding
             ? new Cursor(StandardCursorType.Hand)
@@ -331,13 +336,19 @@ public partial class VideoPokerView : UserControl
 
                 if (isWin)
                 {
-                    WinHandNameBlock.Text = $"{vm.State.LastHandName}!";
-                    WinPayoutBlock.Text   = $"+{vm.State.LastPayout} credits";
+                    WinHandNameBlock.Text  = $"{vm.State.LastHandName}!";
+                    // No Stress Mode's free play still announces the winning hand, just
+                    // without a credit amount attached (no credits are ever earned).
+                    WinPayoutBlock.IsVisible = !vm.Options.IsNoStressMode;
+                    WinPayoutBlock.Text      = $"+{vm.State.LastPayout} credits";
                     ShowBanner(WinBanner);
                     StartPayRowPulse(vm.WinningHandName);
                 }
                 else
                 {
+                    // No Stress Mode's free play never actually wagers the bet, so the
+                    // "-{bet} credits" line would be misleading — hide it here too.
+                    NoWinPayoutRow.IsVisible = !vm.Options.IsNoStressMode;
                     ShowBanner(NoWinOverlay);
                     StopPayRowPulse();
                 }
@@ -572,12 +583,14 @@ public partial class VideoPokerView : UserControl
 
     private void ApplyFeltColor(VideoPokerViewModel vm)
     {
-        VignetteRect.IsVisible = false;
+        // BoardFeltGrid and PayTableBar no longer paint their own background — they let
+        // the shared window-level felt color + vignette (see MainWindow.ApplyFeltColor)
+        // show through underneath, so the same continuous gradient spans the title bar,
+        // pay table, board, and legend with no seams. BidBar keeps its own darker panel
+        // for text contrast.
         if (vm.Options.IsFinalFantasyMode)
         {
-            BoardFeltGrid.Background = new SolidColorBrush(Colors.Black);
-            PayTableBar.Background   = new SolidColorBrush(Colors.Black);
-            BidBar.Background        = new SolidColorBrush(Color.Parse("#1A1A1A"));
+            BidBar.Background = new SolidColorBrush(Color.Parse("#1A1A1A"));
             return;
         }
 
@@ -593,17 +606,13 @@ public partial class VideoPokerView : UserControl
         try
         {
             var felt = Color.Parse(hex);
-            BoardFeltGrid.Background = new SolidColorBrush(felt);
-            PayTableBar.Background   = new SolidColorBrush(felt);
             // Bid bar uses a darkened shade of the felt color for text contrast
             var bar = new Color(255, (byte)(felt.R / 2), (byte)(felt.G / 2), (byte)(felt.B / 2));
             BidBar.Background = new SolidColorBrush(bar);
         }
         catch
         {
-            BoardFeltGrid.Background = new SolidColorBrush(Colors.DarkGreen);
-            PayTableBar.Background   = new SolidColorBrush(Colors.DarkGreen);
-            BidBar.Background        = new SolidColorBrush(Color.Parse("#004000"));
+            BidBar.Background = new SolidColorBrush(Color.Parse("#004000"));
         }
     }
 

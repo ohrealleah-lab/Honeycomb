@@ -38,6 +38,7 @@
                             <Button x:Name="IdxSpider"    Content="Spider Solitaire"     Click="GoTo_Spider"      Classes="help-link"/>
                             <Button x:Name="IdxVP"        Content="Video Poker"          Click="GoTo_VideoPoker"  Classes="help-link"/>
                             <Button x:Name="IdxBJ"        Content="Video Blackjack"      Click="GoTo_Blackjack"   Classes="help-link"/>
+                            <Button x:Name="IdxNoStress"  Content="No Stress Mode"       Click="GoTo_NoStress"   Classes="help-link"/>
                             <Button x:Name="IdxThemes"    Content="Custom Themes &amp; Art" Click="GoTo_Themes"    Classes="help-link"/>
                         </StackPanel>
                     </StackPanel>
@@ -351,6 +352,37 @@
                             <TextBlock Text="Tips" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
                                        Text="Always double down on 11 when the dealer shows 2–10. Stand on any hard 17 or higher. Never split 10-value cards — a 20 is already a strong hand. Always split Aces and 8s. If the dealer shows 2–6, they are likely to bust, so stand on hard 12 or higher and let them come to you."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── No Stress Mode ───────────────────────────────────────── -->
+                <Border x:Name="NoStressAnchor" Margin="0,0,0,6">
+                    <TextBlock Text="NO STRESS MODE"
+                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               Foreground="#FFD700"/>
+                </Border>
+                <Border Background="#1E1E1E" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Overview" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="A single Options-page toggle that strips away every source of pressure — the clock, the pay table, and the bet itself — so you can just play. It applies across every game."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Klondike, Freecell &amp; Spider" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Turns the timer off, same as unchecking the old Timed Game option (which No Stress Mode now fully replaces). No time is tracked or shown for the game."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Video Poker &amp; Video Blackjack — Free Play" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="The pay table, credits/bet/hands board, and every betting control (− Bet, Bet Max, + Bet, Clear Bet, and the Blackjack chip buttons) are hidden. Hands are dealt free of charge — no credits are ever wagered, earned, or lost. Double Down and Split remain fully available, behaving as if you always have credits to cover them."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="What still shows" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Win/loss banners, the winning hand name, and your current win streak still appear exactly as normal — only the dollar amount is left out, since no credits change hands in free play."/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
