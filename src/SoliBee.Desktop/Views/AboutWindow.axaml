@@ -5,7 +5,7 @@
         Width="340" Height="220"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
-        Background="#1E1E1E"
+        Background="White"
         ShowInTaskbar="False">
 
     <Grid RowDefinitions="*, Auto">
@@ -13,20 +13,20 @@
 
             <TextBlock Text="SoliBee"
                        FontSize="32" FontWeight="Black"
-                       Foreground="White"
+                       Foreground="#1A1A1A"
                        HorizontalAlignment="Center"
                        FontFamily="Segoe UI" />
 
             <TextBlock Text="Solitaire Suite"
                        FontSize="13" FontWeight="SemiBold"
-                       Foreground="#A0A0A0"
+                       Foreground="#707070"
                        HorizontalAlignment="Center"
                        LetterSpacing="2" />
 
-            <Border Height="1" Background="#333333" Margin="0,6,0,6" />
+            <Border Height="1" Background="#DDDDDD" Margin="0,6,0,6" />
 
             <TextBlock x:Name="VersionText"
-                       FontSize="12" Foreground="#C0C0C0"
+                       FontSize="12" Foreground="#555555"
                        HorizontalAlignment="Center" />
 
             <TextBlock Text="© 2026 Leahbee. All rights reserved."
@@ -34,7 +34,7 @@
                        HorizontalAlignment="Center" />
 
             <TextBlock Text="For Rhinestone."
-                       FontSize="11" Foreground="#B0B0B0" FontStyle="Italic"
+                       FontSize="11" Foreground="#707070" FontStyle="Italic"
                        HorizontalAlignment="Center" Margin="0,4,0,0" />
         </StackPanel>
 
@@ -45,7 +45,6 @@
                 Margin="0,0,20,16"
                 Width="80"
                 HorizontalContentAlignment="Center"
-                Background="#444444"
-                Foreground="White" />
+                Classes="light-secondary" />
     </Grid>
 </Window>

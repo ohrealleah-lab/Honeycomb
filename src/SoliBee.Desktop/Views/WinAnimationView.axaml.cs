@@ -53,6 +53,7 @@ public partial class WinAnimationView : UserControl
         // Show win info panel with score and time
         WinStatsLabel.Text = FormatStatsLine(scoreText, timeText);
         WinInfoPanel.IsVisible = true;
+        WinParticleSystem.Burst(ParticleCanvas);
 
         var foundationList = foundations.ToList();
         _foundationCount = Math.Max(1, foundationList.Count);
@@ -101,6 +102,7 @@ public partial class WinAnimationView : UserControl
         _activeCards.Clear();
         _spawnQueue.Clear();
         AnimationCanvas.Children.Clear();
+        ParticleCanvas.Children.Clear();
         _spawnTicks  = 0;
         _spawnIndex  = 0;
 

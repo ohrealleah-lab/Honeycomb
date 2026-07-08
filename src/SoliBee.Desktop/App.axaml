@@ -57,5 +57,35 @@
             <Setter Property="Background" Value="#007AFF" />
             <Setter Property="Foreground" Value="White" />
         </Style>
+
+        <!-- Light-themed buttons used across the (light, Mac-style) Preferences/Themes
+             panels and their dialogs, plus any other window that needs the same look
+             (e.g. CardBackEditorWindow) — app-wide so every Window can share them
+             instead of redefining per-window. Same FluentTheme pointerover-tint
+             workaround as the other shared button classes above. -->
+        <Style Selector="Button.light-secondary">
+            <Setter Property="Background" Value="#E5E5E5" />
+            <Setter Property="Foreground" Value="#1A1A1A" />
+        </Style>
+        <Style Selector="Button.light-secondary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#E5E5E5" />
+            <Setter Property="Foreground" Value="#1A1A1A" />
+        </Style>
+        <Style Selector="Button.light-primary">
+            <Setter Property="Background" Value="#1155AA" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.light-primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1155AA" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.light-danger">
+            <Setter Property="Background" Value="#CC3333" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.light-danger:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#CC3333" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
     </Application.Styles>
 </Application>

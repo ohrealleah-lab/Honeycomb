@@ -362,7 +362,7 @@ public partial class PreferencesView : UserControl
         var nameBlock = new TextBlock
         {
             Text = theme.Name,
-            Foreground = Brushes.White,
+            Foreground = new SolidColorBrush(Color.Parse("#1A1A1A")),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(6, 0, 0, 0)
         };

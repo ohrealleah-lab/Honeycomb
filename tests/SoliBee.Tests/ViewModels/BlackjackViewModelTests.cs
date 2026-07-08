@@ -240,7 +240,11 @@ public class BlackjackViewModelTests
 
         vm.Deal();
 
-        Assert.Equal(BlackjackPhase.Playing, vm.State.Phase);
+        // Not asserting Phase == Playing specifically — a freshly shuffled deck can
+        // occasionally deal a natural blackjack, which auto-resolves straight to
+        // Result. Either way, Deal() must have proceeded past the credit gate instead
+        // of bailing out and leaving the phase at Betting.
+        Assert.NotEqual(BlackjackPhase.Betting, vm.State.Phase);
         Assert.Equal(0, vm.State.Credits); // never deducted
     }
 

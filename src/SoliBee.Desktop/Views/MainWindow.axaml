@@ -114,20 +114,18 @@
             
             <!-- Preferences Modal Dialog Overlay (ZIndex above VignetteOverlay so its buttons stay unaffected) -->
             <Grid x:Name="PreferencesOverlay" Background="Transparent" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ZIndex="95">
-                <Border x:Name="PreferencesPanel" Background="#2E2E2E" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
+                <Border x:Name="PreferencesPanel" Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
                     <StackPanel Spacing="15">
-                        <TextBlock Text="Preferences" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                        <ScrollViewer MaxHeight="600" VerticalScrollBarVisibility="Auto">
-                            <ContentControl x:Name="PreferencesContent" />
-                        </ScrollViewer>
+                        <TextBlock Text="Preferences" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
+                        <ContentControl x:Name="PreferencesContent" />
                         <Grid ColumnDefinitions="*,Auto,Auto">
                             <TextBlock Text="View Stats" Grid.Column="0"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
-                                       Foreground="#4DA3FF" TextDecorations="Underline"
+                                       Foreground="#1155AA" TextDecorations="Underline"
                                        Cursor="Hand" PointerPressed="ViewStats_PointerPressed"/>
-                            <Button Classes="confirm-cancel" Content="Cancel" Click="CancelPreferences_Click" Grid.Column="1"
+                            <Button Classes="light-secondary" Content="Cancel" Click="CancelPreferences_Click" Grid.Column="1"
                                     Width="80" HorizontalContentAlignment="Center" Margin="0,0,8,0" />
-                            <Button Classes="confirm-cancel" Content="OK" Click="ClosePreferences_Click" Grid.Column="2"
+                            <Button Classes="light-primary" Content="OK" Click="ClosePreferences_Click" Grid.Column="2"
                                     Width="80" HorizontalContentAlignment="Center" />
                         </Grid>
                     </StackPanel>
@@ -136,53 +134,53 @@
             
             <!-- Stats Modal Dialog Overlay (ZIndex above VignetteOverlay so its buttons stay unaffected) -->
             <Grid x:Name="StatsOverlay" Background="#90000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ZIndex="95">
-                <Border Background="#2E2E2E" CornerRadius="8" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
+                <Border Background="White" CornerRadius="8" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
                     <StackPanel Spacing="14" Width="300">
-                        <TextBlock x:Name="StatsTitleText" Text="Klondike Statistics" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                        <Rectangle Height="1" Fill="#30FFFFFF" />
+                        <TextBlock x:Name="StatsTitleText" Text="Klondike Statistics" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
+                        <Rectangle Height="1" Fill="#DDDDDD" />
                         <StackPanel x:Name="StatsFixedRows" Spacing="8">
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Games Played" Foreground="White" />
-                                <TextBlock Grid.Column="1" x:Name="StatsGamesPlayedText" Foreground="White" FontWeight="Bold" />
+                                <TextBlock Text="Games Played" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsGamesPlayedText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Games Won" Foreground="White" />
-                                <TextBlock Grid.Column="1" x:Name="StatsGamesWonText" Foreground="White" FontWeight="Bold" />
+                                <TextBlock Text="Games Won" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsGamesWonText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="High Score" Foreground="White" />
-                                <TextBlock Grid.Column="1" x:Name="StatsHighScoreText" Foreground="White" FontWeight="Bold" />
+                                <TextBlock Text="High Score" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsHighScoreText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Win Percentage" Foreground="White" />
-                                <TextBlock Grid.Column="1" x:Name="StatsWinPctText" Foreground="White" FontWeight="Bold" />
+                                <TextBlock Text="Win Percentage" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsWinPctText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Current Streak" Foreground="White" />
-                                <TextBlock Grid.Column="1" x:Name="StatsCurrentStreakText" Foreground="White" FontWeight="Bold" />
+                                <TextBlock Text="Current Streak" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsCurrentStreakText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Longest Streak" Foreground="White" />
-                                <TextBlock Grid.Column="1" x:Name="StatsLongestStreakText" Foreground="White" FontWeight="Bold" />
+                                <TextBlock Text="Longest Streak" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsLongestStreakText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Avg Winning Time" Foreground="White" />
-                                <TextBlock Grid.Column="1" x:Name="StatsAvgWinTimeText" Foreground="White" FontWeight="Bold" />
+                                <TextBlock Text="Avg Winning Time" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsAvgWinTimeText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Fastest Win" Foreground="White" />
-                                <TextBlock Grid.Column="1" x:Name="StatsFastestWinText" Foreground="White" FontWeight="Bold" />
+                                <TextBlock Text="Fastest Win" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsFastestWinText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                         </StackPanel>
                         <!-- Blackjack / Video Poker have a different field set (no streaks/timing),
                              so their rows are built in code-behind rather than fixed like above. -->
                         <StackPanel x:Name="StatsDynamicRows" Spacing="8" IsVisible="False" />
-                        <Rectangle Height="1" Fill="#30FFFFFF" />
+                        <Rectangle Height="1" Fill="#DDDDDD" />
                         <Grid ColumnDefinitions="Auto,*,Auto">
                             <Button Content="Reset Stats" Click="ResetStats_Click" Grid.Column="0"
-                                    Background="Transparent" Foreground="#FF5555" BorderThickness="0" />
+                                    Background="Transparent" Foreground="#CC3333" BorderThickness="0" />
                             <Button Content="Close" Click="CloseStats_Click" Grid.Column="2"
-                                    Width="80" HorizontalContentAlignment="Center" Background="#444444" Foreground="White" />
+                                    Width="80" HorizontalContentAlignment="Center" Classes="light-secondary" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -190,13 +188,13 @@
 
             <!-- Game Action Confirmation Overlay (ZIndex above VignetteOverlay so its buttons stay unaffected) -->
             <Grid x:Name="ConfirmActionOverlay" Background="Transparent" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="95">
-                <Border Background="#2E2E2E" CornerRadius="8" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <Border Background="White" CornerRadius="8" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                     <StackPanel Spacing="15" Width="260">
-                        <TextBlock x:Name="ConfirmActionTitle" Text="Start New Game?" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                        <TextBlock x:Name="ConfirmActionMessage" Text="Are you sure you want to abandon the current game and start a new one?" FontSize="12" Foreground="LightGray" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
+                        <TextBlock x:Name="ConfirmActionTitle" Text="Start New Game?" FontSize="16" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="ConfirmActionMessage" Text="Are you sure you want to abandon the current game and start a new one?" FontSize="12" Foreground="#555555" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
                         <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
-                            <Button x:Name="ConfirmActionButton" Classes="confirm-action" Content="New Game" Click="ConfirmAction_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,4,0" />
-                            <Button Classes="confirm-cancel" Content="Cancel" Click="CancelConfirmAction_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="4,0,0,0" />
+                            <Button x:Name="ConfirmActionButton" Classes="light-danger" Content="New Game" Click="ConfirmAction_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,4,0" />
+                            <Button Classes="light-secondary" Content="Cancel" Click="CancelConfirmAction_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="4,0,0,0" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -264,26 +262,5 @@
             <Setter Property="Foreground" Value="White" />
         </Style>
 
-        <!-- Confirmation dialog buttons (ConfirmActionOverlay) — FluentTheme's default
-             Button ControlTheme applies its own hover tint on an internal template part
-             that overrides a plain Background attribute (same issue already worked
-             around for Button.toolbar above), so the :pointerover overrides here
-             re-assert the same colors to keep each button static on hover. -->
-        <Style Selector="Button.confirm-action">
-            <Setter Property="Background" Value="#882222" />
-            <Setter Property="Foreground" Value="White" />
-        </Style>
-        <Style Selector="Button.confirm-action:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#882222" />
-            <Setter Property="Foreground" Value="White" />
-        </Style>
-        <Style Selector="Button.confirm-cancel">
-            <Setter Property="Background" Value="#444444" />
-            <Setter Property="Foreground" Value="White" />
-        </Style>
-        <Style Selector="Button.confirm-cancel:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#444444" />
-            <Setter Property="Foreground" Value="White" />
-        </Style>
     </Window.Styles>
 </Window>

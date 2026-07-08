@@ -44,6 +44,11 @@
                     HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
                     Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="Close_Click"/>
         </Grid>
+
+        <!-- Particle burst canvas (top layer — bursts in front of the win banner,
+             same as Blackjack/Video Poker's win banners) -->
+        <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
     </Grid>
 
 </UserControl>

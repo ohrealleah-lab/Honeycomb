@@ -170,7 +170,7 @@ public partial class FaceCardArtSectionView : UserControl
                 Content = "✕",
                 Width = 20, Height = 18,
                 FontSize = 9, Padding = new Thickness(0),
-                Background = new SolidColorBrush(Color.Parse("#662222")),
+                Background = new SolidColorBrush(Color.Parse("#CC3333")),
                 Foreground = new SolidColorBrush(Colors.White)
             };
             deleteBtn.Click += (_, _) => OnDeleteClick(slot);
@@ -182,7 +182,7 @@ public partial class FaceCardArtSectionView : UserControl
                 Content = new TextBlock { Text = "On", FontSize = 9 },
                 IsChecked = initiallyEnabled,
                 Height = 18, Padding = new Thickness(4, 0),
-                Foreground = new SolidColorBrush(Colors.White)
+                Foreground = new SolidColorBrush(Color.Parse("#1A1A1A"))
             };
             toggle.IsCheckedChanged += (_, _) =>
             {

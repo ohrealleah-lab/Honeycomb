@@ -394,6 +394,8 @@ public partial class VideoPokerView : UserControl
         _activeBanner = banner;
         banner.Opacity = 1.0;
         banner.IsVisible = true;
+        if (banner == WinBanner)
+            WinParticleSystem.Burst(ParticleCanvas);
         StartBannerDelay();
     }
 

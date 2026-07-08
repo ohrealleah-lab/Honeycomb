@@ -740,6 +740,19 @@ public partial class BlackjackView : UserControl
     private void CardBack_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm || !vm.CanDeal) return;
+
+        // CanDeal goes true the instant a hand settles (Phase -> Result), well before
+        // the win/loss banner has actually revealed to the player (it waits ~1.5s,
+        // then stays up until it fades or is dismissed). Without this guard, a stray
+        // click anywhere on the card table during that window deals a "ghost" hand
+        // underneath the still-pending reveal — and since Deal() can itself settle
+        // instantly (e.g. another natural blackjack), the table can cycle through
+        // several unintended hands before the player ever sees the first result.
+        // The visible "Buy In Again" button and clicking the banner itself are still
+        // immediate on purpose — this only blocks the invisible whole-table hitbox.
+        if (vm.State.Phase == BlackjackPhase.Result && (_resultShowTimer != null || ResultOverlay.IsVisible))
+            return;
+
         vm.Deal();
         SoundService.PlayShuffle();
         e.Handled = true;

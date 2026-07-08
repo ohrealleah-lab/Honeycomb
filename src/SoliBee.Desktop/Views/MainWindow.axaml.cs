@@ -488,11 +488,13 @@ public partial class MainWindow : Window
         return dollars < 0 ? $"-${abs}.00" : $"${abs}.00";
     }
 
+    private static readonly SolidColorBrush _statRowForeground = new(Color.Parse("#1A1A1A"));
+
     private static Grid BuildStatRow(string label, string value)
     {
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-        grid.Children.Add(new TextBlock { Text = label, Foreground = Brushes.White });
-        var valueBlock = new TextBlock { Text = value, Foreground = Brushes.White, FontWeight = FontWeight.Bold };
+        grid.Children.Add(new TextBlock { Text = label, Foreground = _statRowForeground });
+        var valueBlock = new TextBlock { Text = value, Foreground = _statRowForeground, FontWeight = FontWeight.Bold };
         Grid.SetColumn(valueBlock, 1);
         grid.Children.Add(valueBlock);
         return grid;

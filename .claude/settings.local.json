@@ -95,7 +95,9 @@
       "Bash(gh pr *)",
       "Bash(env)",
       "Bash(git credential *)",
-      "Bash(rm -f /tmp/pr_body.json /tmp/pr_result.json /tmp/existing_pr.json)"
+      "Bash(rm -f /tmp/pr_body.json /tmp/pr_result.json /tmp/existing_pr.json)",
+      "Read(//c/Users/Leahbee/.nuget/packages/avalonia/**)",
+      "Bash(find \"/c/Users/Leahbee/.nuget/packages/avalonia/11.0.10\" -iname \"Avalonia.Base.dll\" -o -iname \"Avalonia.Controls.dll\" 2>/dev/null)"
     ]
   }
 }
