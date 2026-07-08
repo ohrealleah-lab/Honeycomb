@@ -1,19 +1,10 @@
 # 🐝 Solibee Card Suite
-What's the #1 issue facing Mac users today? A lack of ad-free Klondike Solitaire. I used SpecKit, Gemini, and Claude to build Solibee card suite for OSX so my woes would end (and to brush up on Agentic development.) 
+What's the #1 issue facing Mac users today? The lack of a quality, free Klondike Solitaire game. I used SpecKit, Gemini, and Claude to build Solibee card suite for OSX so my woes would end (and to brush up on Agentic development.) 
 
-A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the gameplay dynamics of classic Solitaire, Video Poker, and Video Blackjack games with modern flourishes and deep customization. All art was created by real artists - there is zero AI art.
+Solibee is a native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the classic gameplay dynamics of Klondike Solitaire, Freecell, Video Poker, and Blackjack with modern flourishes and deep customization. Change the card decks and card art to *your* pictures. Match the felt and card color, save it as a *full custom theme*. Make your own dark mode. **Make the game yours**. 
 
-**Make the game yours**. 
-
-Comments from players:
-
-“It’s pretty cool, I must say” 
-
-“The customization is amazing. It is what I require in apps.”
 
 <img width="1162" height="927" alt="image" src="https://github.com/user-attachments/assets/009116d0-51e4-4b02-baf9-107bda7ef7e7" />
-
-
 
 ---
 
@@ -27,7 +18,7 @@ Solibee supports five fully implemented, distinct games selectable via the **Gam
 * **Classic Win Animation**: The cards will flow from the foundations, and you will feel alive again.
 
 ### 2. Freecell Solitaire
-* **Modes**: Supports both **1-Deck** (8 columns, 4 free cells, 4 foundations) and **2-Deck** (10 columns, 4 free cells, 8 foundations) options.
+* **Modes**: Supports both **1-Deck** (8 columns, 4 free cells, 4 foundations) and **2-Deck** (10 columns, 8 free cells, 8 foundations) options.
 * **Rules & Scoring**: Open card placement strategy with move limits based on the number of empty free cells and tableau spaces.
 
 ### 3. Spider Solitaire
@@ -40,7 +31,8 @@ Solibee supports five fully implemented, distinct games selectable via the **Gam
 * **Bonus Poker**: Jacks or Better rules with enhanced payouts for four-of-a-kind hands.
 
 ### 3. Video Blackjack
-* **Casino-style Blackjack**: Hit, stand, double down, and split. 
+* **Casino-style Blackjack**: Hit, stand, and split.
+* **Video Blackjack Betting**: Bid in 1, 10, or 25 credits, or double your last bet.
 
 ---
 
