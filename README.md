@@ -1,7 +1,7 @@
 # 🐝 Solibee Card Suite
 What's the #1 issue facing Mac users today? The lack of a quality, free Klondike Solitaire game. I used SpecKit, Gemini, and Claude to build Solibee card suite for OSX so my woes would end (and to brush up on Agentic development.) 
 
-Solibee is a native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the classic gameplay dynamics of Klondike Solitaire, Freecell, Video Poker, and Blackjack with modern flourishes and deep customization. Change the card decks and card art to *your* pictures. Match the felt and card color, save it as a *full custom theme*. Make your own dark mode. **Make the game yours**. 
+Solibee is a native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the classic gameplay dynamics of Klondike Solitaire, Freecell, Video Poker, and Blackjack with modern flourishes and deep customization. Change the card decks and card art to **your pictures**. Match the felt and card color, save it as a **full custom theme**. Make your own dark mode. **Make the game yours**. 
 
 
 <img width="1162" height="927" alt="image" src="https://github.com/user-attachments/assets/009116d0-51e4-4b02-baf9-107bda7ef7e7" />
