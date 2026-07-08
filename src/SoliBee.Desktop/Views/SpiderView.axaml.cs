@@ -273,10 +273,10 @@ public partial class SpiderView : CardGameView
         _winTriggered = true;
         VictoryOverlay.IsVisible = true;
         if (DataContext is SpiderViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.TimeDisplay);
+            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.Options.IsTimed ? vm.TimeDisplay : "");
         else
             VictoryOverlay.StartAnimation();
-        SoundService.PlayVictory();
+        SoundService.PlaySolitaireWin();
     }
 
     // Dev-only banner preview, wired to the toolbar's local-only "Banners" dropdown
@@ -285,7 +285,7 @@ public partial class SpiderView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         if (DataContext is SpiderViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.TimeDisplay);
+            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, vm.Options.IsTimed ? vm.TimeDisplay : "");
         else
             VictoryOverlay.StartAnimation();
     }

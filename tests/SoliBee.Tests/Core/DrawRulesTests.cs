@@ -66,6 +66,12 @@ public class DrawRulesTests
     public void TestStockRecycle()
     {
         var vm = new GameViewModel();
+        // GameViewModel() loads real, persisted Options from disk (SettingsService has no
+        // test seam), so pin this explicitly rather than inheriting whatever Vegas setting
+        // happens to be saved — Vegas Draw 1 now allows 0 recycles (see GameViewModel's
+        // vegasRecycleLimit), which would otherwise make this generic recycle test flaky
+        // depending on ambient state.
+        vm.Options.IsVegasScoring = false;
         vm.Stock.Cards.Clear();
         vm.Waste.Cards.Clear();
 

@@ -38,6 +38,7 @@
     <Content Include="Assets/shuffle.wav" CopyToOutputDirectory="Always" />
     <Content Include="Assets/snap.wav" CopyToOutputDirectory="Always" />
     <Content Include="Assets/victory.wav" CopyToOutputDirectory="Always" />
+    <Content Include="Assets/tada.wav" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>

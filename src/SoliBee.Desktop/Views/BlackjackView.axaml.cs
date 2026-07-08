@@ -195,21 +195,23 @@ public partial class BlackjackView : UserControl
 
     // ── Player hands ──────────────────────────────────────────────────────────
 
-    // Scale factor for a split hand's card size, keyed by card count. A hand's total
-    // rendered width (first card + each overlapping card after it) is capped at the
-    // width of a fresh 2-card hand, so no matter how many cards a hand grows to via
-    // Hit, it never grows wider than its starting footprint — which means it can
-    // never overlap the other split hand sitting beside it, and its cards never
-    // overlap the board edge either.
-    private const double CardBaseWidth    = 190;
-    private const double CardOverlapWidth = 154.375; // width each additional overlapping card adds
+    // Overlap tightening for a split hand's cards, keyed by card count. Cards
+    // themselves never shrink — instead, as a hand grows past 2 cards the gap
+    // between them tightens so the row still targets a fresh 2-card hand's width
+    // (keeping it clear of the other split hand beside it). That tightening is
+    // floored at MinVisibleStripWidth, since covering more than that would start
+    // hiding a card's rank/suit corner — a hand that grows past what the floor can
+    // fit is simply allowed to run wider than the target instead.
+    private const double CardBaseWidth        = 190;
+    private const double CardOverlapWidth     = 154.375; // default/2-card width each additional card adds
+    private const double MinVisibleStripWidth = 40;      // floor — keeps every covered card's corner visible
 
-    private static double CardScaleForHandSize(int cardCount)
+    private static double OverlapWidthForHandSize(int cardCount)
     {
-        if (cardCount <= 2) return 1.0;
-        double unscaledWidth   = CardBaseWidth + (cardCount - 1) * CardOverlapWidth;
-        double twoCardWidth    = CardBaseWidth + CardOverlapWidth;
-        return Math.Min(1.0, twoCardWidth / unscaledWidth);
+        if (cardCount <= 2) return CardOverlapWidth;
+        double targetHandWidth = CardBaseWidth + CardOverlapWidth; // same cap a 2-card hand uses
+        double neededOverlap   = (targetHandWidth - CardBaseWidth) / (cardCount - 1);
+        return Math.Max(MinVisibleStripWidth, neededOverlap);
     }
 
     private void RebuildPlayerHands(BlackjackViewModel vm)
@@ -252,13 +254,13 @@ public partial class BlackjackView : UserControl
             var newIds  = hand.Cards.Select(c => c.Id).ToList();
             int stagger = 0;
 
-            // Cards row — shrink card size as a split hand grows, so a long hand
-            // never pushes its outer cards past the window edge; single (unsplit)
-            // hands always stay at full size.
-            double scale = vm.State.IsSplit ? CardScaleForHandSize(hand.Cards.Count) : 1.0;
-            double cardWidth  = CardBaseWidth * scale;
-            double cardHeight = 268.375 * scale;
-            double overlap    = -(CardBaseWidth - CardOverlapWidth) * scale;
+            // Cards row — tighten the overlap (never the card size) as a split hand
+            // grows, so a long hand still targets its starting footprint; single
+            // (unsplit) hands always use the default spacing.
+            double overlapWidth = vm.State.IsSplit ? OverlapWidthForHandSize(hand.Cards.Count) : CardOverlapWidth;
+            double cardWidth  = CardBaseWidth;
+            double cardHeight = 268.375;
+            double overlap    = -(CardBaseWidth - overlapWidth);
 
             var cardRow = new StackPanel { Orientation = Orientation.Horizontal };
             for (int ci = 0; ci < hand.Cards.Count; ci++)
@@ -352,15 +354,15 @@ public partial class BlackjackView : UserControl
         bool playing = vm.State.Phase == BlackjackPhase.Playing;
         bool canDeal = vm.CanDeal;
 
-        bool notPlaying = !playing;
         ActionButtonRow.IsVisible = playing;
         HitButton.IsVisible    = playing;
         StandButton.IsVisible  = playing;
-        DoubleButton.IsVisible = playing;
+        DoubleButton.IsVisible = playing && vm.CanDouble;
         SplitButton.IsVisible  = playing && vm.CanSplit;
-        BetButtonRow.IsVisible = notPlaying;
-        DealButton.IsVisible   = notPlaying && !vm.NeedsRebuy;
-        RebuyButton.IsVisible  = vm.NeedsRebuy && notPlaying;
+        BetButtonRow.IsVisible = vm.CanChangeBet;
+        DealButton.IsVisible   = vm.CanDeal && !vm.CanRebuy;
+        RebuyButton.IsVisible  = vm.CanRebuy;
+        RebuyDivider.IsVisible = vm.CanRebuy;
 
         if (playing)
         {
@@ -370,7 +372,7 @@ public partial class BlackjackView : UserControl
             SplitButton.IsEnabled  = vm.CanSplit;
         }
 
-        DealButton.Content = vm.State.Phase == BlackjackPhase.Result ? "Deal Again" : "Deal";
+        DealButton.Content = vm.State.Phase == BlackjackPhase.Result ? "Buy In Again" : "Buy In";
 
     }
 
@@ -408,7 +410,7 @@ public partial class BlackjackView : UserControl
             ? $"Player: {string.Join(" / ", vm.State.PlayerHands.Select(FormatHandTotal))}"
             : $"Player: {FormatHandTotal(vm.State.PlayerHands[0])}";
 
-        string headline, subline, background, boxShadow;
+        string headline, subline, background;
         bool win;
         int streak;
 
@@ -416,8 +418,7 @@ public partial class BlackjackView : UserControl
         {
             headline   = "Blackjack!";
             subline    = netStr;
-            background = "#1A44CC";
-            boxShadow  = "0 0 28 8 #90FFD700, 0 4 18 0 #AA000000";
+            background = "#BF000000";
             win        = true;
             streak     = vm.ConsecutiveWins;
         }
@@ -425,26 +426,24 @@ public partial class BlackjackView : UserControl
         {
             headline   = "You win!";
             subline    = netStr;
-            background = "#1A44CC"; // Dark blue, matches the Autocomplete/You Win banner scheme
-            boxShadow  = "0 0 28 8 #90FFD700, 0 4 18 0 #AA000000";
+            background = "#BF000000";
             win        = true;
             streak     = vm.ConsecutiveWins;
         }
         else if (allPush)
         {
             headline   = "Push";
-            subline    = "Bet Returned";
-            background = "#37474F"; // Dark slate grey
-            boxShadow  = "0 4 18 0 #AA000000";
+            subline    = "Bets returned";
+            background = "#BF000000";
             win        = false;
             streak     = 0;
         }
         else
         {
-            headline   = "Not today, partner!";
+            bool anyBust = vm.State.PlayerHands.Any(h => h.IsBust);
+            headline   = anyBust ? "Bust!" : "Not today, partner!";
             subline    = netStr;
-            background = "#B71C1C"; // Dark red
-            boxShadow  = "0 4 18 0 #AA000000";
+            background = "#BF000000";
             win        = false;
             streak     = 0;
         }
@@ -461,7 +460,8 @@ public partial class BlackjackView : UserControl
             ResultHeadline.Text = headline;
             ResultSubline.Text  = subline;
             ResultOverlay.Background = new SolidColorBrush(Color.Parse(background));
-            ResultOverlay.BoxShadow  = BoxShadows.Parse(boxShadow);
+            ResultOverlay.BoxShadow  = BoxShadows.Parse(BannerStyles.GoldGlowBoxShadow);
+            ResultOverlay.MaxWidth   = (headline.Contains("Not today, partner!")) ? 460 : 320;
             ShowBanner(win, streak);
         };
         _resultShowTimer.Start();
@@ -477,9 +477,15 @@ public partial class BlackjackView : UserControl
         ResultPlayerTotal.Text    = "Player: 21";
         ResultHeadline.Text       = win ? "You win!" : "Not today, partner!";
         ResultSubline.Text        = win ? "+50 credits" : "-50 credits";
-        ResultOverlay.Background  = new SolidColorBrush(Color.Parse(win ? "#1A44CC" : "#B71C1C"));
-        ResultOverlay.BoxShadow   = BoxShadows.Parse(win ? "0 0 28 8 #90FFD700, 0 4 18 0 #AA000000" : "0 4 18 0 #AA000000");
+        ResultOverlay.Background  = new SolidColorBrush(Color.Parse("#BF000000"));
+        ResultOverlay.BoxShadow   = BoxShadows.Parse(BannerStyles.GoldGlowBoxShadow);
+        ResultOverlay.MaxWidth    = win ? 320 : 460;
         ShowBanner(win, streak: 0);
+    }
+
+    private void BannerDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        HideBanner();
     }
 
     private void ShowBanner(bool win, int streak)
@@ -762,22 +768,23 @@ public partial class BlackjackView : UserControl
         SoundService.PlaySnap();
     }
 
-    private void DecreaseBet_Click(object? sender, RoutedEventArgs e)
+    private void Chip_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
-        vm.DecreaseBet();
+        if (sender is not Button { Tag: string tag } || !int.TryParse(tag, out int amount)) return;
+        vm.AddToBet(amount);
     }
 
-    private void IncreaseBet_Click(object? sender, RoutedEventArgs e)
+    private void DoubleBet_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
-        vm.IncreaseBet();
+        vm.DoubleBet();
     }
 
-    private void BetMax_Click(object? sender, RoutedEventArgs e)
+    private void ClearBet_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
-        vm.BetMax();
+        vm.ClearBet();
     }
 
     private void ResultOverlay_PointerPressed(object? sender, PointerPressedEventArgs e)

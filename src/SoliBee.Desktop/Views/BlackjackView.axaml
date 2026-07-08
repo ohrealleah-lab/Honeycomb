@@ -101,19 +101,26 @@
             <StackPanel Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center"
                         Spacing="10" Margin="0,3,0,12">
 
-                <!-- Bet adjustment + Deal row (visible when not playing) -->
-                <StackPanel x:Name="BetButtonRow" Orientation="Horizontal" Spacing="8"
-                            HorizontalAlignment="Center">
-                    <Button x:Name="DecreaseBetButton" Content="− Bet" Height="46" Padding="14,0"
-                            Click="DecreaseBet_Click" Classes="bj-button"/>
-                    <Button x:Name="BetMaxButton"      Content="Bet Max" Height="46" Padding="14,0"
-                            Click="BetMax_Click"      Classes="bj-button"/>
-                    <Button x:Name="IncreaseBetButton" Content="+ Bet"  Height="46" Padding="14,0"
-                            Click="IncreaseBet_Click" Classes="bj-button"/>
-                    <Button x:Name="DealButton"   Content="Deal  [Space]" Height="46" Padding="28,0"
-                            Click="Deal_Click"   Classes="bj-button bj-button-deal"/>
-                    <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
-                            Click="Rebuy_Click"  Classes="bj-button bj-button-rebuy" IsVisible="False"/>
+                <!-- Bet chips + actions (visible when not playing), split into two rows: -->
+                <StackPanel x:Name="BetButtonRow" Spacing="8" HorizontalAlignment="Center">
+                    <!-- Row 1: flat chip buttons — 1/5/10/25 add to the bet, 2X doubles it -->
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                        <Button x:Name="Chip1Button"  Content="1"  Tag="1"  Click="Chip_Click" Classes="bj-chip bj-chip-1"/>
+                        <Button x:Name="Chip5Button"  Content="5"  Tag="5"  Click="Chip_Click" Classes="bj-chip bj-chip-2"/>
+                        <Button x:Name="Chip10Button" Content="10" Tag="10" Click="Chip_Click" Classes="bj-chip bj-chip-3"/>
+                        <Button x:Name="Chip25Button" Content="25" Tag="25" Click="Chip_Click" Classes="bj-chip bj-chip-4"/>
+                        <Button x:Name="DoubleBetButton" Content="2X" Click="DoubleBet_Click" Classes="bj-chip bj-chip-5"/>
+                    </StackPanel>
+                    <!-- Row 2: Clear / Deal / (Rebuy, only when out of credits for the bet) -->
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                        <Button x:Name="ClearBetButton" Content="Clear Bet" Height="46" Padding="14,0"
+                                Click="ClearBet_Click" Classes="bj-button"/>
+                        <Button x:Name="DealButton"   Content="Buy In  [Space]" Height="46" Padding="28,0"
+                                Click="Deal_Click"   Classes="bj-button bj-button-buyin"/>
+                        <Rectangle x:Name="RebuyDivider" Width="1" Fill="#40FFFFFF" Margin="4,4" IsVisible="False"/>
+                        <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
+                                Click="Rebuy_Click"  Classes="bj-button bj-button-deal" IsVisible="False"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- Action buttons (visible while playing) -->
@@ -138,29 +145,41 @@
         <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False" ZIndex="50"/>
 
         <!-- ─── Result overlay (layered over the entire board) ─── -->
-        <Border x:Name="ResultOverlay" IsVisible="False"
-                Background="#1A44CC" CornerRadius="8" Padding="36,16"
-                HorizontalAlignment="Center" VerticalAlignment="Center"
-                BoxShadow="0 0 28 8 #60FFD700, 0 4 18 0 #AA000000"
-                RenderTransformOrigin="50%,50%"
-                IsHitTestVisible="True"
-                PointerPressed="ResultOverlay_PointerPressed">
-            <StackPanel Spacing="6">
-                <TextBlock x:Name="ResultHeadline" FontSize="32" FontWeight="Black"
-                           Foreground="#FFD700" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
-                <TextBlock x:Name="ResultSubline"  FontSize="18" FontWeight="Bold"
-                           Foreground="White" Opacity="0.85" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
-                <StackPanel Spacing="1" Margin="0,2,0,0">
-                    <TextBlock x:Name="ResultDealerTotal" FontSize="14" FontWeight="SemiBold"
-                               Foreground="White" Opacity="0.65" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
-                    <TextBlock x:Name="ResultPlayerTotal" FontSize="14" FontWeight="SemiBold"
-                               Foreground="White" Opacity="0.65" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
+        <Grid x:Name="ResultOverlayContainer" HorizontalAlignment="Center" VerticalAlignment="Center" ZIndex="40">
+            <!-- Classes="banner-glow" (App.axaml) applies the shared static soft gold halo
+                 as a default; code-behind (UpdateResult/DebugShowResultBanner) re-sets
+                 BoxShadow explicitly to the same BannerStyles.GoldGlowBoxShadow value on
+                 every result since it also needs to change Background per outcome. -->
+            <Border x:Name="ResultOverlay" IsVisible="False" Classes="banner-glow"
+                    Background="#BF000000" CornerRadius="12" Padding="24,24"
+                    IsHitTestVisible="True"
+                    PointerPressed="ResultOverlay_PointerPressed">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <TextBlock x:Name="ResultHeadline" FontSize="36" FontWeight="Black"
+                               Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                               TextAlignment="Center"/>
+                    <TextBlock x:Name="ResultSubline"  FontSize="14" FontWeight="Regular"
+                               Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                               TextAlignment="Center"/>
+                    <StackPanel Spacing="2" HorizontalAlignment="Center">
+                        <TextBlock x:Name="ResultDealerTotal" FontSize="14" FontWeight="Bold"
+                                   Foreground="#B3FFFFFF" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                                   TextAlignment="Center"/>
+                        <TextBlock x:Name="ResultPlayerTotal" FontSize="14" FontWeight="Bold"
+                                   Foreground="#B3FFFFFF" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                                   TextAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ResultStreak"   FontSize="14" FontWeight="Bold"
+                               Foreground="#FFD600" Opacity="0.9" HorizontalAlignment="Center"
+                               IsVisible="False" FontFamily="Segoe UI" TextAlignment="Center"/>
                 </StackPanel>
-                <TextBlock x:Name="ResultStreak"   FontSize="14" FontWeight="Bold"
-                           Foreground="#FFD700" Opacity="0.9" HorizontalAlignment="Center"
-                           IsVisible="False" FontFamily="Segoe UI"/>
-            </StackPanel>
-        </Border>
+            </Border>
+            <!-- Dismiss button anchored TopRight, overlapping corner -->
+            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"
+                    IsVisible="{Binding #ResultOverlay.IsVisible}"/>
+        </Grid>
 
     </Grid>
 
@@ -213,11 +232,14 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style Selector="Button.bj-button-rebuy">
-            <Setter Property="Background" Value="#CC664400"/>
-            <Setter Property="BorderBrush" Value="#FFAA44"/>
+        <Style Selector="Button.bj-button-buyin">
+            <Setter Property="Background" Value="#FFCC00"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+            <Setter Property="BorderBrush" Value="#AAFFE680"/>
         </Style>
-
+        <Style Selector="Button.bj-button-buyin:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#FFD633"/>
+        </Style>
         <!-- Action buttons color-coded by move, so they read clearly against the felt
              instead of blending into it like the old translucent-white style did. -->
         <Style Selector="Button.bj-button-hit">

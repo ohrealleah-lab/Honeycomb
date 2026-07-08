@@ -114,20 +114,22 @@
             </LayoutTransformControl>
             
             <!-- Preferences Modal Dialog Overlay (ZIndex above VignetteOverlay so its buttons stay unaffected) -->
-            <Grid x:Name="PreferencesOverlay" Background="#90000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ZIndex="95">
+            <Grid x:Name="PreferencesOverlay" Background="Transparent" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ZIndex="95">
                 <Border x:Name="PreferencesPanel" Background="#2E2E2E" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
                     <StackPanel Spacing="15">
                         <TextBlock Text="Preferences" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
                         <ScrollViewer MaxHeight="600" VerticalScrollBarVisibility="Auto">
                             <ContentControl x:Name="PreferencesContent" />
                         </ScrollViewer>
-                        <Grid ColumnDefinitions="*,Auto">
+                        <Grid ColumnDefinitions="*,Auto,Auto">
                             <TextBlock Text="View Stats" Grid.Column="0"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Foreground="#4DA3FF" TextDecorations="Underline"
                                        Cursor="Hand" PointerPressed="ViewStats_PointerPressed"/>
-                            <Button Content="OK" Click="ClosePreferences_Click" Grid.Column="1"
-                                    Width="80" HorizontalContentAlignment="Center" Background="#444444" Foreground="White" />
+                            <Button Classes="confirm-cancel" Content="Cancel" Click="CancelPreferences_Click" Grid.Column="1"
+                                    Width="80" HorizontalContentAlignment="Center" Margin="0,0,8,0" />
+                            <Button Classes="confirm-cancel" Content="OK" Click="ClosePreferences_Click" Grid.Column="2"
+                                    Width="80" HorizontalContentAlignment="Center" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -188,14 +190,14 @@
             </Grid>
 
             <!-- Game Action Confirmation Overlay (ZIndex above VignetteOverlay so its buttons stay unaffected) -->
-            <Grid x:Name="ConfirmActionOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="95">
+            <Grid x:Name="ConfirmActionOverlay" Background="Transparent" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="95">
                 <Border Background="#2E2E2E" CornerRadius="8" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                     <StackPanel Spacing="15" Width="260">
                         <TextBlock x:Name="ConfirmActionTitle" Text="Start New Game?" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
                         <TextBlock x:Name="ConfirmActionMessage" Text="Are you sure you want to abandon the current game and start a new one?" FontSize="12" Foreground="LightGray" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
                         <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
-                            <Button Content="Cancel" Click="CancelConfirmAction_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#444444" Foreground="White" Margin="0,0,4,0" />
-                            <Button x:Name="ConfirmActionButton" Content="New Game" Click="ConfirmAction_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#882222" Foreground="White" Margin="4,0,0,0" />
+                            <Button x:Name="ConfirmActionButton" Classes="confirm-action" Content="New Game" Click="ConfirmAction_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,4,0" />
+                            <Button Classes="confirm-cancel" Content="Cancel" Click="CancelConfirmAction_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="4,0,0,0" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -260,6 +262,28 @@
             <Setter Property="BorderBrush" Value="White" />
         </Style>
         <Style Selector="ComboBox.toolbar-combo /template/ PathIcon">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <!-- Confirmation dialog buttons (ConfirmActionOverlay) — FluentTheme's default
+             Button ControlTheme applies its own hover tint on an internal template part
+             that overrides a plain Background attribute (same issue already worked
+             around for Button.toolbar above), so the :pointerover overrides here
+             re-assert the same colors to keep each button static on hover. -->
+        <Style Selector="Button.confirm-action">
+            <Setter Property="Background" Value="#882222" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.confirm-action:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#882222" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.confirm-cancel">
+            <Setter Property="Background" Value="#444444" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.confirm-cancel:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#444444" />
             <Setter Property="Foreground" Value="White" />
         </Style>
     </Window.Styles>

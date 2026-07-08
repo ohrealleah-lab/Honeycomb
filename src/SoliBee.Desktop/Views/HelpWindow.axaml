@@ -88,7 +88,7 @@
                                 <TextBlock Classes="help-body" TextWrapping="Wrap"
                                            Text="Standard — Waste→Tableau: +5 · Waste→Foundation: +10 · Tableau→Foundation: +10 · Flip a card: +5 · Foundation→Tableau: −15"/>
                                 <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                           Text="Vegas — Starts at −$52. Each card moved to a foundation earns +$5; moving it back costs −$5. One free recycle of the waste is allowed (Vegas mode blocks a second recycle). The score display shows your running dollar balance."/>
+                                           Text="Vegas — Starts at −$52. Each card moved to a foundation earns +$5; moving it back costs −$5. Draw 1 gets a single pass through the deck (no recycles); Draw 3 gets 2 recycles (3 total passes). The score display shows your running dollar balance."/>
                             </StackPanel>
                         </StackPanel>
                         <StackPanel Spacing="4">
@@ -330,11 +330,11 @@
                                 </TextBlock>
                                 <TextBlock Classes="help-body" TextWrapping="Wrap">
                                     <Run FontWeight="SemiBold" Foreground="White" Text="Double Down: "/>
-                                    <Run Text="Double your bet and receive exactly one more card, then stand automatically. Only available on your first two cards when you have enough credits to cover the extra bet."/>
+                                    <Run Text="Double your bet and receive exactly one more card, then stand automatically. Only available on your first two cards, when your total is 9, 10, or 11, and when you have enough credits to cover the extra bet."/>
                                 </TextBlock>
                                 <TextBlock Classes="help-body" TextWrapping="Wrap">
                                     <Run FontWeight="SemiBold" Foreground="White" Text="Split: "/>
-                                    <Run Text="When your first two cards have the same value, split them into two separate hands, each receiving one more card. Each hand is then played independently. Costs a second bet equal to your original wager. Split Aces each receive exactly one additional card and then stand automatically."/>
+                                    <Run Text="When your first two cards have the same rank (e.g. two Jacks, but not a Jack and a King), split them into two separate hands, each receiving one more card. Each hand is then played independently. Costs a second bet equal to your original wager. Split Aces each receive exactly one additional card and then stand automatically."/>
                                 </TextBlock>
                             </StackPanel>
                         </StackPanel>

@@ -81,7 +81,20 @@
       "Bash(xargs -I {} sh -c 'echo \"{}:\"; grep -c \"Content=\\\\\"&#x2715;\\\\\"\" \"{}\"')",
       "Bash(grep -v \"//\\\\|Binary\")",
       "Bash(grep -n 'NoMovesStatsLabel.Text = \\\\$\"Score' src/SoliBee.Desktop/Views/GameView.axaml.cs src/SoliBee.Desktop/Views/FreecellView.axaml.cs src/SoliBee.Desktop/Views/SpiderView.axaml.cs)",
-      "Bash(git rev-list *)"
+      "Bash(git rev-list *)",
+      "Read(//c/Users/Leahbee/AppData/Local/SoliBee/**)",
+      "Read(//c/Users/Leahbee/AppData/**)",
+      "Bash(grep -o '\"Klondike[A-Za-z]*\"[^,}]*' \"/c/Users/Leahbee/AppData/Local/SoliBee/settings.json\")",
+      "Bash(find tests *)",
+      "Bash(find . -maxdepth 1 -iname \"*.sln\")",
+      "Bash(dotnet test *)",
+      "Bash(grep -c \"_syncContext?.Post\\(_ =>$\" src/SoliBee.Core/ViewModels/GameViewModel.cs src/SoliBee.Core/ViewModels/FreecellViewModel.cs src/SoliBee.Core/ViewModels/SpiderViewModel.cs)",
+      "Bash(ls -la \"C:\\\\Users\\\\Leahbee\\\\AppData\\\\Local\\\\Temp\\\\vmware-Leahbee\\\\VMwareDnD\\\\16fe7f77\\\\tada.wav\" 2>&1)",
+      "Bash(xargs grep -l \"\\\\[Fact\\\\]\\\\|\\\\[Test\\\\]\\\\|\\\\[TestMethod\\\\]\")",
+      "Bash(gh repo *)",
+      "Bash(gh pr *)",
+      "Bash(env)",
+      "Bash(git credential *)"
     ]
   }
 }

@@ -1266,6 +1266,13 @@ public partial class CardView : UserControl
         }
         if (pileView == null || pileView.Pile == null) return;
 
+        // Waste only ever plays its single actual top card — in Draw-3 mode the two
+        // older cards behind it are shown fanned out for visibility only. Without this,
+        // clicking one of those buried cards would drag it (and everything after it in
+        // the pile) along as a group, which Waste never allows.
+        if (pileView.Pile.Type == PileType.Waste && Card.Id != pileView.Pile.Cards[^1].Id)
+            return;
+
         // Manual double-click detection keyed by card identity, not CardView instance —
         // PointerReleased rebuilds the source pile's CardView children, so the second
         // click usually lands on a brand-new instance, making e.ClickCount unreliable.

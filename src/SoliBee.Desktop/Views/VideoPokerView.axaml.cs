@@ -38,7 +38,7 @@ public partial class VideoPokerView : UserControl
     private int _displayedCredits = -1;
 
     // Banner fade state
-    private Border? _activeBanner;
+    private Control? _activeBanner;
     private DispatcherTimer? _resultShowTimer;
     private bool _resultRevealed;
     private DispatcherTimer? _bannerDelayTimer;
@@ -130,23 +130,10 @@ public partial class VideoPokerView : UserControl
         UpdateHoldBadges(vm);
         UpdateControls(vm);
         UpdateResult(vm);
-        UpdateWinCardHighlights(vm);
         HighlightPayRow(vm.WinningHandName);
         UpdatePayColumnHighlight(vm.State.CurrentBet);
         ApplyFeltColor(vm);
         ResetIdleTimer(vm);
-    }
-
-    private void UpdateWinCardHighlights(VideoPokerViewModel vm)
-    {
-        bool isWin = vm.State.Phase == VideoPokerPhase.Result && vm.HasWin;
-        for (int i = 0; i < 5; i++)
-        {
-            if (isWin && vm.State.WinningCardMask.Length > i && vm.State.WinningCardMask[i])
-                _cardViews[i].ShowHint();
-            else
-                _cardViews[i].ClearHint();
-        }
     }
 
     private void UpdateCards(VideoPokerViewModel vm)
@@ -344,15 +331,13 @@ public partial class VideoPokerView : UserControl
 
                 if (isWin)
                 {
-                    WinHandNameBlock.Text = $"You win! {vm.State.LastHandName}";
+                    WinHandNameBlock.Text = $"{vm.State.LastHandName}!";
                     WinPayoutBlock.Text   = $"+{vm.State.LastPayout} credits";
-                    WinBanner.Background  = new SolidColorBrush(Color.Parse("#1A44CC")); // Dark blue for win
                     ShowBanner(WinBanner);
                     StartPayRowPulse(vm.WinningHandName);
                 }
                 else
                 {
-                    NoWinOverlay.Background = new SolidColorBrush(Color.Parse("#B71C1C")); // Dark red for loss
                     ShowBanner(NoWinOverlay);
                     StopPayRowPulse();
                 }
@@ -374,9 +359,8 @@ public partial class VideoPokerView : UserControl
     {
         _resultShowTimer?.Stop();
         _resultShowTimer = null;
-        WinHandNameBlock.Text = "You win! Royal Flush";
+        WinHandNameBlock.Text = "Royal Flush!";
         WinPayoutBlock.Text   = "+250 credits";
-        WinBanner.Background  = new SolidColorBrush(Color.Parse("#1A44CC"));
         ShowBanner(WinBanner);
     }
 
@@ -384,11 +368,10 @@ public partial class VideoPokerView : UserControl
     {
         _resultShowTimer?.Stop();
         _resultShowTimer = null;
-        NoWinOverlay.Background = new SolidColorBrush(Color.Parse("#B71C1C"));
         ShowBanner(NoWinOverlay);
     }
 
-    private void ShowBanner(Border banner)
+    private void ShowBanner(Control banner)
     {
         if (_activeBanner == banner)
         {
@@ -838,6 +821,11 @@ public partial class VideoPokerView : UserControl
     {
         DealFromResult();
         e.Handled = true;
+    }
+
+    private void BannerDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        HideActiveBanner();
     }
 
     private void CardSlot_PointerPressed(object? sender, PointerPressedEventArgs e)

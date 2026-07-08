@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -27,6 +28,17 @@ public partial class PreferencesView : UserControl
     private Bitmap? _cardBackPreviewBitmap;
     private List<SoliBeeTheme> _themes = new();
     private SoliBeeTheme? _themeToDelete;
+
+    // Snapshots taken when the panel opens, so Cancel can restore whatever was actually
+    // on disk beforehand — every individual control here saves+broadcasts immediately
+    // on change (see NotifySettingsChanged/Option_Changed), there's no separate "staged"
+    // state, so reverting means writing this snapshot back over whatever was live-saved
+    // during the session. Doesn't cover the Theme library (Save/Delete Theme) or the
+    // Custom Card Back / Face Card Art libraries — those already have their own
+    // dedicated confirm dialogs and are treated as already-committed actions.
+    private GameOptions? _originalGameOptions;
+    private VideoPokerOptions? _originalVideoPokerOptions;
+    private GameOptions? _originalSharedOptionsForVideoPoker;
 
     public string ActiveGameFamily { get; set; } = "";
     public VideoPokerViewModel? VideoPokerVm { get; set; }
@@ -168,14 +180,74 @@ public partial class PreferencesView : UserControl
     {
         if (DataContext is GameOptions options)
         {
+            _originalGameOptions = options.Clone();
             SyncUIFromOptions(options);
             RefreshThemeList();
         }
         else if (DataContext is VideoPokerOptions vpOptions)
         {
+            _originalVideoPokerOptions          = vpOptions.Clone();
+            _originalSharedOptionsForVideoPoker  = SettingsService.LoadOptions().Clone();
             SyncUIFromVideoPokerOptions(vpOptions);
         }
         _initializing = false;
+    }
+
+    // Restores whatever was on disk when the panel opened, undoing any settings changed
+    // during this session (see the snapshot fields' comment for exactly what this
+    // does/doesn't cover). Called by MainWindow's Cancel button.
+    public void RevertSettingsChanges()
+    {
+        if (_originalGameOptions != null)
+        {
+            NotifySettingsChanged(_originalGameOptions);
+        }
+        else if (_originalVideoPokerOptions != null && DataContext is VideoPokerOptions vpOptions)
+        {
+            var orig = _originalVideoPokerOptions;
+            vpOptions.Variant            = orig.Variant;
+            vpOptions.StartingCredits    = orig.StartingCredits;
+            vpOptions.BetPerHand         = orig.BetPerHand;
+            vpOptions.IsSoundEnabled     = orig.IsSoundEnabled;
+            vpOptions.HideBetBoard       = orig.HideBetBoard;
+            vpOptions.CardBackTheme      = orig.CardBackTheme;
+            vpOptions.FeltColor          = orig.FeltColor;
+            vpOptions.CustomFeltColorHex = orig.CustomFeltColorHex;
+            vpOptions.IsFinalFantasyMode = orig.IsFinalFantasyMode;
+            vpOptions.IsVignetteEnabled  = orig.IsVignetteEnabled;
+            VideoPokerVm?.SaveOptions();
+
+            if (_originalSharedOptionsForVideoPoker != null)
+                NotifySettingsChanged(_originalSharedOptionsForVideoPoker);
+        }
+    }
+
+    // True if anything has changed since the panel opened — a live-saved settings
+    // edit, an applied Theme, or an unconfirmed game-mode dropdown selection. Used
+    // by MainWindow's Cancel button / Escape key to decide whether to warn before
+    // discarding (see CancelPreferences_Click in MainWindow.axaml.cs).
+    public bool HasPendingChanges()
+    {
+        if (TryGetPendingGameModeChange(out _)) return true;
+
+        if (_originalGameOptions != null && DataContext is GameOptions options)
+        {
+            return JsonSerializer.Serialize(options) != JsonSerializer.Serialize(_originalGameOptions);
+        }
+
+        if (_originalVideoPokerOptions != null && DataContext is VideoPokerOptions vpOptions)
+        {
+            if (JsonSerializer.Serialize(vpOptions) != JsonSerializer.Serialize(_originalVideoPokerOptions))
+                return true;
+
+            if (_originalSharedOptionsForVideoPoker != null)
+            {
+                var currentShared = SettingsService.LoadOptions();
+                return JsonSerializer.Serialize(currentShared) != JsonSerializer.Serialize(_originalSharedOptionsForVideoPoker);
+            }
+        }
+
+        return false;
     }
 
     // Video Poker has its own separate options model — only a handful of settings

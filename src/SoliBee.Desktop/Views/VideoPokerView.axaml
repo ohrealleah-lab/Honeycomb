@@ -160,38 +160,51 @@
                     <!-- Overlay layer -->
                     <Grid Height="226" VerticalAlignment="Top">
 
-                        <Border x:Name="NoWinOverlay" IsVisible="False"
-                                Background="#1A44CC" CornerRadius="8" Padding="32,14"
-                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                BoxShadow="0 4 18 0 #AA000000"
-                                IsHitTestVisible="True"
-                                PointerPressed="NoWinOverlay_PointerPressed">
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="Not today, partner!"
-                                           FontSize="30" FontWeight="Black" Foreground="White"
-                                           HorizontalAlignment="Center" FontFamily="Segoe UI"/>
-                                <TextBlock Text="Ante up!"
-                                           FontSize="22" FontWeight="Bold" Foreground="White" Opacity="0.80"
-                                           HorizontalAlignment="Center" FontFamily="Segoe UI"/>
-                            </StackPanel>
-                        </Border>
+                        <Grid x:Name="NoWinOverlay" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
+                                 static soft gold halo matching the other overlay banners. -->
+                            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="460"
+                                    IsHitTestVisible="True" PointerPressed="NoWinOverlay_PointerPressed">
+                                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                                    <TextBlock Text="Not today, partner!"
+                                               FontSize="36" FontWeight="Black" Foreground="#FFD600"
+                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="-" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding BetDisplay}" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                        <TextBlock Text=" credits" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <!-- Dismiss button anchored TopRight, overlapping corner -->
+                            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"/>
+                        </Grid>
 
-                        <Border x:Name="WinBanner" IsVisible="False"
-                                Background="#1A44CC" CornerRadius="8" Padding="32,14"
-                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                BoxShadow="0 0 28 8 #90FFD700, 0 4 18 0 #AA000000"
-                                RenderTransformOrigin="50%,50%"
-                                IsHitTestVisible="True"
-                                PointerPressed="WinBanner_PointerPressed">
-                            <StackPanel Spacing="6">
-                                <TextBlock x:Name="WinHandNameBlock"
-                                           FontSize="30" FontWeight="Black" Foreground="White"
-                                           HorizontalAlignment="Center" FontFamily="Segoe UI"/>
-                                <TextBlock x:Name="WinPayoutBlock"
-                                           FontSize="22" FontWeight="Bold" Foreground="White" Opacity="0.80"
-                                           HorizontalAlignment="Center" FontFamily="Segoe UI"/>
-                            </StackPanel>
-                        </Border>
+                        <Grid x:Name="WinBanner" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
+                                 static soft gold halo matching the other overlay banners. -->
+                            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320"
+                                    IsHitTestVisible="True" PointerPressed="WinBanner_PointerPressed">
+                                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="WinHandNameBlock"
+                                               FontSize="36" FontWeight="Black" Foreground="#FFD600"
+                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="WinPayoutBlock"
+                                               FontSize="14" Foreground="White" FontWeight="Regular"
+                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                                    <!-- Optional streak line for completeness (always hidden in Video Poker since no streak is tracked) -->
+                                    <TextBlock x:Name="WinStreakBlock" IsVisible="False"
+                                               FontSize="14" FontWeight="Bold" Foreground="#FFD600" Opacity="0.90"
+                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- Dismiss button anchored TopRight, overlapping corner -->
+                            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"/>
+                        </Grid>
 
                     </Grid>
                 </Grid>

@@ -6,6 +6,17 @@
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
 
+        <!-- Shared soft gold halo used by every overlay banner (win/stuck/autocomplete
+             banners, and Blackjack/Video Poker's win-loss banners). Keep this literal in
+             sync with BannerStyles.GoldGlowBoxShadow (used by BlackjackView.axaml.cs,
+             which sets BoxShadow at runtime) — a Setter can't use {x:Static} here because
+             Avalonia assigns the value directly without running the property's
+             string->BoxShadows TypeConverter, so a static string reference throws
+             InvalidCastException at startup instead of being parsed. -->
+        <Style Selector="Border.banner-glow">
+            <Setter Property="BoxShadow" Value="0 0 16 0 #80FFD600" />
+        </Style>
+
         <!-- Shared close "X" circle button used on every dismissible banner
              (WinAnimationView, and the No-Moves/Autocomplete banners in
              GameView/FreecellView/SpiderView). Only Content, Click, and Margin
@@ -24,6 +35,27 @@
             <Setter Property="VerticalAlignment" Value="Top" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <!-- Shared action button used on every win/stuck/autocomplete banner (Restart
+             Game, New Game, Autocomplete Game, Play Again). FluentTheme's default Button
+             ControlTheme applies its own hover tint on an internal template part that
+             overrides a plain Background attribute — same issue already worked around
+             for Button.toolbar below — so the :pointerover override here re-asserts the
+             same colors to keep the button static regardless of pointer state. -->
+        <Style Selector="Button.banner-action">
+            <Setter Property="Padding" Value="20,10" />
+            <Setter Property="Background" Value="#007AFF" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="Button.banner-action:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#007AFF" />
+            <Setter Property="Foreground" Value="White" />
         </Style>
     </Application.Styles>
 </Application>

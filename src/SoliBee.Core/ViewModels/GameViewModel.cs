@@ -70,19 +70,7 @@ public partial class GameViewModel : ObservableObject
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
 
-    public string ScoreDisplay
-    {
-        get
-        {
-            if (Options?.IsVegasScoring == true)
-            {
-                int dollars = State.Score / 100;
-                int abs     = Math.Abs(dollars);
-                return dollars < 0 ? $"-${abs}.00" : $"${abs}.00";
-            }
-            return State.Score.ToString();
-        }
-    }
+    public string ScoreDisplay => ScoreFormatter.FormatScore(State.Score, Options?.IsVegasScoring == true);
 
     partial void OnStateChanged(GameState value) => OnPropertyChanged(nameof(ScoreDisplay));
     partial void OnOptionsChanged(GameOptions value) => OnPropertyChanged(nameof(ScoreDisplay));
@@ -213,11 +201,19 @@ public partial class GameViewModel : ObservableObject
         _gameTimer?.Dispose();
         _gameTimer = new System.Threading.Timer(_ =>
         {
-            if (State != null && State.IsTimerActive && !State.HasWon)
+            // The whole check-and-mutate runs on the UI thread via _syncContext.Post,
+            // not just the notification — State is a shared mutable object also written
+            // to from the UI thread (Restart/Undo/InitializeGame), so mutating
+            // State.TimerSeconds directly on this background timer thread would race
+            // with those writes.
+            _syncContext?.Post(_ =>
             {
-                State.TimerSeconds++;
-                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
-            }
+                if (State != null && State.IsTimerActive && !State.HasWon)
+                {
+                    State.TimerSeconds++;
+                    OnPropertyChanged(nameof(TimeDisplay));
+                }
+            }, null);
         }, null, 1000, 1000);
 
         OnPropertyChanged(nameof(Stock));
@@ -293,11 +289,19 @@ public partial class GameViewModel : ObservableObject
         _gameTimer?.Dispose();
         _gameTimer = new System.Threading.Timer(_ =>
         {
-            if (State != null && State.IsTimerActive && !State.HasWon)
+            // The whole check-and-mutate runs on the UI thread via _syncContext.Post,
+            // not just the notification — State is a shared mutable object also written
+            // to from the UI thread (Restart/Undo/InitializeGame), so mutating
+            // State.TimerSeconds directly on this background timer thread would race
+            // with those writes.
+            _syncContext?.Post(_ =>
             {
-                State.TimerSeconds++;
-                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
-            }
+                if (State != null && State.IsTimerActive && !State.HasWon)
+                {
+                    State.TimerSeconds++;
+                    OnPropertyChanged(nameof(TimeDisplay));
+                }
+            }, null);
         }, null, 1000, 1000);
 
         OnPropertyChanged(nameof(Stock));
@@ -336,7 +340,9 @@ public partial class GameViewModel : ObservableObject
         {
             // Recycle waste back to stock — guard no-ops before snapshot
             if (Waste.Cards.Count == 0) return;
-            int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 1;
+            // Real Vegas-scoring rules: Draw One gets a single pass through the deck (no
+            // recycles at all); Draw Three gets 2 recycles (3 total passes).
+            int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
             if (Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit) return;
 
             ClearHintCycle();
@@ -770,7 +776,7 @@ public partial class GameViewModel : ObservableObject
             if (CardCanPlayAnywhere(card)) return true;
 
         // Check buried waste cards: accessible after recycle (if allowed)
-        int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 1;
+        int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
         bool canRecycle = Waste.Cards.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
         if (canRecycle && Waste.Cards.Count > 1)
         {
@@ -797,8 +803,11 @@ public partial class GameViewModel : ObservableObject
                 foreach (var f in Foundations) if (CanMoveCard(src.Cards[i], f)) return true;
 
                 bool exposesHiddenCard = i == firstFaceUp && revealsHidden;
+                // Can't use CanMoveCard(..., foundation) here — it requires the card to
+                // already be its pile's actual top, but src.Cards[i-1] is still buried
+                // under the cards we'd be moving away (that's the whole point of "exposes").
                 bool exposesFoundationMove = i > 0 && src.Cards[i - 1].IsFaceUp &&
-                    Foundations.Any(f => CanMoveCard(src.Cards[i - 1], f));
+                    CanReachFoundation(src.Cards[i - 1]);
 
                 if (!deckExhausted || exposesHiddenCard || exposesFoundationMove)
                 {
@@ -813,13 +822,19 @@ public partial class GameViewModel : ObservableObject
         return false;
     }
 
-    private bool CardCanPlayAnywhere(Card card)
+    private bool CanReachFoundation(Card card)
     {
         foreach (var f in Foundations)
         {
             if (f.Cards.Count == 0 && card.Rank == 1) return true;
             if (f.Cards.Count > 0 && f.Cards.Last().Suit == card.Suit && card.Rank == f.Cards.Last().Rank + 1) return true;
         }
+        return false;
+    }
+
+    private bool CardCanPlayAnywhere(Card card)
+    {
+        if (CanReachFoundation(card)) return true;
         foreach (var t in Tableaus)
         {
             if (t.Cards.Count == 0 && card.Rank == 13) return true;
@@ -924,7 +939,9 @@ public partial class GameViewModel : ObservableObject
         // Priority 6 (20): recycle waste back to stock — only when stock is empty and legal
         if (Stock.Cards.Count == 0 && Waste.Cards.Count > 0)
         {
-            int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 1;
+            // Real Vegas-scoring rules: Draw One gets a single pass through the deck (no
+            // recycles at all); Draw Three gets 2 recycles (3 total passes).
+            int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
             bool canRecycle = !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
             if (canRecycle)
                 scored.Add((20, new HintMove(new Card("recycle", CardSuit.Spades, 1, false), Waste.Id, Stock.Id,

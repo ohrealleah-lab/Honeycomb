@@ -32,15 +32,16 @@ public partial class BlackjackViewModel : ObservableObject
 
     public bool CanHit    => ActiveHand is { } h && !h.IsComplete;
     public bool CanStand  => ActiveHand is { } h && !h.IsComplete;
-    public bool CanDouble => ActiveHand is { } h && h.Cards.Count == 2 && !h.IsComplete && State.Credits >= h.Bet;
+    public bool CanDouble => ActiveHand is { } h && h.Cards.Count == 2 && !h.IsComplete && State.Credits >= h.Bet
+                             && h.ComputeValue().Value is 9 or 10 or 11;
     public bool CanSplit  => !State.IsSplit
                              && ActiveHand is { } h && h.Cards.Count == 2 && !h.IsComplete
-                             && Math.Min(h.Cards[0].Rank, 10) == Math.Min(h.Cards[1].Rank, 10)
+                             && h.Cards[0].Rank == h.Cards[1].Rank
                              && State.Credits >= h.Bet;
     public bool CanDeal        => State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result;
     public bool IsPlaying      => State.Phase == BlackjackPhase.Playing;
-    public bool NeedsRebuy     => State.Credits < State.CurrentBet;
     public bool CanChangeBet   => State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result;
+    public bool CanRebuy       => CanChangeBet && State.Credits < State.CurrentBet;
     public bool CanUndo        => false;
 
     public string CreditDisplay => State.Credits.ToString();
@@ -54,7 +55,7 @@ public partial class BlackjackViewModel : ObservableObject
         Options = LoadOptions();
         Stats   = LoadStatistics();
         State.Credits    = Options.StartingCredits;
-        State.CurrentBet = Math.Clamp(Options.BetPerHand, 1, 5);
+        State.CurrentBet = Math.Max(1, Math.Min(Options.BetPerHand, State.Credits));
 
         // Sync felt color and shared visual settings from global options at startup
         var shared = SettingsService.LoadOptions();
@@ -195,34 +196,33 @@ public partial class BlackjackViewModel : ObservableObject
         }
     }
 
-    public void SetBet(int amount)
+    // Chip buttons (1/5/10/25): while the bet is still at the round's default of 1,
+    // clicking a chip other than "1" replaces the bet with that chip's value instead
+    // of adding to it — so the first click always sets a clean number instead of
+    // starting from "1 + chip". Once the bet has moved off 1 (however it got there),
+    // every chip click just adds normally.
+    public void AddToBet(int amount)
     {
         if (!CanChangeBet) return;
-        State.CurrentBet = Math.Clamp(amount, 1, 5);
-        NotifyStateChanged();
-    }
-
-    public void IncreaseBet()
-    {
-        if (!CanChangeBet) return;
-        State.CurrentBet = Math.Min(5, State.CurrentBet + 1);
-        NotifyStateChanged();
-    }
-
-    public void DecreaseBet()
-    {
-        if (!CanChangeBet) return;
-        State.CurrentBet = Math.Max(1, State.CurrentBet - 1);
-        NotifyStateChanged();
-    }
-
-    public void BetMax()
-    {
-        State.CurrentBet = Math.Max(1, Math.Min(5, State.Credits));
-        if (State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result)
-            Deal();
+        if (amount != 1 && State.CurrentBet == 1)
+            State.CurrentBet = Math.Max(1, Math.Min(amount, State.Credits));
         else
-            NotifyStateChanged();
+            State.CurrentBet = Math.Max(1, Math.Min(State.CurrentBet + amount, State.Credits));
+        NotifyStateChanged();
+    }
+
+    public void DoubleBet()
+    {
+        if (!CanChangeBet) return;
+        State.CurrentBet = Math.Max(1, Math.Min(State.CurrentBet * 2, State.Credits));
+        NotifyStateChanged();
+    }
+
+    public void ClearBet()
+    {
+        if (!CanChangeBet) return;
+        State.CurrentBet = 1;
+        NotifyStateChanged();
     }
 
     public void Rebuy()
@@ -253,7 +253,7 @@ public partial class BlackjackViewModel : ObservableObject
         State = new BlackjackState
         {
             Credits    = Options.StartingCredits,
-            CurrentBet = Math.Clamp(Options.BetPerHand, 1, 5),
+            CurrentBet = Math.Max(1, Math.Min(Options.BetPerHand, Options.StartingCredits)),
             Phase      = BlackjackPhase.Betting,
         };
     }
@@ -284,6 +284,9 @@ public partial class BlackjackViewModel : ObservableObject
 
     private void DealerPlay()
     {
+        // Guards against a delayed/async auto-resolve callback firing after the phase
+        // has already moved on, which would otherwise re-run the dealer's turn twice.
+        if (State.Phase != BlackjackPhase.Playing) return;
         State.Phase = BlackjackPhase.DealerTurn;
         FlipHoleCard();
 
@@ -341,7 +344,7 @@ public partial class BlackjackViewModel : ObservableObject
         switch (hand.Result)
         {
             case BlackjackHandResult.Blackjack:
-                int bjReturn = hand.Bet + (int)(hand.Bet * 1.5);  // floor, matches Mac 3:2 rounding
+                int bjReturn = hand.Bet + hand.Bet * 3;  // 3:1 payout (bet returned + 3x bet profit)
                 State.Credits += bjReturn;
                 Stats.HandsWon++;
                 Stats.Blackjacks++;
@@ -382,6 +385,17 @@ public partial class BlackjackViewModel : ObservableObject
 
     private Card DrawCard(bool faceUp)
     {
+        // Defensive fallback — should be unreachable under current rules (a single
+        // fresh 52-card deck per deal, at most one split allowing 2 player hands, and
+        // forced-stand at 21 bound total cards drawn well under 52 by the pigeonhole
+        // principle: only 4 cards of each rank exist). Reshuffle a fresh deck instead of
+        // throwing if that invariant is ever broken by a future rule change.
+        if (_deckIdx >= _deck.Count)
+        {
+            _deck    = BuildAndShuffleDeck();
+            _deckIdx = 0;
+        }
+
         var card = _deck[_deckIdx++];
         return card with { IsFaceUp = faceUp };
     }
@@ -436,8 +450,8 @@ public partial class BlackjackViewModel : ObservableObject
         OnPropertyChanged(nameof(CanSplit));
         OnPropertyChanged(nameof(CanDeal));
         OnPropertyChanged(nameof(IsPlaying));
-        OnPropertyChanged(nameof(NeedsRebuy));
         OnPropertyChanged(nameof(CanChangeBet));
+        OnPropertyChanged(nameof(CanRebuy));
         OnPropertyChanged(nameof(CreditDisplay));
         OnPropertyChanged(nameof(BetDisplay));
         OnPropertyChanged(nameof(HandsDisplay));

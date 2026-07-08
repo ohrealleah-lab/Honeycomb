@@ -76,52 +76,57 @@
         <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
 
         <!-- Inline autocomplete banner -->
-        <Border x:Name="AutocompleteBanner" IsVisible="False" ZIndex="5"
-                Background="#1A44CC" CornerRadius="12" Padding="28,22"
-                BorderBrush="#FFD700" BorderThickness="2" BoxShadow="0 8 30 0 #80000000"
-                HorizontalAlignment="Center" VerticalAlignment="Center">
-            <Grid>
-                <StackPanel Spacing="14" HorizontalAlignment="Center">
-                    <StackPanel Spacing="2" HorizontalAlignment="Center">
-                        <TextBlock Text="Victory Is Guaranteed!" FontSize="18" FontWeight="Black"
-                                   Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
-                        <TextBlock Text="All remaining cards can be sorted into foundations."
-                                   FontSize="14" Foreground="#AAFFFFFF" HorizontalAlignment="Center"
-                                   FontFamily="Segoe UI"/>
-                    </StackPanel>
-                    <Button Content="Autocomplete Game" Click="AutocompleteGame_Click"
-                            Padding="18,8" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"
-                            Background="#FFD700" Foreground="#1A1A1A"
-                            BorderThickness="0" CornerRadius="4"
-                            FontFamily="Segoe UI"/>
+        <Grid x:Name="AutocompleteBanner" IsVisible="False" ZIndex="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared static
+                 soft gold halo (no offset, 16px blur, 50% opacity — matches the Mac
+                 original's .shadow(color: gold.opacity(0.5), radius: 16)). -->
+            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="400">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <TextBlock Text="Victory is guaranteed!" FontSize="36" FontWeight="Black"
+                               Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                               TextAlignment="Center" TextWrapping="Wrap"/>
+                    <TextBlock Text="All remaining cards can be moved to foundations."
+                               FontSize="14" Foreground="White" HorizontalAlignment="Center"
+                               FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                    <Button Classes="banner-action" Content="Autocomplete Game" Click="AutocompleteGame_Click"
+                            HorizontalAlignment="Center"/>
                 </StackPanel>
-                <Button Classes="banner-close" Content="&#x2715;" Click="AutocompleteDismiss_Click" Margin="0,-20,-26,0"/>
-            </Grid>
-        </Border>
+            </Border>
+            <!-- Dismiss button anchored TopRight, overlapping corner -->
+            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="AutocompleteDismiss_Click"/>
+        </Grid>
 
         <!-- Inline stuck banner -->
-        <Border x:Name="NoMovesBanner" IsVisible="False" ZIndex="5"
-                Background="#1A44CC" CornerRadius="12" Padding="28,22"
-                BorderBrush="#FFD700" BorderThickness="2" BoxShadow="0 8 30 0 #80000000"
-                HorizontalAlignment="Center" VerticalAlignment="Center">
-            <Grid>
-                <StackPanel Spacing="14" HorizontalAlignment="Center">
-                    <StackPanel Spacing="2" HorizontalAlignment="Center">
-                        <TextBlock Text="No Moves Remaining." FontSize="18" FontWeight="Black"
-                                   Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
-                        <TextBlock x:Name="NoMovesStatsLabel"
-                                   FontSize="14" Foreground="#AAFFFFFF" HorizontalAlignment="Center"
-                                   FontFamily="Segoe UI"/>
+        <Grid x:Name="NoMovesBanner" IsVisible="False" ZIndex="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared static
+                 soft gold halo (no offset, 16px blur, 50% opacity — matches the Mac
+                 original's .shadow(color: gold.opacity(0.5), radius: 16)). -->
+            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <TextBlock Text="Game Over" FontSize="36" FontWeight="Black"
+                               Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                               TextAlignment="Center"/>
+                    
+                    <TextBlock Text="No moves remaining." FontSize="14" FontWeight="Bold"
+                               Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                               TextAlignment="Center"/>
+                    
+                    <!-- Hidden label to compile with code-behind -->
+                    <TextBlock x:Name="NoMovesStatsLabel" IsVisible="False" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                        <Button Classes="banner-action" Content="New Game" Click="NoMovesNewGame_Click"/>
+                        <Button Classes="banner-action" Content="Restart Game" Click="NoMovesRestart_Click"/>
                     </StackPanel>
-                    <Button Content="New Game" Click="NoMovesNewGame_Click"
-                            Padding="18,8" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"
-                            Background="#FFD700" Foreground="#1A1A1A"
-                            BorderThickness="0" CornerRadius="4"
-                            FontFamily="Segoe UI"/>
                 </StackPanel>
-                <Button Classes="banner-close" Content="&#x2715;" Click="NoMovesDismiss_Click" Margin="0,-14,-20,0"/>
-            </Grid>
-        </Border>
+            </Border>
+            <!-- Dismiss button anchored TopRight, overlapping corner -->
+            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="NoMovesDismiss_Click"/>
+        </Grid>
     </Grid>
 
 </local:CardGameView>

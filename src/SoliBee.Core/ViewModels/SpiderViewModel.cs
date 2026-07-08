@@ -67,7 +67,11 @@ public partial class SpiderViewModel : ObservableObject
     private string? _lastGameSuitKey;
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
+
+    // Spider has no Vegas mode of its own — Options.IsVegasScoring is shared with
+    // Klondike, but Spider always uses standard scoring regardless of it.
     public string ScoreDisplay => State.Score.ToString();
+
     public bool CanUndo => _undoStack.Count > 0 && !_autocompleteLocked && !State.HasWon;
 
     private string SuitKey => Options.SpiderSuitCount.ToString();
@@ -85,7 +89,7 @@ public partial class SpiderViewModel : ObservableObject
             var old = Options;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
-            if (Options.SpiderSuitCount != old.SpiderSuitCount || Options.IsVegasScoring != old.IsVegasScoring)
+            if (Options.SpiderSuitCount != old.SpiderSuitCount)
                 InitializeGame(countAsNewGame: false);
         });
 
@@ -113,9 +117,7 @@ public partial class SpiderViewModel : ObservableObject
         _foundationCardCount = 0;
         _undoStack.Clear();
 
-        // Vegas scoring carries the running bankroll forward across deals (like Klondike),
-        // subtracting a fresh buy-in rather than resetting to a fixed floor each new game.
-        int startScore = Options.IsVegasScoring ? State.Score - 500 : 500;
+        int startScore = 500;
 
         State = new GameState
         {
@@ -179,11 +181,19 @@ public partial class SpiderViewModel : ObservableObject
 
         _gameTimer = new System.Threading.Timer(_ =>
         {
-            if (State != null && State.IsTimerActive && !State.HasWon)
+            // The whole check-and-mutate runs on the UI thread via _syncContext.Post,
+            // not just the notification — State is a shared mutable object also written
+            // to from the UI thread (Restart/Undo/InitializeGame), so mutating
+            // State.TimerSeconds directly on this background timer thread would race
+            // with those writes.
+            _syncContext?.Post(_ =>
             {
-                State.TimerSeconds++;
-                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
-            }
+                if (State != null && State.IsTimerActive && !State.HasWon)
+                {
+                    State.TimerSeconds++;
+                    OnPropertyChanged(nameof(TimeDisplay));
+                }
+            }, null);
         }, null, 1000, 1000);
 
         OnPropertyChanged(nameof(Tableaus));
@@ -213,11 +223,19 @@ public partial class SpiderViewModel : ObservableObject
 
         _gameTimer = new System.Threading.Timer(_ =>
         {
-            if (State != null && State.IsTimerActive && !State.HasWon)
+            // The whole check-and-mutate runs on the UI thread via _syncContext.Post,
+            // not just the notification — State is a shared mutable object also written
+            // to from the UI thread (Restart/Undo/InitializeGame), so mutating
+            // State.TimerSeconds directly on this background timer thread would race
+            // with those writes.
+            _syncContext?.Post(_ =>
             {
-                State.TimerSeconds++;
-                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
-            }
+                if (State != null && State.IsTimerActive && !State.HasWon)
+                {
+                    State.TimerSeconds++;
+                    OnPropertyChanged(nameof(TimeDisplay));
+                }
+            }, null);
         }, null, 1000, 1000);
 
         OnPropertyChanged(nameof(Tableaus));
@@ -333,8 +351,7 @@ public partial class SpiderViewModel : ObservableObject
 
         FlipTopCard(source);
 
-        if (!Options.IsVegasScoring)
-            State.Score--;
+        State.Score--;
 
         State.MovesCount++;
         TryCompleteRuns();
@@ -377,8 +394,7 @@ public partial class SpiderViewModel : ObservableObject
         for (int i = 0; i < Tableaus.Count && i < deal.Cards.Count; i++)
             Tableaus[i].Cards.Add(deal.Cards[i] with { IsFaceUp = true });
 
-        if (!Options.IsVegasScoring)
-            State.Score--;
+        State.Score--;
 
         State.MovesCount++;
         TryCompleteRuns();
@@ -719,11 +735,19 @@ public partial class SpiderViewModel : ObservableObject
         _gameTimer?.Dispose();
         _gameTimer = new System.Threading.Timer(_ =>
         {
-            if (State != null && State.IsTimerActive && !State.HasWon)
+            // The whole check-and-mutate runs on the UI thread via _syncContext.Post,
+            // not just the notification — State is a shared mutable object also written
+            // to from the UI thread (Restart/Undo/InitializeGame), so mutating
+            // State.TimerSeconds directly on this background timer thread would race
+            // with those writes.
+            _syncContext?.Post(_ =>
             {
-                State.TimerSeconds++;
-                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
-            }
+                if (State != null && State.IsTimerActive && !State.HasWon)
+                {
+                    State.TimerSeconds++;
+                    OnPropertyChanged(nameof(TimeDisplay));
+                }
+            }, null);
         }, null, 1000, 1000);
 
         CheckAutocomplete();

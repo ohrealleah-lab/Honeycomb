@@ -384,6 +384,10 @@ public partial class MainWindow : Window
                 SlideOutAndClosePreferences();
             }
         }
+        else if (_pendingAction == "CancelPreferences")
+        {
+            ExecuteCancelPreferences();
+        }
         else if (_pendingAction == "ResetStats")
         {
             if (this.DataContext is GameViewModel klondikeVm) klondikeVm.ResetStats();
@@ -613,6 +617,8 @@ public partial class MainWindow : Window
             longestStreak = ms.LongestStreak;
             fastestWinSec = ms.ShortestWinSeconds;
             totalWinSec   = ms.TotalWinSeconds;
+            // Spider has no Vegas mode of its own (see SpiderViewModel.ScoreDisplay) —
+            // always the plain score.
             highScoreText = ms.HighScore.ToString();
         }
         else
@@ -747,6 +753,33 @@ public partial class MainWindow : Window
             }
             return;
         }
+        SlideOutAndClosePreferences();
+    }
+
+    // Discards any pending (unconfirmed) game-mode selection and restores whatever
+    // options were on disk when the panel opened — every other control here saves
+    // live as you change it (see PreferencesView.RevertSettingsChanges), so "cancel"
+    // means writing that snapshot back over the session's live edits, not skipping
+    // an apply step. If anything was actually changed during this session, confirm
+    // first since those live-saved edits are about to be thrown away.
+    private void CancelPreferences_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_preferencesView != null && _preferencesView.HasPendingChanges())
+        {
+            _pendingAction = "CancelPreferences";
+            ConfirmActionTitle.Text     = "Discard Changes?";
+            ConfirmActionMessage.Text   = "You have pending changes which will be lost. Are you sure you want to cancel?";
+            ConfirmActionButton.Content = "Yes";
+            ConfirmActionOverlay.IsVisible = true;
+            return;
+        }
+        ExecuteCancelPreferences();
+    }
+
+    private void ExecuteCancelPreferences()
+    {
+        _preferencesView?.RevertGameModeCombo();
+        _preferencesView?.RevertSettingsChanges();
         SlideOutAndClosePreferences();
     }
 
@@ -1171,6 +1204,15 @@ public partial class MainWindow : Window
             // clipping; a lower floor let the window (and saved BlackjackHeight) shrink
             // below what the board needs.
             "Blackjack"  => 950,
+            // These three floors are sized so a maxed-out tableau column — a full
+            // King-to-2 run (12 face-up cards) for Klondike/Freecell, or a completed
+            // 13-card same-suit run for Spider — fits under the toolbar without being
+            // clipped or scrolled out of view. Math.Max(MinHeight, saved height) in
+            // RestoreWindowSizeForGame means this also repairs any already-saved
+            // window height that was set before this floor existed.
+            "Klondike"   => 900,
+            "Freecell"   => 1050,
+            "Spider"     => 950,
             _            => 640,
         };
         return (baseMinWidth * zoom, baseMinHeight * zoom);
@@ -1288,7 +1330,7 @@ public partial class MainWindow : Window
             if (PreferencesOverlay != null && PreferencesOverlay.IsVisible)
             {
                 e.Handled = true;
-                SlideOutAndClosePreferences();
+                CancelPreferences_Click(sender, e);
                 return;
             }
         }

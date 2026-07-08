@@ -194,11 +194,19 @@ public partial class FreecellViewModel : ObservableObject
 
         _gameTimer = new System.Threading.Timer(_ =>
         {
-            if (State != null && State.IsTimerActive && !State.HasWon)
+            // The whole check-and-mutate runs on the UI thread via _syncContext.Post,
+            // not just the notification — State is a shared mutable object also written
+            // to from the UI thread (Restart/Undo/InitializeGame), so mutating
+            // State.TimerSeconds directly on this background timer thread would race
+            // with those writes.
+            _syncContext?.Post(_ =>
             {
-                State.TimerSeconds++;
-                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
-            }
+                if (State != null && State.IsTimerActive && !State.HasWon)
+                {
+                    State.TimerSeconds++;
+                    OnPropertyChanged(nameof(TimeDisplay));
+                }
+            }, null);
         }, null, 1000, 1000);
 
         OnPropertyChanged(nameof(FreeCells));
@@ -228,11 +236,19 @@ public partial class FreecellViewModel : ObservableObject
 
         _gameTimer = new System.Threading.Timer(_ =>
         {
-            if (State != null && State.IsTimerActive && !State.HasWon)
+            // The whole check-and-mutate runs on the UI thread via _syncContext.Post,
+            // not just the notification — State is a shared mutable object also written
+            // to from the UI thread (Restart/Undo/InitializeGame), so mutating
+            // State.TimerSeconds directly on this background timer thread would race
+            // with those writes.
+            _syncContext?.Post(_ =>
             {
-                State.TimerSeconds++;
-                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
-            }
+                if (State != null && State.IsTimerActive && !State.HasWon)
+                {
+                    State.TimerSeconds++;
+                    OnPropertyChanged(nameof(TimeDisplay));
+                }
+            }, null);
         }, null, 1000, 1000);
 
         OnPropertyChanged(nameof(FreeCells));
@@ -747,11 +763,19 @@ public partial class FreecellViewModel : ObservableObject
         _gameTimer?.Dispose();
         _gameTimer = new System.Threading.Timer(_ =>
         {
-            if (State != null && State.IsTimerActive && !State.HasWon)
+            // The whole check-and-mutate runs on the UI thread via _syncContext.Post,
+            // not just the notification — State is a shared mutable object also written
+            // to from the UI thread (Restart/Undo/InitializeGame), so mutating
+            // State.TimerSeconds directly on this background timer thread would race
+            // with those writes.
+            _syncContext?.Post(_ =>
             {
-                State.TimerSeconds++;
-                _syncContext?.Post(_ => OnPropertyChanged(nameof(TimeDisplay)), null);
-            }
+                if (State != null && State.IsTimerActive && !State.HasWon)
+                {
+                    State.TimerSeconds++;
+                    OnPropertyChanged(nameof(TimeDisplay));
+                }
+            }, null);
         }, null, 1000, 1000);
 
         CheckAutocomplete();

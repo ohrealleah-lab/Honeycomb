@@ -10,6 +10,10 @@ public static class SoundService
     public static void PlaySnap() => PlaySound("snap.wav");
     public static void PlayVictory() => PlaySound("victory.wav");
 
+    // Played specifically on a solitaire win (Klondike/Freecell/Spider) — Blackjack's
+    // own win sound still uses PlayVictory().
+    public static void PlaySolitaireWin() => PlaySound("tada.wav");
+
     private static void PlaySound(string filename)
     {
         var options = SettingsService.LoadOptions();

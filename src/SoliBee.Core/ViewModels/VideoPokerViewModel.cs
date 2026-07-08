@@ -325,7 +325,7 @@ public partial class VideoPokerViewModel : ObservableObject
                     naturals.Concat(new[] { subs[i], subs[j] }).ToArray()));
             }
         }
-        else // wildCount == 3
+        else if (wildCount == 3)
         {
             for (int i = 0; i < subs.Length; i++)
             for (int j = 0; j < subs.Length; j++)
@@ -336,6 +336,29 @@ public partial class VideoPokerViewModel : ObservableObject
                     if (k == i || k == j) continue;
                     TryUpdate(PokerHandEvaluator.Evaluate(
                         naturals.Concat(new[] { subs[i], subs[j], subs[k] }).ToArray()));
+                }
+            }
+        }
+        else if (wildCount == 4)
+        {
+            // Not currently reachable in live play — EvaluateHand's caller intercepts
+            // wildCount == 4 for the "Four Deuces" named hand before calling here — but
+            // this must still substitute all 4 wilds (not fall through to the 3-wild
+            // branch above), which previously produced a 4-card hand that
+            // PokerHandEvaluator.Evaluate silently scored as HighCard.
+            for (int i = 0; i < subs.Length; i++)
+            for (int j = 0; j < subs.Length; j++)
+            {
+                if (j == i) continue;
+                for (int k = 0; k < subs.Length; k++)
+                {
+                    if (k == i || k == j) continue;
+                    for (int l = 0; l < subs.Length; l++)
+                    {
+                        if (l == i || l == j || l == k) continue;
+                        TryUpdate(PokerHandEvaluator.Evaluate(
+                            naturals.Concat(new[] { subs[i], subs[j], subs[k], subs[l] }).ToArray()));
+                    }
                 }
             }
         }
