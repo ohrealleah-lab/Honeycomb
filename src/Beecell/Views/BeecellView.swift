@@ -116,22 +116,6 @@ public struct BeecellView: View {
                     .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
 
-                    // Stats
-                    if !viewModel.options.hideStatsButton {
-                        Button(action: { isShowingStats = true }) {
-                            Text("Stats")
-                                .font(.display(16))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.white.opacity(0.15))
-                                .cornerRadius(4)
-                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                        }
-                        .buttonStyle(HoverToolbarButtonStyle())
-                        .focusable(false)
-                    }
-
                     // Hint
                     if !viewModel.options.hideHintButton {
                         Button(action: { viewModel.findHint() }) {
@@ -175,7 +159,7 @@ public struct BeecellView: View {
                     HStack(alignment: .bottom, spacing: 20) {
                         StatusItemView(label: "SCORE", value: viewModel.scoreString)
                         StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
-                        if viewModel.options.isTimed {
+                        if viewModel.options.isTimed && !viewModel.options.noStressMode {
                             StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                         }
                     }
@@ -911,10 +895,9 @@ struct BeecellOptionsView: View {
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
     @State private var deckCount: Int
-    @State private var isTimed: Bool
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
-    @State private var hideStatsButton: Bool
+    @State private var noStressMode: Bool
     @State private var showFeltVignette: Bool
     @State private var customSelectedColor: Color
     @State private var customCardColors: CustomCardColorGroup
@@ -935,10 +918,9 @@ struct BeecellOptionsView: View {
         _feltColor = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme = State(initialValue: viewModel.options.cardBackTheme)
         _deckCount = State(initialValue: viewModel.options.deckCount)
-        _isTimed = State(initialValue: viewModel.options.isTimed)
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
-        _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        _noStressMode = State(initialValue: viewModel.options.noStressMode)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _customCardColors = State(initialValue: viewModel.options.customCardColors)
         self.originalFeltColor = viewModel.options.feltColor
@@ -980,16 +962,13 @@ struct BeecellOptionsView: View {
                     
                     Divider()
 
-                    Toggle("Timed Game", isOn: $isTimed)
-                        .font(.system(.body))
-
                     Toggle("Sound Effects", isOn: $isSoundEnabled)
                         .font(.system(.body))
 
                     Toggle("Hide Hint button", isOn: $hideHintButton)
                         .font(.system(.body))
 
-                    Toggle("Hide Stats button", isOn: $hideStatsButton)
+                    Toggle("No Stress Mode", isOn: $noStressMode)
                         .font(.system(.body))
 
                     Divider()
@@ -1066,10 +1045,9 @@ struct BeecellOptionsView: View {
                     updatedOpts.feltColor = feltColor
                     updatedOpts.cardBackTheme = cardBackTheme
                     updatedOpts.deckCount = deckCount
-                    updatedOpts.isTimed = isTimed
                     updatedOpts.isSoundEnabled = isSoundEnabled
                     updatedOpts.hideHintButton = hideHintButton
-                    updatedOpts.hideStatsButton = hideStatsButton
+                    updatedOpts.noStressMode = noStressMode
                     updatedOpts.showFeltVignette = showFeltVignette
                     updatedOpts.customCardColors = customCardColors
                     updatedOpts.customFeltColorRevision += 1

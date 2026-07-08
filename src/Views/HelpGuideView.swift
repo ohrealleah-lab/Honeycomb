@@ -77,6 +77,9 @@ struct KlondikeHelpView: View {
             RuleSection(title: "Vegas Mode",
                         text: "In Vegas scoring, you start with a debt of −$52 (the cost of the deck). Each card moved to a foundation earns +$5. Redealing from the waste is not allowed — make your moves count!")
 
+            RuleSection(title: "No Stress Mode",
+                        text: "Turns off the timer for a pressure-free game. This is a shared setting — enabling it here also enables it in Freecell, Spider, Video Poker, and Blackjack, where it also turns off timers and switches the casino games into free play (no bets, no credits, just the cards).")
+
             RuleSection(title: "Keyboard Shortcuts",
                         text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — Switch to Draw 1\n⌥⌘3 — Switch to Draw 3\n💡 Hint — press again to cycle through all available hints")
         }
@@ -106,6 +109,9 @@ struct BeecellHelpView: View {
             RuleSection(title: "Strategy Tips",
                         text: "Nearly every deal of FreeCell is solvable — take your time and plan ahead. Avoid filling all free cells at once, as it severely limits your options. Try to expose Aces and low cards early.")
 
+            RuleSection(title: "No Stress Mode",
+                        text: "Turns off the timer for a pressure-free game. This is a shared setting — enabling it here also enables it in Klondike, Spider, Video Poker, and Blackjack, where it also turns off timers and switches the casino games into free play (no bets, no credits, just the cards).")
+
             RuleSection(title: "Keyboard Shortcuts",
                         text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n💡 Hint — press again to cycle through all available hints")
         }
@@ -134,6 +140,9 @@ struct SpiderHelpView: View {
 
             RuleSection(title: "Empty Columns",
                         text: "Any card or valid in-suit sequence may be placed in an empty column. Empty columns are extremely valuable — use them to juggle sequences.")
+
+            RuleSection(title: "No Stress Mode",
+                        text: "Turns off the timer for a pressure-free game. This is a shared setting — enabling it here also enables it in Klondike, Freecell, Video Poker, and Blackjack, where it also turns off timers and switches the casino games into free play (no bets, no credits, just the cards).")
 
             RuleSection(title: "Keyboard Shortcuts",
                         text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — 1-Suit mode\n⌥⌘2 — 2-Suit mode\n💡 Hint — press again to cycle through all available hints")
@@ -167,6 +176,9 @@ struct VideoPokerHelpView: View {
             RuleSection(title: "Bonus Poker",
                         text: "Based on Jacks or Better with enhanced payouts for four-of-a-kind hands. Four Aces pays 80×, four 2s/3s/4s pay 40×, and other quads pay the standard 25×.")
 
+            RuleSection(title: "No Stress Mode",
+                        text: "Switches into free play: no bets, no credits won or lost, just relaxed practice — winning hands and streaks still show. This is a shared setting — enabling it here also enables it in Blackjack, and turns off the timer in Klondike, Freecell, and Spider.")
+
             RuleSection(title: "Keyboard Shortcuts",
                         text: "Space — Deal / Draw\n1 2 3 4 5 — Toggle hold for cards 1–5\nH — Hold all cards\nC — Clear all holds\nM — Bet Max and deal")
         }
@@ -190,6 +202,9 @@ struct BlackjackHelpView: View {
 
             RuleSection(title: "Credits",
                         text: "You start each session with 100 credits. If your credits drop to zero, a Rebuy button adds another 100 credits to keep playing.")
+
+            RuleSection(title: "No Stress Mode",
+                        text: "Switches into free play: no bets, no credits won or lost, just relaxed practice — winning hands and streaks still show, and Double/Split always behave as if you have credits for them. This is a shared setting — enabling it here also enables it in Video Poker, and turns off the timer in Klondike, Freecell, and Spider.")
 
             RuleSection(title: "Keyboard Shortcuts",
                         text: "Space — Deal\nH — Hit\nS — Stand\nD — Double Down\nP — Split\nM — Bet Max and deal")

@@ -51,9 +51,9 @@ public final class AppCoordinator {
     private func syncSharedOptions(from old: GameMode, to new: GameMode) {
         let isSoundEnabled:   Bool
         let hideHintButton:   Bool
-        let hideStatsButton:  Bool
         let showFeltVignette: Bool
         let customCardColors: CustomCardColorGroup
+        let noStressMode:     Bool
         // isTimed is only read from solitaire games — VP/BJ don't have a real timer preference
         let isTimed:          Bool?
 
@@ -61,76 +61,76 @@ public final class AppCoordinator {
         case .klondike:
             isSoundEnabled    = klondikeViewModel.options.isSoundEnabled
             hideHintButton    = klondikeViewModel.options.hideHintButton
-            hideStatsButton   = klondikeViewModel.options.hideStatsButton
             showFeltVignette  = klondikeViewModel.options.showFeltVignette
             customCardColors  = klondikeViewModel.options.customCardColors
+            noStressMode      = klondikeViewModel.options.noStressMode
             isTimed           = klondikeViewModel.options.isTimed
         case .beecell:
             isSoundEnabled    = beecellViewModel.options.isSoundEnabled
             hideHintButton    = beecellViewModel.options.hideHintButton
-            hideStatsButton   = beecellViewModel.options.hideStatsButton
             showFeltVignette  = beecellViewModel.options.showFeltVignette
             customCardColors  = beecellViewModel.options.customCardColors
+            noStressMode      = beecellViewModel.options.noStressMode
             isTimed           = beecellViewModel.options.isTimed
         case .spider:
             isSoundEnabled    = spiderViewModel.options.isSoundEnabled
             hideHintButton    = spiderViewModel.options.hideHintButton
-            hideStatsButton   = spiderViewModel.options.hideStatsButton
             showFeltVignette  = spiderViewModel.options.showFeltVignette
             customCardColors  = spiderViewModel.options.customCardColors
+            noStressMode      = spiderViewModel.options.noStressMode
             isTimed           = spiderViewModel.options.isTimed
         case .videoPoker:
             isSoundEnabled    = videoPokerViewModel.options.isSoundEnabled
             hideHintButton    = videoPokerViewModel.options.hideHintButton
-            hideStatsButton   = videoPokerViewModel.options.hideStatsButton
             showFeltVignette  = videoPokerViewModel.options.showFeltVignette
             customCardColors  = videoPokerViewModel.options.customCardColors
+            noStressMode      = videoPokerViewModel.options.noStressMode
             isTimed           = nil  // don't propagate VP's timer concept to solitaire games
         case .blackjack:
             isSoundEnabled    = blackjackViewModel.options.isSoundEnabled
             hideHintButton    = false
-            hideStatsButton   = blackjackViewModel.options.hideStatsButton
             showFeltVignette  = blackjackViewModel.options.showFeltVignette
             customCardColors  = blackjackViewModel.options.customCardColors
+            noStressMode      = blackjackViewModel.options.noStressMode
             isTimed           = nil  // don't propagate BJ's timer concept to solitaire games
         }
 
         if old != .klondike {
             klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
             klondikeViewModel.options.hideHintButton   = hideHintButton
-            klondikeViewModel.options.hideStatsButton  = hideStatsButton
             klondikeViewModel.options.showFeltVignette = showFeltVignette
             klondikeViewModel.options.customCardColors = customCardColors
+            klondikeViewModel.options.noStressMode     = noStressMode
             if let isTimed { klondikeViewModel.options.isTimed = isTimed }
         }
         if old != .beecell {
             beecellViewModel.options.isSoundEnabled   = isSoundEnabled
             beecellViewModel.options.hideHintButton   = hideHintButton
-            beecellViewModel.options.hideStatsButton  = hideStatsButton
             beecellViewModel.options.showFeltVignette = showFeltVignette
             beecellViewModel.options.customCardColors = customCardColors
+            beecellViewModel.options.noStressMode     = noStressMode
             if let isTimed { beecellViewModel.options.isTimed = isTimed }
         }
         if old != .spider {
             spiderViewModel.options.isSoundEnabled   = isSoundEnabled
             spiderViewModel.options.hideHintButton   = hideHintButton
-            spiderViewModel.options.hideStatsButton  = hideStatsButton
             spiderViewModel.options.showFeltVignette = showFeltVignette
             spiderViewModel.options.customCardColors = customCardColors
+            spiderViewModel.options.noStressMode     = noStressMode
             if let isTimed { spiderViewModel.options.isTimed = isTimed }
         }
         if old != .videoPoker {
             videoPokerViewModel.options.isSoundEnabled   = isSoundEnabled
             videoPokerViewModel.options.hideHintButton   = hideHintButton
-            videoPokerViewModel.options.hideStatsButton  = hideStatsButton
             videoPokerViewModel.options.showFeltVignette = showFeltVignette
             videoPokerViewModel.options.customCardColors = customCardColors
+            videoPokerViewModel.options.noStressMode     = noStressMode
         }
         if old != .blackjack {
             blackjackViewModel.options.isSoundEnabled   = isSoundEnabled
-            blackjackViewModel.options.hideStatsButton  = hideStatsButton
             blackjackViewModel.options.showFeltVignette = showFeltVignette
             blackjackViewModel.options.customCardColors = customCardColors
+            blackjackViewModel.options.noStressMode     = noStressMode
         }
     }
 

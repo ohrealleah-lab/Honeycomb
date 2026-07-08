@@ -166,8 +166,8 @@ public final class GameViewModel {
     }
     
     private func handleOptionsChanged(oldValue: GameOptions) {
-        if options.isTimed != oldValue.isTimed {
-            if options.isTimed {
+        if effectiveTimed(options) != effectiveTimed(oldValue) {
+            if effectiveTimed(options) {
                 if state.movesCount > 0 && !state.hasWon {
                     startTimerIfNeeded()
                 }
@@ -640,9 +640,13 @@ public final class GameViewModel {
     }
     
     // MARK: - Timer Handling
-    
+
+    private func effectiveTimed(_ o: GameOptions) -> Bool {
+        o.isTimed && !o.noStressMode
+    }
+
     public func startTimerIfNeeded() {
-        guard options.isTimed else { return }
+        guard effectiveTimed(options) else { return }
         guard !state.isTimerActive else { return }
         state.isTimerActive = true
         

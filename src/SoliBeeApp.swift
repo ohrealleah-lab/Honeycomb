@@ -72,10 +72,6 @@ struct SoliBeeApp: App {
                 HelpMenuCommands()
             }
 
-            CommandMenu("Banners") {
-                DebugBannerCommands(coordinator: coordinator)
-            }
-
             CommandGroup(replacing: .toolbar) {
                 Button("Zoom In") {
                     coordinator.zoomIn()

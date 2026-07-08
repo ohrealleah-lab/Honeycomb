@@ -121,8 +121,8 @@ public final class SpiderViewModel {
     }
     
     private func handleOptionsChanged(oldValue: SpiderOptions) {
-        if options.isTimed != oldValue.isTimed {
-            if options.isTimed {
+        if effectiveTimed(options) != effectiveTimed(oldValue) {
+            if effectiveTimed(options) {
                 if state.movesCount > 0 && !state.hasWon {
                     startTimerIfNeeded()
                 }
@@ -609,9 +609,13 @@ public final class SpiderViewModel {
     }
     
     // MARK: - Timer Handling
-    
+
+    private func effectiveTimed(_ o: SpiderOptions) -> Bool {
+        o.isTimed && !o.noStressMode
+    }
+
     public func startTimerIfNeeded() {
-        guard options.isTimed else { return }
+        guard effectiveTimed(options) else { return }
         guard !state.isTimerActive else { return }
         state.isTimerActive = true
         

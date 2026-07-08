@@ -130,22 +130,6 @@ public struct GameView: View {
                     .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
 
-                    // Stats Button
-                    if !viewModel.options.hideStatsButton {
-                        Button(action: { isShowingStats = true }) {
-                            Text("Stats")
-                                .font(.display(16))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.white.opacity(0.15))
-                                .cornerRadius(4)
-                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                        }
-                        .buttonStyle(HoverToolbarButtonStyle())
-                        .focusable(false)
-                    }
-
                     // Hint Button
                     if !viewModel.options.hideHintButton {
                         Button(action: { viewModel.findHint() }) {
@@ -199,7 +183,7 @@ public struct GameView: View {
                             StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
 
                             // Timer
-                            if viewModel.options.isTimed {
+                            if viewModel.options.isTimed && !viewModel.options.noStressMode {
                                 StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                             }
                         }
@@ -943,13 +927,12 @@ struct OptionsView: View {
 
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
-    @State private var isTimed: Bool
     @State private var isStatusBarVisible: Bool
     @State private var isSoundEnabled: Bool
     @State private var isVegasScoring: Bool
     @State private var drawMode: GameState.DrawMode
     @State private var hideHintButton: Bool
-    @State private var hideStatsButton: Bool
+    @State private var noStressMode: Bool
     @State private var showFeltVignette: Bool
     @State private var customSelectedColor: Color
     @State private var customCardColors: CustomCardColorGroup
@@ -971,13 +954,12 @@ struct OptionsView: View {
         self.onViewStats = onViewStats
         _feltColor = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme = State(initialValue: viewModel.options.cardBackTheme)
-        _isTimed = State(initialValue: viewModel.options.isTimed)
         _isStatusBarVisible = State(initialValue: viewModel.options.isStatusBarVisible)
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _isVegasScoring = State(initialValue: viewModel.options.isVegasScoring)
         _drawMode = State(initialValue: viewModel.state.drawMode)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
-        _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        _noStressMode = State(initialValue: viewModel.options.noStressMode)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _customCardColors = State(initialValue: viewModel.options.customCardColors)
         self.originalFeltColor = viewModel.options.feltColor
@@ -1019,9 +1001,6 @@ struct OptionsView: View {
                     
                     Divider()
 
-                    Toggle("Timed Game", isOn: $isTimed)
-                        .font(.system(.body))
-
                     Toggle("Sound Effects", isOn: $isSoundEnabled)
                         .font(.system(.body))
 
@@ -1031,7 +1010,7 @@ struct OptionsView: View {
                     Toggle("Hide Hint button", isOn: $hideHintButton)
                         .font(.system(.body))
 
-                    Toggle("Hide Stats button", isOn: $hideStatsButton)
+                    Toggle("No Stress Mode", isOn: $noStressMode)
                         .font(.system(.body))
 
                     Divider()
@@ -1107,12 +1086,11 @@ struct OptionsView: View {
                     var updatedOpts = viewModel.options
                     updatedOpts.feltColor = feltColor
                     updatedOpts.cardBackTheme = cardBackTheme
-                    updatedOpts.isTimed = isTimed
                     updatedOpts.isStatusBarVisible = isStatusBarVisible
                     updatedOpts.isSoundEnabled = isSoundEnabled
                     updatedOpts.isVegasScoring = isVegasScoring
                     updatedOpts.hideHintButton = hideHintButton
-                    updatedOpts.hideStatsButton = hideStatsButton
+                    updatedOpts.noStressMode = noStressMode
                     updatedOpts.showFeltVignette = showFeltVignette
                     updatedOpts.customCardColors = customCardColors
                     updatedOpts.customFeltColorRevision += 1

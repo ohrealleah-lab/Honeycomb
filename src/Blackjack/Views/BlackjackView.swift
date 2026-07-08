@@ -56,7 +56,9 @@ public struct BlackjackView: View {
                 // Scaled board area
                 VStack(spacing: 0) {
                     VStack(spacing: 12) {
-                        creditDisplay
+                        if !viewModel.isFreePlay {
+                            creditDisplay
+                        }
 
                         VStack(spacing: 12) {
                             dealerArea
@@ -219,9 +221,6 @@ public struct BlackjackView: View {
         HStack(spacing: 20) {
             gameModeMenu
             toolbarButton("Options")  { isShowingOptions = true }
-            if !viewModel.options.hideStatsButton {
-                toolbarButton("Stats") { isShowingStats = true }
-            }
             Spacer()
         }
     }
@@ -546,10 +545,12 @@ public struct BlackjackView: View {
                 .onAppear { if isWin { bannerWinFlash = true } }
                 .onDisappear { bannerWinFlash = false }
 
-            Text(subline)
-                .font(.system(.body))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
+            if !viewModel.isFreePlay {
+                Text(subline)
+                    .font(.system(.body))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+            }
 
             VStack(spacing: 2) {
                 Text("Dealer: \(dealerVal)")
@@ -582,19 +583,23 @@ public struct BlackjackView: View {
         VStack(spacing: 12) {
             switch viewModel.state.phase {
             case .betting, .result:
-                HStack(spacing: 12) {
-                    casinoButton("1",  color: .white, textColor: .black) { viewModel.addToBet(1) }
-                    casinoButton("5",  color: .red.opacity(0.85)) { viewModel.addToBet(5) }
-                    casinoButton("10", color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
-                    casinoButton("25", color: .green.opacity(0.75)) { viewModel.addToBet(25) }
-                    casinoButton("2X", color: .orange.opacity(0.85)) { viewModel.doubleBet() }
+                if !viewModel.isFreePlay {
+                    HStack(spacing: 12) {
+                        casinoButton("1",  color: .white, textColor: .black) { viewModel.addToBet(1) }
+                        casinoButton("5",  color: .red.opacity(0.85)) { viewModel.addToBet(5) }
+                        casinoButton("10", color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
+                        casinoButton("25", color: .green.opacity(0.75)) { viewModel.addToBet(25) }
+                        casinoButton("2X", color: .orange.opacity(0.85)) { viewModel.doubleBet() }
+                    }
                 }
 
                 HStack(spacing: 12) {
-                    casinoButton("CLEAR", color: Color(white: 0.25)) { viewModel.clearBet() }
-                    Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
+                    if !viewModel.isFreePlay {
+                        casinoButton("CLEAR BET", color: Color(white: 0.25)) { viewModel.clearBet() }
+                        Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
+                    }
                     casinoButton("DEAL  [Space]", color: .yellow,
-                                 disabled: viewModel.state.sessionCredits < viewModel.state.currentBet) {
+                                 disabled: !viewModel.isFreePlay && viewModel.state.sessionCredits < viewModel.state.currentBet) {
                         viewModel.deal()
                     }
                     if viewModel.canRebuy {
@@ -737,7 +742,7 @@ struct BlackjackOptionsView: View {
 
     @State private var startingCredits: Int
     @State private var isSoundEnabled: Bool
-    @State private var hideStatsButton: Bool
+    @State private var noStressMode: Bool
     @State private var showFeltVignette: Bool
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
@@ -759,7 +764,7 @@ struct BlackjackOptionsView: View {
         self._isPresented = isPresented
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
-        _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        _noStressMode    = State(initialValue: viewModel.options.noStressMode)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _feltColor       = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme   = State(initialValue: viewModel.options.cardBackTheme)
@@ -796,7 +801,7 @@ struct BlackjackOptionsView: View {
                     Divider()
 
                     Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body))
-                    Toggle("Hide Stats button", isOn: $hideStatsButton).font(.system(.body))
+                    Toggle("No Stress Mode",    isOn: $noStressMode).font(.system(.body))
 
                     Divider()
 
@@ -867,7 +872,7 @@ struct BlackjackOptionsView: View {
                     var o = viewModel.options
                     o.startingCredits = startingCredits
                     o.isSoundEnabled  = isSoundEnabled
-                    o.hideStatsButton   = hideStatsButton
+                    o.noStressMode    = noStressMode
                     o.showFeltVignette  = showFeltVignette
                     o.feltColor         = feltColor
                     o.cardBackTheme   = cardBackTheme

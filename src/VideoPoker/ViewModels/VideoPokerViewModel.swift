@@ -130,6 +130,10 @@ public final class VideoPokerViewModel {
             self.statistics = decoded
         }
 
+        if !VideoPokerPlayMode.tripleEnabled && options.playMode == .triple {
+            options.playMode = .single
+        }
+
         state.sessionCredits = options.startingCredits
         state.currentBet = options.betPerHand
 
@@ -215,17 +219,30 @@ public final class VideoPokerViewModel {
 
     // MARK: - Game flow
 
+    public var totalBet: Int {
+        state.currentBet * (options.playMode == .triple ? 3 : 1)
+    }
+
+    public var isFreePlay: Bool {
+        options.noStressMode
+    }
+
     public func deal() {
         guard state.phase == .deal || state.phase == .result else { return }
-        guard state.sessionCredits >= state.currentBet else { return }
+        guard isFreePlay || state.sessionCredits >= totalBet else { return }
 
-        state.sessionCredits -= state.currentBet
-        statistics.totalWagered += state.currentBet
-        statistics.handsPlayed += 1
+        if !isFreePlay {
+            state.sessionCredits -= totalBet
+            statistics.totalWagered += totalBet
+        }
+        statistics.handsPlayed += options.playMode == .triple ? 3 : 1
         state.handsDealt += 1
         state.lastPayout = 0
         state.lastHandName = ""
         state.heldIndices = []
+        state.triplePlayHands = []
+        state.triplePlayHandNames = ["", "", ""]
+        state.triplePlayPayouts = [0, 0, 0]
 
         // Fresh shuffled deck
         var deck: [Card] = []
@@ -253,54 +270,151 @@ public final class VideoPokerViewModel {
     public func draw() {
         guard state.phase == .holding else { return }
 
-        // Replace non-held cards
-        for i in 0..<5 {
-            if !state.heldIndices.contains(i) {
-                if let replacement = state.deck.first {
-                    state.hand[i] = replacement
-                    state.deck.removeFirst()
+        if options.playMode == .triple {
+            drawTriplePlay()
+            playSound(named: "snap")
+            evaluateTriplePlay()
+        } else {
+            // Replace non-held cards
+            for i in 0..<5 {
+                if !state.heldIndices.contains(i) {
+                    if let replacement = state.deck.first {
+                        state.hand[i] = replacement
+                        state.deck.removeFirst()
+                    }
                 }
+            }
+            playSound(named: "snap")
+            evaluate()
+        }
+        state.phase = .result
+    }
+
+    // MARK: - Triple Play
+
+    private static func freshDeck(excluding hand: [Card]) -> [Card] {
+        let excluded = Set(hand.map { "\($0.suit.rawValue)-\($0.rank)" })
+        var deck: [Card] = []
+        for suit in Card.Suit.allCases {
+            for rank in 1...13 where !excluded.contains("\(suit.rawValue)-\(rank)") {
+                deck.append(Card(suit: suit, rank: rank, faceUp: true))
+            }
+        }
+        deck.shuffle()
+        return deck
+    }
+
+    private func drawTriplePlay() {
+        let baseHand = state.hand
+        let held = state.heldIndices
+
+        var hands: [[Card]] = []
+        for handIndex in 0..<3 {
+            var hand = baseHand
+            if handIndex == 2 {
+                // Bottom/base hand: draws from the deck already dealt alongside the base hand.
+                for i in 0..<5 where !held.contains(i) {
+                    if let replacement = state.deck.first {
+                        hand[i] = replacement
+                        state.deck.removeFirst()
+                    }
+                }
+            } else {
+                var deck = Self.freshDeck(excluding: baseHand)
+                for i in 0..<5 where !held.contains(i) {
+                    hand[i] = deck.removeFirst()
+                }
+            }
+            hands.append(hand)
+        }
+
+        state.triplePlayHands = hands
+        state.hand = hands[2]
+    }
+
+    private func evaluateTriplePlay() {
+        state.triplePlayHandNames = Array(repeating: "", count: 3)
+        state.triplePlayPayouts = Array(repeating: 0, count: 3)
+
+        var totalPayout = 0
+        var anyWin = false
+        var winCount = 0
+        var maxSingle = 0
+        var royalCount = 0
+
+        for i in 0..<3 {
+            let (name, payout, rank) = evaluateHand(state.triplePlayHands[i])
+            state.triplePlayHandNames[i] = name
+            state.triplePlayPayouts[i] = payout
+            totalPayout += payout
+            if rank != nil { anyWin = true }
+            if payout > 0 {
+                winCount += 1
+                maxSingle = max(maxSingle, payout)
+                if rank == .royalFlush { royalCount += 1 }
             }
         }
 
-        playSound(named: "snap")
-        evaluate()
-        state.phase = .result
+        state.lastHandName = ""
+        state.lastPayout = totalPayout
+        if !isFreePlay {
+            state.sessionCredits += totalPayout
+        }
+
+        if anyWin {
+            statistics.currentStreak += 1
+            statistics.longestStreak = max(statistics.longestStreak, statistics.currentStreak)
+        } else {
+            statistics.currentStreak = 0
+        }
+        if totalPayout > 0 {
+            statistics.handsWon += winCount
+            statistics.royalFlushCount += royalCount
+            if !isFreePlay {
+                statistics.totalPaidOut += totalPayout
+                statistics.biggestPayout = max(statistics.biggestPayout, maxSingle)
+            }
+            playSound(named: "victory")
+        }
     }
 
     // MARK: - Hand evaluation against pay table
 
-    private func evaluate() {
-        guard state.hand.count == 5 else { return }
-
-        let hand = state.hand
+    private func evaluateHand(_ hand: [Card]) -> (name: String, payout: Int, rank: PokerHandRank?) {
         let result = options.variant == .deucesWild
             ? PokerHandEvaluator.evaluateWithDeuces(hand)
             : PokerHandEvaluator.evaluate(hand)
 
         // Walk the pay table from top (best) to bottom and find first match
-        for entry in payTable {
-            if matches(result: result, hand: hand, entry: entry) {
-                let payout = entry.payout(bet: state.currentBet)
-                state.lastHandName = entry.handName
-                state.lastPayout = payout
-                statistics.currentStreak += 1
-                statistics.longestStreak = max(statistics.longestStreak, statistics.currentStreak)
-                if payout > 0 {
+        for entry in payTable where matches(result: result, hand: hand, entry: entry) {
+            return (entry.handName, entry.payout(bet: state.currentBet), entry.rank)
+        }
+        return ("No Win", 0, nil)
+    }
+
+    private func evaluate() {
+        guard state.hand.count == 5 else { return }
+
+        let (name, payout, rank) = evaluateHand(state.hand)
+        state.lastHandName = name
+        state.lastPayout = payout
+
+        if rank != nil {
+            statistics.currentStreak += 1
+            statistics.longestStreak = max(statistics.longestStreak, statistics.currentStreak)
+            if payout > 0 {
+                statistics.handsWon += 1
+                if rank == .royalFlush { statistics.royalFlushCount += 1 }
+                if !isFreePlay {
                     state.sessionCredits += payout
-                    statistics.handsWon += 1
                     statistics.totalPaidOut += payout
                     statistics.biggestPayout = max(statistics.biggestPayout, payout)
-                    if entry.rank == .royalFlush { statistics.royalFlushCount += 1 }
-                    playSound(named: "victory")
                 }
-                return
+                playSound(named: "victory")
             }
+        } else {
+            statistics.currentStreak = 0
         }
-
-        state.lastHandName = "No Win"
-        state.lastPayout = 0
-        statistics.currentStreak = 0
     }
 
     private func matches(result: PokerHandResult, hand: [Card], entry: VideoPokerPayEntry) -> Bool {
@@ -352,7 +466,8 @@ public final class VideoPokerViewModel {
     }
 
     public func maxBet() {
-        state.currentBet = max(1, min(5, state.sessionCredits))
+        let divisor = options.playMode == .triple ? 3 : 1
+        state.currentBet = max(1, min(5, state.sessionCredits / divisor))
         if state.phase == .deal || state.phase == .result { deal() }
     }
 

@@ -7,7 +7,7 @@ public struct BeecellOptions: Codable, Equatable {
     public var isTimed: Bool = true
     public var isSoundEnabled: Bool = true
     public var hideHintButton: Bool = false
-    public var hideStatsButton: Bool = false
+    public var noStressMode: Bool = false
 
     public var customFeltColorRevision: Int = 0
     public var showFeltVignette: Bool = true
@@ -20,7 +20,7 @@ public struct BeecellOptions: Codable, Equatable {
         case isTimed
         case isSoundEnabled
         case hideHintButton
-        case hideStatsButton
+        case noStressMode
         case customFeltColorRevision
         case showFeltVignette
         case customCardColors
@@ -33,7 +33,7 @@ public struct BeecellOptions: Codable, Equatable {
         isTimed: Bool = true,
         isSoundEnabled: Bool = true,
         hideHintButton: Bool = false,
-        hideStatsButton: Bool = false,
+        noStressMode: Bool = false,
         customFeltColorRevision: Int = 0,
         showFeltVignette: Bool = true,
         customCardColors: CustomCardColorGroup = CustomCardColorGroup()
@@ -44,7 +44,7 @@ public struct BeecellOptions: Codable, Equatable {
         self.isTimed = isTimed
         self.isSoundEnabled = isSoundEnabled
         self.hideHintButton = hideHintButton
-        self.hideStatsButton = hideStatsButton
+        self.noStressMode = noStressMode
         self.customFeltColorRevision = customFeltColorRevision
         self.showFeltVignette = showFeltVignette
         self.customCardColors = customCardColors
@@ -58,7 +58,7 @@ public struct BeecellOptions: Codable, Equatable {
         self.isTimed = try container.decodeIfPresent(Bool.self, forKey: .isTimed) ?? true
         self.isSoundEnabled = try container.decodeIfPresent(Bool.self, forKey: .isSoundEnabled) ?? true
         self.hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
-        self.hideStatsButton = try container.decodeIfPresent(Bool.self, forKey: .hideStatsButton) ?? false
+        self.noStressMode = try container.decodeIfPresent(Bool.self, forKey: .noStressMode) ?? false
         self.customFeltColorRevision = try container.decodeIfPresent(Int.self, forKey: .customFeltColorRevision) ?? 0
         self.showFeltVignette = try container.decodeIfPresent(Bool.self, forKey: .showFeltVignette) ?? true
         self.customCardColors = try container.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()

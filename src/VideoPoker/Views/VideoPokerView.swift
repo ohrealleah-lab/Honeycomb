@@ -26,7 +26,29 @@ public struct VideoPokerView: View {
 
     // The toolbar stays fixed size regardless of zoom; only the board below it scales.
     static let toolbarHeight: CGFloat = 73
-    static let boardBaseHeight: CGFloat = 762 - toolbarHeight
+    private static let singleBoardBaseHeight: CGFloat = 762 - toolbarHeight
+    // Triple Play never shows the pay table, so its cards can be a comfortable, fully
+    // legible size (120pt wide — 100pt base bumped 20% — matching CardView's true
+    // 128x181 native aspect ratio) rather than a tiny thumbnail.
+    private static let tripleCardScale: CGFloat = 120.0 / 128.0
+    private static let tripleRowSpacing: CGFloat = 12
+    // Extra headroom above each triple-play row's card height so the "lift held card"
+    // offset animation has room without being clipped by the row's own bounds.
+    private static let tripleRowSlack: CGFloat = 16
+    private static let tripleRowHeight: CGFloat = 181 * tripleCardScale + tripleRowSlack
+
+    private var boardBaseHeight: CGFloat {
+        guard viewModel.options.playMode == .triple else { return Self.singleBoardBaseHeight }
+        // Triple Play hides the pay table AND the single-play result-label spacer (see
+        // body), so its board is built from the same non-hand-area chrome as single play
+        // (credit display, hold labels, action buttons, VStack spacing/padding) minus
+        // that 52pt label + 1 VStack gap, plus 3 card rows instead of 1, with a safety
+        // margin since these chrome heights are estimates.
+        let nonHandAreaChrome: CGFloat = 292 - 52 - 16
+        let safetyMargin: CGFloat = 50
+        let tripleHandAreaHeight = 3 * Self.tripleRowHeight + 2 * Self.tripleRowSpacing
+        return nonHandAreaChrome + tripleHandAreaHeight + safetyMargin
+    }
 
     public init(viewModel: VideoPokerViewModel) {
         self.viewModel = viewModel
@@ -50,7 +72,7 @@ public struct VideoPokerView: View {
 
                 // Scaled board area
                 VStack(spacing: 0) {
-                    if !viewModel.options.hideBetBoard {
+                    if !(viewModel.options.hideBetBoard || viewModel.options.noStressMode) && viewModel.options.playMode != .triple {
                         payTableGrid
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
@@ -60,8 +82,12 @@ public struct VideoPokerView: View {
                     }
 
                     VStack(spacing: 16) {
-                        creditDisplay
-                        resultLabel
+                        if !viewModel.isFreePlay {
+                            creditDisplay
+                        }
+                        if viewModel.options.playMode != .triple {
+                            resultLabel
+                        }
                         handArea
                             .overlay {
                                 if showIdlePrompt {
@@ -85,9 +111,9 @@ public struct VideoPokerView: View {
 
                     Spacer()
                 }
-                .frame(width: 905, height: Self.boardBaseHeight, alignment: .topLeading)
+                .frame(width: 905, height: boardBaseHeight, alignment: .topLeading)
                 .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
-                .frame(width: 905 * viewModel.zoomScale, height: Self.boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
+                .frame(width: 905 * viewModel.zoomScale, height: boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
@@ -98,7 +124,7 @@ public struct VideoPokerView: View {
                 .clipped()
         }
         .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
-               minHeight: Self.toolbarHeight + Self.boardBaseHeight * viewModel.zoomScale, maxHeight: .infinity)
+               minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale, maxHeight: .infinity)
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
@@ -111,6 +137,7 @@ public struct VideoPokerView: View {
             }
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
+        .onChange(of: viewModel.options.playMode) { snapToMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .overlay {
@@ -252,9 +279,6 @@ public struct VideoPokerView: View {
         HStack(spacing: 20) {
             gameModeMenu
             toolbarButton("Options") { isShowingOptions = true }
-            if !viewModel.options.hideStatsButton {
-                toolbarButton("Stats") { isShowingStats = true }
-            }
             Spacer()
         }
     }
@@ -386,11 +410,32 @@ public struct VideoPokerView: View {
 
     // MARK: - Hand Area
 
-    private let cardScale: CGFloat = 1.4
-    private var scaledCardW: CGFloat { 77 * cardScale }   // ≈108
-    private var scaledCardH: CGFloat { 122 * cardScale }  // ≈171
+    private var cardScale: CGFloat {
+        viewModel.options.playMode == .triple ? Self.tripleCardScale : 1.4
+    }
+    // CardView's own intrinsic size is 128x181 (see CardView.swift); single play's
+    // existing look uses a 77x122 "logical" base instead (kept as-is to avoid changing
+    // its already-correct appearance). Triple play must use CardView's real 128x181
+    // base so the scaled card frame actually matches what gets painted — otherwise the
+    // card's edges get clipped by the row's .clipped() bounds.
+    private var scaledCardW: CGFloat {
+        viewModel.options.playMode == .triple ? 128 * cardScale : 77 * cardScale
+    }
+    private var scaledCardH: CGFloat {
+        viewModel.options.playMode == .triple ? 181 * cardScale : 122 * cardScale
+    }
 
     private var handArea: some View {
+        Group {
+            if viewModel.options.playMode == .triple {
+                tripleHandArea
+            } else {
+                singleHandArea
+            }
+        }
+    }
+
+    private var singleHandArea: some View {
         HStack(spacing: 16) {
             if viewModel.state.hand.isEmpty || showCardBackPlaceholders {
                 ForEach(0..<5, id: \.self) { _ in
@@ -444,9 +489,11 @@ public struct VideoPokerView: View {
                             .foregroundColor(.yellow)
                             .scaleEffect(winFlash ? 1.1 : 1.0)
                             .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
-                        Text("+\(viewModel.state.lastPayout) Credits")
-                            .font(.system(.body))
-                            .foregroundColor(.white)
+                        if !viewModel.isFreePlay {
+                            Text("+\(viewModel.state.lastPayout) Credits")
+                                .font(.system(.body))
+                                .foregroundColor(.white)
+                        }
                         if let streakText {
                             Text(streakText)
                                 .font(.system(size: 14, weight: .bold))
@@ -467,9 +514,11 @@ public struct VideoPokerView: View {
                         Text("Not today, partner!")
                             .font(.system(size: 36, weight: .black))
                             .foregroundColor(.yellow)
-                        Text("-\(viewModel.state.currentBet) credits")
-                            .font(.system(.body))
-                            .foregroundColor(.white)
+                        if !viewModel.isFreePlay {
+                            Text("-\(viewModel.state.currentBet) credits")
+                                .font(.system(.body))
+                                .foregroundColor(.white)
+                        }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 24)
@@ -483,6 +532,108 @@ public struct VideoPokerView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.state.phase)
+    }
+
+    // MARK: - Triple Play Hand Area
+
+    private var tripleHandArea: some View {
+        VStack(spacing: 12) {
+            if viewModel.state.hand.isEmpty || showCardBackPlaceholders {
+                tripleCardBackRow
+            } else {
+                tripleCardRow(index: 0)
+                tripleCardRow(index: 1)
+                tripleCardRow(index: 2)
+            }
+        }
+        .opacity(cardsVisible ? 1 : 0)
+        .overlay {
+            WinParticleView(active: showParticles)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.state.phase)
+    }
+
+    private var tripleCardBackRow: some View {
+        HStack(spacing: 10) {
+            ForEach(0..<5, id: \.self) { _ in
+                CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
+                    .scaleEffect(cardScale)
+                    .frame(width: scaledCardW, height: scaledCardH)
+                    .onTapGesture { viewModel.deal() }
+            }
+        }
+        .frame(height: Self.tripleRowHeight, alignment: .bottom)
+        .clipped()
+    }
+
+    @ViewBuilder
+    private func tripleCardRow(index: Int) -> some View {
+        let isBaseRow = index == 2
+        let isHolding = viewModel.state.phase == .holding
+
+        if !isBaseRow && isHolding {
+            // Hands 1 & 2 haven't been dealt yet — show a plain placeholder band
+            // instead of a full (and potentially confusing) preview of the base hand.
+            tripleBandRow
+        } else {
+            let cards: [Card] = isBaseRow
+                ? viewModel.state.hand
+                : (index < viewModel.state.triplePlayHands.count ? viewModel.state.triplePlayHands[index] : viewModel.state.hand)
+            let name = index < viewModel.state.triplePlayHandNames.count ? viewModel.state.triplePlayHandNames[index] : ""
+            let payout = index < viewModel.state.triplePlayPayouts.count ? viewModel.state.triplePlayPayouts[index] : 0
+
+            HStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    ForEach(Array(cards.enumerated()), id: \.offset) { idx, card in
+                        let isHeld = isBaseRow && viewModel.state.heldIndices.contains(idx)
+                        CardView(card: card)
+                            .scaleEffect(cardScale)
+                            .frame(width: scaledCardW, height: scaledCardH)
+                            .offset(y: isHeld && isHolding ? -12 : 0)
+                            .animation(.easeInOut(duration: 0.15), value: isHeld)
+                            .onTapGesture {
+                                if isBaseRow && isHolding {
+                                    viewModel.toggleHold(at: idx)
+                                }
+                            }
+                            .shadow(color: .black.opacity(0.3), radius: 3)
+                    }
+                }
+                .frame(height: Self.tripleRowHeight, alignment: .bottom)
+                .clipped()
+                .transition(.opacity)
+
+                if showResultBanner && !name.isEmpty {
+                    tripleBadge(name: name, payout: payout)
+                        .transition(.opacity)
+                }
+            }
+        }
+    }
+
+    private var tripleBandRow: some View {
+        HStack(spacing: 10) {
+            ForEach(0..<5, id: \.self) { _ in
+                CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
+                    .scaleEffect(cardScale)
+                    .frame(width: scaledCardW, height: scaledCardH)
+            }
+        }
+        .frame(height: Self.tripleRowHeight, alignment: .bottom)
+        .clipped()
+        .transition(.opacity)
+    }
+
+    private func tripleBadge(name: String, payout: Int) -> some View {
+        Text(payout > 0 ? "\(name) +\(payout)" : name)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundColor(payout > 0 ? .black : .white.opacity(0.8))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(payout > 0 ? Color.yellow.opacity(winFlash ? 1.0 : 0.85) : Color.black.opacity(0.4))
+            .cornerRadius(6)
+            .fixedSize()
     }
 
     // MARK: - Hold / New Labels
@@ -512,12 +663,23 @@ public struct VideoPokerView: View {
             }
 
             VStack(spacing: 2) {
-                Text("BET")
+                Text(viewModel.options.playMode == .triple ? "BET/HAND" : "BET")
                     .font(.display(10))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.currentBet)")
                     .font(.display(28, weight: .black))
                     .foregroundColor(viewModel.state.currentBet == 5 ? .orange : .white)
+            }
+
+            if viewModel.options.playMode == .triple {
+                VStack(spacing: 2) {
+                    Text("TOTAL BET")
+                        .font(.display(10))
+                        .foregroundColor(.white.opacity(0.6))
+                    Text("\(viewModel.totalBet)")
+                        .font(.display(28, weight: .black))
+                        .foregroundColor(.white)
+                }
             }
 
             VStack(spacing: 2) {
@@ -558,14 +720,16 @@ public struct VideoPokerView: View {
         HStack(spacing: 12) {
             switch viewModel.state.phase {
             case .deal, .result:
-                casinoButton("-", color: .white.opacity(0.2)) { viewModel.decreaseBet() }
-                casinoButton("BET MAX  [M]", color: .orange.opacity(0.85)) { viewModel.maxBet() }
-                casinoButton("+", color: .white.opacity(0.2)) { viewModel.increaseBet() }
+                if !viewModel.isFreePlay {
+                    casinoButton("-", color: .white.opacity(0.2)) { viewModel.decreaseBet() }
+                    casinoButton("BET MAX  [M]", color: .orange.opacity(0.85)) { viewModel.maxBet() }
+                    casinoButton("+", color: .white.opacity(0.2)) { viewModel.increaseBet() }
 
-                Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
+                    Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
+                }
 
                 casinoButton("DEAL  [Space]", color: .yellow, textColor: .black,
-                             disabled: viewModel.state.sessionCredits < viewModel.state.currentBet) {
+                             disabled: !viewModel.isFreePlay && viewModel.state.sessionCredits < viewModel.totalBet) {
                     viewModel.deal()
                 }
 
@@ -578,7 +742,7 @@ public struct VideoPokerView: View {
                 casinoButton("DRAW", color: .green.opacity(0.85)) { viewModel.draw() }
             }
 
-            if viewModel.state.sessionCredits < viewModel.state.currentBet && viewModel.state.phase != .holding {
+            if !viewModel.isFreePlay && viewModel.state.sessionCredits < viewModel.totalBet && viewModel.state.phase != .holding {
                 casinoButton("REBUY", color: .red.opacity(0.8)) { viewModel.rebuy() }
             }
         }
@@ -644,7 +808,7 @@ public struct VideoPokerView: View {
     private func handleSpace() {
         switch viewModel.state.phase {
         case .deal, .result:
-            guard viewModel.state.sessionCredits >= viewModel.state.currentBet else { return }
+            guard viewModel.isFreePlay || viewModel.state.sessionCredits >= viewModel.totalBet else { return }
             viewModel.deal()
         case .holding:
             viewModel.draw()
@@ -669,7 +833,7 @@ public struct VideoPokerView: View {
     private func updateMinSize() {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + Self.boardBaseHeight * z)
+        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
         DispatchQueue.main.async {
             window.contentMinSize = size
         }
@@ -678,13 +842,26 @@ public struct VideoPokerView: View {
     private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + Self.boardBaseHeight * z)
+        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
         let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
         DispatchQueue.main.async {
             window.contentMinSize = minSize
+
+            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
+            // bottom-left anchor) so a height change — e.g. switching Play Mode — never
+            // pushes the toolbar/title bar off the top of the screen.
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+            let currentFrame = window.frame
+            newFrame.origin.x = currentFrame.origin.x
+            newFrame.origin.y = currentFrame.maxY - newFrame.height
+            if let visible = window.screen?.visibleFrame {
+                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
+                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+            }
+
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.animator().setContentSize(size)
+                window.animator().setFrame(newFrame, display: true)
             }
         }
     }
@@ -702,12 +879,13 @@ struct VideoPokerOptionsView: View {
     @Binding var isPresented: Bool
 
     @State private var variant: VideoPokerVariant
+    @State private var playMode: VideoPokerPlayMode
     @State private var startingCredits: Int
     @State private var betPerHand: Int
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
-    @State private var hideStatsButton: Bool
     @State private var hideBetBoard: Bool
+    @State private var noStressMode: Bool
     @State private var showFeltVignette: Bool
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
@@ -728,12 +906,13 @@ struct VideoPokerOptionsView: View {
         self._isShowingStats = isShowingStats
         self._isPresented = isPresented
         _variant         = State(initialValue: viewModel.options.variant)
+        _playMode        = State(initialValue: viewModel.options.playMode)
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
         _betPerHand      = State(initialValue: viewModel.options.betPerHand)
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton  = State(initialValue: viewModel.options.hideHintButton)
-        _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
         _hideBetBoard    = State(initialValue: viewModel.options.hideBetBoard)
+        _noStressMode    = State(initialValue: viewModel.options.noStressMode)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _feltColor       = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme   = State(initialValue: viewModel.options.cardBackTheme)
@@ -770,6 +949,16 @@ struct VideoPokerOptionsView: View {
                     }
                     .font(.system(.body))
 
+                    if VideoPokerPlayMode.tripleEnabled {
+                        Picker("Play Mode:", selection: $playMode) {
+                            ForEach(VideoPokerPlayMode.allCases, id: \.self) {
+                                Text($0.rawValue).tag($0)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .font(.system(.body))
+                    }
+
                     Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 100...10000, step: 100)
                         .font(.system(.body))
 
@@ -781,8 +970,8 @@ struct VideoPokerOptionsView: View {
                     Divider()
 
                     Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body))
-                    Toggle("Hide Stats button",isOn: $hideStatsButton).font(.system(.body))
                     Toggle("Hide Bet Board",   isOn: $hideBetBoard).font(.system(.body))
+                    Toggle("No Stress Mode",   isOn: $noStressMode).font(.system(.body))
 
                     Divider()
 
@@ -849,21 +1038,23 @@ struct VideoPokerOptionsView: View {
 
                 Button("OK") {
                     let variantChanged = variant != viewModel.options.variant
+                    let playModeChanged = playMode != viewModel.options.playMode
                     var o = viewModel.options
                     o.variant         = variant
+                    o.playMode        = playMode
                     o.startingCredits = startingCredits
                     o.betPerHand      = betPerHand
                     o.isSoundEnabled  = isSoundEnabled
                     o.hideHintButton  = hideHintButton
-                    o.hideStatsButton = hideStatsButton
                     o.hideBetBoard    = hideBetBoard
+                    o.noStressMode    = noStressMode
                     o.showFeltVignette   = showFeltVignette
                     o.feltColor          = feltColor
                     o.cardBackTheme   = cardBackTheme
                     o.customCardColors = customCardColors
                     o.customFeltColorRevision += 1
                     viewModel.options = o
-                    if variantChanged { viewModel.startNewGame() }
+                    if variantChanged || playModeChanged { viewModel.startNewGame() }
                     isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)

@@ -147,11 +147,15 @@ public final class BlackjackViewModel {
 
     // MARK: - Computed properties
 
+    public var isFreePlay: Bool {
+        options.noStressMode
+    }
+
     public var canSplit: Bool {
         state.playerHands.count == 1
         && state.playerHands[0].cards.count == 2
         && state.playerHands[0].cards[0].rank == state.playerHands[0].cards[1].rank
-        && state.sessionCredits >= state.currentBet
+        && (isFreePlay || state.sessionCredits >= state.currentBet)
     }
 
     public var canDouble: Bool {
@@ -160,11 +164,12 @@ public final class BlackjackViewModel {
         return hand.cards.count == 2
             && !hand.isSplitAce
             && (9...11).contains(hand.value)
-            && state.sessionCredits >= hand.bet
+            && (isFreePlay || state.sessionCredits >= hand.bet)
     }
 
     public var canRebuy: Bool {
-        (state.phase == .betting || state.phase == .result)
+        !isFreePlay
+            && (state.phase == .betting || state.phase == .result)
             && state.sessionCredits < state.currentBet
     }
 
@@ -198,10 +203,12 @@ public final class BlackjackViewModel {
 
     public func deal() {
         guard state.phase == .betting || state.phase == .result else { return }
-        guard state.sessionCredits >= state.currentBet else { return }
+        guard isFreePlay || state.sessionCredits >= state.currentBet else { return }
 
-        state.sessionCredits -= state.currentBet
-        statistics.totalWagered += state.currentBet
+        if !isFreePlay {
+            state.sessionCredits -= state.currentBet
+            statistics.totalWagered += state.currentBet
+        }
         statistics.handsPlayed += 1
         state.handsDealt += 1
 
@@ -256,8 +263,10 @@ public final class BlackjackViewModel {
         guard canDouble else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         let hand = state.playerHands[state.activeHandIndex]
-        state.sessionCredits -= hand.bet
-        statistics.totalWagered += hand.bet
+        if !isFreePlay {
+            state.sessionCredits -= hand.bet
+            statistics.totalWagered += hand.bet
+        }
         state.playerHands[state.activeHandIndex].bet *= 2
         state.playerHands[state.activeHandIndex].isDoubled = true
 
@@ -272,8 +281,10 @@ public final class BlackjackViewModel {
         guard state.phase == .playing, canSplit else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         let originalBet = state.playerHands[0].bet
-        state.sessionCredits -= originalBet
-        statistics.totalWagered += originalBet
+        if !isFreePlay {
+            state.sessionCredits -= originalBet
+            statistics.totalWagered += originalBet
+        }
 
         let card0 = state.playerHands[0].cards[0]
         let card1 = state.playerHands[0].cards[1]
@@ -409,10 +420,12 @@ public final class BlackjackViewModel {
             }
 
             state.playerHands[i].result = result
-            state.sessionCredits += payout
             totalPayout += payout
-            statistics.totalPaidOut += payout
-            statistics.biggestPayout = max(statistics.biggestPayout, payout)
+            if !isFreePlay {
+                state.sessionCredits += payout
+                statistics.totalPaidOut += payout
+                statistics.biggestPayout = max(statistics.biggestPayout, payout)
+            }
 
             let label: String
             switch result {

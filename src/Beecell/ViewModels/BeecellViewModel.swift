@@ -106,8 +106,8 @@ public final class BeecellViewModel {
     }
     
     private func handleOptionsChanged(oldValue: BeecellOptions) {
-        if options.isTimed != oldValue.isTimed {
-            if options.isTimed {
+        if effectiveTimed(options) != effectiveTimed(oldValue) {
+            if effectiveTimed(options) {
                 if state.movesCount > 0 && !state.hasWon {
                     startTimerIfNeeded()
                 }
@@ -546,9 +546,13 @@ public final class BeecellViewModel {
     }
     
     // MARK: - Timer Handling
-    
+
+    private func effectiveTimed(_ o: BeecellOptions) -> Bool {
+        o.isTimed && !o.noStressMode
+    }
+
     public func startTimerIfNeeded() {
-        guard options.isTimed else { return }
+        guard effectiveTimed(options) else { return }
         guard !state.isTimerActive else { return }
         state.isTimerActive = true
         

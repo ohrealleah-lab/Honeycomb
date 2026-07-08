@@ -9,9 +9,9 @@ public struct GameOptions: Codable, Equatable {
     public var isVegasScoring: Bool = false
     public var isDrawConstraintsEnabled: Bool = false
     public var hideHintButton: Bool = false
-    public var hideStatsButton: Bool = false
+    public var noStressMode: Bool = false
     public var deckCount: Int = 1
-    
+
     public var customFeltColorRevision: Int = 0
     public var drawMode: GameState.DrawMode = .drawThree
     public var showFeltVignette: Bool = true
@@ -26,7 +26,7 @@ public struct GameOptions: Codable, Equatable {
         isVegasScoring: Bool = false,
         isDrawConstraintsEnabled: Bool = false,
         hideHintButton: Bool = false,
-        hideStatsButton: Bool = false,
+        noStressMode: Bool = false,
         deckCount: Int = 1,
         customFeltColorRevision: Int = 0,
         drawMode: GameState.DrawMode = .drawThree,
@@ -41,7 +41,7 @@ public struct GameOptions: Codable, Equatable {
         self.isVegasScoring = isVegasScoring
         self.isDrawConstraintsEnabled = isDrawConstraintsEnabled
         self.hideHintButton = hideHintButton
-        self.hideStatsButton = hideStatsButton
+        self.noStressMode = noStressMode
         self.deckCount = deckCount
         self.customFeltColorRevision = customFeltColorRevision
         self.drawMode = drawMode
@@ -58,7 +58,7 @@ public struct GameOptions: Codable, Equatable {
         case isVegasScoring
         case isDrawConstraintsEnabled
         case hideHintButton
-        case hideStatsButton
+        case noStressMode
         case deckCount
         case customFeltColorRevision
         case drawMode
@@ -76,7 +76,7 @@ public struct GameOptions: Codable, Equatable {
         self.isVegasScoring = (try? container.decode(Bool.self, forKey: .isVegasScoring)) ?? false
         self.isDrawConstraintsEnabled = (try? container.decode(Bool.self, forKey: .isDrawConstraintsEnabled)) ?? false
         self.hideHintButton = (try? container.decode(Bool.self, forKey: .hideHintButton)) ?? false
-        self.hideStatsButton = (try? container.decode(Bool.self, forKey: .hideStatsButton)) ?? false
+        self.noStressMode = (try? container.decode(Bool.self, forKey: .noStressMode)) ?? false
         self.deckCount = (try? container.decode(Int.self, forKey: .deckCount)) ?? 1
         self.customFeltColorRevision = (try? container.decode(Int.self, forKey: .customFeltColorRevision)) ?? 0
         self.drawMode = (try? container.decode(GameState.DrawMode.self, forKey: .drawMode)) ?? .drawThree

@@ -35,4 +35,10 @@ public struct VideoPokerState {
     public var lastPayout: Int = 0
     public var lastHandName: String = ""
     public var handsDealt: Int = 0
+
+    // Triple Play: 3 completed hands, their evaluated names, and per-hand payouts.
+    // Empty outside of an active triple-play round.
+    public var triplePlayHands: [[Card]] = []
+    public var triplePlayHandNames: [String] = []
+    public var triplePlayPayouts: [Int] = []
 }
