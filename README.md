@@ -3,6 +3,12 @@ What's the #1 issue facing Mac users today? A lack of ad-free Klondike Solitaire
 
 A native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the gameplay dynamics of classic Solitaire, Video Poker, and Video Blackjack games with modern flourishes and deep customization. All art was created by real artists - there is zero AI art.
 
+Comments from players:
+
+“It’s pretty cool, I must say” 
+
+“The customization is amazing. It is what I require in apps.”
+
 **Make the game yours**. 
 
 <img width="1162" height="927" alt="image" src="https://github.com/user-attachments/assets/009116d0-51e4-4b02-baf9-107bda7ef7e7" />
@@ -46,6 +52,7 @@ Solibee supports five fully implemented, distinct games selectable via the **Gam
 * **Custom Color Background**: Set the tableau to match your deck of cards.
 * **Visual Themes**: Use a presaved theme, or create your own! Easily toggle between multiple themes.
 * **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
+* * **No Stress Mode**: Disable timers and hide  betting for a relaxed card gaming session.
   
 ---
 
