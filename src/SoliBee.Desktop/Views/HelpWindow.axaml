@@ -298,7 +298,7 @@
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="help-body" TextWrapping="Wrap">
                                     <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="1. Place your bet. "/>
-                                    <Run Text="Use + Bet / − Bet to choose 1–5 credits, or press Bet Max to wager 5 and deal immediately."/>
+                                    <Run Text="Click a chip (1, 5, 10, or 25) to add it to your bet — the first click on a chip other than 1, while the bet is still at its default of 1, replaces the bet instead of adding to it. 2X doubles your current bet, and Clear Bet resets it to 1. Click Buy In (or press Space) to deal."/>
                                 </TextBlock>
                                 <TextBlock Classes="help-body" TextWrapping="Wrap">
                                     <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="2. Deal. "/>
