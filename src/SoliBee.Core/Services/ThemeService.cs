@@ -18,8 +18,19 @@ public static class ThemeService
 
     private static readonly JsonSerializerOptions _jsonOpts = new() { WriteIndented = true };
 
+    // "Dingwall"/"Colorblind" were removed from the preset lineup (no longer in this
+    // array), but LoadThemes() never purges a saved theme just because it's missing
+    // from here — so existing users who already saved one of those keep it untouched.
     public static readonly IReadOnlyList<SoliBeeTheme> DefaultThemes = new List<SoliBeeTheme>
     {
+        // Index 0 — applied by ApplyDefaultThemeIfNeeded on a fresh install (see below).
+        new SoliBeeTheme
+        {
+            Id             = new Guid("b0001111-0000-0000-0000-000000000006"),
+            Name           = "Default",
+            CardBackTheme  = "Moogle",
+            FeltColor      = FeltColorTheme.FeltGreen,
+        },
         new SoliBeeTheme
         {
             Id             = new Guid("b0001111-0000-0000-0000-000000000001"),
@@ -30,17 +41,36 @@ public static class ThemeService
         },
         new SoliBeeTheme
         {
-            Id             = new Guid("b0001111-0000-0000-0000-000000000002"),
-            Name           = "Dingwall",
-            CardBackTheme  = "Dingwall",
-            FeltColor      = FeltColorTheme.Charcoal,
-        },
-        new SoliBeeTheme
-        {
             Id             = new Guid("b0001111-0000-0000-0000-000000000003"),
             Name           = "Desert",
             CardBackTheme  = "Vulpera",
             FeltColor      = FeltColorTheme.Desert,
+        },
+        new SoliBeeTheme
+        {
+            Id             = new Guid("b0001111-0000-0000-0000-000000000004"),
+            Name           = "Forest",
+            CardBackTheme  = "Forest",
+            FeltColor      = FeltColorTheme.Custom,
+            CustomFeltColorHex   = "#857A74", // R:0.5212 G:0.4770 B:0.4560
+            ThemeFaceBackNormal  = "#FFE6CFAC",
+            ThemeFaceBorderNormal = "#D9000000",
+            ThemeTextBlackNormal = "#FFB53026", // Black suits (Spades/Clubs)
+            ThemeTextRed         = "#FFC61C1A", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow      = "#26000000",
+        },
+        new SoliBeeTheme
+        {
+            Id             = new Guid("b0001111-0000-0000-0000-000000000005"),
+            Name           = "OceanSky",
+            CardBackTheme  = "Pareidolic",
+            FeltColor      = FeltColorTheme.Custom,
+            CustomFeltColorHex   = "#96F5F7", // R:0.5867 G:0.9626 B:0.9703
+            ThemeFaceBackNormal  = "#FFE1FDFE",
+            ThemeFaceBorderNormal = "#D9000000",
+            ThemeTextBlackNormal = "#FF424242", // Black suits (Spades/Clubs)
+            ThemeTextRed         = "#FFC05491", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow      = "#26000000",
         },
     }.AsReadOnly();
 
@@ -75,6 +105,52 @@ public static class ThemeService
         themes.Add(theme);
         SaveThemes(themes);
     }
+
+    // Called on every launch to keep the saved themes list converged with the current
+    // preset definitions: a saved theme whose name matches a preset (case-insensitive)
+    // gets its values overwritten with the preset's; a preset with no match is appended.
+    // Never removes or touches anything else the user saved (e.g. a legacy "Dingwall"
+    // theme, or their own custom themes) — only names that collide with a current preset
+    // are affected.
+    public static void MergeInDefaultThemes()
+    {
+        var themes = LoadThemes();
+
+        foreach (var preset in DefaultThemes)
+        {
+            int idx = themes.FindIndex(t => string.Equals(t.Name, preset.Name, StringComparison.OrdinalIgnoreCase));
+            if (idx >= 0)
+                themes[idx] = ClonePreset(preset);
+            else
+                themes.Add(ClonePreset(preset));
+        }
+
+        SaveThemes(themes);
+    }
+
+    private static SoliBeeTheme ClonePreset(SoliBeeTheme preset) => new()
+    {
+        Id                    = preset.Id,
+        Name                  = preset.Name,
+        CardBackTheme         = preset.CardBackTheme,
+        CardBackScale         = preset.CardBackScale,
+        CardBackOffsetX       = preset.CardBackOffsetX,
+        CardBackOffsetY       = preset.CardBackOffsetY,
+        IsFinalFantasyMode    = preset.IsFinalFantasyMode,
+        FeltColor             = preset.FeltColor,
+        CustomFeltColorHex    = preset.CustomFeltColorHex,
+        ThemeFaceBackNormal   = preset.ThemeFaceBackNormal,
+        ThemeFaceBackFF       = preset.ThemeFaceBackFF,
+        ThemeFaceBorderNormal = preset.ThemeFaceBorderNormal,
+        ThemeFaceBorderFF     = preset.ThemeFaceBorderFF,
+        ThemeFaceBorderFFCard = preset.ThemeFaceBorderFFCard,
+        ThemeTextRed          = preset.ThemeTextRed,
+        ThemeTextRedFF        = preset.ThemeTextRedFF,
+        ThemeTextBlackNormal  = preset.ThemeTextBlackNormal,
+        ThemeTextBlackFF      = preset.ThemeTextBlackFF,
+        ThemeCardShadow       = preset.ThemeCardShadow,
+        FaceArts              = new List<FaceArtSnapshot>(preset.FaceArts),
+    };
 
     public static void DeleteTheme(Guid id)
     {
@@ -177,7 +253,8 @@ public static class ThemeService
 
         options.HasAppliedDefaultTheme = true;
 
-        // Only override visuals if the user hasn't changed anything from factory defaults
+        // Only override visuals if the user hasn't changed anything from factory defaults —
+        // a fresh install lands here and gets DefaultThemes[0] ("Default": Moogle + Felt Green).
         bool isFactoryFelt = options.FeltColor == FeltColorTheme.FeltGreen;
         bool isFactoryBack = options.CardBackTheme == "Vulpera";
         if (isFactoryFelt && isFactoryBack)

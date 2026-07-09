@@ -119,7 +119,6 @@ public partial class FreecellView : CardGameView
             BindPiles(vm);
         }
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
-        VictoryOverlay.CloseRequested += VictoryOverlay_CloseRequested;
     }
 
     private void FreecellView_Unloaded(object? sender, RoutedEventArgs e)
@@ -127,7 +126,6 @@ public partial class FreecellView : CardGameView
         if (DataContext is FreecellViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
-        VictoryOverlay.CloseRequested -= VictoryOverlay_CloseRequested;
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         CardView.ClearPileViewCache(this);
     }
@@ -135,11 +133,6 @@ public partial class FreecellView : CardGameView
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
     {
         if (DataContext is FreecellViewModel vm) vm.InitializeGame();
-    }
-
-    private void VictoryOverlay_CloseRequested(object? sender, EventArgs e)
-    {
-        VictoryOverlay.IsVisible = false;
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -265,13 +258,29 @@ public partial class FreecellView : CardGameView
 
     private bool _winTriggered;
 
+    // Real center-X of each foundation pile, in VictoryOverlay's own coordinate space
+    // (its AnimationCanvas fills it with no offset) — so the win cascade spawns cards
+    // above the actual foundation columns instead of an evenly-spread approximation.
+    // Only as many entries as the current deck count's foundation piles (4 or 8).
+    private List<double> ComputeFoundationSpawnX(int count)
+    {
+        var allViews = new[] { Foundation0, Foundation1, Foundation2, Foundation3, Foundation4, Foundation5, Foundation6, Foundation7 };
+        var xs = new List<double>(count);
+        for (int i = 0; i < count && i < allViews.Length; i++)
+        {
+            var topLeft = allViews[i].TranslatePoint(new Point(0, 0), this) ?? default;
+            xs.Add(topLeft.X + allViews[i].Bounds.Width / 2.0);
+        }
+        return xs;
+    }
+
     private void TriggerVictoryCascade()
     {
         if (_winTriggered) return;
         _winTriggered = true;
         VictoryOverlay.IsVisible = true;
         if (DataContext is FreecellViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+            VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnX(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
         else
             VictoryOverlay.StartAnimation();
         SoundService.PlaySolitaireWin();
@@ -283,9 +292,22 @@ public partial class FreecellView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         if (DataContext is FreecellViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+            VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnX(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
         else
             VictoryOverlay.StartAnimation();
+    }
+
+    // Dev-only — always plays the full demo cascade (the no-arg overload's fake 52-card
+    // deck) regardless of the real foundations' current contents, so the bouncing-card
+    // animation itself can be reviewed even mid-game when few/no cards are actually up.
+    public void DebugPlayWinAnimation()
+    {
+        VictoryOverlay.IsVisible = true;
+        if (DataContext is FreecellViewModel vm)
+            VictoryOverlay.StartAnimation(ComputeFoundationSpawnX(vm.Foundations.Count));
+        else
+            VictoryOverlay.StartAnimation();
+        SoundService.PlaySolitaireWin();
     }
 
     public void DebugShowLossBanner()

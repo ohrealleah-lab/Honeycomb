@@ -845,6 +845,20 @@ public partial class VideoPokerView : UserControl
         if (!int.TryParse(g.Tag?.ToString(), out var idx)) return;
         if (DataContext is not VideoPokerViewModel vm) return;
 
+        // Phase flips to Result the instant Draw() resolves, well before the win/loss
+        // banner actually reveals (it waits ~1.5s via _resultShowTimer, then stays up
+        // until it fades or is dismissed). Without this guard, a stray click anywhere
+        // on the card slots during that window deals a "ghost" hand underneath the
+        // still-pending reveal — same bug class as Blackjack's CardBack_PointerPressed
+        // guard. Clicking the banner itself once shown is still immediate on purpose
+        // (see WinBanner_PointerPressed/NoWinOverlay_PointerPressed).
+        if (vm.State.Phase == VideoPokerPhase.Result &&
+            (_resultShowTimer != null || WinBanner.IsVisible || NoWinOverlay.IsVisible))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (vm.State.Phase == VideoPokerPhase.Result || vm.State.Phase == VideoPokerPhase.Deal)
         {
             DealFromResult();

@@ -57,16 +57,19 @@
                                 <MenuFlyout>
                                     <MenuItem Header="Klondike">
                                         <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Klondike:Win" />
+                                        <MenuItem Header="Play Win Animation" Click="DebugBanner_Click" Tag="Klondike:PlayWinAnimation" />
                                         <MenuItem Header="Loss (No Moves)" Click="DebugBanner_Click" Tag="Klondike:Loss" />
                                         <MenuItem Header="Autocomplete" Click="DebugBanner_Click" Tag="Klondike:Autocomplete" />
                                     </MenuItem>
                                     <MenuItem Header="Freecell">
                                         <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Freecell:Win" />
+                                        <MenuItem Header="Play Win Animation" Click="DebugBanner_Click" Tag="Freecell:PlayWinAnimation" />
                                         <MenuItem Header="Loss (No Moves)" Click="DebugBanner_Click" Tag="Freecell:Loss" />
                                         <MenuItem Header="Autocomplete" Click="DebugBanner_Click" Tag="Freecell:Autocomplete" />
                                     </MenuItem>
                                     <MenuItem Header="Spider">
                                         <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Spider:Win" />
+                                        <MenuItem Header="Play Win Animation" Click="DebugBanner_Click" Tag="Spider:PlayWinAnimation" />
                                         <MenuItem Header="Loss (No Moves)" Click="DebugBanner_Click" Tag="Spider:Loss" />
                                         <MenuItem Header="Autocomplete" Click="DebugBanner_Click" Tag="Spider:Autocomplete" />
                                     </MenuItem>

@@ -41,9 +41,14 @@ public partial class MainWindow : Window
         // One-time migration: if FF mode was on before themes existed, seed a "Final Fantasy" theme
         ThemeService.MigrateFFModeIfNeeded(_coordinator.GameViewModel.Options);
 
-        // First launch: apply Pareidolic 2 as the default visual theme
+        // First launch: apply the "Default" theme (Moogle + Felt Green) as the default visual theme
         if (ThemeService.ApplyDefaultThemeIfNeeded(_coordinator.GameViewModel.Options))
             SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
+
+        // Every launch: converge the saved themes list with the current preset
+        // definitions (adds any new presets, corrects colors on existing ones by name)
+        // without touching anything else the user has saved.
+        ThemeService.MergeInDefaultThemes();
 
         // Restore the last game the user had open; SelectionChanged handler sets content + DataContext
         GameSelectionBox.SelectedIndex = GameModeToIndex(_coordinator.GameViewModel.Options.LastGameMode);
@@ -1032,16 +1037,19 @@ public partial class MainWindow : Window
         {
             case GameView gv:
                 if (kind == "Win") gv.DebugShowWinBanner();
+                else if (kind == "PlayWinAnimation") gv.DebugPlayWinAnimation();
                 else if (kind == "Loss") gv.DebugShowLossBanner();
                 else if (kind == "Autocomplete") gv.DebugShowAutocompleteBanner();
                 break;
             case FreecellView fv:
                 if (kind == "Win") fv.DebugShowWinBanner();
+                else if (kind == "PlayWinAnimation") fv.DebugPlayWinAnimation();
                 else if (kind == "Loss") fv.DebugShowLossBanner();
                 else if (kind == "Autocomplete") fv.DebugShowAutocompleteBanner();
                 break;
             case SpiderView sv:
                 if (kind == "Win") sv.DebugShowWinBanner();
+                else if (kind == "PlayWinAnimation") sv.DebugPlayWinAnimation();
                 else if (kind == "Loss") sv.DebugShowLossBanner();
                 else if (kind == "Autocomplete") sv.DebugShowAutocompleteBanner();
                 break;

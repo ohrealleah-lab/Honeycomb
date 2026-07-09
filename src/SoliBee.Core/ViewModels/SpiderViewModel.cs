@@ -243,6 +243,12 @@ public partial class SpiderViewModel : ObservableObject
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(TimeDisplay));
         OnPropertyChanged(nameof(CanUndo));
+        // RestartGame mutates the existing State object in place rather than replacing
+        // it, so this is the only way the View's nameof(State) handler (which resets
+        // _winTriggered and hides the victory overlay) ever fires for a restart —
+        // without it, restarting a just-won game leaves the win animation stuck on
+        // screen and permanently suppresses the next win's animation.
+        OnPropertyChanged(nameof(State));
     }
 
     // Called by AppCoordinator when switching away to a different game — the background

@@ -84,7 +84,6 @@ public partial class SpiderView : CardGameView
             UpdateStockDisplay(vm);
         }
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
-        VictoryOverlay.CloseRequested += VictoryOverlay_CloseRequested;
     }
 
     private void SpiderView_Unloaded(object? sender, RoutedEventArgs e)
@@ -92,7 +91,6 @@ public partial class SpiderView : CardGameView
         if (DataContext is SpiderViewModel vm)
             vm.PropertyChanged -= ViewModel_PropertyChanged;
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
-        VictoryOverlay.CloseRequested -= VictoryOverlay_CloseRequested;
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         CardView.ClearPileViewCache(this);
     }
@@ -100,11 +98,6 @@ public partial class SpiderView : CardGameView
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
     {
         if (DataContext is SpiderViewModel vm) vm.InitializeGame();
-    }
-
-    private void VictoryOverlay_CloseRequested(object? sender, EventArgs e)
-    {
-        VictoryOverlay.IsVisible = false;
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -267,13 +260,28 @@ public partial class SpiderView : CardGameView
 
     private bool _winTriggered;
 
+    // Real center-X of each foundation pile, in VictoryOverlay's own coordinate space
+    // (its AnimationCanvas fills it with no offset) — so the win cascade spawns cards
+    // above the actual foundation columns instead of an evenly-spread approximation.
+    private List<double> ComputeFoundationSpawnX()
+    {
+        var views = new[] { Foundation0, Foundation1, Foundation2, Foundation3, Foundation4, Foundation5, Foundation6, Foundation7 };
+        var xs = new List<double>(views.Length);
+        foreach (var fv in views)
+        {
+            var topLeft = fv.TranslatePoint(new Point(0, 0), this) ?? default;
+            xs.Add(topLeft.X + fv.Bounds.Width / 2.0);
+        }
+        return xs;
+    }
+
     private void TriggerVictoryCascade()
     {
         if (_winTriggered) return;
         _winTriggered = true;
         VictoryOverlay.IsVisible = true;
         if (DataContext is SpiderViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+            VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnX(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
         else
             VictoryOverlay.StartAnimation();
         SoundService.PlaySolitaireWin();
@@ -285,9 +293,19 @@ public partial class SpiderView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         if (DataContext is SpiderViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+            VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnX(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
         else
             VictoryOverlay.StartAnimation();
+    }
+
+    // Dev-only — always plays the full demo cascade (the no-arg overload's fake 52-card
+    // deck) regardless of the real foundations' current contents, so the bouncing-card
+    // animation itself can be reviewed even mid-game when few/no cards are actually up.
+    public void DebugPlayWinAnimation()
+    {
+        VictoryOverlay.IsVisible = true;
+        VictoryOverlay.StartAnimation(ComputeFoundationSpawnX());
+        SoundService.PlaySolitaireWin();
     }
 
     public void DebugShowLossBanner()
