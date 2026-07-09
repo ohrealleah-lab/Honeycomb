@@ -4,7 +4,9 @@ What's the #1 issue facing Mac users today? The lack of a quality, free Klondike
 Solibee is a native macOS Solitaire suite written in **Swift 6 & SwiftUI**, designed to recreate the classic gameplay dynamics of Klondike Solitaire, Freecell, Video Poker, and Blackjack with modern flourishes and deep customization. Change the card decks and card art to **your pictures**. Match the felt and card color, save it as a **full custom theme**. Make your own dark mode. **Make the game yours**. 
 
 
-<img width="1162" height="927" alt="image" src="https://github.com/user-attachments/assets/009116d0-51e4-4b02-baf9-107bda7ef7e7" />
+<img width="1067" height="1006" alt="image" src="https://github.com/user-attachments/assets/98f76568-78c5-4846-b7bc-d87592c32227" />
+<img width="2126" height="1828" alt="image" src="https://github.com/user-attachments/assets/6c21b381-94d7-4ee3-aeb2-ae271fd8d162" />
+
 
 ---
 
