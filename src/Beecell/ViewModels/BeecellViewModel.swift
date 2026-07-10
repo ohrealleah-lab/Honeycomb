@@ -111,12 +111,17 @@ public final class BeecellViewModel {
                 if state.movesCount > 0 && !state.hasWon {
                     startTimerIfNeeded()
                 }
-            } else {
+            } else if state.isTimerActive {
+                // Only reset elapsed time when we're actually stopping a running timer
+                // (this game was the foreground one). A shared-option change (e.g. No
+                // Stress Mode toggled elsewhere and synced in via AppCoordinator) can
+                // reach a backgrounded game whose timer is already stopped — its saved
+                // elapsed time shouldn't be wiped just because it received the update.
                 stopTimer()
                 state.timerSeconds = 0
             }
         }
-        
+
         if options.deckCount != oldValue.deckCount {
             startNewGame()
         }
@@ -204,7 +209,7 @@ public final class BeecellViewModel {
             }
             self.options = decoded
         } else {
-            let globalCardBack = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
+            let globalCardBack = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
             let globalFeltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
             let globalFelt = FeltColorTheme(rawValue: globalFeltStr) ?? .feltGreen
             var opts = BeecellOptions(feltColor: globalFelt, cardBackTheme: globalCardBack)
@@ -372,6 +377,7 @@ public final class BeecellViewModel {
         isStuck = false
         initialState = state
         clearHint()
+        clearKeyboardCursor()
     }
 
     public func restartCurrentGame() {
@@ -383,6 +389,7 @@ public final class BeecellViewModel {
         isAutoplayRunning = false
         isStuck = false
         clearHint()
+        clearKeyboardCursor()
     }
     
     // MARK: - Sequence Limits
@@ -547,8 +554,12 @@ public final class BeecellViewModel {
     
     // MARK: - Timer Handling
 
+    // `isTimed` has no UI control anymore (the old "Timed Game" toggle was replaced by
+    // No Stress Mode) so it's intentionally not consulted here — honoring a persisted
+    // `false` from before that change would permanently strand upgrading users with no
+    // way to turn the timer back on.
     private func effectiveTimed(_ o: BeecellOptions) -> Bool {
-        o.isTimed && !o.noStressMode
+        !o.noStressMode
     }
 
     public func startTimerIfNeeded() {
@@ -948,11 +959,12 @@ public final class BeecellViewModel {
         isAutoplayRunning = false
         isStuck = false
         clearHint()
+        clearKeyboardCursor()
         checkWinState()
         checkAutocompleteState()
         checkStuckState()
     }
-    
+
     // MARK: - Zoom Actions
     
     public func zoomIn() {
@@ -983,5 +995,193 @@ public final class BeecellViewModel {
 
     public func resetStatistics() {
         statistics = BeecellStatistics()
+    }
+
+    // MARK: - Keyboard Navigation
+    public var activeCursor: KeyboardCursor?
+    public var selectedCardsSource: String?
+    
+    // Internal coordinate tracking
+    private var cursorColumn: Int = 0 // tableau column
+    private var topRowColumn: Int = 0 // combined free cell + foundation column
+    private var cursorRow: Int = 0 // 0 = Top (Cells/Foundations), 1 = Tableau
+
+    public func enableKeyboardCursorIfNeeded() {
+        if activeCursor == nil {
+            activeCursor = KeyboardCursor(pileId: state.freeCells[0].id)
+            topRowColumn = 0
+            cursorRow = 0
+        }
+    }
+
+    public func clearKeyboardCursor() {
+        activeCursor = nil
+        selectedCardsSource = nil
+    }
+
+    public func moveCursorLeft() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 0 {
+            let maxCol = state.freeCells.count + state.foundations.count - 1
+            var newCol = topRowColumn - 1
+            if newCol < 0 { newCol = maxCol }
+            topRowColumn = newCol
+        } else {
+            let maxCol = state.tableau.count - 1
+            var newCol = cursorColumn - 1
+            if newCol < 0 { newCol = maxCol }
+            cursorColumn = newCol
+        }
+        updateCursorFromCoordinates()
+    }
+
+    public func moveCursorRight() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 0 {
+            let maxCol = state.freeCells.count + state.foundations.count - 1
+            var newCol = topRowColumn + 1
+            if newCol > maxCol { newCol = 0 }
+            topRowColumn = newCol
+        } else {
+            let maxCol = state.tableau.count - 1
+            var newCol = cursorColumn + 1
+            if newCol > maxCol { newCol = 0 }
+            cursorColumn = newCol
+        }
+        updateCursorFromCoordinates()
+    }
+
+    public func moveCursorUp() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 1 {
+            cursorRow = 0
+            updateCursorFromCoordinates()
+        }
+    }
+
+    public func moveCursorDown() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 0 {
+            cursorRow = 1
+            updateCursorFromCoordinates()
+        }
+    }
+
+    private func updateCursorFromCoordinates() {
+        if cursorRow == 0 {
+            if topRowColumn < state.freeCells.count {
+                activeCursor = KeyboardCursor(pileId: state.freeCells[topRowColumn].id)
+            } else {
+                activeCursor = KeyboardCursor(pileId: state.foundations[topRowColumn - state.freeCells.count].id)
+            }
+        } else {
+            let pileId = state.tableau[cursorColumn].id
+            activeCursor = KeyboardCursor(pileId: pileId)
+        }
+    }
+    
+    public func performSpaceAction() {
+        enableKeyboardCursorIfNeeded()
+        guard let cursor = activeCursor else { return }
+        
+        if let sourceId = selectedCardsSource {
+            if sourceId == cursor.pileId {
+                selectedCardsSource = nil
+                return
+            }
+            
+            // Find target pile
+            let targetPile: Pile?
+            if let cellIdx = state.freeCells.firstIndex(where: { $0.id == cursor.pileId }) { targetPile = state.freeCells[cellIdx] }
+            else if let fIdx = state.foundations.firstIndex(where: { $0.id == cursor.pileId }) { targetPile = state.foundations[fIdx] }
+            else if let tIdx = state.tableau.firstIndex(where: { $0.id == cursor.pileId }) { targetPile = state.tableau[tIdx] }
+            else { targetPile = nil }
+            
+            // Find source pile
+            let sourcePile: Pile?
+            if let cellIdx = state.freeCells.firstIndex(where: { $0.id == sourceId }) { sourcePile = state.freeCells[cellIdx] }
+            else if let fIdx = state.foundations.firstIndex(where: { $0.id == sourceId }) { sourcePile = state.foundations[fIdx] }
+            else if let tIdx = state.tableau.firstIndex(where: { $0.id == sourceId }) { sourcePile = state.tableau[tIdx] }
+            else { sourcePile = nil }
+            
+            guard let target = targetPile, let source = sourcePile else {
+                selectedCardsSource = nil
+                return
+            }
+            
+            let cardsToMove: [Card]
+            if source.type == .tableau {
+                if let top = source.topCard {
+                    var seq = [top]
+                    if source.cards.count > 1 {
+                        for i in stride(from: source.cards.count - 2, to: -1, by: -1) {
+                            let card = source.cards[i]
+                            let prev = seq.first!
+                            if card.faceUp && card.rank == prev.rank + 1 && card.isRed != prev.isRed {
+                                seq.insert(card, at: 0)
+                            } else {
+                                break
+                            }
+                        }
+                    }
+                    cardsToMove = seq
+                } else {
+                    cardsToMove = []
+                }
+            } else {
+                cardsToMove = source.topCard != nil ? [source.topCard!] : []
+            }
+            
+            if !cardsToMove.isEmpty && isValidMove(cards: cardsToMove, to: target) {
+                moveCards(cardsToMove, from: source, to: target)
+            }
+            selectedCardsSource = nil
+        } else {
+            let sourcePile: Pile?
+            if let cellIdx = state.freeCells.firstIndex(where: { $0.id == cursor.pileId }) { sourcePile = state.freeCells[cellIdx] }
+            else if let fIdx = state.foundations.firstIndex(where: { $0.id == cursor.pileId }) { sourcePile = state.foundations[fIdx] }
+            else if let tIdx = state.tableau.firstIndex(where: { $0.id == cursor.pileId }) { sourcePile = state.tableau[tIdx] }
+            else { sourcePile = nil }
+            
+            guard let source = sourcePile, !source.isEmpty else { return }
+            selectedCardsSource = cursor.pileId
+        }
+    }
+    
+    public func autoMoveFocusedCardToFoundations() {
+        enableKeyboardCursorIfNeeded()
+        guard let cursor = activeCursor else { return }
+        
+        let sourcePile: Pile?
+        if let cellIdx = state.freeCells.firstIndex(where: { $0.id == cursor.pileId }) { sourcePile = state.freeCells[cellIdx] }
+        else if let tIdx = state.tableau.firstIndex(where: { $0.id == cursor.pileId }) { sourcePile = state.tableau[tIdx] }
+        else { sourcePile = nil }
+        
+        guard let source = sourcePile, let topCard = source.topCard else { return }
+        
+        for foundation in state.foundations {
+            if isValidMove(cards: [topCard], to: foundation) {
+                moveCards([topCard], from: source, to: foundation)
+                break
+            }
+        }
+    }
+    
+    public func autoMoveFocusedCardToFreeCell() {
+        enableKeyboardCursorIfNeeded()
+        guard let cursor = activeCursor else { return }
+        
+        let sourcePile: Pile?
+        if let tIdx = state.tableau.firstIndex(where: { $0.id == cursor.pileId }) { sourcePile = state.tableau[tIdx] }
+        else { sourcePile = nil }
+        
+        guard let source = sourcePile, let topCard = source.topCard else { return }
+        
+        for cell in state.freeCells {
+            if cell.isEmpty && isValidMove(cards: [topCard], to: cell) {
+                moveCards([topCard], from: source, to: cell)
+                break
+            }
+        }
     }
 }

@@ -59,7 +59,7 @@ public final class BlackjackViewModel {
             }
             self.options = decoded
         } else {
-            let back = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
+            let back = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
             let feltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
             let felt = FeltColorTheme(rawValue: feltStr) ?? .feltGreen
             var opts = BlackjackOptions(feltColor: felt, cardBackTheme: back)
@@ -368,8 +368,10 @@ public final class BlackjackViewModel {
         state.phase = .result
 
         // Keep the bet at its last wagered amount for the next hand if still affordable,
-        // otherwise fall back to the 1 credit minimum.
-        if state.currentBet > state.sessionCredits {
+        // otherwise fall back to the 1 credit minimum. Skipped in free play, where
+        // sessionCredits never changes and comparing against it would otherwise reset
+        // the player's bet after every single hand.
+        if !isFreePlay && state.currentBet > state.sessionCredits {
             state.currentBet = 1
         }
     }

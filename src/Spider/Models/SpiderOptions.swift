@@ -2,7 +2,7 @@ import Foundation
 
 public struct SpiderOptions: Codable, Equatable {
     public var feltColor: FeltColorTheme = .feltGreen
-    public var cardBackTheme: String = "Vulpera"
+    public var cardBackTheme: String = "Moogle"
     public var suitCount: Int = 1 // 1, 2, or 4 suits
     public var isTimed: Bool = true
     public var isSoundEnabled: Bool = true
@@ -28,7 +28,7 @@ public struct SpiderOptions: Codable, Equatable {
 
     public init(
         feltColor: FeltColorTheme = .feltGreen,
-        cardBackTheme: String = "Vulpera",
+        cardBackTheme: String = "Moogle",
         suitCount: Int = 1,
         isTimed: Bool = true,
         isSoundEnabled: Bool = true,
@@ -53,7 +53,7 @@ public struct SpiderOptions: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.feltColor = try container.decodeIfPresent(FeltColorTheme.self, forKey: .feltColor) ?? .feltGreen
-        self.cardBackTheme = try container.decodeIfPresent(String.self, forKey: .cardBackTheme) ?? "Vulpera"
+        self.cardBackTheme = try container.decodeIfPresent(String.self, forKey: .cardBackTheme) ?? "Moogle"
         self.suitCount = try container.decodeIfPresent(Int.self, forKey: .suitCount) ?? 1
         self.isTimed = try container.decodeIfPresent(Bool.self, forKey: .isTimed) ?? true
         self.isSoundEnabled = try container.decodeIfPresent(Bool.self, forKey: .isSoundEnabled) ?? true

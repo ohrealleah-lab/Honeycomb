@@ -38,16 +38,29 @@ public struct VideoPokerView: View {
     private static let tripleRowHeight: CGFloat = 181 * tripleCardScale + tripleRowSlack
 
     private var boardBaseHeight: CGFloat {
-        guard viewModel.options.playMode == .triple else { return Self.singleBoardBaseHeight }
-        // Triple Play hides the pay table AND the single-play result-label spacer (see
-        // body), so its board is built from the same non-hand-area chrome as single play
-        // (credit display, hold labels, action buttons, VStack spacing/padding) minus
-        // that 52pt label + 1 VStack gap, plus 3 card rows instead of 1, with a safety
-        // margin since these chrome heights are estimates.
-        let nonHandAreaChrome: CGFloat = 292 - 52 - 16
-        let safetyMargin: CGFloat = 50
-        let tripleHandAreaHeight = 3 * Self.tripleRowHeight + 2 * Self.tripleRowSpacing
-        return nonHandAreaChrome + tripleHandAreaHeight + safetyMargin
+        if viewModel.options.playMode == .triple {
+            // Triple Play hides the pay table AND the single-play result-label spacer (see
+            // body), so its board is built from the same non-hand-area chrome as single play
+            // (credit display, hold labels, action buttons, VStack spacing/padding) minus
+            // that 52pt label + 1 VStack gap, plus 3 card rows instead of 1, with a safety
+            // margin since these chrome heights are estimates. Free play additionally hides
+            // the credit display itself (+ its VStack gap), so subtract that too when both
+            // modes are active together.
+            let creditDisplayContribution: CGFloat = viewModel.isFreePlay ? 84 : 0
+            let nonHandAreaChrome: CGFloat = 292 - 52 - 16 - creditDisplayContribution
+            let safetyMargin: CGFloat = 50
+            let tripleHandAreaHeight = 3 * Self.tripleRowHeight + 2 * Self.tripleRowSpacing
+            return nonHandAreaChrome + tripleHandAreaHeight + safetyMargin
+        }
+        if viewModel.isFreePlay {
+            // Free play hides the pay table and credit display, leaving only the result
+            // label spacer, hand area, hold labels, and action buttons.
+            let nonHandAreaChrome: CGFloat = 200
+            let safetyMargin: CGFloat = 60
+            let singleHandAreaHeight = scaledCardH + 24
+            return nonHandAreaChrome + singleHandAreaHeight + safetyMargin
+        }
+        return Self.singleBoardBaseHeight
     }
 
     public init(viewModel: VideoPokerViewModel) {
@@ -56,7 +69,10 @@ public struct VideoPokerView: View {
 
     public var body: some View {
         ZStack {
+            // .id() forces a redraw when the custom felt color's raw RGB changes — those
+            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs on.
             viewModel.options.feltColor.primaryColor
+                .id(viewModel.options.customFeltColorRevision)
                 .ignoresSafeArea()
 
             if viewModel.options.showFeltVignette { FeltVignetteView() }
@@ -114,6 +130,7 @@ public struct VideoPokerView: View {
                 .frame(width: 905, height: boardBaseHeight, alignment: .topLeading)
                 .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
                 .frame(width: 905 * viewModel.zoomScale, height: boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: viewModel.isFreePlay ? .center : .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
@@ -138,6 +155,7 @@ public struct VideoPokerView: View {
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
         .onChange(of: viewModel.options.playMode) { snapToMinSize() }
+        .onChange(of: viewModel.options.noStressMode) { snapToMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .overlay {
@@ -783,8 +801,8 @@ public struct VideoPokerView: View {
             Button("") { toggleHoldKey(at: 2) }.keyboardShortcut("3", modifiers: [])
             Button("") { toggleHoldKey(at: 3) }.keyboardShortcut("4", modifiers: [])
             Button("") { toggleHoldKey(at: 4) }.keyboardShortcut("5", modifiers: [])
-            // M — bet max
-            Button("") { viewModel.maxBet() }.keyboardShortcut("m", modifiers: [])
+            // M — bet max (hidden in free play, where the BET MAX button is also hidden)
+            Button("") { if !viewModel.isFreePlay { viewModel.maxBet() } }.keyboardShortcut("m", modifiers: [])
             // H / C — hold all / clear
             Button("") { holdAll()    }.keyboardShortcut("h", modifiers: [])
             Button("") { clearHolds() }.keyboardShortcut("c", modifiers: [])

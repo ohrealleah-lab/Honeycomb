@@ -6,7 +6,7 @@ public struct BlackjackOptions: Codable, Equatable {
     public var noStressMode: Bool = false
     public var feltColor: FeltColorTheme = .feltGreen
     public var customFeltColorRevision: Int = 0
-    public var cardBackTheme: String = "Vulpera"
+    public var cardBackTheme: String = "Moogle"
     public var showFeltVignette: Bool = true
     public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
 
@@ -15,7 +15,7 @@ public struct BlackjackOptions: Codable, Equatable {
         case feltColor, customFeltColorRevision, cardBackTheme, showFeltVignette, customCardColors
     }
 
-    public init(feltColor: FeltColorTheme = .feltGreen, cardBackTheme: String = "Vulpera") {
+    public init(feltColor: FeltColorTheme = .feltGreen, cardBackTheme: String = "Moogle") {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
         self.customCardColors = CustomCardColorGroup()
@@ -28,7 +28,7 @@ public struct BlackjackOptions: Codable, Equatable {
         noStressMode           = try c.decodeIfPresent(Bool.self,          forKey: .noStressMode)           ?? false
         feltColor              = try c.decodeIfPresent(FeltColorTheme.self, forKey: .feltColor)             ?? .feltGreen
         customFeltColorRevision = try c.decodeIfPresent(Int.self,          forKey: .customFeltColorRevision) ?? 0
-        cardBackTheme          = try c.decodeIfPresent(String.self,        forKey: .cardBackTheme)          ?? "Vulpera"
+        cardBackTheme          = try c.decodeIfPresent(String.self,        forKey: .cardBackTheme)          ?? "Moogle"
         showFeltVignette       = try c.decodeIfPresent(Bool.self,          forKey: .showFeltVignette)       ?? true
         customCardColors       = try c.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()
     }

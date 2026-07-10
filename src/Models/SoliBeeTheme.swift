@@ -60,27 +60,87 @@ public final class ThemeManager {
     public var themes: [SoliBeeTheme] = []
 
     private static let defaultThemes: [SoliBeeTheme] = [
+        SoliBeeTheme(name: "Default",      cardBackTheme: "Moogle",       feltColor: .feltGreen,
+                     customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
+                     faceArts: [], customCardColors: CustomCardColorGroup()),
         SoliBeeTheme(name: "Pareidolic 2", cardBackTheme: "Pareidolic 2", feltColor: .custom,
                      customFeltRed: 0.5925555229187012, customFeltGreen: 0.5882400274276733, customFeltBlue: 0.8116011023521423,
-                     faceArts: [], customCardColors: CustomCardColorGroup()),
-        SoliBeeTheme(name: "Dingwall",     cardBackTheme: "Dingwall",     feltColor: .charcoal,
-                     customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
                      faceArts: [], customCardColors: CustomCardColorGroup()),
         SoliBeeTheme(name: "Desert",       cardBackTheme: "Vulpera",      feltColor: .desert,
                      customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
                      faceArts: [], customCardColors: CustomCardColorGroup()),
+        SoliBeeTheme(name: "Forest",       cardBackTheme: "Forest",       feltColor: .custom,
+                     customFeltRed: 0.5211737751960754, customFeltGreen: 0.4769634008407593, customFeltBlue: 0.4559733271598816,
+                     faceArts: [], customCardColors: {
+                         var group = CustomCardColorGroup()
+                         group.isEnabled = true
+                         group.bgRed = 0.9010706543922424
+                         group.bgGreen = 0.812778890132904
+                         group.bgBlue = 0.6745686531066895
+                         group.bgAlpha = 1
+                         group.outlineRed = 0
+                         group.outlineGreen = 0
+                         group.outlineBlue = 0
+                         group.outlineAlpha = 0.85
+                         group.blackSuitRed = 0.7106840014457703
+                         group.blackSuitGreen = 0.1873437464237213
+                         group.blackSuitBlue = 0.14731520414352417
+                         group.blackSuitAlpha = 1
+                         group.redSuitRed = 0.7748149037361145
+                         group.redSuitGreen = 0.11090389639139175
+                         group.redSuitBlue = 0.10087030380964279
+                         group.redSuitAlpha = 1
+                         group.shadowRed = 0
+                         group.shadowGreen = 0
+                         group.shadowBlue = 0
+                         group.shadowAlpha = 0.15
+                         return group
+                     }()),
+        SoliBeeTheme(name: "OceanSky",     cardBackTheme: "Pareidolic",   feltColor: .custom,
+                     customFeltRed: 0.5867433547973633, customFeltGreen: 0.9626139998435974, customFeltBlue: 0.9703466296195984,
+                     faceArts: [], customCardColors: {
+                         var group = CustomCardColorGroup()
+                         group.isEnabled = true
+                         group.bgRed = 0.8808431029319763
+                         group.bgGreen = 0.9917027354240417
+                         group.bgBlue = 0.9941582083702087
+                         group.bgAlpha = 1
+                         group.outlineRed = 0
+                         group.outlineGreen = 0
+                         group.outlineBlue = 0
+                         group.outlineAlpha = 0.85
+                         group.blackSuitRed = 0.2587890625
+                         group.blackSuitGreen = 0.2587890625
+                         group.blackSuitBlue = 0.2587890625
+                         group.blackSuitAlpha = 1
+                         group.redSuitRed = 0.7544758915901184
+                         group.redSuitGreen = 0.3275292217731476
+                         group.redSuitBlue = 0.5698546767234802
+                         group.redSuitAlpha = 1
+                         group.shadowRed = 0
+                         group.shadowGreen = 0
+                         group.shadowBlue = 0
+                         group.shadowAlpha = 0.15
+                         return group
+                     }()),
     ]
 
     private init() { load() }
 
     private func load() {
         guard let data = UserDefaults.standard.data(forKey: "solibee_themes"),
-              let decoded = try? JSONDecoder().decode([SoliBeeTheme].self, from: data)
+              var decoded = try? JSONDecoder().decode([SoliBeeTheme].self, from: data)
         else {
             themes = Self.defaultThemes
             return
         }
+        for defaultTheme in Self.defaultThemes {
+            if !decoded.contains(where: { $0.name.lowercased() == defaultTheme.name.lowercased() }) {
+                decoded.append(defaultTheme)
+            }
+        }
         themes = decoded
+        save()
     }
 
     public func save() {

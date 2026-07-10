@@ -3,9 +3,13 @@ import SwiftUI
 // MARK: - Spider Stock View
 public struct SpiderStockView: View {
     let cardCount: Int
+    public var isFocused: Bool = false
+    public var isSelected: Bool = false
     
-    public init(cardCount: Int) {
+    public init(cardCount: Int, isFocused: Bool = false, isSelected: Bool = false) {
         self.cardCount = cardCount
+        self.isFocused = isFocused
+        self.isSelected = isSelected
     }
     
     public var body: some View {
@@ -13,13 +17,15 @@ public struct SpiderStockView: View {
         
         ZStack {
             if dealsRemaining == 0 {
-                EmptyPileView(symbol: "∅")
+                EmptyPileView(symbol: "∅", isFocused: isFocused, isSelected: isSelected)
             } else {
                 // Render overlapping card backs to represent remaining deals (max 5)
                 let visibleCount = min(5, dealsRemaining)
                 ForEach(0..<visibleCount, id: \.self) { index in
                     CardView(card: Card(suit: .spades, rank: 1, faceUp: false),
-                             isAnimated: index == visibleCount - 1)
+                             isAnimated: index == visibleCount - 1,
+                             isFocused: isFocused && index == visibleCount - 1,
+                             isSelected: isSelected && index == visibleCount - 1)
                         .offset(x: CGFloat(index) * 2.5, y: 0)
                 }
             }
@@ -32,6 +38,10 @@ public struct SpiderTableauView: View {
     let pile: Pile
     let draggedCardIDs: Set<UUID>
     let activeHint: SpiderViewModel.SpiderHintMove?
+    public var isFocused: Bool = false
+    public var focusedCardIndex: Int? = nil
+    public var isSelected: Bool = false
+    public var selectedCardIndex: Int? = nil
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -41,6 +51,10 @@ public struct SpiderTableauView: View {
         pile: Pile,
         draggedCardIDs: Set<UUID>,
         activeHint: SpiderViewModel.SpiderHintMove?,
+        isFocused: Bool = false,
+        focusedCardIndex: Int? = nil,
+        isSelected: Bool = false,
+        selectedCardIndex: Int? = nil,
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void,
@@ -49,6 +63,10 @@ public struct SpiderTableauView: View {
         self.pile = pile
         self.draggedCardIDs = draggedCardIDs
         self.activeHint = activeHint
+        self.isFocused = isFocused
+        self.focusedCardIndex = focusedCardIndex
+        self.isSelected = isSelected
+        self.selectedCardIndex = selectedCardIndex
         self.onDragStarted = onDragStarted
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
@@ -72,7 +90,7 @@ public struct SpiderTableauView: View {
         let hintStartIndex = isSource ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
         
         ZStack(alignment: .top) {
-            EmptyPileView()
+            EmptyPileView(isFocused: isFocused && pile.isEmpty, isSelected: isSelected && pile.isEmpty)
                 .modifier(HintHighlightModifier(isHighlighted: isTarget && pile.isEmpty))
             
             ForEach(Array(pile.cards.enumerated()), id: \.element.id) { index, card in
@@ -86,7 +104,10 @@ public struct SpiderTableauView: View {
                     return false
                 }()
                 
-                CardView(card: card)
+                let cardIsFocused = isFocused && index == focusedCardIndex
+                let cardIsSelected = isSelected && index == selectedCardIndex
+                
+                CardView(card: card, isFocused: cardIsFocused, isSelected: cardIsSelected)
                     .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: CGFloat(index) * offset)

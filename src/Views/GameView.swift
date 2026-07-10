@@ -12,6 +12,7 @@ public struct GameView: View {
     @State private var dragLocation: CGPoint = .zero
     @State private var pileFrames: [String: CGRect] = [:]
     @State private var isShuffling: Bool = false
+    @State private var isDrawInFlight: Bool = false
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
     @State private var isShowingNewGameConfirm: Bool = false
@@ -23,6 +24,8 @@ public struct GameView: View {
     @State private var pendingDrawMode: GameState.DrawMode? = nil
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
+    @FocusState private var isBoardFocused: Bool
+    @State private var keyMonitor: Any? = nil
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
 
@@ -37,8 +40,17 @@ public struct GameView: View {
         
         return ZStack {
             // Felt Board Background
+            // .id() forces a redraw when the custom felt color's raw RGB changes — those
+            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs
+            // on. Scoped to just this Color (not the whole board) so it doesn't tear down
+            // and reset unrelated @State, like the Options/Themes sheet's open/closed state.
             viewModel.options.feltColor.primaryColor
+                .id(viewModel.options.customFeltColorRevision)
                 .ignoresSafeArea()
+                .onTapGesture {
+                    viewModel.clearKeyboardCursor()
+                    isBoardFocused = true
+                }
 
             if viewModel.options.showFeltVignette { FeltVignetteView(intensity: 0.34) }
 
@@ -183,7 +195,7 @@ public struct GameView: View {
                             StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
 
                             // Timer
-                            if viewModel.options.isTimed && !viewModel.options.noStressMode {
+                            if !viewModel.options.noStressMode {
                                 StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                             }
                         }
@@ -215,8 +227,14 @@ public struct GameView: View {
                 // Piles Row (Stock + Waste + Col 2 Blank + 4 Foundations)
                 HStack(alignment: .top, spacing: stackSpacing) {
                     ZStack {
-                        StockPileView(pile: viewModel.state.stock, stackSpacing: stackSpacing, canRecycle: viewModel.canRecycleStock)
-                            .offset(x: isShuffling ? -6 : 0, y: isShuffling ? -2 : 0)
+                        StockPileView(
+                            pile: viewModel.state.stock,
+                            stackSpacing: stackSpacing,
+                            canRecycle: viewModel.canRecycleStock,
+                            isFocused: viewModel.activeCursor?.pileId == viewModel.state.stock.id,
+                            isSelected: viewModel.selectedCardsSource == viewModel.state.stock.id
+                        )
+                        .offset(x: isShuffling ? -6 : 0, y: isShuffling ? -2 : 0)
                             .rotationEffect(.degrees(isShuffling ? -4 : 0))
                         if viewModel.isStockExhausted {
                             Text("Stock\nExhausted")
@@ -239,33 +257,9 @@ public struct GameView: View {
                     })
                     .overlay(
                         ClickReceiver {
-                            if viewModel.state.hasWon { return }
-                            if viewModel.state.stock.isEmpty && !viewModel.canRecycleStock {
-                                return
-                            }
-                            viewModel.clearHint()
-                            let wasEmpty = viewModel.state.stock.isEmpty
-                            if wasEmpty && !viewModel.state.waste.isEmpty {
-                                // Recycle animation: cards slide back to stock
-                                withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
-                                    viewModel.drawCard()
-                                }
-                                // Play a quick physical wiggle on the stock pile
-                                withAnimation(.spring(response: 0.15, dampingFraction: 0.35)) {
-                                    isShuffling = true
-                                }
-                                // Center wiggle back
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                    withAnimation(.spring(response: 0.22, dampingFraction: 0.45)) {
-                                        isShuffling = false
-                                    }
-                                }
-                            } else {
-                                // Draw animation: cards slide to waste
-                                withAnimation(.easeInOut(duration: 0.22)) {
-                                    viewModel.drawCard()
-                                }
-                            }
+                            viewModel.clearKeyboardCursor()
+                            isBoardFocused = true
+                            performStockDraw()
                         }
                     )
                     
@@ -277,7 +271,10 @@ public struct GameView: View {
                         stackSpacing: stackSpacing,
                         draggedCardIDs: Set(draggedCards.map { $0.id }),
                         isHinted: (viewModel.activeHint?.sourcePileId == viewModel.state.waste.id || viewModel.activeHint?.targetPileId == viewModel.state.waste.id) && viewModel.activeHint?.sourcePileId != viewModel.state.stock.id && viewModel.activeHint?.targetPileId != viewModel.state.stock.id,
+                        isFocused: viewModel.activeCursor?.pileId == viewModel.state.waste.id,
+                        isSelected: viewModel.selectedCardsSource == viewModel.state.waste.id,
                         onDragStarted: { card, stack, startLoc in
+                            viewModel.clearKeyboardCursor()
                             viewModel.clearHint()
                             if draggedCards.isEmpty {
                                 draggedCards = stack
@@ -318,7 +315,10 @@ public struct GameView: View {
                         FoundationPileView(
                             pile: pile,
                             suit: suit,
+                            isFocused: viewModel.activeCursor?.pileId == pile.id,
+                            isSelected: viewModel.selectedCardsSource == pile.id,
                             onDragStarted: { card, stack, startLoc in
+                                viewModel.clearKeyboardCursor()
                                 viewModel.clearHint()
                                 if draggedCards.isEmpty {
                                     draggedCards = stack
@@ -355,7 +355,12 @@ public struct GameView: View {
                             pile: pile,
                             draggedCardIDs: Set(draggedCards.map { $0.id }),
                             activeHint: viewModel.activeHint,
+                            isFocused: viewModel.activeCursor?.pileId == pile.id,
+                            focusedCardIndex: viewModel.activeCursor?.pileId == pile.id ? viewModel.activeCursor?.cardIndex : nil,
+                            isSelected: viewModel.selectedCardsSource == pile.id,
+                            selectedCardIndex: viewModel.selectedCardsSource == pile.id ? viewModel.selectedCardsIndex : nil,
                             onDragStarted: { card, stack, startLoc in
+                                viewModel.clearKeyboardCursor()
                                 viewModel.clearHint()
                                 if draggedCards.isEmpty {
                                     draggedCards = stack
@@ -527,9 +532,7 @@ public struct GameView: View {
                                     .onAppear { winPulse = true }
                                     .onDisappear { winPulse = false }
 
-                                Text(viewModel.options.isVegasScoring
-                                     ? "Bankroll: \(viewModel.vegasBankrollString) | Time: \(formatTime(viewModel.state.timerSeconds))"
-                                     : "Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
+                                Text(winSummaryText)
                                     .font(.system(.body))
                                     .foregroundColor(.white)
 
@@ -602,7 +605,64 @@ public struct GameView: View {
         .environment(\.feltColor, viewModel.options.feltColor)
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
-        .id(viewModel.options.customFeltColorRevision)
+        .focusable()
+        .focused($isBoardFocused)
+        .onAppear {
+            isBoardFocused = true
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                guard !isShowingOptions && !isShowingStats else { return event }
+                if let firstResponder = NSApp.keyWindow?.firstResponder,
+                   firstResponder.isKind(of: NSText.self) || String(describing: type(of: firstResponder)).contains("TextView") {
+                    return event
+                }
+                // Arrow/function keys always carry .numericPad and .function in modifierFlags
+                // even with no modifier held, so only guard against real modifier keys.
+                let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+                guard modifiers.isEmpty else { return event }
+
+                switch event.keyCode {
+                case 123: // Left Arrow
+                    viewModel.moveCursorLeft()
+                    return nil
+                case 124: // Right Arrow
+                    viewModel.moveCursorRight()
+                    return nil
+                case 126: // Up Arrow
+                    viewModel.moveCursorUp()
+                    return nil
+                case 125: // Down Arrow
+                    viewModel.moveCursorDown()
+                    return nil
+                case 49, 36: // Space, Return
+                    viewModel.performSpaceAction()
+                    return nil
+                case 53: // Escape
+                    viewModel.clearKeyboardCursor()
+                    return nil
+                default:
+                    if let chars = event.charactersIgnoringModifiers?.lowercased() {
+                        if chars == "d" {
+                            viewModel.enableKeyboardCursorIfNeeded()
+                            performStockDraw()
+                            return nil
+                        } else if chars == "f" {
+                            viewModel.autoMoveFocusedCardToFoundations()
+                            return nil
+                        } else if chars == "a" {
+                            viewModel.runAutocomplete()
+                            return nil
+                        }
+                    }
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let monitor = keyMonitor {
+                NSEvent.removeMonitor(monitor)
+                keyMonitor = nil
+            }
+        }
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
                minHeight: 73 + 950 * viewModel.zoomScale,
@@ -676,6 +736,40 @@ public struct GameView: View {
         .onChange(of: viewModel.state.tableau.count) { updateMinSize() }
     }
 
+    private func performStockDraw() {
+        if viewModel.state.hasWon { return }
+        if viewModel.state.stock.isEmpty && !viewModel.canRecycleStock { return }
+        guard !isDrawInFlight else { return }
+        viewModel.clearHint()
+        let wasEmpty = viewModel.state.stock.isEmpty
+        isDrawInFlight = true
+        if wasEmpty && !viewModel.state.waste.isEmpty {
+            // Recycle animation: cards slide back to stock
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                viewModel.drawCard()
+            } completion: {
+                isDrawInFlight = false
+            }
+            // Play a quick physical wiggle on the stock pile
+            withAnimation(.spring(response: 0.15, dampingFraction: 0.35)) {
+                isShuffling = true
+            }
+            // Center wiggle back
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation(.spring(response: 0.22, dampingFraction: 0.45)) {
+                    isShuffling = false
+                }
+            }
+        } else {
+            // Draw animation: cards slide to waste
+            withAnimation(.easeInOut(duration: 0.22)) {
+                viewModel.drawCard()
+            } completion: {
+                isDrawInFlight = false
+            }
+        }
+    }
+
     private func updateMinSize() {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
@@ -699,9 +793,22 @@ public struct GameView: View {
         let size = overrideSize.map { NSSize(width: max($0.width, minW), height: max($0.height, minH)) } ?? minSize
         DispatchQueue.main.async {
             window.contentMinSize = minSize
+
+            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
+            // bottom-left anchor) so a height change never pushes the toolbar/title bar off
+            // the top of the screen.
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+            let currentFrame = window.frame
+            newFrame.origin.x = currentFrame.origin.x
+            newFrame.origin.y = currentFrame.maxY - newFrame.height
+            if let visible = window.screen?.visibleFrame {
+                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
+                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+            }
+
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.animator().setContentSize(size)
+                window.animator().setFrame(newFrame, display: true)
             }
         }
     }
@@ -839,6 +946,14 @@ public struct GameView: View {
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
+
+    private var winSummaryText: String {
+        let scorePart = viewModel.options.isVegasScoring
+            ? "Bankroll: \(viewModel.vegasBankrollString)"
+            : "Score: \(viewModel.scoreString)"
+        guard !viewModel.options.noStressMode else { return scorePart }
+        return "\(scorePart) | Time: \(formatTime(viewModel.state.timerSeconds))"
+    }
 }
 
 // MARK: - UI Subviews
@@ -886,6 +1001,8 @@ extension FeltColorTheme {
             return Color(red: 0.18, green: 0.18, blue: 0.18)
         case .desert:
             return Color(red: 0.76, green: 0.59, blue: 0.48)
+        case .colorblind:
+            return Color(red: 0.20, green: 0.32, blue: 0.45)
         case .custom:
             let r = UserDefaults.standard.double(forKey: "custom_felt_red")
             let g = UserDefaults.standard.double(forKey: "custom_felt_green")
@@ -909,6 +1026,8 @@ extension FeltColorTheme {
             return Color(red: 0.14, green: 0.14, blue: 0.14)
         case .desert:
             return Color(red: 0.71, green: 0.54, blue: 0.43)
+        case .colorblind:
+            return Color(red: 0.16, green: 0.26, blue: 0.38)
         case .custom:
             let r = UserDefaults.standard.double(forKey: "custom_felt_red")
             let g = UserDefaults.standard.double(forKey: "custom_felt_green")
@@ -1110,7 +1229,7 @@ struct OptionsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 440)
-        .fixedSize(horizontal: false, vertical: true)
+        .fixedSize(horizontal: true, vertical: true)
         .background(Color(NSColor.windowBackgroundColor))
 
         if showingThemes {

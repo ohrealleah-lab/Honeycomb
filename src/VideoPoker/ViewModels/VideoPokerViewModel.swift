@@ -111,7 +111,7 @@ public final class VideoPokerViewModel {
             }
             self.options = decoded
         } else {
-            let back = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
+            let back = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
             let feltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
             let felt = FeltColorTheme(rawValue: feltStr) ?? .feltGreen
             var opts = VideoPokerOptions(feltColor: felt, cardBackTheme: back)
@@ -381,6 +381,10 @@ public final class VideoPokerViewModel {
     // MARK: - Hand evaluation against pay table
 
     private func evaluateHand(_ hand: [Card]) -> (name: String, payout: Int, rank: PokerHandRank?) {
+        // PokerHandEvaluator requires exactly 5 cards; guard here so every caller
+        // (single-hand evaluate() and each triple-play sub-hand) is protected, rather
+        // than relying on each call site to check first.
+        guard hand.count == 5 else { return ("No Win", 0, nil) }
         let result = options.variant == .deucesWild
             ? PokerHandEvaluator.evaluateWithDeuces(hand)
             : PokerHandEvaluator.evaluate(hand)

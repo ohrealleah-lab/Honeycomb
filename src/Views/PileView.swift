@@ -5,7 +5,7 @@ private struct FeltColorKey: EnvironmentKey {
 }
 
 private struct ActiveCardBackThemeKey: EnvironmentKey {
-    static let defaultValue: String = "Vulpera"
+    static let defaultValue: String = "Moogle"
 }
 
 private struct ActiveCustomCardColorsKey: EnvironmentKey {
@@ -32,9 +32,13 @@ extension EnvironmentValues {
 public struct EmptyPileView: View {
     @Environment(\.feltColor) private var feltColor
     let symbol: String?
+    public var isFocused: Bool = false
+    public var isSelected: Bool = false
     
-    public init(symbol: String? = nil) {
+    public init(symbol: String? = nil, isFocused: Bool = false, isSelected: Bool = false) {
         self.symbol = symbol
+        self.isFocused = isFocused
+        self.isSelected = isSelected
     }
     
     public var body: some View {
@@ -54,6 +58,7 @@ public struct EmptyPileView: View {
                     }
                 }
             )
+            .modifier(KeyboardFocusHighlightModifier(isFocused: isFocused, isSelected: isSelected))
     }
 }
 
@@ -63,14 +68,16 @@ public struct StockPileView: View {
     let pile: Pile
     let stackSpacing: CGFloat
     let canRecycle: Bool
+    public var isFocused: Bool = false
+    public var isSelected: Bool = false
     
     public var body: some View {
         ZStack {
             if pile.isEmpty {
-                EmptyPileView(symbol: canRecycle ? "↺" : nil)
+                EmptyPileView(symbol: canRecycle ? "↺" : nil, isFocused: isFocused, isSelected: isSelected)
                     .transition(.opacity)
             } else {
-                CardView(card: Card(suit: .spades, rank: 1, faceUp: false), isAnimated: true)
+                CardView(card: Card(suit: .spades, rank: 1, faceUp: false), isAnimated: true, isFocused: isFocused, isSelected: isSelected)
                     .transition(.asymmetric(
                         insertion: .offset(x: 128 + stackSpacing).combined(with: .opacity),
                         removal: .opacity
@@ -91,6 +98,8 @@ public struct WastePileView: View {
     let stackSpacing: CGFloat
     let draggedCardIDs: Set<UUID>
     let isHinted: Bool
+    public var isFocused: Bool = false
+    public var isSelected: Bool = false
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -99,7 +108,7 @@ public struct WastePileView: View {
     public var body: some View {
         ZStack {
             if pile.isEmpty {
-                EmptyPileView()
+                EmptyPileView(isFocused: isFocused, isSelected: isSelected)
                     .transition(.opacity)
             } else {
                 ZStack {
@@ -112,7 +121,7 @@ public struct WastePileView: View {
                             
                             ForEach(Array(cardsToShow.enumerated()), id: \.element.id) { index, card in
                                 let isTopCard = index == cardsToShow.count - 1
-                                CardView(card: card)
+                                CardView(card: card, isFocused: isFocused && isTopCard, isSelected: isSelected && isTopCard)
                                     .modifier(HintHighlightModifier(isHighlighted: isHinted && isTopCard))
                                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                                     .offset(x: CGFloat(index) * 42)
@@ -147,7 +156,7 @@ public struct WastePileView: View {
                         .frame(width: 128 + CGFloat(max(0, cardsToShow.count - 1)) * 42, height: 181, alignment: .leading)
                     } else {
                         if let topCard = pile.topCard {
-                            CardView(card: topCard)
+                            CardView(card: topCard, isFocused: isFocused, isSelected: isSelected)
                                 .id(topCard.id)
                                 .modifier(HintHighlightModifier(isHighlighted: isHinted))
                                 .opacity(draggedCardIDs.contains(topCard.id) ? 0.0 : 1.0)
@@ -174,10 +183,11 @@ public struct WastePileView: View {
                         }
                     }
                 }
-                .transition(.asymmetric(
-                    insertion: .opacity,
-                    removal: .offset(x: -(128 + stackSpacing)).combined(with: .opacity)
-                ))
+                // No transition of its own: the individual card(s) inside already carry
+                // their own slide+fade transition. Adding one here too double-nests with
+                // theirs, which mutes the slide on the empty->non-empty edge (e.g. the
+                // very first draw of a game).
+                .transition(.identity)
             }
         }
         .frame(width: isDrawThree ? 212 : 128, height: 181, alignment: .leading)
@@ -189,15 +199,17 @@ public struct WastePileView: View {
 public struct FoundationPileView: View {
     let pile: Pile
     let suit: Card.Suit
+    public var isFocused: Bool = false
+    public var isSelected: Bool = false
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
     
     public var body: some View {
         if pile.isEmpty {
-            EmptyPileView(symbol: "A")
+            EmptyPileView(symbol: "A", isFocused: isFocused, isSelected: isSelected)
         } else {
-            CardView(card: pile.topCard!)
+            CardView(card: pile.topCard!, isFocused: isFocused, isSelected: isSelected)
                 .gesture(
                     DragGesture(minimumDistance: 5, coordinateSpace: .global)
                         .onChanged { val in
@@ -218,6 +230,10 @@ public struct TableauPileView: View {
     let pile: Pile
     let draggedCardIDs: Set<UUID>
     let activeHint: GameViewModel.HintMove?
+    public var isFocused: Bool = false
+    public var focusedCardIndex: Int? = nil
+    public var isSelected: Bool = false
+    public var selectedCardIndex: Int? = nil
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -236,7 +252,7 @@ public struct TableauPileView: View {
         let hintStartIndex = isSource ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
         
         ZStack(alignment: .top) {
-            EmptyPileView()
+            EmptyPileView(isFocused: isFocused && pile.isEmpty, isSelected: isSelected && pile.isEmpty)
                 .modifier(HintHighlightModifier(isHighlighted: isTarget && pile.isEmpty))
             
             ForEach(Array(pile.cards.enumerated()), id: \.element.id) { index, card in
@@ -250,7 +266,10 @@ public struct TableauPileView: View {
                     return false
                 }()
                 
-                CardView(card: card)
+                let cardIsFocused = isFocused && index == focusedCardIndex
+                let cardIsSelected = isSelected && index == selectedCardIndex
+                
+                CardView(card: card, isFocused: cardIsFocused, isSelected: cardIsSelected)
                     .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: offsetForCard(at: index))

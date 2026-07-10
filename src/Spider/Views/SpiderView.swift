@@ -19,6 +19,8 @@ public struct SpiderView: View {
     @State private var winPulse: Bool = false
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
+    @FocusState private var isBoardFocused: Bool
+    @State private var keyMonitor: Any? = nil
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
     
@@ -34,8 +36,17 @@ public struct SpiderView: View {
         
         return ZStack {
             // Felt Board Background
+            // .id() forces a redraw when the custom felt color's raw RGB changes — those
+            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs
+            // on. Scoped to just this Color (not the whole board) so it doesn't tear down
+            // and reset unrelated @State, like the Options/Themes sheet's open/closed state.
             viewModel.options.feltColor.primaryColor
+                .id(viewModel.options.customFeltColorRevision)
                 .ignoresSafeArea()
+                .onTapGesture {
+                    viewModel.clearKeyboardCursor()
+                    isBoardFocused = true
+                }
 
             if viewModel.options.showFeltVignette { FeltVignetteView(intensity: 0.34) }
 
@@ -160,7 +171,7 @@ public struct SpiderView: View {
                     HStack(alignment: .bottom, spacing: 20) {
                         StatusItemView(label: "SCORE", value: viewModel.scoreString)
                         StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
-                        if viewModel.options.isTimed && !viewModel.options.noStressMode {
+                        if !viewModel.options.noStressMode {
                             StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                         }
                     }
@@ -182,15 +193,21 @@ public struct SpiderView: View {
                         // Top Row: Stock (left) and 8 Completed Foundations (right)
                         HStack(alignment: .top, spacing: stackSpacing) {
                             // Stock Pile View
-                            SpiderStockView(cardCount: viewModel.state.stock.cards.count)
+                            SpiderStockView(
+                                cardCount: viewModel.state.stock.cards.count,
+                                isFocused: viewModel.activeCursor?.pileId == viewModel.state.stock.id,
+                                isSelected: viewModel.selectedCardsSource == viewModel.state.stock.id
+                            )
                                 .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.stock.id))
                                 .background(GeometryReader { geo in
                                     Color.clear
                                         .onAppear { pileFrames[viewModel.state.stock.id] = geo.frame(in: .global) }
                                         .onChange(of: geo.frame(in: .global)) { _, newFrame in pileFrames[viewModel.state.stock.id] = newFrame }
-                                })
+                                 })
                                 .overlay(
                                     ClickReceiver {
+                                        viewModel.clearKeyboardCursor()
+                                        isBoardFocused = true
                                         viewModel.clearHint()
                                         if viewModel.hasEmptyTableauColumn {
                                             isShowingEmptyStockWarning = true
@@ -222,7 +239,12 @@ public struct SpiderView: View {
                                     pile: pile,
                                     draggedCardIDs: Set(draggedCards.map { $0.id }),
                                     activeHint: viewModel.activeHint,
+                                    isFocused: viewModel.activeCursor?.pileId == pile.id,
+                                    focusedCardIndex: viewModel.activeCursor?.pileId == pile.id ? viewModel.activeCursor?.cardIndex : nil,
+                                    isSelected: viewModel.selectedCardsSource == pile.id,
+                                    selectedCardIndex: viewModel.selectedCardsSource == pile.id ? viewModel.selectedCardsIndex : nil,
                                     onDragStarted: { card, stack, startLoc in
+                                        viewModel.clearKeyboardCursor()
                                         viewModel.clearHint()
                                         if draggedCards.isEmpty {
                                             draggedCards = stack
@@ -412,7 +434,7 @@ public struct SpiderView: View {
                                     .onAppear { winPulse = true }
                                     .onDisappear { winPulse = false }
 
-                                Text("Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
+                                Text(winSummaryText)
                                     .font(.system(.body))
                                     .foregroundColor(.white)
 
@@ -466,7 +488,61 @@ public struct SpiderView: View {
         .environment(\.feltColor, viewModel.options.feltColor)
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
-        .id(viewModel.options.customFeltColorRevision)
+        .focusable()
+        .focused($isBoardFocused)
+        .onAppear {
+            isBoardFocused = true
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                guard !isShowingOptions && !isShowingStats else { return event }
+                if let firstResponder = NSApp.keyWindow?.firstResponder,
+                   firstResponder.isKind(of: NSText.self) || String(describing: type(of: firstResponder)).contains("TextView") {
+                    return event
+                }
+                // Arrow/function keys always carry .numericPad and .function in modifierFlags
+                // even with no modifier held, so only guard against real modifier keys.
+                let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+                guard modifiers.isEmpty else { return event }
+                
+                switch event.keyCode {
+                case 123: // Left Arrow
+                    viewModel.moveCursorLeft()
+                    return nil
+                case 124: // Right Arrow
+                    viewModel.moveCursorRight()
+                    return nil
+                case 126: // Up Arrow
+                    viewModel.moveCursorUp()
+                    return nil
+                case 125: // Down Arrow
+                    viewModel.moveCursorDown()
+                    return nil
+                case 49, 36: // Space, Return
+                    viewModel.performSpaceAction()
+                    return nil
+                case 53: // Escape
+                    viewModel.clearKeyboardCursor()
+                    return nil
+                default:
+                    if let chars = event.charactersIgnoringModifiers?.lowercased() {
+                        if chars == "d" {
+                            viewModel.enableKeyboardCursorIfNeeded()
+                            viewModel.drawFromStock()
+                            return nil
+                        } else if chars == "a" {
+                            viewModel.runAutocomplete()
+                            return nil
+                        }
+                    }
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let monitor = keyMonitor {
+                NSEvent.removeMonitor(monitor)
+                keyMonitor = nil
+            }
+        }
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
                minHeight: 73 + boardHeight * viewModel.zoomScale,
@@ -553,9 +629,22 @@ public struct SpiderView: View {
         let size = overrideSize.map { NSSize(width: max($0.width, minW), height: max($0.height, minH)) } ?? minSize
         DispatchQueue.main.async {
             window.contentMinSize = minSize
+
+            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
+            // bottom-left anchor) so a height change never pushes the toolbar/title bar off
+            // the top of the screen.
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+            let currentFrame = window.frame
+            newFrame.origin.x = currentFrame.origin.x
+            newFrame.origin.y = currentFrame.maxY - newFrame.height
+            if let visible = window.screen?.visibleFrame {
+                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
+                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+            }
+
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.animator().setContentSize(size)
+                window.animator().setFrame(newFrame, display: true)
             }
         }
     }
@@ -617,7 +706,12 @@ public struct SpiderView: View {
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
-    
+
+    private var winSummaryText: String {
+        guard !viewModel.options.noStressMode else { return "Score: \(viewModel.scoreString)" }
+        return "Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))"
+    }
+
 }
 
 // MARK: - Options Preference Dialog
@@ -797,7 +891,7 @@ struct SpiderOptionsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 440)
-        .fixedSize(horizontal: false, vertical: true)
+        .fixedSize(horizontal: true, vertical: true)
         .background(Color(NSColor.windowBackgroundColor))
 
         if showingThemes {

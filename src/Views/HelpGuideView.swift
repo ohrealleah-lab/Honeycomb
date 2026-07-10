@@ -81,7 +81,7 @@ struct KlondikeHelpView: View {
                         text: "Turns off the timer for a pressure-free game. This is a shared setting — enabling it here also enables it in Freecell, Spider, Video Poker, and Blackjack, where it also turns off timers and switches the casino games into free play (no bets, no credits, just the cards).")
 
             RuleSection(title: "Keyboard Shortcuts",
-                        text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — Switch to Draw 1\n⌥⌘3 — Switch to Draw 3\n💡 Hint — press again to cycle through all available hints")
+                        text: "Arrow Keys — Navigate board cursor\nSpace / Return — Select / Place cards\nEscape — Clear selection\nD — Draw card\nF — Auto-move to foundations\nA — Autocomplete\n⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — Switch to Draw 1\n⌥⌘3 — Switch to Draw 3\n💡 Hint — press again to cycle through all available hints")
         }
     }
 }
@@ -113,7 +113,7 @@ struct BeecellHelpView: View {
                         text: "Turns off the timer for a pressure-free game. This is a shared setting — enabling it here also enables it in Klondike, Spider, Video Poker, and Blackjack, where it also turns off timers and switches the casino games into free play (no bets, no credits, just the cards).")
 
             RuleSection(title: "Keyboard Shortcuts",
-                        text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n💡 Hint — press again to cycle through all available hints")
+                        text: "Arrow Keys — Navigate board cursor\nSpace / Return — Select / Place cards\nEscape — Clear selection\nC — Auto-move to free cell\nF — Auto-move to foundations\nA — Autocomplete\n⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n💡 Hint — press again to cycle through all available hints")
         }
     }
 }
@@ -145,7 +145,7 @@ struct SpiderHelpView: View {
                         text: "Turns off the timer for a pressure-free game. This is a shared setting — enabling it here also enables it in Klondike, Freecell, Video Poker, and Blackjack, where it also turns off timers and switches the casino games into free play (no bets, no credits, just the cards).")
 
             RuleSection(title: "Keyboard Shortcuts",
-                        text: "⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — 1-Suit mode\n⌥⌘2 — 2-Suit mode\n💡 Hint — press again to cycle through all available hints")
+                        text: "Arrow Keys — Navigate board cursor\nSpace / Return — Select / Place cards\nEscape — Clear selection\nD — Deal from stock\nA — Autocomplete\n⌘N — New Game\n⌘R — Restart current deal\n⌘Z — Undo last move\n⌥⌘1 — 1-Suit mode\n⌥⌘2 — 2-Suit mode\n💡 Hint — press again to cycle through all available hints")
         }
     }
 }

@@ -4,6 +4,8 @@ import SwiftUI
 public struct FreeCellView: View {
     let pile: Pile
     let draggedCardIDs: Set<UUID>
+    public var isFocused: Bool = false
+    public var isSelected: Bool = false
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -12,6 +14,8 @@ public struct FreeCellView: View {
     public init(
         pile: Pile,
         draggedCardIDs: Set<UUID>,
+        isFocused: Bool = false,
+        isSelected: Bool = false,
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void,
@@ -19,6 +23,8 @@ public struct FreeCellView: View {
     ) {
         self.pile = pile
         self.draggedCardIDs = draggedCardIDs
+        self.isFocused = isFocused
+        self.isSelected = isSelected
         self.onDragStarted = onDragStarted
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
@@ -27,10 +33,10 @@ public struct FreeCellView: View {
     
     public var body: some View {
         ZStack {
-            EmptyPileView()
+            EmptyPileView(isFocused: isFocused && pile.isEmpty, isSelected: isSelected && pile.isEmpty)
             
             if let topCard = pile.topCard {
-                CardView(card: topCard)
+                CardView(card: topCard, isFocused: isFocused, isSelected: isSelected)
                     .opacity(draggedCardIDs.contains(topCard.id) ? 0.0 : 1.0)
                     .gesture(
                         DragGesture(minimumDistance: 5, coordinateSpace: .global)
@@ -57,6 +63,8 @@ public struct FreeCellView: View {
 public struct BeecellFoundationView: View {
     let pile: Pile
     let draggedCardIDs: Set<UUID>
+    public var isFocused: Bool = false
+    public var isSelected: Bool = false
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -64,12 +72,16 @@ public struct BeecellFoundationView: View {
     public init(
         pile: Pile,
         draggedCardIDs: Set<UUID>,
+        isFocused: Bool = false,
+        isSelected: Bool = false,
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void
     ) {
         self.pile = pile
         self.draggedCardIDs = draggedCardIDs
+        self.isFocused = isFocused
+        self.isSelected = isSelected
         self.onDragStarted = onDragStarted
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
@@ -77,10 +89,10 @@ public struct BeecellFoundationView: View {
     
     public var body: some View {
         ZStack {
-            EmptyPileView(symbol: "A")
+            EmptyPileView(symbol: "A", isFocused: isFocused && pile.isEmpty, isSelected: isSelected && pile.isEmpty)
             
             if let topCard = pile.topCard {
-                CardView(card: topCard)
+                CardView(card: topCard, isFocused: isFocused, isSelected: isSelected)
                     .opacity(draggedCardIDs.contains(topCard.id) ? 0.0 : 1.0)
                     .gesture(
                         DragGesture(minimumDistance: 5, coordinateSpace: .global)
@@ -102,6 +114,8 @@ public struct BeecellTableauView: View {
     let pile: Pile
     let draggedCardIDs: Set<UUID>
     let activeHint: BeecellViewModel.HintMove?
+    public var isFocused: Bool = false
+    public var isSelected: Bool = false
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
@@ -111,6 +125,8 @@ public struct BeecellTableauView: View {
         pile: Pile,
         draggedCardIDs: Set<UUID>,
         activeHint: BeecellViewModel.HintMove?,
+        isFocused: Bool = false,
+        isSelected: Bool = false,
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void,
@@ -119,6 +135,8 @@ public struct BeecellTableauView: View {
         self.pile = pile
         self.draggedCardIDs = draggedCardIDs
         self.activeHint = activeHint
+        self.isFocused = isFocused
+        self.isSelected = isSelected
         self.onDragStarted = onDragStarted
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
@@ -137,9 +155,8 @@ public struct BeecellTableauView: View {
         let isTarget = activeHint?.targetPileId == pile.id
         let hintStartIndex = isSource ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
         
-
         ZStack(alignment: .top) {
-            EmptyPileView()
+            EmptyPileView(isFocused: isFocused && pile.isEmpty, isSelected: isSelected && pile.isEmpty)
                 .modifier(HintHighlightModifier(isHighlighted: isTarget && pile.isEmpty))
             
             ForEach(Array(pile.cards.enumerated()), id: \.element.id) { index, card in
@@ -153,7 +170,10 @@ public struct BeecellTableauView: View {
                     return false
                 }()
                 
-                CardView(card: card)
+                let cardIsFocused = isFocused && index == pile.cards.count - 1
+                let cardIsSelected = isSelected && index == pile.cards.count - 1
+                
+                CardView(card: card, isFocused: cardIsFocused, isSelected: cardIsSelected)
                     .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: CGFloat(index) * 32)

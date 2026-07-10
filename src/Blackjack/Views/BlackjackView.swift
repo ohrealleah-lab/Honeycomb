@@ -31,7 +31,16 @@ public struct BlackjackView: View {
 
     // The toolbar stays fixed size regardless of zoom; only the board below it scales.
     static let toolbarHeight: CGFloat = 73
-    static let boardBaseHeight: CGFloat = 950 - toolbarHeight
+    private static let baseBoardHeight: CGFloat = 950 - toolbarHeight
+
+    private var boardBaseHeight: CGFloat {
+        guard viewModel.isFreePlay else { return Self.baseBoardHeight }
+        // Free play hides the credit display, so the board only needs to fit the
+        // dealer/player card areas and action buttons — not that display's own
+        // height plus its VStack spacing gap.
+        let creditDisplayContribution: CGFloat = 84
+        return Self.baseBoardHeight - creditDisplayContribution
+    }
 
     public init(viewModel: BlackjackViewModel) {
         self.viewModel = viewModel
@@ -39,7 +48,10 @@ public struct BlackjackView: View {
 
     public var body: some View {
         ZStack {
+            // .id() forces a redraw when the custom felt color's raw RGB changes — those
+            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs on.
             viewModel.options.feltColor.primaryColor
+                .id(viewModel.options.customFeltColorRevision)
                 .ignoresSafeArea()
 
             if viewModel.options.showFeltVignette { FeltVignetteView() }
@@ -83,9 +95,10 @@ public struct BlackjackView: View {
 
                     Spacer()
                 }
-                .frame(width: 905, height: Self.boardBaseHeight, alignment: .topLeading)
+                .frame(width: 905, height: boardBaseHeight, alignment: .topLeading)
                 .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
-                .frame(width: 905 * viewModel.zoomScale, height: Self.boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
+                .frame(width: 905 * viewModel.zoomScale, height: boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: viewModel.isFreePlay ? .center : .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
@@ -116,7 +129,7 @@ public struct BlackjackView: View {
                 .clipped()
         }
         .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
-               minHeight: Self.toolbarHeight + Self.boardBaseHeight * viewModel.zoomScale, maxHeight: .infinity)
+               minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale, maxHeight: .infinity)
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
@@ -129,6 +142,7 @@ public struct BlackjackView: View {
             }
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
+        .onChange(of: viewModel.options.noStressMode) { snapToMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
         .overlay {
@@ -708,7 +722,7 @@ public struct BlackjackView: View {
     private func updateMinSize() {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + Self.boardBaseHeight * z)
+        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
         DispatchQueue.main.async {
             window.contentMinSize = size
         }
@@ -717,13 +731,26 @@ public struct BlackjackView: View {
     private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + Self.boardBaseHeight * z)
+        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
         let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
         DispatchQueue.main.async {
             window.contentMinSize = minSize
+
+            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
+            // bottom-left anchor) so a height change — e.g. toggling No Stress Mode — never
+            // pushes the toolbar/title bar off the top of the screen.
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+            let currentFrame = window.frame
+            newFrame.origin.x = currentFrame.origin.x
+            newFrame.origin.y = currentFrame.maxY - newFrame.height
+            if let visible = window.screen?.visibleFrame {
+                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
+                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+            }
+
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.animator().setContentSize(size)
+                window.animator().setFrame(newFrame, display: true)
             }
         }
     }

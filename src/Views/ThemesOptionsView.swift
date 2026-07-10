@@ -81,6 +81,7 @@ struct ThemesOptionsView: View {
                             Text("Royal Blue").tag(FeltColorTheme.royalBlue)
                             Text("Charcoal").tag(FeltColorTheme.charcoal)
                             Text("Desert").tag(FeltColorTheme.desert)
+                            Text("Colorblind").tag(FeltColorTheme.colorblind)
                             Text("Custom").tag(FeltColorTheme.custom)
                         }
                         .font(.system(.body))
@@ -134,7 +135,7 @@ struct ThemesOptionsView: View {
             .padding(.vertical, 16)
         }
         .frame(width: 880)
-        .fixedSize(horizontal: false, vertical: true)
+        .fixedSize(horizontal: true, vertical: true)
         .background(Color(NSColor.windowBackgroundColor))
         .onChange(of: feltColor) { _, _ in onCommit(false) }
         .onChange(of: cardBackTheme) { _, _ in onCommit(false) }

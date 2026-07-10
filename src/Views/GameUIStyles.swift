@@ -53,6 +53,23 @@ enum UISound {
     }
 }
 
+struct KeyboardFocusHighlightModifier: ViewModifier {
+    let isFocused: Bool
+    let isSelected: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(
+                        isFocused ? Color.blue : (isSelected ? Color.orange : Color.clear),
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round, dash: isSelected ? [6, 4] : [])
+                    )
+                    .shadow(color: isFocused ? Color.blue.opacity(0.8) : (isSelected ? Color.orange.opacity(0.8) : Color.clear), radius: 6)
+            )
+    }
+}
+
 // MARK: - Felt Vignette
 
 struct FeltVignetteView: View {

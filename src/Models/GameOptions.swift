@@ -2,7 +2,7 @@ import Foundation
 
 public struct GameOptions: Codable, Equatable {
     public var feltColor: FeltColorTheme = .feltGreen
-    public var cardBackTheme: String = "Vulpera"
+    public var cardBackTheme: String = "Moogle"
     public var isTimed: Bool = true
     public var isStatusBarVisible: Bool = true
     public var isSoundEnabled: Bool = true
@@ -19,7 +19,7 @@ public struct GameOptions: Codable, Equatable {
 
     public init(
         feltColor: FeltColorTheme = .feltGreen,
-        cardBackTheme: String = "Vulpera",
+        cardBackTheme: String = "Moogle",
         isTimed: Bool = true,
         isStatusBarVisible: Bool = true,
         isSoundEnabled: Bool = true,
@@ -69,7 +69,7 @@ public struct GameOptions: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.feltColor = (try? container.decode(FeltColorTheme.self, forKey: .feltColor)) ?? .feltGreen
-        self.cardBackTheme = (try? container.decode(String.self, forKey: .cardBackTheme)) ?? "Vulpera"
+        self.cardBackTheme = (try? container.decode(String.self, forKey: .cardBackTheme)) ?? "Moogle"
         self.isTimed = (try? container.decode(Bool.self, forKey: .isTimed)) ?? true
         self.isStatusBarVisible = (try? container.decode(Bool.self, forKey: .isStatusBarVisible)) ?? true
         self.isSoundEnabled = (try? container.decode(Bool.self, forKey: .isSoundEnabled)) ?? true
@@ -91,6 +91,7 @@ public enum FeltColorTheme: String, Codable, CaseIterable {
     case royalBlue
     case charcoal
     case desert
+    case colorblind
     case custom
 }
 
