@@ -486,25 +486,6 @@ public struct BlackjackView: View {
         }
     }
 
-    private func resultBadge(_ result: BlackjackHandResult) -> some View {
-        let (text, color): (String, Color) = {
-            switch result {
-            case .blackjack: return ("BJ", .yellow)
-            case .win:       return ("WIN", .green)
-            case .loss:      return ("LOSS", .red)
-            case .push:      return ("PUSH", .white)
-            case .bust:      return ("BUST", .red)
-            }
-        }()
-        return Text(text)
-            .font(.display(10, weight: .black))
-            .foregroundColor(color)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.2))
-            .cornerRadius(4)
-    }
-
     // MARK: - Result Banner
 
     private var resultBanner: some View {
