@@ -119,15 +119,22 @@ public partial class WinAnimationView : UserControl
 
         // Adjust pace and concurrency based on deck size (e.g. Spider has 8 foundations, 104 cards)
         // so that the animation takes the same total time (~21s) and feels appropriately grand.
+        //
+        // _maxActiveCards must stay >= MaxCardLifetimeSeconds / _spawnInterval, or the queue
+        // stalls into strict one-out-one-in once every slot is occupied by a still-living
+        // card (visibly "cards stop coming out, only one at a time" partway through the
+        // cascade). At 9s lifetime that's ~22.5 for a 0.4s interval and ~45 for a 0.2s
+        // interval — the trail ghosts are cheap shared-bitmap Images now (see Timer_Tick),
+        // so this many concurrent cards is affordable.
         if (numFoundations > 4)
         {
             _spawnInterval = 0.2;
-            _maxActiveCards = 12;
+            _maxActiveCards = 48;
         }
         else
         {
             _spawnInterval = 0.4;
-            _maxActiveCards = 6;
+            _maxActiveCards = 24;
         }
 
         // Show win info panel with score and time
@@ -157,17 +164,20 @@ public partial class WinAnimationView : UserControl
         _timer.Start();
     }
 
-    // Backward-compatible overload — builds a fake full 52-card deck across 4
-    // demo foundations, for the debug "Play Win Animation" menu.
+    // Backward-compatible overload — builds a fake full demo deck for the debug "Play
+    // Win Animation" menu, across as many demo foundations as the caller's real
+    // foundationPoints has entries (falling back to 4), so an 8-foundation game (2-deck
+    // Freecell, Spider) actually uses every computed position instead of only the first 4.
     public void StartAnimation(IReadOnlyList<Point>? foundationPoints = null)
     {
+        int count = foundationPoints?.Count > 0 ? foundationPoints.Count : 4;
         var suits = new[] { CardSuit.Spades, CardSuit.Hearts, CardSuit.Diamonds, CardSuit.Clubs };
         var foundations = new List<Pile>();
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < count; i++)
         {
             var pile = new Pile($"Foundation_{i}", PileType.Foundation);
             for (int rank = 13; rank >= 1; rank--)
-                pile.Cards.Add(new Card($"demo_{i}_{rank}", suits[i], rank, true));
+                pile.Cards.Add(new Card($"demo_{i}_{rank}", suits[i % suits.Length], rank, true));
             foundations.Add(pile);
         }
         StartAnimation(foundations, foundationPoints);
@@ -232,7 +242,14 @@ public partial class WinAnimationView : UserControl
                 card.View.Measure(new Size(CardWidth, CardHeight));
                 card.View.Arrange(new Rect(0, 0, CardWidth, CardHeight));
 
-                var rtb = new RenderTargetBitmap(new PixelSize(CardWidth, CardHeight));
+                // Render at the display's actual scale, or the snapshot is rasterized at a
+                // fixed 96 DPI regardless of Windows UI scaling — every ghost would then look
+                // visibly softer than the natively-rendered main card on any scaled display
+                // (125%/150% are common defaults).
+                double scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
+                var rtb = new RenderTargetBitmap(
+                    new PixelSize((int)(CardWidth * scale), (int)(CardHeight * scale)),
+                    new Vector(96 * scale, 96 * scale));
                 rtb.Render(card.View);
                 foreach (var ghost in card.TrailViews)
                 {
