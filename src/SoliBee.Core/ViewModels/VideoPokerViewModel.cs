@@ -17,6 +17,9 @@ public partial class VideoPokerViewModel : ObservableObject
     [ObservableProperty] private VideoPokerStatistics _stats = new();
 
     private List<Card> _deck = new();
+    // Session-scoped (not persisted) — starts at 0 each time the player buys in and
+    // counts hands played since then, distinct from Stats.TotalHands's lifetime total.
+    private int _sessionHandsPlayed = 0;
 
     // ── Pay tables ────────────────────────────────────────────────────────────
 
@@ -74,6 +77,7 @@ public partial class VideoPokerViewModel : ObservableObject
     public string ScoreDisplay    => $"${State.SessionCredits}";
     public string CreditDisplay   => State.SessionCredits.ToString();
     public string BetDisplay      => State.CurrentBet.ToString();
+    public string HandsDisplay    => _sessionHandsPlayed.ToString();
     // No Stress Mode's free play still announces the winning hand, just without a
     // credit amount attached (no credits are ever earned in free play).
     public string ResultText      => State.Phase == VideoPokerPhase.Result && State.LastPayout > 0
@@ -144,6 +148,7 @@ public partial class VideoPokerViewModel : ObservableObject
         _deck = _deck.Skip(5).ToList();
 
         Stats.TotalHands++;
+        _sessionHandsPlayed++;
         if (!freePlay) Stats.TotalCreditsWagered += State.CurrentBet;
 
         NotifyStateChanged();
@@ -254,6 +259,7 @@ public partial class VideoPokerViewModel : ObservableObject
 
     public void StartNewGame()
     {
+        _sessionHandsPlayed = 0;
         State = new VideoPokerState
         {
             SessionCredits = Options.StartingCredits,
@@ -522,6 +528,7 @@ public partial class VideoPokerViewModel : ObservableObject
         OnPropertyChanged(nameof(ScoreDisplay));
         OnPropertyChanged(nameof(CreditDisplay));
         OnPropertyChanged(nameof(BetDisplay));
+        OnPropertyChanged(nameof(HandsDisplay));
         OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(HasWin));
         OnPropertyChanged(nameof(ShowNoWin));

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -258,20 +259,16 @@ public partial class FreecellView : CardGameView
 
     private bool _winTriggered;
 
-    // Real center-X of each foundation pile, in VictoryOverlay's own coordinate space
-    // (its AnimationCanvas fills it with no offset) — so the win cascade spawns cards
-    // above the actual foundation columns instead of an evenly-spread approximation.
-    // Only as many entries as the current deck count's foundation piles (4 or 8).
-    private List<double> ComputeFoundationSpawnX(int count)
+    private List<Point> ComputeFoundationSpawnPoints(int count)
     {
         var allViews = new[] { Foundation0, Foundation1, Foundation2, Foundation3, Foundation4, Foundation5, Foundation6, Foundation7 };
-        var xs = new List<double>(count);
+        var pts = new List<Point>(count);
         for (int i = 0; i < count && i < allViews.Length; i++)
         {
             var topLeft = allViews[i].TranslatePoint(new Point(0, 0), this) ?? default;
-            xs.Add(topLeft.X + allViews[i].Bounds.Width / 2.0);
+            pts.Add(new Point(topLeft.X + allViews[i].Bounds.Width / 2.0, topLeft.Y));
         }
-        return xs;
+        return pts;
     }
 
     private void TriggerVictoryCascade()
@@ -280,9 +277,15 @@ public partial class FreecellView : CardGameView
         _winTriggered = true;
         VictoryOverlay.IsVisible = true;
         if (DataContext is FreecellViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnX(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+        {
+            Dispatcher.UIThread.Post(() => {
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+            }, DispatcherPriority.Loaded);
+        }
         else
+        {
             VictoryOverlay.StartAnimation();
+        }
         SoundService.PlaySolitaireWin();
     }
 
@@ -292,9 +295,15 @@ public partial class FreecellView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         if (DataContext is FreecellViewModel vm)
-            VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnX(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+        {
+            Dispatcher.UIThread.Post(() => {
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+            }, DispatcherPriority.Loaded);
+        }
         else
+        {
             VictoryOverlay.StartAnimation();
+        }
     }
 
     // Dev-only — always plays the full demo cascade (the no-arg overload's fake 52-card
@@ -303,10 +312,9 @@ public partial class FreecellView : CardGameView
     public void DebugPlayWinAnimation()
     {
         VictoryOverlay.IsVisible = true;
-        if (DataContext is FreecellViewModel vm)
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnX(vm.Foundations.Count));
-        else
-            VictoryOverlay.StartAnimation();
+        Dispatcher.UIThread.Post(() => {
+            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(4));
+        }, DispatcherPriority.Loaded);
         SoundService.PlaySolitaireWin();
     }
 

@@ -128,29 +128,11 @@ public static class ThemeService
         SaveThemes(themes);
     }
 
-    private static SoliBeeTheme ClonePreset(SoliBeeTheme preset) => new()
-    {
-        Id                    = preset.Id,
-        Name                  = preset.Name,
-        CardBackTheme         = preset.CardBackTheme,
-        CardBackScale         = preset.CardBackScale,
-        CardBackOffsetX       = preset.CardBackOffsetX,
-        CardBackOffsetY       = preset.CardBackOffsetY,
-        IsFinalFantasyMode    = preset.IsFinalFantasyMode,
-        FeltColor             = preset.FeltColor,
-        CustomFeltColorHex    = preset.CustomFeltColorHex,
-        ThemeFaceBackNormal   = preset.ThemeFaceBackNormal,
-        ThemeFaceBackFF       = preset.ThemeFaceBackFF,
-        ThemeFaceBorderNormal = preset.ThemeFaceBorderNormal,
-        ThemeFaceBorderFF     = preset.ThemeFaceBorderFF,
-        ThemeFaceBorderFFCard = preset.ThemeFaceBorderFFCard,
-        ThemeTextRed          = preset.ThemeTextRed,
-        ThemeTextRedFF        = preset.ThemeTextRedFF,
-        ThemeTextBlackNormal  = preset.ThemeTextBlackNormal,
-        ThemeTextBlackFF      = preset.ThemeTextBlackFF,
-        ThemeCardShadow       = preset.ThemeCardShadow,
-        FaceArts              = new List<FaceArtSnapshot>(preset.FaceArts),
-    };
+    // JSON round-trip instead of a hand-listed field copy — SoliBeeTheme has no
+    // exhaustiveness check (plain mutable class, not a record), so a manual copy would
+    // silently drop any field added later instead of failing to compile.
+    private static SoliBeeTheme ClonePreset(SoliBeeTheme preset) =>
+        JsonSerializer.Deserialize<SoliBeeTheme>(JsonSerializer.Serialize(preset, _jsonOpts), _jsonOpts)!;
 
     public static void DeleteTheme(Guid id)
     {

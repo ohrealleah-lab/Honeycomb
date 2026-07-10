@@ -1033,6 +1033,11 @@ public partial class MainWindow : Window
             _revertingSelection = false;
         }
 
+        FireDebugBanner(kind);
+    }
+
+    private void FireDebugBanner(string kind)
+    {
         switch (MainContent.Content)
         {
             case GameView gv:

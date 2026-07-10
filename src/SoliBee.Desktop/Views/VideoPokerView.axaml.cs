@@ -287,7 +287,7 @@ public partial class VideoPokerView : UserControl
     {
         AnimateCreditsTo(vm.CreditDisplay);
         BetLabel.Text          = vm.BetDisplay;
-        HandsLabel.Text        = vm.Stats.TotalHands.ToString();
+        HandsLabel.Text        = vm.HandsDisplay;
         RebuyButton.IsVisible  = vm.NeedsRebuy;
         BetButtonRow.IsVisible = !vm.Options.IsNoStressMode;
 
@@ -784,6 +784,7 @@ public partial class VideoPokerView : UserControl
             case Key.D:
             case Key.Space:
             case Key.Enter:
+                if (IsResultRevealPending(vm)) { e.Handled = true; break; }
                 if ((DateTime.UtcNow - _lastDealDrawTime).TotalMilliseconds < 400) { e.Handled = true; break; }
                 _lastDealDrawTime = DateTime.UtcNow;
                 DoDealOrDraw(vm); e.Handled = true; break;
@@ -839,21 +840,23 @@ public partial class VideoPokerView : UserControl
         HideActiveBanner();
     }
 
+    // Phase flips to Result the instant Draw() resolves, well before the win/loss banner
+    // actually reveals (it waits ~1.5s via _resultShowTimer, then stays up until it fades
+    // or is dismissed). Any input that would deal a new hand must be blocked while this
+    // is true, or it deals a "ghost" hand underneath the still-pending reveal — same bug
+    // class as Blackjack's CardBack_PointerPressed guard. Clicking the banner itself once
+    // shown is still immediate on purpose (see WinBanner_PointerPressed/NoWinOverlay_PointerPressed).
+    private bool IsResultRevealPending(VideoPokerViewModel vm) =>
+        vm.State.Phase == VideoPokerPhase.Result &&
+        (_resultShowTimer != null || WinBanner.IsVisible || NoWinOverlay.IsVisible);
+
     private void CardSlot_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Grid g) return;
         if (!int.TryParse(g.Tag?.ToString(), out var idx)) return;
         if (DataContext is not VideoPokerViewModel vm) return;
 
-        // Phase flips to Result the instant Draw() resolves, well before the win/loss
-        // banner actually reveals (it waits ~1.5s via _resultShowTimer, then stays up
-        // until it fades or is dismissed). Without this guard, a stray click anywhere
-        // on the card slots during that window deals a "ghost" hand underneath the
-        // still-pending reveal — same bug class as Blackjack's CardBack_PointerPressed
-        // guard. Clicking the banner itself once shown is still immediate on purpose
-        // (see WinBanner_PointerPressed/NoWinOverlay_PointerPressed).
-        if (vm.State.Phase == VideoPokerPhase.Result &&
-            (_resultShowTimer != null || WinBanner.IsVisible || NoWinOverlay.IsVisible))
+        if (IsResultRevealPending(vm))
         {
             e.Handled = true;
             return;
@@ -892,6 +895,7 @@ public partial class VideoPokerView : UserControl
     private void DealDraw_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not VideoPokerViewModel vm) return;
+        if (IsResultRevealPending(vm)) return;
         if ((DateTime.UtcNow - _lastDealDrawTime).TotalMilliseconds < 400) return;
         _lastDealDrawTime = DateTime.UtcNow;
         DoDealOrDraw(vm);

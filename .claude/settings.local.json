@@ -99,7 +99,16 @@
       "Read(//c/Users/Leahbee/.nuget/packages/avalonia/**)",
       "Bash(find \"/c/Users/Leahbee/.nuget/packages/avalonia/11.0.10\" -iname \"Avalonia.Base.dll\" -o -iname \"Avalonia.Controls.dll\" 2>/dev/null)",
       "Bash(python3 -)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(rm -f /tmp/gh_cred.txt /tmp/existing_pr.json)",
+      "Bash(git -C C:\\\\Users\\\\Leahbee\\\\SolibeeWin diff HEAD~1...HEAD)",
+      "Bash(git -C \"C:\\\\Users\\\\Leahbee\\\\SolibeeWin\" diff HEAD~1...HEAD -- src/SoliBee.Desktop/Views/WinAnimationView.axaml.cs src/SoliBee.Desktop/Views/GameView.axaml.cs src/SoliBee.Desktop/Views/FreecellView.axaml.cs src/SoliBee.Desktop/Views/SpiderView.axaml.cs)",
+      "Bash(git -C C:\\\\Users\\\\Leahbee\\\\SolibeeWin diff HEAD~1...HEAD --stat)",
+      "Bash(git -C C:\\\\Users\\\\Leahbee\\\\SolibeeWin diff HEAD~1...HEAD -- src/SoliBee.Desktop/Views/WinAnimationView.axaml.cs)",
+      "Bash(git -C C:\\\\Users\\\\Leahbee\\\\SolibeeWin diff HEAD~1...HEAD -- src/SoliBee.Core/Services/ThemeService.cs)",
+      "Bash(git -C C:\\\\Users\\\\Leahbee\\\\SolibeeWin diff HEAD~1...HEAD -- src/SoliBee.Desktop/Views/MainWindow.axaml.cs)",
+      "Bash(powershell -NoProfile -Command \"Get-Job | Format-Table Id,State\")",
+      "Bash(find \"C:\\\\Users\\\\Leahbee\\\\SoliBeeMac\\\\SoliBee\" -iname \"*win*anim*\" -o -iname \"*WinAnimation*\" 2>/dev/null)"
     ]
   }
 }

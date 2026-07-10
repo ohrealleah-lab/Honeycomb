@@ -20,6 +20,9 @@ public partial class BlackjackViewModel : ObservableObject
     private int _deckIdx                    = 0;
     private static readonly Random _rng    = new();
     private int _creditsBeforeDeal          = 0;
+    // Session-scoped (not persisted) — starts at 0 each time the player buys in and
+    // counts hands played since then, distinct from Stats.HandsPlayed's lifetime total.
+    private int _sessionHandsPlayed         = 0;
 
     public int ConsecutiveWins { get; private set; } = 0;
 
@@ -49,7 +52,7 @@ public partial class BlackjackViewModel : ObservableObject
 
     public string CreditDisplay => State.Credits.ToString();
     public string BetDisplay    => State.CurrentBet.ToString();
-    public string HandsDisplay  => Stats.HandsPlayed.ToString();
+    public string HandsDisplay  => _sessionHandsPlayed.ToString();
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
@@ -115,6 +118,7 @@ public partial class BlackjackViewModel : ObservableObject
         };
 
         Stats.HandsPlayed++;
+        _sessionHandsPlayed++;
         if (!freePlay) Stats.TotalCreditsWagered += State.CurrentBet;
 
         // Dealer blackjack — push if player also has a natural, otherwise player loses
@@ -265,6 +269,7 @@ public partial class BlackjackViewModel : ObservableObject
         Options.BetPerHand = State.CurrentBet;
         SaveOptions();
         ConsecutiveWins = 0;
+        _sessionHandsPlayed = 0;
         State = new BlackjackState
         {
             Credits    = Options.StartingCredits,
