@@ -8,6 +8,7 @@ public final class BlackjackViewModel {
     public var options: BlackjackOptions {
         didSet {
             saveOptions()
+            UISound.isEnabled = options.isSoundEnabled
             if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
                 UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
                 NotificationCenter.default.post(name: .feltColorDidChange, object: self, userInfo: [
@@ -58,7 +59,7 @@ public final class BlackjackViewModel {
             }
             self.options = decoded
         } else {
-            let back = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
+            let back = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
             let feltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
             let felt = FeltColorTheme(rawValue: feltStr) ?? .feltGreen
             var opts = BlackjackOptions(feltColor: felt, cardBackTheme: back)
@@ -78,7 +79,7 @@ public final class BlackjackViewModel {
         }
 
         state.sessionCredits = options.startingCredits
-        state.currentBet = options.betPerHand
+        state.currentBet = 1
 
         if let saved = UserDefaults.standard.value(forKey: "blackjack_defaultZoomScale") as? Double {
             self.defaultZoomScale = CGFloat(saved)
@@ -89,9 +90,16 @@ public final class BlackjackViewModel {
             self.zoomScale = self.defaultZoomScale
         }
 
+        if let savedWidth = UserDefaults.standard.value(forKey: "blackjack_defaultWindowWidth") as? Double,
+           let savedHeight = UserDefaults.standard.value(forKey: "blackjack_defaultWindowHeight") as? Double {
+            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
+        }
+
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
+
+        UISound.isEnabled = self.options.isSoundEnabled
     }
 
     deinit {
@@ -139,17 +147,30 @@ public final class BlackjackViewModel {
 
     // MARK: - Computed properties
 
+    public var isFreePlay: Bool {
+        options.noStressMode
+    }
+
     public var canSplit: Bool {
         state.playerHands.count == 1
         && state.playerHands[0].cards.count == 2
         && state.playerHands[0].cards[0].rank == state.playerHands[0].cards[1].rank
-        && state.sessionCredits >= state.currentBet
+        && (isFreePlay || state.sessionCredits >= state.currentBet)
     }
 
     public var canDouble: Bool {
         guard state.activeHandIndex < state.playerHands.count else { return false }
         let hand = state.playerHands[state.activeHandIndex]
-        return hand.cards.count == 2 && state.sessionCredits >= hand.bet
+        return hand.cards.count == 2
+            && !hand.isSplitAce
+            && (9...11).contains(hand.value)
+            && (isFreePlay || state.sessionCredits >= hand.bet)
+    }
+
+    public var canRebuy: Bool {
+        !isFreePlay
+            && (state.phase == .betting || state.phase == .result)
+            && state.sessionCredits < state.currentBet
     }
 
     public var activeHand: BlackjackHand? {
@@ -182,10 +203,12 @@ public final class BlackjackViewModel {
 
     public func deal() {
         guard state.phase == .betting || state.phase == .result else { return }
-        guard state.sessionCredits >= state.currentBet else { return }
+        guard isFreePlay || state.sessionCredits >= state.currentBet else { return }
 
-        state.sessionCredits -= state.currentBet
-        statistics.totalWagered += state.currentBet
+        if !isFreePlay {
+            state.sessionCredits -= state.currentBet
+            statistics.totalWagered += state.currentBet
+        }
         statistics.handsPlayed += 1
         state.handsDealt += 1
 
@@ -216,6 +239,7 @@ public final class BlackjackViewModel {
         guard state.phase == .playing else { return }
         guard state.activeHandIndex < state.playerHands.count else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
+        guard !state.playerHands[state.activeHandIndex].isSplitAce else { return }
         guard let card = popCard(faceUp: true) else { return }
 
         playSound(named: "snap")
@@ -230,6 +254,7 @@ public final class BlackjackViewModel {
         guard state.phase == .playing else { return }
         guard state.activeHandIndex < state.playerHands.count else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
+        guard !state.playerHands[state.activeHandIndex].isSplitAce else { return }
         advanceHand()
     }
 
@@ -238,8 +263,10 @@ public final class BlackjackViewModel {
         guard canDouble else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         let hand = state.playerHands[state.activeHandIndex]
-        state.sessionCredits -= hand.bet
-        statistics.totalWagered += hand.bet
+        if !isFreePlay {
+            state.sessionCredits -= hand.bet
+            statistics.totalWagered += hand.bet
+        }
         state.playerHands[state.activeHandIndex].bet *= 2
         state.playerHands[state.activeHandIndex].isDoubled = true
 
@@ -254,37 +281,55 @@ public final class BlackjackViewModel {
         guard state.phase == .playing, canSplit else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         let originalBet = state.playerHands[0].bet
-        state.sessionCredits -= originalBet
-        statistics.totalWagered += originalBet
+        if !isFreePlay {
+            state.sessionCredits -= originalBet
+            statistics.totalWagered += originalBet
+        }
 
         let card0 = state.playerHands[0].cards[0]
         let card1 = state.playerHands[0].cards[1]
+        let isAces = card0.rank == 1
 
         // Draw a second card for each split hand
         let extra0 = popCard(faceUp: true) ?? card0
         let extra1 = popCard(faceUp: true) ?? card1
 
-        state.playerHands = [
-            BlackjackHand(cards: [card0, extra0], bet: originalBet),
-            BlackjackHand(cards: [card1, extra1], bet: originalBet)
-        ]
+        var hand0 = BlackjackHand(cards: [card0, extra0], bet: originalBet)
+        var hand1 = BlackjackHand(cards: [card1, extra1], bet: originalBet)
+        hand0.isSplitAce = isAces
+        hand1.isSplitAce = isAces
+
+        state.playerHands = [hand0, hand1]
         state.activeHandIndex = 0
         playSound(named: "snap")
+
+        // Split Aces: each hand gets exactly the one card just dealt, then must stand.
+        // Delay the auto-resolve so the player has a moment to see both hands' cards
+        // before the round jumps to the dealer's turn.
+        if isAces {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                self?.executeDealerTurn()
+            }
+        }
     }
 
-    public func maxBet() {
-        state.currentBet = max(1, min(5, state.sessionCredits))
-        if state.phase == .betting || state.phase == .result { deal() }
-    }
-
-    public func increaseBet() {
+    public func addToBet(_ amount: Int) {
         guard state.phase == .betting || state.phase == .result else { return }
-        state.currentBet = min(5, state.currentBet + 1)
+        if amount != 1 && state.currentBet == 1 {
+            state.currentBet = max(1, min(amount, state.sessionCredits))
+        } else {
+            state.currentBet = max(1, min(state.currentBet + amount, state.sessionCredits))
+        }
     }
 
-    public func decreaseBet() {
+    public func doubleBet() {
         guard state.phase == .betting || state.phase == .result else { return }
-        state.currentBet = max(1, state.currentBet - 1)
+        state.currentBet = max(1, min(state.currentBet * 2, state.sessionCredits))
+    }
+
+    public func clearBet() {
+        guard state.phase == .betting || state.phase == .result else { return }
+        state.currentBet = 1
     }
 
     public func rebuy() {
@@ -321,6 +366,14 @@ public final class BlackjackViewModel {
 
         evaluateAllHands()
         state.phase = .result
+
+        // Keep the bet at its last wagered amount for the next hand if still affordable,
+        // otherwise fall back to the 1 credit minimum. Skipped in free play, where
+        // sessionCredits never changes and comparing against it would otherwise reset
+        // the player's bet after every single hand.
+        if !isFreePlay && state.currentBet > state.sessionCredits {
+            state.currentBet = 1
+        }
     }
 
     private func evaluateAllHands() {
@@ -345,9 +398,9 @@ public final class BlackjackViewModel {
                 payout = hand.bet
                 statistics.pushes += 1
             } else if playerBJ {
-                // Blackjack pays 3:2
+                // Blackjack pays 3:1
                 result = .blackjack
-                payout = hand.bet + Int(Double(hand.bet) * 1.5)
+                payout = hand.bet + hand.bet * 3
                 statistics.blackjacks += 1
                 statistics.handsWon += 1
                 playSound(named: "victory")
@@ -369,10 +422,12 @@ public final class BlackjackViewModel {
             }
 
             state.playerHands[i].result = result
-            state.sessionCredits += payout
             totalPayout += payout
-            statistics.totalPaidOut += payout
-            statistics.biggestPayout = max(statistics.biggestPayout, payout)
+            if !isFreePlay {
+                state.sessionCredits += payout
+                statistics.totalPaidOut += payout
+                statistics.biggestPayout = max(statistics.biggestPayout, payout)
+            }
 
             let label: String
             switch result {
@@ -454,14 +509,14 @@ public final class BlackjackViewModel {
     public func startNewGame() {
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
-        state.currentBet = options.betPerHand
+        state.currentBet = 1
         statistics.currentStreak = 0
     }
 
     public func restartCurrentGame() {
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
-        state.currentBet = options.betPerHand
+        state.currentBet = 1
         // streak preserved — restart replays the same session
     }
     public func undoLastAction() {}
@@ -475,9 +530,23 @@ public final class BlackjackViewModel {
 
     public func zoomIn() { zoomScale = min(2.0, zoomScale + 0.1) }
     public func zoomOut() { zoomScale = max(0.6, zoomScale - 0.1) }
-    public func resetZoom() { zoomScale = defaultZoomScale }
+    public func resetZoom() {
+        zoomScale = defaultZoomScale
+        defaultWindowSize = nil
+        UserDefaults.standard.removeObject(forKey: "blackjack_defaultWindowWidth")
+        UserDefaults.standard.removeObject(forKey: "blackjack_defaultWindowHeight")
+    }
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "blackjack_defaultZoomScale")
+    }
+
+    // MARK: - Default Window Size
+    public var defaultWindowSize: CGSize?
+
+    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
+        defaultWindowSize = size
+        UserDefaults.standard.set(Double(size.width), forKey: "blackjack_defaultWindowWidth")
+        UserDefaults.standard.set(Double(size.height), forKey: "blackjack_defaultWindowHeight")
     }
 }

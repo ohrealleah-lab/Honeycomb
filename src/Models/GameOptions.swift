@@ -2,16 +2,16 @@ import Foundation
 
 public struct GameOptions: Codable, Equatable {
     public var feltColor: FeltColorTheme = .feltGreen
-    public var cardBackTheme: String = "Vulpera"
+    public var cardBackTheme: String = "Moogle"
     public var isTimed: Bool = true
     public var isStatusBarVisible: Bool = true
     public var isSoundEnabled: Bool = true
     public var isVegasScoring: Bool = false
     public var isDrawConstraintsEnabled: Bool = false
     public var hideHintButton: Bool = false
-    public var hideStatsButton: Bool = false
+    public var noStressMode: Bool = false
     public var deckCount: Int = 1
-    
+
     public var customFeltColorRevision: Int = 0
     public var drawMode: GameState.DrawMode = .drawThree
     public var showFeltVignette: Bool = true
@@ -19,14 +19,14 @@ public struct GameOptions: Codable, Equatable {
 
     public init(
         feltColor: FeltColorTheme = .feltGreen,
-        cardBackTheme: String = "Vulpera",
+        cardBackTheme: String = "Moogle",
         isTimed: Bool = true,
         isStatusBarVisible: Bool = true,
         isSoundEnabled: Bool = true,
         isVegasScoring: Bool = false,
         isDrawConstraintsEnabled: Bool = false,
         hideHintButton: Bool = false,
-        hideStatsButton: Bool = false,
+        noStressMode: Bool = false,
         deckCount: Int = 1,
         customFeltColorRevision: Int = 0,
         drawMode: GameState.DrawMode = .drawThree,
@@ -41,7 +41,7 @@ public struct GameOptions: Codable, Equatable {
         self.isVegasScoring = isVegasScoring
         self.isDrawConstraintsEnabled = isDrawConstraintsEnabled
         self.hideHintButton = hideHintButton
-        self.hideStatsButton = hideStatsButton
+        self.noStressMode = noStressMode
         self.deckCount = deckCount
         self.customFeltColorRevision = customFeltColorRevision
         self.drawMode = drawMode
@@ -58,7 +58,7 @@ public struct GameOptions: Codable, Equatable {
         case isVegasScoring
         case isDrawConstraintsEnabled
         case hideHintButton
-        case hideStatsButton
+        case noStressMode
         case deckCount
         case customFeltColorRevision
         case drawMode
@@ -69,14 +69,14 @@ public struct GameOptions: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.feltColor = (try? container.decode(FeltColorTheme.self, forKey: .feltColor)) ?? .feltGreen
-        self.cardBackTheme = (try? container.decode(String.self, forKey: .cardBackTheme)) ?? "Vulpera"
+        self.cardBackTheme = (try? container.decode(String.self, forKey: .cardBackTheme)) ?? "Moogle"
         self.isTimed = (try? container.decode(Bool.self, forKey: .isTimed)) ?? true
         self.isStatusBarVisible = (try? container.decode(Bool.self, forKey: .isStatusBarVisible)) ?? true
         self.isSoundEnabled = (try? container.decode(Bool.self, forKey: .isSoundEnabled)) ?? true
         self.isVegasScoring = (try? container.decode(Bool.self, forKey: .isVegasScoring)) ?? false
         self.isDrawConstraintsEnabled = (try? container.decode(Bool.self, forKey: .isDrawConstraintsEnabled)) ?? false
         self.hideHintButton = (try? container.decode(Bool.self, forKey: .hideHintButton)) ?? false
-        self.hideStatsButton = (try? container.decode(Bool.self, forKey: .hideStatsButton)) ?? false
+        self.noStressMode = (try? container.decode(Bool.self, forKey: .noStressMode)) ?? false
         self.deckCount = (try? container.decode(Int.self, forKey: .deckCount)) ?? 1
         self.customFeltColorRevision = (try? container.decode(Int.self, forKey: .customFeltColorRevision)) ?? 0
         self.drawMode = (try? container.decode(GameState.DrawMode.self, forKey: .drawMode)) ?? .drawThree
@@ -91,6 +91,7 @@ public enum FeltColorTheme: String, Codable, CaseIterable {
     case royalBlue
     case charcoal
     case desert
+    case colorblind
     case custom
 }
 

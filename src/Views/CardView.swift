@@ -3,6 +3,8 @@ import SwiftUI
 public struct CardView: View {
     public let card: Card
     public var isAnimated: Bool = false
+    public var isFocused: Bool = false
+    public var isSelected: Bool = false
     @Environment(\.activeCardBackTheme) private var cardBackTheme: String
     @Environment(\.activeCustomCardColors) private var customCardColors: CustomCardColorGroup
 
@@ -32,6 +34,7 @@ public struct CardView: View {
                 .stroke(outlineColor, lineWidth: 0.75)
         )
         .shadow(color: Color.black.opacity(0.15), radius: 1.5, x: 0, y: 1.5)
+        .modifier(KeyboardFocusHighlightModifier(isFocused: isFocused, isSelected: isSelected))
     }
 }
 

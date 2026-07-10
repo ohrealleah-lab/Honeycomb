@@ -6,27 +6,37 @@ public enum VideoPokerVariant: String, Codable, CaseIterable, Equatable {
     case bonusPoker    = "Bonus Poker"
 }
 
+public enum VideoPokerPlayMode: String, Codable, CaseIterable, Equatable {
+    case single = "Single Play"
+    case triple = "Triple Play"
+
+    // Triple Play is hidden from the UI for now (still under polish). Flip this back to
+    // true to re-expose the Options picker and stop forcing saved state back to single.
+    public static let tripleEnabled = false
+}
+
 public struct VideoPokerOptions: Codable, Equatable {
     public var variant: VideoPokerVariant = .jacksOrBetter
+    public var playMode: VideoPokerPlayMode = .single
     public var startingCredits: Int = 100
     public var betPerHand: Int = 1          // 1–5 coins
     public var isSoundEnabled: Bool = true
     public var hideHintButton: Bool = false
-    public var hideStatsButton: Bool = false
     public var hideBetBoard: Bool = false
+    public var noStressMode: Bool = false
     public var feltColor: FeltColorTheme = .feltGreen
-    public var cardBackTheme: String = "Vulpera"
+    public var cardBackTheme: String = "Moogle"
     public var customFeltColorRevision: Int = 0
     public var showFeltVignette: Bool = true
     public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
 
     enum CodingKeys: String, CodingKey {
-        case variant, startingCredits, betPerHand
-        case isSoundEnabled, hideHintButton, hideStatsButton, hideBetBoard
+        case variant, playMode, startingCredits, betPerHand
+        case isSoundEnabled, hideHintButton, hideBetBoard, noStressMode
         case feltColor, cardBackTheme, customFeltColorRevision, showFeltVignette, customCardColors
     }
 
-    public init(feltColor: FeltColorTheme = .feltGreen, cardBackTheme: String = "Vulpera") {
+    public init(feltColor: FeltColorTheme = .feltGreen, cardBackTheme: String = "Moogle") {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
         self.customCardColors = CustomCardColorGroup()
@@ -35,14 +45,15 @@ public struct VideoPokerOptions: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         variant        = try c.decodeIfPresent(VideoPokerVariant.self, forKey: .variant) ?? .jacksOrBetter
+        playMode       = try c.decodeIfPresent(VideoPokerPlayMode.self, forKey: .playMode) ?? .single
         startingCredits = try c.decodeIfPresent(Int.self, forKey: .startingCredits) ?? 100
         betPerHand     = try c.decodeIfPresent(Int.self, forKey: .betPerHand) ?? 1
         isSoundEnabled = try c.decodeIfPresent(Bool.self, forKey: .isSoundEnabled) ?? true
         hideHintButton = try c.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
-        hideStatsButton = try c.decodeIfPresent(Bool.self, forKey: .hideStatsButton) ?? false
         hideBetBoard   = try c.decodeIfPresent(Bool.self, forKey: .hideBetBoard) ?? false
+        noStressMode   = try c.decodeIfPresent(Bool.self, forKey: .noStressMode) ?? false
         feltColor      = try c.decodeIfPresent(FeltColorTheme.self, forKey: .feltColor) ?? .feltGreen
-        cardBackTheme  = try c.decodeIfPresent(String.self, forKey: .cardBackTheme) ?? "Vulpera"
+        cardBackTheme  = try c.decodeIfPresent(String.self, forKey: .cardBackTheme) ?? "Moogle"
         customFeltColorRevision = try c.decodeIfPresent(Int.self, forKey: .customFeltColorRevision) ?? 0
         showFeltVignette = try c.decodeIfPresent(Bool.self, forKey: .showFeltVignette) ?? true
         customCardColors = try c.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()

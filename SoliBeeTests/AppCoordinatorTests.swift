@@ -38,17 +38,16 @@ struct AppCoordinatorTests {
         
         // Verify defaults
         assert(coordinator.klondikeViewModel.options.feltColor == .feltGreen, "Default felt color should be feltGreen")
-        assert(coordinator.klondikeViewModel.options.cardBackTheme == "Vulpera", "Default card back theme should be Vulpera")
+        assert(coordinator.klondikeViewModel.options.cardBackTheme == "Moogle", "Default card back theme should be Moogle")
         
-        // 2. Change preferences on Klondike ViewModel
         coordinator.klondikeViewModel.options.feltColor = .crimson
-        coordinator.klondikeViewModel.options.cardBackTheme = "Moogle"
+        coordinator.klondikeViewModel.options.cardBackTheme = "Vulpera"
         
         // Assert real-time propagation via notifications to Beecell and Spider ViewModels
         assert(coordinator.beecellViewModel.options.feltColor == .crimson, "Beecell felt color should sync to crimson")
-        assert(coordinator.beecellViewModel.options.cardBackTheme == "Moogle", "Beecell card back theme should sync to Moogle")
+        assert(coordinator.beecellViewModel.options.cardBackTheme == "Vulpera", "Beecell card back theme should sync to Vulpera")
         assert(coordinator.spiderViewModel.options.feltColor == .crimson, "Spider felt color should sync to crimson")
-        assert(coordinator.spiderViewModel.options.cardBackTheme == "Moogle", "Spider card back theme should sync to Moogle")
+        assert(coordinator.spiderViewModel.options.cardBackTheme == "Vulpera", "Spider card back theme should sync to Vulpera")
         
         // 3. Change preferences on Beecell ViewModel
         coordinator.beecellViewModel.options.feltColor = .charcoal
@@ -57,23 +56,23 @@ struct AppCoordinatorTests {
         
         // 4. Change preferences on Spider ViewModel
         var spiderOpts = coordinator.spiderViewModel.options
-        spiderOpts.cardBackTheme = "Vulpera"
+        spiderOpts.cardBackTheme = "Moogle"
         coordinator.spiderViewModel.options = spiderOpts
         
-        assert(coordinator.klondikeViewModel.options.cardBackTheme == "Vulpera", "Klondike card back theme should sync back to Vulpera")
-        assert(coordinator.beecellViewModel.options.cardBackTheme == "Vulpera", "Beecell card back theme should sync back to Vulpera")
+        assert(coordinator.klondikeViewModel.options.cardBackTheme == "Moogle", "Klondike card back theme should sync back to Moogle")
+        assert(coordinator.beecellViewModel.options.cardBackTheme == "Moogle", "Beecell card back theme should sync back to Moogle")
         
         // 5. Verify persistence in UserDefaults
         assert(UserDefaults.standard.string(forKey: "global_felt_color") == "charcoal", "Felt color should be persisted to UserDefaults")
-        assert(UserDefaults.standard.string(forKey: "cardBackTheme") == "Vulpera", "Card back theme should be persisted to UserDefaults")
+        assert(UserDefaults.standard.string(forKey: "cardBackTheme") == "Moogle", "Card back theme should be persisted to UserDefaults")
         
         // 6. Verify persistence through relaunch (initializing a new AppCoordinator)
         let newCoordinator = AppCoordinator()
         assert(newCoordinator.klondikeViewModel.options.feltColor == .charcoal, "New Klondike VM should load charcoal felt color")
-        assert(newCoordinator.klondikeViewModel.options.cardBackTheme == "Vulpera", "New Klondike VM should load Vulpera card back theme")
+        assert(newCoordinator.klondikeViewModel.options.cardBackTheme == "Moogle", "New Klondike VM should load Moogle card back theme")
         assert(newCoordinator.beecellViewModel.options.feltColor == .charcoal, "New Beecell VM should load charcoal felt color")
-        assert(newCoordinator.beecellViewModel.options.cardBackTheme == "Vulpera", "New Beecell VM should load Vulpera card back theme")
+        assert(newCoordinator.beecellViewModel.options.cardBackTheme == "Moogle", "New Beecell VM should load Moogle card back theme")
         assert(newCoordinator.spiderViewModel.options.feltColor == .charcoal, "New Spider VM should load charcoal felt color")
-        assert(newCoordinator.spiderViewModel.options.cardBackTheme == "Vulpera", "New Spider VM should load Vulpera card back theme")
+        assert(newCoordinator.spiderViewModel.options.cardBackTheme == "Moogle", "New Spider VM should load Moogle card back theme")
     }
 }

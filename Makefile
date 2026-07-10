@@ -43,7 +43,7 @@ clean:
 
 test:
 	# Compile test runner excluding SoliBeeApp.swift (which has the GUI @main entry)
-	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift SoliBeeTests/*.swift
+	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Debug/*.swift SoliBeeTests/*.swift
 	# Run tests
 	./test_runner
 	# Cleanup test runner binary

@@ -9,6 +9,8 @@ struct GameViewModelTests {
         testValidMoveTableauToTableau()
         testHintsAndAutocompleteTriggers()
         testNoMovesPossibleHint()
+        testStuckDetectionRecognizesUnblockingMoves()
+        testStuckDetectionIgnoresPointlessKingShuffle()
         testUndoAction()
         testZoomAndDefaultZoom()
         testGamesWonCounter()
@@ -19,6 +21,7 @@ struct GameViewModelTests {
         testRestartCurrentGame()
         testHighScorePersistence()
         testCardBackThemePersistence()
+        testKeyboardNavigation()
     }
     
     static func testGameInitialization() {
@@ -128,6 +131,83 @@ struct GameViewModelTests {
         assert(viewModel.activeHint?.description == "No such luck, friend! Try a new game!", "Should show stuck friendly message")
     }
     
+    static func testStuckDetectionRecognizesUnblockingMoves() {
+        let viewModel = GameViewModel()
+        // Disable stock recycling (Vegas mode + draw-one caps recycles at 0) so
+        // hasValidMoves() must actually reason about tableau moves instead of bailing
+        // out early on "the stock can still be redealt".
+        viewModel.options.isVegasScoring = true
+        viewModel.state.drawMode = .drawOne
+        viewModel.state.recyclesCount = 0
+        viewModel.state.stock.cards.removeAll()
+        viewModel.state.waste.cards.removeAll()
+
+        // The 2 of hearts is already on the foundation, so the 3 of hearts is one move
+        // from completing it — but it's sitting under the 2 of spades, and every card
+        // involved is already face-up (no hidden card gets "revealed" by moving it).
+        viewModel.state.foundations = [
+            Pile(id: "foundation_hearts", type: .foundation, cards: [
+                Card(suit: .hearts, rank: 1, faceUp: true),
+                Card(suit: .hearts, rank: 2, faceUp: true)
+            ]),
+            Pile(id: "foundation_spades", type: .foundation),
+            Pile(id: "foundation_diamonds", type: .foundation),
+            Pile(id: "foundation_clubs", type: .foundation)
+        ]
+        viewModel.state.tableau = [
+            Pile(id: "tableau_0", type: .tableau, cards: [
+                Card(suit: .hearts, rank: 3, faceUp: true),
+                Card(suit: .spades, rank: 2, faceUp: true)
+            ]),
+            Pile(id: "tableau_1", type: .tableau, cards: [
+                Card(suit: .diamonds, rank: 3, faceUp: true)
+            ])
+        ] + (2..<7).map { Pile(id: "tableau_\($0)", type: .tableau) }
+
+        viewModel.checkStuckState()
+        assert(!viewModel.isStuck, "Moving the 2 of spades onto the 3 of diamonds frees the already-face-up 3 of hearts for the foundation — this is a real move and must not be flagged as stuck")
+
+        // Options are persisted to UserDefaults on every assignment — restore the
+        // default so later tests that construct a fresh GameViewModel() don't
+        // inherit isVegasScoring=true from this test.
+        viewModel.options.isVegasScoring = false
+    }
+
+    static func testStuckDetectionIgnoresPointlessKingShuffle() {
+        let viewModel = GameViewModel()
+        viewModel.options.isVegasScoring = true
+        viewModel.state.drawMode = .drawOne
+        viewModel.state.recyclesCount = 0
+        viewModel.state.stock.cards.removeAll()
+        viewModel.state.waste.cards.removeAll()
+        viewModel.state.foundations = [
+            Pile(id: "foundation_hearts", type: .foundation),
+            Pile(id: "foundation_spades", type: .foundation),
+            Pile(id: "foundation_diamonds", type: .foundation),
+            Pile(id: "foundation_clubs", type: .foundation)
+        ]
+
+        // A lone King can always hop into an empty column, but doing so here doesn't
+        // reveal anything, complete a foundation, or create any new opportunity — it
+        // just swaps which column is empty. Every other exposed card is a rank that
+        // fits nowhere (foundations are empty and need an Ace; no tableau top is an
+        // adjacent rank/opposite color). This board is a genuine dead end.
+        viewModel.state.tableau = [
+            Pile(id: "tableau_0", type: .tableau, cards: [Card(suit: .clubs, rank: 13, faceUp: true)]),
+            Pile(id: "tableau_1", type: .tableau, cards: []),
+            Pile(id: "tableau_2", type: .tableau, cards: [Card(suit: .diamonds, rank: 9, faceUp: true)]),
+            Pile(id: "tableau_3", type: .tableau, cards: [Card(suit: .clubs, rank: 9, faceUp: true)]),
+            Pile(id: "tableau_4", type: .tableau, cards: [Card(suit: .spades, rank: 9, faceUp: true)]),
+            Pile(id: "tableau_5", type: .tableau, cards: [Card(suit: .hearts, rank: 9, faceUp: true)]),
+            Pile(id: "tableau_6", type: .tableau, cards: [Card(suit: .clubs, rank: 2, faceUp: true)])
+        ]
+
+        viewModel.checkStuckState()
+        assert(viewModel.isStuck, "The only 'move' available is a lone King hopping between two empty-equivalent columns, which is not real progress — this board must be flagged as stuck")
+
+        viewModel.options.isVegasScoring = false
+    }
+
     static func testUndoAction() {
         let viewModel = GameViewModel()
         viewModel.state.drawMode = .drawOne
@@ -369,7 +449,7 @@ struct GameViewModelTests {
         UserDefaults.standard.removeObject(forKey: "cardBackTheme")
         
         let viewModel = GameViewModel()
-        assert(viewModel.cardBackTheme == "Vulpera", "Default theme should be Vulpera")
+        assert(viewModel.cardBackTheme == "Moogle", "Default theme should be Moogle")
         
         viewModel.cardBackTheme = "Moogle"
         assert(UserDefaults.standard.string(forKey: "cardBackTheme") == "Moogle", "Theme should be persisted to UserDefaults")
@@ -388,5 +468,25 @@ struct GameViewModelTests {
         } else {
             UserDefaults.standard.removeObject(forKey: "cardBackTheme")
         }
+    }
+    
+    static func testKeyboardNavigation() {
+        let viewModel = GameViewModel()
+        assert(viewModel.activeCursor == nil, "Initial activeCursor should be nil")
+        
+        viewModel.moveCursorRight()
+        assert(viewModel.activeCursor?.pileId == viewModel.state.waste.id, "Right arrow from stock should target waste pile")
+        
+        viewModel.moveCursorRight()
+        assert(viewModel.activeCursor?.pileId == viewModel.state.foundations[0].id, "Right arrow from waste should target first foundation")
+        
+        viewModel.moveCursorLeft()
+        assert(viewModel.activeCursor?.pileId == viewModel.state.waste.id, "Left arrow from first foundation should target waste pile")
+        
+        viewModel.moveCursorLeft()
+        assert(viewModel.activeCursor?.pileId == viewModel.state.stock.id, "Left arrow from waste should target stock pile")
+        
+        viewModel.moveCursorDown()
+        assert(viewModel.activeCursor?.pileId == viewModel.state.tableau[0].id, "Down arrow from stock should target first tableau column")
     }
 }

@@ -72,10 +72,6 @@ struct SoliBeeApp: App {
                 HelpMenuCommands()
             }
 
-            CommandMenu("Banners") {
-                DebugBannerCommands(coordinator: coordinator)
-            }
-
             CommandGroup(replacing: .toolbar) {
                 Button("Zoom In") {
                     coordinator.zoomIn()
@@ -96,6 +92,10 @@ struct SoliBeeApp: App {
 
                 Button("Make Current Zoom Default") {
                     coordinator.makeCurrentZoomDefault()
+                }
+
+                Button("Make Current Window Size Default") {
+                    coordinator.makeCurrentWindowSizeDefault()
                 }
             }
         }

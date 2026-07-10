@@ -24,18 +24,40 @@ public struct BlackjackView: View {
     private var cardW: CGFloat { 128 * cardScale }  // ≈179
     private var cardH: CGFloat { 181 * cardScale }  // ≈253
 
+    // Card overlap: light for the dealer/single-hand row, tight once a hand is split
+    // so both hands can grow without shrinking (shrinking stays as a fallback for very long hands).
+    private let lightOverlapFraction: CGFloat = 0.3
+    private let tightOverlapFraction: CGFloat = 0.55
+
+    // The toolbar stays fixed size regardless of zoom; only the board below it scales.
+    static let toolbarHeight: CGFloat = 73
+    private static let baseBoardHeight: CGFloat = 950 - toolbarHeight
+
+    private var boardBaseHeight: CGFloat {
+        guard viewModel.isFreePlay else { return Self.baseBoardHeight }
+        // Free play hides the credit display, so the board only needs to fit the
+        // dealer/player card areas and action buttons — not that display's own
+        // height plus its VStack spacing gap.
+        let creditDisplayContribution: CGFloat = 84
+        return Self.baseBoardHeight - creditDisplayContribution
+    }
+
     public init(viewModel: BlackjackViewModel) {
         self.viewModel = viewModel
     }
 
     public var body: some View {
         ZStack {
+            // .id() forces a redraw when the custom felt color's raw RGB changes — those
+            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs on.
             viewModel.options.feltColor.primaryColor
+                .id(viewModel.options.customFeltColorRevision)
                 .ignoresSafeArea()
 
             if viewModel.options.showFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
+                // Stationary toolbar — never scales with zoom
                 toolbarView
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -43,35 +65,42 @@ public struct BlackjackView: View {
 
                 Divider().overlay(Color.white.opacity(0.2))
 
-                VStack(spacing: 12) {
-                    creditDisplay
-
+                // Scaled board area
+                VStack(spacing: 0) {
                     VStack(spacing: 12) {
-                        dealerArea
-                            .padding(.horizontal, 24)
-
-                        vsLabel
-
-                        playerArea
-                            .padding(.horizontal, 24)
-                    }
-                    .overlay {
-                        if viewModel.state.phase == .result {
-                            Color.clear
-                                .contentShape(Rectangle())
-                                .onTapGesture { viewModel.deal() }
+                        if !viewModel.isFreePlay {
+                            creditDisplay
                         }
+
+                        VStack(spacing: 12) {
+                            dealerArea
+                                .padding(.horizontal, 24)
+
+                            vsLabel
+
+                            playerArea
+                                .padding(.horizontal, 24)
+                        }
+                        .overlay {
+                            if viewModel.state.phase == .result {
+                                Color.clear
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { viewModel.deal() }
+                            }
+                        }
+
+                        actionButtons
                     }
+                    .padding(.vertical, 16)
 
-                    actionButtons
+                    Spacer()
                 }
-                .padding(.vertical, 16)
-
-                Spacer()
+                .frame(width: 905, height: boardBaseHeight, alignment: .topLeading)
+                .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
+                .frame(width: 905 * viewModel.zoomScale, height: boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
-            .frame(width: 905, height: 950, alignment: .topLeading)
-            .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
-            .frame(width: 905 * viewModel.zoomScale, height: 950 * viewModel.zoomScale, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             // Idle prompt overlay
             if showIdlePrompt {
@@ -100,25 +129,39 @@ public struct BlackjackView: View {
                 .clipped()
         }
         .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
-               minHeight: 950 * viewModel.zoomScale, maxHeight: .infinity)
+               minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale, maxHeight: .infinity)
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            snapToMinSize()
+            coordinator?.activeWindow = window
+            if let saved = viewModel.defaultWindowSize {
+                snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
+            } else {
+                snapToMinSize()
+            }
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
+        .onChange(of: viewModel.options.noStressMode) { snapToMinSize() }
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
-        .sheet(isPresented: $isShowingOptions) {
-            BlackjackOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
+        .overlay {
+            if isShowingOptions {
+                Color.clear
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .overlay(
+                        BlackjackOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions)
+                    )
+                    .transition(.opacity)
+            }
         }
         .sheet(isPresented: $isShowingStats) {
             BlackjackStatsView(viewModel: viewModel)
         }
         .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
-            Button("New Game", role: .destructive) { viewModel.startNewGame() }
             Button("Cancel", role: .cancel) { }
+            Button("New Game", role: .destructive) { viewModel.startNewGame() }
         }
         .onAppear {
             if viewModel.state.phase == .betting && viewModel.state.playerHands.isEmpty {
@@ -192,9 +235,6 @@ public struct BlackjackView: View {
         HStack(spacing: 20) {
             gameModeMenu
             toolbarButton("Options")  { isShowingOptions = true }
-            if !viewModel.options.hideStatsButton {
-                toolbarButton("Stats") { isShowingStats = true }
-            }
             Spacer()
         }
     }
@@ -264,7 +304,7 @@ public struct BlackjackView: View {
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.currentBet)")
                     .font(.display(28, weight: .black))
-                    .foregroundColor(viewModel.state.currentBet == 5 ? .orange : .white)
+                    .foregroundColor(viewModel.state.currentBet == viewModel.state.sessionCredits ? .orange : .white)
             }
 
             VStack(spacing: 2) {
@@ -317,7 +357,7 @@ public struct BlackjackView: View {
                 }
             }
 
-            HStack(spacing: 16) {
+            HStack(spacing: -cardW * lightOverlapFraction) {
                 if viewModel.state.dealerCards.isEmpty || showCardBackPlaceholders {
                     ForEach(0..<2, id: \.self) { _ in
                         CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
@@ -361,23 +401,26 @@ public struct BlackjackView: View {
 
     // Scale cards down in split mode so even 5-card hands fit in one grid column.
     // Base card is 128×181 pt; cardScale (1.4) applies on top for the normal single-hand view.
+    // Disabled — cards now overlap (tight overlap on splits), which saves enough room
+    // that hands no longer need to shrink.
     private var playerCardScale: CGFloat {
-        let maxCards = viewModel.state.playerHands.map { $0.cards.count }.max() ?? 2
-        let isSplit = viewModel.state.playerHands.count > 1
-        if isSplit {
-            switch maxCards {
-            case ..<3: return cardScale
-            case 3:    return 1.0
-            case 4:    return 0.78
-            default:   return 0.65
-            }
-        } else {
-            switch maxCards {
-            case ..<5: return cardScale   // 2–4 cards — full size
-            case 5:    return 0.85
-            default:   return 0.70        // 6+
-            }
-        }
+        // let maxCards = viewModel.state.playerHands.map { $0.cards.count }.max() ?? 2
+        // let isSplit = viewModel.state.playerHands.count > 1
+        // if isSplit {
+        //     switch maxCards {
+        //     case ..<3: return cardScale
+        //     case 3:    return 1.0
+        //     case 4:    return 0.78
+        //     default:   return 0.65
+        //     }
+        // } else {
+        //     switch maxCards {
+        //     case ..<5: return cardScale   // 2–4 cards — full size
+        //     case 5:    return 0.85
+        //     default:   return 0.70        // 6+
+        //     }
+        // }
+        return cardScale
     }
     private var playerCardW: CGFloat { 128 * playerCardScale }
     private var playerCardH: CGFloat { 181 * playerCardScale }
@@ -387,7 +430,7 @@ public struct BlackjackView: View {
         let scale  = playerCardScale
         let width  = playerCardW
         let height = playerCardH
-        let spacing: CGFloat = isSplit ? 8 : 16
+        let spacing: CGFloat = isSplit ? -width * tightOverlapFraction : -width * lightOverlapFraction
         let columns = isSplit
             ? [GridItem(.flexible()), GridItem(.flexible())]
             : [GridItem(.flexible())]
@@ -406,7 +449,7 @@ public struct BlackjackView: View {
             }
 
             if viewModel.state.playerHands.isEmpty || showCardBackPlaceholders {
-                HStack(spacing: 16) {
+                HStack(spacing: -cardW * lightOverlapFraction) {
                     ForEach(0..<2, id: \.self) { _ in
                         CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
                             .scaleEffect(cardScale)
@@ -435,14 +478,6 @@ public struct BlackjackView: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(isSplit && isActive ? Color.yellow.opacity(0.85) : Color.clear, lineWidth: 2)
                         )
-
-                        if isSplit {
-                            Text("BET \(hand.bet)")
-                                .font(.display(11, weight: .bold))
-                                .foregroundColor(.yellow.opacity(0.8))
-                                .opacity(cardsVisible ? 1 : 0)
-                                .animation(.easeOut(duration: 0.4), value: cardsVisible)
-                        }
                     }
                 }
             }
@@ -496,7 +531,7 @@ public struct BlackjackView: View {
             isWin = false
         } else {
             let playerBust = !viewModel.state.playerHands.isEmpty && viewModel.state.playerHands.allSatisfy { $0.isBust }
-            headline = playerBust ? "Bust! Not today, partner!" : "Not today, partner!"
+            headline = playerBust ? "Bust!" : "Not today, partner!"
             subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
             isWin = false
         }
@@ -524,10 +559,12 @@ public struct BlackjackView: View {
                 .onAppear { if isWin { bannerWinFlash = true } }
                 .onDisappear { bannerWinFlash = false }
 
-            Text(subline)
-                .font(.system(.body))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
+            if !viewModel.isFreePlay {
+                Text(subline)
+                    .font(.system(.body))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+            }
 
             VStack(spacing: 2) {
                 Text("Dealer: \(dealerVal)")
@@ -557,37 +594,57 @@ public struct BlackjackView: View {
     // MARK: - Action Buttons
 
     private var actionButtons: some View {
-        HStack(spacing: 12) {
+        VStack(spacing: 12) {
             switch viewModel.state.phase {
             case .betting, .result:
-                casinoButton("-", color: .white.opacity(0.2)) { viewModel.decreaseBet() }
-                casinoButton("BET MAX  [M]", color: .orange.opacity(0.85)) { viewModel.maxBet() }
-                casinoButton("+", color: .white.opacity(0.2)) { viewModel.increaseBet() }
-                Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
-                casinoButton("DEAL  [Space]", color: .yellow,
-                             disabled: viewModel.state.sessionCredits < viewModel.state.currentBet) {
-                    viewModel.deal()
+                if !viewModel.isFreePlay {
+                    HStack(spacing: 12) {
+                        casinoButton("1",  color: .white, textColor: .black) { viewModel.addToBet(1) }
+                        casinoButton("5",  color: .red.opacity(0.85)) { viewModel.addToBet(5) }
+                        casinoButton("10", color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
+                        casinoButton("25", color: .green.opacity(0.75)) { viewModel.addToBet(25) }
+                        casinoButton("2X", color: .orange.opacity(0.85)) { viewModel.doubleBet() }
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    if !viewModel.isFreePlay {
+                        casinoButton("CLEAR BET", color: Color(white: 0.25)) { viewModel.clearBet() }
+                        Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
+                    }
+                    casinoButton("DEAL  [Space]", color: .yellow,
+                                 disabled: !viewModel.isFreePlay && viewModel.state.sessionCredits < viewModel.state.currentBet) {
+                        viewModel.deal()
+                    }
+                    if viewModel.canRebuy {
+                        Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
+                        casinoButton("REBUY", color: .red.opacity(0.8)) { viewModel.rebuy() }
+                    }
                 }
 
             case .playing:
-                casinoButton("HIT  [H]",       color: .green.opacity(0.85))  { viewModel.hit() }
-                casinoButton("STAND  [S]",     color: .red.opacity(0.75))    { viewModel.stand() }
-                if viewModel.canDouble {
-                    casinoButton("DOUBLE  [D]", color: .blue.opacity(0.75)) { viewModel.doubleDown() }
-                }
-                if viewModel.canSplit {
-                    casinoButton("SPLIT  [P]", color: .purple.opacity(0.75)) { viewModel.split() }
+                HStack(spacing: 12) {
+                    if viewModel.activeHand?.isSplitAce == true {
+                        // Split Aces auto-stand after one card — no player action, just a brief pause.
+                        casinoButton("HIT  [H]",   color: .green.opacity(0.3), disabled: true) {}
+                        casinoButton("STAND  [S]", color: .red.opacity(0.3),   disabled: true) {}
+                    } else {
+                        casinoButton("HIT  [H]",       color: .green.opacity(0.85))  { viewModel.hit() }
+                        casinoButton("STAND  [S]",     color: .red.opacity(0.75))    { viewModel.stand() }
+                        if viewModel.canDouble {
+                            casinoButton("DOUBLE  [D]", color: .blue.opacity(0.75)) { viewModel.doubleDown() }
+                        }
+                        if viewModel.canSplit {
+                            casinoButton("SPLIT  [P]", color: .purple.opacity(0.75)) { viewModel.split() }
+                        }
+                    }
                 }
 
             case .dealerTurn:
-                casinoButton("HIT  [H]",       color: .green.opacity(0.3), disabled: true) {}
-                casinoButton("STAND  [S]",     color: .red.opacity(0.3),   disabled: true) {}
-            }
-
-            if viewModel.state.sessionCredits < viewModel.state.currentBet
-                && viewModel.state.phase != .playing
-                && viewModel.state.phase != .dealerTurn {
-                casinoButton("REBUY", color: .red.opacity(0.8)) { viewModel.rebuy() }
+                HStack(spacing: 12) {
+                    casinoButton("HIT  [H]",       color: .green.opacity(0.3), disabled: true) {}
+                    casinoButton("STAND  [S]",     color: .red.opacity(0.3),   disabled: true) {}
+                }
             }
         }
     }
@@ -665,21 +722,35 @@ public struct BlackjackView: View {
     private func updateMinSize() {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: 950 * z)
+        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
         DispatchQueue.main.async {
             window.contentMinSize = size
         }
     }
 
-    private func snapToMinSize() {
+    private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: 950 * z)
+        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
+        let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
         DispatchQueue.main.async {
-            window.contentMinSize = size
+            window.contentMinSize = minSize
+
+            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
+            // bottom-left anchor) so a height change — e.g. toggling No Stress Mode — never
+            // pushes the toolbar/title bar off the top of the screen.
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+            let currentFrame = window.frame
+            newFrame.origin.x = currentFrame.origin.x
+            newFrame.origin.y = currentFrame.maxY - newFrame.height
+            if let visible = window.screen?.visibleFrame {
+                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
+                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+            }
+
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.animator().setContentSize(size)
+                window.animator().setFrame(newFrame, display: true)
             }
         }
     }
@@ -694,12 +765,11 @@ public struct BlackjackView: View {
 struct BlackjackOptionsView: View {
     @Bindable var viewModel: BlackjackViewModel
     @Binding var isShowingStats: Bool
-    @Environment(\.dismiss) private var dismiss
+    @Binding var isPresented: Bool
 
     @State private var startingCredits: Int
-    @State private var betPerHand: Int
     @State private var isSoundEnabled: Bool
-    @State private var hideStatsButton: Bool
+    @State private var noStressMode: Bool
     @State private var showFeltVignette: Bool
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
@@ -710,19 +780,25 @@ struct BlackjackOptionsView: View {
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
+    let originalFeltColor: FeltColorTheme
+    let originalCardBackTheme: String
+    let originalShowFeltVignette: Bool
     let originalCustomCardColors: CustomCardColorGroup
 
-    init(viewModel: BlackjackViewModel, isShowingStats: Binding<Bool>) {
+    init(viewModel: BlackjackViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>) {
         self.viewModel = viewModel
         self._isShowingStats = isShowingStats
+        self._isPresented = isPresented
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
-        _betPerHand      = State(initialValue: viewModel.options.betPerHand)
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
-        _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        _noStressMode    = State(initialValue: viewModel.options.noStressMode)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _feltColor       = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme   = State(initialValue: viewModel.options.cardBackTheme)
         _customCardColors = State(initialValue: viewModel.options.customCardColors)
+        self.originalFeltColor = viewModel.options.feltColor
+        self.originalCardBackTheme = viewModel.options.cardBackTheme
+        self.originalShowFeltVignette = viewModel.options.showFeltVignette
         self.originalCustomCardColors = viewModel.options.customCardColors
 
         let r = UserDefaults.standard.double(forKey: "custom_felt_red")
@@ -749,15 +825,10 @@ struct BlackjackOptionsView: View {
                     Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 10...10000, step: 10)
                         .font(.system(.body))
 
-                    Picker("Default Bet:", selection: $betPerHand) {
-                        ForEach(1...5, id: \.self) { n in Text("\(n) coin\(n == 1 ? "" : "s")").tag(n) }
-                    }
-                    .font(.system(.body))
-
                     Divider()
 
                     Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body))
-                    Toggle("Hide Stats button", isOn: $hideStatsButton).font(.system(.body))
+                    Toggle("No Stress Mode",    isOn: $noStressMode).font(.system(.body))
 
                     Divider()
 
@@ -800,14 +871,21 @@ struct BlackjackOptionsView: View {
                     UserDefaults.standard.set(originalRed,   forKey: "custom_felt_red")
                     UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
                     UserDefaults.standard.set(originalBlue,  forKey: "custom_felt_blue")
-                    dismiss()
+                    // Revert any theme changes that were live-previewed via the Themes sub-panel.
+                    var revertedOpts = viewModel.options
+                    revertedOpts.feltColor = originalFeltColor
+                    revertedOpts.cardBackTheme = originalCardBackTheme
+                    revertedOpts.showFeltVignette = originalShowFeltVignette
+                    revertedOpts.customCardColors = originalCustomCardColors
+                    viewModel.options = revertedOpts
+                    isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
                 Button(action: {
-                    dismiss()
+                    isPresented = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { isShowingStats = true }
                 }) {
                     Text("View Stats").foregroundColor(.blue).underline()
@@ -820,16 +898,15 @@ struct BlackjackOptionsView: View {
                 Button("OK") {
                     var o = viewModel.options
                     o.startingCredits = startingCredits
-                    o.betPerHand      = betPerHand
                     o.isSoundEnabled  = isSoundEnabled
-                    o.hideStatsButton   = hideStatsButton
+                    o.noStressMode    = noStressMode
                     o.showFeltVignette  = showFeltVignette
                     o.feltColor         = feltColor
                     o.cardBackTheme   = cardBackTheme
                     o.customCardColors = customCardColors
                     o.customFeltColorRevision += 1
                     viewModel.options = o
-                    dismiss()
+                    isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)
             }
@@ -837,11 +914,13 @@ struct BlackjackOptionsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 440)
+        .fixedSize(horizontal: false, vertical: true)
         .background(Color(NSColor.windowBackgroundColor))
 
         if showingThemes {
             ThemesOptionsView(
                 isShowing: $showingThemes,
+                isOptionsPresented: $isPresented,
                 feltColor: $feltColor,
                 cardBackTheme: $cardBackTheme,
                 showFeltVignette: $showFeltVignette,
@@ -851,13 +930,13 @@ struct BlackjackOptionsView: View {
                 originalGreen: originalGreen,
                 originalBlue: originalBlue,
                 originalCustomCardColors: originalCustomCardColors,
-                onDone: {
+                onCommit: { bumpFeltRevision in
                     var o = viewModel.options
                     o.showFeltVignette   = showFeltVignette
                     o.feltColor          = feltColor
                     o.cardBackTheme      = cardBackTheme
                     o.customCardColors   = customCardColors
-                    o.customFeltColorRevision += 1
+                    if bumpFeltRevision { o.customFeltColorRevision += 1 }
                     viewModel.options = o
                 }
             )

@@ -409,6 +409,7 @@ public struct CardDeckSelectorView: View {
         case .royalBlue: return "Blue"
         case .charcoal: return "Charcoal"
         case .desert: return "Desert"
+        case .colorblind: return "Colorblind"
         case .custom: return "Custom"
         }
     }

@@ -12,6 +12,7 @@ public struct GameView: View {
     @State private var dragLocation: CGPoint = .zero
     @State private var pileFrames: [String: CGRect] = [:]
     @State private var isShuffling: Bool = false
+    @State private var isDrawInFlight: Bool = false
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
     @State private var isShowingNewGameConfirm: Bool = false
@@ -23,9 +24,11 @@ public struct GameView: View {
     @State private var pendingDrawMode: GameState.DrawMode? = nil
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
+    @FocusState private var isBoardFocused: Bool
+    @State private var keyMonitor: Any? = nil
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
-    
+
     public init(viewModel: GameViewModel) {
         self.viewModel = viewModel
     }
@@ -37,8 +40,17 @@ public struct GameView: View {
         
         return ZStack {
             // Felt Board Background
+            // .id() forces a redraw when the custom felt color's raw RGB changes — those
+            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs
+            // on. Scoped to just this Color (not the whole board) so it doesn't tear down
+            // and reset unrelated @State, like the Options/Themes sheet's open/closed state.
             viewModel.options.feltColor.primaryColor
+                .id(viewModel.options.customFeltColorRevision)
                 .ignoresSafeArea()
+                .onTapGesture {
+                    viewModel.clearKeyboardCursor()
+                    isBoardFocused = true
+                }
 
             if viewModel.options.showFeltVignette { FeltVignetteView(intensity: 0.34) }
 
@@ -130,22 +142,6 @@ public struct GameView: View {
                     .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
 
-                    // Stats Button
-                    if !viewModel.options.hideStatsButton {
-                        Button(action: { isShowingStats = true }) {
-                            Text("Stats")
-                                .font(.display(16))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.white.opacity(0.15))
-                                .cornerRadius(4)
-                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                        }
-                        .buttonStyle(HoverToolbarButtonStyle())
-                        .focusable(false)
-                    }
-
                     // Hint Button
                     if !viewModel.options.hideHintButton {
                         Button(action: { viewModel.findHint() }) {
@@ -199,7 +195,7 @@ public struct GameView: View {
                             StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
 
                             // Timer
-                            if viewModel.options.isTimed {
+                            if !viewModel.options.noStressMode {
                                 StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                             }
                         }
@@ -231,8 +227,14 @@ public struct GameView: View {
                 // Piles Row (Stock + Waste + Col 2 Blank + 4 Foundations)
                 HStack(alignment: .top, spacing: stackSpacing) {
                     ZStack {
-                        StockPileView(pile: viewModel.state.stock, stackSpacing: stackSpacing, canRecycle: viewModel.canRecycleStock)
-                            .offset(x: isShuffling ? -6 : 0, y: isShuffling ? -2 : 0)
+                        StockPileView(
+                            pile: viewModel.state.stock,
+                            stackSpacing: stackSpacing,
+                            canRecycle: viewModel.canRecycleStock,
+                            isFocused: viewModel.activeCursor?.pileId == viewModel.state.stock.id,
+                            isSelected: viewModel.selectedCardsSource == viewModel.state.stock.id
+                        )
+                        .offset(x: isShuffling ? -6 : 0, y: isShuffling ? -2 : 0)
                             .rotationEffect(.degrees(isShuffling ? -4 : 0))
                         if viewModel.isStockExhausted {
                             Text("Stock\nExhausted")
@@ -255,33 +257,9 @@ public struct GameView: View {
                     })
                     .overlay(
                         ClickReceiver {
-                            if viewModel.state.hasWon { return }
-                            if viewModel.state.stock.isEmpty && !viewModel.canRecycleStock {
-                                return
-                            }
-                            viewModel.clearHint()
-                            let wasEmpty = viewModel.state.stock.isEmpty
-                            if wasEmpty && !viewModel.state.waste.isEmpty {
-                                // Recycle animation: cards slide back to stock
-                                withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
-                                    viewModel.drawCard()
-                                }
-                                // Play a quick physical wiggle on the stock pile
-                                withAnimation(.spring(response: 0.15, dampingFraction: 0.35)) {
-                                    isShuffling = true
-                                }
-                                // Center wiggle back
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                    withAnimation(.spring(response: 0.22, dampingFraction: 0.45)) {
-                                        isShuffling = false
-                                    }
-                                }
-                            } else {
-                                // Draw animation: cards slide to waste
-                                withAnimation(.easeInOut(duration: 0.22)) {
-                                    viewModel.drawCard()
-                                }
-                            }
+                            viewModel.clearKeyboardCursor()
+                            isBoardFocused = true
+                            performStockDraw()
                         }
                     )
                     
@@ -293,7 +271,10 @@ public struct GameView: View {
                         stackSpacing: stackSpacing,
                         draggedCardIDs: Set(draggedCards.map { $0.id }),
                         isHinted: (viewModel.activeHint?.sourcePileId == viewModel.state.waste.id || viewModel.activeHint?.targetPileId == viewModel.state.waste.id) && viewModel.activeHint?.sourcePileId != viewModel.state.stock.id && viewModel.activeHint?.targetPileId != viewModel.state.stock.id,
+                        isFocused: viewModel.activeCursor?.pileId == viewModel.state.waste.id,
+                        isSelected: viewModel.selectedCardsSource == viewModel.state.waste.id,
                         onDragStarted: { card, stack, startLoc in
+                            viewModel.clearKeyboardCursor()
                             viewModel.clearHint()
                             if draggedCards.isEmpty {
                                 draggedCards = stack
@@ -334,7 +315,10 @@ public struct GameView: View {
                         FoundationPileView(
                             pile: pile,
                             suit: suit,
+                            isFocused: viewModel.activeCursor?.pileId == pile.id,
+                            isSelected: viewModel.selectedCardsSource == pile.id,
                             onDragStarted: { card, stack, startLoc in
+                                viewModel.clearKeyboardCursor()
                                 viewModel.clearHint()
                                 if draggedCards.isEmpty {
                                     draggedCards = stack
@@ -371,7 +355,12 @@ public struct GameView: View {
                             pile: pile,
                             draggedCardIDs: Set(draggedCards.map { $0.id }),
                             activeHint: viewModel.activeHint,
+                            isFocused: viewModel.activeCursor?.pileId == pile.id,
+                            focusedCardIndex: viewModel.activeCursor?.pileId == pile.id ? viewModel.activeCursor?.cardIndex : nil,
+                            isSelected: viewModel.selectedCardsSource == pile.id,
+                            selectedCardIndex: viewModel.selectedCardsSource == pile.id ? viewModel.selectedCardsIndex : nil,
                             onDragStarted: { card, stack, startLoc in
+                                viewModel.clearKeyboardCursor()
                                 viewModel.clearHint()
                                 if draggedCards.isEmpty {
                                     draggedCards = stack
@@ -543,9 +532,7 @@ public struct GameView: View {
                                     .onAppear { winPulse = true }
                                     .onDisappear { winPulse = false }
 
-                                Text(viewModel.options.isVegasScoring
-                                     ? "Bankroll: \(viewModel.vegasBankrollString) | Time: \(formatTime(viewModel.state.timerSeconds))"
-                                     : "Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
+                                Text(winSummaryText)
                                     .font(.system(.body))
                                     .foregroundColor(.white)
 
@@ -618,15 +605,80 @@ public struct GameView: View {
         .environment(\.feltColor, viewModel.options.feltColor)
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
-        .id(viewModel.options.customFeltColorRevision)
+        .focusable()
+        .focused($isBoardFocused)
+        .onAppear {
+            isBoardFocused = true
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                guard !isShowingOptions && !isShowingStats else { return event }
+                if let firstResponder = NSApp.keyWindow?.firstResponder,
+                   firstResponder.isKind(of: NSText.self) || String(describing: type(of: firstResponder)).contains("TextView") {
+                    return event
+                }
+                // Arrow/function keys always carry .numericPad and .function in modifierFlags
+                // even with no modifier held, so only guard against real modifier keys.
+                let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+                guard modifiers.isEmpty else { return event }
+
+                switch event.keyCode {
+                case 123: // Left Arrow
+                    viewModel.moveCursorLeft()
+                    return nil
+                case 124: // Right Arrow
+                    viewModel.moveCursorRight()
+                    return nil
+                case 126: // Up Arrow
+                    viewModel.moveCursorUp()
+                    return nil
+                case 125: // Down Arrow
+                    viewModel.moveCursorDown()
+                    return nil
+                case 49, 36: // Space, Return
+                    viewModel.performSpaceAction()
+                    return nil
+                case 53: // Escape
+                    viewModel.clearKeyboardCursor()
+                    return nil
+                default:
+                    if let chars = event.charactersIgnoringModifiers?.lowercased() {
+                        if chars == "d" {
+                            viewModel.enableKeyboardCursorIfNeeded()
+                            performStockDraw()
+                            return nil
+                        } else if chars == "f" {
+                            viewModel.autoMoveFocusedCardToFoundations()
+                            return nil
+                        } else if chars == "a" {
+                            viewModel.runAutocomplete()
+                            return nil
+                        }
+                    }
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let monitor = keyMonitor {
+                NSEvent.removeMonitor(monitor)
+                keyMonitor = nil
+            }
+        }
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
                minHeight: 73 + 950 * viewModel.zoomScale,
                maxHeight: .infinity)
-        .sheet(isPresented: $isShowingOptions) {
-            OptionsView(viewModel: viewModel, onViewStats: {
-                isShowingStats = true
-            })
+        .overlay {
+            if isShowingOptions {
+                Color.clear
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .overlay(
+                        OptionsView(viewModel: viewModel, isPresented: $isShowingOptions, onViewStats: {
+                            isShowingStats = true
+                        })
+                    )
+                    .transition(.opacity)
+            }
         }
         .sheet(isPresented: $isShowingStats) {
             StatsView(viewModel: viewModel)
@@ -636,11 +688,11 @@ public struct GameView: View {
             Button("Cancel", role: .cancel) { }
         }
         .confirmationDialog("Start a new game? Your current game will end.", isPresented: $isShowingNewGameConfirm) {
+            Button("Cancel", role: .cancel) { pendingDrawMode = nil }
             Button("New Game", role: .destructive) {
                 if let mode = pendingDrawMode { viewModel.state.drawMode = mode; pendingDrawMode = nil }
                 viewModel.startNewGame()
             }
-            Button("Cancel", role: .cancel) { pendingDrawMode = nil }
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
@@ -673,10 +725,49 @@ public struct GameView: View {
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            snapToMinSize()
+            coordinator?.activeWindow = window
+            if let saved = viewModel.defaultWindowSize {
+                snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
+            } else {
+                snapToMinSize()
+            }
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
         .onChange(of: viewModel.state.tableau.count) { updateMinSize() }
+    }
+
+    private func performStockDraw() {
+        if viewModel.state.hasWon { return }
+        if viewModel.state.stock.isEmpty && !viewModel.canRecycleStock { return }
+        guard !isDrawInFlight else { return }
+        viewModel.clearHint()
+        let wasEmpty = viewModel.state.stock.isEmpty
+        isDrawInFlight = true
+        if wasEmpty && !viewModel.state.waste.isEmpty {
+            // Recycle animation: cards slide back to stock
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                viewModel.drawCard()
+            } completion: {
+                isDrawInFlight = false
+            }
+            // Play a quick physical wiggle on the stock pile
+            withAnimation(.spring(response: 0.15, dampingFraction: 0.35)) {
+                isShuffling = true
+            }
+            // Center wiggle back
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation(.spring(response: 0.22, dampingFraction: 0.45)) {
+                    isShuffling = false
+                }
+            }
+        } else {
+            // Draw animation: cards slide to waste
+            withAnimation(.easeInOut(duration: 0.22)) {
+                viewModel.drawCard()
+            } completion: {
+                isDrawInFlight = false
+            }
+        }
     }
 
     private func updateMinSize() {
@@ -691,19 +782,33 @@ public struct GameView: View {
         }
     }
 
-    private func snapToMinSize() {
+    private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
         let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
         let cols = CGFloat(max(viewModel.state.tableau.count, 7))
         let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
         let minH = 73.0 + 950.0 * z + 24
-        let size = NSSize(width: minW, height: minH)
+        let minSize = NSSize(width: minW, height: minH)
+        let size = overrideSize.map { NSSize(width: max($0.width, minW), height: max($0.height, minH)) } ?? minSize
         DispatchQueue.main.async {
-            window.contentMinSize = size
+            window.contentMinSize = minSize
+
+            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
+            // bottom-left anchor) so a height change never pushes the toolbar/title bar off
+            // the top of the screen.
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+            let currentFrame = window.frame
+            newFrame.origin.x = currentFrame.origin.x
+            newFrame.origin.y = currentFrame.maxY - newFrame.height
+            if let visible = window.screen?.visibleFrame {
+                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
+                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+            }
+
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.animator().setContentSize(size)
+                window.animator().setFrame(newFrame, display: true)
             }
         }
     }
@@ -841,6 +946,14 @@ public struct GameView: View {
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
+
+    private var winSummaryText: String {
+        let scorePart = viewModel.options.isVegasScoring
+            ? "Bankroll: \(viewModel.vegasBankrollString)"
+            : "Score: \(viewModel.scoreString)"
+        guard !viewModel.options.noStressMode else { return scorePart }
+        return "\(scorePart) | Time: \(formatTime(viewModel.state.timerSeconds))"
+    }
 }
 
 // MARK: - UI Subviews
@@ -888,6 +1001,8 @@ extension FeltColorTheme {
             return Color(red: 0.18, green: 0.18, blue: 0.18)
         case .desert:
             return Color(red: 0.76, green: 0.59, blue: 0.48)
+        case .colorblind:
+            return Color(red: 0.20, green: 0.32, blue: 0.45)
         case .custom:
             let r = UserDefaults.standard.double(forKey: "custom_felt_red")
             let g = UserDefaults.standard.double(forKey: "custom_felt_green")
@@ -911,6 +1026,8 @@ extension FeltColorTheme {
             return Color(red: 0.14, green: 0.14, blue: 0.14)
         case .desert:
             return Color(red: 0.71, green: 0.54, blue: 0.43)
+        case .colorblind:
+            return Color(red: 0.16, green: 0.26, blue: 0.38)
         case .custom:
             let r = UserDefaults.standard.double(forKey: "custom_felt_red")
             let g = UserDefaults.standard.double(forKey: "custom_felt_green")
@@ -925,17 +1042,16 @@ extension FeltColorTheme {
 
 struct OptionsView: View {
     @Bindable var viewModel: GameViewModel
-    @Environment(\.dismiss) private var dismiss
-    
+    @Binding var isPresented: Bool
+
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
-    @State private var isTimed: Bool
     @State private var isStatusBarVisible: Bool
     @State private var isSoundEnabled: Bool
     @State private var isVegasScoring: Bool
     @State private var drawMode: GameState.DrawMode
     @State private var hideHintButton: Bool
-    @State private var hideStatsButton: Bool
+    @State private var noStressMode: Bool
     @State private var showFeltVignette: Bool
     @State private var customSelectedColor: Color
     @State private var customCardColors: CustomCardColorGroup
@@ -944,24 +1060,30 @@ struct OptionsView: View {
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
+    let originalFeltColor: FeltColorTheme
+    let originalCardBackTheme: String
+    let originalShowFeltVignette: Bool
     let originalCustomCardColors: CustomCardColorGroup
-    
+
     let onViewStats: (() -> Void)?
-    
-    init(viewModel: GameViewModel, onViewStats: (() -> Void)? = nil) {
+
+    init(viewModel: GameViewModel, isPresented: Binding<Bool>, onViewStats: (() -> Void)? = nil) {
         self.viewModel = viewModel
+        self._isPresented = isPresented
         self.onViewStats = onViewStats
         _feltColor = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme = State(initialValue: viewModel.options.cardBackTheme)
-        _isTimed = State(initialValue: viewModel.options.isTimed)
         _isStatusBarVisible = State(initialValue: viewModel.options.isStatusBarVisible)
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _isVegasScoring = State(initialValue: viewModel.options.isVegasScoring)
         _drawMode = State(initialValue: viewModel.state.drawMode)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
-        _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        _noStressMode = State(initialValue: viewModel.options.noStressMode)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _customCardColors = State(initialValue: viewModel.options.customCardColors)
+        self.originalFeltColor = viewModel.options.feltColor
+        self.originalCardBackTheme = viewModel.options.cardBackTheme
+        self.originalShowFeltVignette = viewModel.options.showFeltVignette
         self.originalCustomCardColors = viewModel.options.customCardColors
 
         let r = UserDefaults.standard.double(forKey: "custom_felt_red")
@@ -978,7 +1100,7 @@ struct OptionsView: View {
         }
         _customSelectedColor = State(initialValue: initialColor)
     }
-    
+
     var body: some View {
         ZStack {
         VStack(spacing: 20) {
@@ -998,9 +1120,6 @@ struct OptionsView: View {
                     
                     Divider()
 
-                    Toggle("Timed Game", isOn: $isTimed)
-                        .font(.system(.body))
-
                     Toggle("Sound Effects", isOn: $isSoundEnabled)
                         .font(.system(.body))
 
@@ -1010,7 +1129,7 @@ struct OptionsView: View {
                     Toggle("Hide Hint button", isOn: $hideHintButton)
                         .font(.system(.body))
 
-                    Toggle("Hide Stats button", isOn: $hideStatsButton)
+                    Toggle("No Stress Mode", isOn: $noStressMode)
                         .font(.system(.body))
 
                     Divider()
@@ -1054,14 +1173,21 @@ struct OptionsView: View {
                     UserDefaults.standard.set(originalRed, forKey: "custom_felt_red")
                     UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
                     UserDefaults.standard.set(originalBlue, forKey: "custom_felt_blue")
-                    dismiss()
+                    // Revert any theme changes that were live-previewed via the Themes sub-panel.
+                    var revertedOpts = viewModel.options
+                    revertedOpts.feltColor = originalFeltColor
+                    revertedOpts.cardBackTheme = originalCardBackTheme
+                    revertedOpts.showFeltVignette = originalShowFeltVignette
+                    revertedOpts.customCardColors = originalCustomCardColors
+                    viewModel.options = revertedOpts
+                    isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
-                
+
                 Spacer()
-                
+
                 Button(action: {
-                    dismiss()
+                    isPresented = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                         onViewStats?()
                     }
@@ -1079,12 +1205,11 @@ struct OptionsView: View {
                     var updatedOpts = viewModel.options
                     updatedOpts.feltColor = feltColor
                     updatedOpts.cardBackTheme = cardBackTheme
-                    updatedOpts.isTimed = isTimed
                     updatedOpts.isStatusBarVisible = isStatusBarVisible
                     updatedOpts.isSoundEnabled = isSoundEnabled
                     updatedOpts.isVegasScoring = isVegasScoring
                     updatedOpts.hideHintButton = hideHintButton
-                    updatedOpts.hideStatsButton = hideStatsButton
+                    updatedOpts.noStressMode = noStressMode
                     updatedOpts.showFeltVignette = showFeltVignette
                     updatedOpts.customCardColors = customCardColors
                     updatedOpts.customFeltColorRevision += 1
@@ -1096,7 +1221,7 @@ struct OptionsView: View {
                     }
 
                     viewModel.options = updatedOpts
-                    dismiss()
+                    isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)
             }
@@ -1104,11 +1229,13 @@ struct OptionsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 440)
+        .fixedSize(horizontal: true, vertical: true)
         .background(Color(NSColor.windowBackgroundColor))
 
         if showingThemes {
             ThemesOptionsView(
                 isShowing: $showingThemes,
+                isOptionsPresented: $isPresented,
                 feltColor: $feltColor,
                 cardBackTheme: $cardBackTheme,
                 showFeltVignette: $showFeltVignette,
@@ -1118,13 +1245,13 @@ struct OptionsView: View {
                 originalGreen: originalGreen,
                 originalBlue: originalBlue,
                 originalCustomCardColors: originalCustomCardColors,
-                onDone: {
+                onCommit: { bumpFeltRevision in
                     var updatedOpts = viewModel.options
                     updatedOpts.feltColor = feltColor
                     updatedOpts.cardBackTheme = cardBackTheme
                     updatedOpts.showFeltVignette = showFeltVignette
                     updatedOpts.customCardColors = customCardColors
-                    updatedOpts.customFeltColorRevision += 1
+                    if bumpFeltRevision { updatedOpts.customFeltColorRevision += 1 }
                     viewModel.options = updatedOpts
                 }
             )

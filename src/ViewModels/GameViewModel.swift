@@ -10,6 +10,7 @@ public final class GameViewModel {
     public var options: GameOptions {
         didSet {
             saveOptions()
+            UISound.isEnabled = options.isSoundEnabled
             handleOptionsChanged(oldValue: oldValue)
             if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
                 UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
@@ -121,7 +122,7 @@ public final class GameViewModel {
     
     public var maxRecycles: Int? {
         if options.isVegasScoring {
-            return state.drawMode == .drawThree ? 2 : 1
+            return state.drawMode == .drawThree ? 2 : 0
         }
         return nil
     }
@@ -165,17 +166,22 @@ public final class GameViewModel {
     }
     
     private func handleOptionsChanged(oldValue: GameOptions) {
-        if options.isTimed != oldValue.isTimed {
-            if options.isTimed {
+        if effectiveTimed(options) != effectiveTimed(oldValue) {
+            if effectiveTimed(options) {
                 if state.movesCount > 0 && !state.hasWon {
                     startTimerIfNeeded()
                 }
-            } else {
+            } else if state.isTimerActive {
+                // Only reset elapsed time when we're actually stopping a running timer
+                // (this game was the foreground one). A shared-option change (e.g. No
+                // Stress Mode toggled elsewhere and synced in via AppCoordinator) can
+                // reach a backgrounded game whose timer is already stopped — its saved
+                // elapsed time shouldn't be wiped just because it received the update.
                 stopTimer()
                 state.timerSeconds = 0
             }
         }
-        
+
         if options.isVegasScoring != oldValue.isVegasScoring {
             if options.isVegasScoring {
                 if UserDefaults.standard.object(forKey: "highScoreVegas") != nil {
@@ -257,7 +263,7 @@ public final class GameViewModel {
             self.options = decoded
         } else {
             var opts = GameOptions()
-            let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
+            let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
             let globalFeltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
             opts.cardBackTheme = legacyTheme
             opts.feltColor = FeltColorTheme(rawValue: globalFeltStr) ?? .feltGreen
@@ -270,7 +276,7 @@ public final class GameViewModel {
             }
             self.options = opts
         }
-        
+
         // Load statistics and synchronize with legacy keys
         let legacyWon = UserDefaults.standard.integer(forKey: "gamesWon")
         let legacyPlayed = UserDefaults.standard.integer(forKey: "gamesPlayed")
@@ -308,7 +314,15 @@ public final class GameViewModel {
         } else {
             self.zoomScale = self.defaultZoomScale
         }
-        
+
+        // Load default window size setting
+        if let savedWidth = UserDefaults.standard.value(forKey: "defaultWindowWidth") as? Double,
+           let savedHeight = UserDefaults.standard.value(forKey: "defaultWindowHeight") as? Double {
+            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
+        }
+
+        UISound.isEnabled = self.options.isSoundEnabled
+
         // Register for global preferences notifications
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
@@ -434,6 +448,7 @@ public final class GameViewModel {
         isStockExhausted = false
         initialState = state
         clearHint()
+        clearKeyboardCursor()
     }
 
     public func restartCurrentGame() {
@@ -448,6 +463,7 @@ public final class GameViewModel {
         isStuck = false
         isStockExhausted = false
         clearHint()
+        clearKeyboardCursor()
     }
     
     // MARK: - Core Interactions
@@ -631,9 +647,17 @@ public final class GameViewModel {
     }
     
     // MARK: - Timer Handling
-    
+
+    // `isTimed` has no UI control anymore (the old "Timed Game" toggle was replaced by
+    // No Stress Mode) so it's intentionally not consulted here — honoring a persisted
+    // `false` from before that change would permanently strand upgrading users with no
+    // way to turn the timer back on.
+    private func effectiveTimed(_ o: GameOptions) -> Bool {
+        !o.noStressMode
+    }
+
     public func startTimerIfNeeded() {
-        guard options.isTimed else { return }
+        guard effectiveTimed(options) else { return }
         guard !state.isTimerActive else { return }
         state.isTimerActive = true
         
@@ -729,8 +753,12 @@ public final class GameViewModel {
     // A move is progressive if it advances toward the win condition:
     // - Moving to a foundation pile, OR
     // - Placing the waste top card onto the tableau (it's a new card entering play), OR
-    // - Revealing a face-down card in the source tableau column.
-    // Pure tableau-to-tableau reorganization of fully face-up columns is not progressive.
+    // - Revealing a face-down card in the source tableau column, OR
+    // - Fully clearing a tableau column onto a NON-empty target, creating a genuinely
+    //   new empty column, OR
+    // - Exposing an already-face-up card that can immediately move to a foundation
+    //   (it was blocked, not hidden, but freeing it is still real progress).
+    // Pure tableau-to-tableau reorganization that does none of the above is not progressive.
     private func isProgressiveMove(cards: [Card], source: Pile, target: Pile) -> Bool {
         if target.type == .foundation { return true }
         if source.type == .waste { return true }
@@ -738,7 +766,18 @@ public final class GameViewModel {
             guard let colIdx = state.tableau.firstIndex(where: { $0.id == source.id }) else { return false }
             let col = state.tableau[colIdx]
             let remainingCount = col.cards.count - cards.count
-            if remainingCount > 0 && !col.cards[remainingCount - 1].faceUp {
+            if remainingCount == 0 {
+                // Only a King-led run can move onto an empty target, so if the target is
+                // ALSO empty this just relocates that King from one empty column to
+                // another — net zero progress (and, left unguarded, a move that's always
+                // available whenever a lone King and an empty column coexist, which would
+                // make the game seem never stuck). Only count it as progress when the
+                // target was occupied, so a genuinely new empty column is created.
+                return !target.isEmpty
+            }
+            let exposedCard = col.cards[remainingCount - 1]
+            if !exposedCard.faceUp { return true }
+            if state.foundations.contains(where: { isValidMove(cards: [exposedCard], to: $0) }) {
                 return true
             }
         }
@@ -953,6 +992,7 @@ public final class GameViewModel {
         isAutoplayRunning = false
         isStuck = false
         clearHint()
+        clearKeyboardCursor()
         checkWinState()
         checkAutocompleteState()
         checkStuckState()
@@ -975,16 +1015,255 @@ public final class GameViewModel {
     
     public func resetZoom() {
         zoomScale = defaultZoomScale
+        defaultWindowSize = nil
+        UserDefaults.standard.removeObject(forKey: "defaultWindowWidth")
+        UserDefaults.standard.removeObject(forKey: "defaultWindowHeight")
     }
-    
+
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "defaultZoomScale")
     }
-    
+
+    // MARK: - Default Window Size
+    public var defaultWindowSize: CGSize?
+
+    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
+        defaultWindowSize = size
+        UserDefaults.standard.set(Double(size.width), forKey: "defaultWindowWidth")
+        UserDefaults.standard.set(Double(size.height), forKey: "defaultWindowHeight")
+    }
+
     public func resetStatistics() {
         gamesWon = 0
         gamesPlayed = 0
         highScore = options.isVegasScoring ? -5200 : 0
+    }
+
+    // MARK: - Keyboard Navigation
+    public var activeCursor: KeyboardCursor?
+    public var selectedCardsSource: String?
+    public var selectedCardsIndex: Int?
+    
+    // Internal coordinate tracking
+    private var cursorColumn: Int = 0 // tableau column
+    private var topRowColumn: Int = 0 // stock/waste/foundation column
+    private var cursorRow: Int = 0 // 0 = Top, 1 = Tableau
+
+    public func enableKeyboardCursorIfNeeded() {
+        if activeCursor == nil {
+            activeCursor = KeyboardCursor(pileId: state.stock.id)
+            topRowColumn = 0
+            cursorRow = 0
+        }
+    }
+
+    public func clearKeyboardCursor() {
+        activeCursor = nil
+        selectedCardsSource = nil
+        selectedCardsIndex = nil
+    }
+
+    public func moveCursorLeft() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 0 {
+            var newCol = topRowColumn - 1
+            if newCol < 0 { newCol = 6 }
+            // Skip blank space in top row (column 2)
+            if newCol == 2 { newCol = 1 }
+            topRowColumn = newCol
+        } else {
+            var newCol = cursorColumn - 1
+            if newCol < 0 { newCol = 6 }
+            cursorColumn = newCol
+        }
+        updateCursorFromCoordinates()
+    }
+
+    public func moveCursorRight() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 0 {
+            var newCol = topRowColumn + 1
+            if newCol > 6 { newCol = 0 }
+            // Skip blank space in top row (column 2)
+            if newCol == 2 { newCol = 3 }
+            topRowColumn = newCol
+        } else {
+            var newCol = cursorColumn + 1
+            if newCol > 6 { newCol = 0 }
+            cursorColumn = newCol
+        }
+        updateCursorFromCoordinates()
+    }
+    
+    public func moveCursorUp() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 1 {
+            // Check if we can move focus to a card higher in the tableau column
+            if let active = activeCursor,
+               let colIdx = state.tableau.firstIndex(where: { $0.id == active.pileId }),
+               let cardIdx = active.cardIndex,
+               cardIdx > 0 {
+                // Find previous card in the column (only move up if it's faceUp)
+                let prevIdx = cardIdx - 1
+                if state.tableau[colIdx].cards[prevIdx].faceUp {
+                    activeCursor?.cardIndex = prevIdx
+                    return
+                }
+            }
+            // If we can't move up further in tableau, move to top row
+            cursorRow = 0
+            // Adjust top column if we were on column 2 (empty space)
+            topRowColumn = cursorColumn == 2 ? 1 : cursorColumn
+            updateCursorFromCoordinates()
+        }
+    }
+    
+    public func moveCursorDown() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 0 {
+            cursorRow = 1
+            updateCursorFromCoordinates()
+        } else {
+            // Check if we can move focus to a card lower in the tableau column
+            if let active = activeCursor,
+               let colIdx = state.tableau.firstIndex(where: { $0.id == active.pileId }),
+               let cardIdx = active.cardIndex {
+                let col = state.tableau[colIdx]
+                if cardIdx + 1 < col.cards.count {
+                    activeCursor?.cardIndex = cardIdx + 1
+                }
+            }
+        }
+    }
+    
+    private func updateCursorFromCoordinates() {
+        if cursorRow == 0 {
+            switch topRowColumn {
+            case 0: activeCursor = KeyboardCursor(pileId: state.stock.id)
+            case 1: activeCursor = KeyboardCursor(pileId: state.waste.id)
+            case 3: activeCursor = KeyboardCursor(pileId: state.foundations[0].id)
+            case 4: activeCursor = KeyboardCursor(pileId: state.foundations[1].id)
+            case 5: activeCursor = KeyboardCursor(pileId: state.foundations[2].id)
+            case 6: activeCursor = KeyboardCursor(pileId: state.foundations[3].id)
+            default: break
+            }
+        } else {
+            let pileId = state.tableau[cursorColumn].id
+            let col = state.tableau[cursorColumn]
+            if col.isEmpty {
+                activeCursor = KeyboardCursor(pileId: pileId, cardIndex: nil)
+            } else {
+                activeCursor = KeyboardCursor(pileId: pileId, cardIndex: col.cards.count - 1)
+            }
+        }
+    }
+    
+    public func performSpaceAction() {
+        enableKeyboardCursorIfNeeded()
+        guard let cursor = activeCursor else { return }
+        
+        if let sourceId = selectedCardsSource {
+            if sourceId == cursor.pileId {
+                selectedCardsSource = nil
+                selectedCardsIndex = nil
+                return
+            }
+            
+            // Find target pile
+            let targetPile: Pile?
+            if cursor.pileId == state.stock.id { targetPile = state.stock }
+            else if cursor.pileId == state.waste.id { targetPile = state.waste }
+            else if let fIdx = state.foundations.firstIndex(where: { $0.id == cursor.pileId }) { targetPile = state.foundations[fIdx] }
+            else if let tIdx = state.tableau.firstIndex(where: { $0.id == cursor.pileId }) { targetPile = state.tableau[tIdx] }
+            else { targetPile = nil }
+            
+            // Find source pile
+            let sourcePile: Pile?
+            if sourceId == state.stock.id { sourcePile = state.stock }
+            else if sourceId == state.waste.id { sourcePile = state.waste }
+            else if let fIdx = state.foundations.firstIndex(where: { $0.id == sourceId }) { sourcePile = state.foundations[fIdx] }
+            else if let tIdx = state.tableau.firstIndex(where: { $0.id == sourceId }) { sourcePile = state.tableau[tIdx] }
+            else { sourcePile = nil }
+            
+            guard let target = targetPile, let source = sourcePile else {
+                selectedCardsSource = nil
+                selectedCardsIndex = nil
+                return
+            }
+            
+            let cardsToMove: [Card]
+            if source.type == .tableau {
+                if let selIdx = selectedCardsIndex {
+                    cardsToMove = Array(source.cards[selIdx..<source.cards.count])
+                } else {
+                    cardsToMove = source.topCard != nil ? [source.topCard!] : []
+                }
+            } else {
+                cardsToMove = source.topCard != nil ? [source.topCard!] : []
+            }
+            
+            if !cardsToMove.isEmpty && isValidMove(cards: cardsToMove, to: target) {
+                moveCards(cardsToMove, from: source, to: target)
+                if target.type == .tableau {
+                    cursorRow = 1
+                    updateCursorFromCoordinates()
+                }
+            }
+            selectedCardsSource = nil
+            selectedCardsIndex = nil
+        } else {
+            if cursor.pileId == state.stock.id {
+                if state.stock.isEmpty {
+                    recycleStock()
+                } else {
+                    drawCard()
+                }
+            } else {
+                let sourcePile: Pile?
+                if cursor.pileId == state.waste.id { sourcePile = state.waste }
+                else if let fIdx = state.foundations.firstIndex(where: { $0.id == cursor.pileId }) { sourcePile = state.foundations[fIdx] }
+                else if let tIdx = state.tableau.firstIndex(where: { $0.id == cursor.pileId }) { sourcePile = state.tableau[tIdx] }
+                else { sourcePile = nil }
+                
+                guard let source = sourcePile, !source.isEmpty else { return }
+                
+                if source.type == .tableau {
+                    if let cardIdx = cursor.cardIndex {
+                        if source.cards[cardIdx].faceUp {
+                            selectedCardsSource = cursor.pileId
+                            selectedCardsIndex = cardIdx
+                        }
+                    }
+                } else {
+                    selectedCardsSource = cursor.pileId
+                    selectedCardsIndex = source.cards.count - 1
+                }
+            }
+        }
+    }
+    
+    public func autoMoveFocusedCardToFoundations() {
+        enableKeyboardCursorIfNeeded()
+        guard let cursor = activeCursor else { return }
+        
+        let sourcePile: Pile?
+        if cursor.pileId == state.waste.id { sourcePile = state.waste }
+        else if let tIdx = state.tableau.firstIndex(where: { $0.id == cursor.pileId }) { sourcePile = state.tableau[tIdx] }
+        else { sourcePile = nil }
+        
+        guard let source = sourcePile, let topCard = source.topCard else { return }
+        
+        for foundation in state.foundations {
+            if isValidMove(cards: [topCard], to: foundation) {
+                moveCards([topCard], from: source, to: foundation)
+                selectedCardsSource = nil
+                selectedCardsIndex = nil
+                if source.type == .tableau {
+                    updateCursorFromCoordinates()
+                }
+                break
+            }
+        }
     }
 }

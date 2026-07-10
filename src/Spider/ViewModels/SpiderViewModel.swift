@@ -10,6 +10,7 @@ public final class SpiderViewModel {
     public var options: SpiderOptions {
         didSet {
             saveOptions()
+            UISound.isEnabled = options.isSoundEnabled
             handleOptionsChanged(oldValue: oldValue)
             if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
                 UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
@@ -120,17 +121,22 @@ public final class SpiderViewModel {
     }
     
     private func handleOptionsChanged(oldValue: SpiderOptions) {
-        if options.isTimed != oldValue.isTimed {
-            if options.isTimed {
+        if effectiveTimed(options) != effectiveTimed(oldValue) {
+            if effectiveTimed(options) {
                 if state.movesCount > 0 && !state.hasWon {
                     startTimerIfNeeded()
                 }
-            } else {
+            } else if state.isTimerActive {
+                // Only reset elapsed time when we're actually stopping a running timer
+                // (this game was the foreground one). A shared-option change (e.g. No
+                // Stress Mode toggled elsewhere and synced in via AppCoordinator) can
+                // reach a backgrounded game whose timer is already stopped — its saved
+                // elapsed time shouldn't be wiped just because it received the update.
                 stopTimer()
                 state.timerSeconds = 0
             }
         }
-        
+
         if options.suitCount != oldValue.suitCount {
             startNewGame()
         }
@@ -204,7 +210,7 @@ public final class SpiderViewModel {
             }
             self.options = decoded
         } else {
-            let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Vulpera"
+            let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
             let globalFeltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
             let globalFelt = FeltColorTheme(rawValue: globalFeltStr) ?? .feltGreen
             var opts = SpiderOptions(feltColor: globalFelt, cardBackTheme: legacyTheme)
@@ -239,7 +245,15 @@ public final class SpiderViewModel {
         } else {
             self.zoomScale = self.defaultZoomScale
         }
-        
+
+        // Load default window size setting
+        if let savedWidth = UserDefaults.standard.value(forKey: "spider_defaultWindowWidth") as? Double,
+           let savedHeight = UserDefaults.standard.value(forKey: "spider_defaultWindowHeight") as? Double {
+            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
+        }
+
+        UISound.isEnabled = self.options.isSoundEnabled
+
         // Register for global preferences notifications
         NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
@@ -373,6 +387,7 @@ public final class SpiderViewModel {
         isAutoplayRunning = false
         isStuck = false
         initialState = state
+        clearKeyboardCursor()
     }
 
     public func restartCurrentGame() {
@@ -383,6 +398,7 @@ public final class SpiderViewModel {
         isAutocompleteAvailable = false
         isAutoplayRunning = false
         isStuck = false
+        clearKeyboardCursor()
     }
     
     // MARK: - Core Interactions
@@ -600,9 +616,17 @@ public final class SpiderViewModel {
     }
     
     // MARK: - Timer Handling
-    
+
+    // `isTimed` has no UI control anymore (the old "Timed Game" toggle was replaced by
+    // No Stress Mode) so it's intentionally not consulted here — honoring a persisted
+    // `false` from before that change would permanently strand upgrading users with no
+    // way to turn the timer back on.
+    private func effectiveTimed(_ o: SpiderOptions) -> Bool {
+        !o.noStressMode
+    }
+
     public func startTimerIfNeeded() {
-        guard options.isTimed else { return }
+        guard effectiveTimed(options) else { return }
         guard !state.isTimerActive else { return }
         state.isTimerActive = true
         
@@ -634,6 +658,7 @@ public final class SpiderViewModel {
         isAutoplayRunning = false
         isStuck = false
         clearHint()
+        clearKeyboardCursor()
         checkWinState()
         checkStuckState()
         checkAutocompleteState()
@@ -877,15 +902,171 @@ public final class SpiderViewModel {
     
     public func resetZoom() {
         zoomScale = defaultZoomScale
+        defaultWindowSize = nil
+        UserDefaults.standard.removeObject(forKey: "spider_defaultWindowWidth")
+        UserDefaults.standard.removeObject(forKey: "spider_defaultWindowHeight")
     }
-    
+
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "spider_defaultZoomScale")
     }
-    
+
+    // MARK: - Default Window Size
+    public var defaultWindowSize: CGSize?
+
+    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
+        defaultWindowSize = size
+        UserDefaults.standard.set(Double(size.width), forKey: "spider_defaultWindowWidth")
+        UserDefaults.standard.set(Double(size.height), forKey: "spider_defaultWindowHeight")
+    }
+
     public func resetStatistics() {
         gamesWon = 0
         gamesPlayed = 0
+    }
+
+    // MARK: - Keyboard Navigation
+    public var activeCursor: KeyboardCursor?
+    public var selectedCardsSource: String?
+    public var selectedCardsIndex: Int?
+    
+    // Internal coordinate tracking
+    private var cursorColumn: Int = 0
+    private var cursorRow: Int = 0 // 0 = Stock, 1 = Tableau
+    
+    public func enableKeyboardCursorIfNeeded() {
+        if activeCursor == nil {
+            activeCursor = KeyboardCursor(pileId: state.stock.id)
+            cursorColumn = 0
+            cursorRow = 0
+        }
+    }
+    
+    public func clearKeyboardCursor() {
+        activeCursor = nil
+        selectedCardsSource = nil
+        selectedCardsIndex = nil
+    }
+    
+    public func moveCursorLeft() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 1 {
+            var newCol = cursorColumn - 1
+            if newCol < 0 { newCol = 9 }
+            cursorColumn = newCol
+            updateCursorFromCoordinates()
+        }
+    }
+    
+    public func moveCursorRight() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 1 {
+            var newCol = cursorColumn + 1
+            if newCol > 9 { newCol = 0 }
+            cursorColumn = newCol
+            updateCursorFromCoordinates()
+        }
+    }
+    
+    public func moveCursorUp() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 1 {
+            if let active = activeCursor,
+               let colIdx = state.tableau.firstIndex(where: { $0.id == active.pileId }),
+               let cardIdx = active.cardIndex,
+               cardIdx > 0 {
+                let prevIdx = cardIdx - 1
+                if state.tableau[colIdx].cards[prevIdx].faceUp {
+                    activeCursor?.cardIndex = prevIdx
+                    return
+                }
+            }
+            cursorRow = 0
+            updateCursorFromCoordinates()
+        }
+    }
+    
+    public func moveCursorDown() {
+        enableKeyboardCursorIfNeeded()
+        if cursorRow == 0 {
+            cursorRow = 1
+            updateCursorFromCoordinates()
+        } else {
+            if let active = activeCursor,
+               let colIdx = state.tableau.firstIndex(where: { $0.id == active.pileId }),
+               let cardIdx = active.cardIndex {
+                let col = state.tableau[colIdx]
+                if cardIdx + 1 < col.cards.count {
+                    activeCursor?.cardIndex = cardIdx + 1
+                }
+            }
+        }
+    }
+    
+    private func updateCursorFromCoordinates() {
+        if cursorRow == 0 {
+            activeCursor = KeyboardCursor(pileId: state.stock.id)
+        } else {
+            let pileId = state.tableau[cursorColumn].id
+            let col = state.tableau[cursorColumn]
+            if col.isEmpty {
+                activeCursor = KeyboardCursor(pileId: pileId, cardIndex: nil)
+            } else {
+                activeCursor = KeyboardCursor(pileId: pileId, cardIndex: col.cards.count - 1)
+            }
+        }
+    }
+    
+    public func performSpaceAction() {
+        enableKeyboardCursorIfNeeded()
+        guard let cursor = activeCursor else { return }
+        
+        if let sourceId = selectedCardsSource {
+            if sourceId == cursor.pileId {
+                selectedCardsSource = nil
+                selectedCardsIndex = nil
+                return
+            }
+            
+            let targetPile = state.tableau.first(where: { $0.id == cursor.pileId })
+            let sourcePile = state.tableau.first(where: { $0.id == sourceId })
+            
+            guard let target = targetPile, let source = sourcePile else {
+                selectedCardsSource = nil
+                selectedCardsIndex = nil
+                return
+            }
+            
+            let cardsToMove: [Card]
+            if let selIdx = selectedCardsIndex {
+                cardsToMove = Array(source.cards[selIdx..<source.cards.count])
+            } else {
+                cardsToMove = source.topCard != nil ? [source.topCard!] : []
+            }
+            
+            if !cardsToMove.isEmpty && isValidDragSequence(cardsToMove) && isValidMove(cards: cardsToMove, to: target) {
+                moveCards(cardsToMove, from: source, to: target)
+                cursorRow = 1
+                updateCursorFromCoordinates()
+            }
+            selectedCardsSource = nil
+            selectedCardsIndex = nil
+        } else {
+            if cursor.pileId == state.stock.id {
+                drawFromStock()
+            } else {
+                let sourcePile = state.tableau.first(where: { $0.id == cursor.pileId })
+                guard let source = sourcePile, !source.isEmpty else { return }
+                
+                if let cardIdx = cursor.cardIndex {
+                    let sequence = Array(source.cards[cardIdx..<source.cards.count])
+                    if isValidDragSequence(sequence) {
+                        selectedCardsSource = cursor.pileId
+                        selectedCardsIndex = cardIdx
+                    }
+                }
+            }
+        }
     }
 }

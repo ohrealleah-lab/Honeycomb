@@ -19,6 +19,8 @@ public struct SpiderView: View {
     @State private var winPulse: Bool = false
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
+    @FocusState private var isBoardFocused: Bool
+    @State private var keyMonitor: Any? = nil
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
     
@@ -34,8 +36,17 @@ public struct SpiderView: View {
         
         return ZStack {
             // Felt Board Background
+            // .id() forces a redraw when the custom felt color's raw RGB changes — those
+            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs
+            // on. Scoped to just this Color (not the whole board) so it doesn't tear down
+            // and reset unrelated @State, like the Options/Themes sheet's open/closed state.
             viewModel.options.feltColor.primaryColor
+                .id(viewModel.options.customFeltColorRevision)
                 .ignoresSafeArea()
+                .onTapGesture {
+                    viewModel.clearKeyboardCursor()
+                    isBoardFocused = true
+                }
 
             if viewModel.options.showFeltVignette { FeltVignetteView(intensity: 0.34) }
 
@@ -114,22 +125,6 @@ public struct SpiderView: View {
                     .buttonStyle(HoverToolbarButtonStyle())
                     .focusable(false)
 
-                    // Stats
-                    if !viewModel.options.hideStatsButton {
-                        Button(action: { isShowingStats = true }) {
-                            Text("Stats")
-                                .font(.display(16))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.white.opacity(0.15))
-                                .cornerRadius(4)
-                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                        }
-                        .buttonStyle(HoverToolbarButtonStyle())
-                        .focusable(false)
-                    }
-
                     // Hint
                     if !viewModel.options.hideHintButton {
                         Button(action: { viewModel.findHint() }) {
@@ -176,7 +171,7 @@ public struct SpiderView: View {
                     HStack(alignment: .bottom, spacing: 20) {
                         StatusItemView(label: "SCORE", value: viewModel.scoreString)
                         StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
-                        if viewModel.options.isTimed {
+                        if !viewModel.options.noStressMode {
                             StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                         }
                     }
@@ -198,15 +193,21 @@ public struct SpiderView: View {
                         // Top Row: Stock (left) and 8 Completed Foundations (right)
                         HStack(alignment: .top, spacing: stackSpacing) {
                             // Stock Pile View
-                            SpiderStockView(cardCount: viewModel.state.stock.cards.count)
+                            SpiderStockView(
+                                cardCount: viewModel.state.stock.cards.count,
+                                isFocused: viewModel.activeCursor?.pileId == viewModel.state.stock.id,
+                                isSelected: viewModel.selectedCardsSource == viewModel.state.stock.id
+                            )
                                 .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.stock.id))
                                 .background(GeometryReader { geo in
                                     Color.clear
                                         .onAppear { pileFrames[viewModel.state.stock.id] = geo.frame(in: .global) }
                                         .onChange(of: geo.frame(in: .global)) { _, newFrame in pileFrames[viewModel.state.stock.id] = newFrame }
-                                })
+                                 })
                                 .overlay(
                                     ClickReceiver {
+                                        viewModel.clearKeyboardCursor()
+                                        isBoardFocused = true
                                         viewModel.clearHint()
                                         if viewModel.hasEmptyTableauColumn {
                                             isShowingEmptyStockWarning = true
@@ -238,7 +239,12 @@ public struct SpiderView: View {
                                     pile: pile,
                                     draggedCardIDs: Set(draggedCards.map { $0.id }),
                                     activeHint: viewModel.activeHint,
+                                    isFocused: viewModel.activeCursor?.pileId == pile.id,
+                                    focusedCardIndex: viewModel.activeCursor?.pileId == pile.id ? viewModel.activeCursor?.cardIndex : nil,
+                                    isSelected: viewModel.selectedCardsSource == pile.id,
+                                    selectedCardIndex: viewModel.selectedCardsSource == pile.id ? viewModel.selectedCardsIndex : nil,
                                     onDragStarted: { card, stack, startLoc in
+                                        viewModel.clearKeyboardCursor()
                                         viewModel.clearHint()
                                         if draggedCards.isEmpty {
                                             draggedCards = stack
@@ -428,7 +434,7 @@ public struct SpiderView: View {
                                     .onAppear { winPulse = true }
                                     .onDisappear { winPulse = false }
 
-                                Text("Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))")
+                                Text(winSummaryText)
                                     .font(.system(.body))
                                     .foregroundColor(.white)
 
@@ -482,20 +488,82 @@ public struct SpiderView: View {
         .environment(\.feltColor, viewModel.options.feltColor)
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
         .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
-        .id(viewModel.options.customFeltColorRevision)
+        .focusable()
+        .focused($isBoardFocused)
+        .onAppear {
+            isBoardFocused = true
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                guard !isShowingOptions && !isShowingStats else { return event }
+                if let firstResponder = NSApp.keyWindow?.firstResponder,
+                   firstResponder.isKind(of: NSText.self) || String(describing: type(of: firstResponder)).contains("TextView") {
+                    return event
+                }
+                // Arrow/function keys always carry .numericPad and .function in modifierFlags
+                // even with no modifier held, so only guard against real modifier keys.
+                let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+                guard modifiers.isEmpty else { return event }
+                
+                switch event.keyCode {
+                case 123: // Left Arrow
+                    viewModel.moveCursorLeft()
+                    return nil
+                case 124: // Right Arrow
+                    viewModel.moveCursorRight()
+                    return nil
+                case 126: // Up Arrow
+                    viewModel.moveCursorUp()
+                    return nil
+                case 125: // Down Arrow
+                    viewModel.moveCursorDown()
+                    return nil
+                case 49, 36: // Space, Return
+                    viewModel.performSpaceAction()
+                    return nil
+                case 53: // Escape
+                    viewModel.clearKeyboardCursor()
+                    return nil
+                default:
+                    if let chars = event.charactersIgnoringModifiers?.lowercased() {
+                        if chars == "d" {
+                            viewModel.enableKeyboardCursorIfNeeded()
+                            viewModel.drawFromStock()
+                            return nil
+                        } else if chars == "a" {
+                            viewModel.runAutocomplete()
+                            return nil
+                        }
+                    }
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let monitor = keyMonitor {
+                NSEvent.removeMonitor(monitor)
+                keyMonitor = nil
+            }
+        }
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
                minHeight: 73 + boardHeight * viewModel.zoomScale,
                maxHeight: .infinity)
-        .sheet(isPresented: $isShowingOptions) {
-            SpiderOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats)
+        .overlay {
+            if isShowingOptions {
+                Color.clear
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .overlay(
+                        SpiderOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions)
+                    )
+                    .transition(.opacity)
+            }
         }
         .sheet(isPresented: $isShowingStats) {
             SpiderStatsView(viewModel: viewModel)
         }
         .confirmationDialog("Start a new game? Your current game will end.", isPresented: $isShowingNewGameConfirm) {
-            Button("New Game", role: .destructive) { viewModel.startNewGame() }
             Button("Cancel", role: .cancel) { }
+            Button("New Game", role: .destructive) { viewModel.startNewGame() }
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
@@ -528,7 +596,12 @@ public struct SpiderView: View {
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            snapToMinSize()
+            coordinator?.activeWindow = window
+            if let saved = viewModel.defaultWindowSize {
+                snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
+            } else {
+                snapToMinSize()
+            }
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
     }
@@ -545,19 +618,33 @@ public struct SpiderView: View {
         }
     }
 
-    private func snapToMinSize() {
+    private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
         let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
         let cols: Double = 10.0
         let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
         let minH = 73.0 + 1120.0 * z + 24
-        let size = NSSize(width: minW, height: minH)
+        let minSize = NSSize(width: minW, height: minH)
+        let size = overrideSize.map { NSSize(width: max($0.width, minW), height: max($0.height, minH)) } ?? minSize
         DispatchQueue.main.async {
-            window.contentMinSize = size
+            window.contentMinSize = minSize
+
+            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
+            // bottom-left anchor) so a height change never pushes the toolbar/title bar off
+            // the top of the screen.
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+            let currentFrame = window.frame
+            newFrame.origin.x = currentFrame.origin.x
+            newFrame.origin.y = currentFrame.maxY - newFrame.height
+            if let visible = window.screen?.visibleFrame {
+                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
+                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+            }
+
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.animator().setContentSize(size)
+                window.animator().setFrame(newFrame, display: true)
             }
         }
     }
@@ -619,22 +706,26 @@ public struct SpiderView: View {
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
-    
+
+    private var winSummaryText: String {
+        guard !viewModel.options.noStressMode else { return "Score: \(viewModel.scoreString)" }
+        return "Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))"
+    }
+
 }
 
 // MARK: - Options Preference Dialog
 struct SpiderOptionsView: View {
     @Bindable var viewModel: SpiderViewModel
     @Binding var isShowingStats: Bool
-    @Environment(\.dismiss) private var dismiss
-    
+    @Binding var isPresented: Bool
+
     @State private var feltColor: FeltColorTheme
     @State private var cardBackTheme: String
     @State private var suitCount: Int
-    @State private var isTimed: Bool
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
-    @State private var hideStatsButton: Bool
+    @State private var noStressMode: Bool
     @State private var showFeltVignette: Bool
     @State private var customSelectedColor: Color
     @State private var customCardColors: CustomCardColorGroup
@@ -643,22 +734,28 @@ struct SpiderOptionsView: View {
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
+    let originalFeltColor: FeltColorTheme
+    let originalCardBackTheme: String
+    let originalShowFeltVignette: Bool
     let originalCustomCardColors: CustomCardColorGroup
 
-    init(viewModel: SpiderViewModel, isShowingStats: Binding<Bool>) {
+    init(viewModel: SpiderViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>) {
         self.viewModel = viewModel
         self._isShowingStats = isShowingStats
+        self._isPresented = isPresented
         _feltColor = State(initialValue: viewModel.options.feltColor)
         _cardBackTheme = State(initialValue: viewModel.options.cardBackTheme)
         _suitCount = State(initialValue: viewModel.options.suitCount)
-        _isTimed = State(initialValue: viewModel.options.isTimed)
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
-        _hideStatsButton = State(initialValue: viewModel.options.hideStatsButton)
+        _noStressMode = State(initialValue: viewModel.options.noStressMode)
         _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
         _customCardColors = State(initialValue: viewModel.options.customCardColors)
+        self.originalFeltColor = viewModel.options.feltColor
+        self.originalCardBackTheme = viewModel.options.cardBackTheme
+        self.originalShowFeltVignette = viewModel.options.showFeltVignette
         self.originalCustomCardColors = viewModel.options.customCardColors
-        
+
         let r = UserDefaults.standard.double(forKey: "custom_felt_red")
         let g = UserDefaults.standard.double(forKey: "custom_felt_green")
         let b = UserDefaults.standard.double(forKey: "custom_felt_blue")
@@ -695,16 +792,13 @@ struct SpiderOptionsView: View {
                     
                     Divider()
 
-                    Toggle("Timed Game", isOn: $isTimed)
-                        .font(.system(.body))
-
                     Toggle("Sound Effects", isOn: $isSoundEnabled)
                         .font(.system(.body))
 
                     Toggle("Hide Hint button", isOn: $hideHintButton)
                         .font(.system(.body))
 
-                    Toggle("Hide Stats button", isOn: $hideStatsButton)
+                    Toggle("No Stress Mode", isOn: $noStressMode)
                         .font(.system(.body))
 
                     Divider()
@@ -748,14 +842,21 @@ struct SpiderOptionsView: View {
                     UserDefaults.standard.set(originalRed, forKey: "custom_felt_red")
                     UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
                     UserDefaults.standard.set(originalBlue, forKey: "custom_felt_blue")
-                    dismiss()
+                    // Revert any theme changes that were live-previewed via the Themes sub-panel.
+                    var revertedOpts = viewModel.options
+                    revertedOpts.feltColor = originalFeltColor
+                    revertedOpts.cardBackTheme = originalCardBackTheme
+                    revertedOpts.showFeltVignette = originalShowFeltVignette
+                    revertedOpts.customCardColors = originalCustomCardColors
+                    viewModel.options = revertedOpts
+                    isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
-                
+
                 Spacer()
-                
+
                 Button(action: {
-                    dismiss()
+                    isPresented = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                         isShowingStats = true
                     }
@@ -774,16 +875,15 @@ struct SpiderOptionsView: View {
                     updatedOpts.feltColor = feltColor
                     updatedOpts.cardBackTheme = cardBackTheme
                     updatedOpts.suitCount = suitCount
-                    updatedOpts.isTimed = isTimed
                     updatedOpts.isSoundEnabled = isSoundEnabled
                     updatedOpts.hideHintButton = hideHintButton
-                    updatedOpts.hideStatsButton = hideStatsButton
+                    updatedOpts.noStressMode = noStressMode
                     updatedOpts.showFeltVignette = showFeltVignette
                     updatedOpts.customCardColors = customCardColors
                     updatedOpts.customFeltColorRevision += 1
-                    
+
                     viewModel.options = updatedOpts
-                    dismiss()
+                    isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)
             }
@@ -791,11 +891,13 @@ struct SpiderOptionsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 440)
+        .fixedSize(horizontal: true, vertical: true)
         .background(Color(NSColor.windowBackgroundColor))
 
         if showingThemes {
             ThemesOptionsView(
                 isShowing: $showingThemes,
+                isOptionsPresented: $isPresented,
                 feltColor: $feltColor,
                 cardBackTheme: $cardBackTheme,
                 showFeltVignette: $showFeltVignette,
@@ -805,13 +907,13 @@ struct SpiderOptionsView: View {
                 originalGreen: originalGreen,
                 originalBlue: originalBlue,
                 originalCustomCardColors: originalCustomCardColors,
-                onDone: {
+                onCommit: { bumpFeltRevision in
                     var updatedOpts = viewModel.options
                     updatedOpts.feltColor = feltColor
                     updatedOpts.cardBackTheme = cardBackTheme
                     updatedOpts.showFeltVignette = showFeltVignette
                     updatedOpts.customCardColors = customCardColors
-                    updatedOpts.customFeltColorRevision += 1
+                    if bumpFeltRevision { updatedOpts.customFeltColorRevision += 1 }
                     viewModel.options = updatedOpts
                 }
             )

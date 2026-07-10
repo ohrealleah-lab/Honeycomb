@@ -7,9 +7,9 @@ struct ThemesSectionView: View {
     let currentCardBackTheme: String
     let currentFeltColor: FeltColorTheme
     let currentCustomCardColors: CustomCardColorGroup
+    @Binding var isOptionsPresented: Bool
 
     @Environment(AppCoordinator.self) private var coordinator
-    @Environment(\.dismiss) private var dismiss
 
     @State private var showingSaveRow = false
     @State private var newThemeName = ""
@@ -117,7 +117,7 @@ struct ThemesSectionView: View {
 
             Button("Apply") {
                 coordinator.applyTheme(theme)
-                dismiss()
+                isOptionsPresented = false
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
