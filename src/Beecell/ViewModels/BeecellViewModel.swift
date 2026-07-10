@@ -977,8 +977,11 @@ public final class BeecellViewModel {
     
     public func resetZoom() {
         zoomScale = defaultZoomScale
+        defaultWindowSize = nil
+        UserDefaults.standard.removeObject(forKey: "beecell_defaultWindowWidth")
+        UserDefaults.standard.removeObject(forKey: "beecell_defaultWindowHeight")
     }
-    
+
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "beecell_defaultZoomScale")

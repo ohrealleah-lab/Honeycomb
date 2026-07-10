@@ -538,7 +538,12 @@ public final class VideoPokerViewModel {
 
     public func zoomIn() { zoomScale = min(2.0, zoomScale + 0.1) }
     public func zoomOut() { zoomScale = max(0.6, zoomScale - 0.1) }
-    public func resetZoom() { zoomScale = defaultZoomScale }
+    public func resetZoom() {
+        zoomScale = defaultZoomScale
+        defaultWindowSize = nil
+        UserDefaults.standard.removeObject(forKey: "videopoker_defaultWindowWidth")
+        UserDefaults.standard.removeObject(forKey: "videopoker_defaultWindowHeight")
+    }
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "videopoker_defaultZoomScale")

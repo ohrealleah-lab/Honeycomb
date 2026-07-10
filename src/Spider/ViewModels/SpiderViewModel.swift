@@ -902,8 +902,11 @@ public final class SpiderViewModel {
     
     public func resetZoom() {
         zoomScale = defaultZoomScale
+        defaultWindowSize = nil
+        UserDefaults.standard.removeObject(forKey: "spider_defaultWindowWidth")
+        UserDefaults.standard.removeObject(forKey: "spider_defaultWindowHeight")
     }
-    
+
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "spider_defaultZoomScale")

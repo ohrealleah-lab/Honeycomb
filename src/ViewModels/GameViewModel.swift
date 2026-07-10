@@ -1015,8 +1015,11 @@ public final class GameViewModel {
     
     public func resetZoom() {
         zoomScale = defaultZoomScale
+        defaultWindowSize = nil
+        UserDefaults.standard.removeObject(forKey: "defaultWindowWidth")
+        UserDefaults.standard.removeObject(forKey: "defaultWindowHeight")
     }
-    
+
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "defaultZoomScale")

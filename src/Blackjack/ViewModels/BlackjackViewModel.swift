@@ -530,7 +530,12 @@ public final class BlackjackViewModel {
 
     public func zoomIn() { zoomScale = min(2.0, zoomScale + 0.1) }
     public func zoomOut() { zoomScale = max(0.6, zoomScale - 0.1) }
-    public func resetZoom() { zoomScale = defaultZoomScale }
+    public func resetZoom() {
+        zoomScale = defaultZoomScale
+        defaultWindowSize = nil
+        UserDefaults.standard.removeObject(forKey: "blackjack_defaultWindowWidth")
+        UserDefaults.standard.removeObject(forKey: "blackjack_defaultWindowHeight")
+    }
     public func makeCurrentZoomDefault() {
         defaultZoomScale = zoomScale
         UserDefaults.standard.set(Double(defaultZoomScale), forKey: "blackjack_defaultZoomScale")

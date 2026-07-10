@@ -98,7 +98,7 @@ public struct BlackjackView: View {
                 .frame(width: 905, height: boardBaseHeight, alignment: .topLeading)
                 .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
                 .frame(width: 905 * viewModel.zoomScale, height: boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: viewModel.isFreePlay ? .center : .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
