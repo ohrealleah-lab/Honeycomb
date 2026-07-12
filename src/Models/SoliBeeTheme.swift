@@ -59,6 +59,19 @@ public final class ThemeManager {
 
     public var themes: [SoliBeeTheme] = []
 
+    // Tracks which saved theme (if any) is currently applied, so the UI can tell
+    // whether the user has since drifted away from it via manual customization.
+    // Cleared whenever a theme-relevant setting changes outside of applyTheme().
+    public var activeThemeId: UUID? {
+        didSet {
+            if let activeThemeId {
+                UserDefaults.standard.set(activeThemeId.uuidString, forKey: "solibee_active_theme_id")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "solibee_active_theme_id")
+            }
+        }
+    }
+
     private static let defaultThemes: [SoliBeeTheme] = [
         SoliBeeTheme(name: "Default",      cardBackTheme: "Moogle",       feltColor: .feltGreen,
                      customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
@@ -125,16 +138,30 @@ public final class ThemeManager {
                      }()),
     ]
 
-    private init() { load() }
+    // Names (lowercased) of built-in themes the user has explicitly deleted — checked
+    // in load() so a deleted default doesn't silently reappear on next launch.
+    private var deletedDefaultThemes: [String] {
+        get { UserDefaults.standard.stringArray(forKey: "solibee_deleted_default_themes") ?? [] }
+        set { UserDefaults.standard.set(newValue, forKey: "solibee_deleted_default_themes") }
+    }
+
+    private init() {
+        load()
+        if let idString = UserDefaults.standard.string(forKey: "solibee_active_theme_id") {
+            activeThemeId = UUID(uuidString: idString)
+        }
+    }
 
     private func load() {
+        let deletedDefaults = Set(deletedDefaultThemes)
         guard let data = UserDefaults.standard.data(forKey: "solibee_themes"),
               var decoded = try? JSONDecoder().decode([SoliBeeTheme].self, from: data)
         else {
-            themes = Self.defaultThemes
+            themes = Self.defaultThemes.filter { !deletedDefaults.contains($0.name.lowercased()) }
             return
         }
         for defaultTheme in Self.defaultThemes {
+            guard !deletedDefaults.contains(defaultTheme.name.lowercased()) else { continue }
             if !decoded.contains(where: { $0.name.lowercased() == defaultTheme.name.lowercased() }) {
                 decoded.append(defaultTheme)
             }
@@ -155,7 +182,17 @@ public final class ThemeManager {
     }
 
     public func deleteTheme(id: UUID) {
+        guard let theme = themes.first(where: { $0.id == id }) else { return }
         themes.removeAll { $0.id == id }
+        let lowercasedName = theme.name.lowercased()
+        if Self.defaultThemes.contains(where: { $0.name.lowercased() == lowercasedName }) {
+            var deleted = deletedDefaultThemes
+            if !deleted.contains(lowercasedName) {
+                deleted.append(lowercasedName)
+                deletedDefaultThemes = deleted
+            }
+        }
+        if activeThemeId == id { activeThemeId = nil }
         save()
     }
 

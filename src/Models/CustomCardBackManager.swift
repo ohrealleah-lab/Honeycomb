@@ -51,7 +51,12 @@ public final class CustomCardBackManager {
     }
     
     public var customCardBacks: [CustomCardBack] = [] {
-        didSet { _customCardBacksByName = Dictionary(uniqueKeysWithValues: customCardBacks.map { ($0.name, $0) }) }
+        didSet {
+            // Tolerate duplicate names in persisted data (e.g. a restored/merged
+            // UserDefaults backup) instead of trapping — keep whichever entry wins the
+            // merge rather than crashing the app on launch.
+            _customCardBacksByName = Dictionary(customCardBacks.map { ($0.name, $0) }, uniquingKeysWith: { _, last in last })
+        }
     }
 
     @ObservationIgnored private var _customCardBacksByName: [String: CustomCardBack] = [:]
@@ -185,8 +190,16 @@ public final class CustomCardBackManager {
     }
     
     public func removeCustomCardBack(_ customBack: CustomCardBack) {
-        let fileURL = appSupportDirectory.appendingPathComponent(customBack.relativePath)
-        try? FileManager.default.removeItem(at: fileURL)
+        // Don't delete the underlying file if any saved theme still references this deck
+        // by name — otherwise applying that theme later silently falls back to a
+        // different look with no indication the deck it wanted is gone.
+        let stillReferencedBySavedTheme = ThemeManager.shared.themes.contains {
+            $0.cardBackTheme == customBack.name
+        }
+        if !stillReferencedBySavedTheme {
+            let fileURL = appSupportDirectory.appendingPathComponent(customBack.relativePath)
+            try? FileManager.default.removeItem(at: fileURL)
+        }
         invalidateCache(for: customBack.relativePath)
         customCardBacks.removeAll { $0.id == customBack.id }
         saveCustomCardBacks()

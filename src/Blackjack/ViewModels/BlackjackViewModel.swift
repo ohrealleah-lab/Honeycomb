@@ -151,6 +151,13 @@ public final class BlackjackViewModel {
         options.noStressMode
     }
 
+    // Options can only be opened between hands — changing a setting like No Stress
+    // Mode mid-hand would desync isFreePlay's live re-evaluation from what was
+    // actually wagered when the hand started.
+    public var canOpenOptions: Bool {
+        state.phase == .betting || state.phase == .result
+    }
+
     public var canSplit: Bool {
         state.playerHands.count == 1
         && state.playerHands[0].cards.count == 2
@@ -209,6 +216,9 @@ public final class BlackjackViewModel {
             state.sessionCredits -= state.currentBet
             statistics.totalWagered += state.currentBet
         }
+        // Counted here (and again in split()) rather than at resolution time, so it
+        // stays in lockstep with totalWagered even if the hand is abandoned mid-play
+        // (e.g. New Game/Restart) before evaluateAllHands() ever runs.
         statistics.handsPlayed += 1
         state.handsDealt += 1
 
@@ -285,6 +295,9 @@ public final class BlackjackViewModel {
             state.sessionCredits -= originalBet
             statistics.totalWagered += originalBet
         }
+        // A split creates a second wagered hand, so it counts as an additional
+        // "hand played" alongside the one already counted in deal().
+        statistics.handsPlayed += 1
 
         let card0 = state.playerHands[0].cards[0]
         let card1 = state.playerHands[0].cards[1]

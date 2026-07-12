@@ -26,6 +26,10 @@ public struct VideoPokerView: View {
 
     // The toolbar stays fixed size regardless of zoom; only the board below it scales.
     static let toolbarHeight: CGFloat = 73
+    // The hotkey legend sits below the scaled board, outside boardBaseHeight, and never
+    // scales with zoom — reserve fixed room for it so it doesn't get clipped by the
+    // window's bottom edge at minimum size.
+    private static let legendHeight: CGFloat = 28
     private static let singleBoardBaseHeight: CGFloat = 762 - toolbarHeight
     // Triple Play never shows the pay table, so its cards can be a comfortable, fully
     // legible size (120pt wide — 100pt base bumped 20% — matching CardView's true
@@ -139,9 +143,11 @@ public struct VideoPokerView: View {
                 .opacity(0)
                 .frame(width: 0, height: 0)
                 .clipped()
+
+            HotkeyLegendView(text: "Space/Enter/D=Deal or Draw   1-5=Toggle Hold   H=Hold All   C=Clear   M=Bet Max")
         }
         .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
-               minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale, maxHeight: .infinity)
+               minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale + Self.legendHeight, maxHeight: .infinity)
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
@@ -296,23 +302,26 @@ public struct VideoPokerView: View {
     private var toolbarView: some View {
         HStack(spacing: 20) {
             gameModeMenu
-            toolbarButton("Options") { isShowingOptions = true }
+            toolbarButton("Options", disabled: !viewModel.canOpenOptions) {
+                isShowingOptions = true
+            }
             Spacer()
         }
     }
 
-    private func toolbarButton(_ label: String, action: @escaping () -> Void) -> some View {
+    private func toolbarButton(_ label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
                 .font(.display(16))
-                .foregroundColor(.white)
+                .foregroundColor(disabled ? .white.opacity(0.4) : .white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(Color.white.opacity(0.15))
                 .cornerRadius(4)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(disabled ? Color.white.opacity(0.4) : Color.white, lineWidth: 1))
         }
         .buttonStyle(HoverToolbarButtonStyle())
+        .disabled(disabled)
         .focusable(false)
     }
 
@@ -851,7 +860,7 @@ public struct VideoPokerView: View {
     private func updateMinSize() {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
+        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight)
         DispatchQueue.main.async {
             window.contentMinSize = size
         }
@@ -860,7 +869,7 @@ public struct VideoPokerView: View {
     private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
+        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight)
         let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
         DispatchQueue.main.async {
             window.contentMinSize = minSize
@@ -1055,8 +1064,6 @@ struct VideoPokerOptionsView: View {
                 Spacer()
 
                 Button("OK") {
-                    let variantChanged = variant != viewModel.options.variant
-                    let playModeChanged = playMode != viewModel.options.playMode
                     var o = viewModel.options
                     o.variant         = variant
                     o.playMode        = playMode
@@ -1072,7 +1079,6 @@ struct VideoPokerOptionsView: View {
                     o.customCardColors = customCardColors
                     o.customFeltColorRevision += 1
                     viewModel.options = o
-                    if variantChanged || playModeChanged { viewModel.startNewGame() }
                     isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)

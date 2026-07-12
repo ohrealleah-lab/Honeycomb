@@ -210,6 +210,7 @@ public final class CustomFaceCardArtManager {
         let art = CustomFaceArt(id: id, slot: slot, relativePath: filename, scale: scale, offsetX: offsetX, offsetY: offsetY, isEnabled: true)
         faceArts.append(art)
         save()
+        ThemeManager.shared.activeThemeId = nil
         return true
     }
 
@@ -217,18 +218,26 @@ public final class CustomFaceCardArtManager {
         if let idx = faceArts.firstIndex(where: { $0.slot == updated.slot }) {
             faceArts[idx] = updated
             save()
+            ThemeManager.shared.activeThemeId = nil
         }
     }
 
     public func remove(slot: FaceCardSlot, deleteFile: Bool = true) {
         if let existing = art(for: slot) {
-            if deleteFile {
+            // Don't delete the underlying file if any saved theme still references this
+            // exact art — otherwise applying that theme later silently drops the slot
+            // with no indication anything went wrong.
+            let stillReferencedBySavedTheme = ThemeManager.shared.themes.contains {
+                $0.faceArts.contains { $0.relativePath == existing.relativePath }
+            }
+            if deleteFile && !stillReferencedBySavedTheme {
                 let fileURL = appSupportDirectory.appendingPathComponent(existing.relativePath)
                 try? FileManager.default.removeItem(at: fileURL)
             }
             imageCache.removeValue(forKey: existing.relativePath)
             faceArts.removeAll { $0.slot == slot }
             save()
+            ThemeManager.shared.activeThemeId = nil
         }
     }
 
@@ -236,6 +245,7 @@ public final class CustomFaceCardArtManager {
         if let idx = faceArts.firstIndex(where: { $0.slot == slot }) {
             faceArts[idx].isEnabled = enabled
             save()
+            ThemeManager.shared.activeThemeId = nil
         }
     }
 

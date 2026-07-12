@@ -50,7 +50,10 @@ public final class AppCoordinator {
 
     private func syncSharedOptions(from old: GameMode, to new: GameMode) {
         let isSoundEnabled:   Bool
-        let hideHintButton:   Bool
+        // hideHintButton is only read from games that actually have a Hint button —
+        // Blackjack doesn't, so it's Optional like isTimed rather than a hardcoded
+        // placeholder that would otherwise get force-propagated to the other games.
+        let hideHintButton:   Bool?
         let showFeltVignette: Bool
         let customCardColors: CustomCardColorGroup
         let noStressMode:     Bool
@@ -88,7 +91,7 @@ public final class AppCoordinator {
             isTimed           = nil  // don't propagate VP's timer concept to solitaire games
         case .blackjack:
             isSoundEnabled    = blackjackViewModel.options.isSoundEnabled
-            hideHintButton    = false
+            hideHintButton    = nil  // Blackjack has no Hint button/preference to propagate
             showFeltVignette  = blackjackViewModel.options.showFeltVignette
             customCardColors  = blackjackViewModel.options.customCardColors
             noStressMode      = blackjackViewModel.options.noStressMode
@@ -97,34 +100,34 @@ public final class AppCoordinator {
 
         if old != .klondike {
             klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
-            klondikeViewModel.options.hideHintButton   = hideHintButton
             klondikeViewModel.options.showFeltVignette = showFeltVignette
             klondikeViewModel.options.customCardColors = customCardColors
             klondikeViewModel.options.noStressMode     = noStressMode
+            if let hideHintButton { klondikeViewModel.options.hideHintButton = hideHintButton }
             if let isTimed { klondikeViewModel.options.isTimed = isTimed }
         }
         if old != .beecell {
             beecellViewModel.options.isSoundEnabled   = isSoundEnabled
-            beecellViewModel.options.hideHintButton   = hideHintButton
             beecellViewModel.options.showFeltVignette = showFeltVignette
             beecellViewModel.options.customCardColors = customCardColors
             beecellViewModel.options.noStressMode     = noStressMode
+            if let hideHintButton { beecellViewModel.options.hideHintButton = hideHintButton }
             if let isTimed { beecellViewModel.options.isTimed = isTimed }
         }
         if old != .spider {
             spiderViewModel.options.isSoundEnabled   = isSoundEnabled
-            spiderViewModel.options.hideHintButton   = hideHintButton
             spiderViewModel.options.showFeltVignette = showFeltVignette
             spiderViewModel.options.customCardColors = customCardColors
             spiderViewModel.options.noStressMode     = noStressMode
+            if let hideHintButton { spiderViewModel.options.hideHintButton = hideHintButton }
             if let isTimed { spiderViewModel.options.isTimed = isTimed }
         }
         if old != .videoPoker {
             videoPokerViewModel.options.isSoundEnabled   = isSoundEnabled
-            videoPokerViewModel.options.hideHintButton   = hideHintButton
             videoPokerViewModel.options.showFeltVignette = showFeltVignette
             videoPokerViewModel.options.customCardColors = customCardColors
             videoPokerViewModel.options.noStressMode     = noStressMode
+            if let hideHintButton { videoPokerViewModel.options.hideHintButton = hideHintButton }
         }
         if old != .blackjack {
             blackjackViewModel.options.isSoundEnabled   = isSoundEnabled
@@ -284,6 +287,7 @@ public final class AppCoordinator {
         blackjackViewModel.options = bj
 
         CustomFaceCardArtManager.shared.restore(theme.faceArts)
+        ThemeManager.shared.activeThemeId = theme.id
     }
 
     public func triggerWinAnimation() {

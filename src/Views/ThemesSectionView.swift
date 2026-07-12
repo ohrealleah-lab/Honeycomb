@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Themes section embedded in each game's Options sheet.
-/// Pass the current local @State values so "Save current as Theme" snapshots
+/// Pass the current local @State values so "Save as New Theme snapshots
 /// the pending (not-yet-committed) options.
 struct ThemesSectionView: View {
     let currentCardBackTheme: String
@@ -15,6 +15,7 @@ struct ThemesSectionView: View {
     @State private var newThemeName = ""
     @State private var saveError: String? = nil
     @State private var themeToDelete: SoliBeeTheme? = nil
+    @State private var themeToApply: SoliBeeTheme? = nil
 
     private var manager: ThemeManager { ThemeManager.shared }
 
@@ -24,7 +25,7 @@ struct ThemesSectionView: View {
                 Text("Themes")
                     .font(.system(.body).bold())
                 Spacer()
-                Button("Save current as Theme…") {
+                Button("Save as New Theme") {
                     newThemeName = ""
                     saveError = nil
                     showingSaveRow = true
@@ -92,6 +93,31 @@ struct ThemesSectionView: View {
         } message: {
             Text("Delete \"\(themeToDelete?.name ?? "")\"? This cannot be undone.")
         }
+        .alert("Warning", isPresented: Binding(
+            get: { themeToApply != nil },
+            set: { if !$0 { themeToApply = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { themeToApply = nil }
+            Button("Accept", role: .destructive) {
+                if let t = themeToApply { coordinator.applyTheme(t) }
+                themeToApply = nil
+                isOptionsPresented = false
+            }
+        } message: {
+            Text("Applying a new theme will remove your custom card art. Cancel and save as a new theme, if needed.")
+        }
+    }
+
+    // Skip the warning if the user is currently on a saved, non-Default theme (nothing
+    // of theirs is at risk since it's already captured by that theme), or if there's no
+    // active custom face art to lose in the first place.
+    private func shouldWarnBeforeApplying() -> Bool {
+        guard !CustomFaceCardArtManager.shared.faceArts.isEmpty else { return false }
+        guard let activeId = manager.activeThemeId,
+              let activeTheme = manager.themes.first(where: { $0.id == activeId }) else {
+            return true
+        }
+        return activeTheme.name.lowercased() == "default"
     }
 
     private func themeRow(_ theme: SoliBeeTheme) -> some View {
@@ -116,8 +142,12 @@ struct ThemesSectionView: View {
             Spacer()
 
             Button("Apply") {
-                coordinator.applyTheme(theme)
-                isOptionsPresented = false
+                if shouldWarnBeforeApplying() {
+                    themeToApply = theme
+                } else {
+                    coordinator.applyTheme(theme)
+                    isOptionsPresented = false
+                }
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)

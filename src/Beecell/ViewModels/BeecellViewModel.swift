@@ -514,7 +514,10 @@ public final class BeecellViewModel {
 
     public func doubleClickMove(card: Card, from sourcePile: Pile) {
         guard sourcePile.topCard?.id == card.id else { return }
-        
+        // Match the drag-start convention: any direct mouse move relinquishes keyboard
+        // focus/selection so a pending selection can't act on a pile this move changes.
+        clearKeyboardCursor()
+
         // Try foundation first
         for foundation in state.foundations {
             if isValidMove(cards: [card], to: foundation) {
@@ -543,7 +546,10 @@ public final class BeecellViewModel {
     private func adjustScore(from source: Pile.PileType, to target: Pile.PileType) {
         if target == .foundation {
             state.score += 10
-        } else if source == .foundation && target == .tableau {
+        } else if source == .foundation {
+            // Penalize leaving a foundation regardless of destination (tableau or free
+            // cell) — otherwise cycling a card foundation -> free cell -> foundation
+            // nets a free +10 every round trip since only the tableau case was covered.
             state.score = max(0, state.score - 15)
         }
         
@@ -599,6 +605,17 @@ public final class BeecellViewModel {
         if target.type == .foundation { return true }
         if source.type == .freeCell { return true }
         if target.type == .freeCell { return true }
+        if source.type == .tableau {
+            let remainingCount = source.cards.count - cards.count
+            if remainingCount == 0 {
+                // Moving a full column onto an empty target just relocates which column
+                // is empty — net zero progress unless the target was actually occupied.
+                return !target.isEmpty
+            }
+            // Any other tableau-to-tableau move builds/extends a legal sequence without
+            // fully emptying the source column — ordinary, genuine progress.
+            return true
+        }
         return false
     }
 
@@ -896,6 +913,9 @@ public final class BeecellViewModel {
     public func runAutocomplete() {
         guard isAutocompleteAvailable && !isAutoplayRunning else { return }
         saveStateForUndo()
+        // Autoplay moves cards without further cursor navigation, so a pending keyboard
+        // selection could otherwise act on a pile autoplay has already changed.
+        clearKeyboardCursor()
         isAutoplayRunning = true
         animateNextAutocompleteMove()
     }
@@ -1020,6 +1040,13 @@ public final class BeecellViewModel {
     public func clearKeyboardCursor() {
         activeCursor = nil
         selectedCardsSource = nil
+        // Reset coordinate trackers too — enableKeyboardCursorIfNeeded() only re-inits
+        // topRowColumn/cursorRow, so a stale cursorColumn from a larger board (e.g.
+        // 2-deck mode's 10 tableau columns) could otherwise survive into a smaller one
+        // and index out of bounds.
+        cursorColumn = 0
+        topRowColumn = 0
+        cursorRow = 0
     }
 
     public func moveCursorLeft() {

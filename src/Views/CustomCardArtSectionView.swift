@@ -99,8 +99,8 @@ struct CustomCardBackEditorView: View {
     var body: some View {
         VStack(spacing: 20) {
             Text("Edit Custom Card Art")
-                .font(.headline)
-                .foregroundColor(.white)
+                .font(.display(18))
+                .foregroundColor(.primary)
                 .padding(.top)
             
             // Card Preview Frame (128x181 points)
@@ -133,76 +133,75 @@ struct CustomCardBackEditorView: View {
             // Name input
             VStack(alignment: .leading, spacing: 4) {
                 Text("Card Back Name:")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(.display(12))
+                    .foregroundColor(.secondary)
                 TextField("e.g. My Dog", text: $name)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
             }
-            
+
             // Horizontal Offset Slider
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("Horizontal Position:")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                        .font(.display(12))
+                        .foregroundColor(.secondary)
                     Spacer()
                     Text(String(format: "%.0f px", offsetX))
-                        .font(.caption)
-                        .foregroundColor(.white)
-                        
+                        .font(.display(12))
+                        .foregroundColor(.primary)
+
                 }
                 Slider(value: $offsetX, in: -100.0...100.0, step: 1.0)
                     .frame(width: 200)
             }
-            
+
             // Vertical Offset Slider
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("Vertical Position:")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                        .font(.display(12))
+                        .foregroundColor(.secondary)
                     Spacer()
                     Text(String(format: "%.0f px", offsetY))
-                        .font(.caption)
-                        .foregroundColor(.white)
-                        
+                        .font(.display(12))
+                        .foregroundColor(.primary)
+
                 }
                 Slider(value: $offsetY, in: -100.0...100.0, step: 1.0)
                     .frame(width: 200)
             }
-            
+
             // Scale Slider
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("Scale Factor:")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                        .font(.display(12))
+                        .foregroundColor(.secondary)
                     Spacer()
                     Text(String(format: "%.2fx", scale))
-                        .font(.caption)
-                        .foregroundColor(.white)
-                        
+                        .font(.display(12))
+                        .foregroundColor(.primary)
+
                 }
                 Slider(value: $scale, in: 0.5...3.0, step: 0.05)
                     .frame(width: 200)
             }
-            
+
             if showError {
                 Text("Name cannot be empty or already exist!")
-                    .font(.caption)
+                    .font(.display(12))
                     .foregroundColor(.red)
             }
-            
+
             HStack(spacing: 12) {
-                Button("Cancel") {
+                themedEditorButton("Cancel", tint: .primary, shortcut: .cancelAction) {
                     onCancel()
                 }
-                .keyboardShortcut(.cancelAction)
-                
-                Button("Save") {
+
+                themedEditorButton("Save", tint: .primary, shortcut: .defaultAction) {
                     let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if cleanedName.isEmpty || 
+                    if cleanedName.isEmpty ||
                         CustomCardBackManager.shared.defaultThemes.contains(cleanedName) ||
                         CustomCardBackManager.shared.customCardBacks.contains(where: { $0.name == cleanedName }) {
                         showError = true
@@ -210,14 +209,12 @@ struct CustomCardBackEditorView: View {
                         onSave(cleanedName, scale, offsetX, offsetY)
                     }
                 }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
             }
             .padding(.bottom)
         }
         .frame(width: 320)
         .padding()
-        .background(Color(red: 0.15, green: 0.15, blue: 0.15))
+        .background(Color(NSColor.windowBackgroundColor))
         .cornerRadius(12)
     }
 }
@@ -292,6 +289,7 @@ public struct CardDeckSelectorView: View {
     @State private var selectedImageItem: IdentifiableImage? = nil
     @State private var showingDeleteConfirmation = false
     @State private var deckToDelete: String? = nil
+    @State private var deckInUseByTheme: (deckName: String, themeName: String)? = nil
     
     public init(cardBackTheme: Binding<String>, feltColor: Binding<FeltColorTheme>) {
         self._cardBackTheme = cardBackTheme
@@ -400,6 +398,16 @@ public struct CardDeckSelectorView: View {
         } message: {
             Text("Are you sure you want to delete this card back?")
         }
+        .alert("Card Back In Use", isPresented: Binding(
+            get: { deckInUseByTheme != nil },
+            set: { if !$0 { deckInUseByTheme = nil } }
+        )) {
+            Button("OK", role: .cancel) { deckInUseByTheme = nil }
+        } message: {
+            if let info = deckInUseByTheme {
+                Text("This card back is used by \"\(info.themeName)\". Please delete the theme first.")
+            }
+        }
     }
     
     private func feltColorName(_ theme: FeltColorTheme) -> String {
@@ -456,15 +464,20 @@ public struct CardDeckSelectorView: View {
     }
     
     private func deleteDeckByName(_ name: String) {
+        if let usedByTheme = ThemeManager.shared.themes.first(where: { $0.cardBackTheme == name }) {
+            deckInUseByTheme = (deckName: name, themeName: usedByTheme.name)
+            return
+        }
+
         let currentActive = CustomCardBackManager.shared.activeDecks
         guard currentActive.count > 1 else { return }
-        
+
         if cardBackTheme == name {
             if let firstOther = currentActive.first(where: { $0 != name }) {
                 cardBackTheme = firstOther
             }
         }
-        
+
         _ = CustomCardBackManager.shared.deleteDeck(name: name)
     }
     

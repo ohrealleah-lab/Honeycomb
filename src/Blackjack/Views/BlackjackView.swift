@@ -31,6 +31,10 @@ public struct BlackjackView: View {
 
     // The toolbar stays fixed size regardless of zoom; only the board below it scales.
     static let toolbarHeight: CGFloat = 73
+    // The hotkey legend sits below the scaled board, outside boardBaseHeight, and never
+    // scales with zoom — reserve fixed room for it so it doesn't get clipped by the
+    // window's bottom edge at minimum size.
+    private static let legendHeight: CGFloat = 28
     private static let baseBoardHeight: CGFloat = 950 - toolbarHeight
 
     private var boardBaseHeight: CGFloat {
@@ -127,9 +131,11 @@ public struct BlackjackView: View {
                 .opacity(0)
                 .frame(width: 0, height: 0)
                 .clipped()
+
+            HotkeyLegendView(text: "Space=Deal   H=Hit   S=Stand   D=Double Down   P=Split")
         }
         .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
-               minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale, maxHeight: .infinity)
+               minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale + Self.legendHeight, maxHeight: .infinity)
         .onAppear { snapToMinSize() }
         .background(WindowAccessor { window in
             self.hostingWindow = window
@@ -234,23 +240,26 @@ public struct BlackjackView: View {
     private var toolbarView: some View {
         HStack(spacing: 20) {
             gameModeMenu
-            toolbarButton("Options")  { isShowingOptions = true }
+            toolbarButton("Options", disabled: !viewModel.canOpenOptions) {
+                isShowingOptions = true
+            }
             Spacer()
         }
     }
 
-    private func toolbarButton(_ label: String, action: @escaping () -> Void) -> some View {
+    private func toolbarButton(_ label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
                 .font(.display(16))
-                .foregroundColor(.white)
+                .foregroundColor(disabled ? .white.opacity(0.4) : .white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(Color.white.opacity(0.15))
                 .cornerRadius(4)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(disabled ? Color.white.opacity(0.4) : Color.white, lineWidth: 1))
         }
         .buttonStyle(HoverToolbarButtonStyle())
+        .disabled(disabled)
         .focusable(false)
     }
 
@@ -703,7 +712,7 @@ public struct BlackjackView: View {
     private func updateMinSize() {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
+        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight)
         DispatchQueue.main.async {
             window.contentMinSize = size
         }
@@ -712,7 +721,7 @@ public struct BlackjackView: View {
     private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
         let z = viewModel.zoomScale
-        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z)
+        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight)
         let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
         DispatchQueue.main.async {
             window.contentMinSize = minSize

@@ -13,6 +13,8 @@ public struct GameView: View {
     @State private var pileFrames: [String: CGRect] = [:]
     @State private var isShuffling: Bool = false
     @State private var isDrawInFlight: Bool = false
+    @State private var showIdleStockHint: Bool = false
+    @State private var idleStockHintTask: DispatchWorkItem? = nil
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
     @State private var isShowingNewGameConfirm: Bool = false
@@ -182,7 +184,7 @@ public struct GameView: View {
                     
                     Spacer()
                     
-                    if viewModel.options.isStatusBarVisible {
+                    if viewModel.options.isStatusBarVisible && !viewModel.options.noStressMode {
                         HStack(alignment: .bottom, spacing: 20) {
                             // Score / Bankroll
                             if viewModel.options.isVegasScoring {
@@ -190,14 +192,12 @@ public struct GameView: View {
                             } else {
                                 StatusItemView(label: "SCORE", value: viewModel.scoreString)
                             }
-                            
+
                             // Moves
                             StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
 
                             // Timer
-                            if !viewModel.options.noStressMode {
-                                StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
-                            }
+                            StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                         }
                     }
                     
@@ -245,7 +245,7 @@ public struct GameView: View {
                     }
                     .frame(width: 128, height: 181)
                     .contentShape(Rectangle())
-                    .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.stock.id || viewModel.activeHint?.targetPileId == viewModel.state.stock.id))
+                    .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.stock.id || viewModel.activeHint?.targetPileId == viewModel.state.stock.id || showIdleStockHint))
                     .background(GeometryReader { geo in
                         Color.clear
                             .onAppear {
@@ -601,6 +601,8 @@ public struct GameView: View {
                 .shadow(color: .black.opacity(0.4), radius: 5, x: 0, y: 5)
                 .allowsHitTesting(false)
         }
+
+            HotkeyLegendView(text: "Arrows=Move Cursor   Space/Return=Select or Move   D=Draw   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor")
         }
         .environment(\.feltColor, viewModel.options.feltColor)
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
@@ -609,6 +611,7 @@ public struct GameView: View {
         .focused($isBoardFocused)
         .onAppear {
             isBoardFocused = true
+            scheduleIdleStockHint()
             keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                 guard !isShowingOptions && !isShowingStats else { return event }
                 if let firstResponder = NSApp.keyWindow?.firstResponder,
@@ -662,6 +665,17 @@ public struct GameView: View {
                 NSEvent.removeMonitor(monitor)
                 keyMonitor = nil
             }
+            idleStockHintTask?.cancel()
+            idleStockHintTask = nil
+        }
+        .onChange(of: viewModel.state.movesCount) {
+            scheduleIdleStockHint()
+        }
+        .onChange(of: viewModel.options.hideHintButton) {
+            scheduleIdleStockHint()
+        }
+        .onChange(of: viewModel.gameGeneration) {
+            scheduleIdleStockHint()
         }
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
@@ -734,6 +748,27 @@ public struct GameView: View {
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
         .onChange(of: viewModel.state.tableau.count) { updateMinSize() }
+    }
+
+    private func scheduleIdleStockHint() {
+        idleStockHintTask?.cancel()
+        withAnimation { showIdleStockHint = false }
+        guard !viewModel.options.hideHintButton,
+              !viewModel.hasDrawnFromStockThisGame,
+              !viewModel.hasShownIdleStockHintThisGame else { return }
+        let task = DispatchWorkItem {
+            guard !viewModel.options.hideHintButton,
+                  !viewModel.hasDrawnFromStockThisGame,
+                  !viewModel.hasShownIdleStockHintThisGame else { return }
+            viewModel.hasShownIdleStockHintThisGame = true
+            withAnimation { showIdleStockHint = true }
+            // Auto-dismiss after a brief moment rather than lingering indefinitely.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                withAnimation { showIdleStockHint = false }
+            }
+        }
+        idleStockHintTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: task)
     }
 
     private func performStockDraw() {

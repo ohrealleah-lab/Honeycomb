@@ -59,6 +59,7 @@ struct ThemesOptionsView: View {
 
             Divider()
 
+            ScrollView(.vertical, showsIndicators: true) {
             HStack(alignment: .top, spacing: 32) {
                 // Left Column
                 VStack(alignment: .leading, spacing: 16) {
@@ -97,19 +98,18 @@ struct ThemesOptionsView: View {
                                         UserDefaults.standard.set(Double(rgb.greenComponent), forKey: "custom_felt_green")
                                         UserDefaults.standard.set(Double(rgb.blueComponent),  forKey: "custom_felt_blue")
                                     }
+                                    ThemeManager.shared.activeThemeId = nil
                                     onCommit(true)
                                 }
                         }
                     }
 
+                    Toggle("Felt Vignette", isOn: $showFeltVignette)
+                        .font(.system(.body))
+
                     Divider()
 
                     CardDeckSelectorView(cardBackTheme: $cardBackTheme, feltColor: $feltColor)
-
-                    Divider()
-
-                    Toggle("Felt Vignette", isOn: $showFeltVignette)
-                        .font(.system(.body))
 
                     Divider()
 
@@ -133,14 +133,24 @@ struct ThemesOptionsView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
+            }
+            .frame(maxHeight: maxPanelContentHeight)
         }
         .frame(width: 880)
-        .fixedSize(horizontal: true, vertical: true)
+        .fixedSize(horizontal: true, vertical: false)
         .background(Color(NSColor.windowBackgroundColor))
-        .onChange(of: feltColor) { _, _ in onCommit(false) }
-        .onChange(of: cardBackTheme) { _, _ in onCommit(false) }
+        .onChange(of: feltColor) { _, _ in ThemeManager.shared.activeThemeId = nil; onCommit(false) }
+        .onChange(of: cardBackTheme) { _, _ in ThemeManager.shared.activeThemeId = nil; onCommit(false) }
         .onChange(of: showFeltVignette) { _, _ in onCommit(false) }
-        .onChange(of: customCardColors) { _, _ in onCommit(false) }
+        .onChange(of: customCardColors) { _, _ in ThemeManager.shared.activeThemeId = nil; onCommit(false) }
+    }
+
+    // Caps the scrollable content area so the panel never grows taller than the
+    // screen it's on (leaving room for the header/divider above and some margin),
+    // regardless of how short the presenting game window currently is.
+    private var maxPanelContentHeight: CGFloat {
+        let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
+        return max(300, screenHeight - 160)
     }
 
     private func cancel() {

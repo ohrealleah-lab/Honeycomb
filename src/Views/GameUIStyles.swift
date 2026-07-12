@@ -154,6 +154,65 @@ struct WinParticleView: View {
     }
 }
 
+// MARK: - Hotkey Legend
+
+/// Small, muted strip of local keyboard shortcuts pinned to the bottom of a game's
+/// window — pinned outside the scaled board area (not inside boardBaseHeight-style
+/// content) so it never needs the per-game min-window-size math to account for it.
+struct HotkeyLegendView: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(.display(11, weight: .medium))
+            .foregroundColor(.white.opacity(0.55))
+            .padding(.bottom, 10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Themed Editor Button
+
+/// Pill-shaped button matching the main toolbar's look, for use in modal editors like
+/// the custom card-art/card-back panels so they read as part of the same app rather
+/// than generic native dialogs. Defaults to `.primary` since these editors sit on an
+/// adaptive (light/dark) window background, not the game board's fixed dark felt.
+struct ThemedEditorButton: View {
+    let title: String
+    var tint: Color = .primary
+    var shortcut: KeyboardShortcut? = nil
+    let action: () -> Void
+
+    var body: some View {
+        Group {
+            if let shortcut {
+                button.keyboardShortcut(shortcut)
+            } else {
+                button
+            }
+        }
+    }
+
+    private var button: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.display(14))
+                .foregroundColor(tint)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(tint.opacity(0.15))
+                .cornerRadius(4)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(tint, lineWidth: 1))
+        }
+        .buttonStyle(HoverToolbarButtonStyle())
+        .focusable(false)
+    }
+}
+
+func themedEditorButton(_ title: String, tint: Color = .primary, shortcut: KeyboardShortcut? = nil, action: @escaping () -> Void) -> some View {
+    ThemedEditorButton(title: title, tint: tint, shortcut: shortcut, action: action)
+}
+
 // MARK: - Display Font
 
 extension Font {

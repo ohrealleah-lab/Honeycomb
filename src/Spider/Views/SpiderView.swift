@@ -168,10 +168,10 @@ public struct SpiderView: View {
 
                     Spacer()
 
-                    HStack(alignment: .bottom, spacing: 20) {
-                        StatusItemView(label: "SCORE", value: viewModel.scoreString)
-                        StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
-                        if !viewModel.options.noStressMode {
+                    if !viewModel.options.noStressMode {
+                        HStack(alignment: .bottom, spacing: 20) {
+                            StatusItemView(label: "SCORE", value: viewModel.scoreString)
+                            StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
                             StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                         }
                     }
@@ -484,6 +484,8 @@ public struct SpiderView: View {
                 .shadow(color: .black.opacity(0.4), radius: 5, x: 0, y: 5)
                 .allowsHitTesting(false)
             }
+
+            HotkeyLegendView(text: "Arrows=Move Cursor   Space/Return=Select or Move   D=Deal   A=Autocomplete   Esc=Clear Cursor")
         }
         .environment(\.feltColor, viewModel.options.feltColor)
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
@@ -526,7 +528,11 @@ public struct SpiderView: View {
                     if let chars = event.charactersIgnoringModifiers?.lowercased() {
                         if chars == "d" {
                             viewModel.enableKeyboardCursorIfNeeded()
-                            viewModel.drawFromStock()
+                            if viewModel.hasEmptyTableauColumn {
+                                isShowingEmptyStockWarning = true
+                            } else {
+                                viewModel.drawFromStock()
+                            }
                             return nil
                         } else if chars == "a" {
                             viewModel.runAutocomplete()

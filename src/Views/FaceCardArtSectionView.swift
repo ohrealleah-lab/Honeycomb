@@ -98,11 +98,11 @@ struct FaceCardArtEditorView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.12, green: 0.12, blue: 0.14).ignoresSafeArea()
+            Color(NSColor.windowBackgroundColor).ignoresSafeArea()
 
             VStack(spacing: 20) {
                 Text("Edit \(slot.rankLabel)\(slot.suitSymbol) Art")
-                    .font(.headline).foregroundColor(.white).padding(.top)
+                    .font(.display(18)).foregroundColor(.primary).padding(.top)
 
                 // Card preview
                 ZStack {
@@ -115,7 +115,7 @@ struct FaceCardArtEditorView: View {
                     }
                     .foregroundColor(cardColor)
                     .padding(.leading, 8).padding(.top, 8)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .frame(width: 128, height: 181, alignment: .topLeading)
 
                     HStack(alignment: .center, spacing: 1) {
                         Text(slot.rankLabel).font(.system(size: 17, weight: .bold))
@@ -124,7 +124,7 @@ struct FaceCardArtEditorView: View {
                     .foregroundColor(cardColor)
                     .rotationEffect(.degrees(180))
                     .padding(.trailing, 8).padding(.bottom, 8)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .frame(width: 128, height: 181, alignment: .bottomTrailing)
 
                     // Custom art in center area
                     ZStack {
@@ -159,17 +159,14 @@ struct FaceCardArtEditorView: View {
                 // Buttons
                 HStack(spacing: 12) {
                     if onDelete != nil {
-                        Button("Remove") { onDelete?() }
-                            .foregroundColor(.red)
+                        themedEditorButton("Remove", tint: .red) { onDelete?() }
                     }
-                    Button("Reset") {
+                    themedEditorButton("Reset", tint: .secondary) {
                         scale = 1.0; offsetX = 0; offsetY = 0
                     }
-                    .foregroundColor(.secondary)
                     Spacer()
-                    Button("Cancel") { onCancel() }
-                    Button("Save") { onSave(scale, offsetX, offsetY) }
-                        .buttonStyle(.borderedProminent)
+                    themedEditorButton("Cancel", tint: .primary, shortcut: .cancelAction) { onCancel() }
+                    themedEditorButton("Save", tint: .primary, shortcut: .defaultAction) { onSave(scale, offsetX, offsetY) }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -181,9 +178,9 @@ struct FaceCardArtEditorView: View {
     private func sliderRow(label: String, value: Binding<Double>, in range: ClosedRange<Double>, format: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(label).font(.caption).foregroundColor(.white.opacity(0.7))
+                Text(label).font(.display(12)).foregroundColor(.secondary)
                 Spacer()
-                Text(format).font(.caption).foregroundColor(.white)
+                Text(format).font(.display(12)).foregroundColor(.primary)
             }
             Slider(value: value, in: range).frame(width: 200)
         }

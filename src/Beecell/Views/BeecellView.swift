@@ -167,10 +167,10 @@ public struct BeecellView: View {
                     
                     Spacer()
                     
-                    HStack(alignment: .bottom, spacing: 20) {
-                        StatusItemView(label: "SCORE", value: viewModel.scoreString)
-                        StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
-                        if !viewModel.options.noStressMode {
+                    if !viewModel.options.noStressMode {
+                        HStack(alignment: .bottom, spacing: 20) {
+                            StatusItemView(label: "SCORE", value: viewModel.scoreString)
+                            StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
                             StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
                         }
                     }
@@ -281,7 +281,10 @@ public struct BeecellView: View {
                                         FreeCellView(
                                             pile: cell,
                                             draggedCardIDs: Set(draggedCards.map { $0.id }),
+                                            isFocused: viewModel.activeCursor?.pileId == cell.id,
+                                            isSelected: viewModel.selectedCardsSource == cell.id,
                                             onDragStarted: { card, stack, startLoc in
+                                                viewModel.clearKeyboardCursor()
                                                 viewModel.clearHint()
                                                 if draggedCards.isEmpty {
                                                     draggedCards = stack
@@ -300,15 +303,18 @@ public struct BeecellView: View {
                                                 .onChange(of: geo.frame(in: .global)) { _, newFrame in pileFrames[cell.id] = newFrame }
                                         })
                                     }
-                                    
+
                                     Spacer()
                                         .frame(width: 256 + stackSpacing)
-                                    
+
                                     ForEach(Array(viewModel.state.foundations[0..<4])) { foundation in
                                         BeecellFoundationView(
                                             pile: foundation,
                                             draggedCardIDs: Set(draggedCards.map { $0.id }),
+                                            isFocused: viewModel.activeCursor?.pileId == foundation.id,
+                                            isSelected: viewModel.selectedCardsSource == foundation.id,
                                             onDragStarted: { card, stack, startLoc in
+                                                viewModel.clearKeyboardCursor()
                                                 viewModel.clearHint()
                                                 if draggedCards.isEmpty {
                                                     draggedCards = stack
@@ -327,14 +333,17 @@ public struct BeecellView: View {
                                         })
                                     }
                                 }
-                                
+
                                 // Row 2: Freecells 4-7 and Foundations 4-7
                                 HStack(alignment: .top, spacing: stackSpacing) {
                                     ForEach(Array(viewModel.state.freeCells[4..<8])) { cell in
                                         FreeCellView(
                                             pile: cell,
                                             draggedCardIDs: Set(draggedCards.map { $0.id }),
+                                            isFocused: viewModel.activeCursor?.pileId == cell.id,
+                                            isSelected: viewModel.selectedCardsSource == cell.id,
                                             onDragStarted: { card, stack, startLoc in
+                                                viewModel.clearKeyboardCursor()
                                                 viewModel.clearHint()
                                                 if draggedCards.isEmpty {
                                                     draggedCards = stack
@@ -353,15 +362,18 @@ public struct BeecellView: View {
                                                 .onChange(of: geo.frame(in: .global)) { _, newFrame in pileFrames[cell.id] = newFrame }
                                         })
                                     }
-                                    
+
                                     Spacer()
                                         .frame(width: 256 + stackSpacing)
-                                    
+
                                     ForEach(Array(viewModel.state.foundations[4..<8])) { foundation in
                                         BeecellFoundationView(
                                             pile: foundation,
                                             draggedCardIDs: Set(draggedCards.map { $0.id }),
+                                            isFocused: viewModel.activeCursor?.pileId == foundation.id,
+                                            isSelected: viewModel.selectedCardsSource == foundation.id,
                                             onDragStarted: { card, stack, startLoc in
+                                                viewModel.clearKeyboardCursor()
                                                 viewModel.clearHint()
                                                 if draggedCards.isEmpty {
                                                     draggedCards = stack
@@ -614,6 +626,8 @@ public struct BeecellView: View {
                 .shadow(color: .black.opacity(0.4), radius: 5, x: 0, y: 5)
                 .allowsHitTesting(false)
             }
+
+            HotkeyLegendView(text: "Arrows=Move Cursor   Space/Return=Select or Move   C=Free Cell   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor")
         }
         .environment(\.feltColor, viewModel.options.feltColor)
         .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
@@ -740,7 +754,7 @@ public struct BeecellView: View {
                 snapToMinSize()
             }
         })
-        .onChange(of: viewModel.options.deckCount) { updateMinSize() }
+        .onChange(of: viewModel.options.deckCount) { snapToMinSize() }
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
     }
 

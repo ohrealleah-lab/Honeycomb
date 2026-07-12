@@ -110,6 +110,17 @@ public final class GameViewModel {
     public var isStuck: Bool = false
     public var isStockExhausted: Bool = false
 
+    // Tracks whether the player has drawn/recycled the stock at least once this game —
+    // drives the idle "hint" nudge on the stock pile for a player who hasn't dealt yet.
+    public var hasDrawnFromStockThisGame: Bool = false
+    // The idle stock nudge only ever plays once per game, even if the player keeps
+    // idling without drawing afterward.
+    public var hasShownIdleStockHintThisGame: Bool = false
+    // Increments on every startNewGame()/restartCurrentGame() so the View can reliably
+    // re-arm the idle stock hint even when movesCount happens to stay at 0 across the
+    // reset (e.g. clicking New Game again before making a single move).
+    public private(set) var gameGeneration: Int = 0
+
     // Undo stack
     private var undoStack: [GameState] = []
     
@@ -128,6 +139,7 @@ public final class GameViewModel {
     }
     
     public var canRecycleStock: Bool {
+        guard !state.waste.isEmpty else { return false }
         if let maxRec = maxRecycles {
             return state.recyclesCount < maxRec
         }
@@ -446,6 +458,9 @@ public final class GameViewModel {
         isAutoplayRunning = false
         isStuck = false
         isStockExhausted = false
+        hasDrawnFromStockThisGame = false
+        hasShownIdleStockHintThisGame = false
+        gameGeneration += 1
         initialState = state
         clearHint()
         clearKeyboardCursor()
@@ -462,6 +477,9 @@ public final class GameViewModel {
         isAutoplayRunning = false
         isStuck = false
         isStockExhausted = false
+        hasDrawnFromStockThisGame = false
+        hasShownIdleStockHintThisGame = false
+        gameGeneration += 1
         clearHint()
         clearKeyboardCursor()
     }
@@ -475,9 +493,10 @@ public final class GameViewModel {
         } else {
             saveStateForUndo()
         }
-        
+
         guard !state.stock.isEmpty else { return }
-        
+        hasDrawnFromStockThisGame = true
+
         startTimerIfNeeded()
         
         let count = state.drawMode == .drawOne ? 1 : min(3, state.stock.cards.count)
@@ -518,6 +537,7 @@ public final class GameViewModel {
         state.waste.cards.removeAll()
         state.wasteDisplayCount = 0
         state.movesCount += 1
+        hasDrawnFromStockThisGame = true
     }
     
     // MARK: - Move Validation & Execution
@@ -613,7 +633,11 @@ public final class GameViewModel {
     
     public func doubleClickMoveToFoundation(card: Card, from sourcePile: Pile) {
         guard sourcePile.topCard?.id == card.id else { return }
-        
+        // Match the drag-start convention: any direct mouse move relinquishes keyboard
+        // focus/selection so a stale cached cardIndex can't outlive the pile it pointed
+        // into if this move shrinks it.
+        clearKeyboardCursor()
+
         for foundation in state.foundations {
             if isValidMove(cards: [card], to: foundation) {
                 moveCards([card], from: sourcePile, to: foundation)
@@ -935,6 +959,10 @@ public final class GameViewModel {
     public func runAutocomplete() {
         guard isAutocompleteAvailable && !isAutoplayRunning else { return }
         saveStateForUndo()
+        // Autoplay moves cards without further cursor navigation, so a cached keyboard
+        // cursor/selection could otherwise go stale (pointing past the end of a column
+        // autoplay just drained) and crash on the next Space/arrow press.
+        clearKeyboardCursor()
         isAutoplayRunning = true
         animateNextAutocompleteMove()
     }
@@ -989,6 +1017,12 @@ public final class GameViewModel {
     public func undoLastAction() {
         guard !undoStack.isEmpty else { return }
         state = undoStack.removeLast()
+        // vegasBankroll isn't part of `state`, but it always tracks state.score 1:1 via
+        // adjustScore()'s +500/-500 branches — recompute it to match the restored score
+        // rather than leaving it stranded at its pre-undo value.
+        if options.isVegasScoring, let initial = initialState {
+            vegasBankroll = vegasBankrollAtGameStart + (state.score - initial.score)
+        }
         isAutoplayRunning = false
         isStuck = false
         clearHint()
@@ -1062,6 +1096,11 @@ public final class GameViewModel {
         activeCursor = nil
         selectedCardsSource = nil
         selectedCardsIndex = nil
+        // Reset coordinate trackers too, so a stale tableau column can't survive into a
+        // freshly re-engaged cursor and cause a drifted/out-of-bounds focus placement.
+        cursorColumn = 0
+        topRowColumn = 0
+        cursorRow = 0
     }
 
     public func moveCursorLeft() {

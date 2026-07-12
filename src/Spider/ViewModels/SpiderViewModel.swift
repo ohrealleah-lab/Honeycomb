@@ -499,6 +499,11 @@ public final class SpiderViewModel {
     }
 
     public func doubleClickMove(card: Card, from sourcePile: Pile) {
+        // Match the drag-start convention: any direct mouse move relinquishes keyboard
+        // focus/selection so a stale cached index can't outlive the pile it pointed
+        // into if this move shrinks it.
+        clearKeyboardCursor()
+
         // Find if this card is part of a valid sequence up to the top of the pile
         guard let colIdx = state.tableau.firstIndex(where: { $0.id == sourcePile.id }) else { return }
         guard let cardIdx = state.tableau[colIdx].cards.firstIndex(where: { $0.id == card.id }) else { return }
@@ -721,6 +726,9 @@ public final class SpiderViewModel {
     public func runAutocomplete() {
         guard isAutocompleteAvailable && !isAutoplayRunning else { return }
         saveStateForUndo()
+        // Autoplay moves cards without further cursor navigation, so a cached keyboard
+        // cursor/selection could otherwise go stale and crash on the next Space/arrow.
+        clearKeyboardCursor()
         isAutoplayRunning = true
         animateNextAutocompleteMove()
     }

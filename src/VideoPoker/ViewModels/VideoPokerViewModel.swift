@@ -227,6 +227,12 @@ public final class VideoPokerViewModel {
         options.noStressMode
     }
 
+    // Options can only be opened between hands — changing variant/play mode mid-hand
+    // would evaluate an already-dealt hand under different rules.
+    public var canOpenOptions: Bool {
+        state.phase == .deal || state.phase == .result
+    }
+
     public func deal() {
         guard state.phase == .deal || state.phase == .result else { return }
         guard isFreePlay || state.sessionCredits >= totalBet else { return }
@@ -462,17 +468,20 @@ public final class VideoPokerViewModel {
     // MARK: - Bet controls
 
     public func increaseBet() {
+        guard state.phase == .deal || state.phase == .result else { return }
         state.currentBet = min(5, state.currentBet + 1)
     }
 
     public func decreaseBet() {
+        guard state.phase == .deal || state.phase == .result else { return }
         state.currentBet = max(1, state.currentBet - 1)
     }
 
     public func maxBet() {
+        guard state.phase == .deal || state.phase == .result else { return }
         let divisor = options.playMode == .triple ? 3 : 1
         state.currentBet = max(1, min(5, state.sessionCredits / divisor))
-        if state.phase == .deal || state.phase == .result { deal() }
+        deal()
     }
 
     // MARK: - Rebuy
