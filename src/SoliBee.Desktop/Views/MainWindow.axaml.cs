@@ -65,7 +65,9 @@ public partial class MainWindow : Window
             CardView.ApplyThemeColors(m.Options);
             CardView.InvalidateAllCardViews(this);
             bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
-            if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && !m.Options.IsNoStressMode;
+            if (TimeStatPanel != null)  TimeStatPanel.IsVisible  = isCardGame && !m.Options.IsNoStressMode;
+            if (ScoreStatPanel != null) ScoreStatPanel.IsVisible = isCardGame && !m.Options.IsNoStressMode;
+            if (MovesStatPanel != null) MovesStatPanel.IsVisible = isCardGame && !m.Options.IsNoStressMode;
             // Hint is solitaire-only (no hint logic exists for VP/Blackjack).
             if (HintButton != null)    HintButton.IsVisible    = isCardGame && !m.Options.HideHintButton;
             if (ZoomButton != null)    ZoomButton.IsVisible    = !m.Options.HideZoomControls;
@@ -383,6 +385,14 @@ public partial class MainWindow : Window
                 SlideOutAndClosePreferences();
             }
         }
+        else if (_pendingAction.StartsWith("SwitchVariant:"))
+        {
+            int idx = int.Parse(_pendingAction.Substring("SwitchVariant:".Length));
+            _variantInitializing = true;
+            PokerVariantBox.SelectedIndex = idx;
+            _variantInitializing = false;
+            ApplyVariantSwitch((VideoPokerVariant)idx);
+        }
         else if (_pendingAction == "CancelPreferences")
         {
             ExecuteCancelPreferences();
@@ -430,6 +440,10 @@ public partial class MainWindow : Window
             SettingsService.SaveOptions(opts);
             _coordinator.FreecellViewModel.InitializeGame();
             WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(opts));
+            // Unlike Klondike Draw1/3 and Spider's suit-count modes, a Freecell deck-count
+            // change actually alters the board's own footprint (extra FreeCells+Foundations
+            // row, extra tableau columns) — grow the window if it's now too small for it.
+            EnsureWindowFitsBoard(tag);
         }
         else if (tag == "Spider1" || tag == "Spider2" || tag == "Spider4")
         {
@@ -636,6 +650,11 @@ public partial class MainWindow : Window
 
     private void Preferences_Click(object? sender, RoutedEventArgs e)
     {
+        // Belt-and-suspenders alongside OptionsButton.IsEnabled — blocks the F2 shortcut
+        // too, so a hand mid-deal can't be used to peek at Preferences and flip No Stress
+        // Mode on/off to only ever risk real credits on hands already known to be good.
+        if (IsOptionsBlockedDuringHand()) return;
+
         _preferencesView = new PreferencesView();
 
         if (this.DataContext is VideoPokerViewModel vpVm)
@@ -796,6 +815,32 @@ public partial class MainWindow : Window
         if (_variantInitializing) return;
         if (PokerVariantBox.SelectedIndex < 0) return;
         var variant = (VideoPokerVariant)PokerVariantBox.SelectedIndex;
+
+        var vpVm = _coordinator.VideoPokerViewModel;
+        if (vpVm.State != null && vpVm.State.Phase == VideoPokerPhase.Holding)
+        {
+            // A hand is in progress (dealt but not yet drawn) — switching variants here
+            // calls StartNewGame(), which silently resets SessionCredits back to
+            // Options.StartingCredits and discards the wagered bet with no confirmation.
+            // Snap the box back and ask first, same as every other game-abandoning action.
+            int currentIndex = (int)vpVm.Options.Variant;
+            _variantInitializing = true;
+            PokerVariantBox.SelectedIndex = currentIndex;
+            _variantInitializing = false;
+
+            _pendingAction = "SwitchVariant:" + (int)variant;
+            ConfirmActionTitle.Text     = "Switch Variant?";
+            ConfirmActionMessage.Text   = "Are you sure you want to abandon the current hand and switch variants?";
+            ConfirmActionButton.Content = "Switch Variant";
+            ConfirmActionOverlay.IsVisible = true;
+            return;
+        }
+
+        ApplyVariantSwitch(variant);
+    }
+
+    private void ApplyVariantSwitch(VideoPokerVariant variant)
+    {
         _coordinator.VideoPokerViewModel.SetVariant(variant);
         if (MainContent.Content is VideoPokerView vpView)
             vpView.OnVariantChanged();
@@ -837,7 +882,7 @@ public partial class MainWindow : Window
         var tag = baseTag switch
         {
             "Klondike" => opts.IsDrawConstraintsEnabled ? "SolitaireDraw3" : "SolitaireDraw1",
-            "Freecell" => "Freecell1",
+            "Freecell" => opts.FreecellDeckCount == 2 ? "Freecell2" : "Freecell1",
             "Spider"   => opts.SpiderSuitCount switch { 2 => "Spider2", 4 => "Spider4", _ => "Spider1" },
             _          => baseTag,
         };
@@ -964,13 +1009,16 @@ public partial class MainWindow : Window
         _hintTrackedVm = _coordinator.ActiveViewModel as INotifyPropertyChanged;
         if (_hintTrackedVm != null) _hintTrackedVm.PropertyChanged += OnHintTrackedVmPropertyChanged;
         UpdateHintButtonEnabled();
+        UpdateOptionsButtonEnabled();
 
         bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
         // Hint is solitaire-only (no hint logic exists for VP/Blackjack).
         if (HintButton != null)    HintButton.IsVisible    = isCardGame && !_coordinator.GameViewModel.Options.HideHintButton;
         if (ZoomButton != null)    ZoomButton.IsVisible    = !_coordinator.GameViewModel.Options.HideZoomControls;
         if (UndoButton != null)    UndoButton.IsVisible    = isCardGame;
-        if (TimeStatPanel != null) TimeStatPanel.IsVisible = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
+        if (TimeStatPanel != null)  TimeStatPanel.IsVisible  = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
+        if (ScoreStatPanel != null) ScoreStatPanel.IsVisible = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
+        if (MovesStatPanel != null) MovesStatPanel.IsVisible = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
         if (RestartButton != null) RestartButton.IsVisible = isCardGame;
         if (StatsBarPanel != null) StatsBarPanel.IsVisible = isCardGame;
         var options = SettingsService.LoadOptions();
@@ -1073,6 +1121,8 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(GameViewModel.HasNoMoves))
             UpdateHintButtonEnabled();
+        else if (e.PropertyName == nameof(BlackjackViewModel.State) || e.PropertyName == nameof(VideoPokerViewModel.State))
+            UpdateOptionsButtonEnabled();
     }
 
     private void UpdateHintButtonEnabled()
@@ -1085,6 +1135,21 @@ public partial class MainWindow : Window
             _                   => false,
         };
         if (HintButton != null) HintButton.IsEnabled = !hasNoMoves;
+    }
+
+    // A hand mid-deal in Blackjack/Video Poker shouldn't be interruptible by Preferences —
+    // otherwise a player could peek at their (bad) hand, flip No Stress Mode on, and only
+    // ever risk real credits on hands they already know are good.
+    private bool IsOptionsBlockedDuringHand() => _coordinator.ActiveViewModel switch
+    {
+        BlackjackViewModel bj  => bj.IsPlaying,
+        VideoPokerViewModel vp => vp.State != null && vp.State.Phase == VideoPokerPhase.Holding,
+        _                      => false,
+    };
+
+    private void UpdateOptionsButtonEnabled()
+    {
+        if (OptionsButton != null) OptionsButton.IsEnabled = !IsOptionsBlockedDuringHand();
     }
 
     // ── Per-game window size ──────────────────────────────────────────────────
@@ -1120,6 +1185,53 @@ public partial class MainWindow : Window
         SettingsService.SaveOptions(opts);
     }
 
+    // Keeps the window from growing/restoring larger than the actual screen and from
+    // sitting partially off-screen afterward — without this, zoom growth
+    // (SnapWindowToZoom) or a size restored from a different/bigger monitor
+    // (RestoreWindowSizeForGame) could leave the window's bottom/right edge rendered
+    // off-screen, with no way to reach controls anchored there (e.g. Preferences' OK
+    // button). Mirrors the same Screens.ScreenFromWindow/WorkingArea pattern already
+    // used to keep the window's position on-screen in the constructor's Opened handler.
+    private void ClampWindowToScreen()
+    {
+        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+        if (screen == null) return;
+        var wa = screen.WorkingArea;
+
+        Width  = Math.Min(Width, wa.Width);
+        Height = Math.Min(Height, wa.Height);
+
+        double x = Position.X, y = Position.Y;
+        if (x + Width  > wa.X + wa.Width)  x = wa.X + wa.Width  - Width;
+        if (y + Height > wa.Y + wa.Height) y = wa.Y + wa.Height - Height;
+        if (x < wa.X) x = wa.X;
+        if (y < wa.Y) y = wa.Y;
+        Position = new PixelPoint((int)x, (int)y);
+    }
+
+    // Called when the board's own minimum footprint changes at a fixed zoom level (e.g.
+    // Freecell 1-deck ↔ 2-deck adds a whole extra FreeCells+Foundations row) — recomputes
+    // Min bounds and snaps the window to exactly that size, growing OR shrinking as
+    // needed. There's only one saved Freecell window size (not one per deck count), so
+    // switching 2-deck → 1-deck must actively shrink back down here — otherwise it would
+    // stay oversized from 2-deck with no way to reach a correctly-sized window short of
+    // a manual resize. Setting Width/Height alone (without touching Position) already
+    // resizes anchored at the window's current top-left corner; ClampWindowToScreen then
+    // keeps it on-screen.
+    private void EnsureWindowFitsBoard(string tag)
+    {
+        var (minW, minH) = ComputeBoardMinSize(tag, GetGameZoom(tag));
+        this.MinWidth = minW;
+        this.MinHeight = minH;
+
+        if (WindowState == WindowState.Maximized) return;
+        if (Width == minW && Height == minH) return;
+
+        Width  = minW;
+        Height = minH;
+        ClampWindowToScreen();
+    }
+
     private void RestoreWindowSizeForGame(string tag)
     {
         // Cancel any in-flight zoom-driven resize animation from ApplyZoom above —
@@ -1145,6 +1257,7 @@ public partial class MainWindow : Window
             WindowState = WindowState.Normal;
             Width  = Math.Max(MinWidth, w);
             Height = Math.Max(MinHeight, h);
+            ClampWindowToScreen();
         }
     }
 
@@ -1211,13 +1324,38 @@ public partial class MainWindow : Window
             // 13-card same-suit run for Spider — fits under the toolbar without being
             // clipped or scrolled out of view. Math.Max(MinHeight, saved height) in
             // RestoreWindowSizeForGame means this also repairs any already-saved
-            // window height that was set before this floor existed.
-            "Klondike"   => 900,
-            "Freecell"   => 1050,
-            "Spider"     => 950,
+            // window height that was set before this floor existed. +30 on each of
+            // these three reserves room for the bottom hotkey-legend strip — Blackjack/
+            // Video Poker previously got clipped against the window's bottom edge when
+            // that strip was added without a matching floor bump.
+            "Klondike"   => 930,
+            // 2-deck Freecell stacks a second FreeCells+Foundations row (TopRow2) below
+            // the first — real height, not just extra columns — so it needs its own
+            // taller floor: +189 for that row (128×181 PileView + the 8px Spacing between
+            // TopRow1/TopRow2 in FreecellView.axaml), matching the Mac original's two
+            // separate hand-tuned profiles (950/1120) for 1-deck vs 2-deck.
+            "Freecell"   => tag == "Freecell2" ? 1270 : 1080,
+            "Spider"     => 980,
             _            => 640,
         };
-        return (baseMinWidth * zoom, baseMinHeight * zoom);
+
+        double minWidth  = baseMinWidth * zoom;
+        double minHeight = baseMinHeight * zoom;
+
+        // Never require a minimum bigger than the actual screen — Avalonia enforces
+        // MinWidth/MinHeight as a hard floor on the window, so at high zoom this floor
+        // alone can force the window taller/wider than the screen with no way for
+        // ClampWindowToScreen (which only adjusts Width/Height, not the Min values) to
+        // override it afterward.
+        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+        if (screen != null)
+        {
+            var wa = screen.WorkingArea;
+            minWidth  = Math.Min(minWidth, wa.Width);
+            minHeight = Math.Min(minHeight, wa.Height);
+        }
+
+        return (minWidth, minHeight);
     }
 
     private DispatcherTimer? _windowResizeTimer;
@@ -1237,6 +1375,18 @@ public partial class MainWindow : Window
         double ratio = oldZoom > 0 ? newZoom / oldZoom : 1.0;
         double targetW = Math.Max(minW, Width * ratio);
         double targetH = Math.Max(minH, Height * ratio);
+
+        // Never let zoom-driven growth push the window past the actual screen size —
+        // that oversized size then gets persisted (SaveCurrentWindowSize) and keeps
+        // getting restored too large on every future launch (RestoreWindowSizeForGame).
+        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+        if (screen != null)
+        {
+            var wa = screen.WorkingArea;
+            targetW = Math.Min(targetW, wa.Width);
+            targetH = Math.Min(targetH, wa.Height);
+        }
+
         if (targetW == Width && targetH == Height) return;
 
         double startW = Width, startH = Height;
@@ -1255,6 +1405,7 @@ public partial class MainWindow : Window
             {
                 _windowResizeTimer!.Stop();
                 _windowResizeTimer = null;
+                ClampWindowToScreen();
             }
         };
         _windowResizeTimer.Start();

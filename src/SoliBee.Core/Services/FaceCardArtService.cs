@@ -53,15 +53,13 @@ public static class FaceCardArtService
         return _arts.Find(a => a.Slot == slot);
     }
 
-    public static CustomFaceArt? GetEnabledArt(FaceCardSlot slot)
-    {
-        EnsureLoaded();
-        return _arts.Find(a => a.Slot == slot && a.IsEnabled);
-    }
-
+    // Custom art is always considered active once loaded — there's no separate
+    // enable/disable state, only loaded-or-not — so Add/Update normalize IsEnabled to
+    // true here rather than trusting every caller to set it.
     public static void Add(CustomFaceArt art)
     {
         EnsureLoaded();
+        art.IsEnabled = true;
         _arts.RemoveAll(a => a.Slot == art.Slot);
         _arts.Add(art);
         Save();
@@ -70,6 +68,7 @@ public static class FaceCardArtService
     public static void Update(CustomFaceArt art)
     {
         EnsureLoaded();
+        art.IsEnabled = true;
         var idx = _arts.FindIndex(a => a.Id == art.Id);
         if (idx >= 0) _arts[idx] = art;
         else { _arts.RemoveAll(a => a.Slot == art.Slot); _arts.Add(art); }
@@ -94,13 +93,6 @@ public static class FaceCardArtService
             _arts.Remove(art);
         }
         Save();
-    }
-
-    public static void SetEnabled(bool enabled, FaceCardSlot slot)
-    {
-        EnsureLoaded();
-        var art = _arts.Find(a => a.Slot == slot);
-        if (art != null) { art.IsEnabled = enabled; Save(); }
     }
 
     public static IReadOnlyList<CustomFaceArt> GetAllArts()

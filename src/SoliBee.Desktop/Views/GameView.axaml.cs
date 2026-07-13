@@ -4,6 +4,7 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -94,6 +95,8 @@ public partial class GameView : CardGameView
             BindPiles(vm);
         }
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
+        ArmDealNudgeTimer();
+        TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
     }
 
     private void GameView_Unloaded(object? sender, RoutedEventArgs e)
@@ -104,6 +107,136 @@ public partial class GameView : CardGameView
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
         CardView.ClearPileViewCache(this);
+        StopDealNudge();
+        TopLevel.GetTopLevel(this)?.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
+    }
+
+    // ── Keyboard cursor: per-game grid + hotkeys ────────────────────────────────────
+    // Row 0: Stock, Waste, (gap — mirrors the visual layout's empty slot), Foundations
+    // 0-3. Row 1: Tableaus 0-6.
+    protected override List<List<PileView?>> BuildCursorGrid() => new()
+    {
+        new List<PileView?> { StockPileControl, WastePileControl, null, Foundation0, Foundation1, Foundation2, Foundation3 },
+        new List<PileView?> { Tableau0, Tableau1, Tableau2, Tableau3, Tableau4, Tableau5, Tableau6 },
+    };
+
+    // Space/Return on the Stock pile draws, same as clicking it — Stock has no
+    // selectable card of its own, so without this the cursor landing there just no-ops.
+    protected override bool TryActivateEmptyCursorPile(PileView pile)
+    {
+        if (pile != StockPileControl || DataContext is not GameViewModel vm) return false;
+        // Only arm a restore if the draw actually did something — DrawCard silently
+        // no-ops on an empty, recycle-exhausted Stock (see the D-hotkey comment above).
+        int movesBefore = vm.State.MovesCount;
+        vm.DrawCard();
+        if (vm.State.MovesCount != movesBefore) ArmCursorRestore(StockPileControl);
+        SoundService.PlayShuffle();
+        return true;
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not GameViewModel vm) return;
+
+        switch (e.Key)
+        {
+            case Key.Escape:
+                if (!HasCursor && SelectedCardView == null) return; // let MainWindow handle closing dialogs
+                ClearCursorAndSelection();
+                e.Handled = true;
+                break;
+            case Key.Up:    MoveCursor(-1, 0); e.Handled = true; break;
+            case Key.Down:  MoveCursor(1, 0);  e.Handled = true; break;
+            case Key.Left:  MoveCursor(0, -1); e.Handled = true; break;
+            case Key.Right: MoveCursor(0, 1);  e.Handled = true; break;
+            case Key.Space: case Key.Enter:
+                ActivateCursor(); e.Handled = true; break;
+            case Key.D:
+                {
+                    // Draw doesn't touch wherever the cursor currently is, but Stock/Waste
+                    // changing still fires the same clear-on-pile-change wiring other
+                    // triggers rely on — arm a restore so the cursor doesn't vanish under
+                    // it. Only if the draw actually did something: DrawCard silently
+                    // no-ops on an empty, recycle-exhausted Stock, and arming for a no-op
+                    // would leave a stale restore target that a later, unrelated pile
+                    // change (even Undo) would wrongly consume.
+                    int movesBefore = vm.State.MovesCount;
+                    vm.DrawCard();
+                    if (HasCursor && vm.State.MovesCount != movesBefore) ArmCursorRestore(CursorPile!);
+                }
+                SoundService.PlayShuffle(); e.Handled = true; break;
+            case Key.F:
+                if (CursorPile?.Pile != null && CursorCardIndex >= 0 && CursorCardIndex < CursorPile.Pile.Cards.Count)
+                {
+                    var pile = CursorPile;
+                    if (TryAutoMoveToFoundation(pile.Pile.Cards[CursorCardIndex], pile.Pile))
+                        ArmCursorRestore(pile);
+                }
+                e.Handled = true; break;
+            case Key.A:
+                vm.Autocomplete(); e.Handled = true; break;
+        }
+    }
+
+    // Nudges a new/idle Klondike game: if the player hasn't made a single move within
+    // 5s of a deal, pulse the stock pile twice, then clear the highlight when the last
+    // pulse ends (matching the regular Hint feature's 2s auto-dismiss) rather than
+    // leaving it lit until a move happens. Re-armed on every new deal (State change) and
+    // canceled the instant any real move is made — polling MovesCount at tick time
+    // (rather than wiring a dedicated "move made" event) means this stays correct even
+    // though the initial deal itself raises the same Stock/Waste/Foundations/Tableaus
+    // notifications a real move does. Respects HideHintButton, same as the regular Hint
+    // feature — re-checked before each repeat pulse too, not just the initial one.
+    private const int DealNudgePulseCount = 2;
+    private static readonly TimeSpan DealNudgePulseDuration = TimeSpan.FromSeconds(2);
+    private DispatcherTimer? _dealNudgeArmTimer;
+    private DispatcherTimer? _dealNudgeClearTimer;
+    private int _dealNudgePulsesRemaining;
+
+    private void ArmDealNudgeTimer()
+    {
+        if (DataContext is GameViewModel vm0 && vm0.Options.HideHintButton) { StopDealNudge(); return; }
+
+        _dealNudgeArmTimer = ArmOneShotTimer(_dealNudgeArmTimer, TimeSpan.FromSeconds(5), () =>
+        {
+            _dealNudgeArmTimer = null;
+            if (DataContext is GameViewModel vm && !vm.Options.HideHintButton
+                && vm.State.MovesCount == 0 && !vm.State.HasWon)
+            {
+                _dealNudgePulsesRemaining = DealNudgePulseCount;
+                PulseDealNudge();
+            }
+        });
+    }
+
+    private void PulseDealNudge()
+    {
+        StockPileControl.ShowHint();
+        _dealNudgePulsesRemaining--;
+        _dealNudgeClearTimer = ArmOneShotTimer(_dealNudgeClearTimer, DealNudgePulseDuration, () =>
+        {
+            _dealNudgeClearTimer = null;
+            if (_dealNudgePulsesRemaining > 0
+                && DataContext is GameViewModel vm && !vm.Options.HideHintButton
+                && vm.State.MovesCount == 0 && !vm.State.HasWon)
+            {
+                PulseDealNudge();
+            }
+            else
+            {
+                StockPileControl?.ClearHint();
+            }
+        });
+    }
+
+    private void StopDealNudge()
+    {
+        _dealNudgeArmTimer?.Stop();
+        _dealNudgeArmTimer = null;
+        _dealNudgeClearTimer?.Stop();
+        _dealNudgeClearTimer = null;
+        _dealNudgePulsesRemaining = 0;
+        StockPileControl?.ClearHint();
     }
 
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
@@ -117,6 +250,9 @@ public partial class GameView : CardGameView
         {
             if (e.PropertyName == nameof(GameViewModel.State))
             {
+                // New game / restart — the pile contents underneath any cached cursor
+                // position or pending selection are about to be entirely replaced.
+                ClearCursorAndSelection();
                 if (DataContext is GameViewModel vm && vm.State.HasWon)
                     TriggerVictoryCascade();
                 else
@@ -124,33 +260,49 @@ public partial class GameView : CardGameView
                     _winTriggered = false;
                     VictoryOverlay.StopAnimation();
                     VictoryOverlay.IsVisible = false;
+                    ArmDealNudgeTimer();
                 }
             }
             else if (e.PropertyName == nameof(GameViewModel.IsAutocompletable) ||
                      e.PropertyName == nameof(GameViewModel.IsAutoplayRunning))
             {
                 if (DataContext is GameViewModel vm)
+                {
+                    if (vm.IsAutoplayRunning) ClearCursorAndSelection();
                     AutocompleteBanner.IsVisible = vm.IsAutocompletable && !vm.IsAutoplayRunning;
+                }
             }
             else if (e.PropertyName == nameof(GameViewModel.Stock))
             {
+                // Any move (or Undo) that touched Stock/Waste/Foundations/Tableaus can
+                // shrink/replace the pile a cached cursor index points into, so the
+                // cursor always clears — but the selection only clears if it's no
+                // longer actually there, so drawing from Stock doesn't silently cancel
+                // an unrelated pending Tableau selection (see CardGameView remarks).
+                ClearStaleCursorAndSelection();
                 StockPileControl.UpdateCardsLayout();
+                if (DataContext is GameViewModel vm && vm.State.MovesCount > 0) StopDealNudge();
             }
             else if (e.PropertyName == nameof(GameViewModel.Waste))
             {
+                ClearStaleCursorAndSelection();
                 WastePileControl.UpdateCardsLayout();
                 AnimateTopWasteCard();
+                if (DataContext is GameViewModel vm && vm.State.MovesCount > 0) StopDealNudge();
             }
             else if (e.PropertyName == "Foundations")
             {
+                ClearStaleCursorAndSelection();
                 Foundation0.UpdateCardsLayout();
                 Foundation1.UpdateCardsLayout();
                 Foundation2.UpdateCardsLayout();
                 Foundation3.UpdateCardsLayout();
                 if (DataContext is GameViewModel vm && vm.State.HasWon) TriggerVictoryCascade();
+                if (DataContext is GameViewModel vm2 && vm2.State.MovesCount > 0) StopDealNudge();
             }
             else if (e.PropertyName == "Tableaus")
             {
+                ClearStaleCursorAndSelection();
                 Tableau0.UpdateCardsLayout();
                 Tableau1.UpdateCardsLayout();
                 Tableau2.UpdateCardsLayout();
@@ -159,6 +311,7 @@ public partial class GameView : CardGameView
                 Tableau5.UpdateCardsLayout();
                 Tableau6.UpdateCardsLayout();
                 if (DataContext is GameViewModel vm && vm.State.HasWon) TriggerVictoryCascade();
+                if (DataContext is GameViewModel vm2 && vm2.State.MovesCount > 0) StopDealNudge();
             }
             else if (e.PropertyName == nameof(GameViewModel.HasNoMoves))
             {
@@ -322,6 +475,15 @@ public partial class GameView : CardGameView
         return pts;
     }
 
+    // The "You win" banner defaults to centering on VictoryOverlay's full bounds (which
+    // span the whole window, for the bouncing-card cascade's room to fall) rather than
+    // the board's actual content — visibly sitting too low on games like Freecell whose
+    // board leaves slack below it, and (on any game) able to drift off-center
+    // horizontally too, e.g. under the zoom feature's LayoutTransformControl. Center on
+    // the real board's actual midpoint, on both axes, instead.
+    private Point? ComputeBoardCenter() =>
+        BoardPanel.TranslatePoint(new Point(BoardPanel.Bounds.Width / 2.0, BoardPanel.Bounds.Height / 2.0), VictoryOverlay);
+
     private void TriggerVictoryCascade()
     {
         if (_winTriggered) return;
@@ -330,7 +492,7 @@ public partial class GameView : CardGameView
         if (DataContext is GameViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
             }, DispatcherPriority.Loaded);
         }
         else
@@ -348,7 +510,7 @@ public partial class GameView : CardGameView
         if (DataContext is GameViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
             }, DispatcherPriority.Loaded);
         }
         else
@@ -364,7 +526,7 @@ public partial class GameView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         Dispatcher.UIThread.Post(() => {
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints());
+            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(), ComputeBoardCenter());
         }, DispatcherPriority.Loaded);
         SoundService.PlaySolitaireWin();
     }

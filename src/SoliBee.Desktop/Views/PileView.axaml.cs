@@ -75,6 +75,25 @@ public partial class PileView : UserControl
         HintHighlightBorder.BoxShadow = default;
     }
 
+    // Whole-pile keyboard cursor outline — steady (no pulse), for when the focus cursor
+    // is on a pile with no specific CardView to outline (empty, or a non-tableau pile).
+    public void ShowCursor()
+    {
+        if (CursorHighlightBorder == null) return;
+        if (CardsCanvas != null)
+        {
+            CursorHighlightBorder.Width  = CardsCanvas.Width;
+            CursorHighlightBorder.Height = CardsCanvas.Height;
+        }
+        CursorHighlightBorder.IsVisible = true;
+    }
+
+    public void ClearCursor()
+    {
+        if (CursorHighlightBorder == null) return;
+        CursorHighlightBorder.IsVisible = false;
+    }
+
     private void OnPileChanged(AvaloniaPropertyChangedEventArgs e)
     {
         UpdateCardsLayout();
@@ -263,22 +282,21 @@ public partial class PileView : UserControl
         return idx < 0 ? new List<Card> { fromCard } : pile.Cards.GetRange(idx, pile.Cards.Count - idx);
     }
 
+    private CardGameView? FindParentGameView() => CardGameView.FindAncestorGameView(this.Parent);
+
     private void PileView_PointerPressed(object sender, PointerPressedEventArgs e)
     {
         if (Pile == null) return;
+
+        // Any direct mouse interaction relinquishes the keyboard focus cursor (pending
+        // selection, shared with the keyboard, is untouched — see CardGameView remarks).
+        var gameView = FindParentGameView();
+        gameView?.RelinquishKeyboardCursor();
 
         if (Pile.Type == PileType.Stock)
         {
             Clicked?.Invoke(this, EventArgs.Empty);
             return;
-        }
-
-        CardGameView? gameView = null;
-        Avalonia.StyledElement? parent = this.Parent;
-        while (parent != null)
-        {
-            if (parent is CardGameView cgv) { gameView = cgv; break; }
-            parent = parent.Parent;
         }
 
         if (gameView == null) return;

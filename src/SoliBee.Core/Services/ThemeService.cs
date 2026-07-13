@@ -16,6 +16,12 @@ public static class ThemeService
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SoliBee", "themes.json");
 
+    // Tombstone of default-preset Ids the user has explicitly deleted, so
+    // MergeInDefaultThemes doesn't resurrect them on the next launch.
+    private static readonly string _deletedDefaultsPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SoliBee", "deleted_default_themes.json");
+
     private static readonly JsonSerializerOptions _jsonOpts = new() { WriteIndented = true };
 
     // "Dingwall"/"Colorblind" were removed from the preset lineup (no longer in this
@@ -107,18 +113,22 @@ public static class ThemeService
     }
 
     // Called on every launch to keep the saved themes list converged with the current
-    // preset definitions: a saved theme whose name matches a preset (case-insensitive)
-    // gets its values overwritten with the preset's; a preset with no match is appended.
-    // Never removes or touches anything else the user saved (e.g. a legacy "Dingwall"
-    // theme, or their own custom themes) — only names that collide with a current preset
-    // are affected.
+    // preset definitions. Matches by the preset's fixed Id (not by name) — a saved theme
+    // is only ever treated as "this preset" if it really is that preset, so a user's own
+    // custom theme that merely happens to share a preset's name (e.g. "Desert") is never
+    // touched, and a preset the user explicitly deleted (tracked in the tombstone file)
+    // stays deleted instead of silently reappearing. Never removes or touches anything
+    // else the user saved (a legacy "Dingwall" theme, or their own custom themes).
     public static void MergeInDefaultThemes()
     {
-        var themes = LoadThemes();
+        var themes     = LoadThemes();
+        var deletedIds = LoadDeletedDefaultThemeIds();
 
         foreach (var preset in DefaultThemes)
         {
-            int idx = themes.FindIndex(t => string.Equals(t.Name, preset.Name, StringComparison.OrdinalIgnoreCase));
+            if (deletedIds.Contains(preset.Id)) continue;
+
+            int idx = themes.FindIndex(t => t.Id == preset.Id);
             if (idx >= 0)
                 themes[idx] = ClonePreset(preset);
             else
@@ -126,6 +136,31 @@ public static class ThemeService
         }
 
         SaveThemes(themes);
+    }
+
+    private static List<Guid> LoadDeletedDefaultThemeIds()
+    {
+        if (File.Exists(_deletedDefaultsPath))
+        {
+            try
+            {
+                var json    = File.ReadAllText(_deletedDefaultsPath);
+                var loaded  = JsonSerializer.Deserialize<List<Guid>>(json);
+                if (loaded != null) return loaded;
+            }
+            catch { }
+        }
+        return new List<Guid>();
+    }
+
+    private static void SaveDeletedDefaultThemeIds(List<Guid> ids)
+    {
+        try
+        {
+            if (!Directory.Exists(_dataDir)) Directory.CreateDirectory(_dataDir);
+            File.WriteAllText(_deletedDefaultsPath, JsonSerializer.Serialize(ids, _jsonOpts));
+        }
+        catch { }
     }
 
     // JSON round-trip instead of a hand-listed field copy — SoliBeeTheme has no
@@ -136,6 +171,21 @@ public static class ThemeService
 
     public static void DeleteTheme(Guid id)
     {
+        // If this is a built-in default preset, record the tombstone BEFORE removing it
+        // from themes.json (two separate files, no way to write them atomically together)
+        // — if the process dies between the two writes, this ordering means the safe
+        // failure mode is "still shows in the list" rather than "silently resurrected
+        // with reset values", since MergeInDefaultThemes checks the tombstone first.
+        if (DefaultThemes.Any(p => p.Id == id))
+        {
+            var deletedIds = LoadDeletedDefaultThemeIds();
+            if (!deletedIds.Contains(id))
+            {
+                deletedIds.Add(id);
+                SaveDeletedDefaultThemeIds(deletedIds);
+            }
+        }
+
         var themes = LoadThemes();
         themes.RemoveAll(t => t.Id == id);
         SaveThemes(themes);
@@ -181,8 +231,18 @@ public static class ThemeService
         return theme;
      }
 
+     // Compares live options against a saved theme's own snapshot (ignoring Id, which
+     // callers set to match before calling) to detect edits made since it was applied/saved.
+     public static bool CurrentMatchesTheme(GameOptions options, SoliBeeTheme theme)
+     {
+        var current = SnapshotFromOptions(theme.Name, options);
+        current.Id = theme.Id;
+        return JsonSerializer.Serialize(current, _jsonOpts) == JsonSerializer.Serialize(theme, _jsonOpts);
+     }
+
      public static GameOptions ApplyTheme(SoliBeeTheme theme, GameOptions options)
      {
+        options.ActiveThemeId = theme.Id;
         options.CardBackTheme = theme.CardBackTheme;
         options.CardBackScale = theme.CardBackScale;
         options.CardBackOffsetX = theme.CardBackOffsetX;

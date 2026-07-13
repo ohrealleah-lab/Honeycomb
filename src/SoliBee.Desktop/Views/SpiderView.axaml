@@ -27,6 +27,20 @@
                     <Grid Grid.Column="0" Grid.Row="0"
                           Width="128" Height="181"
                           HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <Grid.Styles>
+                            <!-- StockCursorPileView exists only so the shared keyboard-cursor
+                                 machinery (which operates on PileView instances) has a real
+                                 target for "the stock" — it has no Pile bound and never draws
+                                 cards, so its own empty-slot outline/symbol must stay hidden;
+                                 the real stock graphic underneath (SpiderStock*) is what's
+                                 actually seen. Only its CursorHighlightBorder is ever shown. -->
+                            <Style Selector="local|PileView#StockCursorPileView Rectangle#EmptyOutline">
+                                <Setter Property="IsVisible" Value="False"/>
+                            </Style>
+                            <Style Selector="local|PileView#StockCursorPileView TextBlock#EmptySymbolText">
+                                <Setter Property="IsVisible" Value="False"/>
+                            </Style>
+                        </Grid.Styles>
                         <Rectangle x:Name="SpiderStockEmptyOutline"
                                    Width="128" Height="181"
                                    Stroke="White" StrokeThickness="1.5"
@@ -42,6 +56,7 @@
                                 Cursor="Hand"
                                 PointerPressed="StockButton_PointerPressed"
                                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                        <local:PileView x:Name="StockCursorPileView" IsHitTestVisible="False" />
                     </Grid>
 
                     <!-- 8 Foundation slots (cols 2–16, row 0) -->
@@ -72,8 +87,37 @@
         <!-- Drag overlay sits outside the ScrollViewer so it covers the full view -->
         <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
+        <!-- Keyboard hint row — same styling/placement convention as Klondike/Freecell/
+             Blackjack/Video Poker's KeyHintLabel, anchored to the bottom of the window. -->
+        <TextBlock x:Name="KeyHintLabel"
+                   Text="Arrows=Move Cursor   Space/Return=Select or Move   D=Deal   A=Autocomplete   Esc=Clear Cursor"
+                   FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
+                   VerticalAlignment="Bottom"
+                   FontFamily="Segoe UI"
+                   Margin="0,4,0,8"/>
+
         <!-- Win animation overlay -->
         <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
+
+        <!-- Inline deal-blocked warning banner — shown (mouse or keyboard path alike) when
+             a deal is attempted while a tableau column is empty, matching the mouse deal
+             click's feedback so a keyboard D press is never a silent no-op. -->
+        <Grid x:Name="DealBlockedBanner" IsVisible="False" ZIndex="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="360">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <TextBlock Text="Cannot Deal" FontSize="28" FontWeight="Black"
+                               Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                               TextAlignment="Center"/>
+                    <TextBlock Text="Every tableau column must have at least one card before dealing a new row."
+                               FontSize="14" Foreground="White" HorizontalAlignment="Center"
+                               FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+            <!-- Dismiss button anchored TopRight, overlapping corner -->
+            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="DealBlockedDismiss_Click"/>
+        </Grid>
 
         <!-- Inline autocomplete banner -->
         <Grid x:Name="AutocompleteBanner" IsVisible="False" ZIndex="5" HorizontalAlignment="Center" VerticalAlignment="Center">

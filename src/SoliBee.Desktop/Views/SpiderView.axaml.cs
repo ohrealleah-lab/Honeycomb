@@ -84,6 +84,7 @@ public partial class SpiderView : CardGameView
             UpdateStockDisplay(vm);
         }
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
+        TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
     }
 
     private void SpiderView_Unloaded(object? sender, RoutedEventArgs e)
@@ -93,6 +94,86 @@ public partial class SpiderView : CardGameView
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         CardView.ClearPileViewCache(this);
+        TopLevel.GetTopLevel(this)?.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
+    }
+
+    // ── Keyboard cursor: per-game grid + hotkeys ────────────────────────────────────
+    // Row 0: the stock, as a single reachable target (StockCursorPileView — a Pile-less
+    // PileView that exists purely to give the shared cursor machinery a real target;
+    // see its styles in SpiderView.axaml). Row 1: the 10 tableau columns. No Foundations
+    // row — Spider auto-completes full runs to foundations itself, there's never a
+    // manual move there (TryAutoMoveToFoundation always returns false, above).
+    protected override List<List<PileView?>> BuildCursorGrid() => new()
+    {
+        new List<PileView?> { StockCursorPileView },
+        new List<PileView?> { Tableau0, Tableau1, Tableau2, Tableau3, Tableau4, Tableau5, Tableau6, Tableau7, Tableau8, Tableau9 },
+    };
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not SpiderViewModel vm) return;
+
+        switch (e.Key)
+        {
+            case Key.Escape:
+                if (!HasCursor && SelectedCardView == null) return; // let MainWindow handle closing dialogs
+                ClearCursorAndSelection();
+                e.Handled = true;
+                break;
+            case Key.Up:    MoveCursor(-1, 0); e.Handled = true; break;
+            case Key.Down:  MoveCursor(1, 0);  e.Handled = true; break;
+            case Key.Left:  MoveCursor(0, -1); e.Handled = true; break;
+            case Key.Right: MoveCursor(0, 1);  e.Handled = true; break;
+            case Key.Space: case Key.Enter:
+                ActivateCursor(); e.Handled = true; break;
+            case Key.D:
+                TryDealFromStock(vm); e.Handled = true; break;
+            case Key.A:
+                vm.Autocomplete(); e.Handled = true; break;
+        }
+    }
+
+    // Shared by the keyboard D hotkey and the mouse stock-click path, so a deal blocked
+    // by an empty tableau column gets the same visible warning on either input path
+    // instead of a silent no-op (a player pressing D has no other way to know why
+    // nothing happened). A deal blocked because the stock itself is empty needs no
+    // banner — the stock's own empty-slot outline already makes that obvious.
+    private void TryDealFromStock(SpiderViewModel vm)
+    {
+        if (vm.CanDealFromStock)
+        {
+            // Preserve wherever the cursor already is (D doesn't require it to be on
+            // Stock) so the Tableaus/StockPiles notification this deal raises doesn't
+            // wipe it — the mouse path already relinquished the cursor before calling
+            // in here, so `pile` is null there and this is naturally a no-op for clicks.
+            var pile = CursorPile;
+            vm.DealFromStock();
+            SoundService.PlayShuffle();
+            if (pile != null) ArmCursorRestore(pile);
+            return;
+        }
+        if (vm.StockPiles.Count > 0 && vm.Tableaus.Any(t => t.Cards.Count == 0))
+            ShowDealBlockedWarning();
+    }
+
+    private DispatcherTimer? _dealBlockedDismissTimer;
+
+    private void ShowDealBlockedWarning()
+    {
+        DealBlockedBanner.IsVisible = true;
+        _dealBlockedDismissTimer = ArmOneShotTimer(_dealBlockedDismissTimer, TimeSpan.FromSeconds(3), () =>
+        {
+            _dealBlockedDismissTimer = null;
+            DealBlockedBanner.IsVisible = false;
+        });
+    }
+
+    private void DealBlockedDismiss_Click(object? sender, RoutedEventArgs e)
+    {
+        _dealBlockedDismissTimer?.Stop();
+        _dealBlockedDismissTimer = null;
+        DealBlockedBanner.IsVisible = false;
+        e.Handled = true;
     }
 
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
@@ -108,6 +189,9 @@ public partial class SpiderView : CardGameView
 
             if (e.PropertyName == nameof(SpiderViewModel.State))
             {
+                // New game / restart — the pile contents underneath any cached cursor
+                // position or pending selection are about to be entirely replaced.
+                ClearCursorAndSelection();
                 if (vm.State.HasWon) TriggerVictoryCascade();
                 else
                 {
@@ -118,6 +202,12 @@ public partial class SpiderView : CardGameView
             }
             else if (e.PropertyName == "Tableaus")
             {
+                // Any move (or Undo) that touched a pile can shrink/replace it out from
+                // under a cached cursor index, so the cursor always clears — but the
+                // selection only clears if it's no longer actually there, so an
+                // unrelated pile's own change doesn't silently cancel a pending
+                // selection elsewhere on the board.
+                ClearStaleCursorAndSelection();
                 Tableau0.UpdateCardsLayout();
                 Tableau1.UpdateCardsLayout();
                 Tableau2.UpdateCardsLayout();
@@ -132,6 +222,7 @@ public partial class SpiderView : CardGameView
             }
             else if (e.PropertyName == "Foundations")
             {
+                ClearStaleCursorAndSelection();
                 Foundation0.UpdateCardsLayout();
                 Foundation1.UpdateCardsLayout();
                 Foundation2.UpdateCardsLayout();
@@ -144,6 +235,7 @@ public partial class SpiderView : CardGameView
             }
             else if (e.PropertyName == "StockPiles")
             {
+                ClearStaleCursorAndSelection();
                 UpdateStockDisplay(vm);
             }
             else if (e.PropertyName == nameof(SpiderViewModel.HasNoMoves))
@@ -154,6 +246,7 @@ public partial class SpiderView : CardGameView
             else if (e.PropertyName == nameof(SpiderViewModel.IsAutocompletable) ||
                      e.PropertyName == nameof(SpiderViewModel.IsAutoplayRunning))
             {
+                if (vm.IsAutoplayRunning) ClearCursorAndSelection();
                 AutocompleteBanner.IsVisible = vm.IsAutocompletable && !vm.IsAutoplayRunning;
             }
             else if (e.PropertyName == nameof(SpiderViewModel.ActiveHint))
@@ -252,9 +345,8 @@ public partial class SpiderView : CardGameView
     private void StockButton_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (DataContext is not SpiderViewModel vm) return;
-        if (!vm.CanDealFromStock) return;
-        vm.DealFromStock();
-        SoundService.PlayShuffle();
+        RelinquishKeyboardCursor();
+        TryDealFromStock(vm);
         e.Handled = true;
     }
 
@@ -272,6 +364,14 @@ public partial class SpiderView : CardGameView
         return pts;
     }
 
+    // The "You win" banner defaults to centering on VictoryOverlay's full bounds (which
+    // span the whole window, for the bouncing-card cascade's room to fall) rather than
+    // the board's actual content, on either axis — e.g. drifting off horizontal-center
+    // under the zoom feature's LayoutTransformControl. Center on the real board's actual
+    // midpoint, both axes, instead.
+    private Point? ComputeBoardCenter() =>
+        BoardGrid.TranslatePoint(new Point(BoardGrid.Bounds.Width / 2.0, BoardGrid.Bounds.Height / 2.0), VictoryOverlay);
+
     private void TriggerVictoryCascade()
     {
         if (_winTriggered) return;
@@ -280,7 +380,7 @@ public partial class SpiderView : CardGameView
         if (DataContext is SpiderViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
             }, DispatcherPriority.Loaded);
         }
         else
@@ -298,7 +398,7 @@ public partial class SpiderView : CardGameView
         if (DataContext is SpiderViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
             }, DispatcherPriority.Loaded);
         }
         else
@@ -314,7 +414,7 @@ public partial class SpiderView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         Dispatcher.UIThread.Post(() => {
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints());
+            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(), ComputeBoardCenter());
         }, DispatcherPriority.Loaded);
         SoundService.PlaySolitaireWin();
     }

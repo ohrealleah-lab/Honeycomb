@@ -236,6 +236,17 @@
             </Border>
         </Grid>
 
+        <!-- Card Back In Use (blocks deletion when a saved theme still references it) -->
+        <Grid x:Name="CardBackInUseOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <StackPanel Spacing="12" Width="230">
+                    <TextBlock Text="Card Back In Use" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="CardBackInUseText" Text="" FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    <Button Content="OK" Click="CardBackInUseOk_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
         <!-- Save Theme Name -->
         <Grid x:Name="SaveThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
@@ -260,6 +271,34 @@
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button Content="Cancel" Click="CancelDeleteTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
                         <Button Content="Delete" Click="ConfirmDeleteTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-danger" Margin="4,0,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Confirm Reset Card Colors -->
+        <Grid x:Name="ConfirmResetCardColorsOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <StackPanel Spacing="12" Width="230">
+                    <TextBlock Text="Reset Card Colors" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Are you sure you want to reset the card colors to default?" FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
+                        <Button Content="Cancel" Click="CancelResetCardColors_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
+                        <Button Content="Reset" Click="ConfirmResetCardColors_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-danger" Margin="4,0,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Confirm Apply Theme (warns about losing unsaved custom card art) -->
+        <Grid x:Name="ConfirmApplyThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <StackPanel Spacing="12" Width="230">
+                    <TextBlock Text="Apply Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Warning: Applying a new theme will remove your custom card art. Cancel and save as a new theme, if needed." FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
+                        <Button Content="Cancel" Click="CancelApplyTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
+                        <Button Content="Accept" Click="ConfirmApplyTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary" Margin="4,0,0,0"/>
                     </Grid>
                 </StackPanel>
             </Border>

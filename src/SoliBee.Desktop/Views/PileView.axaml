@@ -18,5 +18,14 @@
         <Border x:Name="HintHighlightBorder" Width="128" Height="181" IsVisible="False" IsHitTestVisible="False"
                 BorderBrush="#FFD700" BorderThickness="3.5" CornerRadius="10" Background="Transparent"
                 HorizontalAlignment="Left" VerticalAlignment="Top" />
+
+        <!-- Whole-pile keyboard cursor outline — shown when the focus cursor is on an
+             empty or non-card pile (empty foundation/free cell, stock, empty tableau
+             column) where there's no individual CardView to outline instead. Distinct
+             element from HintHighlightBorder so the (rare, 2s auto-dismiss) Hint pulse
+             and the (persistent) keyboard cursor never fight over the same border. -->
+        <Border x:Name="CursorHighlightBorder" Width="128" Height="181" IsVisible="False" IsHitTestVisible="False"
+                BorderBrush="#00E5FF" BorderThickness="3" CornerRadius="10" Background="Transparent"
+                HorizontalAlignment="Left" VerticalAlignment="Top" />
     </Grid>
 </UserControl>

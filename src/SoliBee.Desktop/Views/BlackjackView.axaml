@@ -128,6 +128,16 @@
 
             </StackPanel>
 
+            <!-- Keyboard hint row — same styling/placement as VideoPokerView's KeyHintLabel,
+                 anchored to the bottom of the trailing flexible row so it sits at the very
+                 bottom of the window like Video Poker's does. -->
+            <TextBlock Grid.Row="5" x:Name="KeyHintLabel"
+                       Text="Space/Enter=Deal   H=Hit   S=Stand   D=Double   P=Split"
+                       FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
+                       VerticalAlignment="Bottom"
+                       FontFamily="Segoe UI"
+                       Margin="0,4,0,8"/>
+
         </Grid>
 
 

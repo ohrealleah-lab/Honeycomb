@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -82,6 +83,26 @@ public partial class FreecellView : CardGameView
         return false;
     }
 
+    // C hotkey: auto-move the focused card to an empty free cell (CanMoveCards already
+    // requires target.Cards.Count == 0 and a single card for FreeCell targets).
+    private bool TryAutoMoveToFreeCell(Card card, Pile sourcePile)
+    {
+        if (DataContext is not FreecellViewModel vm) return false;
+        if (sourcePile.Cards.Count == 0 || sourcePile.Cards[^1].Id != card.Id) return false;
+
+        var single = new List<Card> { card };
+        foreach (var fc in vm.FreeCells)
+        {
+            if (vm.CanMoveCards(single, fc))
+            {
+                vm.MoveCards(single, sourcePile, fc);
+                SoundService.PlaySnap();
+                return true;
+            }
+        }
+        return false;
+    }
+
     public FreecellView()
     {
         InitializeComponent();
@@ -120,6 +141,7 @@ public partial class FreecellView : CardGameView
             BindPiles(vm);
         }
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
+        TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
     }
 
     private void FreecellView_Unloaded(object? sender, RoutedEventArgs e)
@@ -129,6 +151,73 @@ public partial class FreecellView : CardGameView
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         CardView.ClearPileViewCache(this);
+        TopLevel.GetTopLevel(this)?.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
+    }
+
+    // ── Keyboard cursor: per-game grid + hotkeys ────────────────────────────────────
+    // Row 0: FreeCells 0-3 + Foundations 0-3. In 2-deck mode, an extra Row 1: FreeCells
+    // 4-7 + Foundations 4-7 (stacked sub-row, matching TopRow2's real layout). Final
+    // row: Tableaus (8 columns, or 10 in 2-deck mode). Rebuilt fresh on every cursor
+    // activation, so a mid-session deck-count change can never leave a stale grid shape.
+    protected override List<List<PileView?>> BuildCursorGrid()
+    {
+        if (DataContext is not FreecellViewModel vm) return new List<List<PileView?>>();
+        int deckCount = vm.Options.FreecellDeckCount;
+
+        var grid = new List<List<PileView?>>
+        {
+            new List<PileView?> { FreeCell0, FreeCell1, FreeCell2, FreeCell3, Foundation0, Foundation1, Foundation2, Foundation3 }
+        };
+
+        if (deckCount == 2)
+        {
+            grid.Add(new List<PileView?> { FreeCell4, FreeCell5, FreeCell6, FreeCell7, Foundation4, Foundation5, Foundation6, Foundation7 });
+            grid.Add(new List<PileView?> { Tableau0, Tableau1, Tableau2, Tableau3, Tableau4, Tableau5, Tableau6, Tableau7, Tableau8, Tableau9 });
+        }
+        else
+        {
+            grid.Add(new List<PileView?> { Tableau0, Tableau1, Tableau2, Tableau3, Tableau4, Tableau5, Tableau6, Tableau7 });
+        }
+
+        return grid;
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not FreecellViewModel vm) return;
+
+        switch (e.Key)
+        {
+            case Key.Escape:
+                if (!HasCursor && SelectedCardView == null) return; // let MainWindow handle closing dialogs
+                ClearCursorAndSelection();
+                e.Handled = true;
+                break;
+            case Key.Up:    MoveCursor(-1, 0); e.Handled = true; break;
+            case Key.Down:  MoveCursor(1, 0);  e.Handled = true; break;
+            case Key.Left:  MoveCursor(0, -1); e.Handled = true; break;
+            case Key.Right: MoveCursor(0, 1);  e.Handled = true; break;
+            case Key.Space: case Key.Enter:
+                ActivateCursor(); e.Handled = true; break;
+            case Key.C:
+                if (CursorPile?.Pile != null && CursorCardIndex >= 0 && CursorCardIndex < CursorPile.Pile.Cards.Count)
+                {
+                    var pile = CursorPile;
+                    if (TryAutoMoveToFreeCell(pile.Pile.Cards[CursorCardIndex], pile.Pile))
+                        ArmCursorRestore(pile);
+                }
+                e.Handled = true; break;
+            case Key.F:
+                if (CursorPile?.Pile != null && CursorCardIndex >= 0 && CursorCardIndex < CursorPile.Pile.Cards.Count)
+                {
+                    var pile = CursorPile;
+                    if (TryAutoMoveToFoundation(pile.Pile.Cards[CursorCardIndex], pile.Pile))
+                        ArmCursorRestore(pile);
+                }
+                e.Handled = true; break;
+            case Key.A:
+                vm.Autocomplete(); e.Handled = true; break;
+        }
     }
 
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
@@ -144,6 +233,9 @@ public partial class FreecellView : CardGameView
 
             if (e.PropertyName == nameof(FreecellViewModel.State))
             {
+                // New game / restart — the pile contents underneath any cached cursor
+                // position or pending selection are about to be entirely replaced.
+                ClearCursorAndSelection();
                 BindPiles(vm);
                 RefreshAllPiles();
 
@@ -157,11 +249,20 @@ public partial class FreecellView : CardGameView
             }
             else if (e.PropertyName == "FreeCells" || e.PropertyName == "Foundations" || e.PropertyName == "Tableaus")
             {
+                // Any move (or Undo) that touched a pile can shrink/replace it out from
+                // under a cached cursor index, so the cursor always clears — but the
+                // selection only clears if it's no longer actually there, so an
+                // unrelated pile's own change doesn't silently cancel a pending
+                // selection elsewhere on the board.
+                ClearStaleCursorAndSelection();
                 RefreshAllPiles();
                 if (vm.State.HasWon) TriggerVictoryCascade();
             }
             else if (e.PropertyName == nameof(FreecellViewModel.Options))
             {
+                // Deck count (and therefore the whole cursor grid shape) may have just
+                // changed — never leave a cursor built against the old shape.
+                ClearCursorAndSelection();
                 ApplyFeltColor(vm.Options);
                 BindPiles(vm);
                 RefreshAllPiles();
@@ -169,6 +270,7 @@ public partial class FreecellView : CardGameView
             else if (e.PropertyName == nameof(FreecellViewModel.IsAutocompletable) ||
                      e.PropertyName == nameof(FreecellViewModel.IsAutoplayRunning))
             {
+                if (vm.IsAutoplayRunning) ClearCursorAndSelection();
                 AutocompleteBanner.IsVisible = vm.IsAutocompletable && !vm.IsAutoplayRunning;
             }
             else if (e.PropertyName == nameof(FreecellViewModel.HasNoMoves))
@@ -271,6 +373,15 @@ public partial class FreecellView : CardGameView
         return pts;
     }
 
+    // The "You win" banner defaults to centering on VictoryOverlay's full bounds (which
+    // span the whole window, for the bouncing-card cascade's room to fall) rather than
+    // the board's actual content — visibly sitting too low since Freecell's
+    // FreeCells+Foundations+tableau layout leaves slack below it, and (on any game) able
+    // to drift off-center horizontally too, e.g. under the zoom feature's
+    // LayoutTransformControl. Center on the real board's actual midpoint, both axes.
+    private Point? ComputeBoardCenter() =>
+        BoardPanel.TranslatePoint(new Point(BoardPanel.Bounds.Width / 2.0, BoardPanel.Bounds.Height / 2.0), VictoryOverlay);
+
     private void TriggerVictoryCascade()
     {
         if (_winTriggered) return;
@@ -279,7 +390,7 @@ public partial class FreecellView : CardGameView
         if (DataContext is FreecellViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
             }, DispatcherPriority.Loaded);
         }
         else
@@ -297,7 +408,7 @@ public partial class FreecellView : CardGameView
         if (DataContext is FreecellViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
             }, DispatcherPriority.Loaded);
         }
         else
@@ -313,7 +424,7 @@ public partial class FreecellView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         Dispatcher.UIThread.Post(() => {
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(4));
+            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(4), ComputeBoardCenter());
         }, DispatcherPriority.Loaded);
         SoundService.PlaySolitaireWin();
     }

@@ -58,6 +58,15 @@
 
         </StackPanel>
 
+        <!-- Keyboard hint row — same styling/placement convention as Klondike/Blackjack/
+             Video Poker's KeyHintLabel, anchored to the bottom of the board. -->
+        <TextBlock x:Name="KeyHintLabel"
+                   Text="Arrows=Move Cursor   Space/Return=Select or Move   C=Free Cell   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor"
+                   FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
+                   VerticalAlignment="Bottom"
+                   FontFamily="Segoe UI"
+                   Margin="0,4,0,8"/>
+
         <!-- Drag overlay -->
         <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 

@@ -49,6 +49,19 @@
             </Grid>
         </Border>
 
+        <!-- Selection highlight — a card "picked up" pending a move, set by either mouse
+             click-to-select or the keyboard cursor's Space/Return select action (both
+             paths share this same visual and the SelectedCardView/SelectedSourcePile
+             state in CardGameView, so they can never show conflicting selection state). -->
+        <Border x:Name="SelectionHighlightBorder" IsVisible="False" IsHitTestVisible="False"
+                BorderBrush="#3B82F6" BorderThickness="3.5" CornerRadius="10" Background="Transparent" />
+
+        <!-- Keyboard focus cursor — purely "what arrow keys currently point at", distinct
+             from the selection above and from the gold Hint pulse, so all three can be
+             reasoned about (and toggled) independently without fighting over one border. -->
+        <Border x:Name="CursorHighlightBorder" IsVisible="False" IsHitTestVisible="False"
+                BorderBrush="#00E5FF" BorderThickness="3" CornerRadius="10" Background="Transparent" />
+
         <!-- Card Back (Face Down) -->
         <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="0.75" CornerRadius="10" IsVisible="False" Padding="0" Background="White" BoxShadow="0 4 16 0 #60000000, 0 2 4 0 #80000000" ClipToBounds="True">
             <!-- Themes like Moogle apply a scale/offset RenderTransform to CardBackImage

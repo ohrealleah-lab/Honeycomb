@@ -108,7 +108,31 @@
       "Bash(git -C C:\\\\Users\\\\Leahbee\\\\SolibeeWin diff HEAD~1...HEAD -- src/SoliBee.Core/Services/ThemeService.cs)",
       "Bash(git -C C:\\\\Users\\\\Leahbee\\\\SolibeeWin diff HEAD~1...HEAD -- src/SoliBee.Desktop/Views/MainWindow.axaml.cs)",
       "Bash(powershell -NoProfile -Command \"Get-Job | Format-Table Id,State\")",
-      "Bash(find \"C:\\\\Users\\\\Leahbee\\\\SoliBeeMac\\\\SoliBee\" -iname \"*win*anim*\" -o -iname \"*WinAnimation*\" 2>/dev/null)"
+      "Bash(find \"C:\\\\Users\\\\Leahbee\\\\SoliBeeMac\\\\SoliBee\" -iname \"*win*anim*\" -o -iname \"*WinAnimation*\" 2>/dev/null)",
+      "Bash(git cherry-pick *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git worktree *)",
+      "Bash(git branch *)",
+      "Bash(git diff *)",
+      "Bash(ls ~/.claude/CLAUDE.md 2>/dev/null && echo \"EXISTS\" || echo \"NOT FOUND\" *)",
+      "Bash(powershell -NoProfile -Command \"Get-Process SoliBee.Desktop -ErrorAction SilentlyContinue | Select-Object Id, StartTime, Path\")",
+      "Bash(powershell -NoProfile -Command \"Get-Item 'C:\\\\Users\\\\Leahbee\\\\SolibeeWin\\\\src\\\\SoliBee.Desktop\\\\bin\\\\Debug\\\\net8.0\\\\win-x64\\\\SoliBee.Desktop.dll' | Select-Object LastWriteTime; Get-Date\")",
+      "Bash(powershell -NoProfile -Command \"Get-Process SoliBee.Desktop -ErrorAction SilentlyContinue | Select-Object Id, StartTime\")",
+      "Bash(powershell -NoProfile -Command \"Get-Process SoliBee.Desktop -ErrorAction SilentlyContinue | Select-Object Id\")",
+      "Bash(mkdir -p \"/c/Users/Leahbee/AppData/Local/Temp/claude/C--Users-Leahbee-SolibeeWin/036aff80-8905-4301-ba05-b87641b1dd66/scratchpad\")",
+      "Bash(cp /tmp/hotkey_diff.patch \"/c/Users/Leahbee/AppData/Local/Temp/claude/C--Users-Leahbee-SolibeeWin/036aff80-8905-4301-ba05-b87641b1dd66/scratchpad/hotkey_diff.patch\")",
+      "Read(//c/Users/Leahbee/AppData/Local/Temp/claude/C--Users-Leahbee-SolibeeWin/036aff80-8905-4301-ba05-b87641b1dd66/scratchpad/**)",
+      "Bash(find / -iname \"Bitmap.cs\" -path \"*Avalonia*\" 2>/dev/null | head -20)",
+      "Bash(find \"$HOME/.nuget\" -iname \"*.dll\" -path \"*Avalonia.Base*\" 2>/dev/null | head -5; find / -maxdepth 4 -iname \"*.nuget*\" 2>/dev/null | head)",
+      "Bash(powershell -NoProfile -Command \"Get-Process SoliBee.Desktop -ErrorAction SilentlyContinue | Select-Object Id, StartTime; Get-Item 'C:\\\\Users\\\\Leahbee\\\\SolibeeWin\\\\src\\\\SoliBee.Desktop\\\\bin\\\\Debug\\\\net8.0\\\\win-x64\\\\SoliBee.Desktop.dll' | Select-Object LastWriteTime\")",
+      "Bash(powershell -NoProfile -Command \"Get-Item 'C:\\\\Users\\\\Leahbee\\\\SolibeeWin\\\\src\\\\SoliBee.Desktop\\\\bin\\\\Debug\\\\net8.0\\\\win-x64\\\\SoliBee.Desktop.dll' | Select-Object LastWriteTime\")",
+      "Bash(powershell -NoProfile -Command \"Get-Process SoliBee.Desktop -ErrorAction SilentlyContinue | Select-Object Id, StartTime; Get-Item 'C:\\\\Users\\\\Leahbee\\\\SolibeeWin\\\\src\\\\SoliBee.Core\\\\bin\\\\Debug\\\\net8.0\\\\SoliBee.Core.dll' | Select-Object LastWriteTime\")",
+      "Bash(powershell -NoProfile -Command \"Get-Item 'C:\\\\Users\\\\Leahbee\\\\SolibeeWin\\\\src\\\\SoliBee.Core\\\\bin\\\\Debug\\\\net8.0\\\\SoliBee.Core.dll' | Select-Object LastWriteTime\")",
+      "Bash(mkdir -p \"/c/Users/Leahbee/AppData/Local/Temp/claude/C--Users-Leahbee-SolibeeWin/036aff80-8905-4301-ba05-b87641b1dd66/scratchpad/simtest\")",
+      "Bash(dotnet script *)",
+      "Bash(dotnet-script sim.csx)",
+      "Bash(dotnet new *)",
+      "Bash(dotnet run *)"
     ]
   }
 }

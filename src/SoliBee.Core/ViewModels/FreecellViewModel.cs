@@ -97,10 +97,15 @@ public partial class FreecellViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
             var old = Options;
+            // No Stress Mode's whole point is "no timer" — if it's switched on mid-game,
+            // stop the timer immediately instead of leaving it ticking until the next deal.
+            bool noStressJustEnabled = m.Options.IsNoStressMode && !old.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             if (Options.FreecellDeckCount != old.FreecellDeckCount)
                 InitializeGame(countAsNewGame: false);
+            else if (noStressJustEnabled && State.IsTimerActive)
+                State.IsTimerActive = false;
         });
 
         InitializeGame();
@@ -316,6 +321,9 @@ public partial class FreecellViewModel : ObservableObject
 
         if (target.Type == PileType.Foundation)
         {
+            // Foundation-to-foundation is legal (2-deck mode especially has a real reason
+            // to reorganize which foundation slot holds which suit's Ace) — UpdateScore
+            // excludes this from the +10 bonus so it can't be shuffled for free score.
             if (cards.Count != 1) return false;
             if (target.Cards.Count == 0) return first.Rank == 1;
             var top = target.Cards.Last();
@@ -371,8 +379,12 @@ public partial class FreecellViewModel : ObservableObject
 
     private void UpdateScore(PileType source, PileType target, int cardCount)
     {
-        if (target == PileType.Foundation) State.Score += 10 * cardCount;
-        else if (source == PileType.Foundation) State.Score = Math.Max(0, State.Score - 15 * cardCount);
+        // Excludes source==Foundation from the bonus so relocating a card between
+        // foundations (reorganizing which slot holds which suit) nets zero score either
+        // way — otherwise a lone Ace shuffled between two empty foundations would earn
+        // +10 every single move, forever, for free.
+        if (target == PileType.Foundation && source != PileType.Foundation) State.Score += 10 * cardCount;
+        else if (source == PileType.Foundation && target != PileType.Foundation) State.Score = Math.Max(0, State.Score - 15 * cardCount);
         OnPropertyChanged(nameof(ScoreDisplay));
     }
 
@@ -433,24 +445,57 @@ public partial class FreecellViewModel : ObservableObject
     // A card of rank R is safe to auto-play to its foundation only if both opposite-colour
     // suits already have at least rank R-2 on their foundations (Aces/2s are always safe) —
     // otherwise the auto-play could strand a lower opposite-colour card that's needed later.
-    private static bool IsSafeToAutoplay(Card card, Dictionary<CardSuit, int> foundationRanks)
+    // In 2-deck mode a suit can have more than one foundation (one per physical Ace), so
+    // this takes the MINIMUM rank across all of that suit's foundations (0 if none started
+    // yet) — the conservative choice, since being unsafe about the least-advanced copy is
+    // what actually protects a card that might still be needed on the tableau.
+    private static bool IsSafeToAutoplay(Card card, Dictionary<CardSuit, List<int>> foundationRanks)
     {
         if (card.Rank <= 2) return true;
         var oppositeSuits = IsRed(card.Suit)
             ? new[] { CardSuit.Spades, CardSuit.Clubs }
             : new[] { CardSuit.Hearts, CardSuit.Diamonds };
-        return oppositeSuits.All(s => foundationRanks[s] >= card.Rank - 2);
+        return oppositeSuits.All(s =>
+        {
+            var list = foundationRanks[s];
+            int min = list.Count == 0 ? 0 : list.Min();
+            return min >= card.Rank - 2;
+        });
     }
 
-    private Dictionary<CardSuit, int> LiveFoundationRanks()
+    // Tracks each foundation's own top rank, grouped by suit — a plain per-suit scalar
+    // collapses to one value when 2-deck mode has two independent same-suit foundations,
+    // silently overwriting whichever was enumerated first and making autocomplete
+    // eligibility checks wrong for the "shadowed" foundation.
+    private Dictionary<CardSuit, List<int>> LiveFoundationRanks()
     {
-        var ranks = new Dictionary<CardSuit, int>
+        var ranks = new Dictionary<CardSuit, List<int>>
         {
-            [CardSuit.Spades] = 0, [CardSuit.Hearts] = 0, [CardSuit.Diamonds] = 0, [CardSuit.Clubs] = 0
+            [CardSuit.Spades] = new(), [CardSuit.Hearts] = new(), [CardSuit.Diamonds] = new(), [CardSuit.Clubs] = new()
         };
         foreach (var f in Foundations)
-            if (f.Cards.Count > 0) ranks[f.Cards[0].Suit] = f.Cards.Count;
+            if (f.Cards.Count > 0) ranks[f.Cards[0].Suit].Add(f.Cards.Count);
         return ranks;
+    }
+
+    // An Ace can only start a genuinely empty foundation (never join a same-suit one, which
+    // by definition already has a card on it), so Ace eligibility is tracked separately via
+    // a shared empty-foundation count rather than the per-suit rank lists.
+    private static bool HasFoundationFor(Dictionary<CardSuit, List<int>> ranks, int emptyFoundations, Card card) =>
+        card.Rank == 1 ? emptyFoundations > 0 : ranks[card.Suit].Contains(card.Rank - 1);
+
+    private static void ApplyFoundationMove(Dictionary<CardSuit, List<int>> ranks, ref int emptyFoundations, Card card)
+    {
+        if (card.Rank == 1)
+        {
+            emptyFoundations--;
+            ranks[card.Suit].Add(1);
+        }
+        else
+        {
+            ranks[card.Suit].Remove(card.Rank - 1);
+            ranks[card.Suit].Add(card.Rank);
+        }
     }
 
     // Dry-run the safe-move strategy Autocomplete() uses (free cells first, then tableau
@@ -458,9 +503,10 @@ public partial class FreecellViewModel : ObservableObject
     // mutating real state. Only counts as available if it can fully clear the board.
     private bool SimulateAutocomplete()
     {
-        var tableauCopies   = Tableaus.Select(t => new List<Card>(t.Cards)).ToList();
-        var freeCellCopies  = FreeCells.Select(f => new List<Card>(f.Cards)).ToList();
-        var foundationRanks = LiveFoundationRanks();
+        var tableauCopies    = Tableaus.Select(t => new List<Card>(t.Cards)).ToList();
+        var freeCellCopies   = FreeCells.Select(f => new List<Card>(f.Cards)).ToList();
+        var foundationRanks  = LiveFoundationRanks();
+        int emptyFoundations = Foundations.Count(f => f.Cards.Count == 0);
 
         bool movedAny = true;
         while (movedAny)
@@ -471,8 +517,8 @@ public partial class FreecellViewModel : ObservableObject
             {
                 if (cell.Count == 0) continue;
                 var card = cell[^1];
-                if (foundationRanks[card.Suit] != card.Rank - 1 || !IsSafeToAutoplay(card, foundationRanks)) continue;
-                foundationRanks[card.Suit]++;
+                if (!HasFoundationFor(foundationRanks, emptyFoundations, card) || !IsSafeToAutoplay(card, foundationRanks)) continue;
+                ApplyFoundationMove(foundationRanks, ref emptyFoundations, card);
                 cell.RemoveAt(cell.Count - 1);
                 movedAny = true;
             }
@@ -481,8 +527,8 @@ public partial class FreecellViewModel : ObservableObject
             {
                 if (tab.Count == 0) continue;
                 var card = tab[^1];
-                if (foundationRanks[card.Suit] != card.Rank - 1 || !IsSafeToAutoplay(card, foundationRanks)) continue;
-                foundationRanks[card.Suit]++;
+                if (!HasFoundationFor(foundationRanks, emptyFoundations, card) || !IsSafeToAutoplay(card, foundationRanks)) continue;
+                ApplyFoundationMove(foundationRanks, ref emptyFoundations, card);
                 tab.RemoveAt(tab.Count - 1);
                 movedAny = true;
             }
@@ -592,8 +638,10 @@ public partial class FreecellViewModel : ObservableObject
             foreach (var tgt in Tableaus)
             {
                 if (tgt.Id == src.Id) continue;
-                if (tgt.Cards.Count == 0 && seq.Count == src.Cards.Count) continue;
-                if (CanMoveCards(seq, tgt)) return true;
+                bool targetEmpty = tgt.Cards.Count == 0;
+                if (MoveSequenceHelper.AnySuffixMoves(seq, s => CanMoveCards(s, tgt),
+                        len => targetEmpty && len == src.Cards.Count)) // pointless: relocates the whole column, unchanged
+                    return true;
             }
         }
         // Tableau top → free cell

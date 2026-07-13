@@ -30,7 +30,10 @@ public partial class FaceCardArtEditorWindow : Window
             Scale = art.Scale,
             OffsetX = art.OffsetX,
             OffsetY = art.OffsetY,
-            IsEnabled = art.IsEnabled
+            // Custom art is always considered "on" once loaded — there's no way to
+            // disable it without removing it — so this normalizes any legacy disabled
+            // entry back to enabled the moment it's opened here.
+            IsEnabled = true
         };
         _slot = slot;
         InitializeComponent();

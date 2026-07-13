@@ -23,6 +23,12 @@ public partial class BlackjackViewModel : ObservableObject
     // Session-scoped (not persisted) — starts at 0 each time the player buys in and
     // counts hands played since then, distinct from Stats.HandsPlayed's lifetime total.
     private int _sessionHandsPlayed         = 0;
+    // Snapshotted once at Deal() and reused for the rest of that hand (DoubleDown, Split,
+    // ApplyPayout) instead of re-reading the live, player-alterable Options.IsNoStressMode —
+    // Preferences broadcasts settings changes immediately, so a live re-read let a player
+    // flip No Stress Mode mid-hand (after seeing their cards, before payout) to either skip
+    // the bet deduction while still collecting a real payout, or vice versa.
+    private bool _handFreePlay              = false;
 
     public int ConsecutiveWins { get; private set; } = 0;
 
@@ -36,14 +42,17 @@ public partial class BlackjackViewModel : ObservableObject
     public bool CanHit    => ActiveHand is { } h && !h.IsComplete;
     public bool CanStand  => ActiveHand is { } h && !h.IsComplete;
     // No Stress Mode's free play has no real credits to check against — Double/Split
-    // behave as if the player always has enough.
+    // behave as if the player always has enough. Reads the hand-frozen _handFreePlay
+    // snapshot, not the live Options.IsNoStressMode — DoubleDown()/Split() already gate
+    // on that same snapshot, so this must match or the button can enable/disable out of
+    // sync with what actually happens when it's clicked.
     public bool CanDouble => ActiveHand is { } h && h.Cards.Count == 2 && !h.IsComplete
-                             && (Options.IsNoStressMode || State.Credits >= h.Bet)
+                             && (_handFreePlay || State.Credits >= h.Bet)
                              && h.ComputeValue().Value is 9 or 10 or 11;
     public bool CanSplit  => !State.IsSplit
                              && ActiveHand is { } h && h.Cards.Count == 2 && !h.IsComplete
                              && h.Cards[0].Rank == h.Cards[1].Rank
-                             && (Options.IsNoStressMode || State.Credits >= h.Bet);
+                             && (_handFreePlay || State.Credits >= h.Bet);
     public bool CanDeal        => State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result;
     public bool IsPlaying      => State.Phase == BlackjackPhase.Playing;
     public bool CanChangeBet   => State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result;
@@ -93,6 +102,7 @@ public partial class BlackjackViewModel : ObservableObject
     {
         bool freePlay = Options.IsNoStressMode;
         if (!freePlay && State.Credits < State.CurrentBet) return;
+        _handFreePlay = freePlay;
 
         _deck    = BuildAndShuffleDeck();
         _deckIdx = 0;
@@ -117,7 +127,10 @@ public partial class BlackjackViewModel : ObservableObject
             CurrentBet      = State.CurrentBet,
         };
 
-        Stats.HandsPlayed++;
+        // Stats.HandsPlayed is incremented per resulting hand (in ApplyPayout), not here —
+        // a split round produces 2 resulting hands from 1 round, and HandsWon/Lost/Pushed
+        // are already tallied per resulting hand, so counting HandsPlayed per round instead
+        // would let win-rate (HandsWon/HandsPlayed) mathematically exceed 100%.
         _sessionHandsPlayed++;
         if (!freePlay) Stats.TotalCreditsWagered += State.CurrentBet;
 
@@ -162,7 +175,7 @@ public partial class BlackjackViewModel : ObservableObject
 
     public void DoubleDown()
     {
-        bool freePlay = Options.IsNoStressMode;
+        bool freePlay = _handFreePlay;
         var hand = ActiveHand;
         if (hand == null || hand.Cards.Count != 2 || (!freePlay && State.Credits < hand.Bet)) return;
         if (!freePlay)
@@ -178,7 +191,7 @@ public partial class BlackjackViewModel : ObservableObject
 
     public void Split()
     {
-        bool freePlay = Options.IsNoStressMode;
+        bool freePlay = _handFreePlay;
         var hand = ActiveHand;
         if (hand == null || hand.Cards.Count != 2 || (!freePlay && State.Credits < hand.Bet) || State.IsSplit) return;
 
@@ -256,6 +269,19 @@ public partial class BlackjackViewModel : ObservableObject
     public void PrepareForResume()
     {
         if (State.Phase == BlackjackPhase.Betting) return;
+
+        // A hand that was dealt (bet already taken) but abandoned mid-play — by switching
+        // away before Hit/Stand resolved it — never reaches ApplyPayout, which is now the
+        // only place Stats.HandsPlayed increments. Count it here so it isn't silently
+        // dropped from the lifetime total, one increment per still-unresolved resulting
+        // hand (matching split rounds, which can abandon 2 hands from 1 round).
+        int abandonedHands = State.PlayerHands.Count(h => h.Result == BlackjackHandResult.Pending);
+        if (abandonedHands > 0)
+        {
+            Stats.HandsPlayed += abandonedHands;
+            SaveStatistics();
+        }
+
         State = new BlackjackState
         {
             Credits    = State.Credits,
@@ -363,7 +389,11 @@ public partial class BlackjackViewModel : ObservableObject
     {
         // No Stress Mode's free play still shows the win/loss/streak, but never
         // touches credits or the money-based stats — only hand-count stats count.
-        bool freePlay = Options.IsNoStressMode;
+        // Uses the flag snapshotted at Deal(), not a live re-read, so switching No Stress
+        // Mode after seeing the hand can't change whether this payout is real money.
+        bool freePlay = _handFreePlay;
+
+        Stats.HandsPlayed++;
 
         switch (hand.Result)
         {

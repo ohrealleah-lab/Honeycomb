@@ -109,10 +109,24 @@ public partial class WinAnimationView : UserControl
     }
 
     public void StartAnimation(IEnumerable<Pile> foundations, IReadOnlyList<Point>? foundationPoints = null,
-        string scoreText = "", string timeText = "")
+        string scoreText = "", string timeText = "", Point? infoPanelCenter = null)
     {
         StopAnimation();
         _foundationPoints = foundationPoints;
+
+        // WinInfoPanel defaults to centering on this whole overlay's full bounds, which
+        // span the entire window (for the bouncing-card cascade's room to fall/bounce) —
+        // not just the actual board content. Vertically, that made the banner sit too low
+        // whenever the board is shorter than the window gives it (board sits top-anchored
+        // with slack below, as in Freecell's shorter FreeCells+Foundations+tableau
+        // layout). Horizontally, it can also drift off the board's true center — e.g.
+        // under the zoom feature's LayoutTransformControl wrapping MainContent, where the
+        // overlay's own stretched bounds don't necessarily share the board's midpoint.
+        // Callers pass the board's own center (in this view's coordinate space) so the
+        // banner centers on the board the player actually sees instead, on both axes.
+        WinInfoPanel.RenderTransform = infoPanelCenter.HasValue
+            ? new TranslateTransform(infoPanelCenter.Value.X - Bounds.Width / 2.0, infoPanelCenter.Value.Y - Bounds.Height / 2.0)
+            : null;
 
         var foundationList = foundations.ToList();
         int numFoundations = foundationList.Count;
@@ -168,7 +182,7 @@ public partial class WinAnimationView : UserControl
     // Win Animation" menu, across as many demo foundations as the caller's real
     // foundationPoints has entries (falling back to 4), so an 8-foundation game (2-deck
     // Freecell, Spider) actually uses every computed position instead of only the first 4.
-    public void StartAnimation(IReadOnlyList<Point>? foundationPoints = null)
+    public void StartAnimation(IReadOnlyList<Point>? foundationPoints = null, Point? infoPanelCenter = null)
     {
         int count = foundationPoints?.Count > 0 ? foundationPoints.Count : 4;
         var suits = new[] { CardSuit.Spades, CardSuit.Hearts, CardSuit.Diamonds, CardSuit.Clubs };
@@ -180,7 +194,7 @@ public partial class WinAnimationView : UserControl
                 pile.Cards.Add(new Card($"demo_{i}_{rank}", suits[i % suits.Length], rank, true));
             foundations.Add(pile);
         }
-        StartAnimation(foundations, foundationPoints);
+        StartAnimation(foundations, foundationPoints, infoPanelCenter: infoPanelCenter);
     }
 
     public void StopAnimation()
@@ -205,6 +219,7 @@ public partial class WinAnimationView : UserControl
         _lastTickTime       = null;
 
         WinInfoPanel.IsVisible = false;
+        WinInfoPanel.RenderTransform = null;
     }
 
     private void Timer_Tick(object? sender, EventArgs e)

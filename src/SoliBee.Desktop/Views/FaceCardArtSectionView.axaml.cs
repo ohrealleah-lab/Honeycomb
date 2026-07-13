@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -30,6 +29,13 @@ public partial class FaceCardArtSectionView : UserControl
     {
         InitializeComponent();
         this.Loaded += (_, _) => BuildGrid();
+
+        // Rebuild whenever face art changes from anywhere — not just edits made within
+        // this section's own tiles, but also e.g. PreferencesView applying a theme
+        // (ThemeService.ApplyTheme replaces the underlying art via FaceCardArtService),
+        // which previously left these tiles showing stale thumbnails until reopened.
+        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) => BuildGrid());
+        this.Unloaded += (_, _) => WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
     }
 
     private void BuildGrid()
@@ -100,7 +106,7 @@ public partial class FaceCardArtSectionView : UserControl
             ClipToBounds = true
         };
 
-        bool showArt = art != null && art.IsEnabled;
+        bool showArt = art != null;
         if (showArt && art != null)
         {
             var img = new Image { Stretch = Stretch.Uniform, Width = 29, Height = 25 };
@@ -153,49 +159,30 @@ public partial class FaceCardArtSectionView : UserControl
         // Click to open picker or editor
         cardBorder.PointerPressed += async (_, _) => await OnTileClickAsync(slot);
 
-        // Container: card + optional controls
-        var container = new StackPanel { Spacing = 3 };
+        // Container: the card, with a delete badge overlaid on its lower-left corner
+        // when art is loaded — art is always considered active once loaded (no separate
+        // on/off state), so the only per-tile action needed here is removing it.
+        var container = new Grid();
         container.Children.Add(cardBorder);
 
         if (hasArt)
         {
-            var controlsRow = new StackPanel
-            {
-                Orientation = Avalonia.Layout.Orientation.Horizontal,
-                Spacing = 3
-            };
-
             var deleteBtn = new Button
             {
                 Content = "✕",
-                Width = 20, Height = 18,
-                FontSize = 9, Padding = new Thickness(0),
+                Width = 20, Height = 20,
+                FontSize = 10,
+                Padding = new Thickness(0),
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
+                HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                Margin = new Thickness(3),
                 Background = new SolidColorBrush(Color.Parse("#CC3333")),
                 Foreground = new SolidColorBrush(Colors.White)
             };
             deleteBtn.Click += (_, _) => OnDeleteClick(slot);
-            controlsRow.Children.Add(deleteBtn);
-
-            bool initiallyEnabled = art!.IsEnabled;
-            var toggle = new ToggleButton
-            {
-                Content = new TextBlock { Text = "On", FontSize = 9 },
-                IsChecked = initiallyEnabled,
-                Height = 18, Padding = new Thickness(4, 0),
-                Foreground = new SolidColorBrush(Color.Parse("#1A1A1A"))
-            };
-            toggle.IsCheckedChanged += (_, _) =>
-            {
-                bool enabled = toggle.IsChecked ?? false;
-                FaceCardArtService.SetEnabled(enabled, slot);
-                CardView.InvalidateFaceArtCache();
-                SendArtChangedMessage();
-                // Rebuild only this tile to reflect enabled state
-                Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(BuildGrid);
-            };
-            controlsRow.Children.Add(toggle);
-
-            container.Children.Add(controlsRow);
+            container.Children.Add(deleteBtn);
         }
 
         return container;

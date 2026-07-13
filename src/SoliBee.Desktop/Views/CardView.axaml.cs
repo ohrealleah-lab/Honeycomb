@@ -117,21 +117,19 @@ public partial class CardView : UserControl
         }
     }
 
+    // Deliberately does NOT Dispose() the removed Bitmap(s) — a live CardView on the
+    // actual game board can still hold one as its Image.Source at this exact moment
+    // (board refreshes are dispatched asynchronously via FaceCardArtChangedMessage,
+    // e.g. GameView's Dispatcher.UIThread.InvokeAsync(UpdateAllPilesLayout)), so an
+    // immediate Dispose() here raced a pending render pass and crashed the app. Just
+    // drop our cache reference; the CLR reclaims the underlying Bitmap once nothing
+    // else references it, after the board has had a chance to swap to fresh art.
     public static void InvalidateFaceArtCache(string? filePath = null)
     {
         if (filePath != null)
-        {
-            if (_customBitmapCache.TryGetValue(filePath, out var bmp))
-            {
-                _customBitmapCache.Remove(filePath);
-                bmp.Dispose();
-            }
-        }
+            _customBitmapCache.Remove(filePath);
         else
-        {
-            foreach (var bmp in _customBitmapCache.Values) bmp.Dispose();
             _customBitmapCache.Clear();
-        }
     }
 
     // Slide-in animation state (deal / draw / move)
@@ -452,12 +450,10 @@ public partial class CardView : UserControl
             AcePipImage.IsVisible = false;
 
             // Custom face art takes priority over all other rendering for A/J/Q/K.
-            // In FF mode any configured art is used as the default (enabled flag is ignored);
-            // in normal mode the enabled flag still gates display.
+            // Any art loaded for a slot is always considered active — there's no
+            // separate enable/disable state, only loaded-or-not.
             var faceSlot = FaceCardSlotExtensions.SlotFor(Card.Rank, Card.Suit);
-            var customFaceArt = faceSlot.HasValue
-                ? (ffMode ? FaceCardArtService.GetArt(faceSlot.Value) : FaceCardArtService.GetEnabledArt(faceSlot.Value))
-                : null;
+            var customFaceArt = faceSlot.HasValue ? FaceCardArtService.GetArt(faceSlot.Value) : null;
 
             if (customFaceArt != null)
             {
@@ -866,7 +862,7 @@ public partial class CardView : UserControl
         else
         {
             var customBack = options.CustomCardBacks.Find(c => c.Name == theme);
-            if (customBack != null)
+            if (customBack != null && PathSafety.IsSafeFileName(customBack.FileName))
             {
                 isCustom = true;
                 customPath = Path.Combine(
@@ -1190,7 +1186,20 @@ public partial class CardView : UserControl
         }
     }
 
-    public void Highlight() { }
+    public void Highlight()
+    {
+        if (SelectionHighlightBorder != null) SelectionHighlightBorder.IsVisible = true;
+    }
+
+    public void ShowCursor()
+    {
+        if (CursorHighlightBorder != null) CursorHighlightBorder.IsVisible = true;
+    }
+
+    public void ClearCursor()
+    {
+        if (CursorHighlightBorder != null) CursorHighlightBorder.IsVisible = false;
+    }
 
     public void ShowHint()
     {
@@ -1225,12 +1234,7 @@ public partial class CardView : UserControl
 
     public void ClearSelection()
     {
-        if (CardFace != null)
-        {
-            bool ffMode = (_cachedOptions ?? SettingsService.LoadOptions()).IsFinalFantasyMode;
-            CardFace.BorderBrush     = ffMode ? _brushFaceBorderFF    : _brushFaceBorderNormal;
-            CardFace.BorderThickness = new Thickness(ffMode ? 2.0 : 0.75);
-        }
+        if (SelectionHighlightBorder != null) SelectionHighlightBorder.IsVisible = false;
     }
 
     private static List<Card> GetCardsFromCard(Card fromCard, Pile pile)
@@ -1239,16 +1243,7 @@ public partial class CardView : UserControl
         return idx < 0 ? new List<Card> { fromCard } : pile.Cards.GetRange(idx, pile.Cards.Count - idx);
     }
 
-    private CardGameView? FindParentGameView()
-    {
-        Avalonia.StyledElement? parent = this.Parent;
-        while (parent != null)
-        {
-            if (parent is CardGameView cgv) return cgv;
-            parent = parent.Parent;
-        }
-        return null;
-    }
+    private CardGameView? FindParentGameView() => CardGameView.FindAncestorGameView(this.Parent);
 
     private void CardView_PointerPressed(object sender, PointerPressedEventArgs e)
     {
@@ -1256,6 +1251,11 @@ public partial class CardView : UserControl
 
         var gameView = FindParentGameView();
         if (gameView == null) return;
+
+        // Any direct mouse interaction relinquishes the keyboard focus cursor — the two
+        // input modes never fight over the same state (pending selection is untouched;
+        // this only clears the arrow-key focus indicator).
+        gameView.RelinquishKeyboardCursor();
 
         PileView? pileView = null;
         Avalonia.StyledElement? parent = this.Parent;
@@ -1289,18 +1289,22 @@ public partial class CardView : UserControl
             _lastCardClickId   = null;
             _lastCardClickTime = DateTime.MinValue;
 
+            // A double-click is its own independent quick-move action — drop any
+            // pending keyboard selection unconditionally (not only on success), so it
+            // can't linger and confuse a later keyboard/mouse action.
+            if (gameView.SelectedCardView != null)
+            {
+                gameView.SelectedCardView.ClearSelection();
+                gameView.SelectedCardView = null;
+                gameView.SelectedSourcePile = null;
+            }
+
             var sourcePile = pileView.Pile;
             if (gameView.TryAutoMoveToFoundation(Card, sourcePile))
             {
                 e.Pointer.Capture(null);
                 _isDragging = false;
                 ResetDraggedStack(gameView);
-                if (gameView.SelectedCardView != null)
-                {
-                    gameView.SelectedCardView.ClearSelection();
-                    gameView.SelectedCardView = null;
-                    gameView.SelectedSourcePile = null;
-                }
                 e.Handled = true;
             }
             return;
@@ -1356,12 +1360,15 @@ public partial class CardView : UserControl
                 e.Pointer.Capture(this);
             }
 
-            // Click-to-select / click-to-move
+            // Click-to-select / click-to-move. Deliberately no Highlight() here — the
+            // blue selection border is reserved for keyboard-driven selection
+            // (CardGameView.ActivateCursor); a mouse click still tracks SelectedCardView/
+            // SelectedSourcePile for the click-again-to-move logic below, it just isn't
+            // drawn, since the click itself is already the player's visual feedback.
             if (gameView.SelectedCardView == null)
             {
                 gameView.SelectedCardView = this;
                 gameView.SelectedSourcePile = thisPile;
-                this.Highlight();
             }
             else
             {
@@ -1387,7 +1394,6 @@ public partial class CardView : UserControl
                         gameView.SelectedCardView.ClearSelection();
                         gameView.SelectedCardView = this;
                         gameView.SelectedSourcePile = thisPile;
-                        this.Highlight();
                     }
                 }
                 else
@@ -1398,7 +1404,6 @@ public partial class CardView : UserControl
                     {
                         gameView.SelectedCardView = this;
                         gameView.SelectedSourcePile = thisPile;
-                        this.Highlight();
                     }
                     else
                     {

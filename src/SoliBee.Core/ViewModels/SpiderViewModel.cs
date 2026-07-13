@@ -87,10 +87,15 @@ public partial class SpiderViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
             var old = Options;
+            // No Stress Mode's whole point is "no timer" — if it's switched on mid-game,
+            // stop the timer immediately instead of leaving it ticking until the next deal.
+            bool noStressJustEnabled = m.Options.IsNoStressMode && !old.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             if (Options.SpiderSuitCount != old.SpiderSuitCount)
                 InitializeGame(countAsNewGame: false);
+            else if (noStressJustEnabled && State.IsTimerActive)
+                State.IsTimerActive = false;
         });
 
         for (int i = 0; i < 10; i++)
@@ -596,7 +601,7 @@ public partial class SpiderViewModel : ObservableObject
             foreach (var tgt in Tableaus)
             {
                 if (tgt.Id == src.Id) continue;
-                if (CanMoveSequence(seq, tgt)) return true;
+                if (MoveSequenceHelper.AnySuffixMoves(seq, s => CanMoveSequence(s, tgt))) return true;
             }
         }
         return false;

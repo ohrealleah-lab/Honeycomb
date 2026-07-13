@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SoliBee.Core.Models;
 
@@ -15,6 +17,10 @@ public enum FeltColorTheme
 public class GameOptions
 {
     public List<CustomCardBack> CustomCardBacks { get; set; } = new();
+    // Built-in card back designs (Vulpera, Moogle, etc.) the user has chosen to delete
+    // from their picker — the underlying bundled asset isn't removed, just hidden from
+    // the list, since it's shipped with the app rather than owned by the user.
+    public List<string> HiddenDefaultCardBacks { get; set; } = new();
     public FeltColorTheme FeltColor { get; set; } = FeltColorTheme.FeltGreen;
     public string CardBackTheme { get; set; } = "Vulpera";
     public bool IsSoundEnabled { get; set; } = true;
@@ -37,6 +43,11 @@ public class GameOptions
     // credit/bet board and betting controls; hands are played without wagering).
     public bool IsNoStressMode { get; set; } = false;
     public bool HasAppliedDefaultTheme { get; set; } = false;
+    // Id of the saved theme (from ThemeService.LoadThemes) most recently applied or
+    // saved-as — null means "never explicitly applied one" (treated like Default for
+    // warning purposes). Not touched by manual color/felt/art edits, so comparing
+    // live options against this theme's saved snapshot detects unsaved drift.
+    public Guid? ActiveThemeId { get; set; } = null;
     public string LastGameMode { get; set; } = "SolitaireDraw1";
 
     // Per-game zoom levels (LayoutTransform scale, 0.6–2.0)
@@ -87,12 +98,22 @@ public class GameOptions
     public string? ThemeTextBlackFF { get; set; }
     public string? ThemeCardShadow { get; set; }
 
-    // Shallow copy so callers can diff "old vs new" against the live options object —
-    // mutating the same instance in place would make any before/after comparison a no-op.
+    // Deep-copies CustomCardBacks (not just the list container) so callers can diff
+    // "old vs new" against the live options object — a shallow element copy would let
+    // an in-place edit to an existing entry (e.g. the Card Back Editor adjusting scale/
+    // offset) mutate the "original" snapshot too, silently defeating Preferences' Cancel.
     public GameOptions Clone()
     {
         var clone = (GameOptions)MemberwiseClone();
-        clone.CustomCardBacks = new List<CustomCardBack>(CustomCardBacks);
+        clone.CustomCardBacks = CustomCardBacks.Select(c => new CustomCardBack
+        {
+            Name     = c.Name,
+            FileName = c.FileName,
+            Scale    = c.Scale,
+            OffsetX  = c.OffsetX,
+            OffsetY  = c.OffsetY,
+        }).ToList();
+        clone.HiddenDefaultCardBacks = new List<string>(HiddenDefaultCardBacks);
         return clone;
     }
 }

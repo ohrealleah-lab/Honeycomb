@@ -84,9 +84,14 @@ public partial class GameViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
             bool vegasChanged = m.Options.IsVegasScoring != Options.IsVegasScoring;
+            // No Stress Mode's whole point is "no timer" — if it's switched on mid-game,
+            // stop the timer immediately instead of leaving it ticking until the next deal.
+            bool noStressJustEnabled = m.Options.IsNoStressMode && !Options.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             if (vegasChanged) InitializeGame(countAsNewGame: false);
+            else if (noStressJustEnabled && State.IsTimerActive)
+                State.IsTimerActive = false;
         });
 
         for (int i = 0; i < 4; i++)
@@ -380,15 +385,17 @@ public partial class GameViewModel : ObservableObject
         int drawCount = State.Mode == DrawMode.DrawThree ? 3 : 1;
         int cardsToDraw = Math.Min(drawCount, Stock.Cards.Count);
 
-        // Collect then reverse so the top-of-stock card ends up as top-of-waste
+        // Pop off the top of Stock and append to Waste in that same raw pop order — no
+        // within-batch reversal. The last-popped card of the batch (the one furthest
+        // from the top of Stock before this draw) ends up on top of Waste.
         var drawn = new List<Card>(cardsToDraw);
         for (int i = 0; i < cardsToDraw; i++)
         {
             drawn.Add(Stock.Cards[^1] with { IsFaceUp = true });
             Stock.Cards.RemoveAt(Stock.Cards.Count - 1);
         }
-        for (int i = drawn.Count - 1; i >= 0; i--)
-            Waste.Cards.Add(drawn[i]);
+        foreach (var card in drawn)
+            Waste.Cards.Add(card);
         State.WasteDrawBatchSize = cardsToDraw;
 
         if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
@@ -442,6 +449,12 @@ public partial class GameViewModel : ObservableObject
         }
         else if (targetPile.Type == PileType.Foundation)
         {
+            // Foundation-to-foundation is legal (players reorganize which foundation slot
+            // holds which suit — the only reachable case is relocating a lone Ace between
+            // two otherwise-empty foundations, since any foundation with a 2+ buries its
+            // Ace for good). UpdateScoreForMove excludes this from the Vegas +500 bonus so
+            // it can't be shuffled back and forth for free score — see that method.
+
             // Foundation can only receive single cards, not stacks
             // Check if card is the top card of its pile
             if (sourcePile.Cards.Last() != card) return false;
@@ -526,7 +539,11 @@ public partial class GameViewModel : ObservableObject
     {
         if (Options.IsVegasScoring)
         {
-            if (target == PileType.Foundation)
+            // Excludes source==Foundation so relocating a card between foundations (e.g.
+            // reorganizing which foundation slot holds which suit's Ace) nets zero score
+            // either way — otherwise a lone Ace shuffled between two empty foundations
+            // would earn +500 every single move, forever, for free.
+            if (target == PileType.Foundation && source != PileType.Foundation)
                 State.Score += 500;
             else if (source == PileType.Foundation && target == PileType.Tableau)
                 State.Score -= 500;
@@ -589,6 +606,9 @@ public partial class GameViewModel : ObservableObject
         State.TimerSeconds = snapshot.TimerSeconds;
         State.RecyclesCount = snapshot.RecyclesCount;
         State.HasWon = snapshot.HasWon;
+        // IsTimerActive is deliberately NOT restored — undoing a move shouldn't stop the
+        // clock; the timer keeps running regardless of undo, same as it would if the
+        // player just paused to think.
         State.WasteDrawBatchSize = snapshot.WasteDrawBatchSize;
 
         Stock.Cards.Clear();
@@ -777,55 +797,134 @@ public partial class GameViewModel : ObservableObject
             foreach (var t in Tableaus) if (CanMoveCard(wasteTop, t)) return true;
         }
 
-        // Check stock: each card could become the waste top after drawing
+        // Check stock and buried waste cards, but only the ones that can actually ever
+        // become the real top-of-waste card — see ComputeReachableStockWasteCardIds for
+        // why "it's somewhere in Stock or Waste" is not the same as "reachable" in
+        // Draw-Three mode.
+        var reachableIds = ComputeReachableStockWasteCardIds();
         foreach (var card in Stock.Cards)
-            if (CardCanPlayAnywhere(card)) return true;
+            if (reachableIds.Contains(card.Id) && CardCanPlayAnywhere(card)) return true;
 
-        // Check buried waste cards: accessible after recycle (if allowed)
         int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
         bool canRecycle = Waste.Cards.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
         if (canRecycle && Waste.Cards.Count > 1)
         {
             for (int i = 0; i < Waste.Cards.Count - 1; i++)
-                if (CardCanPlayAnywhere(Waste.Cards[i])) return true;
+                if (reachableIds.Contains(Waste.Cards[i].Id) && CardCanPlayAnywhere(Waste.Cards[i])) return true;
         }
 
-        // No more new cards will ever appear if stock is empty and waste can't be recycled.
-        // In that state, tableau→tableau moves only count as progress when they reveal
-        // a face-down card, or expose a face-up card underneath that's immediately
-        // playable to a foundation — reshuffling otherwise (e.g. a run that doesn't
-        // uncover anything new) doesn't change what's playable.
-        bool deckExhausted = Stock.Cards.Count == 0 && (Waste.Cards.Count == 0 || !canRecycle);
-
-        // Check tableau moves
+        // Check tableau moves — a move must be both legal (CanMoveCard) and progressive
+        // (IsProgressiveTableauMove) to count as evidence the player isn't stuck. Pure
+        // reorganization — relocating a run to a structurally-equivalent spot that
+        // changes nothing about what's playable — never counts, regardless of whether
+        // Stock still has cards. (Matches the Mac original's isProgressiveMove, which
+        // applies unconditionally; an earlier version of this check only filtered out
+        // non-progressive moves once the deck was fully exhausted, which let a purely
+        // lateral tableau shuffle — e.g. relocating a run from one same-rank top to
+        // another — incorrectly count as "not stuck" any time Stock still had cards.)
         foreach (var src in Tableaus)
         {
             if (src.Cards.Count == 0) continue;
             int firstFaceUp = src.Cards.FindIndex(c => c.IsFaceUp);
             if (firstFaceUp < 0) continue;
-            bool revealsHidden = firstFaceUp > 0;
             for (int i = firstFaceUp; i < src.Cards.Count; i++)
             {
                 foreach (var f in Foundations) if (CanMoveCard(src.Cards[i], f)) return true;
 
-                bool exposesHiddenCard = i == firstFaceUp && revealsHidden;
-                // Can't use CanMoveCard(..., foundation) here — it requires the card to
-                // already be its pile's actual top, but src.Cards[i-1] is still buried
-                // under the cards we'd be moving away (that's the whole point of "exposes").
-                bool exposesFoundationMove = i > 0 && src.Cards[i - 1].IsFaceUp &&
-                    CanReachFoundation(src.Cards[i - 1]);
-
-                if (!deckExhausted || exposesHiddenCard || exposesFoundationMove)
+                foreach (var tgt in Tableaus)
                 {
-                    foreach (var tgt in Tableaus)
-                    {
-                        if (tgt.Id == src.Id) continue;
-                        if (CanMoveCard(src.Cards[i], tgt)) return true;
-                    }
+                    if (tgt.Id == src.Id) continue;
+                    if (!CanMoveCard(src.Cards[i], tgt)) continue;
+                    if (IsProgressiveTableauMove(src, i, tgt, firstFaceUp)) return true;
                 }
             }
         }
         return false;
+    }
+
+    // A tableau-to-tableau move is "progress" — as opposed to pure reorganization that
+    // changes nothing about what's ultimately playable — exactly when one of these holds
+    // (matches the Mac original's isProgressiveMove):
+    //   - It fully empties the source column, AND the target wasn't already empty
+    //     (otherwise it's just relocating which column happens to be the empty one —
+    //     e.g. shuffling a lone King back and forth between two empty columns forever).
+    //   - It reveals a face-down card underneath (there's a hidden card below the run
+    //     being moved).
+    //   - It exposes a face-up card underneath that's now immediately playable to a
+    //     foundation.
+    // Everything else — reorganizing an already-fully-visible column without emptying it,
+    // or without exposing anything new — is not progress.
+    private bool IsProgressiveTableauMove(Pile src, int cardIndex, Pile tgt, int firstFaceUp)
+    {
+        if (cardIndex == 0)
+            return tgt.Cards.Count > 0;
+
+        if (cardIndex == firstFaceUp && firstFaceUp > 0)
+            return true;
+
+        // Can't use CanMoveCard(..., foundation) here — it requires the card to already
+        // be its pile's actual top, but src.Cards[cardIndex-1] is still buried under the
+        // cards we'd be moving away (that's the whole point of "exposes"). Guaranteed
+        // face-up here since cardIndex > firstFaceUp.
+        return CanReachFoundation(src.Cards[cardIndex - 1]);
+    }
+
+    // Draw-Three's fan only ever exposes the LAST-popped card of each drawn 3-card batch
+    // as the real, playable top-of-waste — the other two are shown for visibility but can
+    // never be selected. Recycling reverses the whole waste pile back into Stock; because
+    // drawing itself no longer reorders a batch (see DrawCard), a full draw-through
+    // followed by exactly one recycle reconstructs the original Stock order exactly
+    // (reverse-of-reverse is the identity) — so recycling never surfaces a different card
+    // out of any given batch. Only 1 of every 3 cards in a batch is EVER reachable, no
+    // matter how many times the pile is recycled. Draw-One has no such restriction —
+    // every card is its own batch of one and is always reachable.
+    //
+    // Simulated on copies of Stock/Waste (never mutates real state) by literally replaying
+    // DrawCard's mechanics: draw through whatever's left in Stock, then — if recycling is
+    // still allowed — simulate exactly one recycle-and-redraw on top of that. One recycle
+    // is always enough (recycling further is a no-op, reproducing the same result), but
+    // it must actually be simulated: if Stock is already empty (nothing left to draw
+    // through on its own), skipping this step would wrongly treat every card sitting in
+    // Waste as permanently unreachable even when a recycle would legitimately surface one.
+    private HashSet<string> ComputeReachableStockWasteCardIds()
+    {
+        var reachable = new HashSet<string>();
+        int batchSize = State.Mode == DrawMode.DrawThree ? 3 : 1;
+        int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
+
+        var simStock = new List<Card>(Stock.Cards);
+        var simWaste = new List<Card>(Waste.Cards);
+
+        void DrawThroughStock()
+        {
+            while (simStock.Count > 0)
+            {
+                int take = Math.Min(batchSize, simStock.Count);
+                var drawn = new List<Card>(take);
+                for (int i = 0; i < take; i++)
+                {
+                    drawn.Add(simStock[^1]);
+                    simStock.RemoveAt(simStock.Count - 1);
+                }
+                foreach (var card in drawn)
+                    simWaste.Add(card);
+                reachable.Add(simWaste[^1].Id);
+            }
+        }
+
+        DrawThroughStock();
+
+        bool canRecycle = simWaste.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
+        if (canRecycle)
+        {
+            var reversed = new List<Card>(simWaste);
+            reversed.Reverse();
+            simStock = reversed;
+            simWaste = new List<Card>();
+            DrawThroughStock();
+        }
+
+        return reachable;
     }
 
     private bool CanReachFoundation(Card card)
@@ -901,32 +1000,43 @@ public partial class GameViewModel : ObservableObject
                         $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} to Foundation.")));
         }
 
-        // Priority 2 (500 + hidden×100) / Priority 4 (150): tableau → tableau
+        // Priority 2 (500 + hidden×100) / Priority 4 (150): tableau → tableau. Checks
+        // every possible sub-run start within the face-up portion (i from firstFaceUp to
+        // the pile's end), not just the run's very first card, and only suggests a move
+        // that IsProgressiveTableauMove actually counts as progress — the identical
+        // legality + progressiveness test HasAnyLegalMoves uses, so Hint and
+        // stuck-detection can never disagree: if Hint has nothing to suggest here, the
+        // board is also correctly flagged stuck, and vice versa (matches the Mac
+        // original's guarantee). Suggesting a legal-but-purely-lateral reshuffle (e.g.
+        // relocating a run between two structurally-equivalent spots) would let Hint
+        // recommend something HasAnyLegalMoves correctly ignores as non-progress.
         foreach (var src in Tableaus)
         {
             if (src.Cards.Count == 0) continue;
             int firstFaceUp = src.Cards.FindIndex(c => c.IsFaceUp);
             if (firstFaceUp < 0) continue;
-            var seq = src.Cards.GetRange(firstFaceUp, src.Cards.Count - firstFaceUp);
-            bool revealsHidden = firstFaceUp > 0;
-            int hiddenCount    = firstFaceUp;
 
-            foreach (var tgt in Tableaus)
+            for (int i = firstFaceUp; i < src.Cards.Count; i++)
             {
-                if (tgt.Id == src.Id) continue;
-                if (!CanMoveCard(seq[0], tgt)) continue;
+                var card = src.Cards[i];
+                bool revealsHidden = i == firstFaceUp && firstFaceUp > 0;
 
-                if (revealsHidden)
+                foreach (var tgt in Tableaus)
                 {
-                    scored.Add((500 + hiddenCount * 100, new HintMove(seq[0], src.Id, tgt.Id,
-                        $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence.")));
-                }
-                else if (tgt.Cards.Count > 0)
-                {
-                    // Plain, all-face-up moves onto an empty column (e.g. King to empty) are
-                    // suppressed here — they're only surfaced later if nothing else is legal.
-                    scored.Add((150, new HintMove(seq[0], src.Id, tgt.Id,
-                        $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence.")));
+                    if (tgt.Id == src.Id) continue;
+                    if (!CanMoveCard(card, tgt)) continue;
+                    if (!IsProgressiveTableauMove(src, i, tgt, firstFaceUp)) continue;
+
+                    if (revealsHidden)
+                    {
+                        scored.Add((500 + firstFaceUp * 100, new HintMove(card, src.Id, tgt.Id,
+                            $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} sequence.")));
+                    }
+                    else
+                    {
+                        scored.Add((150, new HintMove(card, src.Id, tgt.Id,
+                            $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} sequence.")));
+                    }
                 }
             }
         }
@@ -938,42 +1048,37 @@ public partial class GameViewModel : ObservableObject
                     scored.Add((300, new HintMove(wasteTop, Waste.Id, t.Id,
                         $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} from waste.")));
 
-        // Priority 5 (50): draw from stock
-        if (Stock.Cards.Count > 0)
+        // Priority 5 (50) / 6 (20): draw from stock / recycle waste — only when a card
+        // that can ACTUALLY become the real top-of-waste would land somewhere. In
+        // Draw-Three, "somewhere in Stock/Waste" isn't enough: only the first and last
+        // card of each drawn 3-card group can ever become the true playable top — the
+        // middle card is stuck there through any number of recycles (see
+        // ComputeReachableStockWasteCardIds). Suggesting a draw/recycle whenever the
+        // pile is merely non-empty recommends a dead-end action forever once every
+        // reachable card is a dud, even after stuck-detection has correctly given up.
+        var reachableIds = ComputeReachableStockWasteCardIds();
+        if (Stock.Cards.Count > 0 && Stock.Cards.Any(c => reachableIds.Contains(c.Id) && CardCanPlayAnywhere(c)))
             scored.Add((50, new HintMove(new Card("deal", CardSuit.Spades, 1, false), Stock.Id, "", "Draw from stock.")));
 
-        // Priority 6 (20): recycle waste back to stock — only when stock is empty and legal
         if (Stock.Cards.Count == 0 && Waste.Cards.Count > 0)
         {
             // Real Vegas-scoring rules: Draw One gets a single pass through the deck (no
             // recycles at all); Draw Three gets 2 recycles (3 total passes).
             int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
             bool canRecycle = !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
-            if (canRecycle)
+            if (canRecycle && Waste.Cards.Any(c => reachableIds.Contains(c.Id) && CardCanPlayAnywhere(c)))
                 scored.Add((20, new HintMove(new Card("recycle", CardSuit.Spades, 1, false), Waste.Id, Stock.Id,
                     "Recycle waste back to stock.")));
         }
 
         var hints = scored.OrderByDescending(s => s.Score).Select(s => s.Hint).ToList();
 
-        // King-to-empty-column fallback: only surfaced when it's the only legal move at all.
-        if (hints.Count == 0)
-        {
-            foreach (var src in Tableaus)
-            {
-                if (src.Cards.Count == 0) continue;
-                int firstFaceUp = src.Cards.FindIndex(c => c.IsFaceUp);
-                if (firstFaceUp < 0) continue;
-                var seq = src.Cards.GetRange(firstFaceUp, src.Cards.Count - firstFaceUp);
-                foreach (var tgt in Tableaus)
-                {
-                    if (tgt.Id == src.Id || tgt.Cards.Count != 0) continue;
-                    if (CanMoveCard(seq[0], tgt))
-                        hints.Add(new HintMove(seq[0], src.Id, tgt.Id,
-                            $"Move {RankStr(seq[0].Rank)}{SuitStr(seq[0].Suit)} sequence."));
-                }
-            }
-        }
+        // Deliberately no "King to empty column" last-resort fallback here: that move is
+        // only ever offered when it's non-progressive (an already-fully-face-up column
+        // being relocated to another empty column — see IsProgressiveTableauMove), and
+        // surfacing it anyway would let Hint suggest something HasAnyLegalMoves correctly
+        // treats as not-a-real-move, breaking the guarantee that Hint and stuck-detection
+        // never disagree (matches the Mac original, which has no such fallback either).
 
         // Last-move filter: drop the exact reversal of the last move (source/target swapped).
         // If that empties the list, fall back to the unfiltered one so something is always shown.

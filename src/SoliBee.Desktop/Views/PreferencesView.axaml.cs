@@ -28,6 +28,7 @@ public partial class PreferencesView : UserControl
     private Bitmap? _cardBackPreviewBitmap;
     private List<SoliBeeTheme> _themes = new();
     private SoliBeeTheme? _themeToDelete;
+    private SoliBeeTheme? _themeToApply;
 
     // Snapshots taken when the panel opens, so Cancel can restore whatever was actually
     // on disk beforehand — every individual control here saves+broadcasts immediately
@@ -59,15 +60,11 @@ public partial class PreferencesView : UserControl
     {
         CardBackComboBox.Items.Clear();
 
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Vulpera",         Tag = "Vulpera" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Dingwall",         Tag = "Dingwall" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Moogle",           Tag = "Moogle" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Forest",           Tag = "Forest" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "On the Water",     Tag = "On the Water" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Pareidolic",       Tag = "Pareidolic" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Pareidolic 2",     Tag = "Pareidolic 2" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Red Sky",          Tag = "Red Sky" });
-        CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Sunset",           Tag = "Sunset" });
+        foreach (var name in _builtInCardBackNames)
+        {
+            if (options.HiddenDefaultCardBacks.Contains(name)) continue;
+            CardBackComboBox.Items.Add(new ComboBoxItem { Content = name, Tag = name });
+        }
 
         foreach (var cb in options.CustomCardBacks)
         {
@@ -150,7 +147,7 @@ public partial class PreferencesView : UserControl
             if (item.Tag?.ToString() == options.CardBackTheme)
             {
                 CardBackComboBox.SelectedItem = item;
-                DeleteCustomCardBackButton.IsEnabled = !IsBuiltInCardBack(options.CardBackTheme);
+                DeleteCustomCardBackButton.IsEnabled = true;
                 break;
             }
         }
@@ -164,7 +161,7 @@ public partial class PreferencesView : UserControl
         CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
 
         // Game Mode section
-        if (!string.IsNullOrEmpty(ActiveGameFamily) && ActiveGameFamily != "Freecell" && ActiveGameFamily != "VideoPoker")
+        if (!string.IsNullOrEmpty(ActiveGameFamily) && ActiveGameFamily != "VideoPoker")
         {
             PopulateGameModeCombo(options, ActiveGameFamily);
             GameModeSection.IsVisible = true;
@@ -279,8 +276,9 @@ public partial class PreferencesView : UserControl
                 currentTag = options.IsDrawConstraintsEnabled ? "SolitaireDraw3" : "SolitaireDraw1";
                 break;
             case "Freecell":
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Deck", Tag = "Freecell1" });
-                currentTag = "Freecell1";
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Deck Freecell", Tag = "Freecell1" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = "2 Deck Freecell", Tag = "Freecell2" });
+                currentTag = options.FreecellDeckCount == 2 ? "Freecell2" : "Freecell1";
                 break;
             case "Spider":
                 GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Suit",  Tag = "Spider1" });
@@ -427,6 +425,12 @@ public partial class PreferencesView : UserControl
         if (DataContext is not GameOptions options) return;
         var theme = ThemeService.SnapshotFromOptions(name, options);
         ThemeService.AddTheme(theme);
+        options.ActiveThemeId = theme.Id;
+        NotifySettingsChanged(options);
+        // Save Theme is an already-committed action, like the theme file itself — keep the
+        // Cancel-revert snapshot in sync so a later Cancel doesn't undo just this one field
+        // while the permanently-saved theme it refers to stays in themes.json.
+        if (_originalGameOptions != null) _originalGameOptions.ActiveThemeId = theme.Id;
         RefreshThemeList();
     }
 
@@ -435,6 +439,47 @@ public partial class PreferencesView : UserControl
         if (sender is not Button btn || btn.Tag is not SoliBeeTheme theme) return;
         if (DataContext is not GameOptions options) return;
 
+        if (ShouldWarnBeforeApplyingTheme(options))
+        {
+            _themeToApply = theme;
+            ConfirmApplyThemeOverlay.IsVisible = true;
+            return;
+        }
+
+        ApplyThemeNow(theme, options);
+    }
+
+    // Warn only if custom face art is actually at risk of being silently discarded:
+    // the user is on the Default theme (or has never explicitly applied/saved one), or
+    // their current saved theme has been edited since it was last applied/saved.
+    private bool ShouldWarnBeforeApplyingTheme(GameOptions options)
+    {
+        bool hasCustomArt = FaceCardArtService.GetAllArts().Any();
+        if (!hasCustomArt) return false;
+
+        bool isDefault = options.ActiveThemeId == null || options.ActiveThemeId == ThemeService.DefaultThemes[0].Id;
+        if (isDefault) return true;
+
+        var activeTheme = _themes.FirstOrDefault(t => t.Id == options.ActiveThemeId);
+        return activeTheme == null || !ThemeService.CurrentMatchesTheme(options, activeTheme);
+    }
+
+    private void CancelApplyTheme_Click(object? sender, RoutedEventArgs e)
+    {
+        _themeToApply = null;
+        ConfirmApplyThemeOverlay.IsVisible = false;
+    }
+
+    private void ConfirmApplyTheme_Click(object? sender, RoutedEventArgs e)
+    {
+        ConfirmApplyThemeOverlay.IsVisible = false;
+        if (_themeToApply == null || DataContext is not GameOptions options) return;
+        ApplyThemeNow(_themeToApply, options);
+        _themeToApply = null;
+    }
+
+    private void ApplyThemeNow(SoliBeeTheme theme, GameOptions options)
+    {
         ThemeService.ApplyTheme(theme, options);
 
         _initializing = true;
@@ -525,9 +570,7 @@ public partial class PreferencesView : UserControl
         {
             var selectedTag = item.Tag.ToString()!;
             options.CardBackTheme = selectedTag;
-
-            bool isCustom = !IsBuiltInCardBack(selectedTag);
-            DeleteCustomCardBackButton.IsEnabled = isCustom;
+            DeleteCustomCardBackButton.IsEnabled = true;
 
             var customBack = options.CustomCardBacks.Find(c => c.Name == selectedTag);
             if (customBack != null)
@@ -612,7 +655,7 @@ public partial class PreferencesView : UserControl
             if (item.Tag?.ToString() == name)
             {
                 CardBackComboBox.SelectedItem = item;
-                DeleteCustomCardBackButton.IsEnabled = !IsBuiltInCardBack(name);
+                DeleteCustomCardBackButton.IsEnabled = true;
                 break;
             }
         }
@@ -621,10 +664,13 @@ public partial class PreferencesView : UserControl
         UpdateCardBackPreview(options);
     }
 
-    private static bool IsBuiltInCardBack(string name) =>
-        name is "Vulpera" or "Dingwall" or "Moogle"
-             or "Forest" or "On the Water" or "Pareidolic" or "Pareidolic 2"
-             or "Red Sky" or "Sunset";
+    private static readonly string[] _builtInCardBackNames =
+    {
+        "Vulpera", "Dingwall", "Moogle", "Forest", "On the Water",
+        "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset",
+    };
+
+    private static bool IsBuiltInCardBack(string name) => _builtInCardBackNames.Contains(name);
 
     private static (double Scale, double OffsetX, double OffsetY) BuiltInCardBackDefaults(string name) => name switch
     {
@@ -761,7 +807,41 @@ public partial class PreferencesView : UserControl
 
     private void DeleteCustomCardBack_Click(object? sender, RoutedEventArgs e)
     {
+        var selectedItem = CardBackComboBox.SelectedItem as ComboBoxItem;
+        var cardBackName = selectedItem?.Tag?.ToString();
+        if (cardBackName == null) return;
+
+        // Themes store their card back by name (SoliBeeTheme.CardBackTheme), not by a
+        // reference to the CustomCardBack object — deleting the file out from under a
+        // saved theme would silently leave that theme pointing at nothing, so block it.
+        var themeNames = ThemeService.LoadThemes()
+            .Where(t => t.CardBackTheme == cardBackName)
+            .Select(t => t.Name)
+            .ToList();
+
+        if (themeNames.Count > 0)
+        {
+            CardBackInUseText.Text = $"This card back is used by {string.Join(", ", themeNames)}. " +
+                $"Please delete the theme{(themeNames.Count > 1 ? "s" : "")} first.";
+            CardBackInUseOverlay.IsVisible = true;
+            return;
+        }
+
+        // There must always be at least one card deck design to choose from — built-in
+        // or custom — so the last remaining one (of either kind) can't be removed.
+        if (CardBackComboBox.Items.Count <= 1)
+        {
+            CardBackInUseText.Text = "At least one card deck design must remain — you can't delete the last one.";
+            CardBackInUseOverlay.IsVisible = true;
+            return;
+        }
+
         ConfirmDeleteOverlay.IsVisible = true;
+    }
+
+    private void CardBackInUseOk_Click(object? sender, RoutedEventArgs e)
+    {
+        CardBackInUseOverlay.IsVisible = false;
     }
 
     private void CancelDelete_Click(object? sender, RoutedEventArgs e)
@@ -777,41 +857,38 @@ public partial class PreferencesView : UserControl
 
         var selectedItem = CardBackComboBox.SelectedItem as ComboBoxItem;
         if (selectedItem == null || selectedItem.Tag == null) return;
+        var nameToDelete = selectedItem.Tag.ToString()!;
 
-        var themeToDelete = selectedItem.Tag.ToString();
-        var customBack = options.CustomCardBacks.Find(c => c.Name == themeToDelete);
-        if (customBack == null) return;
-
-        if (PathSafety.IsSafeFileName(customBack.FileName))
+        var customBack = options.CustomCardBacks.Find(c => c.Name == nameToDelete);
+        if (customBack != null)
         {
-            var destDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SoliBee", "CardBacks");
-            var filePath = Path.Combine(destDir, customBack.FileName);
-            try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
+            if (PathSafety.IsSafeFileName(customBack.FileName))
+            {
+                var destDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SoliBee", "CardBacks");
+                var filePath = Path.Combine(destDir, customBack.FileName);
+                try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
+            }
+            options.CustomCardBacks.Remove(customBack);
         }
-
-        options.CustomCardBacks.Remove(customBack);
-        options.CardBackTheme = "Vulpera";
+        else if (IsBuiltInCardBack(nameToDelete))
+        {
+            // The bundled asset stays on disk — just hide this design from the picker.
+            if (!options.HiddenDefaultCardBacks.Contains(nameToDelete))
+                options.HiddenDefaultCardBacks.Add(nameToDelete);
+        }
+        else return;
 
         _initializing = true;
         PopulateCardBacks(options);
-
-        foreach (var item in CardBackComboBox.Items.OfType<ComboBoxItem>())
-        {
-            if (item.Tag?.ToString() == "Vulpera")
-            {
-                CardBackComboBox.SelectedItem = item;
-                break;
-            }
-        }
-
-        options.CardBackScale = 1.0;
-        options.CardBackOffsetX = 0;
-        options.CardBackOffsetY = 0;
-        DeleteCustomCardBackButton.IsEnabled = false;
         _initializing = false;
-        UpdateCardBackPreview(options);
+
+        // Fall back to whatever's first in the repopulated list — not hardcoded
+        // "Vulpera", since the user may have just deleted/hidden Vulpera itself.
+        var fallback = CardBackComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
+        if (fallback?.Tag != null)
+            ApplyCardBackSelection(fallback.Tag.ToString()!, options);
 
         NotifySettingsChanged(options);
         CardView.PreloadCardBacks(options);
@@ -962,6 +1039,17 @@ public partial class PreferencesView : UserControl
 
     private void ResetCardColors_Click(object? sender, RoutedEventArgs e)
     {
+        ConfirmResetCardColorsOverlay.IsVisible = true;
+    }
+
+    private void CancelResetCardColors_Click(object? sender, RoutedEventArgs e)
+    {
+        ConfirmResetCardColorsOverlay.IsVisible = false;
+    }
+
+    private void ConfirmResetCardColors_Click(object? sender, RoutedEventArgs e)
+    {
+        ConfirmResetCardColorsOverlay.IsVisible = false;
         if (DataContext is not GameOptions options) return;
 
         options.ThemeFaceBackNormal = null;
