@@ -53,6 +53,14 @@ public partial class GameViewModel : ObservableObject
     // a genuinely new deal (InitializeGame) costs a fresh buy-in.
     private int _vegasBalanceBeforeDeal;
 
+    // Running total of every standard-mode "-2 every 8 seconds" time penalty applied so
+    // far this game, tracked separately from State.Score. Undo needs this to reverse only
+    // the specific move it's undoing — if it just restored State.Score to its pre-move
+    // snapshot value, it would also refund any time penalties that legitimately accrued
+    // in the meantime (real time elapsed between the move and pressing Undo), which have
+    // nothing to do with that move.
+    private int _standardTimePenaltyTotal;
+
     private List<HintMove> _hintCycleList  = new();
     private int            _hintCycleIndex = 0;
 
@@ -129,6 +137,7 @@ public partial class GameViewModel : ObservableObject
         _vegasBalanceBeforeDeal = State.Score;
         int startScore = Options.IsVegasScoring ? State.Score - 5200 : 0;
         _vegasGameStartScore = startScore;
+        _standardTimePenaltyTotal = 0;
 
         State = new GameState
         {
@@ -211,14 +220,7 @@ public partial class GameViewModel : ObservableObject
             // to from the UI thread (Restart/Undo/InitializeGame), so mutating
             // State.TimerSeconds directly on this background timer thread would race
             // with those writes.
-            _syncContext?.Post(_ =>
-            {
-                if (State != null && State.IsTimerActive && !State.HasWon)
-                {
-                    State.TimerSeconds++;
-                    OnPropertyChanged(nameof(TimeDisplay));
-                }
-            }, null);
+            _syncContext?.Post(_ => OnTimerTick(), null);
         }, null, 1000, 1000);
 
         OnPropertyChanged(nameof(Stock));
@@ -232,6 +234,14 @@ public partial class GameViewModel : ObservableObject
     public void RestartGame()
     {
         if (!_initialDeck.Any()) return;
+
+        // Restart refunds this deal's Vegas buy-in (see the comment below) on the theory
+        // that the player already paid for and engaged with this exact deal, so retrying
+        // it from scratch isn't a fresh charge. Without this guard, New Game (charge the
+        // buy-in) immediately followed by Restart (refund it) — before making even one
+        // move — hands back the identical freshly-dealt board at zero net cost, letting
+        // a player "reroll" for a nicer deal, or simply play any deal, entirely for free.
+        if (State.MovesCount == 0) return;
 
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
@@ -253,6 +263,7 @@ public partial class GameViewModel : ObservableObject
         // foundation gains, rather than charging a fresh buy-in like a new deal would.
         State.Score = Options.IsVegasScoring ? _vegasBalanceBeforeDeal : 0;
         _vegasGameStartScore = State.Score;
+        _standardTimePenaltyTotal = 0;
         OnPropertyChanged(nameof(ScoreDisplay));
         State.MovesCount = 0;
         State.TimerSeconds = 0;
@@ -299,14 +310,7 @@ public partial class GameViewModel : ObservableObject
             // to from the UI thread (Restart/Undo/InitializeGame), so mutating
             // State.TimerSeconds directly on this background timer thread would race
             // with those writes.
-            _syncContext?.Post(_ =>
-            {
-                if (State != null && State.IsTimerActive && !State.HasWon)
-                {
-                    State.TimerSeconds++;
-                    OnPropertyChanged(nameof(TimeDisplay));
-                }
-            }, null);
+            _syncContext?.Post(_ => OnTimerTick(), null);
         }, null, 1000, 1000);
 
         OnPropertyChanged(nameof(Stock));
@@ -321,6 +325,24 @@ public partial class GameViewModel : ObservableObject
         // without it, restarting a just-won game leaves the win animation stuck on
         // screen and permanently suppresses the next win's animation.
         OnPropertyChanged(nameof(State));
+    }
+
+    // Shared by both InitializeGame's and RestartGame's background timer, so the two
+    // don't duplicate (and risk drifting on) this tick logic. Always advances the clock;
+    // additionally applies the standard-mode "-2 every 8 seconds" time penalty, tracking
+    // the running total separately so Undo can later reverse only the specific move it's
+    // undoing without also refunding time penalties that accrued in the meantime.
+    private void OnTimerTick()
+    {
+        if (State == null || !State.IsTimerActive || State.HasWon) return;
+        State.TimerSeconds++;
+        if (!Options.IsVegasScoring && State.TimerSeconds % 8 == 0)
+        {
+            State.Score -= 2;
+            _standardTimePenaltyTotal += 2;
+            OnPropertyChanged(nameof(ScoreDisplay));
+        }
+        OnPropertyChanged(nameof(TimeDisplay));
     }
 
     // Called by AppCoordinator when switching away to a different game — the background
@@ -574,13 +596,14 @@ public partial class GameViewModel : ObservableObject
 
         var snapshot = new GameStateSnapshot
         {
-            Score              = State.Score,
-            MovesCount         = State.MovesCount,
-            TimerSeconds       = State.TimerSeconds,
-            RecyclesCount      = State.RecyclesCount,
-            HasWon             = State.HasWon,
-            WasteDrawBatchSize = State.WasteDrawBatchSize,
-            PileCards          = new List<List<Card>>()
+            Score                    = State.Score,
+            MovesCount               = State.MovesCount,
+            TimerSeconds             = State.TimerSeconds,
+            RecyclesCount            = State.RecyclesCount,
+            HasWon                   = State.HasWon,
+            WasteDrawBatchSize       = State.WasteDrawBatchSize,
+            StandardTimePenaltyTotal = _standardTimePenaltyTotal,
+            PileCards                = new List<List<Card>>()
         };
 
         // Snapshot all piles
@@ -601,7 +624,19 @@ public partial class GameViewModel : ObservableObject
         _lastMoveTargetPileId = null;
 
         var snapshot = _undoStack.Pop();
-        State.Score = snapshot.Score;
+        if (Options.IsVegasScoring)
+        {
+            State.Score = snapshot.Score;
+        }
+        else
+        {
+            // Reverse only the specific move being undone — jumping straight back to the
+            // snapshot's score would also refund any standard-mode "-2 every 8 seconds"
+            // time penalty that legitimately accrued since that move (real time elapsed
+            // while deciding to undo), which has nothing to do with the move itself.
+            int timePenaltySinceSnapshot = _standardTimePenaltyTotal - snapshot.StandardTimePenaltyTotal;
+            State.Score = snapshot.Score - timePenaltySinceSnapshot;
+        }
         State.MovesCount = snapshot.MovesCount;
         State.TimerSeconds = snapshot.TimerSeconds;
         State.RecyclesCount = snapshot.RecyclesCount;
@@ -753,6 +788,16 @@ public partial class GameViewModel : ObservableObject
                 }
                 else
                 {
+                    // Standard-mode time bonus rewards a fast win. No bonus in No Stress
+                    // Mode — TimerSeconds never advances there, so there's nothing to
+                    // measure — or once 10 minutes have passed, matching the rule that
+                    // this bonus only applies to a genuinely quick win.
+                    if (!Options.IsNoStressMode && State.TimerSeconds > 0 && State.TimerSeconds < 600)
+                    {
+                        State.Score += 20000 / State.TimerSeconds;
+                        OnPropertyChanged(nameof(ScoreDisplay));
+                    }
+
                     if (State.Score > Stats.StandardHighScore)
                     {
                         Stats.StandardHighScore = State.Score;
@@ -1138,5 +1183,6 @@ public class GameStateSnapshot
     public int RecyclesCount { get; set; }
     public bool HasWon { get; set; }
     public int WasteDrawBatchSize { get; set; }
+    public int StandardTimePenaltyTotal { get; set; }
     public List<List<Card>> PileCards { get; set; } = new();
 }

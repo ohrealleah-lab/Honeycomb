@@ -362,7 +362,7 @@ public partial class SpiderViewModel : ObservableObject
 
         FlipTopCard(source);
 
-        State.Score--;
+        State.Score = Math.Max(0, State.Score - 1);
 
         State.MovesCount++;
         TryCompleteRuns();
@@ -405,7 +405,7 @@ public partial class SpiderViewModel : ObservableObject
         for (int i = 0; i < Tableaus.Count && i < deal.Cards.Count; i++)
             Tableaus[i].Cards.Add(deal.Cards[i] with { IsFaceUp = true });
 
-        State.Score--;
+        State.Score = Math.Max(0, State.Score - 1);
 
         State.MovesCount++;
         TryCompleteRuns();

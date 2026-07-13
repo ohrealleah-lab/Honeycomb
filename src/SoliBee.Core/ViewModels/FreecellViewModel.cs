@@ -475,6 +475,19 @@ public partial class FreecellViewModel : ObservableObject
         };
         foreach (var f in Foundations)
             if (f.Cards.Count > 0) ranks[f.Cards[0].Suit].Add(f.Cards.Count);
+
+        // In 2-deck mode each suit can have up to Options.FreecellDeckCount separate
+        // foundations (one per physical Ace). Only recording a rank for foundations that
+        // have actually been started left a suit with one advanced copy and one
+        // untouched duplicate reporting just [advancedRank] — Min() then ignored the
+        // unstarted duplicate entirely instead of correctly treating it as rank 0, letting
+        // IsSafeToAutoplay judge a card safe when the still-unstarted duplicate foundation
+        // means it isn't. Pad every suit up to the full deck count with 0s so an unstarted
+        // copy always pulls the minimum back down to 0.
+        foreach (var suit in ranks.Keys.ToList())
+            while (ranks[suit].Count < Options.FreecellDeckCount)
+                ranks[suit].Add(0);
+
         return ranks;
     }
 

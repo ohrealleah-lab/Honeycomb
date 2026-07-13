@@ -47,8 +47,47 @@ public partial class SpiderView : CardGameView
 
     public override bool TryAutoMoveToFoundation(Card card, Pile sourcePile)
     {
-        // Spider auto-completes full runs; no manual double-click to foundation
+        // Spider auto-completes full runs to foundations itself; there's no manual
+        // move-to-foundation action for the F hotkey (which Spider doesn't have) to call.
+        // Double-click uses TryHandleDoubleClick below instead, not this method.
         return false;
+    }
+
+    // Double-click moves the clicked card (and everything stacked below it) to the best
+    // available tableau target: a same-suit build first (keeps the run completable to a
+    // foundation later), then any other legal rank-matching target, then an empty column
+    // — matching the Mac original's double-click priority order exactly.
+    public override bool TryHandleDoubleClick(Card card, Pile sourcePile)
+    {
+        if (DataContext is not SpiderViewModel vm) return false;
+        if (sourcePile.Type != PileType.Tableau) return false;
+
+        int idx = sourcePile.Cards.IndexOf(card);
+        if (idx < 0) return false;
+        var cardsToMove = sourcePile.Cards.GetRange(idx, sourcePile.Cards.Count - idx);
+
+        Pile? sameSuitTarget = null;
+        Pile? anySuitTarget = null;
+        Pile? emptyTarget = null;
+        foreach (var tgt in vm.Tableaus)
+        {
+            if (tgt.Id == sourcePile.Id) continue;
+            if (!vm.CanMoveSequence(cardsToMove, tgt)) continue;
+
+            if (tgt.Cards.Count == 0)
+            {
+                emptyTarget ??= tgt;
+            }
+            else
+            {
+                if (sameSuitTarget == null && tgt.Cards.Last().Suit == cardsToMove[0].Suit)
+                    sameSuitTarget = tgt;
+                anySuitTarget ??= tgt;
+            }
+        }
+
+        var chosen = sameSuitTarget ?? anySuitTarget ?? emptyTarget;
+        return chosen != null && TryMoveCards(cardsToMove, sourcePile, chosen);
     }
 
     public SpiderView()

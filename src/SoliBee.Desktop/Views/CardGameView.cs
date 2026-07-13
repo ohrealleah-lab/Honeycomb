@@ -31,6 +31,14 @@ public abstract class CardGameView : UserControl
     public abstract bool TryMoveCards(List<Card> cards, Pile sourcePile, Pile targetPile);
     public abstract bool TryAutoMoveToFoundation(Card card, Pile sourcePile);
 
+    // Handles a double-click on a face-up card. Default behavior is "try to auto-move it
+    // to a foundation" — the same action Klondike/FreeCell's F hotkey performs — since
+    // for those two games double-click-to-foundation is exactly what a double-click means.
+    // Spider overrides this instead of TryAutoMoveToFoundation (which it leaves returning
+    // false, since Spider auto-completes whole runs itself and has no F hotkey), because
+    // its double-click targets a tableau column, not a foundation.
+    public virtual bool TryHandleDoubleClick(Card card, Pile sourcePile) => TryAutoMoveToFoundation(card, sourcePile);
+
     // Called when a hint's on-screen timer expires, so the queue is cleared and the
     // next Hint press starts fresh rather than cycling to a hint that's no longer shown.
     protected abstract void ClearActiveHint();

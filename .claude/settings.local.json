@@ -132,7 +132,8 @@
       "Bash(dotnet script *)",
       "Bash(dotnet-script sim.csx)",
       "Bash(dotnet new *)",
-      "Bash(dotnet run *)"
+      "Bash(dotnet run *)",
+      "Bash(xargs -I{} basename {})"
     ]
   }
 }

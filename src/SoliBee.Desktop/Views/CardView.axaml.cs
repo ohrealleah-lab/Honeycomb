@@ -1300,7 +1300,7 @@ public partial class CardView : UserControl
             }
 
             var sourcePile = pileView.Pile;
-            if (gameView.TryAutoMoveToFoundation(Card, sourcePile))
+            if (gameView.TryHandleDoubleClick(Card, sourcePile))
             {
                 e.Pointer.Capture(null);
                 _isDragging = false;
