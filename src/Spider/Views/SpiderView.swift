@@ -208,12 +208,7 @@ public struct SpiderView: View {
                                     ClickReceiver {
                                         viewModel.clearKeyboardCursor()
                                         isBoardFocused = true
-                                        viewModel.clearHint()
-                                        if viewModel.hasEmptyTableauColumn {
-                                            isShowingEmptyStockWarning = true
-                                        } else {
-                                            viewModel.drawFromStock()
-                                        }
+                                        attemptStockDraw()
                                     }
                                 )
                             
@@ -519,7 +514,12 @@ public struct SpiderView: View {
                     viewModel.moveCursorDown()
                     return nil
                 case 49, 36: // Space, Return
-                    viewModel.performSpaceAction()
+                    viewModel.enableKeyboardCursorIfNeeded()
+                    if viewModel.selectedCardsSource == nil && viewModel.activeCursor?.pileId == viewModel.state.stock.id {
+                        attemptStockDraw()
+                    } else {
+                        viewModel.performSpaceAction()
+                    }
                     return nil
                 case 53: // Escape
                     viewModel.clearKeyboardCursor()
@@ -528,11 +528,7 @@ public struct SpiderView: View {
                     if let chars = event.charactersIgnoringModifiers?.lowercased() {
                         if chars == "d" {
                             viewModel.enableKeyboardCursorIfNeeded()
-                            if viewModel.hasEmptyTableauColumn {
-                                isShowingEmptyStockWarning = true
-                            } else {
-                                viewModel.drawFromStock()
-                            }
+                            attemptStockDraw()
                             return nil
                         } else if chars == "a" {
                             viewModel.runAutocomplete()
@@ -610,6 +606,21 @@ public struct SpiderView: View {
             }
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
+    }
+
+    // Single choke point for every input path that can try to deal from the stock
+    // (mouse click, 'd' hotkey, Space/Return via the keyboard cursor) so they all give
+    // identical feedback. Checks stock emptiness FIRST — mirroring drawFromStock()'s own
+    // internal order — so an exhausted stock is never misreported as "fill the empty
+    // column first" when a tableau column also happens to be empty.
+    private func attemptStockDraw() {
+        viewModel.clearHint()
+        guard !viewModel.state.stock.isEmpty else { return }
+        if viewModel.hasEmptyTableauColumn {
+            isShowingEmptyStockWarning = true
+        } else {
+            viewModel.drawFromStock()
+        }
     }
 
     private func updateMinSize() {

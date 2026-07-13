@@ -101,7 +101,7 @@ public final class SpiderViewModel {
     private var initialState: SpiderState?
     
     public var canUndo: Bool {
-        !undoStack.isEmpty
+        !undoStack.isEmpty && !state.hasWon
     }
     
     public var defaultZoomScale: CGFloat = 1.0
@@ -659,7 +659,13 @@ public final class SpiderViewModel {
     
     public func undoLastAction() {
         guard !undoStack.isEmpty else { return }
+        // The timer must keep running forward through an undo, not rewind to whatever it
+        // read when the undone move's snapshot was saved.
+        let currentTimerSeconds = state.timerSeconds
+        let currentIsTimerActive = state.isTimerActive
         state = undoStack.removeLast()
+        state.timerSeconds = currentTimerSeconds
+        state.isTimerActive = currentIsTimerActive
         isAutoplayRunning = false
         isStuck = false
         clearHint()
@@ -817,16 +823,33 @@ public final class SpiderViewModel {
             let col = state.tableau[colIdx]
             guard !col.isEmpty else { continue }
 
-            for k in (0..<col.cards.count).reversed() {
-                let dragStack = Array(col.cards[k...])
-                guard isValidDragSequence(dragStack) else { break }
+            // The true face-down/face-up boundary — only a drag that starts exactly here
+            // reveals a hidden card when it moves away. A drag that starts further up
+            // (even if it's a legal same-suit run) just re-exposes cards that are already
+            // face-up, so it reveals nothing, regardless of how many cards sit below it.
+            let firstFaceUpIdx = col.cards.firstIndex(where: { $0.faceUp }) ?? col.cards.count
 
-                let faceDownBelow = k  // cards below drag start that are face-down
-                let freesColumn = k == 0  // moving all cards out of this column
+            // The deepest legal drag-start position (longest same-suit descending run
+            // anchored at the bottom of the column) — validity only ever breaks once as
+            // you grow the stack upward, so this can be found once per column instead of
+            // per target.
+            var minValidK = col.cards.count - 1
+            while minValidK > 0 && isValidDragSequence(Array(col.cards[(minValidK - 1)...])) {
+                minValidK -= 1
+            }
 
-                for targetIdx in 0..<state.tableau.count {
-                    let targetCol = state.tableau[targetIdx]
-                    guard targetCol.id != col.id else { continue }
+            for targetIdx in 0..<state.tableau.count {
+                let targetCol = state.tableau[targetIdx]
+                guard targetCol.id != col.id else { continue }
+
+                // Try every legal length longest-first and stop at the first one that
+                // scores a hint for this target — otherwise a long run with an empty
+                // column available (any length is legal onto an empty target) would
+                // generate one near-duplicate entry per length.
+                for k in (minValidK...(col.cards.count - 1)).reversed() {
+                    let dragStack = Array(col.cards[k...])
+                    let faceDownBelow = k == firstFaceUpIdx ? firstFaceUpIdx : 0
+                    let freesColumn = k == 0
 
                     if targetCol.isEmpty {
                         // Moving to empty column: only worthwhile if it exposes a face-down card
@@ -835,9 +858,11 @@ public final class SpiderViewModel {
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                                 description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to empty column — \(label)"),
                                 350 + faceDownBelow * 50))
+                            break
                         } else if !freesColumn {
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                                 description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to empty column."), 200))
+                            break
                         }
                     } else if let topCard = targetCol.topCard, topCard.rank == dragStack.first!.rank + 1 {
                         let sameSuit = topCard.suit == dragStack.first!.suit
@@ -855,6 +880,7 @@ public final class SpiderViewModel {
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                                 description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(topCard.rankString)\(topCard.suit.symbol)\(label)"), score))
                         }
+                        break
                     }
                 }
             }
@@ -955,6 +981,8 @@ public final class SpiderViewModel {
         activeCursor = nil
         selectedCardsSource = nil
         selectedCardsIndex = nil
+        cursorColumn = 0
+        cursorRow = 0
     }
     
     public func moveCursorLeft() {

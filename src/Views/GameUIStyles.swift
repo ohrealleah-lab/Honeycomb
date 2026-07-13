@@ -173,6 +173,31 @@ struct HotkeyLegendView: View {
 
 // MARK: - Themed Editor Button
 
+/// Pill-shaped toolbar button used by Blackjack/VideoPoker's own toolbars (white text
+/// on the felt, dimmed when `disabled`). Distinct from `ThemedEditorButton` below,
+/// which targets modal editors sitting on an adaptive light/dark window background.
+struct GameToolbarButton: View {
+    let label: String
+    var disabled: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.display(16))
+                .foregroundColor(disabled ? .white.opacity(0.4) : .white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.white.opacity(0.15))
+                .cornerRadius(4)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(disabled ? Color.white.opacity(0.4) : Color.white, lineWidth: 1))
+        }
+        .buttonStyle(HoverToolbarButtonStyle())
+        .disabled(disabled)
+        .focusable(false)
+    }
+}
+
 /// Pill-shaped button matching the main toolbar's look, for use in modal editors like
 /// the custom card-art/card-back panels so they read as part of the same app rather
 /// than generic native dialogs. Defaults to `.primary` since these editors sit on an

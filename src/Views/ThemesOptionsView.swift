@@ -98,7 +98,7 @@ struct ThemesOptionsView: View {
                                         UserDefaults.standard.set(Double(rgb.greenComponent), forKey: "custom_felt_green")
                                         UserDefaults.standard.set(Double(rgb.blueComponent),  forKey: "custom_felt_blue")
                                     }
-                                    ThemeManager.shared.activeThemeId = nil
+                                    ThemeManager.shared.invalidateActiveTheme()
                                     onCommit(true)
                                 }
                         }
@@ -139,10 +139,10 @@ struct ThemesOptionsView: View {
         .frame(width: 880)
         .fixedSize(horizontal: true, vertical: false)
         .background(Color(NSColor.windowBackgroundColor))
-        .onChange(of: feltColor) { _, _ in ThemeManager.shared.activeThemeId = nil; onCommit(false) }
-        .onChange(of: cardBackTheme) { _, _ in ThemeManager.shared.activeThemeId = nil; onCommit(false) }
+        .onChange(of: feltColor) { _, _ in ThemeManager.shared.invalidateActiveTheme(); onCommit(false) }
+        .onChange(of: cardBackTheme) { _, _ in ThemeManager.shared.invalidateActiveTheme(); onCommit(false) }
         .onChange(of: showFeltVignette) { _, _ in onCommit(false) }
-        .onChange(of: customCardColors) { _, _ in ThemeManager.shared.activeThemeId = nil; onCommit(false) }
+        .onChange(of: customCardColors) { _, _ in ThemeManager.shared.invalidateActiveTheme(); onCommit(false) }
     }
 
     // Caps the scrollable content area so the panel never grows taller than the

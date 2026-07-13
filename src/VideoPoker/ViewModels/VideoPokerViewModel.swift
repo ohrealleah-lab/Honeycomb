@@ -527,6 +527,20 @@ public final class VideoPokerViewModel {
         }
     }
 
+    // Clears the last-dealt hand/result display without touching credits or the
+    // bet, so committing a Variant/Play Mode change from Options (allowed mid-round
+    // at the .result phase) doesn't leave stale cards from the old mode on screen.
+    public func resetHandDisplay() {
+        state.phase = .deal
+        state.hand = []
+        state.heldIndices = []
+        state.lastPayout = 0
+        state.lastHandName = ""
+        state.triplePlayHands = []
+        state.triplePlayHandNames = []
+        state.triplePlayPayouts = []
+    }
+
     // MARK: - AppCoordinator compatibility stubs
 
     public func startNewGame() {

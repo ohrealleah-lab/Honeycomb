@@ -56,7 +56,7 @@ public final class BeecellViewModel {
     private var initialState: BeecellState?
     
     public var canUndo: Bool {
-        !undoStack.isEmpty
+        !undoStack.isEmpty && !state.hasWon
     }
     
     public var currentModeKey: String {
@@ -552,10 +552,6 @@ public final class BeecellViewModel {
             // nets a free +10 every round trip since only the tableau case was covered.
             state.score = max(0, state.score - 15)
         }
-        
-        if state.score > highScore {
-            highScore = state.score
-        }
     }
     
     // MARK: - Timer Handling
@@ -596,12 +592,20 @@ public final class BeecellViewModel {
             stopTimer()
             recordWin(timeInSeconds: state.timerSeconds)
             playSound(named: "victory")
+            if state.score > highScore {
+                highScore = state.score
+            }
         }
     }
     
     // MARK: - Stuck Detection
 
     private func isProgressiveMove(cards: [Card], source: Pile, target: Pile) -> Bool {
+        // Retreating a card off a foundation is never a real way to become unstuck —
+        // collectHints() never suggests it either, so without this guard hasValidMoves()
+        // would keep the game from ever declaring itself stuck as long as any free cell
+        // is open and any foundation holds a card, even when no other move exists.
+        if source.type == .foundation { return false }
         if target.type == .foundation { return true }
         if source.type == .freeCell { return true }
         if target.type == .freeCell { return true }
@@ -634,7 +638,11 @@ public final class BeecellViewModel {
                 }
             }
 
-            // Try sequences from tableau columns
+            // Try sequences from tableau columns — every sub-run length, not just the
+            // longest. Beecell's supermove cap (maxMoveLimit, based on empty free cells/
+            // columns) can block the full run while a shorter suffix of that same run is
+            // still legal and progressive, so collectHints() already tries every length;
+            // this must match or isStuck can fire while Hint still finds a real move.
             if source.type == .tableau {
                 var seqStart = source.cards.count - 1
                 while seqStart > 0 {
@@ -642,8 +650,8 @@ public final class BeecellViewModel {
                     let lower = source.cards[seqStart]
                     if upper.rank == lower.rank + 1 && upper.isRed != lower.isRed { seqStart -= 1 } else { break }
                 }
-                if seqStart < source.cards.count - 1 {
-                    let seq = Array(source.cards[seqStart..<source.cards.count])
+                for idx in seqStart..<source.cards.count {
+                    let seq = Array(source.cards[idx...])
                     for target in state.tableau where target.id != source.id {
                         if isValidMove(cards: seq, to: target),
                            isProgressiveMove(cards: seq, source: source, target: target) {
@@ -844,7 +852,11 @@ public final class BeecellViewModel {
             }
         }
 
-        // Tableau-to-tableau: score higher if it frees a column or moves a longer sequence
+        // Tableau-to-tableau: score higher if it frees a column or moves a longer sequence.
+        // Tries each target's suffix lengths longest-first and stops at the first legal
+        // one — against an empty target, isValidMove passes unconditionally for every
+        // length up to the supermove cap, so without the longest-first + break here, a
+        // single long run would generate one near-duplicate hint per suffix length.
         for sourceCol in state.tableau {
             guard !sourceCol.isEmpty else { continue }
             var seqStart = sourceCol.cards.count - 1
@@ -852,14 +864,16 @@ public final class BeecellViewModel {
                 let upper = sourceCol.cards[seqStart - 1], lower = sourceCol.cards[seqStart]
                 if upper.rank == lower.rank + 1 && upper.isRed != lower.isRed { seqStart -= 1 } else { break }
             }
-            for idx in seqStart..<sourceCol.cards.count {
-                let dragStack = Array(sourceCol.cards[idx...])
-                for targetCol in state.tableau where targetCol.id != sourceCol.id && isValidMove(cards: dragStack, to: targetCol) {
+            for targetCol in state.tableau where targetCol.id != sourceCol.id {
+                for idx in seqStart..<sourceCol.cards.count {
+                    let dragStack = Array(sourceCol.cards[idx...])
+                    guard isValidMove(cards: dragStack, to: targetCol) else { continue }
                     if targetCol.isEmpty && dragStack.count == 1 && idx == 0 { continue }
                     let freesColumn = dragStack.count == sourceCol.cards.count
                     let score = freesColumn ? 700 : 400 + dragStack.count * 20
                     scored.append((HintMove(card: dragStack.first!, sourcePileId: sourceCol.id, targetPileId: targetCol.id,
                         description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to Tableau."), score))
+                    break
                 }
             }
         }
@@ -975,7 +989,13 @@ public final class BeecellViewModel {
     
     public func undoLastAction() {
         guard !undoStack.isEmpty else { return }
+        // The timer must keep running forward through an undo, not rewind to whatever it
+        // read when the undone move's snapshot was saved.
+        let currentTimerSeconds = state.timerSeconds
+        let currentIsTimerActive = state.isTimerActive
         state = undoStack.removeLast()
+        state.timerSeconds = currentTimerSeconds
+        state.isTimerActive = currentIsTimerActive
         isAutoplayRunning = false
         isStuck = false
         clearHint()

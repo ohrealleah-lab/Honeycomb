@@ -318,18 +318,24 @@ struct GameViewModelTests {
     
     static func testFoundationSuitRestrictions() {
         let viewModel = GameViewModel()
-        
+
         let spadeAce = Card(suit: .spades, rank: 1, faceUp: true)
         let clubAce = Card(suit: .clubs, rank: 1, faceUp: true)
-        
+        let spadeTwo = Card(suit: .spades, rank: 2, faceUp: true)
+        let clubTwo = Card(suit: .clubs, rank: 2, faceUp: true)
+
+        // Foundations are no longer suit-locked to a fixed slot — any empty foundation
+        // accepts any suit's Ace, whichever slot the player picks.
+        let emptyFoundation = viewModel.state.foundations[0]
+        assert(viewModel.isValidMove(cards: [spadeAce], to: emptyFoundation), "Any Ace should be valid on an empty foundation")
+        assert(viewModel.isValidMove(cards: [clubAce], to: emptyFoundation), "Any Ace should be valid on an empty foundation")
+
+        // Once a foundation holds a suit, it's locked to that suit going forward,
+        // regardless of which slot it happened to land in.
+        viewModel.state.foundations[0].cards = [spadeAce]
         let spadeFoundation = viewModel.state.foundations[0]
-        let clubFoundation = viewModel.state.foundations[1]
-        
-        assert(viewModel.isValidMove(cards: [spadeAce], to: spadeFoundation), "Spade Ace on Spade Foundation should be valid")
-        assert(!viewModel.isValidMove(cards: [clubAce], to: spadeFoundation), "Club Ace on Spade Foundation should be invalid")
-        
-        assert(viewModel.isValidMove(cards: [clubAce], to: clubFoundation), "Club Ace on Club Foundation should be valid")
-        assert(!viewModel.isValidMove(cards: [spadeAce], to: clubFoundation), "Spade Ace on Club Foundation should be invalid")
+        assert(viewModel.isValidMove(cards: [spadeTwo], to: spadeFoundation), "Matching-suit next rank should be valid")
+        assert(!viewModel.isValidMove(cards: [clubTwo], to: spadeFoundation), "Mismatched suit should be invalid once a foundation is occupied")
     }
     
     static func testResetStatistics() {
@@ -387,51 +393,58 @@ struct GameViewModelTests {
         
         let viewModel = GameViewModel()
         assert(viewModel.highScore == 100, "highScore should load 100 from UserDefaults")
-        
-        // Simulating a move that increases score
+
+        // highScore only updates on an actual win — never mid-game, even if the current
+        // score climbs above it.
+        viewModel.highScore = 5
         let spadeAce = Card(suit: .spades, rank: 1, faceUp: true)
         viewModel.state.tableau[0].cards = [spadeAce]
-        
-        // First move Ace to Foundation to get +10 points (score: 10)
         viewModel.doubleClickMoveToFoundation(card: spadeAce, from: viewModel.state.tableau[0])
         assert(viewModel.state.score == 10, "Score should be 10")
-        assert(viewModel.highScore == 100, "highScore should remain 100 since score (10) < highScore")
-        
-        // Set highScore lower (e.g. 5) to test update
-        viewModel.highScore = 5
-        
-        // Move another Ace to Foundation (Clubs Ace)
-        let clubAce = Card(suit: .clubs, rank: 1, faceUp: true)
-        viewModel.state.tableau[1].cards = [clubAce]
-        viewModel.doubleClickMoveToFoundation(card: clubAce, from: viewModel.state.tableau[1])
-        
-        assert(viewModel.state.score == 20, "Score should be 20")
-        assert(viewModel.highScore == 20, "highScore should update to 20 because score (20) > highScore (5)")
-        
+        assert(viewModel.highScore == 5, "highScore must not update mid-game even though score (10) > highScore (5)")
+
+        // Simulate winning with the current score (10) — highScore should update now.
+        let suits: [Card.Suit] = [.spades, .clubs, .diamonds, .hearts]
+        viewModel.state.foundations = suits.map { suit in
+            Pile(id: "foundation_\(suit.rawValue)", type: .foundation, cards: (1...13).map { Card(suit: suit, rank: $0, faceUp: true) })
+        }
+        viewModel.checkWinState()
+        assert(viewModel.state.hasWon, "Game should be won with all 52 foundation cards")
+        assert(viewModel.highScore == 10, "highScore should update to 10 on win since score (10) > highScore (5)")
+
         // Switch to Vegas mode
         var opts = viewModel.options
         opts.isVegasScoring = true
         viewModel.options = opts
-        
+
         // Default Vegas high score should be -5200 (since no saved vegas score exists yet)
         assert(viewModel.highScore == -5200, "Vegas highScore should default to -5200")
         assert(viewModel.state.score == -5200, "Vegas starting score should be -5200")
-        
-        // Move club Ace to foundation (in Vegas mode: +500 cents) -> score is now -4700 cents
-        viewModel.state.tableau[2].cards = [clubAce]
-        viewModel.doubleClickMoveToFoundation(card: clubAce, from: viewModel.state.tableau[2])
+
+        // Mid-game Vegas score change must not update highScore either.
+        let clubAce = Card(suit: .clubs, rank: 1, faceUp: true)
+        viewModel.state.tableau[0].cards = [clubAce]
+        viewModel.doubleClickMoveToFoundation(card: clubAce, from: viewModel.state.tableau[0])
         assert(viewModel.state.score == -4700, "Vegas score should be -4700")
-        assert(viewModel.highScore == -4700, "Vegas highScore should update to -4700")
-        
+        assert(viewModel.highScore == -5200, "Vegas highScore must not update mid-game")
+
+        // Simulate a Vegas win — highScore should update to match the current score.
+        viewModel.state.foundations = suits.map { suit in
+            Pile(id: "foundation_\(suit.rawValue)", type: .foundation, cards: (1...13).map { Card(suit: suit, rank: $0, faceUp: true) })
+        }
+        viewModel.checkWinState()
+        assert(viewModel.state.hasWon, "Vegas game should be won")
+        assert(viewModel.highScore == -4700, "Vegas highScore should update to -4700 on win")
+
         // Verify persistence of Vegas score
         let vegasViewModel = GameViewModel()
         assert(vegasViewModel.highScore == -4700, "Vegas highScore should persist")
-        
+
         // Switch back to Standard mode
         var opts2 = vegasViewModel.options
         opts2.isVegasScoring = false
         vegasViewModel.options = opts2
-        assert(vegasViewModel.highScore == 20, "Standard highScore should be restored")
+        assert(vegasViewModel.highScore == 10, "Standard highScore should be restored")
         
         // Clean up
         UserDefaults.standard.set(savedHighScore, forKey: "highScore")

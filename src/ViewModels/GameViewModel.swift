@@ -123,12 +123,17 @@ public final class GameViewModel {
 
     // Undo stack
     private var undoStack: [GameState] = []
-    
+    // Parallel to undoStack: how much standard-mode score each pending undo checkpoint's
+    // move(s) actually earned, so undoLastAction() can apply the undo-penalty rule
+    // ("deducts the points earned by the undone move") without it being contaminated by
+    // unrelated score changes (e.g. the time penalty) that happen to land between moves.
+    private var scoreDeltaStack: [Int] = []
+
     // Initial state for game replay
     private var initialState: GameState?
     
     public var canUndo: Bool {
-        !undoStack.isEmpty
+        !undoStack.isEmpty && !state.hasWon
     }
     
     public var maxRecycles: Int? {
@@ -206,7 +211,7 @@ public final class GameViewModel {
                 self.highScore = UserDefaults.standard.integer(forKey: "highScore")
                 vegasBankroll = 0
             }
-            startNewGame()
+            startNewGame(countAsNewGame: false)
         }
     }
     
@@ -379,17 +384,23 @@ public final class GameViewModel {
     
     // MARK: - Game Setup
     
-    public func startNewGame() {
+    // `countAsNewGame: false` is for options-driven re-deals (e.g. toggling Vegas
+    // Scoring) that reshuffle the board without the player actually finishing or
+    // abandoning a game — those shouldn't count toward gamesPlayed or break a streak.
+    public func startNewGame(countAsNewGame: Bool = true) {
         stopTimer()
-        
-        if state.movesCount > 0 && !state.hasWon {
-            var stats = statistics
-            stats.currentStreak = 0
-            statistics = stats
+
+        if countAsNewGame {
+            if state.movesCount > 0 && !state.hasWon {
+                var stats = statistics
+                stats.currentStreak = 0
+                statistics = stats
+            }
+            gamesPlayed += 1
         }
-        
+
         undoStack.removeAll()
-        gamesPlayed += 1
+        scoreDeltaStack.removeAll()
         playSound(named: "shuffle")
         
         // 1. Create a 52-card deck
@@ -470,6 +481,7 @@ public final class GameViewModel {
         guard let initial = initialState else { return }
         stopTimer()
         undoStack.removeAll()
+        scoreDeltaStack.removeAll()
         // Restore bankroll to pre-game value — restart replays the same deal, no re-deal charge
         if options.isVegasScoring { vegasBankroll = vegasBankrollAtGameStart }
         state = initial
@@ -556,19 +568,15 @@ public final class GameViewModel {
         case .foundation:
             // Foundations can only accept a single card at a time
             guard cards.count == 1 else { return false }
-            
-            guard let suitString = targetPile.id.components(separatedBy: "_").last,
-                  let suit = Card.Suit(rawValue: suitString) else {
-                return false
-            }
-            
-            guard firstCard.suit == suit else { return false }
-            
+
+            // Foundations aren't suit-locked to a fixed slot — any empty foundation can
+            // start with any suit's Ace (whichever slot the player picks), and from then
+            // on it's locked to whatever suit its own top card actually is.
             if targetPile.isEmpty {
-                return firstCard.rank == 1 // Only Ace starts an empty foundation
+                return firstCard.rank == 1 // Only an Ace can start an empty foundation
             } else {
                 guard let topCard = targetPile.topCard else { return false }
-                return firstCard.rank == topCard.rank + 1
+                return firstCard.suit == topCard.suit && firstCard.rank == topCard.rank + 1
             }
         case .stock, .waste, .freeCell:
             return false
@@ -585,7 +593,8 @@ public final class GameViewModel {
         
         // Remove cards from source
         let cardIDs = Set(cards.map { $0.id })
-        
+        var revealedFaceDownCard = false
+
         if sourcePile.type == .stock {
             state.stock.cards.removeAll { cardIDs.contains($0.id) }
         } else if sourcePile.type == .waste {
@@ -599,10 +608,11 @@ public final class GameViewModel {
         } else if sourcePile.type == .tableau {
             if let idx = state.tableau.firstIndex(where: { $0.id == sourcePile.id }) {
                 state.tableau[idx].cards.removeAll { cardIDs.contains($0.id) }
-                
+
                 // Auto-flip next card if face down
                 if !state.tableau[idx].cards.isEmpty && !state.tableau[idx].cards.last!.faceUp {
                     state.tableau[idx].cards[state.tableau[idx].cards.count - 1].faceUp = true
+                    revealedFaceDownCard = true
                 }
             }
         } else if sourcePile.type == .foundation {
@@ -610,7 +620,7 @@ public final class GameViewModel {
                 state.foundations[idx].cards.removeAll { cardIDs.contains($0.id) }
             }
         }
-        
+
         // Add to target
         if targetPile.type == .tableau {
             if let idx = state.tableau.firstIndex(where: { $0.id == targetPile.id }) {
@@ -621,9 +631,17 @@ public final class GameViewModel {
                 state.foundations[idx].cards.append(contentsOf: cards)
             }
         }
-        
+
         // Score adjustments
-        adjustScore(from: sourcePile.type, to: targetPile.type)
+        let scoreBeforeAdjust = state.score
+        adjustScore(from: sourcePile.type, to: targetPile.type, revealedFaceDownCard: revealedFaceDownCard)
+        // Accumulate (not overwrite) into the checkpoint saveStateForUndo() just pushed —
+        // autocomplete only pushes one checkpoint for its whole run (saveStateForUndo()
+        // no-ops on every individual move after the first while isAutoplayRunning), so
+        // this correctly sums every move's contribution under that single undo step.
+        if !scoreDeltaStack.isEmpty {
+            scoreDeltaStack[scoreDeltaStack.count - 1] += state.score - scoreBeforeAdjust
+        }
 
         state.movesCount += 1
         checkWinState()
@@ -646,7 +664,7 @@ public final class GameViewModel {
         }
     }
     
-    private func adjustScore(from source: Pile.PileType, to target: Pile.PileType) {
+    private func adjustScore(from source: Pile.PileType, to target: Pile.PileType, revealedFaceDownCard: Bool = false) {
         if options.isVegasScoring {
             if target == .foundation {
                 state.score += 500
@@ -661,12 +679,11 @@ public final class GameViewModel {
             } else if (source == .stock || source == .waste) && target == .tableau {
                 state.score += 5
             } else if source == .foundation && target == .tableau {
-                state.score = max(0, state.score - 15)
+                state.score -= 15
             }
-        }
-        
-        if state.score > highScore {
-            highScore = state.score
+            if revealedFaceDownCard {
+                state.score += 5
+            }
         }
     }
     
@@ -688,6 +705,10 @@ public final class GameViewModel {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             self.state.timerSeconds += 1
+            // Standard-mode time penalty: -2 points every 8 seconds elapsed.
+            if !self.options.isVegasScoring && self.state.timerSeconds % 8 == 0 {
+                self.state.score -= 2
+            }
         }
     }
     
@@ -707,6 +728,15 @@ public final class GameViewModel {
             stopTimer()
             recordWin(timeInSeconds: state.timerSeconds)
             playSound(named: "victory")
+            // Standard-mode time win bonus: 20,000 / seconds elapsed, only for a win
+            // finished in under 10 minutes. Guards timerSeconds > 0 since a No Stress Mode
+            // game never starts the timer (it stays 0), which would otherwise divide by zero.
+            if !options.isVegasScoring && state.timerSeconds > 0 && state.timerSeconds < 600 {
+                state.score += 20000 / state.timerSeconds
+            }
+            if state.score > highScore {
+                highScore = state.score
+            }
         }
     }
     
@@ -731,11 +761,51 @@ public final class GameViewModel {
     
     // MARK: - Stuck Detection
 
-    private func hasValidMoves() -> Bool {
-        // Can draw from stock or recycle waste?
-        if !state.stock.isEmpty || canRecycleStock { return true }
+    // Simulates drawing a stock all the way through in `state.drawMode`-sized batches
+    // (mirrors drawCard()'s popLast()-per-card, append-in-pop-order behavior exactly),
+    // recording every card that becomes the top of waste along the way. In Draw Three
+    // this is NOT every card: within each batch of 3, only the last card popped (the one
+    // that ends up on top of that batch's contribution) ever becomes visible/selectable —
+    // the other two are only ever seen fanned out behind it. Returns the resulting waste
+    // pile too, so a caller can chain a simulated recycle afterward.
+    private func simulateDrawThrough(stock: [Card], waste: [Card]) -> (waste: [Card], reachable: [Card]) {
+        let batchSize = state.drawMode == .drawOne ? 1 : 3
+        var simStock = stock
+        var simWaste = waste
+        var reachable: [Card] = []
+        while !simStock.isEmpty {
+            let take = min(batchSize, simStock.count)
+            var drawn: [Card] = []
+            for _ in 0..<take {
+                if let c = simStock.popLast() { drawn.append(c) }
+            }
+            simWaste.append(contentsOf: drawn)
+            if let top = simWaste.last { reachable.append(top) }
+        }
+        return (simWaste, reachable)
+    }
 
-        // Stock is empty and no recycling is available — no new cards can ever be drawn.
+    // Cards reachable by continuing to draw the current stock, no recycle needed.
+    private func hasPlayableStockCard() -> Bool {
+        let targets: [Pile] = state.foundations + state.tableau
+        let (_, reachable) = simulateDrawThrough(stock: state.stock.cards, waste: state.waste.cards)
+        return reachable.contains { card in targets.contains { isValidMove(cards: [card], to: $0) } }
+    }
+
+    // Cards reachable only by recycling the waste back into the stock and drawing again.
+    // Recycling reverses the ENTIRE waste pile, not per-batch, so a full draw-through
+    // followed by one recycle is its own inverse (reverse(reverse(x)) == x) — it exactly
+    // reconstructs the pre-draw stock order. That means a second recycle would rediscover
+    // nothing new, so simulating a single recycle+redraw here is always sufficient.
+    private func hasPlayableWasteCard() -> Bool {
+        guard canRecycleStock else { return false }
+        let targets: [Pile] = state.foundations + state.tableau
+        let (finalWaste, _) = simulateDrawThrough(stock: state.stock.cards, waste: state.waste.cards)
+        let (_, reachable) = simulateDrawThrough(stock: Array(finalWaste.reversed()), waste: [])
+        return reachable.contains { card in targets.contains { isValidMove(cards: [card], to: $0) } }
+    }
+
+    private func hasValidMoves() -> Bool {
         // Only count moves that make real progress; pure tableau reorganization of fully
         // face-up columns (e.g. kings shuffling between empty slots) cannot advance the
         // game and must not prevent stuck detection.
@@ -771,6 +841,12 @@ public final class GameViewModel {
                 }
             }
         }
+
+        // No board move exists. The game is only un-stuck if a card still waiting in the
+        // stock, or (if a fresh pass is still allowed) buried in the waste, can actually
+        // be played — merely having cards left in the stock is not enough.
+        if hasPlayableStockCard() { return true }
+        if canRecycleStock && hasPlayableWasteCard() { return true }
         return false
     }
 
@@ -887,19 +963,6 @@ public final class GameViewModel {
             }
         }
 
-        // Reveal face-down cards (scored by number hidden below)
-        for col in state.tableau {
-            guard let firstFaceUpIdx = col.cards.firstIndex(where: { $0.faceUp }),
-                  firstFaceUpIdx > 0 else { continue }
-            let faceDownCount = firstFaceUpIdx
-            let dragStack = Array(col.cards[firstFaceUpIdx...])
-            for targetCol in state.tableau where targetCol.id != col.id && isValidMove(cards: dragStack, to: targetCol) {
-                let label = faceDownCount == 1 ? "Reveal 1 face-down card." : "Reveal \(faceDownCount) face-down cards."
-                scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
-                    description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) — \(label)"), 500 + faceDownCount * 100))
-            }
-        }
-
         // Waste to tableau
         if let topWaste = state.waste.topCard {
             for targetCol in state.tableau where isValidMove(cards: [topWaste], to: targetCol) {
@@ -908,22 +971,48 @@ public final class GameViewModel {
             }
         }
 
-        // Tableau-to-tableau (all face-up columns — reorganization)
+        // Tableau-to-tableau — tries every sub-run starting position within the face-up
+        // portion of the column (matching hasValidMoves()'s search exactly), not just the
+        // entire face-up run. Without this, a board whose only progressive move is a
+        // partial sub-run (e.g. peeling off the bottom few cards of a run to expose a
+        // card mid-column) would show no hint at all, even though hasValidMoves() — which
+        // does check every sub-run — correctly knows a move exists.
         for col in state.tableau {
-            guard let firstFaceUpIdx = col.cards.firstIndex(where: { $0.faceUp }),
-                  firstFaceUpIdx == 0, !col.isEmpty else { continue }
-            let dragStack = Array(col.cards[firstFaceUpIdx...])
-            for targetCol in state.tableau where targetCol.id != col.id && !targetCol.isEmpty && isValidMove(cards: dragStack, to: targetCol) {
-                scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
-                    description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(targetCol.topCard!.rankString)\(targetCol.topCard!.suit.symbol)."), 150))
+            guard let firstFaceUpIdx = col.cards.firstIndex(where: { $0.faceUp }) else { continue }
+            for startIdx in firstFaceUpIdx..<col.cards.count {
+                let dragStack = Array(col.cards[startIdx...])
+                var valid = true
+                for i in 0..<dragStack.count - 1 {
+                    if dragStack[i].rank != dragStack[i+1].rank + 1 || dragStack[i].isRed == dragStack[i+1].isRed { valid = false; break }
+                }
+                guard valid else { continue }
+
+                for targetCol in state.tableau where targetCol.id != col.id && isValidMove(cards: dragStack, to: targetCol) {
+                    guard isProgressiveMove(cards: dragStack, source: col, target: targetCol) else { continue }
+
+                    if startIdx == firstFaceUpIdx && firstFaceUpIdx > 0 {
+                        let faceDownCount = firstFaceUpIdx
+                        let label = faceDownCount == 1 ? "Reveal 1 face-down card." : "Reveal \(faceDownCount) face-down cards."
+                        scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
+                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) — \(label)"), 500 + faceDownCount * 100))
+                    } else if !targetCol.isEmpty {
+                        scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
+                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(targetCol.topCard!.rankString)\(targetCol.topCard!.suit.symbol)."), 150))
+                    } else {
+                        scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
+                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to an empty column."), 150))
+                    }
+                }
             }
         }
 
-        // Stock / recycle
-        if !state.stock.isEmpty {
+        // Stock / recycle — only suggest an action that can actually reach a playable
+        // card, otherwise Hint would loop on "Draw from Stock" forever once every
+        // remaining stock/waste card is a dead end.
+        if !state.stock.isEmpty && hasPlayableStockCard() {
             scored.append((HintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
                 sourcePileId: state.stock.id, targetPileId: state.waste.id, description: "Draw from Stock pile."), 50))
-        } else if canRecycleStock && !state.waste.isEmpty {
+        } else if canRecycleStock && hasPlayableWasteCard() {
             scored.append((HintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
                 sourcePileId: state.waste.id, targetPileId: state.stock.id, description: "Recycle Waste pile to Stock."), 20))
         }
@@ -1009,14 +1098,30 @@ public final class GameViewModel {
     private func saveStateForUndo() {
         guard !isAutoplayRunning else { return }
         undoStack.append(state)
+        scoreDeltaStack.append(0)
         if undoStack.count > 100 {
             undoStack.removeFirst()
+            scoreDeltaStack.removeFirst()
         }
     }
     
     public func undoLastAction() {
         guard !undoStack.isEmpty else { return }
+        // The timer must keep running forward through an undo, not rewind to whatever it
+        // read when the undone move's snapshot was saved.
+        let currentTimerSeconds = state.timerSeconds
+        let currentIsTimerActive = state.isTimerActive
         state = undoStack.removeLast()
+        let pointsEarnedByUndoneMove = scoreDeltaStack.isEmpty ? 0 : scoreDeltaStack.removeLast()
+        state.timerSeconds = currentTimerSeconds
+        state.isTimerActive = currentIsTimerActive
+        // Standard-mode undo penalty: deducts the points the undone move earned, on top
+        // of the natural reversion the state restore above already did. Clamped to 0 so
+        // undoing a move that already COST points (e.g. a foundation retreat) can't turn
+        // into a net reward — it just reverts, with no extra penalty either way.
+        if !options.isVegasScoring {
+            state.score -= max(0, pointsEarnedByUndoneMove)
+        }
         // vegasBankroll isn't part of `state`, but it always tracks state.score 1:1 via
         // adjustScore()'s +500/-500 branches — recompute it to match the restored score
         // rather than leaving it stranded at its pre-undo value.

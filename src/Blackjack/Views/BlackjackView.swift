@@ -248,19 +248,7 @@ public struct BlackjackView: View {
     }
 
     private func toolbarButton(_ label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.display(16))
-                .foregroundColor(disabled ? .white.opacity(0.4) : .white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.white.opacity(0.15))
-                .cornerRadius(4)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(disabled ? Color.white.opacity(0.4) : Color.white, lineWidth: 1))
-        }
-        .buttonStyle(HoverToolbarButtonStyle())
-        .disabled(disabled)
-        .focusable(false)
+        GameToolbarButton(label: label, disabled: disabled, action: action)
     }
 
     private var gameModeMenu: some View {

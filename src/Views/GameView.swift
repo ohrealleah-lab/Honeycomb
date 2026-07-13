@@ -751,11 +751,22 @@ public struct GameView: View {
     }
 
     private func scheduleIdleStockHint() {
+        let eligible = !viewModel.options.hideHintButton
+            && !viewModel.hasDrawnFromStockThisGame
+            && !viewModel.hasShownIdleStockHintThisGame
+        guard eligible else {
+            // Already permanently ineligible for the rest of this game — once any
+            // pending task/visible hint has been cleared, further calls (e.g. from
+            // movesCount changing on every move) are true no-ops instead of redoing
+            // the cancel/animate work every time.
+            guard idleStockHintTask != nil || showIdleStockHint else { return }
+            idleStockHintTask?.cancel()
+            idleStockHintTask = nil
+            withAnimation { showIdleStockHint = false }
+            return
+        }
         idleStockHintTask?.cancel()
         withAnimation { showIdleStockHint = false }
-        guard !viewModel.options.hideHintButton,
-              !viewModel.hasDrawnFromStockThisGame,
-              !viewModel.hasShownIdleStockHintThisGame else { return }
         let task = DispatchWorkItem {
             guard !viewModel.options.hideHintButton,
                   !viewModel.hasDrawnFromStockThisGame,

@@ -201,4 +201,11 @@ public final class ThemeManager {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return themes.contains { $0.name.lowercased() == trimmed }
     }
+
+    /// Call whenever a theme-relevant setting (felt color, card back, custom card
+    /// colors, custom face art) changes outside of `applyTheme()`, so the UI can
+    /// tell the user has drifted away from whatever theme was last applied.
+    public func invalidateActiveTheme() {
+        activeThemeId = nil
+    }
 }
