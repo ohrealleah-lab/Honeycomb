@@ -1520,6 +1520,16 @@ public partial class CardView : UserControl
 
     private PileView? FindTargetPileView(CardGameView gameView, Point dropPoint)
     {
+        // TranslatePoint/Bounds below reflect the last completed layout pass, not
+        // necessarily the pile positions as of right now — if a Tableaus/FreeCells/
+        // Foundations change (a deck-count switch's fresh deal, an Undo, or even the
+        // move that's currently in flight) queued an invalidation that Avalonia hasn't
+        // processed yet, TranslatePoint can return null or stale bounds for every pile,
+        // making every drop look like "no target found" (the dragged card silently
+        // reverts to its source). Force any pending layout to complete first so the hit
+        // test below is always against current positions.
+        gameView.UpdateLayout();
+
         if (!_pileViewListCache.TryGetValue(gameView, out var piles))
         {
             piles = new List<PileView>();
