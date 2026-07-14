@@ -756,6 +756,10 @@ public struct BeecellView: View {
         })
         .onChange(of: viewModel.options.deckCount) { snapToMinSize() }
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { note in
+            guard (note.object as? NSWindow) == hostingWindow, !draggedCards.isEmpty else { return }
+            cancelDrag()
+        }
     }
 
     private func updateMinSize() {
@@ -803,12 +807,25 @@ public struct BeecellView: View {
         }
     }
 
+    // Clears drag state without attempting a move — used both by a normal drop (after
+    // handleDragEnded resolves a target, or finds none) and as a safety net when the
+    // window loses key status mid-drag (Cmd+Tab, a system dialog, Mission Control, etc.).
+    // SwiftUI's DragGesture has no distinct "cancelled" callback, so a gesture interrupted
+    // that way never fires .onEnded/handleDragEnded at all — without this, the floating
+    // drag overlay (driven by draggedCards/dragOffset) is left rendering forever, exactly
+    // like a stack of cards stuck hovering mid-board.
+    private func cancelDrag() {
+        draggedCards = []
+        dragSourcePile = nil
+        dragOffset = .zero
+    }
+
     private func handleDragEnded() {
         let releaseLocation = CGPoint(
             x: dragLocation.x + dragOffset.width,
             y: dragLocation.y + dragOffset.height
         )
-        
+
         var dropTarget: Pile? = nil
         
         // 1. Check Tableau piles first
@@ -905,11 +922,8 @@ public struct BeecellView: View {
         if let target = dropTarget, let source = dragSourcePile {
             viewModel.moveCards(draggedCards, from: source, to: target)
         }
-        
-        // Reset states
-        draggedCards = []
-        dragSourcePile = nil
-        dragOffset = .zero
+
+        cancelDrag()
     }
     
     private func formatTime(_ totalSeconds: Int) -> String {
