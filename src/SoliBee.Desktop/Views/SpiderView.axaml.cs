@@ -403,14 +403,6 @@ public partial class SpiderView : CardGameView
         return pts;
     }
 
-    // The "You win" banner defaults to centering on VictoryOverlay's full bounds (which
-    // span the whole window, for the bouncing-card cascade's room to fall) rather than
-    // the board's actual content, on either axis — e.g. drifting off horizontal-center
-    // under the zoom feature's LayoutTransformControl. Center on the real board's actual
-    // midpoint, both axes, instead.
-    private Point? ComputeBoardCenter() =>
-        BoardGrid.TranslatePoint(new Point(BoardGrid.Bounds.Width / 2.0, BoardGrid.Bounds.Height / 2.0), VictoryOverlay);
-
     private void TriggerVictoryCascade()
     {
         if (_winTriggered) return;
@@ -419,7 +411,7 @@ public partial class SpiderView : CardGameView
         if (DataContext is SpiderViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
             }, DispatcherPriority.Loaded);
         }
         else
@@ -437,7 +429,7 @@ public partial class SpiderView : CardGameView
         if (DataContext is SpiderViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
             }, DispatcherPriority.Loaded);
         }
         else
@@ -453,7 +445,7 @@ public partial class SpiderView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         Dispatcher.UIThread.Post(() => {
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(), ComputeBoardCenter());
+            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints());
         }, DispatcherPriority.Loaded);
         SoundService.PlaySolitaireWin();
     }

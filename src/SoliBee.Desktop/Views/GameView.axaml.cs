@@ -475,15 +475,6 @@ public partial class GameView : CardGameView
         return pts;
     }
 
-    // The "You win" banner defaults to centering on VictoryOverlay's full bounds (which
-    // span the whole window, for the bouncing-card cascade's room to fall) rather than
-    // the board's actual content — visibly sitting too low on games like Freecell whose
-    // board leaves slack below it, and (on any game) able to drift off-center
-    // horizontally too, e.g. under the zoom feature's LayoutTransformControl. Center on
-    // the real board's actual midpoint, on both axes, instead.
-    private Point? ComputeBoardCenter() =>
-        BoardPanel.TranslatePoint(new Point(BoardPanel.Bounds.Width / 2.0, BoardPanel.Bounds.Height / 2.0), VictoryOverlay);
-
     private void TriggerVictoryCascade()
     {
         if (_winTriggered) return;
@@ -492,7 +483,7 @@ public partial class GameView : CardGameView
         if (DataContext is GameViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
             }, DispatcherPriority.Loaded);
         }
         else
@@ -510,7 +501,7 @@ public partial class GameView : CardGameView
         if (DataContext is GameViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
             }, DispatcherPriority.Loaded);
         }
         else
@@ -526,7 +517,7 @@ public partial class GameView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         Dispatcher.UIThread.Post(() => {
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(), ComputeBoardCenter());
+            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints());
         }, DispatcherPriority.Loaded);
         SoundService.PlaySolitaireWin();
     }

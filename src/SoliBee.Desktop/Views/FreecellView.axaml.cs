@@ -373,15 +373,6 @@ public partial class FreecellView : CardGameView
         return pts;
     }
 
-    // The "You win" banner defaults to centering on VictoryOverlay's full bounds (which
-    // span the whole window, for the bouncing-card cascade's room to fall) rather than
-    // the board's actual content — visibly sitting too low since Freecell's
-    // FreeCells+Foundations+tableau layout leaves slack below it, and (on any game) able
-    // to drift off-center horizontally too, e.g. under the zoom feature's
-    // LayoutTransformControl. Center on the real board's actual midpoint, both axes.
-    private Point? ComputeBoardCenter() =>
-        BoardPanel.TranslatePoint(new Point(BoardPanel.Bounds.Width / 2.0, BoardPanel.Bounds.Height / 2.0), VictoryOverlay);
-
     private void TriggerVictoryCascade()
     {
         if (_winTriggered) return;
@@ -390,7 +381,7 @@ public partial class FreecellView : CardGameView
         if (DataContext is FreecellViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
             }, DispatcherPriority.Loaded);
         }
         else
@@ -408,7 +399,7 @@ public partial class FreecellView : CardGameView
         if (DataContext is FreecellViewModel vm)
         {
             Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "", ComputeBoardCenter());
+                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
             }, DispatcherPriority.Loaded);
         }
         else
@@ -424,7 +415,7 @@ public partial class FreecellView : CardGameView
     {
         VictoryOverlay.IsVisible = true;
         Dispatcher.UIThread.Post(() => {
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(4), ComputeBoardCenter());
+            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(4));
         }, DispatcherPriority.Loaded);
         SoundService.PlaySolitaireWin();
     }
