@@ -133,7 +133,14 @@
       "Bash(dotnet-script sim.csx)",
       "Bash(dotnet new *)",
       "Bash(dotnet run *)",
-      "Bash(xargs -I{} basename {})"
+      "Bash(xargs -I{} basename {})",
+      "PowerShell(Get-Process SoliBee.Desktop -ErrorAction SilentlyContinue)",
+      "PowerShell(dotnet build src/SoliBee.Core/SoliBee.Core.csproj 2>&1)",
+      "PowerShell(dotnet build src/SoliBee.Desktop/SoliBee.Desktop.csproj 2>&1)",
+      "Bash(rm -f \"/c/Users/Leahbee/AppData/Local/Temp/winbanner-debug.log\"; echo cleared)",
+      "PowerShell(explorer.exe $env:LOCALAPPDATA)",
+      "Bash(powershell -c \"Get-ChildItem -Recurse -Filter *.cs src | Select-String -Pattern 'class OptionsChangedMessage|class FaceCardArtChangedMessage'\")",
+      "Bash(xargs grep -l \"public.*OptionsChangedMessage\\\\|class OptionsChangedMessage\")"
     ]
   }
 }

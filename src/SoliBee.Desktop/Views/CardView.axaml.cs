@@ -60,21 +60,12 @@ public partial class CardView : UserControl
             ["Sunset"]       = "sunset.png",
         };
 
-    // FF mode default face art — empty; assets removed, falls back to LargeAceText rank display.
-    private static readonly Dictionary<FaceCardSlot, (string Uri, double Scale)> _ffDefaultArt = new();
-
     // Pre-allocated brushes — only ~5 combinations exist, no need to allocate per render
     // internal so ThemeEditorWindow can mutate .Color for live debug preview
     internal static readonly SolidColorBrush _brushFaceBackNormal   = new(Colors.White);
-    internal static readonly SolidColorBrush _brushFaceBackFF       = new(Color.Parse("#333333"));
     internal static readonly SolidColorBrush _brushFaceBorderNormal = new(Color.Parse("#D9000000"));
-    internal static readonly SolidColorBrush _brushFaceBorderFF     = new(Color.Parse("#00000000"));
-    internal static readonly SolidColorBrush _brushFaceBorderFFCard = new(Colors.White);
     internal static readonly SolidColorBrush _brushTextRed          = new(Color.Parse("#CC1A1A"));
-    internal static readonly SolidColorBrush _brushTextRedFF        = new(Color.Parse("#FF4444"));
     internal static readonly SolidColorBrush _brushTextBlackNormal  = new(Color.Parse("#1A1A1A"));
-    internal static readonly SolidColorBrush _brushTextBlackFF      = new(Color.Parse("#C0C0C0"));
-    internal static Color _ffShadowColor = Color.Parse("#B3FFD700");
     internal static Color _normalShadowColor = Color.Parse("#26000000");
 
     // 2× render size: card backs render at 120×173, face art at 70×60
@@ -89,14 +80,9 @@ public partial class CardView : UserControl
         _pipBitmapCache.Clear();
         _aceBitmapCache.Clear();
         _brushFaceBackNormal.Color  = options.ThemeFaceBackNormal  != null ? Color.Parse(options.ThemeFaceBackNormal)  : Colors.White;
-        _brushFaceBackFF.Color       = options.ThemeFaceBackFF       != null ? Color.Parse(options.ThemeFaceBackFF)       : Color.Parse("#333333");
         _brushFaceBorderNormal.Color = options.ThemeFaceBorderNormal != null ? Color.Parse(options.ThemeFaceBorderNormal) : Color.Parse("#D9000000");
-        _brushFaceBorderFF.Color     = options.ThemeFaceBorderFF     != null ? Color.Parse(options.ThemeFaceBorderFF)     : Color.Parse("#00000000");
-        _brushFaceBorderFFCard.Color = options.ThemeFaceBorderFFCard != null ? Color.Parse(options.ThemeFaceBorderFFCard) : Colors.White;
         _brushTextRed.Color          = options.ThemeTextRed          != null ? Color.Parse(options.ThemeTextRed)          : Color.Parse("#CC1A1A");
-        _brushTextRedFF.Color        = options.ThemeTextRedFF        != null ? Color.Parse(options.ThemeTextRedFF)        : Color.Parse("#FF4444");
         _brushTextBlackNormal.Color  = options.ThemeTextBlackNormal  != null ? Color.Parse(options.ThemeTextBlackNormal)  : Color.Parse("#1A1A1A");
-        _brushTextBlackFF.Color      = options.ThemeTextBlackFF      != null ? Color.Parse(options.ThemeTextBlackFF)      : Color.Parse("#C0C0C0");
         _normalShadowColor           = options.ThemeCardShadow       != null ? Color.Parse(options.ThemeCardShadow)       : Color.Parse("#26000000");
     }
 
@@ -228,6 +214,16 @@ public partial class CardView : UserControl
     {
         if (_customBitmapCache.TryGetValue(filePath, out var cached)) return cached;
         var bitmap = LoadAndScaleFaceArt(filePath);
+        _customBitmapCache[filePath] = bitmap;
+        return bitmap;
+    }
+
+    // Board background art — cached at native resolution (rendered at whatever size the
+    // window is, unlike card backs/face art which are pre-scaled to a fixed card-sized cache).
+    internal static Bitmap GetCachedBackgroundBitmap(string filePath)
+    {
+        if (_customBitmapCache.TryGetValue(filePath, out var cached)) return cached;
+        var bitmap = new Bitmap(filePath);
         _customBitmapCache[filePath] = bitmap;
         return bitmap;
     }
@@ -402,14 +398,10 @@ public partial class CardView : UserControl
             CardFace.IsVisible = true;
             CardBack.IsVisible = false;
 
-            bool ffMode = (_cachedOptions ?? SettingsService.LoadOptions()).IsFinalFantasyMode;
-            // Card face background and border adapt to FF mode
-            CardFace.Background       = ffMode ? _brushFaceBackFF       : _brushFaceBackNormal;
-            CardFace.BorderBrush      = ffMode ? _brushFaceBorderFFCard : _brushFaceBorderNormal;
-            CardFace.BorderThickness  = new Avalonia.Thickness(ffMode ? 2.5 : 0.75);
-            CardFace.BoxShadow        = ffMode
-                ? new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = -5, Blur = 6, Spread = 0, Color = _ffShadowColor })
-                : new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = 1.5, Blur = 1.5, Spread = 0, Color = _normalShadowColor });
+            CardFace.Background       = _brushFaceBackNormal;
+            CardFace.BorderBrush      = _brushFaceBorderNormal;
+            CardFace.BorderThickness  = new Avalonia.Thickness(0.75);
+            CardFace.BoxShadow        = new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = 1.5, Blur = 1.5, Spread = 0, Color = _normalShadowColor });
 
             // Update rank text (Top-left & Bottom-right)
             string rankStr = Card.Rank switch
@@ -423,9 +415,8 @@ public partial class CardView : UserControl
             RankText.Text = rankStr;
             RankTextBottom.Text = rankStr;
 
-            // Suit color: red suits keep crimson; black suits go metallic silver in FF mode
             bool isRed = Card.Suit == CardSuit.Hearts || Card.Suit == CardSuit.Diamonds;
-            var brush = isRed ? (ffMode ? _brushTextRedFF : _brushTextRed) : (ffMode ? _brushTextBlackFF : _brushTextBlackNormal);
+            var brush = isRed ? _brushTextRed : _brushTextBlackNormal;
             RankText.Foreground = brush;
             RankTextBottom.Foreground = brush;
             MiniSuitText.Foreground = brush;
@@ -494,36 +485,7 @@ public partial class CardView : UserControl
                 FaceCardImage.RenderTransform = null;
                 CenterGrid.ClipToBounds = false;
 
-                // In FF mode: use bundled default art for all face/ace slots
-                if (ffMode && faceSlot.HasValue && _ffDefaultArt.TryGetValue(faceSlot.Value, out var ffDefault))
-                {
-                    FaceCardImage.IsVisible = true;
-                    FaceCardImage.Stretch = Avalonia.Media.Stretch.Uniform;
-                    FaceCardImage.Width  = 70;
-                    FaceCardImage.Height = 60;
-                    FaceCardImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
-                    var tg = new TransformGroup();
-                    tg.Children.Add(new ScaleTransform(ffDefault.Scale, ffDefault.Scale));
-                    FaceCardImage.RenderTransform = tg;
-                    CenterGrid.ClipToBounds = true;
-                    try { FaceCardImage.Source = GetCachedBitmap(ffDefault.Uri); }
-                    catch
-                    {
-                        FaceCardImage.IsVisible = false;
-                        if (Card.Rank == 1)
-                        {
-                            AcePipImage.Source = GetOrCreateAceBitmap(suitChar, brush);
-                            AcePipImage.IsVisible = true;
-                        }
-                        else
-                        {
-                            LargeAceText.IsVisible = true;
-                            LargeAceText.Text = rankStr;
-                            LargeAceText.Foreground = brush;
-                        }
-                    }
-                }
-                else if (Card.Rank == 1)
+                if (Card.Rank == 1)
                 {
                     AcePipImage.Source = GetOrCreateAceBitmap(suitChar, brush);
                     AcePipImage.IsVisible = true;
@@ -565,10 +527,9 @@ public partial class CardView : UserControl
             CardFace.IsVisible = false;
             CardBack.IsVisible = true;
 
-            bool ffMode = (_cachedOptions ?? SettingsService.LoadOptions()).IsFinalFantasyMode;
-            CardBack.Background       = ffMode ? _brushFaceBorderFF     : _brushFaceBackNormal;
-            CardBack.BorderBrush      = ffMode ? _brushFaceBorderFF     : _brushFaceBorderNormal;
-            CardBack.BorderThickness  = new Avalonia.Thickness(ffMode ? 4 : 0.75);
+            CardBack.Background       = _brushFaceBackNormal;
+            CardBack.BorderBrush      = _brushFaceBorderNormal;
+            CardBack.BorderThickness  = new Avalonia.Thickness(0.75);
 
             ApplyCardBackTheme();
         }
@@ -924,7 +885,6 @@ public partial class CardView : UserControl
         }
         else
         {
-            bool ffMode = options.IsFinalFantasyMode;
             CardBackImage.Width  = 120;
             CardBackImage.Height = 173;
             CardBackImage.Stretch = Stretch.Uniform;
@@ -1224,12 +1184,9 @@ public partial class CardView : UserControl
         _hintPulse.Stop();
         _hintPulseBrush = null;
         if (CardFace == null || Card == null || !Card.IsFaceUp) return;
-        bool ffMode = (_cachedOptions ?? SettingsService.LoadOptions()).IsFinalFantasyMode;
-        CardFace.BorderBrush     = ffMode ? _brushFaceBorderFFCard : _brushFaceBorderNormal;
-        CardFace.BorderThickness = new Thickness(ffMode ? 2.5 : 0.75);
-        CardFace.BoxShadow       = ffMode
-            ? new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = -5, Blur = 6, Spread = 0, Color = _ffShadowColor })
-            : new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = 1.5, Blur = 1.5, Spread = 0, Color = _normalShadowColor });
+        CardFace.BorderBrush     = _brushFaceBorderNormal;
+        CardFace.BorderThickness = new Thickness(0.75);
+        CardFace.BoxShadow       = new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = 1.5, Blur = 1.5, Spread = 0, Color = _normalShadowColor });
     }
 
     public void ClearSelection()

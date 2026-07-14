@@ -23,10 +23,15 @@ public class GameOptions
     public List<string> HiddenDefaultCardBacks { get; set; } = new();
     public FeltColorTheme FeltColor { get; set; } = FeltColorTheme.FeltGreen;
     public string CardBackTheme { get; set; } = "Vulpera";
+    public List<CustomBackground> CustomBackgrounds { get; set; } = new();
+    // null/"" = "None (Felt Color)"
+    public string? BackgroundName { get; set; } = null;
+    public double BackgroundScale { get; set; } = 1.0;
+    public double BackgroundOffsetX { get; set; } = 0.0;
+    public double BackgroundOffsetY { get; set; } = 0.0;
     public bool IsSoundEnabled { get; set; } = true;
     public bool IsVegasScoring { get; set; } = false;
     public bool IsDrawConstraintsEnabled { get; set; } = false;
-    public bool IsFinalFantasyMode { get; set; } = false;
     public int CustomFeltColorRevision { get; set; } = 0;
     public string CustomFeltColorHex { get; set; } = "#592673";
     public double CardBackScale { get; set; } = 1.0;
@@ -88,14 +93,9 @@ public class GameOptions
 
     // Theme editor color overrides — null means use the compiled default
     public string? ThemeFaceBackNormal { get; set; }
-    public string? ThemeFaceBackFF { get; set; }
     public string? ThemeFaceBorderNormal { get; set; }
-    public string? ThemeFaceBorderFF { get; set; }
-    public string? ThemeFaceBorderFFCard { get; set; }
     public string? ThemeTextRed { get; set; }
-    public string? ThemeTextRedFF { get; set; }
     public string? ThemeTextBlackNormal { get; set; }
-    public string? ThemeTextBlackFF { get; set; }
     public string? ThemeCardShadow { get; set; }
 
     // Deep-copies CustomCardBacks (not just the list container) so callers can diff
@@ -114,6 +114,14 @@ public class GameOptions
             OffsetY  = c.OffsetY,
         }).ToList();
         clone.HiddenDefaultCardBacks = new List<string>(HiddenDefaultCardBacks);
+        clone.CustomBackgrounds = CustomBackgrounds.Select(b => new CustomBackground
+        {
+            Name     = b.Name,
+            FileName = b.FileName,
+            Scale    = b.Scale,
+            OffsetX  = b.OffsetX,
+            OffsetY  = b.OffsetY,
+        }).ToList();
         return clone;
     }
 }

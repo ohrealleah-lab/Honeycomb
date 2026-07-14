@@ -590,12 +590,6 @@ public partial class VideoPokerView : UserControl
         // show through underneath, so the same continuous gradient spans the title bar,
         // pay table, board, and legend with no seams. BidBar keeps its own darker panel
         // for text contrast.
-        if (vm.Options.IsFinalFantasyMode)
-        {
-            BidBar.Background = new SolidColorBrush(Color.Parse("#1A1A1A"));
-            return;
-        }
-
         string hex = vm.Options.FeltColor switch
         {
             "Crimson"   => "#8C0C26",

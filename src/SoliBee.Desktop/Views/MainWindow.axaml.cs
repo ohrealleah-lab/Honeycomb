@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
@@ -38,9 +40,6 @@ public partial class MainWindow : Window
 
         _coordinator = new AppCoordinator();
 
-        // One-time migration: if FF mode was on before themes existed, seed a "Final Fantasy" theme
-        ThemeService.MigrateFFModeIfNeeded(_coordinator.GameViewModel.Options);
-
         // First launch: apply the "Default" theme (Moogle + Felt Green) as the default visual theme
         if (ThemeService.ApplyDefaultThemeIfNeeded(_coordinator.GameViewModel.Options))
             SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
@@ -62,6 +61,7 @@ public partial class MainWindow : Window
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
             ApplyFeltColor(m.Options);
+            ApplyBoardBackground(m.Options);
             CardView.ApplyThemeColors(m.Options);
             CardView.InvalidateAllCardViews(this);
             bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
@@ -81,6 +81,7 @@ public partial class MainWindow : Window
 
         // Set initial background color
         ApplyFeltColor(_coordinator.GameViewModel.Options);
+        ApplyBoardBackground(_coordinator.GameViewModel.Options);
 
         // Apply any saved theme color overrides before first render
         CardView.ApplyThemeColors(_coordinator.GameViewModel.Options);
@@ -88,6 +89,13 @@ public partial class MainWindow : Window
         this.AddHandler(PointerWheelChangedEvent, OnPointerWheelChanged, RoutingStrategies.Tunnel);
         this.KeyDown += OnWindowKeyDown;
         this.Closing += (_, _) => SaveCurrentWindowSize();
+        // Re-scale the background image's offset transform to stay proportionally correct
+        // as the window is resized (offsets are stored in fixed reference-width units).
+        this.Resized += (_, _) =>
+        {
+            if (BoardBackgroundImage.IsVisible && _lastBoardBackgroundOptions != null)
+                ApplyBoardBackground(_lastBoardBackgroundOptions);
+        };
 
         // Ensure the window has OS focus/activation immediately — without this, the
         // first click after launch can get consumed by window activation itself,
@@ -123,12 +131,7 @@ public partial class MainWindow : Window
         string primaryHex = "#008000";
         string statusHex = "#007300";
 
-        if (options.IsFinalFantasyMode)
-        {
-            primaryHex = "#000000";
-            statusHex  = "#111111";
-        }
-        else if (feltColor == FeltColorTheme.Custom)
+        if (feltColor == FeltColorTheme.Custom)
         {
             primaryHex = options.CustomFeltColorHex;
             
@@ -187,6 +190,63 @@ public partial class MainWindow : Window
         {
             this.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Colors.DarkGreen);
         }
+    }
+
+    // Offsets are stored in "reference-width" units (see BackgroundEditorWindow) so a background
+    // set up at one window size looks proportionally the same after a resize — both the small
+    // editor preview and this real board rescale offsets by (their own width / this constant).
+    private const double BackgroundReferenceWidth = 1120.0;
+    private GameOptions? _lastBoardBackgroundOptions;
+
+    private void ApplyBoardBackground(GameOptions options)
+    {
+        _lastBoardBackgroundOptions = options;
+
+        var customBg = string.IsNullOrEmpty(options.BackgroundName)
+            ? null
+            : options.CustomBackgrounds.Find(b => b.Name == options.BackgroundName);
+
+        if (customBg == null || !PathSafety.IsSafeFileName(customBg.FileName))
+        {
+            BoardBackgroundImage.IsVisible = false;
+            return;
+        }
+
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SoliBee", "Backgrounds", customBg.FileName);
+
+        if (!File.Exists(path))
+        {
+            BoardBackgroundImage.IsVisible = false;
+            return;
+        }
+
+        try
+        {
+            BoardBackgroundImage.Source = CardView.GetCachedBackgroundBitmap(path);
+            BoardBackgroundImage.IsVisible = true;
+            BoardBackgroundImage.ZIndex = -10;
+            ApplyBoardBackgroundTransform(options, customBg);
+        }
+        catch
+        {
+            BoardBackgroundImage.IsVisible = false;
+        }
+    }
+
+    private void ApplyBoardBackgroundTransform(GameOptions options, CustomBackground customBg)
+    {
+        double ratio = Math.Max(1.0, Width) / BackgroundReferenceWidth;
+        double scale = customBg.Scale;
+        double offsetX = customBg.OffsetX * ratio;
+        double offsetY = customBg.OffsetY * ratio;
+
+        BoardBackgroundImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+        var tg = new TransformGroup();
+        tg.Children.Add(new ScaleTransform(scale, scale));
+        tg.Children.Add(new TranslateTransform(offsetX, offsetY));
+        BoardBackgroundImage.RenderTransform = tg;
     }
 
     private bool IsGameInProgress()

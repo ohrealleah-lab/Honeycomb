@@ -55,7 +55,6 @@
                 <CheckBox x:Name="NoStressModeCheckBox" Content="No Stress Mode"     Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                <CheckBox x:Name="FinalFantasyCheckBox" Content="Final Fantasy Mode" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A" IsVisible="False"/>
                 <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="HideZoomCheckBox"  Content="Hide Zoom Controls" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
             </StackPanel>
@@ -175,7 +174,38 @@
                 <CheckBox x:Name="VignetteCheckBox" Content="Felt Vignette"
                           Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
 
+                <!-- ─── Background ────────────────────────────────────────────── -->
+                <TextBlock Text="Background" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,6,0,0"/>
+                <Rectangle Height="1" Fill="#E5E5E5"/>
 
+                <Grid ColumnDefinitions="*, 12, Auto">
+                    <!-- Background Selector (Col 0) -->
+                    <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Top">
+                        <ComboBox x:Name="BackgroundComboBox" HorizontalAlignment="Stretch" SelectionChanged="BackgroundComboBox_SelectionChanged">
+                            <ComboBoxItem Content="None (Felt Color)" Tag=""/>
+                        </ComboBox>
+                        <Grid ColumnDefinitions="*, *">
+                            <Button x:Name="AddCustomBackgroundButton"    Grid.Column="0" Content="Add…"  Click="AddCustomBackground_Click"    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,2,0"/>
+                            <Button x:Name="DeleteCustomBackgroundButton" Grid.Column="1" Content="Delete" Click="DeleteCustomBackground_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-danger" Margin="2,0,0,0" IsEnabled="False"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Background Preview (Col 2) -->
+                    <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Top">
+                        <Border x:Name="BackgroundPreviewBorder"
+                                Width="80" Height="55"
+                                BorderBrush="#D9000000" BorderThickness="0.75"
+                                CornerRadius="4" ClipToBounds="True"
+                                HorizontalAlignment="Left"
+                                Cursor="Hand" Background="#008000"
+                                PointerPressed="BackgroundPreview_Click">
+                            <Grid Width="80" Height="55" ClipToBounds="True">
+                                <Image x:Name="BackgroundPreviewImage" Stretch="UniformToFill"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock x:Name="BackgroundPreviewCaption" Text="Tap to adjust" FontSize="9" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
 
             </StackPanel>
 
@@ -243,6 +273,31 @@
                     <TextBlock Text="Card Back In Use" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="CardBackInUseText" Text="" FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
                     <Button Content="OK" Click="CardBackInUseOk_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Delete Background Confirmation -->
+        <Grid x:Name="ConfirmDeleteBackgroundOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <StackPanel Spacing="12" Width="230">
+                    <TextBlock Text="Delete Background" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Are you sure you want to delete this custom background? This cannot be undone." FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
+                        <Button Content="Cancel" Click="CancelDeleteBackground_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
+                        <Button Content="Delete" Click="ConfirmDeleteBackground_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-danger" Margin="4,0,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Background Alert (too large / invalid image / in use by a saved theme) -->
+        <Grid x:Name="BackgroundAlertOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <StackPanel Spacing="12" Width="230">
+                    <TextBlock Text="Background" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="BackgroundAlertText" Text="" FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    <Button Content="OK" Click="BackgroundAlertOk_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary"/>
                 </StackPanel>
             </Border>
         </Grid>

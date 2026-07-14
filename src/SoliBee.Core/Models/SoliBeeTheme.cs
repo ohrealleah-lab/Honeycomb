@@ -21,18 +21,16 @@ public class SoliBeeTheme
     public double CardBackScale { get; set; } = 1.0;
     public double CardBackOffsetX { get; set; } = 0.0;
     public double CardBackOffsetY { get; set; } = 0.0;
-    public bool IsFinalFantasyMode { get; set; } = false;
     public FeltColorTheme FeltColor { get; set; } = FeltColorTheme.FeltGreen;
     public string CustomFeltColorHex { get; set; } = "#592673";
+    public string? BackgroundName { get; set; }
+    public double BackgroundScale { get; set; } = 1.0;
+    public double BackgroundOffsetX { get; set; } = 0.0;
+    public double BackgroundOffsetY { get; set; } = 0.0;
     public string? ThemeFaceBackNormal { get; set; }
-    public string? ThemeFaceBackFF { get; set; }
     public string? ThemeFaceBorderNormal { get; set; }
-    public string? ThemeFaceBorderFF { get; set; }
-    public string? ThemeFaceBorderFFCard { get; set; }
     public string? ThemeTextRed { get; set; }
-    public string? ThemeTextRedFF { get; set; }
     public string? ThemeTextBlackNormal { get; set; }
-    public string? ThemeTextBlackFF { get; set; }
     public string? ThemeCardShadow { get; set; }
     public List<FaceArtSnapshot> FaceArts { get; set; } = new();
 }

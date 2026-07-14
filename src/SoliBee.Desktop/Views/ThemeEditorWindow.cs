@@ -34,9 +34,7 @@ public class ThemeEditorWindow : Window
 
     private Control Build()
     {
-        bool ff = SettingsService.LoadOptions().IsFinalFantasyMode;
-
-        _slots = ff ? BuildFFSlots() : BuildNormalSlots();
+        _slots = BuildNormalSlots();
 
         // ── Left: scrollable list of color rows ───────────────────────
         var listStack = new StackPanel { Spacing = 2, Margin = new Thickness(6) };
@@ -103,7 +101,7 @@ public class ThemeEditorWindow : Window
             Padding = new Thickness(10, 7),
             Child = new TextBlock
             {
-                Text = $"Mode: {(ff ? "Final Fantasy" : "Normal")}",
+                Text = "Card Theme Colors",
                 Foreground = new SolidColorBrush(Color.Parse("#AAAAAA")),
                 FontSize = 11
             }
@@ -161,25 +159,6 @@ public class ThemeEditorWindow : Window
         return root;
     }
 
-    private static List<ColorSlot> BuildFFSlots() => new()
-    {
-        new("Card Face Background",
-            () => CardView._brushFaceBackFF.Color,
-            c  => CardView._brushFaceBackFF.Color = c),
-        new("Face-Up Card Border",
-            () => CardView._brushFaceBorderFFCard.Color,
-            c  => CardView._brushFaceBorderFFCard.Color = c),
-        new("Face-Down Border / Background",
-            () => CardView._brushFaceBorderFF.Color,
-            c  => CardView._brushFaceBorderFF.Color = c),
-        new("Red Suit / Rank Text",
-            () => CardView._brushTextRedFF.Color,
-            c  => CardView._brushTextRedFF.Color = c),
-        new("Silver Suit / Rank Text",
-            () => CardView._brushTextBlackFF.Color,
-            c  => CardView._brushTextBlackFF.Color = c),
-    };
-
     private static List<ColorSlot> BuildNormalSlots() => new()
     {
         new("Card Face Background",
@@ -217,14 +196,9 @@ public class ThemeEditorWindow : Window
     {
         var options = SettingsService.LoadOptions();
         options.ThemeFaceBackNormal  = CardView._brushFaceBackNormal.Color.ToString();
-        options.ThemeFaceBackFF      = CardView._brushFaceBackFF.Color.ToString();
         options.ThemeFaceBorderNormal = CardView._brushFaceBorderNormal.Color.ToString();
-        options.ThemeFaceBorderFF    = CardView._brushFaceBorderFF.Color.ToString();
-        options.ThemeFaceBorderFFCard = CardView._brushFaceBorderFFCard.Color.ToString();
         options.ThemeTextRed         = CardView._brushTextRed.Color.ToString();
-        options.ThemeTextRedFF       = CardView._brushTextRedFF.Color.ToString();
         options.ThemeTextBlackNormal = CardView._brushTextBlackNormal.Color.ToString();
-        options.ThemeTextBlackFF     = CardView._brushTextBlackFF.Color.ToString();
         SettingsService.SaveOptions(options);
 
         if (_statusLabel != null) _statusLabel.Text = "Saved.";

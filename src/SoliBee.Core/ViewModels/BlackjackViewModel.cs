@@ -74,7 +74,6 @@ public partial class BlackjackViewModel : ObservableObject
 
         // Sync felt color and shared visual settings from global options at startup
         var shared = SettingsService.LoadOptions();
-        Options.IsFinalFantasyMode = shared.IsFinalFantasyMode;
         Options.CardBackTheme      = shared.CardBackTheme;
         Options.IsSoundEnabled     = shared.IsSoundEnabled;
         Options.FeltColor          = shared.FeltColor.ToString();
@@ -84,7 +83,6 @@ public partial class BlackjackViewModel : ObservableObject
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
-            Options.IsFinalFantasyMode = m.Options.IsFinalFantasyMode;
             Options.CardBackTheme      = m.Options.CardBackTheme;
             Options.IsSoundEnabled     = m.Options.IsSoundEnabled;
             Options.FeltColor          = m.Options.FeltColor.ToString();

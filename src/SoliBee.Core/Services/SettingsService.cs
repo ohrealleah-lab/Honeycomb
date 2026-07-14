@@ -217,14 +217,23 @@ public static class SettingsService
                 if (GetValue("BlackjackMaximized") is bool   bjM)  options.BlackjackMaximized = bjM;
 
                 if (GetValue("ThemeFaceBackNormal")  is string t1) options.ThemeFaceBackNormal  = t1;
-                if (GetValue("ThemeFaceBackFF")       is string t2) options.ThemeFaceBackFF       = t2;
                 if (GetValue("ThemeFaceBorderNormal") is string t3) options.ThemeFaceBorderNormal = t3;
-                if (GetValue("ThemeFaceBorderFF")     is string t4) options.ThemeFaceBorderFF     = t4;
-                if (GetValue("ThemeFaceBorderFFCard") is string t5) options.ThemeFaceBorderFFCard = t5;
                 if (GetValue("ThemeTextRed")          is string t6) options.ThemeTextRed          = t6;
-                if (GetValue("ThemeTextRedFF")        is string t7) options.ThemeTextRedFF        = t7;
                 if (GetValue("ThemeTextBlackNormal")  is string t8) options.ThemeTextBlackNormal  = t8;
-                if (GetValue("ThemeTextBlackFF")      is string t9) options.ThemeTextBlackFF      = t9;
+
+                if (GetValue("BackgroundName") is string bgName) options.BackgroundName = bgName;
+                if (GetValue("BackgroundScale") is double bgScale) options.BackgroundScale = bgScale;
+                if (GetValue("BackgroundOffsetX") is double bgOffX) options.BackgroundOffsetX = bgOffX;
+                if (GetValue("BackgroundOffsetY") is double bgOffY) options.BackgroundOffsetY = bgOffY;
+
+                if (GetValue("CustomBackgroundsJson") is string cbgJsonStr)
+                {
+                    try
+                    {
+                        options.CustomBackgrounds = JsonSerializer.Deserialize<List<CustomBackground>>(cbgJsonStr) ?? new();
+                    }
+                    catch {}
+                }
 
                 _cache = options;
                 return options;
@@ -315,19 +324,26 @@ public static class SettingsService
 
                 void WriteOrClear(string k, string? v) { if (v != null) SetValue(k, v); else RemoveValue(k); }
                 WriteOrClear("ThemeFaceBackNormal",  options.ThemeFaceBackNormal);
-                WriteOrClear("ThemeFaceBackFF",      options.ThemeFaceBackFF);
                 WriteOrClear("ThemeFaceBorderNormal",options.ThemeFaceBorderNormal);
-                WriteOrClear("ThemeFaceBorderFF",    options.ThemeFaceBorderFF);
-                WriteOrClear("ThemeFaceBorderFFCard",options.ThemeFaceBorderFFCard);
                 WriteOrClear("ThemeTextRed",         options.ThemeTextRed);
-                WriteOrClear("ThemeTextRedFF",       options.ThemeTextRedFF);
                 WriteOrClear("ThemeTextBlackNormal", options.ThemeTextBlackNormal);
-                WriteOrClear("ThemeTextBlackFF",     options.ThemeTextBlackFF);
+                WriteOrClear("BackgroundName",       options.BackgroundName);
+
+                SetValue("BackgroundScale",   options.BackgroundScale);
+                SetValue("BackgroundOffsetX", options.BackgroundOffsetX);
+                SetValue("BackgroundOffsetY", options.BackgroundOffsetY);
 
                 try
                 {
                     var jsonStr = JsonSerializer.Serialize(options.CustomCardBacks);
                     SetValue("CustomCardBacksJson", jsonStr);
+                }
+                catch {}
+
+                try
+                {
+                    var cbgJsonStr = JsonSerializer.Serialize(options.CustomBackgrounds);
+                    SetValue("CustomBackgroundsJson", cbgJsonStr);
                 }
                 catch {}
 

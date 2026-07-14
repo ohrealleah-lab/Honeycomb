@@ -29,6 +29,10 @@ public partial class PreferencesView : UserControl
     private List<SoliBeeTheme> _themes = new();
     private SoliBeeTheme? _themeToDelete;
     private SoliBeeTheme? _themeToApply;
+    private Bitmap? _backgroundPreviewBitmap;
+    private bool _isBackgroundEditorOpen;
+    private string? _backgroundToDelete;
+    private const double BackgroundReferenceWidth = 1120.0;
 
     // Snapshots taken when the panel opens, so Cancel can restore whatever was actually
     // on disk beforehand — every individual control here saves+broadcasts immediately
@@ -69,6 +73,17 @@ public partial class PreferencesView : UserControl
         foreach (var cb in options.CustomCardBacks)
         {
             CardBackComboBox.Items.Add(new ComboBoxItem { Content = cb.Name, Tag = cb.Name });
+        }
+    }
+
+    private void PopulateBackgrounds(GameOptions options)
+    {
+        BackgroundComboBox.Items.Clear();
+        BackgroundComboBox.Items.Add(new ComboBoxItem { Content = "None (Felt Color)", Tag = "" });
+
+        foreach (var bg in options.CustomBackgrounds)
+        {
+            BackgroundComboBox.Items.Add(new ComboBoxItem { Content = bg.Name, Tag = bg.Name });
         }
     }
 
@@ -122,7 +137,6 @@ public partial class PreferencesView : UserControl
         NoStressModeCheckBox.IsChecked = options.IsNoStressMode;
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
         VegasCheckBox.IsChecked        = options.IsVegasScoring;
-        FinalFantasyCheckBox.IsChecked = options.IsFinalFantasyMode;
         VignetteCheckBox.IsChecked     = options.IsVignetteEnabled;
         HideHintCheckBox.IsChecked     = options.HideHintButton;
         HideZoomCheckBox.IsChecked     = options.HideZoomControls;
@@ -153,6 +167,19 @@ public partial class PreferencesView : UserControl
         }
 
         UpdateCardBackPreview(options);
+
+        PopulateBackgrounds(options);
+        string bgTag = options.BackgroundName ?? "";
+        foreach (var item in BackgroundComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if ((item.Tag?.ToString() ?? "") == bgTag)
+            {
+                BackgroundComboBox.SelectedItem = item;
+                break;
+            }
+        }
+        DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(bgTag);
+        UpdateBackgroundPreview(options);
 
         // Custom Card Color Pickers
         CardBgColorPicker.Color = Color.Parse(options.ThemeFaceBackNormal ?? "#FFFFFF");
@@ -208,7 +235,6 @@ public partial class PreferencesView : UserControl
             vpOptions.CardBackTheme      = orig.CardBackTheme;
             vpOptions.FeltColor          = orig.FeltColor;
             vpOptions.CustomFeltColorHex = orig.CustomFeltColorHex;
-            vpOptions.IsFinalFantasyMode = orig.IsFinalFantasyMode;
             vpOptions.IsVignetteEnabled  = orig.IsVignetteEnabled;
             vpOptions.IsNoStressMode     = orig.IsNoStressMode;
             VideoPokerVm?.SaveOptions();
@@ -252,7 +278,6 @@ public partial class PreferencesView : UserControl
     private void SyncUIFromVideoPokerOptions(VideoPokerOptions options)
     {
         VegasCheckBox.IsVisible        = false;
-        FinalFantasyCheckBox.IsVisible = false;
 
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
 
@@ -603,12 +628,6 @@ public partial class PreferencesView : UserControl
             options.IsVignetteEnabled  = VignetteCheckBox.IsChecked     ?? true;
             options.HideHintButton     = HideHintCheckBox.IsChecked     ?? false;
             options.HideZoomControls   = HideZoomCheckBox.IsChecked     ?? false;
-
-            bool wasFF = options.IsFinalFantasyMode;
-            options.IsFinalFantasyMode = FinalFantasyCheckBox.IsChecked ?? false;
-
-            if (!wasFF && options.IsFinalFantasyMode)
-                ApplyCardBackSelection("Vulpera", options);
 
             NotifySettingsChanged(options);
         }
@@ -1001,6 +1020,323 @@ public partial class PreferencesView : UserControl
         {
             System.Diagnostics.Debug.WriteLine($"Failed to add custom card back: {ex}");
         }
+    }
+
+    // ── Background ────────────────────────────────────────────────────────────
+
+    private static readonly byte[] _pngMagic = { 0x89, 0x50, 0x4E, 0x47 };
+    private static readonly byte[] _jpegMagic = { 0xFF, 0xD8, 0xFF };
+    private const long MaxBackgroundFileSizeBytes = 25L * 1024 * 1024;
+
+    private static string BackgroundsDir => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SoliBee", "Backgrounds");
+
+    private void BackgroundComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_initializing) return;
+        if (DataContext is not GameOptions options) return;
+        if (BackgroundComboBox.SelectedItem is not ComboBoxItem item) return;
+
+        var selectedTag = item.Tag?.ToString() ?? "";
+        options.BackgroundName = string.IsNullOrEmpty(selectedTag) ? null : selectedTag;
+        DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(selectedTag);
+
+        var bg = options.CustomBackgrounds.Find(b => b.Name == selectedTag);
+        if (bg != null)
+        {
+            options.BackgroundScale = bg.Scale;
+            options.BackgroundOffsetX = bg.OffsetX;
+            options.BackgroundOffsetY = bg.OffsetY;
+        }
+        else
+        {
+            options.BackgroundScale = 1.0;
+            options.BackgroundOffsetX = 0.0;
+            options.BackgroundOffsetY = 0.0;
+        }
+
+        UpdateBackgroundPreview(options);
+        NotifySettingsChanged(options);
+    }
+
+    private void UpdateBackgroundPreview(GameOptions options)
+    {
+        var old = _backgroundPreviewBitmap;
+        _backgroundPreviewBitmap = LoadBackgroundBitmapForPreview(options);
+        BackgroundPreviewImage.Source = _backgroundPreviewBitmap;
+        old?.Dispose();
+
+        if (_backgroundPreviewBitmap == null)
+        {
+            BackgroundPreviewImage.RenderTransform = null;
+            return;
+        }
+
+        double ratio = 80.0 / BackgroundReferenceWidth;
+        double scale = options.BackgroundScale;
+        double offsetX = options.BackgroundOffsetX * ratio;
+        double offsetY = options.BackgroundOffsetY * ratio;
+
+        BackgroundPreviewImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+        var tg = new TransformGroup();
+        tg.Children.Add(new ScaleTransform(scale, scale));
+        tg.Children.Add(new TranslateTransform(offsetX, offsetY));
+        BackgroundPreviewImage.RenderTransform = tg;
+    }
+
+    private static Bitmap? LoadBackgroundBitmapForPreview(GameOptions options)
+    {
+        if (string.IsNullOrEmpty(options.BackgroundName)) return null;
+        var bg = options.CustomBackgrounds.Find(b => b.Name == options.BackgroundName);
+        if (bg == null || !PathSafety.IsSafeFileName(bg.FileName)) return null;
+        try
+        {
+            var path = Path.Combine(BackgroundsDir, bg.FileName);
+            return File.Exists(path) ? new Bitmap(path) : null;
+        }
+        catch { return null; }
+    }
+
+    private async void BackgroundPreview_Click(object? sender, PointerPressedEventArgs e)
+    {
+        e.Handled = true;
+        e.Pointer.Capture(null);
+
+        if (_isBackgroundEditorOpen) return;
+        if (DataContext is not GameOptions options) return;
+        if (string.IsNullOrEmpty(options.BackgroundName)) return;
+
+        var bg = options.CustomBackgrounds.Find(b => b.Name == options.BackgroundName);
+        if (bg == null) return;
+
+        _isBackgroundEditorOpen = true;
+        try
+        {
+            var bmp = _backgroundPreviewBitmap ?? LoadBackgroundBitmapForPreview(options);
+            if (bmp == null) return;
+
+            var owner = (Window?)TopLevel.GetTopLevel(this);
+            var editor = new BackgroundEditorWindow(bmp, isNew: false, bg.Name,
+                options.BackgroundScale, options.BackgroundOffsetX, options.BackgroundOffsetY);
+
+            if (owner != null)
+                await editor.ShowDialog(owner);
+            else
+                editor.Show();
+
+            if (editor.Saved)
+            {
+                options.BackgroundScale = editor.NewScale;
+                options.BackgroundOffsetX = editor.NewOffsetX;
+                options.BackgroundOffsetY = editor.NewOffsetY;
+
+                bg.Scale = editor.NewScale;
+                bg.OffsetX = editor.NewOffsetX;
+                bg.OffsetY = editor.NewOffsetY;
+
+                UpdateBackgroundPreview(options);
+                NotifySettingsChanged(options);
+            }
+        }
+        finally
+        {
+            _isBackgroundEditorOpen = false;
+        }
+    }
+
+    private async void AddCustomBackground_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not GameOptions options) return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null) return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select Background Image",
+            AllowMultiple = false,
+            FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
+        });
+
+        if (files == null || files.Count == 0) return;
+
+        var file = files[0];
+        string? destPath = null;
+        try
+        {
+            using var memStream = new MemoryStream();
+            using (var sourceStream = await file.OpenReadAsync())
+            {
+                var buffer = new byte[81920];
+                long total = 0;
+                int read;
+                while ((read = await sourceStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    total += read;
+                    if (total > MaxBackgroundFileSizeBytes)
+                    {
+                        BackgroundAlertText.Text = "That image is larger than 25 MB. Please choose a smaller file.";
+                        BackgroundAlertOverlay.IsVisible = true;
+                        return;
+                    }
+                    memStream.Write(buffer, 0, read);
+                }
+            }
+
+            var bytes = memStream.ToArray();
+            bool isPng = bytes.Length >= _pngMagic.Length && bytes.AsSpan(0, _pngMagic.Length).SequenceEqual(_pngMagic);
+            bool isJpeg = bytes.Length >= _jpegMagic.Length && bytes.AsSpan(0, _jpegMagic.Length).SequenceEqual(_jpegMagic);
+            if (!isPng && !isJpeg)
+            {
+                BackgroundAlertText.Text = "Selected file is not a valid PNG or JPEG image.";
+                BackgroundAlertOverlay.IsVisible = true;
+                return;
+            }
+
+            string ext = isPng ? ".png" : ".jpg";
+            if (!Directory.Exists(BackgroundsDir))
+                Directory.CreateDirectory(BackgroundsDir);
+
+            string uniqueFileName = Guid.NewGuid().ToString() + ext;
+            destPath = Path.Combine(BackgroundsDir, uniqueFileName);
+            await File.WriteAllBytesAsync(destPath, bytes);
+
+            string displayName = Path.GetFileNameWithoutExtension(file.Name);
+            if (string.IsNullOrWhiteSpace(displayName)) displayName = "Background";
+            if (options.CustomBackgrounds.Exists(b => b.Name.Equals(displayName, StringComparison.OrdinalIgnoreCase)))
+                displayName += "_" + Guid.NewGuid().ToString().Substring(0, 4);
+
+            var bmp = new Bitmap(destPath);
+            var owner = (Window?)TopLevel.GetTopLevel(this);
+            var editor = new BackgroundEditorWindow(bmp, isNew: true, displayName, 1.0, 0.0, 0.0);
+
+            if (owner != null)
+                await editor.ShowDialog(owner);
+            else
+                editor.Show();
+
+            if (!editor.Saved)
+            {
+                // User backed out of the "name it" editor — nothing left orphaned.
+                try { File.Delete(destPath); } catch { }
+                return;
+            }
+
+            var newBg = new CustomBackground
+            {
+                Name = editor.NewName,
+                FileName = uniqueFileName,
+                Scale = editor.NewScale,
+                OffsetX = editor.NewOffsetX,
+                OffsetY = editor.NewOffsetY
+            };
+            options.CustomBackgrounds.Add(newBg);
+            options.BackgroundName = newBg.Name;
+            options.BackgroundScale = newBg.Scale;
+            options.BackgroundOffsetX = newBg.OffsetX;
+            options.BackgroundOffsetY = newBg.OffsetY;
+
+            _initializing = true;
+            PopulateBackgrounds(options);
+            foreach (var item in BackgroundComboBox.Items.OfType<ComboBoxItem>())
+            {
+                if (item.Tag?.ToString() == newBg.Name)
+                {
+                    BackgroundComboBox.SelectedItem = item;
+                    break;
+                }
+            }
+            DeleteCustomBackgroundButton.IsEnabled = true;
+            _initializing = false;
+
+            UpdateBackgroundPreview(options);
+            NotifySettingsChanged(options);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to add custom background: {ex}");
+            if (destPath != null) { try { File.Delete(destPath); } catch { } }
+        }
+    }
+
+    private void DeleteCustomBackground_Click(object? sender, RoutedEventArgs e)
+    {
+        var selectedItem = BackgroundComboBox.SelectedItem as ComboBoxItem;
+        var backgroundName = selectedItem?.Tag?.ToString();
+        if (string.IsNullOrEmpty(backgroundName)) return;
+
+        // Themes store their background by name (SoliBeeTheme.BackgroundName), not by a
+        // reference to the CustomBackground object — deleting the file out from under a
+        // saved theme would silently leave that theme pointing at nothing, so block it.
+        var themeNames = ThemeService.LoadThemes()
+            .Where(t => t.BackgroundName == backgroundName)
+            .Select(t => t.Name)
+            .ToList();
+
+        if (themeNames.Count > 0)
+        {
+            BackgroundAlertText.Text = $"This background is used by \"{themeNames[0]}\". " +
+                "Please delete the theme first.";
+            BackgroundAlertOverlay.IsVisible = true;
+            return;
+        }
+
+        _backgroundToDelete = backgroundName;
+        ConfirmDeleteBackgroundOverlay.IsVisible = true;
+    }
+
+    private void BackgroundAlertOk_Click(object? sender, RoutedEventArgs e)
+    {
+        BackgroundAlertOverlay.IsVisible = false;
+    }
+
+    private void CancelDeleteBackground_Click(object? sender, RoutedEventArgs e)
+    {
+        _backgroundToDelete = null;
+        ConfirmDeleteBackgroundOverlay.IsVisible = false;
+    }
+
+    private void ConfirmDeleteBackground_Click(object? sender, RoutedEventArgs e)
+    {
+        ConfirmDeleteBackgroundOverlay.IsVisible = false;
+        if (_backgroundToDelete == null) return;
+        if (DataContext is not GameOptions options) return;
+
+        var bg = options.CustomBackgrounds.Find(b => b.Name == _backgroundToDelete);
+        if (bg != null)
+        {
+            if (PathSafety.IsSafeFileName(bg.FileName))
+            {
+                var filePath = Path.Combine(BackgroundsDir, bg.FileName);
+                try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
+                CardView.InvalidateFaceArtCache(filePath);
+            }
+            options.CustomBackgrounds.Remove(bg);
+        }
+
+        if (options.BackgroundName == _backgroundToDelete)
+        {
+            options.BackgroundName = null;
+            options.BackgroundScale = 1.0;
+            options.BackgroundOffsetX = 0.0;
+            options.BackgroundOffsetY = 0.0;
+        }
+
+        _backgroundToDelete = null;
+
+        _initializing = true;
+        PopulateBackgrounds(options);
+        string bgTag = options.BackgroundName ?? "";
+        foreach (var item in BackgroundComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if ((item.Tag?.ToString() ?? "") == bgTag) { BackgroundComboBox.SelectedItem = item; break; }
+        }
+        DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(bgTag);
+        _initializing = false;
+
+        UpdateBackgroundPreview(options);
+        NotifySettingsChanged(options);
     }
 
     // ── About / Help ──────────────────────────────────────────────────

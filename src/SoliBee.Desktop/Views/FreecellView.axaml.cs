@@ -469,28 +469,8 @@ public partial class FreecellView : CardGameView
         e.Handled = true;
     }
 
-    private static Bitmap? _ffEmblemBitmap;
-
     private void ApplyFeltColor(GameOptions options)
     {
-        if (options.IsFinalFantasyMode)
-        {
-            try
-            {
-                _ffEmblemBitmap ??= new Bitmap(AssetLoader.Open(new Uri("avares://SoliBee.Desktop/Assets/ff7-emblem.png")));
-                BoardFeltGrid.Background = new ImageBrush(_ffEmblemBitmap)
-                {
-                    Stretch = Stretch.Uniform,
-                    AlignmentX = AlignmentX.Center,
-                    AlignmentY = AlignmentY.Center,
-                    TileMode = TileMode.None,
-                    DestinationRect = new RelativeRect(0.05, 0.55, 0.9, 0.45, RelativeUnit.Relative)
-                };
-            }
-            catch { BoardFeltGrid.Background = new SolidColorBrush(Colors.Black); }
-            return;
-        }
-
         // Transparent, not an opaque repaint: the window background behind (MainWindow.ApplyFeltColor)
         // already carries this same felt color, and staying transparent here lets the single
         // app-wide vignette overlay (rendered behind the board content) show through in the gaps.

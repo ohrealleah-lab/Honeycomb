@@ -9,7 +9,6 @@ public class VideoPokerOptions
     public string CardBackTheme { get; set; } = "Vulpera";
     public string FeltColor { get; set; } = "FeltGreen";
     public string CustomFeltColorHex { get; set; } = "#592673";
-    public bool IsFinalFantasyMode { get; set; }
     public bool IsVignetteEnabled { get; set; } = true;
     public bool IsNoStressMode { get; set; } = false;
 

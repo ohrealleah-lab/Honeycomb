@@ -200,18 +200,16 @@ public static class ThemeService
             CardBackScale = options.CardBackScale,
             CardBackOffsetX = options.CardBackOffsetX,
             CardBackOffsetY = options.CardBackOffsetY,
-            IsFinalFantasyMode = options.IsFinalFantasyMode,
             FeltColor = options.FeltColor,
             CustomFeltColorHex = options.CustomFeltColorHex,
+            BackgroundName = options.BackgroundName,
+            BackgroundScale = options.BackgroundScale,
+            BackgroundOffsetX = options.BackgroundOffsetX,
+            BackgroundOffsetY = options.BackgroundOffsetY,
             ThemeFaceBackNormal = options.ThemeFaceBackNormal,
-            ThemeFaceBackFF = options.ThemeFaceBackFF,
             ThemeFaceBorderNormal = options.ThemeFaceBorderNormal,
-            ThemeFaceBorderFF = options.ThemeFaceBorderFF,
-            ThemeFaceBorderFFCard = options.ThemeFaceBorderFFCard,
             ThemeTextRed = options.ThemeTextRed,
-            ThemeTextRedFF = options.ThemeTextRedFF,
             ThemeTextBlackNormal = options.ThemeTextBlackNormal,
-            ThemeTextBlackFF = options.ThemeTextBlackFF,
             ThemeCardShadow = options.ThemeCardShadow,
         };
 
@@ -247,18 +245,16 @@ public static class ThemeService
         options.CardBackScale = theme.CardBackScale;
         options.CardBackOffsetX = theme.CardBackOffsetX;
         options.CardBackOffsetY = theme.CardBackOffsetY;
-        options.IsFinalFantasyMode = theme.IsFinalFantasyMode;
         options.FeltColor = theme.FeltColor;
         options.CustomFeltColorHex = theme.CustomFeltColorHex;
+        options.BackgroundName = theme.BackgroundName;
+        options.BackgroundScale = theme.BackgroundScale;
+        options.BackgroundOffsetX = theme.BackgroundOffsetX;
+        options.BackgroundOffsetY = theme.BackgroundOffsetY;
         options.ThemeFaceBackNormal = theme.ThemeFaceBackNormal;
-        options.ThemeFaceBackFF = theme.ThemeFaceBackFF;
         options.ThemeFaceBorderNormal = theme.ThemeFaceBorderNormal;
-        options.ThemeFaceBorderFF = theme.ThemeFaceBorderFF;
-        options.ThemeFaceBorderFFCard = theme.ThemeFaceBorderFFCard;
         options.ThemeTextRed = theme.ThemeTextRed;
-        options.ThemeTextRedFF = theme.ThemeTextRedFF;
         options.ThemeTextBlackNormal = theme.ThemeTextBlackNormal;
-        options.ThemeTextBlackFF = theme.ThemeTextBlackFF;
         options.ThemeCardShadow = theme.ThemeCardShadow;
         options.CustomFeltColorRevision++;
 
@@ -307,15 +303,5 @@ public static class ThemeService
             SaveThemes(new List<SoliBeeTheme>(DefaultThemes));
 
         return true;
-    }
-
-    public static void MigrateFFModeIfNeeded(GameOptions options)
-    {
-        if (!options.IsFinalFantasyMode) return;
-        var themes = LoadThemes();
-        if (themes.Any(t => t.Name == "Final Fantasy")) return;
-        var theme = SnapshotFromOptions("Final Fantasy", options);
-        themes.Add(theme);
-        SaveThemes(themes);
     }
 }
