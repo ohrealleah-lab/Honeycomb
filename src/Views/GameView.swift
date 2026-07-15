@@ -29,7 +29,7 @@ public struct GameView: View {
     @FocusState private var isBoardFocused: Bool
     @State private var keyMonitor: Any? = nil
 
-    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     public init(viewModel: GameViewModel) {
         self.viewModel = viewModel
@@ -39,22 +39,22 @@ public struct GameView: View {
         let stackSpacing = viewModel.zoomScale > 1.0 ? max(4.0, 18.0 - 14.0 * (viewModel.zoomScale - 1.0)) : 18.0
         let columnCount = viewModel.state.tableau.count > 0 ? viewModel.state.tableau.count : 7
         let boardWidth = CGFloat(columnCount) * 128.0 + CGFloat(columnCount - 1) * stackSpacing + 40.0
-        
+        let resolvedFeltColorTheme: FeltColorTheme = coordinator.feltColor
+        let resolvedShowFeltVignette: Bool = coordinator.showFeltVignette
+        let resolvedCardBackTheme: String = coordinator.cardBackTheme
+        let resolvedCustomCardColors: CustomCardColorGroup = coordinator.customCardColors
+
         return ZStack {
-            // Felt Board Background
-            // .id() forces a redraw when the custom felt color's raw RGB changes — those
-            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs
-            // on. Scoped to just this Color (not the whole board) so it doesn't tear down
-            // and reset unrelated @State, like the Options/Themes sheet's open/closed state.
-            viewModel.options.feltColor.primaryColor
-                .id(viewModel.options.customFeltColorRevision)
+            // Board Background — a custom image if one's active, otherwise the app-wide
+            // shared felt color on AppCoordinator (not per-game options).
+            BackgroundLayerView()
                 .ignoresSafeArea()
                 .onTapGesture {
                     viewModel.clearKeyboardCursor()
                     isBoardFocused = true
                 }
 
-            if viewModel.options.showFeltVignette { FeltVignetteView(intensity: 0.34) }
+            if resolvedShowFeltVignette { FeltVignetteView(intensity: 0.34) }
 
             VStack(spacing: 0) {
                 // Stationary Top Control and Status Panel (1.0x Scale)
@@ -62,30 +62,30 @@ public struct GameView: View {
                     // Game Selection Dropdown
                     Menu {
                         Button(GameMode.klondike.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .klondike {
+                            if coordinator.gameMode != .klondike {
                                 coordinator.gameMode = .klondike
                                 coordinator.startNewGame()
                             }
                         }
                         Button(GameMode.beecell.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .beecell {
+                            if coordinator.gameMode != .beecell {
                                 coordinator.gameMode = .beecell
                                 coordinator.startNewGame()
                             }
                         }
                         Button(GameMode.spider.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .spider {
+                            if coordinator.gameMode != .spider {
                                 coordinator.gameMode = .spider
                                 coordinator.startNewGame()
                             }
                         }
                         Button(GameMode.videoPoker.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .videoPoker {
+                            if coordinator.gameMode != .videoPoker {
                                 coordinator.gameMode = .videoPoker
                             }
                         }
                         Button(GameMode.blackjack.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .blackjack {
+                            if coordinator.gameMode != .blackjack {
                                 coordinator.gameMode = .blackjack
                             }
                         }
@@ -604,9 +604,9 @@ public struct GameView: View {
 
             HotkeyLegendView(text: "Arrows=Move Cursor   Space/Return=Select or Move   D=Draw   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor")
         }
-        .environment(\.feltColor, viewModel.options.feltColor)
-        .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
-        .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
+        .environment(\.feltColor, resolvedFeltColorTheme)
+        .environment(\.activeCardBackTheme, resolvedCardBackTheme)
+        .environment(\.activeCustomCardColors, resolvedCustomCardColors)
         .focusable()
         .focused($isBoardFocused)
         .onAppear {
@@ -687,7 +687,7 @@ public struct GameView: View {
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .overlay(
-                        OptionsView(viewModel: viewModel, isPresented: $isShowingOptions, onViewStats: {
+                        OptionsView(viewModel: viewModel, isPresented: $isShowingOptions, coordinator: coordinator, onViewStats: {
                             isShowingStats = true
                         })
                     )
@@ -739,7 +739,7 @@ public struct GameView: View {
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            coordinator?.activeWindow = window
+            coordinator.activeWindow = window
             if let saved = viewModel.defaultWindowSize {
                 snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
             } else {
@@ -872,8 +872,8 @@ public struct GameView: View {
             }
         }
         .frame(width: 128, height: stackHeight)
-        .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
-        .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
+        .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
+        .environment(\.activeCustomCardColors, coordinator.customCardColors)
         let renderer = ImageRenderer(content: content)
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2.0
         dragSnapshot = renderer.nsImage
@@ -1061,8 +1061,6 @@ extension FeltColorTheme {
             return Color(red: 0.18, green: 0.18, blue: 0.18)
         case .desert:
             return Color(red: 0.76, green: 0.59, blue: 0.48)
-        case .colorblind:
-            return Color(red: 0.20, green: 0.32, blue: 0.45)
         case .custom:
             let r = UserDefaults.standard.double(forKey: "custom_felt_red")
             let g = UserDefaults.standard.double(forKey: "custom_felt_green")
@@ -1086,8 +1084,6 @@ extension FeltColorTheme {
             return Color(red: 0.14, green: 0.14, blue: 0.14)
         case .desert:
             return Color(red: 0.71, green: 0.54, blue: 0.43)
-        case .colorblind:
-            return Color(red: 0.16, green: 0.26, blue: 0.38)
         case .custom:
             let r = UserDefaults.standard.double(forKey: "custom_felt_red")
             let g = UserDefaults.standard.double(forKey: "custom_felt_green")
@@ -1103,18 +1099,15 @@ extension FeltColorTheme {
 struct OptionsView: View {
     @Bindable var viewModel: GameViewModel
     @Binding var isPresented: Bool
+    @Bindable var coordinator: AppCoordinator
 
-    @State private var feltColor: FeltColorTheme
-    @State private var cardBackTheme: String
     @State private var isStatusBarVisible: Bool
     @State private var isSoundEnabled: Bool
     @State private var isVegasScoring: Bool
     @State private var drawMode: GameState.DrawMode
     @State private var hideHintButton: Bool
     @State private var noStressMode: Bool
-    @State private var showFeltVignette: Bool
     @State private var customSelectedColor: Color
-    @State private var customCardColors: CustomCardColorGroup
     @State private var showingThemes: Bool = false
 
     let originalRed: Double
@@ -1124,31 +1117,30 @@ struct OptionsView: View {
     let originalCardBackTheme: String
     let originalShowFeltVignette: Bool
     let originalCustomCardColors: CustomCardColorGroup
+    let originalCustomBackgroundName: String?
 
     let onViewStats: (() -> Void)?
 
-    init(viewModel: GameViewModel, isPresented: Binding<Bool>, onViewStats: (() -> Void)? = nil) {
+    init(viewModel: GameViewModel, isPresented: Binding<Bool>, coordinator: AppCoordinator, onViewStats: (() -> Void)? = nil) {
         self.viewModel = viewModel
         self._isPresented = isPresented
+        self.coordinator = coordinator
         self.onViewStats = onViewStats
-        _feltColor = State(initialValue: viewModel.options.feltColor)
-        _cardBackTheme = State(initialValue: viewModel.options.cardBackTheme)
         _isStatusBarVisible = State(initialValue: viewModel.options.isStatusBarVisible)
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _isVegasScoring = State(initialValue: viewModel.options.isVegasScoring)
         _drawMode = State(initialValue: viewModel.state.drawMode)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
-        _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
-        _customCardColors = State(initialValue: viewModel.options.customCardColors)
-        self.originalFeltColor = viewModel.options.feltColor
-        self.originalCardBackTheme = viewModel.options.cardBackTheme
-        self.originalShowFeltVignette = viewModel.options.showFeltVignette
-        self.originalCustomCardColors = viewModel.options.customCardColors
+        self.originalFeltColor = coordinator.feltColor
+        self.originalCardBackTheme = coordinator.cardBackTheme
+        self.originalShowFeltVignette = coordinator.showFeltVignette
+        self.originalCustomCardColors = coordinator.customCardColors
+        self.originalCustomBackgroundName = coordinator.customBackgroundName
 
-        let r = UserDefaults.standard.double(forKey: "custom_felt_red")
-        let g = UserDefaults.standard.double(forKey: "custom_felt_green")
-        let b = UserDefaults.standard.double(forKey: "custom_felt_blue")
+        let r = coordinator.customFeltRed
+        let g = coordinator.customFeltGreen
+        let b = coordinator.customFeltBlue
         self.originalRed = r
         self.originalGreen = g
         self.originalBlue = b
@@ -1230,16 +1222,15 @@ struct OptionsView: View {
             
             HStack {
                 Button("Cancel") {
-                    UserDefaults.standard.set(originalRed, forKey: "custom_felt_red")
-                    UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
-                    UserDefaults.standard.set(originalBlue, forKey: "custom_felt_blue")
                     // Revert any theme changes that were live-previewed via the Themes sub-panel.
-                    var revertedOpts = viewModel.options
-                    revertedOpts.feltColor = originalFeltColor
-                    revertedOpts.cardBackTheme = originalCardBackTheme
-                    revertedOpts.showFeltVignette = originalShowFeltVignette
-                    revertedOpts.customCardColors = originalCustomCardColors
-                    viewModel.options = revertedOpts
+                    coordinator.customFeltRed = originalRed
+                    coordinator.customFeltGreen = originalGreen
+                    coordinator.customFeltBlue = originalBlue
+                    coordinator.feltColor = originalFeltColor
+                    coordinator.cardBackTheme = originalCardBackTheme
+                    coordinator.showFeltVignette = originalShowFeltVignette
+                    coordinator.customCardColors = originalCustomCardColors
+                    coordinator.customBackgroundName = originalCustomBackgroundName
                     isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
@@ -1263,16 +1254,11 @@ struct OptionsView: View {
                 
                 Button("OK") {
                     var updatedOpts = viewModel.options
-                    updatedOpts.feltColor = feltColor
-                    updatedOpts.cardBackTheme = cardBackTheme
                     updatedOpts.isStatusBarVisible = isStatusBarVisible
                     updatedOpts.isSoundEnabled = isSoundEnabled
                     updatedOpts.isVegasScoring = isVegasScoring
                     updatedOpts.hideHintButton = hideHintButton
                     updatedOpts.noStressMode = noStressMode
-                    updatedOpts.showFeltVignette = showFeltVignette
-                    updatedOpts.customCardColors = customCardColors
-                    updatedOpts.customFeltColorRevision += 1
 
                     updatedOpts.drawMode = drawMode
                     if viewModel.state.drawMode != drawMode {
@@ -1296,24 +1282,17 @@ struct OptionsView: View {
             ThemesOptionsView(
                 isShowing: $showingThemes,
                 isOptionsPresented: $isPresented,
-                feltColor: $feltColor,
-                cardBackTheme: $cardBackTheme,
-                showFeltVignette: $showFeltVignette,
+                feltColor: $coordinator.feltColor,
+                cardBackTheme: $coordinator.cardBackTheme,
+                showFeltVignette: $coordinator.showFeltVignette,
                 customSelectedColor: $customSelectedColor,
-                customCardColors: $customCardColors,
+                customCardColors: $coordinator.customCardColors,
+                customBackgroundName: $coordinator.customBackgroundName,
                 originalRed: originalRed,
                 originalGreen: originalGreen,
                 originalBlue: originalBlue,
                 originalCustomCardColors: originalCustomCardColors,
-                onCommit: { bumpFeltRevision in
-                    var updatedOpts = viewModel.options
-                    updatedOpts.feltColor = feltColor
-                    updatedOpts.cardBackTheme = cardBackTheme
-                    updatedOpts.showFeltVignette = showFeltVignette
-                    updatedOpts.customCardColors = customCardColors
-                    if bumpFeltRevision { updatedOpts.customFeltColorRevision += 1 }
-                    viewModel.options = updatedOpts
-                }
+                onCommit: { _ in }
             )
             .transition(.move(edge: .trailing))
             .frame(width: 880)

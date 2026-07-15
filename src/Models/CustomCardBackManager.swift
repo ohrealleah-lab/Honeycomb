@@ -80,12 +80,35 @@ public final class CustomCardBackManager {
     private var appSupportDirectory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        let appSupport = base.appendingPathComponent("SoliBee")
+        let appSupport = base.appendingPathComponent("SoliBee").appendingPathComponent("CardBacks")
         // Ensure directory exists
         try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
         return appSupport
     }
-    
+
+    // Pre-folder-structure location — files used to be dumped flat here alongside face
+    // art and (later) background images. Not created; only read from during migration.
+    private var legacyAppSupportDirectory: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return base.appendingPathComponent("SoliBee")
+    }
+
+    // One-time migration from the flat layout into CardBacks/. Moves whatever it can;
+    // anything that fails to move (permissions, etc.) is left in place rather than
+    // pruned, so a failed move never loses the user's file.
+    private func migrateLegacyFilesIfNeeded() {
+        let legacyDir = legacyAppSupportDirectory
+        let newDir = appSupportDirectory
+        for entry in customCardBacks {
+            let newURL = newDir.appendingPathComponent(entry.relativePath)
+            guard !FileManager.default.fileExists(atPath: newURL.path) else { continue }
+            let legacyURL = legacyDir.appendingPathComponent(entry.relativePath)
+            guard FileManager.default.fileExists(atPath: legacyURL.path) else { continue }
+            try? FileManager.default.moveItem(at: legacyURL, to: newURL)
+        }
+    }
+
     public func loadCustomCardBacks() {
         if let data = UserDefaults.standard.data(forKey: "custom_card_backs"),
            let decoded = try? JSONDecoder().decode([CustomCardBack].self, from: data) {
@@ -93,6 +116,7 @@ public final class CustomCardBackManager {
         } else {
             self.customCardBacks = []
         }
+        migrateLegacyFilesIfNeeded()
         pruneOrphanedEntries()
     }
 
@@ -130,20 +154,7 @@ public final class CustomCardBackManager {
         let filename = "\(id.uuidString).png"
         let fileURL = appSupportDirectory.appendingPathComponent(filename)
 
-        var pngData: Data? = nil
-        for rep in image.representations {
-            if let bitmapRep = rep as? NSBitmapImageRep {
-                pngData = bitmapRep.representation(using: .png, properties: [:])
-                if pngData != nil { break }
-            }
-        }
-        if pngData == nil {
-            if let tiffData = image.tiffRepresentation,
-               let bitmap = NSBitmapImageRep(data: tiffData) {
-                pngData = bitmap.representation(using: .png, properties: [:])
-            }
-        }
-        guard let finalPngData = pngData else { return false }
+        guard let finalPngData = ImageEncoding.pngData(from: image) else { return false }
 
         do {
             try finalPngData.write(to: fileURL)
@@ -193,9 +204,7 @@ public final class CustomCardBackManager {
         // Don't delete the underlying file if any saved theme still references this deck
         // by name — otherwise applying that theme later silently falls back to a
         // different look with no indication the deck it wanted is gone.
-        let stillReferencedBySavedTheme = ThemeManager.shared.themes.contains {
-            $0.cardBackTheme == customBack.name
-        }
+        let stillReferencedBySavedTheme = ThemeManager.shared.themeReferencingCardBack(named: customBack.name) != nil
         if !stillReferencedBySavedTheme {
             let fileURL = appSupportDirectory.appendingPathComponent(customBack.relativePath)
             try? FileManager.default.removeItem(at: fileURL)

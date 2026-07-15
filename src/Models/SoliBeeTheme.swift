@@ -11,6 +11,7 @@ public struct SoliBeeTheme: Codable, Identifiable {
     public var customFeltBlue: Double
     public var faceArts: [CustomFaceArt]
     public var customCardColors: CustomCardColorGroup
+    public var customBackgroundName: String?
 
     public init(
         id: UUID = UUID(),
@@ -21,7 +22,8 @@ public struct SoliBeeTheme: Codable, Identifiable {
         customFeltGreen: Double,
         customFeltBlue: Double,
         faceArts: [CustomFaceArt],
-        customCardColors: CustomCardColorGroup = CustomCardColorGroup()
+        customCardColors: CustomCardColorGroup = CustomCardColorGroup(),
+        customBackgroundName: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -32,11 +34,12 @@ public struct SoliBeeTheme: Codable, Identifiable {
         self.customFeltBlue = customFeltBlue
         self.faceArts = faceArts
         self.customCardColors = customCardColors
+        self.customBackgroundName = customBackgroundName
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, cardBackTheme, feltColor
-        case customFeltRed, customFeltGreen, customFeltBlue, faceArts, customCardColors
+        case customFeltRed, customFeltGreen, customFeltBlue, faceArts, customCardColors, customBackgroundName
     }
 
     public init(from decoder: Decoder) throws {
@@ -50,6 +53,7 @@ public struct SoliBeeTheme: Codable, Identifiable {
         customFeltBlue  = try c.decodeIfPresent(Double.self, forKey: .customFeltBlue)  ?? 0
         faceArts       = try c.decodeIfPresent([CustomFaceArt].self, forKey: .faceArts) ?? []
         customCardColors = try c.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()
+        customBackgroundName = try c.decodeIfPresent(String.self, forKey: .customBackgroundName)
     }
 }
 
@@ -207,5 +211,24 @@ public final class ThemeManager {
     /// tell the user has drifted away from whatever theme was last applied.
     public func invalidateActiveTheme() {
         activeThemeId = nil
+    }
+
+    // MARK: - Asset reference lookups
+    //
+    // Shared by the custom card back / face art / background managers' delete
+    // safeguards (and their selector views' pre-delete "in use" alerts) so "is this
+    // asset referenced by a saved Theme" is defined once instead of as a near-identical
+    // inline closure at each call site.
+
+    public func themeReferencingCardBack(named name: String) -> SoliBeeTheme? {
+        themes.first { $0.cardBackTheme == name }
+    }
+
+    public func themeReferencingBackground(named name: String) -> SoliBeeTheme? {
+        themes.first { $0.customBackgroundName == name }
+    }
+
+    public func themeReferencingFaceArt(relativePath: String) -> SoliBeeTheme? {
+        themes.first { $0.faceArts.contains { $0.relativePath == relativePath } }
     }
 }

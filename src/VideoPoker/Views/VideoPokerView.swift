@@ -22,7 +22,7 @@ public struct VideoPokerView: View {
     @State private var resultAnimationTask:  DispatchWorkItem? = nil
     @State private var resultHideTask:       DispatchWorkItem? = nil
     @State private var idlePromptTask:       DispatchWorkItem? = nil
-    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     // The toolbar stays fixed size regardless of zoom; only the board below it scales.
     static let toolbarHeight: CGFloat = 73
@@ -73,13 +73,12 @@ public struct VideoPokerView: View {
 
     public var body: some View {
         ZStack {
-            // .id() forces a redraw when the custom felt color's raw RGB changes — those
-            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs on.
-            viewModel.options.feltColor.primaryColor
-                .id(viewModel.options.customFeltColorRevision)
+            // Board Background — a custom image if one's active, otherwise the app-wide
+            // shared felt color on AppCoordinator (not per-game options).
+            BackgroundLayerView()
                 .ignoresSafeArea()
 
-            if viewModel.options.showFeltVignette { FeltVignetteView() }
+            if coordinator.showFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
                 // Stationary toolbar — never scales with zoom
@@ -152,7 +151,7 @@ public struct VideoPokerView: View {
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            coordinator?.activeWindow = window
+            coordinator.activeWindow = window
             if let saved = viewModel.defaultWindowSize {
                 snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
             } else {
@@ -162,15 +161,15 @@ public struct VideoPokerView: View {
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }
         .onChange(of: viewModel.options.playMode) { snapToMinSize() }
         .onChange(of: viewModel.options.noStressMode) { snapToMinSize() }
-        .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
-        .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
+        .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
+        .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .overlay {
             if isShowingOptions {
                 Color.clear
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .overlay(
-                        VideoPokerOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions)
+                        VideoPokerOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions, coordinator: coordinator)
                     )
                     .transition(.opacity)
             }
@@ -316,19 +315,19 @@ public struct VideoPokerView: View {
     private var gameModeMenu: some View {
         Menu {
             Button(GameMode.klondike.rawValue) {
-                if let c = coordinator, c.gameMode != .klondike { c.gameMode = .klondike; c.startNewGame() }
+                if coordinator.gameMode != .klondike { coordinator.gameMode = .klondike; coordinator.startNewGame() }
             }
             Button(GameMode.beecell.rawValue) {
-                if let c = coordinator, c.gameMode != .beecell { c.gameMode = .beecell; c.startNewGame() }
+                if coordinator.gameMode != .beecell { coordinator.gameMode = .beecell; coordinator.startNewGame() }
             }
             Button(GameMode.spider.rawValue) {
-                if let c = coordinator, c.gameMode != .spider { c.gameMode = .spider; c.startNewGame() }
+                if coordinator.gameMode != .spider { coordinator.gameMode = .spider; coordinator.startNewGame() }
             }
             Button(GameMode.videoPoker.rawValue) {
-                if let c = coordinator, c.gameMode != .videoPoker { c.gameMode = .videoPoker }
+                if coordinator.gameMode != .videoPoker { coordinator.gameMode = .videoPoker }
             }
             Button(GameMode.blackjack.rawValue) {
-                if let c = coordinator, c.gameMode != .blackjack { c.gameMode = .blackjack }
+                if coordinator.gameMode != .blackjack { coordinator.gameMode = .blackjack }
             }
         } label: {
             Text("Game Selection")
@@ -892,6 +891,7 @@ struct VideoPokerOptionsView: View {
     @Bindable var viewModel: VideoPokerViewModel
     @Binding var isShowingStats: Bool
     @Binding var isPresented: Bool
+    @Bindable var coordinator: AppCoordinator
 
     @State private var variant: VideoPokerVariant
     @State private var playMode: VideoPokerPlayMode
@@ -901,11 +901,7 @@ struct VideoPokerOptionsView: View {
     @State private var hideHintButton: Bool
     @State private var hideBetBoard: Bool
     @State private var noStressMode: Bool
-    @State private var showFeltVignette: Bool
-    @State private var feltColor: FeltColorTheme
-    @State private var cardBackTheme: String
     @State private var customSelectedColor: Color
-    @State private var customCardColors: CustomCardColorGroup
     @State private var showingThemes: Bool = false
 
     let originalRed: Double
@@ -915,11 +911,13 @@ struct VideoPokerOptionsView: View {
     let originalCardBackTheme: String
     let originalShowFeltVignette: Bool
     let originalCustomCardColors: CustomCardColorGroup
+    let originalCustomBackgroundName: String?
 
-    init(viewModel: VideoPokerViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>) {
+    init(viewModel: VideoPokerViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>, coordinator: AppCoordinator) {
         self.viewModel = viewModel
         self._isShowingStats = isShowingStats
         self._isPresented = isPresented
+        self.coordinator = coordinator
         _variant         = State(initialValue: viewModel.options.variant)
         _playMode        = State(initialValue: viewModel.options.playMode)
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
@@ -928,18 +926,15 @@ struct VideoPokerOptionsView: View {
         _hideHintButton  = State(initialValue: viewModel.options.hideHintButton)
         _hideBetBoard    = State(initialValue: viewModel.options.hideBetBoard)
         _noStressMode    = State(initialValue: viewModel.options.noStressMode)
-        _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
-        _feltColor       = State(initialValue: viewModel.options.feltColor)
-        _cardBackTheme   = State(initialValue: viewModel.options.cardBackTheme)
-        _customCardColors = State(initialValue: viewModel.options.customCardColors)
-        self.originalFeltColor = viewModel.options.feltColor
-        self.originalCardBackTheme = viewModel.options.cardBackTheme
-        self.originalShowFeltVignette = viewModel.options.showFeltVignette
-        self.originalCustomCardColors = viewModel.options.customCardColors
+        self.originalFeltColor = coordinator.feltColor
+        self.originalCardBackTheme = coordinator.cardBackTheme
+        self.originalShowFeltVignette = coordinator.showFeltVignette
+        self.originalCustomCardColors = coordinator.customCardColors
+        self.originalCustomBackgroundName = coordinator.customBackgroundName
 
-        let r = UserDefaults.standard.double(forKey: "custom_felt_red")
-        let g = UserDefaults.standard.double(forKey: "custom_felt_green")
-        let b = UserDefaults.standard.double(forKey: "custom_felt_blue")
+        let r = coordinator.customFeltRed
+        let g = coordinator.customFeltGreen
+        let b = coordinator.customFeltBlue
         self.originalRed = r; self.originalGreen = g; self.originalBlue = b
         let init_c: Color = (r == 0 && g == 0 && b == 0)
             ? Color(red: 0.35, green: 0.15, blue: 0.45)
@@ -1024,16 +1019,15 @@ struct VideoPokerOptionsView: View {
 
             HStack {
                 Button("Cancel") {
-                    UserDefaults.standard.set(originalRed,   forKey: "custom_felt_red")
-                    UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
-                    UserDefaults.standard.set(originalBlue,  forKey: "custom_felt_blue")
                     // Revert any theme changes that were live-previewed via the Themes sub-panel.
-                    var revertedOpts = viewModel.options
-                    revertedOpts.feltColor = originalFeltColor
-                    revertedOpts.cardBackTheme = originalCardBackTheme
-                    revertedOpts.showFeltVignette = originalShowFeltVignette
-                    revertedOpts.customCardColors = originalCustomCardColors
-                    viewModel.options = revertedOpts
+                    coordinator.customFeltRed = originalRed
+                    coordinator.customFeltGreen = originalGreen
+                    coordinator.customFeltBlue = originalBlue
+                    coordinator.feltColor = originalFeltColor
+                    coordinator.cardBackTheme = originalCardBackTheme
+                    coordinator.showFeltVignette = originalShowFeltVignette
+                    coordinator.customCardColors = originalCustomCardColors
+                    coordinator.customBackgroundName = originalCustomBackgroundName
                     isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
@@ -1063,11 +1057,6 @@ struct VideoPokerOptionsView: View {
                     o.hideHintButton  = hideHintButton
                     o.hideBetBoard    = hideBetBoard
                     o.noStressMode    = noStressMode
-                    o.showFeltVignette   = showFeltVignette
-                    o.feltColor          = feltColor
-                    o.cardBackTheme   = cardBackTheme
-                    o.customCardColors = customCardColors
-                    o.customFeltColorRevision += 1
                     viewModel.options = o
                     if variantChanged || playModeChanged {
                         viewModel.resetHandDisplay()
@@ -1087,24 +1076,17 @@ struct VideoPokerOptionsView: View {
             ThemesOptionsView(
                 isShowing: $showingThemes,
                 isOptionsPresented: $isPresented,
-                feltColor: $feltColor,
-                cardBackTheme: $cardBackTheme,
-                showFeltVignette: $showFeltVignette,
+                feltColor: $coordinator.feltColor,
+                cardBackTheme: $coordinator.cardBackTheme,
+                showFeltVignette: $coordinator.showFeltVignette,
                 customSelectedColor: $customSelectedColor,
-                customCardColors: $customCardColors,
+                customCardColors: $coordinator.customCardColors,
+                customBackgroundName: $coordinator.customBackgroundName,
                 originalRed: originalRed,
                 originalGreen: originalGreen,
                 originalBlue: originalBlue,
                 originalCustomCardColors: originalCustomCardColors,
-                onCommit: { bumpFeltRevision in
-                    var o = viewModel.options
-                    o.showFeltVignette   = showFeltVignette
-                    o.feltColor          = feltColor
-                    o.cardBackTheme      = cardBackTheme
-                    o.customCardColors   = customCardColors
-                    if bumpFeltRevision { o.customFeltColorRevision += 1 }
-                    viewModel.options = o
-                }
+                onCommit: { _ in }
             )
             .transition(.move(edge: .trailing))
             .frame(width: 880)

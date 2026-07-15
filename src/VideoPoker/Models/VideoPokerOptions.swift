@@ -24,23 +24,13 @@ public struct VideoPokerOptions: Codable, Equatable {
     public var hideHintButton: Bool = false
     public var hideBetBoard: Bool = false
     public var noStressMode: Bool = false
-    public var feltColor: FeltColorTheme = .feltGreen
-    public var cardBackTheme: String = "Moogle"
-    public var customFeltColorRevision: Int = 0
-    public var showFeltVignette: Bool = true
-    public var customCardColors: CustomCardColorGroup = CustomCardColorGroup()
 
     enum CodingKeys: String, CodingKey {
         case variant, playMode, startingCredits, betPerHand
         case isSoundEnabled, hideHintButton, hideBetBoard, noStressMode
-        case feltColor, cardBackTheme, customFeltColorRevision, showFeltVignette, customCardColors
     }
 
-    public init(feltColor: FeltColorTheme = .feltGreen, cardBackTheme: String = "Moogle") {
-        self.feltColor = feltColor
-        self.cardBackTheme = cardBackTheme
-        self.customCardColors = CustomCardColorGroup()
-    }
+    public init() {}
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -52,10 +42,5 @@ public struct VideoPokerOptions: Codable, Equatable {
         hideHintButton = try c.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
         hideBetBoard   = try c.decodeIfPresent(Bool.self, forKey: .hideBetBoard) ?? false
         noStressMode   = try c.decodeIfPresent(Bool.self, forKey: .noStressMode) ?? false
-        feltColor      = try c.decodeIfPresent(FeltColorTheme.self, forKey: .feltColor) ?? .feltGreen
-        cardBackTheme  = try c.decodeIfPresent(String.self, forKey: .cardBackTheme) ?? "Moogle"
-        customFeltColorRevision = try c.decodeIfPresent(Int.self, forKey: .customFeltColorRevision) ?? 0
-        showFeltVignette = try c.decodeIfPresent(Bool.self, forKey: .showFeltVignette) ?? true
-        customCardColors = try c.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()
     }
 }

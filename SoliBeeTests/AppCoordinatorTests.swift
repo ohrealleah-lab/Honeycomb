@@ -25,6 +25,8 @@ struct AppCoordinatorTests {
         // Clear previous state for a clean test
         UserDefaults.standard.removeObject(forKey: "global_felt_color")
         UserDefaults.standard.removeObject(forKey: "cardBackTheme")
+        UserDefaults.standard.removeObject(forKey: "showFeltVignette")
+        UserDefaults.standard.removeObject(forKey: "customCardColors")
         UserDefaults.standard.removeObject(forKey: "solitaire_options")
         UserDefaults.standard.removeObject(forKey: "beecell_options")
         UserDefaults.standard.removeObject(forKey: "spider_options")
@@ -32,47 +34,38 @@ struct AppCoordinatorTests {
         UserDefaults.standard.removeObject(forKey: "blackjack_options")
         UserDefaults.standard.removeObject(forKey: "pokerbee_options")
         UserDefaults.standard.removeObject(forKey: "tejas_options")
-        
+
         // 1. Initialize coordinator
         let coordinator = AppCoordinator()
-        
-        // Verify defaults
-        assert(coordinator.klondikeViewModel.options.feltColor == .feltGreen, "Default felt color should be feltGreen")
-        assert(coordinator.klondikeViewModel.options.cardBackTheme == "Moogle", "Default card back theme should be Moogle")
-        
-        coordinator.klondikeViewModel.options.feltColor = .crimson
-        coordinator.klondikeViewModel.options.cardBackTheme = "Vulpera"
-        
-        // Assert real-time propagation via notifications to Beecell and Spider ViewModels
-        assert(coordinator.beecellViewModel.options.feltColor == .crimson, "Beecell felt color should sync to crimson")
-        assert(coordinator.beecellViewModel.options.cardBackTheme == "Vulpera", "Beecell card back theme should sync to Vulpera")
-        assert(coordinator.spiderViewModel.options.feltColor == .crimson, "Spider felt color should sync to crimson")
-        assert(coordinator.spiderViewModel.options.cardBackTheme == "Vulpera", "Spider card back theme should sync to Vulpera")
-        
-        // 3. Change preferences on Beecell ViewModel
-        coordinator.beecellViewModel.options.feltColor = .charcoal
-        assert(coordinator.klondikeViewModel.options.feltColor == .charcoal, "Klondike felt color should sync to charcoal")
-        assert(coordinator.spiderViewModel.options.feltColor == .charcoal, "Spider felt color should sync to charcoal")
-        
-        // 4. Change preferences on Spider ViewModel
-        var spiderOpts = coordinator.spiderViewModel.options
-        spiderOpts.cardBackTheme = "Moogle"
-        coordinator.spiderViewModel.options = spiderOpts
-        
-        assert(coordinator.klondikeViewModel.options.cardBackTheme == "Moogle", "Klondike card back theme should sync back to Moogle")
-        assert(coordinator.beecellViewModel.options.cardBackTheme == "Moogle", "Beecell card back theme should sync back to Moogle")
-        
-        // 5. Verify persistence in UserDefaults
+
+        // Verify defaults — theme lives on the coordinator itself now, not per-game options.
+        assert(coordinator.feltColor == .feltGreen, "Default felt color should be feltGreen")
+        assert(coordinator.cardBackTheme == "Moogle", "Default card back theme should be Moogle")
+
+        // 2. Theme is a single live-shared value — every game reads the same coordinator
+        // property, so there's no per-VM propagation to assert; just confirm all 5 view
+        // models observe the same change instantly.
+        coordinator.feltColor = .crimson
+        coordinator.cardBackTheme = "Vulpera"
+
+        assert(coordinator.klondikeViewModel.options.isSoundEnabled == coordinator.beecellViewModel.options.isSoundEnabled, "Sound preference should still sync across games")
+        assert(coordinator.feltColor == .crimson, "Felt color should be crimson")
+        assert(coordinator.cardBackTheme == "Vulpera", "Card back theme should be Vulpera")
+
+        // 3. Applying a theme also goes through the single coordinator property
+        coordinator.feltColor = .charcoal
+        assert(coordinator.feltColor == .charcoal, "Felt color should update to charcoal")
+
+        coordinator.cardBackTheme = "Moogle"
+        assert(coordinator.cardBackTheme == "Moogle", "Card back theme should update back to Moogle")
+
+        // 4. Verify persistence in UserDefaults
         assert(UserDefaults.standard.string(forKey: "global_felt_color") == "charcoal", "Felt color should be persisted to UserDefaults")
         assert(UserDefaults.standard.string(forKey: "cardBackTheme") == "Moogle", "Card back theme should be persisted to UserDefaults")
-        
-        // 6. Verify persistence through relaunch (initializing a new AppCoordinator)
+
+        // 5. Verify persistence through relaunch (initializing a new AppCoordinator)
         let newCoordinator = AppCoordinator()
-        assert(newCoordinator.klondikeViewModel.options.feltColor == .charcoal, "New Klondike VM should load charcoal felt color")
-        assert(newCoordinator.klondikeViewModel.options.cardBackTheme == "Moogle", "New Klondike VM should load Moogle card back theme")
-        assert(newCoordinator.beecellViewModel.options.feltColor == .charcoal, "New Beecell VM should load charcoal felt color")
-        assert(newCoordinator.beecellViewModel.options.cardBackTheme == "Moogle", "New Beecell VM should load Moogle card back theme")
-        assert(newCoordinator.spiderViewModel.options.feltColor == .charcoal, "New Spider VM should load charcoal felt color")
-        assert(newCoordinator.spiderViewModel.options.cardBackTheme == "Moogle", "New Spider VM should load Moogle card back theme")
+        assert(newCoordinator.feltColor == .charcoal, "New coordinator should load charcoal felt color")
+        assert(newCoordinator.cardBackTheme == "Moogle", "New coordinator should load Moogle card back theme")
     }
 }

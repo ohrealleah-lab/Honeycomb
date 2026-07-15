@@ -20,7 +20,6 @@ struct GameViewModelTests {
         testResetStatistics()
         testRestartCurrentGame()
         testHighScorePersistence()
-        testCardBackThemePersistence()
         testKeyboardNavigation()
     }
     
@@ -452,34 +451,6 @@ struct GameViewModelTests {
             UserDefaults.standard.set(savedVegasHighScore, forKey: "highScoreVegas")
         } else {
             UserDefaults.standard.removeObject(forKey: "highScoreVegas")
-        }
-    }
-    
-    static func testCardBackThemePersistence() {
-        let savedOptions = UserDefaults.standard.data(forKey: "solitaire_options")
-        let savedTheme = UserDefaults.standard.string(forKey: "cardBackTheme")
-        UserDefaults.standard.removeObject(forKey: "solitaire_options")
-        UserDefaults.standard.removeObject(forKey: "cardBackTheme")
-        
-        let viewModel = GameViewModel()
-        assert(viewModel.cardBackTheme == "Moogle", "Default theme should be Moogle")
-        
-        viewModel.cardBackTheme = "Moogle"
-        assert(UserDefaults.standard.string(forKey: "cardBackTheme") == "Moogle", "Theme should be persisted to UserDefaults")
-        
-        let nextViewModel = GameViewModel()
-        assert(nextViewModel.cardBackTheme == "Moogle", "Persisted theme should be loaded on init")
-        
-        // Clean up
-        if let saved = savedOptions {
-            UserDefaults.standard.set(saved, forKey: "solitaire_options")
-        } else {
-            UserDefaults.standard.removeObject(forKey: "solitaire_options")
-        }
-        if let original = savedTheme {
-            UserDefaults.standard.set(original, forKey: "cardBackTheme")
-        } else {
-            UserDefaults.standard.removeObject(forKey: "cardBackTheme")
         }
     }
     

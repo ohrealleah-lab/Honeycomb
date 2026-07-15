@@ -9,27 +9,6 @@ public final class VideoPokerViewModel {
         didSet {
             saveOptions()
             UISound.isEnabled = options.isSoundEnabled
-            if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
-                UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
-                NotificationCenter.default.post(name: .feltColorDidChange, object: self, userInfo: [
-                    "feltColor": options.feltColor,
-                    "customFeltColorRevision": options.customFeltColorRevision
-                ])
-            }
-            if options.cardBackTheme != oldValue.cardBackTheme {
-                UserDefaults.standard.set(options.cardBackTheme, forKey: "cardBackTheme")
-                NotificationCenter.default.post(name: .cardBackThemeDidChange, object: self, userInfo: ["cardBackTheme": options.cardBackTheme])
-            }
-            if options.showFeltVignette != oldValue.showFeltVignette {
-                UserDefaults.standard.set(options.showFeltVignette, forKey: "showFeltVignette")
-                NotificationCenter.default.post(name: .feltVignetteDidChange, object: self, userInfo: ["showFeltVignette": options.showFeltVignette])
-            }
-            if options.customCardColors != oldValue.customCardColors {
-                if let encoded = try? JSONEncoder().encode(options.customCardColors) {
-                    UserDefaults.standard.set(encoded, forKey: "customCardColors")
-                }
-                NotificationCenter.default.post(name: .customCardColorsDidChange, object: self, userInfo: ["customCardColors": options.customCardColors])
-            }
         }
     }
 
@@ -98,31 +77,10 @@ public final class VideoPokerViewModel {
         self.statistics = VideoPokerStatistics()
 
         if let data = UserDefaults.standard.data(forKey: "videopoker_options"),
-           var decoded = try? JSONDecoder().decode(VideoPokerOptions.self, from: data) {
-            if let back = UserDefaults.standard.string(forKey: "cardBackTheme") { decoded.cardBackTheme = back }
-            if let feltStr = UserDefaults.standard.string(forKey: "global_felt_color"),
-               let felt = FeltColorTheme(rawValue: feltStr) { decoded.feltColor = felt }
-            if UserDefaults.standard.object(forKey: "showFeltVignette") != nil {
-                decoded.showFeltVignette = UserDefaults.standard.bool(forKey: "showFeltVignette")
-            }
-            if let dataColors = UserDefaults.standard.data(forKey: "customCardColors"),
-               let colors = try? JSONDecoder().decode(CustomCardColorGroup.self, from: dataColors) {
-                decoded.customCardColors = colors
-            }
+           let decoded = try? JSONDecoder().decode(VideoPokerOptions.self, from: data) {
             self.options = decoded
         } else {
-            let back = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
-            let feltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
-            let felt = FeltColorTheme(rawValue: feltStr) ?? .feltGreen
-            var opts = VideoPokerOptions(feltColor: felt, cardBackTheme: back)
-            if UserDefaults.standard.object(forKey: "showFeltVignette") != nil {
-                opts.showFeltVignette = UserDefaults.standard.bool(forKey: "showFeltVignette")
-            }
-            if let dataColors = UserDefaults.standard.data(forKey: "customCardColors"),
-               let colors = try? JSONDecoder().decode(CustomCardColorGroup.self, from: dataColors) {
-                opts.customCardColors = colors
-            }
-            self.options = opts
+            self.options = VideoPokerOptions()
         }
 
         if let data = UserDefaults.standard.data(forKey: "videopoker_statistics"),
@@ -151,15 +109,7 @@ public final class VideoPokerViewModel {
             self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
         }
 
-        NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
-
         UISound.isEnabled = self.options.isSoundEnabled
-    }
-
-    deinit {
-        NotificationCenter.default.removeObserver(self)
     }
 
     // MARK: - Persistence
@@ -173,31 +123,6 @@ public final class VideoPokerViewModel {
     private func saveStatistics() {
         if let data = try? JSONEncoder().encode(statistics) {
             UserDefaults.standard.set(data, forKey: "videopoker_statistics")
-        }
-    }
-
-    // MARK: - Notification handlers
-
-    @objc private func handleFeltColorNotification(_ notification: Notification) {
-        guard let sender = notification.object as? AnyObject, sender !== self else { return }
-        guard let theme = notification.userInfo?["feltColor"] as? FeltColorTheme else { return }
-        let rev = notification.userInfo?["customFeltColorRevision"] as? Int ?? 0
-        if options.feltColor != theme || options.customFeltColorRevision != rev {
-            var o = options; o.feltColor = theme; o.customFeltColorRevision = rev; options = o
-        }
-    }
-
-    @objc private func handleCardBackThemeNotification(_ notification: Notification) {
-        guard let sender = notification.object as? AnyObject, sender !== self else { return }
-        guard let theme = notification.userInfo?["cardBackTheme"] as? String else { return }
-        if options.cardBackTheme != theme { options.cardBackTheme = theme }
-    }
-
-    @objc private func handleCustomCardColorsNotification(_ notification: Notification) {
-        guard let sender = notification.object as? AnyObject, sender !== self else { return }
-        guard let colors = notification.userInfo?["customCardColors"] as? CustomCardColorGroup else { return }
-        if self.options.customCardColors != colors {
-            self.options.customCardColors = colors
         }
     }
 

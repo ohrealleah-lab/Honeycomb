@@ -128,9 +128,32 @@ public final class CustomFaceCardArtManager {
     private var appSupportDirectory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        let dir = base.appendingPathComponent("SoliBee")
+        let dir = base.appendingPathComponent("SoliBee").appendingPathComponent("FaceArt")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
+    }
+
+    // Pre-folder-structure location — files used to be dumped flat here alongside card
+    // backs and (later) background images. Not created; only read from during migration.
+    private var legacyAppSupportDirectory: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return base.appendingPathComponent("SoliBee")
+    }
+
+    // One-time migration from the flat layout into FaceArt/. Moves whatever it can;
+    // anything that fails to move (permissions, etc.) is left in place rather than
+    // pruned, so a failed move never loses the user's file.
+    private func migrateLegacyFilesIfNeeded() {
+        let legacyDir = legacyAppSupportDirectory
+        let newDir = appSupportDirectory
+        for entry in faceArts {
+            let newURL = newDir.appendingPathComponent(entry.relativePath)
+            guard !FileManager.default.fileExists(atPath: newURL.path) else { continue }
+            let legacyURL = legacyDir.appendingPathComponent(entry.relativePath)
+            guard FileManager.default.fileExists(atPath: legacyURL.path) else { continue }
+            try? FileManager.default.moveItem(at: legacyURL, to: newURL)
+        }
     }
 
     private func load() {
@@ -138,6 +161,7 @@ public final class CustomFaceCardArtManager {
            let decoded = try? JSONDecoder().decode([CustomFaceArt].self, from: data) {
             faceArts = decoded
         }
+        migrateLegacyFilesIfNeeded()
         pruneOrphanedEntries()
     }
 
@@ -227,9 +251,7 @@ public final class CustomFaceCardArtManager {
             // Don't delete the underlying file if any saved theme still references this
             // exact art — otherwise applying that theme later silently drops the slot
             // with no indication anything went wrong.
-            let stillReferencedBySavedTheme = ThemeManager.shared.themes.contains {
-                $0.faceArts.contains { $0.relativePath == existing.relativePath }
-            }
+            let stillReferencedBySavedTheme = ThemeManager.shared.themeReferencingFaceArt(relativePath: existing.relativePath) != nil
             if deleteFile && !stillReferencedBySavedTheme {
                 let fileURL = appSupportDirectory.appendingPathComponent(existing.relativePath)
                 try? FileManager.default.removeItem(at: fileURL)
@@ -278,16 +300,6 @@ public final class CustomFaceCardArtManager {
     }
 
     public func pngData(from image: NSImage) -> Data? {
-        for rep in image.representations {
-            if let bitmapRep = rep as? NSBitmapImageRep,
-               let data = bitmapRep.representation(using: .png, properties: [:]) {
-                return data
-            }
-        }
-        if let tiffData = image.tiffRepresentation,
-           let bitmap = NSBitmapImageRep(data: tiffData) {
-            return bitmap.representation(using: .png, properties: [:])
-        }
-        return nil
+        ImageEncoding.pngData(from: image)
     }
 }

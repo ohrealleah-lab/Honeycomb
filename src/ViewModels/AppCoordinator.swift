@@ -25,6 +25,62 @@ public final class AppCoordinator {
     public let videoPokerViewModel = VideoPokerViewModel()
     public let blackjackViewModel  = BlackjackViewModel()
 
+    // MARK: - App-wide theme (single source of truth for all 5 games, live-shared —
+    // not per-game, not copy-on-mode-switch). Persisted to the same UserDefaults keys
+    // every game's Options struct used to write independently before this refactor, so
+    // existing users' last-used theme carries over with no migration step.
+    public var feltColor: FeltColorTheme {
+        didSet { UserDefaults.standard.set(feltColor.rawValue, forKey: "global_felt_color") }
+    }
+    public var cardBackTheme: String {
+        didSet { UserDefaults.standard.set(cardBackTheme, forKey: "cardBackTheme") }
+    }
+    public var showFeltVignette: Bool {
+        didSet { UserDefaults.standard.set(showFeltVignette, forKey: "showFeltVignette") }
+    }
+    public var customCardColors: CustomCardColorGroup {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(customCardColors) {
+                UserDefaults.standard.set(encoded, forKey: "customCardColors")
+            }
+        }
+    }
+    public var customFeltRed: Double {
+        didSet { UserDefaults.standard.set(customFeltRed, forKey: "custom_felt_red") }
+    }
+    public var customFeltGreen: Double {
+        didSet { UserDefaults.standard.set(customFeltGreen, forKey: "custom_felt_green") }
+    }
+    public var customFeltBlue: Double {
+        didSet { UserDefaults.standard.set(customFeltBlue, forKey: "custom_felt_blue") }
+    }
+    // nil means "no custom background — render Felt Color instead". App-wide/live-shared,
+    // same as the felt color fields above.
+    public var customBackgroundName: String? {
+        didSet {
+            if let customBackgroundName {
+                UserDefaults.standard.set(customBackgroundName, forKey: "custom_background_name")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "custom_background_name")
+            }
+        }
+    }
+
+    public var activeCustomBackground: CustomBackground? {
+        guard let customBackgroundName else { return nil }
+        return CustomBackgroundManager.shared.customBackgrounds.first { $0.name == customBackgroundName }
+    }
+
+    // Resolves .custom against the live customFeltRed/Green/Blue properties (rather than
+    // FeltColorTheme.primaryColor's raw UserDefaults read) so SwiftUI's Observation
+    // tracking picks up custom-color edits automatically — no more manual .id() bump.
+    public var currentFeltColor: Color {
+        guard feltColor == .custom else { return feltColor.primaryColor }
+        if customFeltRed == 0 && customFeltGreen == 0 && customFeltBlue == 0 {
+            return Color(red: 0.35, green: 0.15, blue: 0.45)
+        }
+        return Color(red: customFeltRed, green: customFeltGreen, blue: customFeltBlue)
+    }
     // The NSWindow currently hosting the active game mode's view, kept up to date
     // by each game view's WindowAccessor so window-level actions (e.g. "make current
     // window size default") can be triggered from menu commands that don't own a window.
@@ -33,6 +89,21 @@ public final class AppCoordinator {
     public init() {
         let saved = UserDefaults.standard.string(forKey: "selectedGameMode") ?? GameMode.klondike.rawValue
         self.gameMode = GameMode(rawValue: saved) ?? .klondike
+
+        self.feltColor = FeltColorTheme(rawValue: UserDefaults.standard.string(forKey: "global_felt_color") ?? "") ?? .feltGreen
+        self.cardBackTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
+        self.showFeltVignette = UserDefaults.standard.object(forKey: "showFeltVignette") != nil
+            ? UserDefaults.standard.bool(forKey: "showFeltVignette") : true
+        if let data = UserDefaults.standard.data(forKey: "customCardColors"),
+           let decoded = try? JSONDecoder().decode(CustomCardColorGroup.self, from: data) {
+            self.customCardColors = decoded
+        } else {
+            self.customCardColors = CustomCardColorGroup()
+        }
+        self.customFeltRed   = UserDefaults.standard.double(forKey: "custom_felt_red")
+        self.customFeltGreen = UserDefaults.standard.double(forKey: "custom_felt_green")
+        self.customFeltBlue  = UserDefaults.standard.double(forKey: "custom_felt_blue")
+        self.customBackgroundName = UserDefaults.standard.string(forKey: "custom_background_name")
 
         // Each view model sets UISound.isEnabled from its own persisted setting as it
         // initializes above; re-assert it from the actually-active mode here so the
@@ -46,7 +117,8 @@ public final class AppCoordinator {
         }
     }
 
-    // MARK: - Shared option sync
+    // MARK: - Shared option sync (genuinely per-game gameplay prefs only — theme fields
+    // above are a single live-shared store and need no propagation on mode switch)
 
     private func syncSharedOptions(from old: GameMode, to new: GameMode) {
         let isSoundEnabled:   Bool
@@ -54,8 +126,6 @@ public final class AppCoordinator {
         // Blackjack doesn't, so it's Optional like isTimed rather than a hardcoded
         // placeholder that would otherwise get force-propagated to the other games.
         let hideHintButton:   Bool?
-        let showFeltVignette: Bool
-        let customCardColors: CustomCardColorGroup
         let noStressMode:     Bool
         // isTimed is only read from solitaire games — VP/BJ don't have a real timer preference
         let isTimed:          Bool?
@@ -64,75 +134,55 @@ public final class AppCoordinator {
         case .klondike:
             isSoundEnabled    = klondikeViewModel.options.isSoundEnabled
             hideHintButton    = klondikeViewModel.options.hideHintButton
-            showFeltVignette  = klondikeViewModel.options.showFeltVignette
-            customCardColors  = klondikeViewModel.options.customCardColors
             noStressMode      = klondikeViewModel.options.noStressMode
             isTimed           = klondikeViewModel.options.isTimed
         case .beecell:
             isSoundEnabled    = beecellViewModel.options.isSoundEnabled
             hideHintButton    = beecellViewModel.options.hideHintButton
-            showFeltVignette  = beecellViewModel.options.showFeltVignette
-            customCardColors  = beecellViewModel.options.customCardColors
             noStressMode      = beecellViewModel.options.noStressMode
             isTimed           = beecellViewModel.options.isTimed
         case .spider:
             isSoundEnabled    = spiderViewModel.options.isSoundEnabled
             hideHintButton    = spiderViewModel.options.hideHintButton
-            showFeltVignette  = spiderViewModel.options.showFeltVignette
-            customCardColors  = spiderViewModel.options.customCardColors
             noStressMode      = spiderViewModel.options.noStressMode
             isTimed           = spiderViewModel.options.isTimed
         case .videoPoker:
             isSoundEnabled    = videoPokerViewModel.options.isSoundEnabled
             hideHintButton    = videoPokerViewModel.options.hideHintButton
-            showFeltVignette  = videoPokerViewModel.options.showFeltVignette
-            customCardColors  = videoPokerViewModel.options.customCardColors
             noStressMode      = videoPokerViewModel.options.noStressMode
             isTimed           = nil  // don't propagate VP's timer concept to solitaire games
         case .blackjack:
             isSoundEnabled    = blackjackViewModel.options.isSoundEnabled
             hideHintButton    = nil  // Blackjack has no Hint button/preference to propagate
-            showFeltVignette  = blackjackViewModel.options.showFeltVignette
-            customCardColors  = blackjackViewModel.options.customCardColors
             noStressMode      = blackjackViewModel.options.noStressMode
             isTimed           = nil  // don't propagate BJ's timer concept to solitaire games
         }
 
         if old != .klondike {
             klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
-            klondikeViewModel.options.showFeltVignette = showFeltVignette
-            klondikeViewModel.options.customCardColors = customCardColors
             klondikeViewModel.options.noStressMode     = noStressMode
             if let hideHintButton { klondikeViewModel.options.hideHintButton = hideHintButton }
             if let isTimed { klondikeViewModel.options.isTimed = isTimed }
         }
         if old != .beecell {
             beecellViewModel.options.isSoundEnabled   = isSoundEnabled
-            beecellViewModel.options.showFeltVignette = showFeltVignette
-            beecellViewModel.options.customCardColors = customCardColors
             beecellViewModel.options.noStressMode     = noStressMode
             if let hideHintButton { beecellViewModel.options.hideHintButton = hideHintButton }
             if let isTimed { beecellViewModel.options.isTimed = isTimed }
         }
         if old != .spider {
             spiderViewModel.options.isSoundEnabled   = isSoundEnabled
-            spiderViewModel.options.showFeltVignette = showFeltVignette
-            spiderViewModel.options.customCardColors = customCardColors
             spiderViewModel.options.noStressMode     = noStressMode
             if let hideHintButton { spiderViewModel.options.hideHintButton = hideHintButton }
             if let isTimed { spiderViewModel.options.isTimed = isTimed }
         }
         if old != .videoPoker {
             videoPokerViewModel.options.isSoundEnabled   = isSoundEnabled
-            videoPokerViewModel.options.showFeltVignette = showFeltVignette
-            videoPokerViewModel.options.customCardColors = customCardColors
             videoPokerViewModel.options.noStressMode     = noStressMode
             if let hideHintButton { videoPokerViewModel.options.hideHintButton = hideHintButton }
         }
         if old != .blackjack {
             blackjackViewModel.options.isSoundEnabled   = isSoundEnabled
-            blackjackViewModel.options.showFeltVignette = showFeltVignette
-            blackjackViewModel.options.customCardColors = customCardColors
             blackjackViewModel.options.noStressMode     = noStressMode
         }
     }
@@ -240,51 +290,15 @@ public final class AppCoordinator {
     }
 
     public func applyTheme(_ theme: SoliBeeTheme) {
+        cardBackTheme = theme.cardBackTheme
+        feltColor     = theme.feltColor
+        customCardColors = theme.customCardColors
         if theme.feltColor == .custom {
-            UserDefaults.standard.set(theme.customFeltRed,   forKey: "custom_felt_red")
-            UserDefaults.standard.set(theme.customFeltGreen, forKey: "custom_felt_green")
-            UserDefaults.standard.set(theme.customFeltBlue,  forKey: "custom_felt_blue")
+            customFeltRed   = theme.customFeltRed
+            customFeltGreen = theme.customFeltGreen
+            customFeltBlue  = theme.customFeltBlue
         }
-        
-        // Save the theme's custom card colors globally so new views load it on init
-        if let encoded = try? JSONEncoder().encode(theme.customCardColors) {
-            UserDefaults.standard.set(encoded, forKey: "customCardColors")
-        }
-
-        var k = klondikeViewModel.options
-        k.cardBackTheme = theme.cardBackTheme
-        k.feltColor     = theme.feltColor
-        k.customCardColors = theme.customCardColors
-        k.customFeltColorRevision += 1
-        klondikeViewModel.options = k
-
-        var b = beecellViewModel.options
-        b.cardBackTheme = theme.cardBackTheme
-        b.feltColor     = theme.feltColor
-        b.customCardColors = theme.customCardColors
-        b.customFeltColorRevision += 1
-        beecellViewModel.options = b
-
-        var s = spiderViewModel.options
-        s.cardBackTheme = theme.cardBackTheme
-        s.feltColor     = theme.feltColor
-        s.customCardColors = theme.customCardColors
-        s.customFeltColorRevision += 1
-        spiderViewModel.options = s
-
-        var v = videoPokerViewModel.options
-        v.cardBackTheme = theme.cardBackTheme
-        v.feltColor     = theme.feltColor
-        v.customCardColors = theme.customCardColors
-        v.customFeltColorRevision += 1
-        videoPokerViewModel.options = v
-
-        var bj = blackjackViewModel.options
-        bj.cardBackTheme = theme.cardBackTheme
-        bj.feltColor     = theme.feltColor
-        bj.customCardColors = theme.customCardColors
-        bj.customFeltColorRevision += 1
-        blackjackViewModel.options = bj
+        customBackgroundName = theme.customBackgroundName
 
         CustomFaceCardArtManager.shared.restore(theme.faceArts)
         ThemeManager.shared.activeThemeId = theme.id

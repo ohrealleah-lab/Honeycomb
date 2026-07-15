@@ -1,12 +1,9 @@
 import SwiftUI
 
 /// Themes section embedded in each game's Options sheet.
-/// Pass the current local @State values so "Save as New Theme snapshots
-/// the pending (not-yet-committed) options.
+/// Reads the live app-wide theme straight off AppCoordinator — theme fields
+/// are shared and live-previewed there, so there's nothing pending to snapshot.
 struct ThemesSectionView: View {
-    let currentCardBackTheme: String
-    let currentFeltColor: FeltColorTheme
-    let currentCustomCardColors: CustomCardColorGroup
     @Binding var isOptionsPresented: Bool
 
     @Environment(AppCoordinator.self) private var coordinator
@@ -176,19 +173,16 @@ struct ThemesSectionView: View {
             return
         }
 
-        let r = UserDefaults.standard.double(forKey: "custom_felt_red")
-        let g = UserDefaults.standard.double(forKey: "custom_felt_green")
-        let b = UserDefaults.standard.double(forKey: "custom_felt_blue")
-
         let theme = SoliBeeTheme(
             name: name,
-            cardBackTheme: currentCardBackTheme,
-            feltColor: currentFeltColor,
-            customFeltRed: r,
-            customFeltGreen: g,
-            customFeltBlue: b,
+            cardBackTheme: coordinator.cardBackTheme,
+            feltColor: coordinator.feltColor,
+            customFeltRed: coordinator.customFeltRed,
+            customFeltGreen: coordinator.customFeltGreen,
+            customFeltBlue: coordinator.customFeltBlue,
             faceArts: CustomFaceCardArtManager.shared.faceArts,
-            customCardColors: currentCustomCardColors
+            customCardColors: coordinator.customCardColors,
+            customBackgroundName: coordinator.customBackgroundName
         )
         manager.addTheme(theme)
         showingSaveRow = false

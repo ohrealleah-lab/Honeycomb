@@ -12,27 +12,6 @@ public final class SpiderViewModel {
             saveOptions()
             UISound.isEnabled = options.isSoundEnabled
             handleOptionsChanged(oldValue: oldValue)
-            if options.feltColor != oldValue.feltColor || options.customFeltColorRevision != oldValue.customFeltColorRevision {
-                UserDefaults.standard.set(options.feltColor.rawValue, forKey: "global_felt_color")
-                NotificationCenter.default.post(name: .feltColorDidChange, object: self, userInfo: [
-                    "feltColor": options.feltColor,
-                    "customFeltColorRevision": options.customFeltColorRevision
-                ])
-            }
-            if options.cardBackTheme != oldValue.cardBackTheme {
-                UserDefaults.standard.set(options.cardBackTheme, forKey: "cardBackTheme")
-                NotificationCenter.default.post(name: .cardBackThemeDidChange, object: self, userInfo: ["cardBackTheme": options.cardBackTheme])
-            }
-            if options.showFeltVignette != oldValue.showFeltVignette {
-                UserDefaults.standard.set(options.showFeltVignette, forKey: "showFeltVignette")
-                NotificationCenter.default.post(name: .feltVignetteDidChange, object: self, userInfo: ["showFeltVignette": options.showFeltVignette])
-            }
-            if options.customCardColors != oldValue.customCardColors {
-                if let encoded = try? JSONEncoder().encode(options.customCardColors) {
-                    UserDefaults.standard.set(encoded, forKey: "customCardColors")
-                }
-                NotificationCenter.default.post(name: .customCardColorsDidChange, object: self, userInfo: ["customCardColors": options.customCardColors])
-            }
         }
     }
 
@@ -117,7 +96,6 @@ public final class SpiderViewModel {
         if let encoded = try? JSONEncoder().encode(options) {
             UserDefaults.standard.set(encoded, forKey: "spider_options")
         }
-        UserDefaults.standard.set(options.cardBackTheme, forKey: "cardBackTheme")
     }
     
     private func handleOptionsChanged(oldValue: SpiderOptions) {
@@ -193,35 +171,10 @@ public final class SpiderViewModel {
         
         // Load options
         if let data = UserDefaults.standard.data(forKey: "spider_options"),
-           var decoded = try? JSONDecoder().decode(SpiderOptions.self, from: data) {
-            if let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") {
-                decoded.cardBackTheme = legacyTheme
-            }
-            if let globalFeltStr = UserDefaults.standard.string(forKey: "global_felt_color"),
-               let globalFelt = FeltColorTheme(rawValue: globalFeltStr) {
-                decoded.feltColor = globalFelt
-            }
-            if UserDefaults.standard.object(forKey: "showFeltVignette") != nil {
-                decoded.showFeltVignette = UserDefaults.standard.bool(forKey: "showFeltVignette")
-            }
-            if let dataColors = UserDefaults.standard.data(forKey: "customCardColors"),
-               let colors = try? JSONDecoder().decode(CustomCardColorGroup.self, from: dataColors) {
-                decoded.customCardColors = colors
-            }
+           let decoded = try? JSONDecoder().decode(SpiderOptions.self, from: data) {
             self.options = decoded
         } else {
-            let legacyTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
-            let globalFeltStr = UserDefaults.standard.string(forKey: "global_felt_color") ?? FeltColorTheme.feltGreen.rawValue
-            let globalFelt = FeltColorTheme(rawValue: globalFeltStr) ?? .feltGreen
-            var opts = SpiderOptions(feltColor: globalFelt, cardBackTheme: legacyTheme)
-            if UserDefaults.standard.object(forKey: "showFeltVignette") != nil {
-                opts.showFeltVignette = UserDefaults.standard.bool(forKey: "showFeltVignette")
-            }
-            if let dataColors = UserDefaults.standard.data(forKey: "customCardColors"),
-               let colors = try? JSONDecoder().decode(CustomCardColorGroup.self, from: dataColors) {
-                opts.customCardColors = colors
-            }
-            self.options = opts
+            self.options = SpiderOptions()
         }
         
         // Load statistics
@@ -254,47 +207,13 @@ public final class SpiderViewModel {
 
         UISound.isEnabled = self.options.isSoundEnabled
 
-        // Register for global preferences notifications
-        NotificationCenter.default.addObserver(self, selector: #selector(handleFeltColorNotification), name: .feltColorDidChange, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleCardBackThemeNotification), name: .cardBackThemeDidChange, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleCustomCardColorsNotification), name: .customCardColorsDidChange, object: nil)
-        
         startNewGame()
     }
-    
+
     deinit {
         stopTimer()
-        NotificationCenter.default.removeObserver(self)
     }
-    
-    @objc private func handleFeltColorNotification(_ notification: Notification) {
-        guard let sender = notification.object as? AnyObject, sender !== self else { return }
-        guard let theme = notification.userInfo?["feltColor"] as? FeltColorTheme else { return }
-        let rev = notification.userInfo?["customFeltColorRevision"] as? Int ?? 0
-        if self.options.feltColor != theme || self.options.customFeltColorRevision != rev {
-            var newOpts = self.options
-            newOpts.feltColor = theme
-            newOpts.customFeltColorRevision = rev
-            self.options = newOpts
-        }
-    }
-    
-    @objc private func handleCardBackThemeNotification(_ notification: Notification) {
-        guard let sender = notification.object as? AnyObject, sender !== self else { return }
-        guard let theme = notification.userInfo?["cardBackTheme"] as? String else { return }
-        if self.options.cardBackTheme != theme {
-            self.options.cardBackTheme = theme
-        }
-    }
-    
-    @objc private func handleCustomCardColorsNotification(_ notification: Notification) {
-        guard let sender = notification.object as? AnyObject, sender !== self else { return }
-        guard let colors = notification.userInfo?["customCardColors"] as? CustomCardColorGroup else { return }
-        if self.options.customCardColors != colors {
-            self.options.customCardColors = colors
-        }
-    }
-    
+
     // MARK: - Game Setup
     
     public func startNewGame() {

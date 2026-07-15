@@ -417,7 +417,6 @@ public struct CardDeckSelectorView: View {
         case .royalBlue: return "Blue"
         case .charcoal: return "Charcoal"
         case .desert: return "Desert"
-        case .colorblind: return "Colorblind"
         case .custom: return "Custom"
         }
     }
@@ -464,7 +463,7 @@ public struct CardDeckSelectorView: View {
     }
     
     private func deleteDeckByName(_ name: String) {
-        if let usedByTheme = ThemeManager.shared.themes.first(where: { $0.cardBackTheme == name }) {
+        if let usedByTheme = ThemeManager.shared.themeReferencingCardBack(named: name) {
             deckInUseByTheme = (deckName: name, themeName: usedByTheme.name)
             return
         }

@@ -4,6 +4,8 @@ import SwiftUI
 /// All theme-related controls live here: vignette, saved themes,
 /// felt color, custom color, card deck + face art.
 struct ThemesOptionsView: View {
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
+
     @Binding var isShowing: Bool
     @Binding var isOptionsPresented: Bool
     @Binding var feltColor: FeltColorTheme
@@ -11,19 +13,15 @@ struct ThemesOptionsView: View {
     @Binding var showFeltVignette: Bool
     @Binding var customSelectedColor: Color
     @Binding var customCardColors: CustomCardColorGroup
+    @Binding var customBackgroundName: String?
 
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
     let originalCustomCardColors: CustomCardColorGroup
-    // Pushes the current selections into the game's live options. Called on every
-    // change (not just on Done) so edits preview immediately on the board behind.
-    // `bumpFeltRevision` should only be true when the custom felt color's raw RGB
-    // changed — that's the one case SwiftUI can't detect via normal diffing (the
-    // colors live in UserDefaults, not in any Equatable option field), so the board
-    // needs the manual customFeltColorRevision nudge to redraw. Bumping it on every
-    // commit would reset unrelated @State (like which Themes screen is showing)
-    // any time the board's `.id(customFeltColorRevision)` view gets recreated.
+    // Theme fields are bound straight through to AppCoordinator now, so edits are
+    // already live on the board the instant they're made. This hook only remains for
+    // any non-theme reconciliation a hosting Options sheet still wants on change.
     let onCommit: (_ bumpFeltRevision: Bool) -> Void
 
     var body: some View {
@@ -64,9 +62,6 @@ struct ThemesOptionsView: View {
                 // Left Column
                 VStack(alignment: .leading, spacing: 16) {
                     ThemesSectionView(
-                        currentCardBackTheme: cardBackTheme,
-                        currentFeltColor: feltColor,
-                        currentCustomCardColors: customCardColors,
                         isOptionsPresented: $isOptionsPresented
                     )
 
@@ -82,7 +77,6 @@ struct ThemesOptionsView: View {
                             Text("Royal Blue").tag(FeltColorTheme.royalBlue)
                             Text("Charcoal").tag(FeltColorTheme.charcoal)
                             Text("Desert").tag(FeltColorTheme.desert)
-                            Text("Colorblind").tag(FeltColorTheme.colorblind)
                             Text("Custom").tag(FeltColorTheme.custom)
                         }
                         .font(.system(.body))
@@ -94,18 +88,22 @@ struct ThemesOptionsView: View {
                                 .onChange(of: customSelectedColor) { _, newColor in
                                     let nsColor = NSColor(newColor)
                                     if let rgb = nsColor.usingColorSpace(.deviceRGB) {
-                                        UserDefaults.standard.set(Double(rgb.redComponent),   forKey: "custom_felt_red")
-                                        UserDefaults.standard.set(Double(rgb.greenComponent), forKey: "custom_felt_green")
-                                        UserDefaults.standard.set(Double(rgb.blueComponent),  forKey: "custom_felt_blue")
+                                        coordinator.customFeltRed   = Double(rgb.redComponent)
+                                        coordinator.customFeltGreen = Double(rgb.greenComponent)
+                                        coordinator.customFeltBlue  = Double(rgb.blueComponent)
                                     }
                                     ThemeManager.shared.invalidateActiveTheme()
                                     onCommit(true)
                                 }
                         }
+
+                        Spacer()
+
+                        Toggle("Felt Vignette", isOn: $showFeltVignette)
+                            .font(.system(.body))
                     }
 
-                    Toggle("Felt Vignette", isOn: $showFeltVignette)
-                        .font(.system(.body))
+                    BackgroundSelectorView(customBackgroundName: $customBackgroundName)
 
                     Divider()
 
@@ -139,10 +137,17 @@ struct ThemesOptionsView: View {
         .frame(width: 880)
         .fixedSize(horizontal: true, vertical: false)
         .background(Color(NSColor.windowBackgroundColor))
-        .onChange(of: feltColor) { _, _ in ThemeManager.shared.invalidateActiveTheme(); onCommit(false) }
+        .onChange(of: feltColor) { _, _ in
+            // Switching to a felt color deactivates any custom background, so the
+            // Background dropdown resets to "None (Felt Color)" automatically.
+            if customBackgroundName != nil { customBackgroundName = nil }
+            ThemeManager.shared.invalidateActiveTheme()
+            onCommit(false)
+        }
         .onChange(of: cardBackTheme) { _, _ in ThemeManager.shared.invalidateActiveTheme(); onCommit(false) }
         .onChange(of: showFeltVignette) { _, _ in onCommit(false) }
         .onChange(of: customCardColors) { _, _ in ThemeManager.shared.invalidateActiveTheme(); onCommit(false) }
+        .onChange(of: customBackgroundName) { _, _ in ThemeManager.shared.invalidateActiveTheme(); onCommit(false) }
     }
 
     // Caps the scrollable content area so the panel never grows taller than the
@@ -154,9 +159,9 @@ struct ThemesOptionsView: View {
     }
 
     private func cancel() {
-        UserDefaults.standard.set(originalRed,   forKey: "custom_felt_red")
-        UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
-        UserDefaults.standard.set(originalBlue,  forKey: "custom_felt_blue")
+        coordinator.customFeltRed   = originalRed
+        coordinator.customFeltGreen = originalGreen
+        coordinator.customFeltBlue  = originalBlue
         customCardColors = originalCustomCardColors
         isShowing = false
     }

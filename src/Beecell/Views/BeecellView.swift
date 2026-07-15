@@ -23,7 +23,7 @@ public struct BeecellView: View {
     @FocusState private var isBoardFocused: Bool
     @State private var keyMonitor: Any? = nil
 
-    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator?
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     public init(viewModel: BeecellViewModel) {
         self.viewModel = viewModel
@@ -37,20 +37,16 @@ public struct BeecellView: View {
         let boardHeight: CGFloat = viewModel.options.deckCount == 1 ? 950 : 1120
         
         return ZStack {
-            // Felt Board Background
-            // .id() forces a redraw when the custom felt color's raw RGB changes — those
-            // live in UserDefaults, outside the Equatable options SwiftUI normally diffs
-            // on. Scoped to just this Color (not the whole board) so it doesn't tear down
-            // and reset unrelated @State, like the Options/Themes sheet's open/closed state.
-            viewModel.options.feltColor.primaryColor
-                .id(viewModel.options.customFeltColorRevision)
+            // Board Background — a custom image if one's active, otherwise the app-wide
+            // shared felt color on AppCoordinator (not per-game options).
+            BackgroundLayerView()
                 .ignoresSafeArea()
                 .onTapGesture {
                     viewModel.clearKeyboardCursor()
                     isBoardFocused = true
                 }
 
-            if viewModel.options.showFeltVignette { FeltVignetteView(intensity: 0.34) }
+            if coordinator.showFeltVignette { FeltVignetteView(intensity: 0.34) }
 
 
             VStack(spacing: 0) {
@@ -59,30 +55,30 @@ public struct BeecellView: View {
                     // Game Selection Dropdown
                     Menu {
                         Button(GameMode.klondike.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .klondike {
+                            if coordinator.gameMode != .klondike {
                                 coordinator.gameMode = .klondike
                                 coordinator.startNewGame()
                             }
                         }
                         Button(GameMode.beecell.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .beecell {
+                            if coordinator.gameMode != .beecell {
                                 coordinator.gameMode = .beecell
                                 coordinator.startNewGame()
                             }
                         }
                         Button(GameMode.spider.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .spider {
+                            if coordinator.gameMode != .spider {
                                 coordinator.gameMode = .spider
                                 coordinator.startNewGame()
                             }
                         }
                         Button(GameMode.videoPoker.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .videoPoker {
+                            if coordinator.gameMode != .videoPoker {
                                 coordinator.gameMode = .videoPoker
                             }
                         }
                         Button(GameMode.blackjack.rawValue) {
-                            if let coordinator = coordinator, coordinator.gameMode != .blackjack {
+                            if coordinator.gameMode != .blackjack {
                                 coordinator.gameMode = .blackjack
                             }
                         }
@@ -629,9 +625,9 @@ public struct BeecellView: View {
 
             HotkeyLegendView(text: "Arrows=Move Cursor   Space/Return=Select or Move   C=Free Cell   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor")
         }
-        .environment(\.feltColor, viewModel.options.feltColor)
-        .environment(\.activeCardBackTheme, viewModel.options.cardBackTheme)
-        .environment(\.activeCustomCardColors, viewModel.options.customCardColors)
+        .environment(\.feltColor, coordinator.feltColor)
+        .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
+        .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .focusable()
         .focused($isBoardFocused)
         .onAppear {
@@ -699,7 +695,7 @@ public struct BeecellView: View {
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .overlay(
-                        BeecellOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions)
+                        BeecellOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions, coordinator: coordinator)
                     )
                     .transition(.opacity)
             }
@@ -747,7 +743,7 @@ public struct BeecellView: View {
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
-            coordinator?.activeWindow = window
+            coordinator.activeWindow = window
             if let saved = viewModel.defaultWindowSize {
                 snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
             } else {
@@ -1013,16 +1009,13 @@ struct BeecellOptionsView: View {
     @Bindable var viewModel: BeecellViewModel
     @Binding var isShowingStats: Bool
     @Binding var isPresented: Bool
+    @Bindable var coordinator: AppCoordinator
 
-    @State private var feltColor: FeltColorTheme
-    @State private var cardBackTheme: String
     @State private var deckCount: Int
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
     @State private var noStressMode: Bool
-    @State private var showFeltVignette: Bool
     @State private var customSelectedColor: Color
-    @State private var customCardColors: CustomCardColorGroup
     @State private var showingThemes: Bool = false
 
     let originalRed: Double
@@ -1032,27 +1025,26 @@ struct BeecellOptionsView: View {
     let originalCardBackTheme: String
     let originalShowFeltVignette: Bool
     let originalCustomCardColors: CustomCardColorGroup
+    let originalCustomBackgroundName: String?
 
-    init(viewModel: BeecellViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>) {
+    init(viewModel: BeecellViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>, coordinator: AppCoordinator) {
         self.viewModel = viewModel
         self._isShowingStats = isShowingStats
         self._isPresented = isPresented
-        _feltColor = State(initialValue: viewModel.options.feltColor)
-        _cardBackTheme = State(initialValue: viewModel.options.cardBackTheme)
+        self.coordinator = coordinator
         _deckCount = State(initialValue: viewModel.options.deckCount)
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
-        _showFeltVignette = State(initialValue: viewModel.options.showFeltVignette)
-        _customCardColors = State(initialValue: viewModel.options.customCardColors)
-        self.originalFeltColor = viewModel.options.feltColor
-        self.originalCardBackTheme = viewModel.options.cardBackTheme
-        self.originalShowFeltVignette = viewModel.options.showFeltVignette
-        self.originalCustomCardColors = viewModel.options.customCardColors
+        self.originalFeltColor = coordinator.feltColor
+        self.originalCardBackTheme = coordinator.cardBackTheme
+        self.originalShowFeltVignette = coordinator.showFeltVignette
+        self.originalCustomCardColors = coordinator.customCardColors
+        self.originalCustomBackgroundName = coordinator.customBackgroundName
 
-        let r = UserDefaults.standard.double(forKey: "custom_felt_red")
-        let g = UserDefaults.standard.double(forKey: "custom_felt_green")
-        let b = UserDefaults.standard.double(forKey: "custom_felt_blue")
+        let r = coordinator.customFeltRed
+        let g = coordinator.customFeltGreen
+        let b = coordinator.customFeltBlue
         self.originalRed = r
         self.originalGreen = g
         self.originalBlue = b
@@ -1131,16 +1123,15 @@ struct BeecellOptionsView: View {
             
             HStack {
                 Button("Cancel") {
-                    UserDefaults.standard.set(originalRed, forKey: "custom_felt_red")
-                    UserDefaults.standard.set(originalGreen, forKey: "custom_felt_green")
-                    UserDefaults.standard.set(originalBlue, forKey: "custom_felt_blue")
                     // Revert any theme changes that were live-previewed via the Themes sub-panel.
-                    var revertedOpts = viewModel.options
-                    revertedOpts.feltColor = originalFeltColor
-                    revertedOpts.cardBackTheme = originalCardBackTheme
-                    revertedOpts.showFeltVignette = originalShowFeltVignette
-                    revertedOpts.customCardColors = originalCustomCardColors
-                    viewModel.options = revertedOpts
+                    coordinator.customFeltRed = originalRed
+                    coordinator.customFeltGreen = originalGreen
+                    coordinator.customFeltBlue = originalBlue
+                    coordinator.feltColor = originalFeltColor
+                    coordinator.cardBackTheme = originalCardBackTheme
+                    coordinator.showFeltVignette = originalShowFeltVignette
+                    coordinator.customCardColors = originalCustomCardColors
+                    coordinator.customBackgroundName = originalCustomBackgroundName
                     isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
@@ -1164,15 +1155,10 @@ struct BeecellOptionsView: View {
                 
                 Button("OK") {
                     var updatedOpts = viewModel.options
-                    updatedOpts.feltColor = feltColor
-                    updatedOpts.cardBackTheme = cardBackTheme
                     updatedOpts.deckCount = deckCount
                     updatedOpts.isSoundEnabled = isSoundEnabled
                     updatedOpts.hideHintButton = hideHintButton
                     updatedOpts.noStressMode = noStressMode
-                    updatedOpts.showFeltVignette = showFeltVignette
-                    updatedOpts.customCardColors = customCardColors
-                    updatedOpts.customFeltColorRevision += 1
 
                     viewModel.options = updatedOpts
                     isPresented = false
@@ -1190,24 +1176,17 @@ struct BeecellOptionsView: View {
             ThemesOptionsView(
                 isShowing: $showingThemes,
                 isOptionsPresented: $isPresented,
-                feltColor: $feltColor,
-                cardBackTheme: $cardBackTheme,
-                showFeltVignette: $showFeltVignette,
+                feltColor: $coordinator.feltColor,
+                cardBackTheme: $coordinator.cardBackTheme,
+                showFeltVignette: $coordinator.showFeltVignette,
                 customSelectedColor: $customSelectedColor,
-                customCardColors: $customCardColors,
+                customCardColors: $coordinator.customCardColors,
+                customBackgroundName: $coordinator.customBackgroundName,
                 originalRed: originalRed,
                 originalGreen: originalGreen,
                 originalBlue: originalBlue,
                 originalCustomCardColors: originalCustomCardColors,
-                onCommit: { bumpFeltRevision in
-                    var updatedOpts = viewModel.options
-                    updatedOpts.feltColor = feltColor
-                    updatedOpts.cardBackTheme = cardBackTheme
-                    updatedOpts.showFeltVignette = showFeltVignette
-                    updatedOpts.customCardColors = customCardColors
-                    if bumpFeltRevision { updatedOpts.customFeltColorRevision += 1 }
-                    viewModel.options = updatedOpts
-                }
+                onCommit: { _ in }
             )
             .transition(.move(edge: .trailing))
             .frame(width: 880)
