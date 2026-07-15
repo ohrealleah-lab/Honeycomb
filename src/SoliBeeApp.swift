@@ -17,6 +17,10 @@ struct SoliBeeApp: App {
         WindowGroup {
             AppRouterView(coordinator: coordinator)
                 .navigationTitle("SoliBee Suite")
+                .onAppear {
+                    NSApplication.shared.setActivationPolicy(.regular)
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .commands {

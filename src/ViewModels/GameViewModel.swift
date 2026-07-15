@@ -614,8 +614,8 @@ public final class GameViewModel {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             self.state.timerSeconds += 1
-            // Standard-mode time penalty: -2 points every 8 seconds elapsed.
-            if !self.options.isVegasScoring && self.state.timerSeconds % 8 == 0 {
+            // Standard-mode time penalty: -2 points every 10 seconds elapsed (Microsoft Solitaire rules).
+            if !self.options.isVegasScoring && self.state.timerSeconds > 0 && self.state.timerSeconds % 10 == 0 {
                 self.state.score -= 2
             }
         }
@@ -637,11 +637,10 @@ public final class GameViewModel {
             stopTimer()
             recordWin(timeInSeconds: state.timerSeconds)
             playSound(named: "victory")
-            // Standard-mode time win bonus: 20,000 / seconds elapsed, only for a win
-            // finished in under 10 minutes. Guards timerSeconds > 0 since a No Stress Mode
-            // game never starts the timer (it stays 0), which would otherwise divide by zero.
-            if !options.isVegasScoring && state.timerSeconds > 0 && state.timerSeconds < 600 {
-                state.score += 20000 / state.timerSeconds
+            // Standard-mode time win bonus: 700,000 / seconds elapsed (Microsoft Solitaire rules).
+            // Guards timerSeconds > 0 since a No Stress Mode game never starts the timer (stays 0).
+            if !options.isVegasScoring && state.timerSeconds > 0 {
+                state.score += 700000 / state.timerSeconds
             }
             if state.score > highScore {
                 highScore = state.score

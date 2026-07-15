@@ -105,6 +105,24 @@ public final class AppCoordinator {
         self.customFeltBlue  = UserDefaults.standard.double(forKey: "custom_felt_blue")
         self.customBackgroundName = UserDefaults.standard.string(forKey: "custom_background_name")
 
+        // Synchronously warm the cache for whichever background is active so that
+        // BackgroundLayerView never renders a transient Color fallback on first paint.
+        // (preloadImages() is otherwise async and would cause a hit-testing race window.)
+        if let name = self.customBackgroundName,
+           let bg = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == name }) {
+            CustomBackgroundManager.shared.preloadImages(priorityPaths: [bg.relativePath])
+        }
+
+        // Same fix for custom card backs — synchronously preload the active card back
+        // so CardBackView never renders the tiny Circle fallback on first paint.
+        let activeCardBack = self.cardBackTheme
+        if let cb = CustomCardBackManager.shared.customCardBack(named: activeCardBack) {
+            CustomCardBackManager.shared.preloadImages(priorityPaths: [cb.relativePath])
+        } else {
+            // Active theme is a built-in — still kick off async preload for any custom backs.
+            CustomCardBackManager.shared.preloadImages()
+        }
+
         // Each view model sets UISound.isEnabled from its own persisted setting as it
         // initializes above; re-assert it from the actually-active mode here so the
         // last view model to init doesn't silently win if settings ever drift out of sync.
@@ -299,6 +317,14 @@ public final class AppCoordinator {
             customFeltBlue  = theme.customFeltBlue
         }
         customBackgroundName = theme.customBackgroundName
+        
+        if let name = customBackgroundName,
+           let bg = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == name }) {
+            print("[DEBUG] AppCoordinator.applyTheme: resolved custom background name '\(name)' to relativePath '\(bg.relativePath)'. Calling image(for:).")
+            let _ = CustomBackgroundManager.shared.image(for: bg.relativePath)
+        } else {
+            print("[DEBUG] AppCoordinator.applyTheme: customBackgroundName is \(customBackgroundName ?? "nil"), bg resolved? \(customBackgroundName != nil ? String(describing: CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == customBackgroundName! }) != nil) : "N/A")")
+        }
 
         CustomFaceCardArtManager.shared.restore(theme.faceArts)
         ThemeManager.shared.activeThemeId = theme.id

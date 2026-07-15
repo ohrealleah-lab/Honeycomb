@@ -47,12 +47,14 @@ public final class CustomBackgroundManager {
     // Excluded from observation so cache writes don't trigger SwiftUI re-renders across the board.
     @ObservationIgnored private var imageCache: [String: NSImage] = [:]
     @ObservationIgnored private var thumbnailCache: [String: NSImage] = [:]
+    @ObservationIgnored private var loadsInFlight: Set<String> = []
+
+    public var imageLoadTick: Int = 0
 
     public var customBackgrounds: [CustomBackground] = []
 
     private init() {
         loadCustomBackgrounds()
-        preloadImages()
     }
 
     private var appSupportDirectory: URL {
@@ -184,12 +186,44 @@ public final class CustomBackgroundManager {
     }
 
     public func image(for relativePath: String) -> NSImage? {
-        if let cached = imageCache[relativePath] { return cached }
-        let fileURL = getFileURL(for: relativePath)
-        guard let img = NSImage(contentsOf: fileURL) else { return nil }
-        let display = scaled(img, maxDimension: Self.maxDisplayDimension)
-        imageCache[relativePath] = display
-        return display
+        print("[DEBUG] image(for:) called with path: \(relativePath)")
+        if let cached = imageCache[relativePath] { 
+            print("[DEBUG] -> cache hit")
+            return cached 
+        }
+        
+        guard !loadsInFlight.contains(relativePath) else { 
+            print("[DEBUG] -> already-in-flight-skip")
+            return nil 
+        }
+        print("[DEBUG] -> newly-scheduled")
+        loadsInFlight.insert(relativePath)
+
+        // Never block the main thread — large images can take time to load and scale.
+        // Load in background; bump imageLoadTick so the BackgroundLayerView re-renders.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            let fileURL = getFileURL(for: relativePath)
+            
+            print("[DEBUG] before NSImage(contentsOf: \(fileURL.path))")
+            guard let img = NSImage(contentsOf: fileURL) else {
+                print("[DEBUG] NSImage(contentsOf:) failed! Returning nil.")
+                DispatchQueue.main.async {
+                    self.loadsInFlight.remove(relativePath)
+                }
+                return
+            }
+            print("[DEBUG] after NSImage(contentsOf:), success")
+            
+            let display = scaled(img, maxDimension: Self.maxDisplayDimension)
+            DispatchQueue.main.async {
+                self.imageCache[relativePath] = display
+                self.loadsInFlight.remove(relativePath)
+                print("[DEBUG] posting CustomBackgroundLoaded notification")
+                NotificationCenter.default.post(name: NSNotification.Name("CustomBackgroundLoaded"), object: nil)
+            }
+        }
+        return nil
     }
 
     public func thumbnail(for relativePath: String) -> NSImage? {
@@ -205,18 +239,39 @@ public final class CustomBackgroundManager {
         thumbnailCache.removeValue(forKey: relativePath)
     }
 
-    /// Warms the image cache on a background thread so first-access is instant.
-    public func preloadImages() {
+    /// Warms the image cache. Any paths in `priorityPaths` are loaded
+    /// synchronously on the calling thread first (so the very first SwiftUI
+    /// render already has a non-nil image and skips the Color fallback).
+    /// Everything else is dispatched to a background thread as before.
+    public func preloadImages(priorityPaths: Set<String> = []) {
         let toLoad = customBackgrounds
             .filter { imageCache[$0.relativePath] == nil }
             .map { (path: $0.relativePath, url: appSupportDirectory.appendingPathComponent($0.relativePath)) }
         guard !toLoad.isEmpty else { return }
+
+        // Synchronous pass: load priority images immediately so the first
+        // SwiftUI render frame already has the active background in cache.
+        let (priority, deferred) = toLoad.reduce(
+            into: ([(path: String, url: URL)](), [(path: String, url: URL)]())) { result, item in
+            if priorityPaths.contains(item.path) { result.0.append(item) }
+            else { result.1.append(item) }
+        }
+        for item in priority {
+            guard let img = NSImage(contentsOf: item.url) else { continue }
+            imageCache[item.path] = scaled(img, maxDimension: Self.maxDisplayDimension)
+        }
+
+        // Async pass: load everything else without blocking the main thread.
+        guard !deferred.isEmpty else { return }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-            for item in toLoad {
+            for item in deferred {
                 guard let img = NSImage(contentsOf: item.url) else { continue }
                 let display = self.scaled(img, maxDimension: Self.maxDisplayDimension)
-                DispatchQueue.main.async { self.imageCache[item.path] = display }
+                DispatchQueue.main.async { 
+                    self.imageCache[item.path] = display 
+                    NotificationCenter.default.post(name: NSNotification.Name("CustomBackgroundLoaded"), object: nil)
+                }
             }
         }
     }

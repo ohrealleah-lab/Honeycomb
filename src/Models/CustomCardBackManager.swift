@@ -43,6 +43,9 @@ public final class CustomCardBackManager {
     // Excluded from observation so cache writes don't trigger SwiftUI re-renders across the board.
     @ObservationIgnored private var imageCache: [String: NSImage] = [:]
     @ObservationIgnored private var thumbnailCache: [String: NSImage] = [:]
+    // Observed: incremented each time an async image load completes, allowing
+    // CardBackView to subscribe and re-render once the image is ready.
+    public var imageLoadTick: Int = 0
     
     public var deletedDefaultDecks: [String] = [] {
         didSet {
@@ -261,11 +264,20 @@ public final class CustomCardBackManager {
 
     public func image(for relativePath: String) -> NSImage? {
         if let cached = imageCache[relativePath] { return cached }
-        let fileURL = getFileURL(for: relativePath)
-        guard let img = NSImage(contentsOf: fileURL) else { return nil }
-        let display = scaled(img, to: Self.displaySize)
-        imageCache[relativePath] = display
-        return display
+        // Never block the main thread — large images can take 200–500 ms to load
+        // and scale, which corrupts SwiftUI gesture-recognizer state.
+        // Load in background; bump imageLoadTick so CardBackView re-renders.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            let fileURL = getFileURL(for: relativePath)
+            guard let img = NSImage(contentsOf: fileURL) else { return }
+            let display = scaled(img, to: Self.displaySize)
+            DispatchQueue.main.async {
+                self.imageCache[relativePath] = display
+                self.imageLoadTick += 1
+            }
+        }
+        return nil
     }
 
     public func thumbnail(for relativePath: String) -> NSImage? {
@@ -282,16 +294,33 @@ public final class CustomCardBackManager {
         thumbnailCache.removeValue(forKey: relativePath)
     }
 
-    /// Warms the image cache on a background thread so first-access during scrolling is instant.
-    public func preloadImages() {
-        // Snapshot missing paths on the calling (main) thread — safe Dictionary read.
+    /// Warms the image cache. Any paths in `priorityPaths` are loaded
+    /// synchronously on the calling thread first (so the very first SwiftUI
+    /// render already has a non-nil image and skips the fallback view).
+    /// Everything else is dispatched to a background thread as before.
+    public func preloadImages(priorityPaths: Set<String> = []) {
         let toLoad = customCardBacks
-            .filter { imageCache[$0.relativePath] == nil }
+            .filter { imageCache[$0.relativePath] == nil && !isGIF(for: $0.relativePath) }
             .map { (path: $0.relativePath, url: appSupportDirectory.appendingPathComponent($0.relativePath)) }
         guard !toLoad.isEmpty else { return }
+
+        // Synchronous pass: load priority images immediately so the first
+        // SwiftUI render frame already has the active card back in cache.
+        let (priority, deferred) = toLoad.reduce(
+            into: ([(path: String, url: URL)](), [(path: String, url: URL)]())) { result, item in
+            if priorityPaths.contains(item.path) { result.0.append(item) }
+            else { result.1.append(item) }
+        }
+        for item in priority {
+            guard let img = NSImage(contentsOf: item.url) else { continue }
+            imageCache[item.path] = scaled(img, to: Self.displaySize)
+        }
+
+        // Async pass: load everything else without blocking the main thread.
+        guard !deferred.isEmpty else { return }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-            for item in toLoad {
+            for item in deferred {
                 guard let img = NSImage(contentsOf: item.url) else { continue }
                 let display = self.scaled(img, to: Self.displaySize)
                 DispatchQueue.main.async { self.imageCache[item.path] = display }

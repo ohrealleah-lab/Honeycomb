@@ -316,6 +316,7 @@ struct CardBackView: View {
     var body: some View {
         let theme = cardBackTheme
         let manager = CustomCardBackManager.shared
+        let _ = manager.imageLoadTick // Subscribe to async image load completions
 
         ZStack {
             if theme == "Moogle", let nsImage = Self.bundleImageCache["Moogle"] {
@@ -346,9 +347,7 @@ struct CardBackView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else if let nsImage = manager.image(for: customBack.relativePath) {
                     ZStack {
-                        Image(nsImage: nsImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
+                        StaticCardBackImageView(image: nsImage)
                             .frame(width: 120, height: 173)
                             .scaleEffect(CGFloat(customBack.scale))
                             .offset(x: CGFloat(customBack.offsetX), y: CGFloat(customBack.offsetY))
@@ -399,6 +398,22 @@ struct CustomFaceArtImageView: View {
 
 import AppKit
 
+/// An NSView subclass that is invisible to AppKit hit-testing.
+/// Any mouse event over it falls through to whatever view is behind it in the
+/// responder chain — specifically the ClickReceiver overlay on the stock pile.
+private class PassThroughNSView: NSView {
+    var onLayout: ((CGRect) -> Void)?
+    
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        return nil // Never intercept clicks
+    }
+    
+    override func layout() {
+        super.layout()
+        onLayout?(self.bounds)
+    }
+}
+
 struct AnimatedGIFView: NSViewRepresentable {
     let url: URL
 
@@ -425,7 +440,7 @@ struct AnimatedGIFView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NSView {
-        let container = NSView()
+        let container = PassThroughNSView()
         container.wantsLayer = true
 
         let imageView = NSImageView()
@@ -461,6 +476,43 @@ struct AnimatedGIFView: NSViewRepresentable {
     }
 }
 
+// MARK: - Static card back image (pass-through hit-testing)
+
+/// Renders a static image for custom card backs without creating a hittable NSImageView.
+/// Uses a direct CALayer inside a PassThroughNSView so no AppKit mouse events are intercepted,
+/// and bypasses NSImageView entirely to avoid any Retina double-scaling bugs.
+private struct StaticCardBackImageView: NSViewRepresentable {
+    let image: NSImage
+
+    func makeNSView(context: Context) -> PassThroughNSView {
+        let container = PassThroughNSView()
+        container.wantsLayer = true
+        container.layer?.masksToBounds = false
+        
+        let imageLayer = CALayer()
+        imageLayer.contentsGravity = .resizeAspect
+        // We use the CGImage directly to avoid any NSImage DPI/size scaling weirdness
+        if let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+            imageLayer.contents = cgImage
+        }
+        
+        container.layer?.addSublayer(imageLayer)
+        
+        // We must bind the sublayer's frame to the container's bounds when it resizes
+        container.onLayout = { [weak imageLayer] bounds in
+            imageLayer?.frame = bounds
+        }
+        
+        return container
+    }
+
+    func updateNSView(_ nsView: PassThroughNSView, context: Context) {
+        guard let imageLayer = nsView.layer?.sublayers?.first else { return }
+        if let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+            imageLayer.contents = cgImage
+        }
+    }
+}
 struct BeeSideProfile: View {
     var body: some View {
         ZStack {

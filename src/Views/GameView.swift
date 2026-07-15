@@ -49,10 +49,7 @@ public struct GameView: View {
             // shared felt color on AppCoordinator (not per-game options).
             BackgroundLayerView()
                 .ignoresSafeArea()
-                .onTapGesture {
-                    viewModel.clearKeyboardCursor()
-                    isBoardFocused = true
-                }
+                .allowsHitTesting(false)
 
             if resolvedShowFeltVignette { FeltVignetteView(intensity: 0.34) }
 
@@ -211,8 +208,8 @@ public struct GameView: View {
                         .keyboardShortcut("n", modifiers: .command).frame(width: 0, height: 0).opacity(0)
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.vertical, 6)
+                .padding(.top, 28) // Clear the macOS traffic light window controls
+                .padding(.bottom, 6)
                 .layoutPriority(1)
 
                 // Visual Divider line
@@ -797,7 +794,8 @@ public struct GameView: View {
             // Recycle animation: cards slide back to stock
             withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
                 viewModel.drawCard()
-            } completion: {
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
                 isDrawInFlight = false
             }
             // Play a quick physical wiggle on the stock pile
@@ -814,7 +812,8 @@ public struct GameView: View {
             // Draw animation: cards slide to waste
             withAnimation(.easeInOut(duration: 0.22)) {
                 viewModel.drawCard()
-            } completion: {
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
                 isDrawInFlight = false
             }
         }
@@ -1448,8 +1447,15 @@ struct ClickReceiver: NSViewRepresentable {
 class InstantClickNSView: NSView {
     var action: (() -> Void)?
 
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        // Always win the hit-test so no NSView-backed child (e.g. AnimatedGIFView)
+        // can intercept clicks before us.
+        return bounds.contains(point) ? self : nil
+    }
+
     override func mouseDown(with event: NSEvent) {
         action?()
+        super.mouseDown(with: event)
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {

@@ -71,7 +71,19 @@ struct ThemesOptionsView: View {
                         Text("Felt Color:")
                             .font(.system(.body).bold())
 
-                        Picker("", selection: $feltColor) {
+                        Picker("", selection: Binding(
+                            get: { feltColor },
+                            set: { newValue in
+                                feltColor = newValue
+                                // Only fires for an actual manual pick from this control — programmatic
+                                // writes to coordinator.feltColor (e.g. AppCoordinator.applyTheme) go
+                                // through the plain property setter and never touch this closure, so a
+                                // theme's own felt color no longer clobbers its own background.
+                                if customBackgroundName != nil { customBackgroundName = nil }
+                                ThemeManager.shared.invalidateActiveTheme()
+                                onCommit(false)
+                            }
+                        )) {
                             Text("Felt Green").tag(FeltColorTheme.feltGreen)
                             Text("Crimson").tag(FeltColorTheme.crimson)
                             Text("Royal Blue").tag(FeltColorTheme.royalBlue)
@@ -137,13 +149,6 @@ struct ThemesOptionsView: View {
         .frame(width: 880)
         .fixedSize(horizontal: true, vertical: false)
         .background(Color(NSColor.windowBackgroundColor))
-        .onChange(of: feltColor) { _, _ in
-            // Switching to a felt color deactivates any custom background, so the
-            // Background dropdown resets to "None (Felt Color)" automatically.
-            if customBackgroundName != nil { customBackgroundName = nil }
-            ThemeManager.shared.invalidateActiveTheme()
-            onCommit(false)
-        }
         .onChange(of: cardBackTheme) { _, _ in ThemeManager.shared.invalidateActiveTheme(); onCommit(false) }
         .onChange(of: showFeltVignette) { _, _ in onCommit(false) }
         .onChange(of: customCardColors) { _, _ in ThemeManager.shared.invalidateActiveTheme(); onCommit(false) }

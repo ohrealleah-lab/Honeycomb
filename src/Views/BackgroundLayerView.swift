@@ -15,33 +15,16 @@ struct CustomBackgroundRenderView: View {
     // this at 1.0 (full scale, no normalization needed).
     var offsetScale: CGFloat = 1.0
 
-    // Measured once via the hidden GeometryReader probe below and cached, rather than
-    // wrapping the image directly in a GeometryReader — that used to force a fresh
-    // layout/measurement pass on every re-render (e.g. every mouse-move frame during a
-    // card drag), even though the container size is unchanged except on window resize.
-    @State private var containerSize: CGSize = .zero
-
     var body: some View {
-        ZStack {
-            Color.clear
-                .background(
-                    GeometryReader { geo in
-                        Color.clear
-                            .onAppear { containerSize = geo.size }
-                            .onChange(of: geo.size) { _, newSize in containerSize = newSize }
-                    }
-                )
-
-            if containerSize != .zero {
+        Color.clear
+            .overlay(
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: containerSize.width, height: containerSize.height)
                     .scaleEffect(CGFloat(background.scale))
                     .offset(x: CGFloat(background.offsetX) * offsetScale, y: CGFloat(background.offsetY) * offsetScale)
-                    .clipped()
-            }
-        }
+            )
+            .clipped()
     }
 }
 
@@ -49,13 +32,32 @@ struct CustomBackgroundRenderView: View {
 /// standard felt color fallback (missing file, no background selected, etc.).
 struct BackgroundLayerView: View {
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
+    @State private var loadTrigger: UUID = UUID()
 
     var body: some View {
-        if let background = coordinator.activeCustomBackground,
-           let image = CustomBackgroundManager.shared.image(for: background.relativePath) {
-            CustomBackgroundRenderView(background: background, image: image)
-        } else {
-            coordinator.currentFeltColor
+        let _ = print("[DEBUG] BackgroundLayerView.body evaluating...")
+        GeometryReader { geo in
+            Group {
+                if let background = coordinator.activeCustomBackground,
+                   let image = CustomBackgroundManager.shared.image(for: background.relativePath) {
+                    let _ = print("[DEBUG] BackgroundLayerView.body: rendering Image for \(background.relativePath)")
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .scaleEffect(CGFloat(background.scale))
+                        .offset(x: CGFloat(background.offsetX), y: CGFloat(background.offsetY))
+                        .clipped()
+                } else {
+                    let _ = print("[DEBUG] BackgroundLayerView.body: rendering Felt (activeCustomBackground? \(coordinator.activeCustomBackground != nil))")
+                    coordinator.currentFeltColor
+                }
+            }
+            .id(loadTrigger)
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CustomBackgroundLoaded"))) { _ in
+                print("[DEBUG] BackgroundLayerView.onReceive: received CustomBackgroundLoaded! Bumping loadTrigger.")
+                loadTrigger = UUID()
+            }
         }
     }
 }
