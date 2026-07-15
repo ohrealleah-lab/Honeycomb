@@ -32,10 +32,10 @@
                                TextAlignment="Center" IsVisible="False" />
 
                     <!-- Image for custom face art (J/Q/K/A slots) -->
-                    <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
+                    <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="HighQuality" />
 
                     <!-- SkiaSharp-rendered pip for Ace (ink-bounds centered) -->
-                    <Image x:Name="AcePipImage" Width="86" Height="86" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
+                    <Image x:Name="AcePipImage" Width="86" Height="86" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="HighQuality" />
                 </Grid>
 
                 <!-- Bottom-Right Value & Suit Display (Horizontal, Rotated 180 degrees) -->
@@ -70,9 +70,9 @@
                  which was covering the thin border stroke. This inner Border (inset 1px,
                  same rounded-corner clipping trick CardFace/CardBack already use) guarantees
                  the border always stays visible on top. -->
-            <Border Margin="1" CornerRadius="9" ClipToBounds="True">
+            <Border Margin="0" CornerRadius="9" ClipToBounds="True">
                 <Grid x:Name="CardBackGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
                 </Grid>
             </Border>
         </Border>

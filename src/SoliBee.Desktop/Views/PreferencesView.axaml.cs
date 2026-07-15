@@ -29,7 +29,6 @@ public partial class PreferencesView : UserControl
     private List<SoliBeeTheme> _themes = new();
     private SoliBeeTheme? _themeToDelete;
     private SoliBeeTheme? _themeToApply;
-    private Bitmap? _backgroundPreviewBitmap;
     private bool _isBackgroundEditorOpen;
     private string? _backgroundToDelete;
     private const double BackgroundReferenceWidth = 1120.0;
@@ -567,6 +566,13 @@ public partial class PreferencesView : UserControl
                     CustomColorPanel.IsVisible = false;
                 }
 
+                // If they explicitly picked a felt color, clear any custom background image
+                // so the felt color they just selected is actually visible on the board.
+                if (BackgroundComboBox.SelectedIndex > 0)
+                {
+                    BackgroundComboBox.SelectedIndex = 0;
+                }
+
                 options.CustomFeltColorRevision++;
                 NotifySettingsChanged(options);
             }
@@ -580,6 +586,13 @@ public partial class PreferencesView : UserControl
         if (DataContext is GameOptions options)
         {
             options.CustomFeltColorHex = e.NewColor.ToString();
+
+            // Clear any custom background image so the color being picked is visible.
+            if (BackgroundComboBox.SelectedIndex > 0)
+            {
+                BackgroundComboBox.SelectedIndex = 0;
+            }
+
             options.CustomFeltColorRevision++;
             NotifySettingsChanged(options);
         }
@@ -974,47 +987,69 @@ public partial class PreferencesView : UserControl
                 }
                 else
                 {
-                    using (var bitmap = Bitmap.DecodeToWidth(sourceStream, 512))
+                    using var destStream = File.Create(destPath);
+                    await sourceStream.CopyToAsync(destStream);
+                }
+            }
+
+            Bitmap editorBmp;
+            using (var stream = File.OpenRead(destPath))
+            {
+                if (isGif)
+                    editorBmp = new Bitmap(stream);
+                else
+                    editorBmp = Bitmap.DecodeToWidth(stream, 1024);
+            }
+
+            var owner = (Window?)TopLevel.GetTopLevel(this);
+            var editor = new CardBackEditorWindow(editorBmp, false, 1.0, 0.0, 0.0);
+
+            if (owner != null)
+                await editor.ShowDialog(owner);
+            else
+                editor.Show();
+
+            if (editor.Saved)
+            {
+                var newBack = new CustomCardBack
+                {
+                    Name = displayName,
+                    FileName = uniqueFileName,
+                    Scale = editor.NewScale,
+                    OffsetX = editor.NewOffsetX,
+                    OffsetY = editor.NewOffsetY
+                };
+                options.CustomCardBacks.Add(newBack);
+                options.CardBackTheme = displayName;
+
+                _initializing = true;
+
+                PopulateCardBacks(options);
+
+                foreach (var item in CardBackComboBox.Items.OfType<ComboBoxItem>())
+                {
+                    if (item.Tag?.ToString() == displayName)
                     {
-                        bitmap.Save(destPath);
+                        CardBackComboBox.SelectedItem = item;
+                        break;
                     }
                 }
+
+                options.CardBackScale = editor.NewScale;
+                options.CardBackOffsetX = editor.NewOffsetX;
+                options.CardBackOffsetY = editor.NewOffsetY;
+                DeleteCustomCardBackButton.IsEnabled = true;
+
+                _initializing = false;
+
+                UpdateCardBackPreview(options);
+                NotifySettingsChanged(options);
+                CardView.PreloadCardBacks(options);
             }
-
-            var newBack = new CustomCardBack
+            else
             {
-                Name = displayName,
-                FileName = uniqueFileName,
-                Scale = 1.0,
-                OffsetX = 0.0,
-                OffsetY = 0.0
-            };
-            options.CustomCardBacks.Add(newBack);
-            options.CardBackTheme = displayName;
-
-            _initializing = true;
-
-            PopulateCardBacks(options);
-
-            foreach (var item in CardBackComboBox.Items.OfType<ComboBoxItem>())
-            {
-                if (item.Tag?.ToString() == displayName)
-                {
-                    CardBackComboBox.SelectedItem = item;
-                    break;
-                }
+                try { File.Delete(destPath); } catch { }
             }
-
-            options.CardBackScale = 1.0;
-            options.CardBackOffsetX = 0.0;
-            options.CardBackOffsetY = 0.0;
-            DeleteCustomCardBackButton.IsEnabled = true;
-
-            _initializing = false;
-
-            UpdateCardBackPreview(options);
-            NotifySettingsChanged(options);
-            CardView.PreloadCardBacks(options);
         }
         catch (Exception ex)
         {
@@ -1062,12 +1097,13 @@ public partial class PreferencesView : UserControl
 
     private void UpdateBackgroundPreview(GameOptions options)
     {
-        var old = _backgroundPreviewBitmap;
-        _backgroundPreviewBitmap = LoadBackgroundBitmapForPreview(options);
-        BackgroundPreviewImage.Source = _backgroundPreviewBitmap;
-        old?.Dispose();
+        // Use the shared bitmap cache (owned by CardView) rather than maintaining a separate
+        // private Bitmap field with its own dispose lifecycle. The cache holds full-res bitmaps;
+        // scaling to the 80 px thumbnail is handled purely by the RenderTransform below.
+        var bmp = LoadBackgroundBitmapForPreview(options);
+        BackgroundPreviewImage.Source = bmp;
 
-        if (_backgroundPreviewBitmap == null)
+        if (bmp == null)
         {
             BackgroundPreviewImage.RenderTransform = null;
             return;
@@ -1093,7 +1129,8 @@ public partial class PreferencesView : UserControl
         try
         {
             var path = Path.Combine(BackgroundsDir, bg.FileName);
-            return File.Exists(path) ? new Bitmap(path) : null;
+            // Use the shared cache so MainWindow and the preview panel decode the image once.
+            return File.Exists(path) ? CardView.GetCachedBackgroundBitmap(path) : null;
         }
         catch { return null; }
     }
@@ -1113,8 +1150,17 @@ public partial class PreferencesView : UserControl
         _isBackgroundEditorOpen = true;
         try
         {
-            var bmp = _backgroundPreviewBitmap ?? LoadBackgroundBitmapForPreview(options);
-            if (bmp == null) return;
+            // Load a fresh full-resolution bitmap from disk for the editor so it renders at
+            // full quality in the 280 px preview. We must not reuse the shared-cache bitmap
+            // directly here because BackgroundEditorWindow now owns and disposes whatever
+            // bitmap it receives on close — passing the cache entry would evict it.
+            var bgFile = options.CustomBackgrounds.Find(b => b.Name == options.BackgroundName);
+            if (bgFile == null || !PathSafety.IsSafeFileName(bgFile.FileName)) return;
+            var bgPath = Path.Combine(BackgroundsDir, bgFile.FileName);
+            if (!File.Exists(bgPath)) return;
+            Bitmap bmp;
+            try { bmp = new Bitmap(bgPath); }
+            catch { return; }
 
             var owner = (Window?)TopLevel.GetTopLevel(this);
             var editor = new BackgroundEditorWindow(bmp, isNew: false, bg.Name,
@@ -1204,10 +1250,15 @@ public partial class PreferencesView : UserControl
 
             string displayName = Path.GetFileNameWithoutExtension(file.Name);
             if (string.IsNullOrWhiteSpace(displayName)) displayName = "Background";
-            if (options.CustomBackgrounds.Exists(b => b.Name.Equals(displayName, StringComparison.OrdinalIgnoreCase)))
-                displayName += "_" + Guid.NewGuid().ToString().Substring(0, 4);
+            // Loop until we have a unique display name — a single suffix attempt could still
+            // collide if the user has already imported a file with that same suffix.
+            while (options.CustomBackgrounds.Exists(b => b.Name.Equals(displayName, StringComparison.OrdinalIgnoreCase)))
+                displayName = Path.GetFileNameWithoutExtension(file.Name) + "_" + Guid.NewGuid().ToString("N")[..6];
 
-            var bmp = new Bitmap(destPath);
+            // Construct the Bitmap from the already-buffered bytes (seeked back to the start)
+            // rather than re-reading from disk, eliminating a redundant I/O round-trip.
+            memStream.Seek(0, SeekOrigin.Begin);
+            var bmp = new Bitmap(memStream);
             var owner = (Window?)TopLevel.GetTopLevel(this);
             var editor = new BackgroundEditorWindow(bmp, isNew: true, displayName, 1.0, 0.0, 0.0);
 

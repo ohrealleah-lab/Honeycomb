@@ -37,7 +37,8 @@
                         <Image x:Name="PreviewImage"
                                Width="70" Height="60"
                                Stretch="Uniform"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
                     </Grid>
 
                     <!-- Bottom-right rank/suit (rotated 180°) -->

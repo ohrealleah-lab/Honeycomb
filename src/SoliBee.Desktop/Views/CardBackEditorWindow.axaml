@@ -17,7 +17,7 @@
                     CornerRadius="10" ClipToBounds="True"
                     BoxShadow="0 2 8 0 #40000000" Background="White">
                 <Grid Width="128" Height="181" ClipToBounds="True">
-                    <Image x:Name="PreviewImage" />
+                    <Image x:Name="PreviewImage" RenderOptions.BitmapInterpolationMode="HighQuality" />
                 </Grid>
             </Border>
         </Border>

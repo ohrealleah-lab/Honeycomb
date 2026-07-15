@@ -185,6 +185,10 @@ public partial class FreecellView : CardGameView
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not FreecellViewModel vm) return;
+        // Don't steal letter/symbol keystrokes while the user is typing in a TextBox
+        // (e.g. the Save Theme name field). Tunnel handlers fire before the focused
+        // control, so without this guard 'A'/'F' trigger game actions mid-typing.
+        if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is TextBox) return;
 
         switch (e.Key)
         {

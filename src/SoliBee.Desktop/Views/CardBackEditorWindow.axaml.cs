@@ -40,8 +40,8 @@ public partial class CardBackEditorWindow : Window
         {
             PreviewImage.Source = image;
             PreviewImage.Stretch = Stretch.Uniform;
-            PreviewImage.Width = 120;
-            PreviewImage.Height = 173;
+            PreviewImage.Width = 128;
+            PreviewImage.Height = 181;
 
             // Set initial slider values without triggering the change handler
             ScaleSlider.ValueChanged -= Slider_Changed;

@@ -227,7 +227,7 @@ public partial class MainWindow : Window
             BoardBackgroundImage.Source = CardView.GetCachedBackgroundBitmap(path);
             BoardBackgroundImage.IsVisible = true;
             BoardBackgroundImage.ZIndex = -10;
-            ApplyBoardBackgroundTransform(options, customBg);
+            ApplyBoardBackgroundTransform(options);
         }
         catch
         {
@@ -235,12 +235,18 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ApplyBoardBackgroundTransform(GameOptions options, CustomBackground customBg)
+    // Reads scale/offset from the live options fields (kept in sync with the matching
+    // CustomBackgrounds entry by every UI mutation, and — crucially — the only copy
+    // ThemeService.ApplyTheme actually updates) rather than the CustomBackground list
+    // entry directly, matching how card backs are rendered (CardView reads
+    // options.CardBackScale/OffsetX/OffsetY, not the CustomCardBack list entry) so a
+    // theme's saved background positioning actually takes effect on the real board.
+    private void ApplyBoardBackgroundTransform(GameOptions options)
     {
         double ratio = Math.Max(1.0, Width) / BackgroundReferenceWidth;
-        double scale = customBg.Scale;
-        double offsetX = customBg.OffsetX * ratio;
-        double offsetY = customBg.OffsetY * ratio;
+        double scale = options.BackgroundScale;
+        double offsetX = options.BackgroundOffsetX * ratio;
+        double offsetY = options.BackgroundOffsetY * ratio;
 
         BoardBackgroundImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
         var tg = new TransformGroup();

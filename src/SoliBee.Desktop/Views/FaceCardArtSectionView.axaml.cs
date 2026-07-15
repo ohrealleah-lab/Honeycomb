@@ -112,7 +112,7 @@ public partial class FaceCardArtSectionView : UserControl
             var img = new Image { Stretch = Stretch.Uniform, Width = 29, Height = 25 };
             try
             {
-                img.Source = CardView.GetCachedFaceArtBitmap(FaceCardArtService.GetFullPath(art));
+                img.Source = CardView.GetCachedFaceArtBitmap(FaceCardArtService.GetFullPath(art), art.Scale, art.OffsetX, art.OffsetY);
                 centerGrid.Children.Add(img);
             }
             catch { showArt = false; }

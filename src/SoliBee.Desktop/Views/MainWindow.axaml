@@ -226,7 +226,8 @@
              everything, ZIndex set at runtime in ApplyBoardBackground (below VignetteOverlay's
              runtime ZIndex so the vignette still darkens it the same way it darkens felt color) -->
         <Image x:Name="BoardBackgroundImage" Grid.Row="0" Grid.RowSpan="2"
-               IsHitTestVisible="False" IsVisible="False" Stretch="UniformToFill" ZIndex="80"/>
+               IsHitTestVisible="False" IsVisible="False" Stretch="UniformToFill" ZIndex="80"
+               RenderOptions.BitmapInterpolationMode="HighQuality" />
 
         <!-- App-wide Vignette depth overlay (covers both top bar and game board) -->
         <Rectangle x:Name="VignetteOverlay" Grid.Row="0" Grid.RowSpan="2" IsHitTestVisible="False" IsVisible="False" ZIndex="90">

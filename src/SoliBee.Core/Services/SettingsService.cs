@@ -232,7 +232,10 @@ public static class SettingsService
                     {
                         options.CustomBackgrounds = JsonSerializer.Deserialize<List<CustomBackground>>(cbgJsonStr) ?? new();
                     }
-                    catch {}
+                    catch (JsonException ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SettingsService] Failed to deserialize CustomBackgroundsJson: {ex.Message}");
+                    }
                 }
 
                 _cache = options;
@@ -345,7 +348,10 @@ public static class SettingsService
                     var cbgJsonStr = JsonSerializer.Serialize(options.CustomBackgrounds);
                     SetValue("CustomBackgroundsJson", cbgJsonStr);
                 }
-                catch {}
+                catch (JsonException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SettingsService] Failed to serialize CustomBackgrounds: {ex.Message}");
+                }
 
                 return;
             }

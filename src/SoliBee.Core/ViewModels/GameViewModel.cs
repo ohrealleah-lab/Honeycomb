@@ -59,7 +59,7 @@ public partial class GameViewModel : ObservableObject
     // snapshot value, it would also refund any time penalties that legitimately accrued
     // in the meantime (real time elapsed between the move and pressing Undo), which have
     // nothing to do with that move.
-    private int _standardTimePenaltyTotal;
+
 
     private List<HintMove> _hintCycleList  = new();
     private int            _hintCycleIndex = 0;
@@ -137,7 +137,6 @@ public partial class GameViewModel : ObservableObject
         _vegasBalanceBeforeDeal = State.Score;
         int startScore = Options.IsVegasScoring ? State.Score - 5200 : 0;
         _vegasGameStartScore = startScore;
-        _standardTimePenaltyTotal = 0;
 
         State = new GameState
         {
@@ -263,7 +262,6 @@ public partial class GameViewModel : ObservableObject
         // foundation gains, rather than charging a fresh buy-in like a new deal would.
         State.Score = Options.IsVegasScoring ? _vegasBalanceBeforeDeal : 0;
         _vegasGameStartScore = State.Score;
-        _standardTimePenaltyTotal = 0;
         OnPropertyChanged(nameof(ScoreDisplay));
         State.MovesCount = 0;
         State.TimerSeconds = 0;
@@ -328,20 +326,11 @@ public partial class GameViewModel : ObservableObject
     }
 
     // Shared by both InitializeGame's and RestartGame's background timer, so the two
-    // don't duplicate (and risk drifting on) this tick logic. Always advances the clock;
-    // additionally applies the standard-mode "-2 every 8 seconds" time penalty, tracking
-    // the running total separately so Undo can later reverse only the specific move it's
-    // undoing without also refunding time penalties that accrued in the meantime.
+    // don't duplicate (and risk drifting on) this tick logic. Always advances the clock.
     private void OnTimerTick()
     {
         if (State == null || !State.IsTimerActive || State.HasWon) return;
         State.TimerSeconds++;
-        if (!Options.IsVegasScoring && State.TimerSeconds % 8 == 0)
-        {
-            State.Score -= 2;
-            _standardTimePenaltyTotal += 2;
-            OnPropertyChanged(nameof(ScoreDisplay));
-        }
         OnPropertyChanged(nameof(TimeDisplay));
     }
 
@@ -602,7 +591,6 @@ public partial class GameViewModel : ObservableObject
             RecyclesCount            = State.RecyclesCount,
             HasWon                   = State.HasWon,
             WasteDrawBatchSize       = State.WasteDrawBatchSize,
-            StandardTimePenaltyTotal = _standardTimePenaltyTotal,
             PileCards                = new List<List<Card>>()
         };
 
@@ -624,19 +612,7 @@ public partial class GameViewModel : ObservableObject
         _lastMoveTargetPileId = null;
 
         var snapshot = _undoStack.Pop();
-        if (Options.IsVegasScoring)
-        {
-            State.Score = snapshot.Score;
-        }
-        else
-        {
-            // Reverse only the specific move being undone — jumping straight back to the
-            // snapshot's score would also refund any standard-mode "-2 every 8 seconds"
-            // time penalty that legitimately accrued since that move (real time elapsed
-            // while deciding to undo), which has nothing to do with the move itself.
-            int timePenaltySinceSnapshot = _standardTimePenaltyTotal - snapshot.StandardTimePenaltyTotal;
-            State.Score = snapshot.Score - timePenaltySinceSnapshot;
-        }
+        State.Score = snapshot.Score;
         State.MovesCount = snapshot.MovesCount;
         State.TimerSeconds = snapshot.TimerSeconds;
         State.RecyclesCount = snapshot.RecyclesCount;
@@ -788,13 +764,19 @@ public partial class GameViewModel : ObservableObject
                 }
                 else
                 {
-                    // Standard-mode time bonus rewards a fast win. No bonus in No Stress
-                    // Mode — TimerSeconds never advances there, so there's nothing to
-                    // measure — or once 10 minutes have passed, matching the rule that
-                    // this bonus only applies to a genuinely quick win.
-                    if (!Options.IsNoStressMode && State.TimerSeconds > 0 && State.TimerSeconds < 600)
+                    // Standard-mode time penalty and bonus are applied now that the game is over.
+                    // No penalties or bonuses in No Stress Mode — TimerSeconds never advances there.
+                    if (!Options.IsNoStressMode)
                     {
-                        State.Score += 20000 / State.TimerSeconds;
+                        int timePenalty = (State.TimerSeconds / 10) * 2;
+                        State.Score = Math.Max(0, State.Score - timePenalty);
+
+                        // Matches the classic Microsoft Solitaire logic: bonus = 700,000 / seconds,
+                        // only applied if the game took at least 30 seconds.
+                        if (State.TimerSeconds >= 30)
+                        {
+                            State.Score += 700000 / State.TimerSeconds;
+                        }
                         OnPropertyChanged(nameof(ScoreDisplay));
                     }
 
@@ -1183,6 +1165,6 @@ public class GameStateSnapshot
     public int RecyclesCount { get; set; }
     public bool HasWon { get; set; }
     public int WasteDrawBatchSize { get; set; }
-    public int StandardTimePenaltyTotal { get; set; }
+
     public List<List<Card>> PileCards { get; set; } = new();
 }

@@ -247,7 +247,16 @@ public static class ThemeService
         options.CardBackOffsetY = theme.CardBackOffsetY;
         options.FeltColor = theme.FeltColor;
         options.CustomFeltColorHex = theme.CustomFeltColorHex;
-        options.BackgroundName = theme.BackgroundName;
+        // Unlike card backs (bundled assets always exist) or face art (restored from the
+        // theme's own snapshot two lines below), a background is neither bundled nor
+        // snapshotted — it's just a name pointing at whatever's currently in
+        // options.CustomBackgrounds. If that entry is gone (deleted out from under this
+        // theme by some path other than the normal UI block, or the two stores desynced),
+        // silently drop the name rather than leaving a dangling reference that the
+        // Preferences combo box can't select and that a later delete could mismatch.
+        bool backgroundStillExists = !string.IsNullOrEmpty(theme.BackgroundName) &&
+            options.CustomBackgrounds.Exists(b => b.Name == theme.BackgroundName);
+        options.BackgroundName = backgroundStillExists ? theme.BackgroundName : null;
         options.BackgroundScale = theme.BackgroundScale;
         options.BackgroundOffsetX = theme.BackgroundOffsetX;
         options.BackgroundOffsetY = theme.BackgroundOffsetY;

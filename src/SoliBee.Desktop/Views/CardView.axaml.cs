@@ -43,6 +43,7 @@ public partial class CardView : UserControl
 
     private static readonly Dictionary<string, Bitmap> _bitmapCache = new();
     private static readonly Dictionary<string, Bitmap> _customBitmapCache = new();
+    private static readonly Dictionary<string, Bitmap> _backgroundBitmapCache = new();
     private static readonly Dictionary<string, (Bitmap[] Frames, int[] Durations)> _gifFrameCache = new();
 
     private static GameOptions? _cachedOptions;
@@ -68,11 +69,10 @@ public partial class CardView : UserControl
     internal static readonly SolidColorBrush _brushTextBlackNormal  = new(Color.Parse("#1A1A1A"));
     internal static Color _normalShadowColor = Color.Parse("#26000000");
 
-    // 2× render size: card backs render at 120×173, face art at 70×60
-    private const int CardBackCacheW = 240;
-    private const int CardBackCacheH = 346;
-    private const int FaceArtCacheW  = 140;
-    private const int FaceArtCacheH  = 120;
+    private const int CardBackCacheW = 256; // 128 * 2
+    private const int CardBackCacheH = 362; // 181 * 2
+    private const int FaceArtCacheW  = 140; // 70 * 2
+    private const int FaceArtCacheH  = 120; // 60 * 2
 
     public static void ApplyThemeColors(SoliBee.Core.Models.GameOptions options)
     {
@@ -113,9 +113,33 @@ public partial class CardView : UserControl
     public static void InvalidateFaceArtCache(string? filePath = null)
     {
         if (filePath != null)
-            _customBitmapCache.Remove(filePath);
+        {
+            // Single-path eviction (background file deleted by the user): safe to dispose
+            // here because the Delete confirm flow clears all UI references before calling in.
+            if (_customBitmapCache.TryGetValue(filePath, out var bmp))
+            {
+                bmp.Dispose();
+                _customBitmapCache.Remove(filePath);
+            }
+            // Background bitmaps live in their own cache; evict from there too.
+            if (_backgroundBitmapCache.TryGetValue(filePath, out var bgBmp))
+            {
+                bgBmp.Dispose();
+                _backgroundBitmapCache.Remove(filePath);
+            }
+        }
         else
+        {
+            // Full wipe (theme switch). Do NOT Dispose() here — async board refreshes
+            // (FaceCardArtChangedMessage → Dispatcher.UIThread.InvokeAsync) may still
+            // hold a just-cleared entry as Image.Source in a pending render pass.
+            // Dropping the cache reference is enough; the CLR reclaims the Bitmap
+            // once nothing else references it.
+            // Background bitmaps are intentionally excluded: they live in
+            // _backgroundBitmapCache and MainWindow.ApplyBoardBackground re-loads
+            // from there on every OptionsChangedMessage, so they must survive the wipe.
             _customBitmapCache.Clear();
+        }
     }
 
     // Slide-in animation state (deal / draw / move)
@@ -199,37 +223,38 @@ public partial class CardView : UserControl
     }
 
     // Card backs (non-GIF) — cached at 2× render resolution
-    private static Bitmap GetCachedCustomBitmap(string filePath)
+    private static Bitmap GetCachedCustomBitmap(string filePath, double scale, double offsetX, double offsetY)
     {
-        if (!_customBitmapCache.TryGetValue(filePath, out var bitmap))
+        string cacheKey = $"{filePath}_{scale}_{offsetX}_{offsetY}";
+        if (!_customBitmapCache.TryGetValue(cacheKey, out var bitmap))
         {
-            bitmap = ScaleToDisplay(filePath, CardBackCacheW, CardBackCacheH);
-            _customBitmapCache[filePath] = bitmap;
+            bitmap = CropAndScaleToDisplay(filePath, CardBackCacheW, CardBackCacheH, scale, offsetX, offsetY);
+            _customBitmapCache[cacheKey] = bitmap;
         }
         return bitmap;
     }
 
-    // Face card art — cached at 2× render resolution, first-frame for GIFs
-    internal static Bitmap GetCachedFaceArtBitmap(string filePath)
+    internal static Bitmap GetCachedFaceArtBitmap(string filePath, double scale, double offsetX, double offsetY)
     {
-        if (_customBitmapCache.TryGetValue(filePath, out var cached)) return cached;
-        var bitmap = LoadAndScaleFaceArt(filePath);
-        _customBitmapCache[filePath] = bitmap;
+        string cacheKey = $"{filePath}_{scale}_{offsetX}_{offsetY}";
+        if (_customBitmapCache.TryGetValue(cacheKey, out var cached)) return cached;
+        var bitmap = LoadAndScaleFaceArt(filePath, scale, offsetX, offsetY);
+        _customBitmapCache[cacheKey] = bitmap;
         return bitmap;
     }
 
-    // Board background art — cached at native resolution (rendered at whatever size the
-    // window is, unlike card backs/face art which are pre-scaled to a fixed card-sized cache).
+    // Board background art — kept in its own cache (separate from face-art / card-backs)
+    // so that InvalidateFaceArtCache() full-clears on theme switch never touch a bitmap
+    // that is still assigned to MainWindow.BoardBackgroundImage.Source.
     internal static Bitmap GetCachedBackgroundBitmap(string filePath)
     {
-        if (_customBitmapCache.TryGetValue(filePath, out var cached)) return cached;
+        if (_backgroundBitmapCache.TryGetValue(filePath, out var cached)) return cached;
         var bitmap = new Bitmap(filePath);
-        _customBitmapCache[filePath] = bitmap;
+        _backgroundBitmapCache[filePath] = bitmap;
         return bitmap;
     }
 
-    // Handles GIF first-frame extraction + downscale to face-art display size
-    private static Bitmap LoadAndScaleFaceArt(string filePath)
+    private static Bitmap LoadAndScaleFaceArt(string filePath, double scale, double offsetX, double offsetY)
     {
         if (filePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
         {
@@ -242,50 +267,64 @@ public partial class CardView : UserControl
                         SKColorType.Bgra8888, SKAlphaType.Premul);
                     using var skBmp = new SKBitmap(frameInfo);
                     codec.GetPixels(frameInfo, skBmp.GetPixels(), new SKCodecOptions(0));
-                    return ScaleToDisplay(skBmp, FaceArtCacheW, FaceArtCacheH);
+                    return CropAndScaleToDisplay(skBmp, FaceArtCacheW, FaceArtCacheH, scale, offsetX, offsetY, true);
                 }
             }
             catch { }
             return new Bitmap(filePath);
         }
-        return ScaleToDisplay(filePath, FaceArtCacheW, FaceArtCacheH);
+        return CropAndScaleToDisplay(filePath, FaceArtCacheW, FaceArtCacheH, scale, offsetX, offsetY, true);
     }
 
-    // Downscale a file to maxW×maxH (preserving aspect ratio) with high-quality filtering.
-    // If the image already fits within the target, it is returned at its original size.
-    // Falls back to a plain Bitmap load on any failure.
-    private static Bitmap ScaleToDisplay(string filePath, int maxW, int maxH)
+    private static Bitmap CropAndScaleToDisplay(string filePath, int targetW, int targetH, double scale, double offsetX, double offsetY, bool isFaceArt = false)
     {
         try
         {
-            using var skBmp = SKBitmap.Decode(filePath);
-            if (skBmp == null) return new Bitmap(filePath);
-            return ScaleToDisplay(skBmp, maxW, maxH);
+            using var src = SKBitmap.Decode(filePath);
+            if (src == null) return new Bitmap(filePath);
+            return CropAndScaleToDisplay(src, targetW, targetH, scale, offsetX, offsetY, isFaceArt);
         }
         catch { return new Bitmap(filePath); }
     }
 
-    private static Bitmap ScaleToDisplay(SKBitmap src, int maxW, int maxH)
+    private static Bitmap CropAndScaleToDisplay(SKBitmap src, int targetW, int targetH, double scale, double offsetX, double offsetY, bool isFaceArt = false)
     {
-        float scaleX = (float)maxW / src.Width;
-        float scaleY = (float)maxH / src.Height;
-        float scale  = Math.Min(scaleX, scaleY);
-
-        SKBitmap work;
-        if (scale < 1.0f)
-        {
-            int w = Math.Max(1, (int)(src.Width  * scale));
-            int h = Math.Max(1, (int)(src.Height * scale));
-            work = src.Resize(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul),
-                              SKFilterQuality.High);
-        }
-        else
-        {
-            work = src.Copy(SKColorType.Bgra8888);
-        }
-
         try
         {
+            using var surface = SKSurface.Create(new SKImageInfo(targetW, targetH, SKColorType.Bgra8888, SKAlphaType.Premul));
+            var canvas = surface.Canvas;
+            canvas.Clear(SKColors.Transparent);
+            canvas.SetMatrix(SKMatrix.CreateIdentity());
+
+            // The logical size of the container in the UI
+            float logicalW = isFaceArt ? 70f : 128f;
+            float logicalH = isFaceArt ? 60f : 181f;
+
+            // Scale from logical size to target high-res size
+            float ratioW = targetW / logicalW;
+            float ratioH = targetH / logicalH;
+            canvas.Scale(ratioW, ratioH);
+
+            float cx = logicalW / 2f;
+            float cy = logicalH / 2f;
+
+            // Apply RenderTransform (Scale & Translate) around center
+            canvas.Translate(cx, cy);
+            canvas.Translate((float)offsetX, (float)offsetY);
+            canvas.Scale((float)scale, (float)scale);
+            canvas.Translate(-cx, -cy);
+
+            // Apply Stretch="Uniform" which scales the image to fit inside the logical bounds, centered
+            float uniformScale = Math.Min(logicalW / src.Width, logicalH / src.Height);
+            canvas.Translate(cx, cy);
+            canvas.Scale(uniformScale, uniformScale);
+            canvas.Translate(-src.Width / 2f, -src.Height / 2f);
+
+            using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+            canvas.DrawImage(SKImage.FromBitmap(src), 0, 0, paint);
+
+            using var snap = surface.Snapshot();
+            using var work = SKBitmap.FromImage(snap);
             var wb = new WriteableBitmap(
                 new PixelSize(work.Width, work.Height),
                 new Vector(96, 96),
@@ -294,7 +333,7 @@ public partial class CardView : UserControl
                 Marshal.Copy(work.Bytes, 0, fb.Address, work.ByteCount);
             return wb;
         }
-        finally { work.Dispose(); }
+        catch { return new WriteableBitmap(new PixelSize(1, 1), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul); } // Fallback if crop fails
     }
 
     // ── Background preloaders ─────────────────────────────────────────────────
@@ -306,18 +345,22 @@ public partial class CardView : UserControl
         foreach (var art in FaceCardArtService.GetAllArts())
         {
             var path = FaceCardArtService.GetFullPath(art);
-            if (_customBitmapCache.ContainsKey(path) || !File.Exists(path)) continue;
+            string cacheKey = $"{path}_{art.Scale}_{art.OffsetX}_{art.OffsetY}";
+            if (_customBitmapCache.ContainsKey(cacheKey) || !File.Exists(path)) continue;
 
             var capturedPath = path;
+            double s = art.Scale;
+            double ox = art.OffsetX;
+            double oy = art.OffsetY;
             Task.Run(() =>
             {
                 try
                 {
-                    var bmp = LoadAndScaleFaceArt(capturedPath);
+                    var bmp = LoadAndScaleFaceArt(capturedPath, s, ox, oy);
                     Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        if (!_customBitmapCache.ContainsKey(capturedPath))
-                            _customBitmapCache[capturedPath] = bmp;
+                        if (!_customBitmapCache.ContainsKey(cacheKey))
+                            _customBitmapCache[cacheKey] = bmp;
                     });
                 }
                 catch { }
@@ -337,18 +380,22 @@ public partial class CardView : UserControl
             if (cb.FileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)) continue;
 
             var path = Path.Combine(backDir, cb.FileName);
-            if (_customBitmapCache.ContainsKey(path) || !File.Exists(path)) continue;
+            string cacheKey = $"{path}_{cb.Scale}_{cb.OffsetX}_{cb.OffsetY}";
+            if (_customBitmapCache.ContainsKey(cacheKey) || !File.Exists(path)) continue;
 
             var capturedPath = path;
+            double s = cb.Scale;
+            double ox = cb.OffsetX;
+            double oy = cb.OffsetY;
             Task.Run(() =>
             {
                 try
                 {
-                    var bmp = ScaleToDisplay(capturedPath, CardBackCacheW, CardBackCacheH);
+                    var bmp = CropAndScaleToDisplay(capturedPath, CardBackCacheW, CardBackCacheH, s, ox, oy);
                     Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        if (!_customBitmapCache.ContainsKey(capturedPath))
-                            _customBitmapCache[capturedPath] = bmp;
+                        if (!_customBitmapCache.ContainsKey(cacheKey))
+                            _customBitmapCache[cacheKey] = bmp;
                     });
                 }
                 catch { }
@@ -449,19 +496,29 @@ public partial class CardView : UserControl
             if (customFaceArt != null)
             {
                 FaceCardImage.IsVisible = true;
-                FaceCardImage.Stretch = Avalonia.Media.Stretch.Uniform;
+                string fullPath = FaceCardArtService.GetFullPath(customFaceArt);
+                if (fullPath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+                {
+                    FaceCardImage.Stretch = Avalonia.Media.Stretch.Uniform;
+                    var tg = new TransformGroup();
+                    tg.Children.Add(new ScaleTransform(customFaceArt.Scale, customFaceArt.Scale));
+                    tg.Children.Add(new TranslateTransform(customFaceArt.OffsetX, customFaceArt.OffsetY));
+                    FaceCardImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+                    FaceCardImage.RenderTransform = tg;
+                }
+                else
+                {
+                    FaceCardImage.Stretch = Avalonia.Media.Stretch.Fill;
+                    FaceCardImage.RenderTransform = null;
+                }
+                
                 FaceCardImage.Width  = 70;
                 FaceCardImage.Height = 60;
-                FaceCardImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
-                var tg = new TransformGroup();
-                tg.Children.Add(new ScaleTransform(customFaceArt.Scale, customFaceArt.Scale));
-                tg.Children.Add(new TranslateTransform(customFaceArt.OffsetX, customFaceArt.OffsetY));
-                FaceCardImage.RenderTransform = tg;
                 CenterGrid.ClipToBounds = true;
 
                 try
                 {
-                    FaceCardImage.Source = GetCachedFaceArtBitmap(FaceCardArtService.GetFullPath(customFaceArt));
+                    FaceCardImage.Source = GetCachedFaceArtBitmap(fullPath, customFaceArt.Scale, customFaceArt.OffsetX, customFaceArt.OffsetY);
                 }
                 catch
                 {
@@ -861,7 +918,7 @@ public partial class CardView : UserControl
                 else
                 {
                     StopGifAnimation();
-                    CardBackImage.Source = GetCachedCustomBitmap(customPath);
+                    CardBackImage.Source = GetCachedCustomBitmap(customPath, scale, offsetX, offsetY);
                 }
             }
             else
@@ -876,7 +933,7 @@ public partial class CardView : UserControl
             StopGifAnimation();
         }
 
-        if (isDingwall)
+        if (isDingwall || (isCustom && customPath != null && !customPath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)))
         {
             CardBackImage.Width = 128;
             CardBackImage.Height = 181;
@@ -885,8 +942,9 @@ public partial class CardView : UserControl
         }
         else
         {
-            CardBackImage.Width  = 120;
-            CardBackImage.Height = 173;
+            // For Moogle/Vulpera and GIFs
+            CardBackImage.Width  = isCustom ? 128 : 120;
+            CardBackImage.Height = isCustom ? 181 : 173;
             CardBackImage.Stretch = Stretch.Uniform;
 
             if (Math.Abs(scale - 1.0) > 0.01 || Math.Abs(offsetX) > 0.01 || Math.Abs(offsetY) > 0.01)

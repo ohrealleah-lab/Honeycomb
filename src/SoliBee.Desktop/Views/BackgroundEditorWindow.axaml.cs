@@ -18,6 +18,10 @@ public partial class BackgroundEditorWindow : Window
     private static readonly double PreviewRatio = PreviewWidth / ReferenceWidth;
 
     private readonly bool _isNew;
+    // The window takes ownership of the bitmap passed to it and disposes it on close.
+    // This ensures the underlying native file handle is released before the caller's
+    // File.Delete on the cancel path (fixing the file-handle leak from the code review).
+    private Bitmap? _image;
 
     public bool Saved { get; private set; }
     public string NewName { get; private set; } = "";
@@ -32,7 +36,9 @@ public partial class BackgroundEditorWindow : Window
         double scale, double offsetX, double offsetY)
     {
         _isNew = isNew;
+        _image = image;
         InitializeComponent();
+        this.Closed += (_, _) => { _image?.Dispose(); _image = null; };
         this.Loaded += (_, _) => OnLoaded(image, initialName, scale, offsetX, offsetY);
     }
 
