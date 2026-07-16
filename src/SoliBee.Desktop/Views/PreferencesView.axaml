@@ -53,6 +53,7 @@
 
             <StackPanel Spacing="2">
                 <CheckBox x:Name="NoStressModeCheckBox" Content="No Stress Mode"     Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                <CheckBox x:Name="HideBetBoardCheckBox" Content="Hide Bet Board"       Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A" IsVisible="False"/>
                 <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
@@ -127,7 +128,6 @@
                     <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Top">
                         <ComboBox x:Name="CardBackComboBox" HorizontalAlignment="Stretch" SelectionChanged="CardBackComboBox_SelectionChanged">
                             <ComboBoxItem Content="Vulpera" Tag="Vulpera"/>
-                            <ComboBoxItem Content="Dingwall" Tag="Dingwall"/>
                             <ComboBoxItem Content="Moogle"   Tag="Moogle"/>
                         </ComboBox>
                         <Grid ColumnDefinitions="*, *">

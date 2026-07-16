@@ -11,6 +11,8 @@ public class VideoPokerStatistics
     public int BiggestPay { get; set; }
     public int Rebuys { get; set; }
     public Dictionary<string, int> HandCounts { get; set; } = new();
+    public int CurrentStreak { get; set; }
+    public int LongestStreak { get; set; }
 
     // Toolbar-compatible aliases used by MainWindow bindings
     public int GamesPlayed => TotalHands;

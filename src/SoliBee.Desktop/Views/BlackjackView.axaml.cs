@@ -146,10 +146,15 @@ public partial class BlackjackView : UserControl
 
     // ── Dealer cards ──────────────────────────────────────────────────────────
 
+    private const double CardBaseWidth   = 190;
+    private const double LightOverlap    = -(CardBaseWidth * 0.30);
+    private const double TightOverlap    = -(CardBaseWidth * 0.55);
+    private const double TightestOverlap = -(CardBaseWidth * 0.75);
+
     private static Viewbox MakeCardVisual(CardView cv, int index)
     {
-        var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 190, Height = 268.375, Child = cv };
-        if (index > 0) vb.Margin = new Avalonia.Thickness(-35.625, 0, 0, 0);
+        var vb = new Viewbox { Stretch = Stretch.Uniform, Width = CardBaseWidth, Height = 268.375, Child = cv };
+        if (index > 0) vb.Margin = new Avalonia.Thickness(LightOverlap, 0, 0, 0);
         return vb;
     }
 
@@ -179,11 +184,13 @@ public partial class BlackjackView : UserControl
         var (visibleValue, _) = vm.State.DealerHand.ComputeVisibleValue();
         DealerCountLabel.Text = $"DEALER  {visibleValue}";
 
+        double dealerOverlap = cards.Count >= 6 ? TightOverlap : LightOverlap;
+
         for (int i = 0; i < cards.Count; i++)
         {
             var cv = new CardView { Card = cards[i], IsHitTestVisible = false };
-            var vb = new Viewbox { Stretch = Stretch.Uniform, Width = 190, Height = 268.375, Child = cv };
-            if (i > 0) vb.Margin = new Avalonia.Thickness(-35.625, 0, 0, 0);
+            var vb = new Viewbox { Stretch = Stretch.Uniform, Width = CardBaseWidth, Height = 268.375, Child = cv };
+            if (i > 0) vb.Margin = new Avalonia.Thickness(dealerOverlap, 0, 0, 0);
             DealerCardsPanel.Children.Add(vb);
 
             bool isNew = i >= _prevDealerIds.Count || _prevDealerIds[i] != newIds[i];
@@ -194,25 +201,6 @@ public partial class BlackjackView : UserControl
     }
 
     // ── Player hands ──────────────────────────────────────────────────────────
-
-    // Overlap tightening for a split hand's cards, keyed by card count. Cards
-    // themselves never shrink — instead, as a hand grows past 2 cards the gap
-    // between them tightens so the row still targets a fresh 2-card hand's width
-    // (keeping it clear of the other split hand beside it). That tightening is
-    // floored at MinVisibleStripWidth, since covering more than that would start
-    // hiding a card's rank/suit corner — a hand that grows past what the floor can
-    // fit is simply allowed to run wider than the target instead.
-    private const double CardBaseWidth        = 190;
-    private const double CardOverlapWidth     = 154.375; // default/2-card width each additional card adds
-    private const double MinVisibleStripWidth = 40;      // floor — keeps every covered card's corner visible
-
-    private static double OverlapWidthForHandSize(int cardCount)
-    {
-        if (cardCount <= 2) return CardOverlapWidth;
-        double targetHandWidth = CardBaseWidth + CardOverlapWidth; // same cap a 2-card hand uses
-        double neededOverlap   = (targetHandWidth - CardBaseWidth) / (cardCount - 1);
-        return Math.Max(MinVisibleStripWidth, neededOverlap);
-    }
 
     private void RebuildPlayerHands(BlackjackViewModel vm)
     {
@@ -254,19 +242,16 @@ public partial class BlackjackView : UserControl
             var newIds  = hand.Cards.Select(c => c.Id).ToList();
             int stagger = 0;
 
-            // Cards row — tighten the overlap (never the card size) as a split hand
-            // grows, so a long hand still targets its starting footprint; single
-            // (unsplit) hands always use the default spacing.
-            double overlapWidth = vm.State.IsSplit ? OverlapWidthForHandSize(hand.Cards.Count) : CardOverlapWidth;
-            double cardWidth  = CardBaseWidth;
-            double cardHeight = 268.375;
-            double overlap    = -(CardBaseWidth - overlapWidth);
+            // Cards row
+            double overlap = vm.State.IsSplit
+                ? (hand.Cards.Count >= 4 ? TightestOverlap : TightOverlap)
+                : (hand.Cards.Count >= 6 ? TightOverlap : LightOverlap);
 
             var cardRow = new StackPanel { Orientation = Orientation.Horizontal };
             for (int ci = 0; ci < hand.Cards.Count; ci++)
             {
                 var cv = new CardView { Card = hand.Cards[ci], IsHitTestVisible = false };
-                var vb = new Viewbox { Stretch = Stretch.Uniform, Width = cardWidth, Height = cardHeight, Child = cv };
+                var vb = new Viewbox { Stretch = Stretch.Uniform, Width = CardBaseWidth, Height = 268.375, Child = cv };
                 if (ci > 0) vb.Margin = new Avalonia.Thickness(overlap, 0, 0, 0);
                 cardRow.Children.Add(vb);
 
@@ -378,8 +363,6 @@ public partial class BlackjackView : UserControl
             DoubleButton.IsEnabled = vm.CanDouble;
             SplitButton.IsEnabled  = vm.CanSplit;
         }
-
-        DealButton.Content = vm.State.Phase == BlackjackPhase.Result ? "Buy In Again" : "Buy In";
 
     }
 
@@ -680,16 +663,6 @@ public partial class BlackjackView : UserControl
             "Custom"    => vm.Options.CustomFeltColorHex,
             _           => "#008000",
         };
-        try
-        {
-            var felt = Color.Parse(hex);
-            var bar = new Color(255, (byte)(felt.R / 2), (byte)(felt.G / 2), (byte)(felt.B / 2));
-            BidBar.Background = new SolidColorBrush(bar);
-        }
-        catch
-        {
-            BidBar.Background        = new SolidColorBrush(Color.Parse("#004000"));
-        }
     }
 
     // ── Keyboard ──────────────────────────────────────────────────────────────
@@ -697,10 +670,16 @@ public partial class BlackjackView : UserControl
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
+
+        // Don't steal letter/symbol keystrokes while the user is typing in a TextBox
+        // (e.g. the Save Theme name field). Tunnel handlers fire before the focused
+        // control, so without this guard 'H'/'S'/etc. trigger game actions mid-typing.
+        if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is TextBox) return;
+
         switch (e.Key)
         {
             case Key.Space: case Key.Enter:
-                if (vm.CanDeal) { vm.Deal(); SoundService.PlayShuffle(); }
+                if (vm.CanDeal) { DoDeal(vm); }
                 e.Handled = true; break;
             case Key.H:
                 if (vm.CanHit) { vm.Hit(); SoundService.PlaySnap(); }
@@ -719,11 +698,19 @@ public partial class BlackjackView : UserControl
 
     // ── Event handlers ────────────────────────────────────────────────────────
 
+    private void DoDeal(BlackjackViewModel vm)
+    {
+        HideBanner();
+        _cardsFadedOut = false;
+        _lastPhase = BlackjackPhase.Betting;
+        vm.Deal();
+        SoundService.PlayShuffle();
+    }
+
     private void Deal_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
-        vm.Deal();
-        SoundService.PlayShuffle();
+        DoDeal(vm);
     }
 
     // Clicking the card backs deals a hand at the current bet, same as pressing
@@ -748,8 +735,7 @@ public partial class BlackjackView : UserControl
         if (vm.State.Phase == BlackjackPhase.Result && (_resultShowTimer != null || ResultOverlay.IsVisible))
             return;
 
-        vm.Deal();
-        SoundService.PlayShuffle();
+        DoDeal(vm);
         e.Handled = true;
     }
 
@@ -783,6 +769,7 @@ public partial class BlackjackView : UserControl
     private void Rebuy_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
+        HideBanner();
         vm.Rebuy();
         SoundService.PlaySnap();
     }
@@ -809,8 +796,7 @@ public partial class BlackjackView : UserControl
     private void ResultOverlay_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
-        HideBanner();
-        if (vm.CanDeal) { vm.Deal(); SoundService.PlayShuffle(); }
+        if (vm.CanDeal) { DoDeal(vm); }
         e.Handled = true;
     }
 }

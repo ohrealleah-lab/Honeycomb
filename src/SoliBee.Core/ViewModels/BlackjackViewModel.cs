@@ -30,7 +30,8 @@ public partial class BlackjackViewModel : ObservableObject
     // the bet deduction while still collecting a real payout, or vice versa.
     private bool _handFreePlay              = false;
 
-    public int ConsecutiveWins { get; private set; } = 0;
+    // Streak is stored in Stats (persisted) — this alias keeps existing UI bindings working.
+    public int ConsecutiveWins => Stats.CurrentStreak;
 
     // ── Computed properties ───────────────────────────────────────────────────
 
@@ -222,7 +223,10 @@ public partial class BlackjackViewModel : ObservableObject
         }
         else
         {
-            NotifyStateChanged();
+            if (ActiveHand != null && ActiveHand.IsComplete)
+                AdvanceHand();
+            else
+                NotifyStateChanged();
         }
     }
 
@@ -292,7 +296,7 @@ public partial class BlackjackViewModel : ObservableObject
     {
         Options.BetPerHand = State.CurrentBet;
         SaveOptions();
-        ConsecutiveWins = 0;
+        Stats.CurrentStreak = 0;
         _sessionHandsPlayed = 0;
         State = new BlackjackState
         {
@@ -310,7 +314,10 @@ public partial class BlackjackViewModel : ObservableObject
         if (next < State.PlayerHands.Count)
         {
             State.ActiveHandIndex = next;
-            NotifyStateChanged();
+            if (ActiveHand != null && ActiveHand.IsComplete)
+                AdvanceHand();
+            else
+                NotifyStateChanged();
             return;
         }
 
@@ -373,8 +380,16 @@ public partial class BlackjackViewModel : ObservableObject
 
         bool roundWon  = State.PlayerHands.Any(h => h.Result is BlackjackHandResult.Won or BlackjackHandResult.Blackjack);
         bool roundLost = State.PlayerHands.Any(h => h.Result == BlackjackHandResult.Lost);
-        if (roundWon && !roundLost) ConsecutiveWins++;
-        else if (roundLost)        ConsecutiveWins = 0;
+        if (roundWon && !roundLost)
+        {
+            Stats.CurrentStreak++;
+            if (Stats.CurrentStreak > Stats.LongestStreak)
+                Stats.LongestStreak = Stats.CurrentStreak;
+        }
+        else if (roundLost)
+        {
+            Stats.CurrentStreak = 0;
+        }
 
         State.Phase         = BlackjackPhase.Result;
         Options.BetPerHand  = State.CurrentBet;

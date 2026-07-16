@@ -16,6 +16,8 @@ public partial class VideoPokerViewModel : ObservableObject
     [ObservableProperty] private VideoPokerOptions _options = new();
     [ObservableProperty] private VideoPokerStatistics _stats = new();
 
+    public bool IsBetBoardVisible => !Options.IsNoStressMode && !Options.HideBetBoard;
+
     private List<Card> _deck = new();
     // Session-scoped (not persisted) — starts at 0 each time the player buys in and
     // counts hands played since then, distinct from Stats.TotalHands's lifetime total.
@@ -179,6 +181,9 @@ public partial class VideoPokerViewModel : ObservableObject
         if (payout > 0)
         {
             Stats.WinningHands++;
+            Stats.CurrentStreak++;
+            if (Stats.CurrentStreak > Stats.LongestStreak)
+                Stats.LongestStreak = Stats.CurrentStreak;
             if (!freePlay)
             {
                 Stats.TotalCreditsWon += payout;
@@ -186,6 +191,10 @@ public partial class VideoPokerViewModel : ObservableObject
             }
             var key = entry!.HandName;
             Stats.HandCounts[key] = Stats.HandCounts.GetValueOrDefault(key) + 1;
+        }
+        else
+        {
+            Stats.CurrentStreak = 0;
         }
 
         SaveStatistics();
@@ -420,6 +429,7 @@ public partial class VideoPokerViewModel : ObservableObject
         // Options is the same live instance Preferences edits directly (single consumer,
         // no cross-ViewModel broadcast needed) — notify so the view refreshes immediately.
         OnPropertyChanged(nameof(Options));
+        OnPropertyChanged(nameof(IsBetBoardVisible));
     }
 
     private static VideoPokerOptions LoadOptions()

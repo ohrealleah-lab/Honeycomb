@@ -71,12 +71,12 @@
              its own fixed Auto row right under the pay table), centered vertically in
              the same leftover space, so it sits centered between the pay table and the
              cards rather than pinned to the top of that gap. -->
-        <Grid Grid.Row="1" RowDefinitions="*,Auto,Auto,*">
+        <Grid Grid.Row="1" RowDefinitions="1.3*,Auto,Auto,*">
 
             <!-- Credits / Bet / Hands bar — centered in the top spacer row -->
-            <Border x:Name="BidBar" Grid.Row="0" Background="#CC000000" CornerRadius="6"
+            <Border x:Name="BidBar" Grid.Row="0" Background="#59000000" CornerRadius="6"
                     HorizontalAlignment="Center" VerticalAlignment="Center" Width="290" Padding="0,8">
-                <Grid ColumnDefinitions="*,Auto,*,Auto,*">
+                <Grid ColumnDefinitions="96,Auto,96,Auto,96">
                     <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
                         <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold"
                                    Foreground="#70FFFFFF" HorizontalAlignment="Center"/>

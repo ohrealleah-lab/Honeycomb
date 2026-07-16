@@ -11,6 +11,7 @@ public class VideoPokerOptions
     public string CustomFeltColorHex { get; set; } = "#592673";
     public bool IsVignetteEnabled { get; set; } = true;
     public bool IsNoStressMode { get; set; } = false;
+    public bool HideBetBoard { get; set; } = false;
 
     // Shallow copy so callers can snapshot "before edits" and restore it later
     // (e.g. Preferences' Cancel button) without aliasing the live instance.

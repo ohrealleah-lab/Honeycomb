@@ -69,6 +69,13 @@ public partial class PreferencesView : UserControl
             CardBackComboBox.Items.Add(new ComboBoxItem { Content = name, Tag = name });
         }
 
+        // If the current card back is "Dingwall" (which was removed from built-in),
+        // we add it dynamically so existing users keep it visible and selected.
+        if (options.CardBackTheme == "Dingwall")
+        {
+            CardBackComboBox.Items.Add(new ComboBoxItem { Content = "Dingwall", Tag = "Dingwall" });
+        }
+
         foreach (var cb in options.CustomCardBacks)
         {
             CardBackComboBox.Items.Add(new ComboBoxItem { Content = cb.Name, Tag = cb.Name });
@@ -236,6 +243,7 @@ public partial class PreferencesView : UserControl
             vpOptions.CustomFeltColorHex = orig.CustomFeltColorHex;
             vpOptions.IsVignetteEnabled  = orig.IsVignetteEnabled;
             vpOptions.IsNoStressMode     = orig.IsNoStressMode;
+            vpOptions.HideBetBoard       = orig.HideBetBoard;
             VideoPokerVm?.SaveOptions();
 
             if (_originalSharedOptionsForVideoPoker != null)
@@ -277,7 +285,9 @@ public partial class PreferencesView : UserControl
     private void SyncUIFromVideoPokerOptions(VideoPokerOptions options)
     {
         VegasCheckBox.IsVisible        = false;
+        HideBetBoardCheckBox.IsVisible = true;
 
+        HideBetBoardCheckBox.IsChecked = options.HideBetBoard;
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
 
         var shared = SettingsService.LoadOptions();
@@ -647,6 +657,7 @@ public partial class PreferencesView : UserControl
         else if (DataContext is VideoPokerOptions vpOptions)
         {
             vpOptions.IsSoundEnabled  = SoundCheckBox.IsChecked        ?? false;
+            vpOptions.HideBetBoard    = HideBetBoardCheckBox.IsChecked ?? false;
 
             // No Stress Mode/Hide Hint/Zoom are global — write to the shared GameOptions
             // so every game (Klondike/Freecell/Spider/Blackjack too) picks up the change.
@@ -698,7 +709,7 @@ public partial class PreferencesView : UserControl
 
     private static readonly string[] _builtInCardBackNames =
     {
-        "Vulpera", "Dingwall", "Moogle", "Forest", "On the Water",
+        "Vulpera", "Moogle", "Forest", "On the Water",
         "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset",
     };
 

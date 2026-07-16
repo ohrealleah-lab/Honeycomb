@@ -611,8 +611,16 @@ public partial class GameViewModel : ObservableObject
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
 
+        int scoreBeforeUndo = State.Score;
         var snapshot = _undoStack.Pop();
         State.Score = snapshot.Score;
+
+        if (!Options.IsVegasScoring)
+        {
+            int pointsEarnedByUndoneMove = scoreBeforeUndo - State.Score;
+            State.Score -= Math.Max(0, pointsEarnedByUndoneMove);
+        }
+
         State.MovesCount = snapshot.MovesCount;
         State.TimerSeconds = snapshot.TimerSeconds;
         State.RecyclesCount = snapshot.RecyclesCount;

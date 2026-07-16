@@ -128,7 +128,7 @@ public partial class VideoPokerView : UserControl
         // No Stress Mode's free play has no bet to place, so the pay table (whose
         // payouts scale with bet), credits/bet readout, and betting controls all
         // disappear — only Hold/Clear/Deal remain (see UpdateControls).
-        PayTableBar.IsVisible = !vm.Options.IsNoStressMode;
+        PayTableBar.IsVisible = vm.IsBetBoardVisible;
         BidBar.IsVisible      = !vm.Options.IsNoStressMode;
         UpdateCards(vm);
         UpdateHoldBadges(vm);
@@ -599,17 +599,6 @@ public partial class VideoPokerView : UserControl
             "Custom"    => vm.Options.CustomFeltColorHex,
             _           => "#008000",
         };
-        try
-        {
-            var felt = Color.Parse(hex);
-            // Bid bar uses a darkened shade of the felt color for text contrast
-            var bar = new Color(255, (byte)(felt.R / 2), (byte)(felt.G / 2), (byte)(felt.B / 2));
-            BidBar.Background = new SolidColorBrush(bar);
-        }
-        catch
-        {
-            BidBar.Background = new SolidColorBrush(Color.Parse("#004000"));
-        }
     }
 
     // ── Deal animation ────────────────────────────────────────────────────────
@@ -773,6 +762,11 @@ public partial class VideoPokerView : UserControl
     {
         if (DataContext is not VideoPokerViewModel vm) return;
 
+        // Don't steal letter/symbol keystrokes while the user is typing in a TextBox
+        // (e.g. the Save Theme name field). Tunnel handlers fire before the focused
+        // control, so without this guard 'D'/'Space'/etc. trigger game actions mid-typing.
+        if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is TextBox) return;
+
         switch (e.Key)
         {
             case Key.D:
@@ -841,8 +835,7 @@ public partial class VideoPokerView : UserControl
     // class as Blackjack's CardBack_PointerPressed guard. Clicking the banner itself once
     // shown is still immediate on purpose (see WinBanner_PointerPressed/NoWinOverlay_PointerPressed).
     private bool IsResultRevealPending(VideoPokerViewModel vm) =>
-        vm.State.Phase == VideoPokerPhase.Result &&
-        (_resultShowTimer != null || WinBanner.IsVisible || NoWinOverlay.IsVisible);
+        vm.State.Phase == VideoPokerPhase.Result && _resultShowTimer != null;
 
     private void CardSlot_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
