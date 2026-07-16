@@ -84,7 +84,7 @@ public struct VideoPokerView: View {
                 // Stationary toolbar — never scales with zoom
                 toolbarView
                     .padding(.horizontal, 16)
-                    .padding(.top, 16)
+                    .padding(.top, 28) // Clear the macOS traffic light window controls
                     .padding(.bottom, 8)
 
                 Divider().overlay(Color.white.opacity(0.2))
@@ -147,15 +147,21 @@ public struct VideoPokerView: View {
         }
         .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
                minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale + Self.legendHeight, maxHeight: .infinity)
-        .onAppear { snapToMinSize() }
+        .onAppear {
+            DispatchQueue.main.async {
+                snapToMinSize()
+            }
+        }
         .background(WindowAccessor { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
             coordinator.activeWindow = window
-            if let saved = viewModel.defaultWindowSize {
-                snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
-            } else {
-                snapToMinSize()
+            DispatchQueue.main.async {
+                if let saved = viewModel.defaultWindowSize {
+                    snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
+                } else {
+                    snapToMinSize()
+                }
             }
         })
         .onChange(of: viewModel.zoomScale) { snapToMinSize() }

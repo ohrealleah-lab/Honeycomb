@@ -173,7 +173,7 @@ public struct SpiderView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 12)
+                .padding(.top, 28) // Clear the macOS traffic light window controls
                 .padding(.bottom, 6)
                 .layoutPriority(1)
 

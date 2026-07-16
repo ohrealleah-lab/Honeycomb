@@ -28,6 +28,7 @@ struct AppRouterView: View {
                     .transition(.opacity)
             }
         }
+        .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.25), value: coordinator.gameMode)
         .environment(coordinator)
     }

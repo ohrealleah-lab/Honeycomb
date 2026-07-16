@@ -1,13 +1,13 @@
 import Foundation
 
-public enum BlackjackPhase: Equatable {
+public enum BlackjackPhase: String, Equatable, Codable {
     case betting
     case playing
     case dealerTurn
     case result
 }
 
-public enum BlackjackHandResult: Equatable {
+public enum BlackjackHandResult: String, Equatable, Codable {
     case win
     case loss
     case push
@@ -15,7 +15,7 @@ public enum BlackjackHandResult: Equatable {
     case bust
 }
 
-public struct BlackjackHand: Equatable {
+public struct BlackjackHand: Equatable, Codable {
     public var cards: [Card]
     public var bet: Int
     public var isDoubled: Bool = false
@@ -32,7 +32,7 @@ public struct BlackjackHand: Equatable {
     public var isBlackjack: Bool { cards.count == 2 && value == 21 }
 }
 
-public struct BlackjackState: Equatable {
+public struct BlackjackState: Equatable, Codable {
     public var phase: BlackjackPhase = .betting
     public var playerHands: [BlackjackHand] = []
     public var activeHandIndex: Int = 0

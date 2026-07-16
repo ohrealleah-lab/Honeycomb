@@ -38,7 +38,13 @@ public struct CustomCardBack: Codable, Identifiable, Equatable {
 public final class CustomCardBackManager {
     public static let shared = CustomCardBackManager()
 
-    public let defaultThemes = ["Vulpera", "Moogle", "Dingwall", "Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset"]
+    public var defaultThemes: [String] {
+        var list = ["Vulpera", "Moogle", "Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset"]
+        if UserDefaults.standard.bool(forKey: "solibee_keep_dingwall") {
+            list.insert("Dingwall", at: 2)
+        }
+        return list
+    }
 
     // Excluded from observation so cache writes don't trigger SwiftUI re-renders across the board.
     @ObservationIgnored private var imageCache: [String: NSImage] = [:]
@@ -77,6 +83,15 @@ public final class CustomCardBackManager {
     private init() {
         loadCustomCardBacks()
         self.deletedDefaultDecks = UserDefaults.standard.stringArray(forKey: "deleted_default_decks") ?? []
+        
+        // If the keep-dingwall setting hasn't been set yet, check if they are an existing user.
+        if UserDefaults.standard.object(forKey: "solibee_keep_dingwall") == nil {
+            let isExistingUser = UserDefaults.standard.object(forKey: "cardBackTheme") != nil ||
+                                 UserDefaults.standard.object(forKey: "selectedGameMode") != nil ||
+                                 UserDefaults.standard.object(forKey: "solibee_themes") != nil
+            UserDefaults.standard.set(isExistingUser, forKey: "solibee_keep_dingwall")
+        }
+        
         preloadImages()
     }
     

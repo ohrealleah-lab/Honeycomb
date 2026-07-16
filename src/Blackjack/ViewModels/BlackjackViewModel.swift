@@ -4,6 +4,7 @@ import AppKit
 
 @Observable
 public final class BlackjackViewModel {
+    public static var isHeadlessMode = false
 
     public var options: BlackjackOptions {
         didSet {
@@ -395,7 +396,7 @@ public final class BlackjackViewModel {
     // MARK: - Sound
 
     public func playSound(named name: String) {
-        guard options.isSoundEnabled else { return }
+        guard !Self.isHeadlessMode && options.isSoundEnabled else { return }
         if let url = Bundle.main.url(forResource: name, withExtension: "aiff"),
            let sound = NSSound(contentsOf: url, byReference: true) { sound.play(); return }
         let sys: String

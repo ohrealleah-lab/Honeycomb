@@ -5,6 +5,7 @@ struct AppCoordinatorTests {
         testDefaultGameMode()
         testSwitchGameMode()
         testPreferencesSync()
+        testDingwallRemoval()
     }
     
     static func testDefaultGameMode() {
@@ -67,5 +68,22 @@ struct AppCoordinatorTests {
         let newCoordinator = AppCoordinator()
         assert(newCoordinator.feltColor == .charcoal, "New coordinator should load charcoal felt color")
         assert(newCoordinator.cardBackTheme == "Moogle", "New coordinator should load Moogle card back theme")
+    }
+
+    static func testDingwallRemoval() {
+        let originalValue = UserDefaults.standard.object(forKey: "solibee_keep_dingwall")
+        defer {
+            if let originalValue {
+                UserDefaults.standard.set(originalValue, forKey: "solibee_keep_dingwall")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "solibee_keep_dingwall")
+            }
+        }
+
+        UserDefaults.standard.set(true, forKey: "solibee_keep_dingwall")
+        assert(CustomCardBackManager.shared.defaultThemes.contains("Dingwall"), "defaultThemes should contain Dingwall when solibee_keep_dingwall is true")
+        
+        UserDefaults.standard.set(false, forKey: "solibee_keep_dingwall")
+        assert(!CustomCardBackManager.shared.defaultThemes.contains("Dingwall"), "defaultThemes should not contain Dingwall when solibee_keep_dingwall is false")
     }
 }

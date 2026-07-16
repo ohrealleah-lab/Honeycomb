@@ -102,11 +102,6 @@ public final class GameViewModel {
 
     // Undo stack
     private var undoStack: [GameState] = []
-    // Parallel to undoStack: how much standard-mode score each pending undo checkpoint's
-    // move(s) actually earned, so undoLastAction() can apply the undo-penalty rule
-    // ("deducts the points earned by the undone move") without it being contaminated by
-    // unrelated score changes (e.g. the time penalty) that happen to land between moves.
-    private var scoreDeltaStack: [Int] = []
 
     // Initial state for game replay
     private var initialState: GameState?
@@ -309,7 +304,6 @@ public final class GameViewModel {
         }
 
         undoStack.removeAll()
-        scoreDeltaStack.removeAll()
         playSound(named: "shuffle")
         
         // 1. Create a 52-card deck
@@ -390,7 +384,6 @@ public final class GameViewModel {
         guard let initial = initialState else { return }
         stopTimer()
         undoStack.removeAll()
-        scoreDeltaStack.removeAll()
         // Restore bankroll to pre-game value — restart replays the same deal, no re-deal charge
         if options.isVegasScoring { vegasBankroll = vegasBankrollAtGameStart }
         state = initial
@@ -542,15 +535,7 @@ public final class GameViewModel {
         }
 
         // Score adjustments
-        let scoreBeforeAdjust = state.score
         adjustScore(from: sourcePile.type, to: targetPile.type, revealedFaceDownCard: revealedFaceDownCard)
-        // Accumulate (not overwrite) into the checkpoint saveStateForUndo() just pushed —
-        // autocomplete only pushes one checkpoint for its whole run (saveStateForUndo()
-        // no-ops on every individual move after the first while isAutoplayRunning), so
-        // this correctly sums every move's contribution under that single undo step.
-        if !scoreDeltaStack.isEmpty {
-            scoreDeltaStack[scoreDeltaStack.count - 1] += state.score - scoreBeforeAdjust
-        }
 
         state.movesCount += 1
         checkWinState()
@@ -614,10 +599,6 @@ public final class GameViewModel {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             self.state.timerSeconds += 1
-            // Standard-mode time penalty: -2 points every 10 seconds elapsed (Microsoft Solitaire rules).
-            if !self.options.isVegasScoring && self.state.timerSeconds > 0 && self.state.timerSeconds % 10 == 0 {
-                self.state.score -= 2
-            }
         }
     }
     
@@ -637,9 +618,10 @@ public final class GameViewModel {
             stopTimer()
             recordWin(timeInSeconds: state.timerSeconds)
             playSound(named: "victory")
-            // Standard-mode time win bonus: 700,000 / seconds elapsed (Microsoft Solitaire rules).
-            // Guards timerSeconds > 0 since a No Stress Mode game never starts the timer (stays 0).
             if !options.isVegasScoring && state.timerSeconds > 0 {
+                // Standard-mode time scoring (Microsoft Solitaire rules), applied once on win:
+                // deduct 2 points for every 10 seconds elapsed, then add the 700,000 / seconds bonus.
+                state.score -= 2 * (state.timerSeconds / 10)
                 state.score += 700000 / state.timerSeconds
             }
             if state.score > highScore {
@@ -1006,10 +988,8 @@ public final class GameViewModel {
     private func saveStateForUndo() {
         guard !isAutoplayRunning else { return }
         undoStack.append(state)
-        scoreDeltaStack.append(0)
         if undoStack.count > 100 {
             undoStack.removeFirst()
-            scoreDeltaStack.removeFirst()
         }
     }
     
@@ -1019,15 +999,18 @@ public final class GameViewModel {
         // read when the undone move's snapshot was saved.
         let currentTimerSeconds = state.timerSeconds
         let currentIsTimerActive = state.isTimerActive
+        let scoreBeforeUndo = state.score
         state = undoStack.removeLast()
-        let pointsEarnedByUndoneMove = scoreDeltaStack.isEmpty ? 0 : scoreDeltaStack.removeLast()
         state.timerSeconds = currentTimerSeconds
         state.isTimerActive = currentIsTimerActive
-        // Standard-mode undo penalty: deducts the points the undone move earned, on top
-        // of the natural reversion the state restore above already did. Clamped to 0 so
-        // undoing a move that already COST points (e.g. a foundation retreat) can't turn
-        // into a net reward — it just reverts, with no extra penalty either way.
+        // Standard-mode undo penalty: deducts the points the undone move(s) earned, on
+        // top of the natural reversion the state restore above already did. Since the timer
+        // no longer drains score mid-game, the difference between the pre-undo score and
+        // the restored snapshot score equals exactly what the move(s) earned — no separate
+        // scoreDeltaStack needed. Clamped to 0 so undoing a move that already COST points
+        // (e.g. a foundation retreat) can't turn into a net reward.
         if !options.isVegasScoring {
+            let pointsEarnedByUndoneMove = scoreBeforeUndo - state.score
             state.score -= max(0, pointsEarnedByUndoneMove)
         }
         // vegasBankroll isn't part of `state`, but it always tracks state.score 1:1 via
