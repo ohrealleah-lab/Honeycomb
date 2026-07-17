@@ -91,7 +91,7 @@
         <!-- ═══════════════════════════════════════════════════════════════════
              THEMES SUB-PANEL
              ═══════════════════════════════════════════════════════════════════ -->
-        <Grid x:Name="ThemesPanel" IsVisible="False" Width="540" Margin="10,10,10,10" RowDefinitions="Auto,*" ColumnDefinitions="*,*">
+        <Grid x:Name="ThemesPanel" IsVisible="False" Width="594" Margin="10,10,10,10" RowDefinitions="Auto,*" ColumnDefinitions="*,*">
 
             <!-- Back button (Row 0, Spans both columns) -->
             <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Click="CloseThemes_Click"
@@ -326,6 +326,20 @@
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button Content="Cancel" Click="CancelDeleteTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
                         <Button Content="Delete" Click="ConfirmDeleteTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-danger" Margin="4,0,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Confirm Update Theme -->
+        <Grid x:Name="ConfirmUpdateThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <StackPanel Spacing="12" Width="230">
+                    <TextBlock Text="Update Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="UpdateThemeConfirmText" Text="Are you sure you want to update this theme?" FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
+                        <Button Content="Cancel" Click="CancelUpdateTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
+                        <Button Content="Update" Click="ConfirmUpdateTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary" Margin="4,0,0,0"/>
                     </Grid>
                 </StackPanel>
             </Border>

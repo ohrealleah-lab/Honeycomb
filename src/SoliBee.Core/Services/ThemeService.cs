@@ -169,6 +169,21 @@ public static class ThemeService
     private static SoliBeeTheme ClonePreset(SoliBeeTheme preset) =>
         JsonSerializer.Deserialize<SoliBeeTheme>(JsonSerializer.Serialize(preset, _jsonOpts), _jsonOpts)!;
 
+    // Overwrites the saved theme with the given id using the current live settings,
+    // keeping that theme's existing id and name unchanged. Works on default presets
+    // too — no special-casing based on theme origin, same as DeleteTheme.
+    public static void UpdateTheme(Guid id, GameOptions options)
+    {
+        var themes = LoadThemes();
+        int idx = themes.FindIndex(t => t.Id == id);
+        if (idx < 0) return;
+
+        var updated = SnapshotFromOptions(themes[idx].Name, options);
+        updated.Id = id;
+        themes[idx] = updated;
+        SaveThemes(themes);
+    }
+
     public static void DeleteTheme(Guid id)
     {
         // If this is a built-in default preset, record the tombstone BEFORE removing it

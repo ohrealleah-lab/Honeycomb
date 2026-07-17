@@ -5,7 +5,18 @@
 
     <Grid>
         <!-- The actual game board felt grid -->
-        <Grid x:Name="BoardFeltGrid" RowDefinitions="1.3*,Auto,Auto,Auto,Auto,*">
+        <Grid x:Name="BoardFeltGrid">
+            <Grid.RowDefinitions>
+                <!-- MinHeight guards against this row collapsing below BidBar's own
+                     content height, which was clipping/flattening its rounded corners
+                     against the toolbar when the window is close to its minimum size. -->
+                <RowDefinition Height="*" MinHeight="90"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
             <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
             <!-- Lives in the top spacer row, centered vertically, so it sits centered

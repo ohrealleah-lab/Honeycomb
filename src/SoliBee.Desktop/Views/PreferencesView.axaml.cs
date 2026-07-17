@@ -29,6 +29,7 @@ public partial class PreferencesView : UserControl
     private List<SoliBeeTheme> _themes = new();
     private SoliBeeTheme? _themeToDelete;
     private SoliBeeTheme? _themeToApply;
+    private SoliBeeTheme? _themeToUpdate;
     private bool _isBackgroundEditorOpen;
     private string? _backgroundToDelete;
     private const double BackgroundReferenceWidth = 1120.0;
@@ -365,15 +366,19 @@ public partial class PreferencesView : UserControl
         ThemeListPanel.Children.Clear();
         NoThemesLabel.IsVisible = _themes.Count == 0;
 
+        Guid? activeThemeId = DataContext is GameOptions options ? options.ActiveThemeId : null;
+
         foreach (var theme in _themes)
-            ThemeListPanel.Children.Add(BuildThemeRow(theme));
+            ThemeListPanel.Children.Add(BuildThemeRow(theme, theme.Id == activeThemeId));
     }
 
-    private Grid BuildThemeRow(SoliBeeTheme theme)
+    private Grid BuildThemeRow(SoliBeeTheme theme, bool isActive)
     {
         var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        if (isActive)
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
@@ -401,6 +406,24 @@ public partial class PreferencesView : UserControl
         Grid.SetColumn(nameBlock, 1);
         grid.Children.Add(nameBlock);
 
+        int col = 2;
+
+        if (isActive)
+        {
+            var updateBtn = new Button
+            {
+                Content = "Resave",
+                Tag = theme,
+                Background = new SolidColorBrush(Color.Parse("#33691E")),
+                Foreground = Brushes.White,
+                Padding = new Thickness(8, 3),
+                Margin = new Thickness(0, 0, 4, 0)
+            };
+            updateBtn.Click += UpdateTheme_Click;
+            Grid.SetColumn(updateBtn, col++);
+            grid.Children.Add(updateBtn);
+        }
+
         var applyBtn = new Button
         {
             Content = "Apply",
@@ -411,7 +434,7 @@ public partial class PreferencesView : UserControl
             Margin = new Thickness(0, 0, 4, 0)
         };
         applyBtn.Click += ApplyTheme_Click;
-        Grid.SetColumn(applyBtn, 2);
+        Grid.SetColumn(applyBtn, col++);
         grid.Children.Add(applyBtn);
 
         var deleteBtn = new Button
@@ -423,7 +446,7 @@ public partial class PreferencesView : UserControl
             Padding = new Thickness(6, 3)
         };
         deleteBtn.Click += DeleteTheme_Click;
-        Grid.SetColumn(deleteBtn, 3);
+        Grid.SetColumn(deleteBtn, col++);
         grid.Children.Add(deleteBtn);
 
         return grid;
@@ -526,6 +549,31 @@ public partial class PreferencesView : UserControl
         CardView.PreloadFaceArt();
         CardView.PreloadCardBacks(options);
         WeakReferenceMessenger.Default.Send(new FaceCardArtChangedMessage());
+
+        RefreshThemeList();
+    }
+
+    private void UpdateTheme_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not SoliBeeTheme theme) return;
+        _themeToUpdate = theme;
+        UpdateThemeConfirmText.Text = $"Are you sure you want to update \"{theme.Name}\"?";
+        ConfirmUpdateThemeOverlay.IsVisible = true;
+    }
+
+    private void CancelUpdateTheme_Click(object? sender, RoutedEventArgs e)
+    {
+        _themeToUpdate = null;
+        ConfirmUpdateThemeOverlay.IsVisible = false;
+    }
+
+    private void ConfirmUpdateTheme_Click(object? sender, RoutedEventArgs e)
+    {
+        ConfirmUpdateThemeOverlay.IsVisible = false;
+        if (_themeToUpdate == null || DataContext is not GameOptions options) return;
+        ThemeService.UpdateTheme(_themeToUpdate.Id, options);
+        _themeToUpdate = null;
+        RefreshThemeList();
     }
 
     private void DeleteTheme_Click(object? sender, RoutedEventArgs e)
