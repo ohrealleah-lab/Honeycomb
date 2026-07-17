@@ -186,17 +186,13 @@ public final class CustomBackgroundManager {
     }
 
     public func image(for relativePath: String) -> NSImage? {
-        print("[DEBUG] image(for:) called with path: \(relativePath)")
-        if let cached = imageCache[relativePath] { 
-            print("[DEBUG] -> cache hit")
-            return cached 
+        if let cached = imageCache[relativePath] {
+            return cached
         }
-        
-        guard !loadsInFlight.contains(relativePath) else { 
-            print("[DEBUG] -> already-in-flight-skip")
-            return nil 
+
+        guard !loadsInFlight.contains(relativePath) else {
+            return nil
         }
-        print("[DEBUG] -> newly-scheduled")
         loadsInFlight.insert(relativePath)
 
         // Never block the main thread — large images can take time to load and scale.
@@ -204,22 +200,18 @@ public final class CustomBackgroundManager {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
             let fileURL = getFileURL(for: relativePath)
-            
-            print("[DEBUG] before NSImage(contentsOf: \(fileURL.path))")
+
             guard let img = NSImage(contentsOf: fileURL) else {
-                print("[DEBUG] NSImage(contentsOf:) failed! Returning nil.")
                 DispatchQueue.main.async {
                     self.loadsInFlight.remove(relativePath)
                 }
                 return
             }
-            print("[DEBUG] after NSImage(contentsOf:), success")
-            
+
             let display = scaled(img, maxDimension: Self.maxDisplayDimension)
             DispatchQueue.main.async {
                 self.imageCache[relativePath] = display
                 self.loadsInFlight.remove(relativePath)
-                print("[DEBUG] posting CustomBackgroundLoaded notification")
                 NotificationCenter.default.post(name: NSNotification.Name("CustomBackgroundLoaded"), object: nil)
             }
         }

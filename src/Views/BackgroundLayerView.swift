@@ -35,12 +35,10 @@ struct BackgroundLayerView: View {
     @State private var loadTrigger: UUID = UUID()
 
     var body: some View {
-        let _ = print("[DEBUG] BackgroundLayerView.body evaluating...")
         GeometryReader { geo in
             Group {
                 if let background = coordinator.activeCustomBackground,
                    let image = CustomBackgroundManager.shared.image(for: background.relativePath) {
-                    let _ = print("[DEBUG] BackgroundLayerView.body: rendering Image for \(background.relativePath)")
                     Image(nsImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -49,13 +47,11 @@ struct BackgroundLayerView: View {
                         .offset(x: CGFloat(background.offsetX), y: CGFloat(background.offsetY))
                         .clipped()
                 } else {
-                    let _ = print("[DEBUG] BackgroundLayerView.body: rendering Felt (activeCustomBackground? \(coordinator.activeCustomBackground != nil))")
                     coordinator.currentFeltColor
                 }
             }
             .id(loadTrigger)
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CustomBackgroundLoaded"))) { _ in
-                print("[DEBUG] BackgroundLayerView.onReceive: received CustomBackgroundLoaded! Bumping loadTrigger.")
                 loadTrigger = UUID()
             }
         }

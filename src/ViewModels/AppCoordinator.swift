@@ -320,10 +320,7 @@ public final class AppCoordinator {
         
         if let name = customBackgroundName,
            let bg = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == name }) {
-            print("[DEBUG] AppCoordinator.applyTheme: resolved custom background name '\(name)' to relativePath '\(bg.relativePath)'. Calling image(for:).")
             let _ = CustomBackgroundManager.shared.image(for: bg.relativePath)
-        } else {
-            print("[DEBUG] AppCoordinator.applyTheme: customBackgroundName is \(customBackgroundName ?? "nil"), bg resolved? \(customBackgroundName != nil ? String(describing: CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == customBackgroundName! }) != nil) : "N/A")")
         }
 
         CustomFaceCardArtManager.shared.restore(theme.faceArts)

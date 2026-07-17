@@ -3,6 +3,8 @@
 SoliBee.app/
 .build*
 test_runner
+solibee_bridge
+blackjack_bridge
 *.swp
 *.lock
 
