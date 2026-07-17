@@ -1,12 +1,12 @@
 import Foundation
 
-public enum VideoPokerPhase: Equatable {
+public enum VideoPokerPhase: String, Codable, Equatable {
     case deal       // waiting for player to hit Deal
     case holding    // cards dealt, player selecting holds
     case result     // draw complete, showing outcome + payout
 }
 
-public struct VideoPokerPayEntry {
+public struct VideoPokerPayEntry: Codable {
     public let handName: String
     public let rank: PokerHandRank
     public let qualifier: VideoPokerQualifier
@@ -18,14 +18,14 @@ public struct VideoPokerPayEntry {
     }
 }
 
-public enum VideoPokerQualifier: Equatable {
+public enum VideoPokerQualifier: Codable, Equatable {
     case none
     case jacksOrBetter          // pair must be J Q K A
     case deucesWild             // 2s are wild
     case bonusFours(rank: Int)  // four-of-a-kind bonus for specific rank
 }
 
-public struct VideoPokerState {
+public struct VideoPokerState: Codable {
     public var phase: VideoPokerPhase = .deal
     public var deck: [Card] = []
     public var hand: [Card] = []            // always 5 cards after deal

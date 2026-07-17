@@ -1,6 +1,6 @@
 import Foundation
 
-public enum PokerHandRank: Int, Comparable, CaseIterable {
+public enum PokerHandRank: Int, Comparable, CaseIterable, Codable {
     case highCard = 0
     case onePair
     case twoPair
@@ -30,7 +30,7 @@ public enum PokerHandRank: Int, Comparable, CaseIterable {
     }
 }
 
-public struct PokerHandResult: Comparable {
+public struct PokerHandResult: Comparable, Codable {
     public let rank: PokerHandRank
     public let kickers: [Int]   // up to 5 card ranks, descending
 

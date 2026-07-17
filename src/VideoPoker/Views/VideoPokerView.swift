@@ -25,12 +25,12 @@ public struct VideoPokerView: View {
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     // The toolbar stays fixed size regardless of zoom; only the board below it scales.
-    static let toolbarHeight: CGFloat = 73
+    static let toolbarHeight: CGFloat = 85
     // The hotkey legend sits below the scaled board, outside boardBaseHeight, and never
     // scales with zoom — reserve fixed room for it so it doesn't get clipped by the
     // window's bottom edge at minimum size.
     private static let legendHeight: CGFloat = 28
-    private static let singleBoardBaseHeight: CGFloat = 762 - toolbarHeight
+    private static let singleBoardBaseHeight: CGFloat = 824 - toolbarHeight
     // Triple Play never shows the pay table, so its cards can be a comfortable, fully
     // legible size (120pt wide — 100pt base bumped 20% — matching CardView's true
     // 128x181 native aspect ratio) rather than a tiny thumbnail.
@@ -52,7 +52,7 @@ public struct VideoPokerView: View {
             // modes are active together.
             let creditDisplayContribution: CGFloat = viewModel.isFreePlay ? 84 : 0
             let nonHandAreaChrome: CGFloat = 292 - 52 - 16 - creditDisplayContribution
-            let safetyMargin: CGFloat = 50
+            let safetyMargin: CGFloat = 90
             let tripleHandAreaHeight = 3 * Self.tripleRowHeight + 2 * Self.tripleRowSpacing
             return nonHandAreaChrome + tripleHandAreaHeight + safetyMargin
         }
@@ -84,7 +84,7 @@ public struct VideoPokerView: View {
                 // Stationary toolbar — never scales with zoom
                 toolbarView
                     .padding(.horizontal, 16)
-                    .padding(.top, 28) // Clear the macOS traffic light window controls
+                    .padding(.top, 36) // Clear the macOS traffic light window controls
                     .padding(.bottom, 8)
 
                 Divider().overlay(Color.white.opacity(0.2))
@@ -861,8 +861,22 @@ public struct VideoPokerView: View {
 
     private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
-        let z = viewModel.zoomScale
-        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight)
+        
+        var z = viewModel.zoomScale
+        if let screen = window.screen ?? NSScreen.main {
+            let maxH = screen.visibleFrame.height - 40
+            let reqH = Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight + 28
+            if reqH > maxH {
+                z = (maxH - Self.toolbarHeight - Self.legendHeight - 28) / boardBaseHeight
+                z = max(0.5, z)
+                if z < viewModel.zoomScale {
+                    viewModel.zoomScale = z
+                    return
+                }
+            }
+        }
+        
+        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight + 28)
         let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
         DispatchQueue.main.async {
             window.contentMinSize = minSize

@@ -88,6 +88,7 @@ public final class GameViewModel {
     // Stuck / stock exhaustion
     public var isStuck: Bool = false
     public var isStockExhausted: Bool = false
+    public var recycleCountAtStuck: Int? = nil
 
     // Tracks whether the player has drawn/recycled the stock at least once this game —
     // drives the idle "hint" nudge on the stock pile for a player who hasn't dealt yet.
@@ -372,6 +373,7 @@ public final class GameViewModel {
         isAutoplayRunning = false
         isStuck = false
         isStockExhausted = false
+        recycleCountAtStuck = nil
         hasDrawnFromStockThisGame = false
         hasShownIdleStockHintThisGame = false
         gameGeneration += 1
@@ -391,6 +393,7 @@ public final class GameViewModel {
         isAutoplayRunning = false
         isStuck = false
         isStockExhausted = false
+        recycleCountAtStuck = nil
         hasDrawnFromStockThisGame = false
         hasShownIdleStockHintThisGame = false
         gameGeneration += 1
@@ -778,10 +781,32 @@ public final class GameViewModel {
         guard !state.hasWon && !isAutocompleteAvailable else {
             isStuck = false
             isStockExhausted = false
+            recycleCountAtStuck = nil
             return
         }
         isStockExhausted = state.stock.isEmpty && !canRecycleStock
-        isStuck = !hasValidMoves()
+        
+        let hasMoves = hasValidMoves()
+        if hasMoves {
+            isStuck = false
+            recycleCountAtStuck = nil
+        } else {
+            if isStockExhausted {
+                isStuck = true
+            } else if options.isVegasScoring {
+                isStuck = false
+            } else {
+                if recycleCountAtStuck == nil {
+                    recycleCountAtStuck = state.recyclesCount
+                }
+                
+                if let stuckAt = recycleCountAtStuck, state.recyclesCount > stuckAt {
+                    isStuck = true
+                } else {
+                    isStuck = false
+                }
+            }
+        }
     }
 
     // MARK: - Hints & Autocomplete Execution

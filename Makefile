@@ -50,8 +50,8 @@ test:
 	rm -f test_runner
 
 bridge:
-	# Compile the Blackjack Agent Bridge
-	swiftc -o blackjack_bridge -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Debug/*.swift SoliBeeBridge/BlackjackBridge.swift
+	# Compile the Universal Agent Bridge
+	swiftc -o solibee_bridge -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Debug/*.swift SoliBeeBridge/UniversalBridge.swift
 
 run: build
 	open $(APP_BUNDLE)

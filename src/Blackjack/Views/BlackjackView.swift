@@ -28,14 +28,15 @@ public struct BlackjackView: View {
     // so both hands can grow without shrinking (shrinking stays as a fallback for very long hands).
     private let lightOverlapFraction: CGFloat = 0.3
     private let tightOverlapFraction: CGFloat = 0.55
+    private let tightestOverlapFraction: CGFloat = 0.75
 
     // The toolbar stays fixed size regardless of zoom; only the board below it scales.
-    static let toolbarHeight: CGFloat = 73
+    static let toolbarHeight: CGFloat = 85
     // The hotkey legend sits below the scaled board, outside boardBaseHeight, and never
     // scales with zoom — reserve fixed room for it so it doesn't get clipped by the
     // window's bottom edge at minimum size.
     private static let legendHeight: CGFloat = 28
-    private static let baseBoardHeight: CGFloat = 950 - toolbarHeight
+    private static let baseBoardHeight: CGFloat = 1012 - toolbarHeight
 
     private var boardBaseHeight: CGFloat {
         guard viewModel.isFreePlay else { return Self.baseBoardHeight }
@@ -63,7 +64,7 @@ public struct BlackjackView: View {
                 // Stationary toolbar — never scales with zoom
                 toolbarView
                     .padding(.horizontal, 16)
-                    .padding(.top, 28) // Clear the macOS traffic light window controls
+                    .padding(.top, 36) // Clear the macOS traffic light window controls
                     .padding(.bottom, 8)
 
                 Divider().overlay(Color.white.opacity(0.2))
@@ -344,7 +345,8 @@ public struct BlackjackView: View {
     // MARK: - Dealer Area
 
     private var dealerArea: some View {
-        VStack(spacing: 8) {
+        let dealerOverlapFraction: CGFloat = viewModel.state.dealerCards.count >= 6 ? tightOverlapFraction : lightOverlapFraction
+        return VStack(spacing: 8) {
             HStack(spacing: 8) {
                 Text("DEALER")
                     .font(.display(12, weight: .bold))
@@ -359,7 +361,7 @@ public struct BlackjackView: View {
                 }
             }
 
-            HStack(spacing: -cardW * lightOverlapFraction) {
+            HStack(spacing: -cardW * dealerOverlapFraction) {
                 if viewModel.state.dealerCards.isEmpty || showCardBackPlaceholders {
                     ForEach(0..<2, id: \.self) { _ in
                         CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
@@ -432,7 +434,6 @@ public struct BlackjackView: View {
         let scale  = playerCardScale
         let width  = playerCardW
         let height = playerCardH
-        let spacing: CGFloat = isSplit ? -width * tightOverlapFraction : -width * lightOverlapFraction
         let columns = isSplit
             ? [GridItem(.flexible()), GridItem(.flexible())]
             : [GridItem(.flexible())]
@@ -465,8 +466,16 @@ public struct BlackjackView: View {
             LazyVGrid(columns: columns, alignment: .center, spacing: 16) {
                 ForEach(Array(viewModel.state.playerHands.enumerated()), id: \.offset) { handIdx, hand in
                     let isActive = handIdx == viewModel.state.activeHandIndex && viewModel.state.phase == .playing
+                    let overlapFraction: CGFloat = {
+                        if isSplit {
+                            return hand.cards.count >= 4 ? tightestOverlapFraction : tightOverlapFraction
+                        } else {
+                            return hand.cards.count >= 6 ? tightOverlapFraction : lightOverlapFraction
+                        }
+                    }()
+                    let handSpacing = -width * overlapFraction
                     VStack(spacing: 8) {
-                        HStack(spacing: spacing) {
+                        HStack(spacing: handSpacing) {
                             ForEach(Array(hand.cards.enumerated()), id: \.offset) { cardIdx, card in
                                 CardView(card: card)
                                     .scaleEffect(scale)
@@ -580,16 +589,6 @@ public struct BlackjackView: View {
         VStack(spacing: 12) {
             switch viewModel.state.phase {
             case .betting, .result:
-                if !viewModel.isFreePlay {
-                    HStack(spacing: 12) {
-                        casinoButton("1",  color: .white, textColor: .black) { viewModel.addToBet(1) }
-                        casinoButton("5",  color: .red.opacity(0.85)) { viewModel.addToBet(5) }
-                        casinoButton("10", color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
-                        casinoButton("25", color: .green.opacity(0.75)) { viewModel.addToBet(25) }
-                        casinoButton("2X", color: .orange.opacity(0.85)) { viewModel.doubleBet() }
-                    }
-                }
-
                 HStack(spacing: 12) {
                     if !viewModel.isFreePlay {
                         casinoButton("CLEAR BET", color: Color(white: 0.25)) { viewModel.clearBet() }
@@ -602,6 +601,16 @@ public struct BlackjackView: View {
                     if viewModel.canRebuy {
                         Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
                         casinoButton("REBUY", color: .red.opacity(0.8)) { viewModel.rebuy() }
+                    }
+                }
+
+                if !viewModel.isFreePlay {
+                    HStack(spacing: 12) {
+                        casinoButton("1",  color: .white, textColor: .black) { viewModel.addToBet(1) }
+                        casinoButton("5",  color: .red.opacity(0.85)) { viewModel.addToBet(5) }
+                        casinoButton("10", color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
+                        casinoButton("25", color: .green.opacity(0.75)) { viewModel.addToBet(25) }
+                        casinoButton("2X", color: .orange.opacity(0.85)) { viewModel.doubleBet() }
                     }
                 }
 
@@ -713,8 +722,22 @@ public struct BlackjackView: View {
 
     private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
-        let z = viewModel.zoomScale
-        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight)
+        
+        var z = viewModel.zoomScale
+        if let screen = window.screen ?? NSScreen.main {
+            let maxH = screen.visibleFrame.height - 40
+            let reqH = Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight + 28
+            if reqH > maxH {
+                z = (maxH - Self.toolbarHeight - Self.legendHeight - 28) / boardBaseHeight
+                z = max(0.5, z)
+                if z < viewModel.zoomScale {
+                    viewModel.zoomScale = z
+                    return
+                }
+            }
+        }
+        
+        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight + 28)
         let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
         DispatchQueue.main.async {
             window.contentMinSize = minSize

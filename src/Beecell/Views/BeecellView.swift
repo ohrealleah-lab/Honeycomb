@@ -181,7 +181,7 @@ public struct BeecellView: View {
                         .keyboardShortcut("2", modifiers: .command).frame(width: 0, height: 0).opacity(0)
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 28) // Clear the macOS traffic light window controls
+                .padding(.top, 36) // Clear the macOS traffic light window controls
                 .padding(.bottom, 6)
                 .layoutPriority(1)
 
@@ -687,7 +687,7 @@ public struct BeecellView: View {
         }
         .frame(minWidth: boardWidth * viewModel.zoomScale,
                maxWidth: .infinity,
-               minHeight: 73 + boardHeight * viewModel.zoomScale,
+               minHeight: 89 + boardHeight * viewModel.zoomScale,
                maxHeight: .infinity)
         .overlay {
             if isShowingOptions {
@@ -765,7 +765,7 @@ public struct BeecellView: View {
         let cols = Double(viewModel.options.deckCount == 1 ? 8 : 10)
         let boardH: CGFloat = viewModel.options.deckCount == 1 ? 950 : 1120
         let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
-        let minH = 73.0 + boardH * z + 24
+        let minH = 89.0 + boardH * z + 24
         DispatchQueue.main.async {
             window.contentMinSize = NSSize(width: minW, height: minH)
         }
@@ -773,12 +773,26 @@ public struct BeecellView: View {
 
     private func snapToMinSize(overrideSize: NSSize? = nil) {
         guard let window = hostingWindow else { return }
-        let z = viewModel.zoomScale
+        
+        var z = viewModel.zoomScale
+        let boardH: CGFloat = viewModel.options.deckCount == 1 ? 950 : 1120
+        if let screen = window.screen ?? NSScreen.main {
+            let maxH = screen.visibleFrame.height - 40
+            let reqH = 89.0 + boardH * z + 24 + 28
+            if reqH > maxH {
+                z = (maxH - 89.0 - 24 - 28) / boardH
+                z = max(0.5, z)
+                if z < viewModel.zoomScale {
+                    viewModel.zoomScale = z
+                    return
+                }
+            }
+        }
+        
         let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
         let cols = Double(viewModel.options.deckCount == 1 ? 8 : 10)
-        let boardH: CGFloat = viewModel.options.deckCount == 1 ? 950 : 1120
         let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
-        let minH = 73.0 + boardH * z + 24
+        let minH = 89.0 + boardH * z + 24 + 28
         let minSize = NSSize(width: minW, height: minH)
         let size = overrideSize.map { NSSize(width: max($0.width, minW), height: max($0.height, minH)) } ?? minSize
         DispatchQueue.main.async {
