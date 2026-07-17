@@ -37,10 +37,12 @@ public partial class GameViewModel : ObservableObject
     public List<Pile> Foundations { get; } = new();
     public List<Pile> Tableaus { get; } = new();
 
+    public event EventHandler? WasteCardDrawn;
     private readonly Stack<GameStateSnapshot> _undoStack = new();
     private List<Card> _initialDeck = new();
     private System.Threading.Timer? _gameTimer;
     private int _vegasGameStartScore;
+    private bool _justRecycled;
 
     // Set by PauseTimerForSwitch when the timer was actually running at the moment this
     // game was switched away from, so ResumeTimerForSwitch only restarts it if it was
@@ -383,7 +385,9 @@ public partial class GameViewModel : ObservableObject
             if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
                 State.IsTimerActive = true;
             State.MovesCount++;
+            _justRecycled = true;
             CheckDeadlock();
+            _justRecycled = false;
             OnPropertyChanged(nameof(Stock));
             OnPropertyChanged(nameof(Waste));
             OnPropertyChanged(nameof(CanUndo));
@@ -414,6 +418,7 @@ public partial class GameViewModel : ObservableObject
         State.MovesCount++;
         CheckAutocomplete();
         CheckDeadlock();
+        WasteCardDrawn?.Invoke(this, EventArgs.Empty);
         OnPropertyChanged(nameof(Stock));
         OnPropertyChanged(nameof(Waste));
         OnPropertyChanged(nameof(CanUndo));
@@ -874,7 +879,22 @@ public partial class GameViewModel : ObservableObject
                 }
             }
         }
-        return false;
+
+        // If we reach here, no legal moves exist. The game is mathematically deadlocked.
+        // We delay the Game Over banner if the user can still physically click through the deck.
+        if (Stock.Cards.Count > 0)
+        {
+            if (_justRecycled && !Options.IsVegasScoring)
+                return false; // In normal mode, flag the banner as they do what will be the final recycle
+            return true; // Delay banner while they can click through the deck
+        }
+        else
+        {
+            if (canRecycle)
+                return true; // Delay banner to let them have the satisfaction of clicking the recycle button
+            else
+                return false; // Out of recycles, let the banner pop
+        }
     }
 
     // A tableau-to-tableau move is "progress" — as opposed to pure reorganization that

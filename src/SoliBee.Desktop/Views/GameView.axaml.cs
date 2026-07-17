@@ -91,6 +91,7 @@ public partial class GameView : CardGameView
         if (DataContext is GameViewModel vm)
         {
             vm.PropertyChanged += ViewModel_PropertyChanged;
+            vm.WasteCardDrawn += ViewModel_WasteCardDrawn;
             ApplyFeltColor(vm.Options);
             BindPiles(vm);
         }
@@ -102,7 +103,10 @@ public partial class GameView : CardGameView
     private void GameView_Unloaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is GameViewModel vm)
+        {
             vm.PropertyChanged -= ViewModel_PropertyChanged;
+            vm.WasteCardDrawn -= ViewModel_WasteCardDrawn;
+        }
         WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
@@ -248,6 +252,14 @@ public partial class GameView : CardGameView
         if (DataContext is GameViewModel vm) vm.InitializeGame();
     }
 
+    private void ViewModel_WasteCardDrawn(object? sender, EventArgs e)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            AnimateTopWasteCard();
+        });
+    }
+
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
@@ -291,7 +303,6 @@ public partial class GameView : CardGameView
             {
                 ClearStaleCursorAndSelection();
                 WastePileControl.UpdateCardsLayout();
-                AnimateTopWasteCard();
                 if (DataContext is GameViewModel vm && vm.State.MovesCount > 0) StopDealNudge();
             }
             else if (e.PropertyName == "Foundations")
