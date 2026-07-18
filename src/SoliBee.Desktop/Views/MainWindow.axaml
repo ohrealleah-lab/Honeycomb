@@ -42,16 +42,6 @@
                         </ComboBox>
                         <Button x:Name="UndoButton" Content="Undo" Click="Undo_Click" Classes="toolbar" IsEnabled="{Binding CanUndo}" />
                         <Button Content="Theme Editor" Click="ThemeEditor_Click" Classes="toolbar" IsVisible="False" />
-                        <Button x:Name="ZoomButton" Content="Zoom" Classes="toolbar">
-                            <Button.Flyout>
-                                <MenuFlyout>
-                                    <MenuItem Header="Zoom In" InputGesture="Ctrl+OemPlus" Click="ZoomIn_Click" />
-                                    <MenuItem Header="Zoom Out" InputGesture="Ctrl+OemMinus" Click="ZoomOut_Click" />
-                                    <MenuItem Header="Reset Zoom" InputGesture="Ctrl+0" Click="ResetZoom_Click" />
-                                    <MenuItem Header="Make Current Zoom Default" Click="MakeCurrentZoomDefault_Click" />
-                                </MenuFlyout>
-                            </Button.Flyout>
-                        </Button>
                         <Button x:Name="DebugBannerButton" Content="Banners" Classes="toolbar" IsVisible="False">
                             <Button.Flyout>
                                 <MenuFlyout>

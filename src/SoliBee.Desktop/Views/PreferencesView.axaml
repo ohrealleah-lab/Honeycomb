@@ -57,7 +57,7 @@
                 <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                <CheckBox x:Name="HideZoomCheckBox"  Content="Hide Zoom Controls" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                <CheckBox x:Name="AlwaysOnTopCheckBox" Content="Always on Top" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
             </StackPanel>
 
             <Rectangle x:Name="VisualThemesDivider" Height="1" Fill="#DDDDDD" Margin="0,4,0,4"/>

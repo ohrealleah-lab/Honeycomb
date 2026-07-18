@@ -82,7 +82,7 @@ public partial class MainWindow : Window
             if (MovesStatPanel != null) MovesStatPanel.IsVisible = isCardGame && !m.Options.IsNoStressMode;
             // Hint is solitaire-only (no hint logic exists for VP/Blackjack).
             if (HintButton != null)    HintButton.IsVisible    = isCardGame && !m.Options.HideHintButton;
-            if (ZoomButton != null)    ZoomButton.IsVisible    = !m.Options.HideZoomControls;
+            this.Topmost = m.Options.IsAlwaysOnTop;
         });
 
         // Also listen to FaceCardArtChangedMessage to keep all cards in sync
@@ -94,11 +94,11 @@ public partial class MainWindow : Window
         // Set initial background color
         ApplyFeltColor(_coordinator.GameViewModel.Options);
         ApplyBoardBackground(_coordinator.GameViewModel.Options);
+        this.Topmost = _coordinator.GameViewModel.Options.IsAlwaysOnTop;
 
         // Apply any saved theme color overrides before first render
         CardView.ApplyThemeColors(_coordinator.GameViewModel.Options);
 
-        this.AddHandler(PointerWheelChangedEvent, OnPointerWheelChanged, RoutingStrategies.Tunnel);
         this.KeyDown += OnWindowKeyDown;
         this.Closing += (_, _) => SaveCurrentWindowSize();
         // Re-scale the background image's offset transform to stay proportionally correct
@@ -1093,7 +1093,6 @@ public partial class MainWindow : Window
 
         this.DataContext = _coordinator.ActiveViewModel;
         ResizeWindowForGame(tag);
-        ApplyZoom(GetGameZoom(tag));
         RestoreWindowSizeForGame(tag);
         // RestoreWindowSizeForGame is the authoritative final size for this game switch,
         // but setting Window.Width/Height doesn't update this.Bounds synchronously — the
@@ -1118,7 +1117,6 @@ public partial class MainWindow : Window
         UpdateSolitaireKeyHint(tag, isCardGame);
         // Hint is solitaire-only (no hint logic exists for VP/Blackjack).
         if (HintButton != null)    HintButton.IsVisible    = isCardGame && !_coordinator.GameViewModel.Options.HideHintButton;
-        if (ZoomButton != null)    ZoomButton.IsVisible    = !_coordinator.GameViewModel.Options.HideZoomControls;
         if (UndoButton != null)    UndoButton.IsVisible    = isCardGame;
         if (TimeStatPanel != null)  TimeStatPanel.IsVisible  = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
         if (ScoreStatPanel != null) ScoreStatPanel.IsVisible = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
@@ -1290,9 +1288,9 @@ public partial class MainWindow : Window
     }
 
     // Keeps the window from growing/restoring larger than the actual screen and from
-    // sitting partially off-screen afterward — without this, zoom growth
-    // (SnapWindowToZoom) or a size restored from a different/bigger monitor
-    // (RestoreWindowSizeForGame) could leave the window's bottom/right edge rendered
+    // sitting partially off-screen afterward — without this, a size restored from a
+    // different/bigger monitor (RestoreWindowSizeForGame) could leave the window's
+    // bottom/right edge rendered
     // off-screen, with no way to reach controls anchored there (e.g. Preferences' OK
     // button). Mirrors the same Screens.ScreenFromWindow/WorkingArea pattern already
     // used to keep the window's position on-screen in the constructor's Opened handler.
@@ -1324,7 +1322,7 @@ public partial class MainWindow : Window
     // keeps it on-screen.
     private void EnsureWindowFitsBoard(string tag)
     {
-        var (minW, minH) = ComputeBoardMinSize(tag, GetGameZoom(tag));
+        var (minW, minH) = ComputeBoardMinSize(tag);
 
         if (WindowState == WindowState.Maximized) return;
         if (Width == minW && Height == minH) return;
@@ -1336,11 +1334,6 @@ public partial class MainWindow : Window
 
     private void RestoreWindowSizeForGame(string tag)
     {
-        // Cancel any in-flight zoom-driven resize animation from ApplyZoom above —
-        // the game-switch restore takes precedence and should apply immediately.
-        _windowResizeTimer?.Stop();
-        _windowResizeTimer = null;
-
         var opts = _coordinator.GameViewModel.Options;
         (double w, double h, bool max) = GetBaseGameTag(tag) switch
         {
@@ -1363,47 +1356,8 @@ public partial class MainWindow : Window
         }
     }
 
-    // ── Per-game zoom ─────────────────────────────────────────────────────────
-
-    private double GetGameZoom(string tag) => GetBaseGameTag(tag) switch
+    private (double minWidth, double minHeight) ComputeBoardMinSize(string tag)
     {
-        "Freecell"   => _coordinator.GameViewModel.Options.FreecellZoom,
-        "Spider"     => _coordinator.GameViewModel.Options.SpiderZoom,
-        "VideoPoker" => _coordinator.GameViewModel.Options.VideoPokerZoom,
-        "Blackjack"  => _coordinator.GameViewModel.Options.BlackjackZoom,
-        _            => _coordinator.GameViewModel.Options.KlondikeZoom,
-    };
-
-    private double GetGameDefaultZoom(string tag) => GetBaseGameTag(tag) switch
-    {
-        "Freecell"   => _coordinator.GameViewModel.Options.FreecellDefaultZoom,
-        "Spider"     => _coordinator.GameViewModel.Options.SpiderDefaultZoom,
-        "VideoPoker" => _coordinator.GameViewModel.Options.VideoPokerDefaultZoom,
-        "Blackjack"  => _coordinator.GameViewModel.Options.BlackjackDefaultZoom,
-        _            => _coordinator.GameViewModel.Options.KlondikeDefaultZoom,
-    };
-
-    private void MakeCurrentZoomDefault()
-    {
-        var opts = _coordinator.GameViewModel.Options;
-        double zoom = GetGameZoom(_currentGameTag);
-        switch (GetBaseGameTag(_currentGameTag))
-        {
-            case "Freecell":   opts.FreecellDefaultZoom    = zoom; break;
-            case "Spider":     opts.SpiderDefaultZoom     = zoom; break;
-            case "VideoPoker": opts.VideoPokerDefaultZoom = zoom; break;
-            case "Blackjack":  opts.BlackjackDefaultZoom  = zoom; break;
-            default:           opts.KlondikeDefaultZoom   = zoom; break;
-        }
-        SettingsService.SaveOptions(opts);
-    }
-
-    private (double minWidth, double minHeight) ComputeBoardMinSize(string tag, double zoom)
-    {
-        // Base minimums are the same values used before the zoom feature existed —
-        // scaling them by zoom keeps the 1.0x defaults exactly as they were (avoids
-        // ballooning the window/pushing the title bar off-screen at startup) while
-        // still growing the floor at higher zoom levels.
         string baseTag = GetBaseGameTag(tag);
         double baseMinWidth = baseTag switch
         {
@@ -1445,12 +1399,11 @@ public partial class MainWindow : Window
             _            => 640,
         };
 
-        double minWidth  = baseMinWidth * zoom;
-        double minHeight = baseMinHeight * zoom;
+        double minWidth  = baseMinWidth;
+        double minHeight = baseMinHeight;
 
         // Never require a minimum bigger than the actual screen — Avalonia enforces
-        // MinWidth/MinHeight as a hard floor on the window, so at high zoom this floor
-        // alone can force the window taller/wider than the screen with no way for
+        // MinWidth/MinHeight as a hard floor on the window, with no way for
         // ClampWindowToScreen (which only adjusts Width/Height, not the Min values) to
         // override it afterward.
         var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
@@ -1463,104 +1416,6 @@ public partial class MainWindow : Window
 
         return (minWidth, minHeight);
     }
-
-    private DispatcherTimer? _windowResizeTimer;
-
-    // Scales the window's *current* size by the zoom delta (rather than jumping to an
-    // absolute size), so whatever aspect ratio the window currently has — the default,
-    // or one the user manually resized to — is preserved as zoom changes, growing on
-    // zoom-in and shrinking on zoom-out.
-    private void SnapWindowToZoom(double oldZoom, double newZoom)
-    {
-        var (minW, minH) = ComputeBoardMinSize(_currentGameTag, newZoom);
-
-        if (WindowState == WindowState.Maximized) return;
-
-        double ratio = oldZoom > 0 ? newZoom / oldZoom : 1.0;
-        double targetW = Math.Max(minW, Width * ratio);
-        double targetH = Math.Max(minH, Height * ratio);
-
-        // Never let zoom-driven growth push the window past the actual screen size —
-        // that oversized size then gets persisted (SaveCurrentWindowSize) and keeps
-        // getting restored too large on every future launch (RestoreWindowSizeForGame).
-        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
-        if (screen != null)
-        {
-            var wa = screen.WorkingArea;
-            targetW = Math.Min(targetW, wa.Width);
-            targetH = Math.Min(targetH, wa.Height);
-        }
-
-        if (targetW == Width && targetH == Height) return;
-
-        double startW = Width, startH = Height;
-
-        _windowResizeTimer?.Stop();
-        double elapsed = 0;
-        const double durationMs = 200;
-        _windowResizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _windowResizeTimer.Tick += (_, _) =>
-        {
-            elapsed += 16;
-            double t = Math.Min(1.0, elapsed / durationMs);
-            Width  = startW + (targetW - startW) * t;
-            Height = startH + (targetH - startH) * t;
-            if (t >= 1.0)
-            {
-                _windowResizeTimer!.Stop();
-                _windowResizeTimer = null;
-                ClampWindowToScreen();
-            }
-        };
-        _windowResizeTimer.Start();
-    }
-
-    private void ApplyZoom(double zoom)
-    {
-        zoom = Math.Clamp(zoom, 0.6, 2.0);
-        double oldZoom = GetGameZoom(_currentGameTag);
-        var opts = _coordinator.GameViewModel.Options;
-        switch (GetBaseGameTag(_currentGameTag))
-        {
-            case "Freecell":   opts.FreecellZoom    = zoom; break;
-            case "Spider":     opts.SpiderZoom     = zoom; break;
-            case "VideoPoker": opts.VideoPokerZoom = zoom; break;
-            case "Blackjack":  opts.BlackjackZoom  = zoom; break;
-            default:           opts.KlondikeZoom   = zoom; break;
-        }
-        SettingsService.SaveOptions(opts);
-        ApplyZoomGap(zoom);
-        SnapWindowToZoom(oldZoom, zoom);
-        UpdateResponsiveLayout();
-    }
-
-    private void ApplyZoomGap(double zoom)
-    {
-        switch (GetBaseGameTag(_currentGameTag))
-        {
-            case "Klondike":
-                (MainContent.Content as GameView)?.ApplyZoomGap(zoom);
-                break;
-            case "Freecell":
-                (MainContent.Content as FreecellView)?.ApplyZoomGap(zoom);
-                break;
-            case "Spider":
-                (MainContent.Content as SpiderView)?.ApplyZoomGap(zoom);
-                break;
-        }
-    }
-
-    private void ZoomIn_Click(object? sender, RoutedEventArgs e) =>
-        ApplyZoom(GetGameZoom(_currentGameTag) + 0.1);
-
-    private void ZoomOut_Click(object? sender, RoutedEventArgs e) =>
-        ApplyZoom(GetGameZoom(_currentGameTag) - 0.1);
-
-    private void ResetZoom_Click(object? sender, RoutedEventArgs e) =>
-        ApplyZoom(GetGameDefaultZoom(_currentGameTag));
-
-    private void MakeCurrentZoomDefault_Click(object? sender, RoutedEventArgs e) =>
-        MakeCurrentZoomDefault();
 
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
     {
@@ -1613,7 +1468,7 @@ public partial class MainWindow : Window
         if (naturalW <= 0 || naturalH <= 0)
         {
             // Not measured yet (e.g. content not attached) — fall back to the tuned floor.
-            var (boardMinW, boardMinH) = ComputeBoardMinSize(_currentGameTag, 1.0);
+            var (boardMinW, boardMinH) = ComputeBoardMinSize(_currentGameTag);
             naturalW = boardMinW;
             naturalH = boardMinH - (TopBarBorder != null && TopBarBorder.Bounds.Height > 0 ? TopBarBorder.Bounds.Height : 80);
         }
@@ -1642,21 +1497,12 @@ public partial class MainWindow : Window
         if (OptionsButton != null) OptionsButton.Content = isCompact ? "⚙️" : "Options";
         if (HintButton != null)    HintButton.Content    = isCompact ? "💡" : "Hint";
         if (UndoButton != null)    UndoButton.Content    = isCompact ? "↩️" : "Undo";
-        if (ZoomButton != null)    ZoomButton.Content    = isCompact ? "🔍" : "Zoom";
 
         // Push responsive state to Blackjack/VideoPoker if they are active
         if (MainContent.Content is BlackjackView bjView)
             bjView.SetResponsiveMode(isCompact);
         else if (MainContent.Content is VideoPokerView vpView)
             vpView.SetResponsiveMode(isCompact);
-    }
-
-    private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
-    {
-        if ((e.KeyModifiers & KeyModifiers.Control) == 0) return;
-        e.Handled = true;
-        double step = e.Delta.Y > 0 ? 0.1 : -0.1;
-        ApplyZoom(GetGameZoom(_currentGameTag) + step);
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
@@ -1695,22 +1541,7 @@ public partial class MainWindow : Window
 
         if ((e.KeyModifiers & KeyModifiers.Control) != 0)
         {
-            if (e.Key == Key.OemPlus || e.Key == Key.Add)
-            {
-                e.Handled = true;
-                ApplyZoom(GetGameZoom(_currentGameTag) + 0.1);
-            }
-            else if (e.Key == Key.OemMinus || e.Key == Key.Subtract)
-            {
-                e.Handled = true;
-                ApplyZoom(GetGameZoom(_currentGameTag) - 0.1);
-            }
-            else if (e.Key == Key.D0 || e.Key == Key.NumPad0)
-            {
-                e.Handled = true;
-                ApplyZoom(GetGameDefaultZoom(_currentGameTag));
-            }
-            else if (e.Key == Key.N)
+            if (e.Key == Key.N)
             {
                 e.Handled = true;
                 NewGame_Click(null, new RoutedEventArgs());

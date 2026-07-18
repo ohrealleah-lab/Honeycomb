@@ -20,24 +20,6 @@ namespace SoliBee.Desktop.Views;
 
 public partial class FreecellView : CardGameView
 {
-    // Column gap narrows above 1.0x zoom so columns don't overflow horizontally; floors at 4px.
-    public void ApplyZoomGap(double zoom)
-    {
-        if (DataContext is not FreecellViewModel vm) return;
-        const double baseGap = 6;
-        double gap = zoom <= 1.0 ? baseGap : Math.Max(4, baseGap - (baseGap - 4) * (zoom - 1.0));
-        for (int i = 1; i < TableauGrid.ColumnDefinitions.Count; i += 2)
-            TableauGrid.ColumnDefinitions[i] = new ColumnDefinition(gap, GridUnitType.Pixel);
-
-        int deckCount = vm.Options.FreecellDeckCount;
-        int columns = deckCount == 2 ? 10 : 8;
-        double width = columns * 128 + (columns - 1) * gap;
-        BoardPanel.Width = width;
-        TopRow1.Width = width;
-        TopRow2.Width = width;
-        TableauGrid.Width = width;
-    }
-
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
         if (DataContext is not FreecellViewModel vm) return false;

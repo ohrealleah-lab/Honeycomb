@@ -175,8 +175,8 @@ public static class SettingsService
                 if (GetValue("HideHintButton") is bool hideHint)
                     options.HideHintButton = hideHint;
 
-                if (GetValue("HideZoomControls") is bool hideZoom)
-                    options.HideZoomControls = hideZoom;
+                if (GetValue("IsAlwaysOnTop") is bool alwaysOnTop)
+                    options.IsAlwaysOnTop = alwaysOnTop;
 
                 if (GetValue("FreecellDeckCount") is int freecellDeck)
                     options.FreecellDeckCount = freecellDeck;
@@ -187,17 +187,7 @@ public static class SettingsService
                 if (GetValue("HasAppliedDefaultTheme") is bool hat) options.HasAppliedDefaultTheme = hat;
                 if (GetValue("LastGameMode") is string lgm) options.LastGameMode = lgm;
 
-                if (GetValue("KlondikeZoom")   is double kz)  options.KlondikeZoom   = kz;
-                if (GetValue("FreecellZoom")    is double bz)  options.FreecellZoom    = bz;
-                if (GetValue("SpiderZoom")     is double spz) options.SpiderZoom     = spz;
-                if (GetValue("VideoPokerZoom") is double vpz) options.VideoPokerZoom = vpz;
                 if (GetValue("VignetteScale")  is double vsc) options.VignetteScale  = vsc;
-
-                if (GetValue("KlondikeDefaultZoom")   is double kdz)  options.KlondikeDefaultZoom   = kdz;
-                if (GetValue("FreecellDefaultZoom")    is double bdz)  options.FreecellDefaultZoom    = bdz;
-                if (GetValue("SpiderDefaultZoom")     is double sdz) options.SpiderDefaultZoom     = sdz;
-                if (GetValue("VideoPokerDefaultZoom") is double vdz) options.VideoPokerDefaultZoom = vdz;
-                if (GetValue("BlackjackDefaultZoom")  is double jdz) options.BlackjackDefaultZoom  = jdz;
 
                 if (GetValue("KlondikeWidth")       is double klW)  options.KlondikeWidth       = klW;
                 if (GetValue("KlondikeHeight")      is double klH)  options.KlondikeHeight      = klH;
@@ -211,7 +201,6 @@ public static class SettingsService
                 if (GetValue("VideoPokerWidth")     is double vpW)  options.VideoPokerWidth     = vpW;
                 if (GetValue("VideoPokerHeight")    is double vpH)  options.VideoPokerHeight    = vpH;
                 if (GetValue("VideoPokerMaximized") is bool   vpM)  options.VideoPokerMaximized = vpM;
-                if (GetValue("BlackjackZoom")      is double bjz)  options.BlackjackZoom      = bjz;
                 if (GetValue("BlackjackWidth")     is double bjW)  options.BlackjackWidth     = bjW;
                 if (GetValue("BlackjackHeight")    is double bjH)  options.BlackjackHeight    = bjH;
                 if (GetValue("BlackjackMaximized") is bool   bjM)  options.BlackjackMaximized = bjM;
@@ -289,24 +278,14 @@ public static class SettingsService
                 SetValue("IsVignetteEnabled", options.IsVignetteEnabled);
                 SetValue("IsStatusBarVisible", options.IsStatusBarVisible);
                 SetValue("HideHintButton", options.HideHintButton);
-                SetValue("HideZoomControls", options.HideZoomControls);
+                SetValue("IsAlwaysOnTop", options.IsAlwaysOnTop);
                 SetValue("FreecellDeckCount", options.FreecellDeckCount);
                 SetValue("SpiderSuitCount", options.SpiderSuitCount);
 
                 SetValue("HasAppliedDefaultTheme", options.HasAppliedDefaultTheme);
                 SetValue("LastGameMode", options.LastGameMode);
 
-                SetValue("KlondikeZoom",   options.KlondikeZoom);
-                SetValue("FreecellZoom",    options.FreecellZoom);
-                SetValue("SpiderZoom",     options.SpiderZoom);
-                SetValue("VideoPokerZoom", options.VideoPokerZoom);
                 SetValue("VignetteScale",  options.VignetteScale);
-
-                SetValue("KlondikeDefaultZoom",   options.KlondikeDefaultZoom);
-                SetValue("FreecellDefaultZoom",    options.FreecellDefaultZoom);
-                SetValue("SpiderDefaultZoom",     options.SpiderDefaultZoom);
-                SetValue("VideoPokerDefaultZoom", options.VideoPokerDefaultZoom);
-                SetValue("BlackjackDefaultZoom",  options.BlackjackDefaultZoom);
 
                 SetValue("KlondikeWidth",       options.KlondikeWidth);
                 SetValue("KlondikeHeight",      options.KlondikeHeight);
@@ -320,7 +299,6 @@ public static class SettingsService
                 SetValue("VideoPokerWidth",     options.VideoPokerWidth);
                 SetValue("VideoPokerHeight",    options.VideoPokerHeight);
                 SetValue("VideoPokerMaximized", options.VideoPokerMaximized);
-                SetValue("BlackjackZoom",      options.BlackjackZoom);
                 SetValue("BlackjackWidth",     options.BlackjackWidth);
                 SetValue("BlackjackHeight",    options.BlackjackHeight);
                 SetValue("BlackjackMaximized", options.BlackjackMaximized);

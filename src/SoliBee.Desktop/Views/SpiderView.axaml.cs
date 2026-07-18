@@ -20,16 +20,6 @@ namespace SoliBee.Desktop.Views;
 
 public partial class SpiderView : CardGameView
 {
-    // Column gap narrows above 1.0x zoom so columns don't overflow horizontally; floors at 4px.
-    public void ApplyZoomGap(double zoom)
-    {
-        const double baseGap = 12;
-        double gap = zoom <= 1.0 ? baseGap : Math.Max(4, baseGap - (baseGap - 4) * (zoom - 1.0));
-        for (int i = 1; i < BoardGrid.ColumnDefinitions.Count; i += 2)
-            BoardGrid.ColumnDefinitions[i] = new ColumnDefinition(gap, GridUnitType.Pixel);
-        BoardGrid.Width = 10 * 128 + 9 * gap;
-    }
-
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
         if (DataContext is not SpiderViewModel vm) return false;
