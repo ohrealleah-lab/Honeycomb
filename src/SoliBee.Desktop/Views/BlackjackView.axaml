@@ -53,7 +53,7 @@
                  count label without changing this block's total height, so the VS line
                  and button row don't shift. -->
             <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4"
-                        Margin="0,9,0,14">
+                        Margin="0,9,0,7">
                 <TextBlock x:Name="DealerCountLabel" Text="DEALER" FontSize="11" FontWeight="Bold"
                            Foreground="#80FFFFFF" HorizontalAlignment="Center"
                            FontFamily="Segoe UI" LetterSpacing="2"/>
@@ -63,7 +63,7 @@
             </StackPanel>
 
             <!-- ─── VS divider ───────────────────────────────────────────────────── -->
-            <Grid Grid.Row="2" Margin="0,2">
+            <Grid Grid.Row="2" Margin="0,1">
                 <Rectangle Height="1" Fill="#30FFFFFF" VerticalAlignment="Center"/>
                 <Border Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="14,0">
                     <TextBlock Text="VS" FontSize="10" FontWeight="Bold"
@@ -71,8 +71,9 @@
                                FontFamily="Segoe UI"/>
                 </Border>
 
-                <!-- Idle nudge prompt — centered over the VS divider -->
-                <Border x:Name="IdlePrompt" Opacity="0" IsHitTestVisible="False" ZIndex="10"
+                <!-- Idle nudge prompt — disabled (see BlackjackView.axaml.cs ResetIdleTimer);
+                     IsVisible="False" so it no longer reserves layout space in this row. -->
+                <Border x:Name="IdlePrompt" Opacity="0" IsVisible="False" IsHitTestVisible="False" ZIndex="10"
                         HorizontalAlignment="Center" VerticalAlignment="Center"
                         Background="#80000000" Padding="24,16" CornerRadius="8">
                     <TextBlock Text="Hit Space to Deal" HorizontalAlignment="Center"
@@ -99,54 +100,54 @@
                  quite enough budget to absorb its new count label, so the last few
                  pixels are borrowed here to keep the overall board height (and button
                  position) unchanged. -->
-            <Grid Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,3,0,12" Height="98">
+            <StackPanel Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,3,0,12" Spacing="7">
 
-                <!-- Bet chips + actions (visible when not playing), split into two rows: -->
-                <StackPanel x:Name="BetButtonRow" Spacing="8" HorizontalAlignment="Center">
-                    <!-- Row 1: Clear / Deal / (Rebuy, only when out of credits for the bet) -->
-                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                        <Button x:Name="ClearBetButton" Content="Clear Bet" Height="46" Padding="14,0"
-                                Click="ClearBet_Click" Classes="bj-button"/>
-                        <Button x:Name="DealButton"   Content="Deal  [Space]" Height="46" Padding="28,0"
+                <Grid Height="98">
+
+                    <!-- Bet chips + actions (visible when not playing), split into two rows: -->
+                    <StackPanel x:Name="BetButtonRow" Spacing="8" HorizontalAlignment="Center">
+                        <!-- Row 1: Clear / Deal / (Rebuy, only when out of credits for the bet) -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <Button x:Name="ClearBetButton" Content="Clear Bet" Height="46" Padding="14,0"
+                                    Click="ClearBet_Click" Classes="bj-button"/>
+                            <Button x:Name="DealButton" Height="46" Padding="28,0"
                                 Click="Deal_Click"   Classes="bj-button bj-button-buyin"/>
-                        <Rectangle x:Name="RebuyDivider" Width="1" Fill="#40FFFFFF" Margin="4,4" IsVisible="False"/>
-                        <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
-                                Click="Rebuy_Click"  Classes="bj-button bj-button-deal" IsVisible="False"/>
+                            <Rectangle x:Name="RebuyDivider" Width="1" Fill="#40FFFFFF" Margin="4,4" IsVisible="False"/>
+                            <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
+                                    Click="Rebuy_Click"  Classes="bj-button bj-button-deal" IsVisible="False"/>
+                        </StackPanel>
+                        <!-- Row 2: flat chip buttons — 1/5/10/25 add to the bet, 2X doubles it -->
+                        <StackPanel x:Name="ChipButtonRow" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                            <Button x:Name="Chip1Button"  Content="1"  Tag="1"  Click="Chip_Click" Classes="bj-chip bj-chip-1"/>
+                            <Button x:Name="Chip5Button"  Content="5"  Tag="5"  Click="Chip_Click" Classes="bj-chip bj-chip-2"/>
+                            <Button x:Name="Chip10Button" Content="10" Tag="10" Click="Chip_Click" Classes="bj-chip bj-chip-3"/>
+                            <Button x:Name="Chip25Button" Content="25" Tag="25" Click="Chip_Click" Classes="bj-chip bj-chip-4"/>
+                            <Button x:Name="DoubleBetButton" Content="2X" Click="DoubleBet_Click" Classes="bj-chip bj-chip-5"/>
+                        </StackPanel>
                     </StackPanel>
-                    <!-- Row 2: flat chip buttons — 1/5/10/25 add to the bet, 2X doubles it -->
-                    <StackPanel x:Name="ChipButtonRow" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                        <Button x:Name="Chip1Button"  Content="1"  Tag="1"  Click="Chip_Click" Classes="bj-chip bj-chip-1"/>
-                        <Button x:Name="Chip5Button"  Content="5"  Tag="5"  Click="Chip_Click" Classes="bj-chip bj-chip-2"/>
-                        <Button x:Name="Chip10Button" Content="10" Tag="10" Click="Chip_Click" Classes="bj-chip bj-chip-3"/>
-                        <Button x:Name="Chip25Button" Content="25" Tag="25" Click="Chip_Click" Classes="bj-chip bj-chip-4"/>
-                        <Button x:Name="DoubleBetButton" Content="2X" Click="DoubleBet_Click" Classes="bj-chip bj-chip-5"/>
+
+                    <!-- Action buttons (visible while playing) -->
+                    <StackPanel x:Name="ActionButtonRow" Orientation="Horizontal" Spacing="10"
+                                HorizontalAlignment="Center" VerticalAlignment="Top">
+                        <Button x:Name="HitButton"    Content="Hit  [H]"      Height="46" Padding="22,0"
+                                Click="Hit_Click"    Classes="bj-button bj-button-hit"/>
+                        <Button x:Name="StandButton"  Content="Stand  [S]"    Height="46" Padding="22,0"
+                                Click="Stand_Click"  Classes="bj-button bj-button-stand"/>
+                        <Button x:Name="DoubleButton" Content="Double  [D]"   Height="46" Padding="16,0"
+                                Click="Double_Click" Classes="bj-button bj-button-double"/>
+                        <Button x:Name="SplitButton"  Content="Split  [P]"    Height="46" Padding="16,0"
+                                Click="Split_Click"  Classes="bj-button bj-button-split"/>
                     </StackPanel>
-                </StackPanel>
 
-                <!-- Action buttons (visible while playing) -->
-                <StackPanel x:Name="ActionButtonRow" Orientation="Horizontal" Spacing="10"
-                            HorizontalAlignment="Center" VerticalAlignment="Top">
-                    <Button x:Name="HitButton"    Content="Hit  [H]"      Height="46" Padding="22,0"
-                            Click="Hit_Click"    Classes="bj-button bj-button-hit"/>
-                    <Button x:Name="StandButton"  Content="Stand  [S]"    Height="46" Padding="22,0"
-                            Click="Stand_Click"  Classes="bj-button bj-button-stand"/>
-                    <Button x:Name="DoubleButton" Content="Double  [D]"   Height="46" Padding="16,0"
-                            Click="Double_Click" Classes="bj-button bj-button-double"/>
-                    <Button x:Name="SplitButton"  Content="Split  [P]"    Height="46" Padding="16,0"
-                            Click="Split_Click"  Classes="bj-button bj-button-split"/>
-                </StackPanel>
+                </Grid>
 
-            </Grid>
+                <!-- Keyboard hint row -->
+                <TextBlock x:Name="KeyHintLabel"
+                           Text="Space/Enter=Deal   H=Hit   S=Stand   D=Double   P=Split"
+                           FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
+                           FontFamily="Segoe UI"/>
 
-            <!-- Keyboard hint row — same styling/placement as VideoPokerView's KeyHintLabel,
-                 anchored to the bottom of the trailing flexible row so it sits at the very
-                 bottom of the window like Video Poker's does. -->
-            <TextBlock Grid.Row="5" x:Name="KeyHintLabel"
-                       Text="Space/Enter=Deal   H=Hit   S=Stand   D=Double   P=Split"
-                       FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
-                       VerticalAlignment="Bottom"
-                       FontFamily="Segoe UI"
-                       Margin="0,4,0,8"/>
+            </StackPanel>
 
         </Grid>
 

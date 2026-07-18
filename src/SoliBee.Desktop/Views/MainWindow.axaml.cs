@@ -91,11 +91,7 @@ public partial class MainWindow : Window
         this.Closing += (_, _) => SaveCurrentWindowSize();
         // Re-scale the background image's offset transform to stay proportionally correct
         // as the window is resized (offsets are stored in fixed reference-width units).
-        this.Resized += (_, _) =>
-        {
-            if (BoardBackgroundImage.IsVisible && _lastBoardBackgroundOptions != null)
-                ApplyBoardBackground(_lastBoardBackgroundOptions);
-        };
+        this.SizeChanged += OnWindowSizeChanged;
 
         // Ensure the window has OS focus/activation immediately — without this, the
         // first click after launch can get consumed by window activation itself,
@@ -932,9 +928,9 @@ public partial class MainWindow : Window
 
     private void ResizeWindowForGame(string tag)
     {
-        var (minW, minH) = ComputeBoardMinSize(tag, GetGameZoom(tag));
-        this.MinWidth = minW;
-        this.MinHeight = minH;
+        // Dynamic scaling and responsive layout happens automatically
+        // via UpdateResponsiveLayout(), which is called in ApplyGameSwitch.
+        UpdateResponsiveLayout();
     }
 
     private void GameSelectionBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1287,8 +1283,6 @@ public partial class MainWindow : Window
     private void EnsureWindowFitsBoard(string tag)
     {
         var (minW, minH) = ComputeBoardMinSize(tag, GetGameZoom(tag));
-        this.MinWidth = minW;
-        this.MinHeight = minH;
 
         if (WindowState == WindowState.Maximized) return;
         if (Width == minW && Height == minH) return;
@@ -1372,19 +1366,23 @@ public partial class MainWindow : Window
         double baseMinWidth = baseTag switch
         {
             "Freecell"   => tag == "Freecell2" ? 1390 : 1120,
-            "Spider"     => 1450,
-            "VideoPoker" => 700,
-            "Blackjack"  => 700,
+            // 712.5 is the exact pixel width of the 5-card row (190px per card, with -59.375px margins).
+            // 743 gives exactly ~15px padding on each side so the card stroke doesn't scrape the absolute edge.
+            "VideoPoker" => 743,
+            "Blackjack"  => 743,
             _            => 1060,
         };
         double baseMinHeight = baseTag switch
         {
             "VideoPoker" => 580,
-            // Must match GameOptions.BlackjackHeight's default (950) — that's the actual
+            // Must match GameOptions.BlackjackHeight's default (920) — that's the actual
             // content height needed to fit dealer/player cards + action buttons without
             // clipping; a lower floor let the window (and saved BlackjackHeight) shrink
-            // below what the board needs.
-            "Blackjack"  => 950,
+            // below what the board needs. -30 vs. the old 950: the hotkey-legend strip
+            // moved from a bottom-anchored flexible row (which needed a reserved buffer
+            // so it wouldn't clip against the window edge) to sitting directly under the
+            // button grid in an Auto row, which sizes to it exactly — no buffer needed.
+            "Blackjack"  => 920,
             // These three floors are sized so a maxed-out tableau column — a full
             // King-to-2 run (12 face-up cards) for Klondike/Freecell, or a completed
             // 13-card same-suit run for Spider — fits under the toolbar without being
@@ -1433,8 +1431,6 @@ public partial class MainWindow : Window
     private void SnapWindowToZoom(double oldZoom, double newZoom)
     {
         var (minW, minH) = ComputeBoardMinSize(_currentGameTag, newZoom);
-        this.MinWidth = minW;
-        this.MinHeight = minH;
 
         if (WindowState == WindowState.Maximized) return;
 
@@ -1490,11 +1486,10 @@ public partial class MainWindow : Window
             case "Blackjack":  opts.BlackjackZoom  = zoom; break;
             default:           opts.KlondikeZoom   = zoom; break;
         }
-        _contentScale.ScaleX = zoom;
-        _contentScale.ScaleY = zoom;
         SettingsService.SaveOptions(opts);
         ApplyZoomGap(zoom);
         SnapWindowToZoom(oldZoom, zoom);
+        UpdateResponsiveLayout();
     }
 
     private void ApplyZoomGap(double zoom)
@@ -1524,6 +1519,82 @@ public partial class MainWindow : Window
 
     private void MakeCurrentZoomDefault_Click(object? sender, RoutedEventArgs e) =>
         MakeCurrentZoomDefault();
+
+    private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (BoardBackgroundImage.IsVisible && _lastBoardBackgroundOptions != null)
+            ApplyBoardBackground(_lastBoardBackgroundOptions);
+
+        UpdateResponsiveLayout();
+    }
+
+    private void UpdateResponsiveLayout()
+    {
+        // Bounds aren't valid yet the first time this runs — it's called synchronously
+        // from the constructor (via the initial GameSelectionBox selection) before the
+        // window has been shown/laid out, so Bounds.Width/Height are still 0 here. Skip
+        // in that case rather than dividing by them and collapsing the board to scale 0;
+        // the real SizeChanged that fires once the window is shown will call this again
+        // with valid bounds.
+        if (this.Bounds.Width <= 0 || this.Bounds.Height <= 0) return;
+
+        // 1. Dynamic Scaling
+        //
+        // The board's natural (unscaled) footprint is measured directly off MainContent
+        // rather than read from ComputeBoardMinSize's per-game constants. Those constants
+        // are tuned as a worst-case clipping floor (e.g. Klondike's 930 assumes a fully
+        // cascaded King-to-2 tableau column, which the initial deal never has), so using
+        // them as the "natural size" reference here made the board shrink well below 1.0x
+        // — and hence leave a large unused margin — any time the window wasn't tall enough
+        // to fit that worst case, even though the actual dealt board fit comfortably.
+        // Measure(Infinity) forces an immediate, up-to-date pass (layout is otherwise
+        // deferred to the next frame, which would read a stale size right after a game
+        // switch) and reports MainContent's true desired size unaffected by the current
+        // LayoutTransform scale.
+        MainContent.Measure(Size.Infinity);
+        double naturalW = MainContent.DesiredSize.Width;
+        double naturalH = MainContent.DesiredSize.Height;
+        if (naturalW <= 0 || naturalH <= 0)
+        {
+            // Not measured yet (e.g. content not attached) — fall back to the tuned floor.
+            var (boardMinW, boardMinH) = ComputeBoardMinSize(_currentGameTag, 1.0);
+            naturalW = boardMinW;
+            naturalH = boardMinH - (TopBarBorder != null && TopBarBorder.Bounds.Height > 0 ? TopBarBorder.Bounds.Height : 80);
+        }
+
+        double toolbarHeight = TopBarBorder != null && TopBarBorder.Bounds.Height > 0 ? TopBarBorder.Bounds.Height : 80;
+        double availableH = Math.Max(1, this.Bounds.Height - toolbarHeight);
+        // MainContentWrapper carries a 30px Margin on each side (see MainWindow.axaml) so
+        // scaled cards never touch the window edge — match that here, otherwise scale-to-fit
+        // sizes the board to the full window width and the margin clips the edge cards instead.
+        double availableW = Math.Max(1, this.Bounds.Width - 60);
+
+        double scaleX = availableW / naturalW;
+        double scaleY = availableH / naturalH;
+
+        // Remove configuredZoom cap entirely: cards now perfectly scale
+        // up OR down to fill whatever space the window provides.
+        double effectiveZoom = Math.Min(scaleX, scaleY);
+        
+        _contentScale.ScaleX = effectiveZoom;
+        _contentScale.ScaleY = effectiveZoom;
+
+        // 2. Responsive Toolbar
+        bool isCompact = this.Bounds.Width < 700;
+        
+        if (NewGameButton != null) NewGameButton.Content = isCompact ? "➕" : "New Game";
+        if (RestartButton != null) RestartButton.Content = isCompact ? "🔄" : "Restart";
+        if (OptionsButton != null) OptionsButton.Content = isCompact ? "⚙️" : "Options";
+        if (HintButton != null)    HintButton.Content    = isCompact ? "💡" : "Hint";
+        if (UndoButton != null)    UndoButton.Content    = isCompact ? "↩️" : "Undo";
+        if (ZoomButton != null)    ZoomButton.Content    = isCompact ? "🔍" : "Zoom";
+
+        // Push responsive state to Blackjack/VideoPoker if they are active
+        if (MainContent.Content is BlackjackView bjView)
+            bjView.SetResponsiveMode(isCompact);
+        else if (MainContent.Content is VideoPokerView vpView)
+            vpView.SetResponsiveMode(isCompact);
+    }
 
     private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {

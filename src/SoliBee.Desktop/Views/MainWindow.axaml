@@ -4,7 +4,7 @@
         Title="SoliBee Card Suite"
         Icon="avares://SoliBee.Desktop/Assets/AppIcon.png"
         Width="1120" Height="768"
-        MinWidth="700" MinHeight="580"
+        MinWidth="400" MinHeight="300"
         WindowStartupLocation="Manual"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="-1">
@@ -30,7 +30,7 @@
                             <ComboBoxItem Content="Video Poker"      Tag="VideoPoker" />
                             <ComboBoxItem Content="Video Blackjack"  Tag="Blackjack" />
                         </ComboBox>
-                        <Button Content="New Game" Click="NewGame_Click" Classes="toolbar" />
+                        <Button x:Name="NewGameButton" Content="New Game" Click="NewGame_Click" Classes="toolbar" />
                         <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
                         <Button x:Name="OptionsButton" Content="Options" Click="Preferences_Click" Classes="toolbar" />
                         <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
@@ -111,7 +111,7 @@
 
         <!-- Main Game Area -->
         <Grid Grid.Row="1">
-            <LayoutTransformControl x:Name="MainContentWrapper" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <LayoutTransformControl x:Name="MainContentWrapper" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="30,0">
                 <ContentControl x:Name="MainContent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
             </LayoutTransformControl>
             

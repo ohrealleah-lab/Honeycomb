@@ -48,11 +48,24 @@ public partial class BlackjackView : UserControl
     public BlackjackView()
     {
         InitializeComponent();
-        this.Loaded   += OnLoaded;
-        this.Unloaded += OnUnloaded;
+        this.Loaded   += BlackjackView_Loaded;
+        this.Unloaded += BlackjackView_Unloaded;
     }
 
-    private void OnLoaded(object? sender, RoutedEventArgs e)
+    private bool _isCompact;
+    public void SetResponsiveMode(bool isCompact)
+    {
+        _isCompact = isCompact;
+        UpdateDealButtonContent();
+    }
+
+    private void UpdateDealButtonContent()
+    {
+        if (DealButton != null)
+            DealButton.Content = _isCompact ? "▶" : "Deal  [Space]";
+    }
+
+    private void BlackjackView_Loaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
         vm.PropertyChanged += Vm_PropertyChanged;
@@ -62,7 +75,7 @@ public partial class BlackjackView : UserControl
         Refresh(vm);
     }
 
-    private void OnUnloaded(object? sender, RoutedEventArgs e)
+    private void BlackjackView_Unloaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is BlackjackViewModel vm)
             vm.PropertyChanged -= Vm_PropertyChanged;
@@ -601,19 +614,10 @@ public partial class BlackjackView : UserControl
 
     private void ResetIdleTimer(BlackjackViewModel vm)
     {
+        // Idle "Hit Space to Deal" nudge banner disabled — never scheduled.
         _idleTimer?.Stop();
         _idleTimer = null;
         if (IdlePrompt.Opacity > 0) FadeOutIdlePrompt();
-        if (vm.State.Phase != BlackjackPhase.Betting) return;
-        _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        _idleTimer.Tick += (_, _) =>
-        {
-            _idleTimer!.Stop();
-            _idleTimer = null;
-            if (DataContext is BlackjackViewModel v && v.State.Phase == BlackjackPhase.Betting)
-                FadeInIdlePrompt();
-        };
-        _idleTimer.Start();
     }
 
     private void FadeInIdlePrompt()

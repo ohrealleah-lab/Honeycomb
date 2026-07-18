@@ -88,7 +88,7 @@ public class GameOptions
     public bool   VideoPokerMaximized { get; set; } = false;
     public double BlackjackZoom      { get; set; } = 1.0;
     public double BlackjackWidth     { get; set; } = 1000;
-    public double BlackjackHeight    { get; set; } = 950;
+    public double BlackjackHeight    { get; set; } = 920;
     public bool   BlackjackMaximized { get; set; } = false;
 
     // Theme editor color overrides — null means use the compiled default

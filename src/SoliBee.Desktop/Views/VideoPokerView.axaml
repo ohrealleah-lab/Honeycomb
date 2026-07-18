@@ -71,7 +71,14 @@
              its own fixed Auto row right under the pay table), centered vertically in
              the same leftover space, so it sits centered between the pay table and the
              cards rather than pinned to the top of that gap. -->
-        <Grid Grid.Row="1" RowDefinitions="1.3*,Auto,Auto,*">
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <!-- Ensure the spacer row is always tall enough to contain the BidBar (approx 60px) -->
+                <RowDefinition Height="1.3*" MinHeight="80" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
             <!-- Credits / Bet / Hands bar — centered in the top spacer row -->
             <Border x:Name="BidBar" Grid.Row="0" Background="#59000000" CornerRadius="6"
@@ -216,7 +223,7 @@
                             IsEnabled="{Binding IsHolding}"
                             Click="ClearAll_Click" Classes="vp-button vp-button-clear"/>
                     <Button x:Name="DealDrawButton"
-                            Content="{Binding DealDrawLabel}" Height="46" Padding="28,0"
+                            Height="46" Padding="28,0"
                             Click="DealDraw_Click" Classes="vp-button vp-button-draw"/>
                     <Button x:Name="RebuyButton"
                             Content="Buy In" Height="46" Padding="16,0"

@@ -77,6 +77,24 @@ public partial class VideoPokerView : UserControl
         this.Unloaded += VideoPokerView_Unloaded;
     }
 
+    private bool _isCompact;
+    public void SetResponsiveMode(bool isCompact)
+    {
+        _isCompact = isCompact;
+        UpdateDealDrawButton();
+    }
+
+    private void UpdateDealDrawButton()
+    {
+        if (DataContext is VideoPokerViewModel vm)
+        {
+            if (_isCompact)
+                DealDrawButton.Content = vm.IsHolding ? "🔀" : "▶";
+            else
+                DealDrawButton.Content = vm.DealDrawLabel;
+        }
+    }
+
     private void VideoPokerView_Loaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not VideoPokerViewModel vm) return;
@@ -296,6 +314,8 @@ public partial class VideoPokerView : UserControl
             : new Cursor(StandardCursorType.Arrow);
         for (int i = 0; i < 5; i++)
             _cardSlots[i].Cursor = slotCursor;
+
+        UpdateDealDrawButton();
     }
 
     private void UpdateResult(VideoPokerViewModel vm)
@@ -920,19 +940,10 @@ public partial class VideoPokerView : UserControl
 
     private void ResetIdleTimer(VideoPokerViewModel vm)
     {
+        // Idle "Hit Space to Deal" nudge banner disabled — never scheduled.
         _idleTimer?.Stop();
         _idleTimer = null;
         if (IdlePrompt.Opacity > 0) FadeOutIdlePrompt();
-        if (vm.State.Phase != VideoPokerPhase.Deal) return;
-        _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        _idleTimer.Tick += (_, _) =>
-        {
-            _idleTimer!.Stop();
-            _idleTimer = null;
-            if (DataContext is VideoPokerViewModel v && v.State.Phase == VideoPokerPhase.Deal)
-                FadeInIdlePrompt();
-        };
-        _idleTimer.Start();
     }
 
     private void FadeInIdlePrompt()

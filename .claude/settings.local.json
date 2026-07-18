@@ -140,7 +140,11 @@
       "Bash(rm -f \"/c/Users/Leahbee/AppData/Local/Temp/winbanner-debug.log\"; echo cleared)",
       "PowerShell(explorer.exe $env:LOCALAPPDATA)",
       "Bash(powershell -c \"Get-ChildItem -Recurse -Filter *.cs src | Select-String -Pattern 'class OptionsChangedMessage|class FaceCardArtChangedMessage'\")",
-      "Bash(xargs grep -l \"public.*OptionsChangedMessage\\\\|class OptionsChangedMessage\")"
+      "Bash(xargs grep -l \"public.*OptionsChangedMessage\\\\|class OptionsChangedMessage\")",
+      "Bash(git reset *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Program Files\",\"C:\\\\Program Files \\(x86\\)\",\"$env:LOCALAPPDATA\",\"$env:USERPROFILE\" -Filter \"gh.exe\" -Recurse -ErrorAction SilentlyContinue -Depth 3 | Select-Object -First 5 FullName)",
+      "PowerShell(winget list --id GitHub.cli 2>&1)",
+      "Bash(git status *)"
     ]
   }
 }
