@@ -24,9 +24,9 @@
                     <!-- Buttons on the Left -->
                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                         <ComboBox x:Name="GameSelectionBox" Classes="toolbar-combo" SelectionChanged="GameSelectionBox_SelectionChanged">
-                            <ComboBoxItem Content="Klondike"         Tag="Klondike" />
-                            <ComboBoxItem Content="Freecell"         Tag="Freecell" />
-                            <ComboBoxItem Content="Spider Solitaire" Tag="Spider" />
+                            <ComboBoxItem Content="Klondike Solibee" Tag="Klondike" />
+                            <ComboBoxItem Content="Beecell"          Tag="Freecell" />
+                            <ComboBoxItem Content="Spider Solibee"   Tag="Spider" />
                             <ComboBoxItem Content="Video Poker"      Tag="VideoPoker" />
                             <ComboBoxItem Content="Video Blackjack"  Tag="Blackjack" />
                         </ComboBox>
