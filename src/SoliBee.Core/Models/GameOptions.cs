@@ -73,15 +73,15 @@ public class GameOptions
 
     // Per-game window size (normal/restored size + maximize flag)
     public double KlondikeWidth      { get; set; } = 1120;
-    public double KlondikeHeight     { get; set; } = 950;
+    public double KlondikeHeight     { get; set; } = 1100;
     public bool   KlondikeMaximized  { get; set; } = false;
     public double FreecellWidth       { get; set; } = 1200;
-    public double FreecellHeight      { get; set; } = 1050;
+    public double FreecellHeight      { get; set; } = 1200;
     public bool   FreecellMaximized   { get; set; } = false;
     public double SpiderWidth        { get; set; } = 1500;
     // Tall enough that a fully-built 13-card same-suit run (K down to Ace) fits
     // without scrolling — see MainWindow.ComputeBoardMinSize for the matching floor.
-    public double SpiderHeight       { get; set; } = 950;
+    public double SpiderHeight       { get; set; } = 1100;
     public bool   SpiderMaximized    { get; set; } = false;
     public double VideoPokerWidth    { get; set; } = 1000;
     public double VideoPokerHeight   { get; set; } = 700;

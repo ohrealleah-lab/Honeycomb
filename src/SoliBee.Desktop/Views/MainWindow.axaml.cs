@@ -38,6 +38,18 @@ public partial class MainWindow : Window
 
         MainContentWrapper.LayoutTransform = _contentScale;
 
+        // The authoritative trigger for the responsive scale-to-fit calculation: fires
+        // once per completed layout pass with GameAreaGrid's real, final Bounds, whether
+        // that's from an OS window resize, the initial show, or a game switch resizing
+        // the window programmatically. Other call sites (SizeChanged, the post-game-switch
+        // Dispatcher.Post, Opened) fire eagerly too, but this is the one that can't read a
+        // stale/mid-transition size, since Bounds by definition only updates from a real
+        // layout pass.
+        GameAreaGrid.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == Visual.BoundsProperty) UpdateResponsiveLayout();
+        };
+
         _coordinator = new AppCoordinator();
 
         // First launch: apply the "Default" theme (Moogle + Felt Green) as the default visual theme
@@ -111,6 +123,13 @@ public partial class MainWindow : Window
                 double x = wa.X + (wa.Width - Width) / 2;
                 Position = new PixelPoint((int)x, wa.Y);
             }
+
+            // Safety net for the very first game switch: it runs from the constructor,
+            // before the window is shown, so Bounds is still invalid the whole way through
+            // and the posted UpdateResponsiveLayout() in ApplyGameSwitch can end up racing
+            // an early/incomplete layout pass instead of the fully-shown one. Opened fires
+            // once the window is genuinely up with final Bounds, so recompute here too.
+            UpdateResponsiveLayout();
         };
 
         // Preload custom art into display-resolution cache before first scroll
@@ -1060,10 +1079,32 @@ public partial class MainWindow : Window
             this.MainContent.Content = new BlackjackView { DataContext = _coordinator.BlackjackViewModel };
         }
 
+        // Blackjack/VideoPoker (and likely the others) populate their card visuals from
+        // their own Loaded handler, not synchronously on construction — DealerCardsPanel /
+        // PlayerHandsContainer etc. start out with zero children. If UpdateResponsiveLayout
+        // measures MainContent before that Loaded fires (which it did in the fast, no-fade
+        // first-launch switch below, before the fade-transition switch had time to let a
+        // few frames pass), it captures an undersized "natural" height — no card row yet —
+        // and computes too large a scale from it, which nothing then corrects since the
+        // window's own size doesn't change again once the cards actually appear. Re-run the
+        // calc once that view's Loaded fires so it measures the fully-populated board.
+        if (this.MainContent.Content is Control activeView)
+            activeView.Loaded += (_, _) => UpdateResponsiveLayout();
+
         this.DataContext = _coordinator.ActiveViewModel;
         ResizeWindowForGame(tag);
         ApplyZoom(GetGameZoom(tag));
         RestoreWindowSizeForGame(tag);
+        // RestoreWindowSizeForGame is the authoritative final size for this game switch,
+        // but setting Window.Width/Height doesn't update this.Bounds synchronously — the
+        // platform applies the resize asynchronously, and Bounds (and the SizeChanged that
+        // OnWindowSizeChanged listens for) only reflect it after the next layout pass. A
+        // synchronous UpdateResponsiveLayout() call here would still read the *old* Bounds
+        // and scale the board for the previous game's window size, which is exactly what
+        // made Blackjack look "zoomed in" until the user grabbed the resize handle (an OS
+        // resize that *does* update Bounds immediately). Posting at Loaded priority defers
+        // this until after that layout pass has actually happened.
+        Dispatcher.UIThread.Post(UpdateResponsiveLayout, DispatcherPriority.Loaded);
 
         // Re-point the hint-availability tracker at whichever viewmodel is now active,
         // so the Hint button disables itself the moment a deadlock leaves no legal moves.
@@ -1074,6 +1115,7 @@ public partial class MainWindow : Window
         UpdateOptionsButtonEnabled();
 
         bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
+        UpdateSolitaireKeyHint(tag, isCardGame);
         // Hint is solitaire-only (no hint logic exists for VP/Blackjack).
         if (HintButton != null)    HintButton.IsVisible    = isCardGame && !_coordinator.GameViewModel.Options.HideHintButton;
         if (ZoomButton != null)    ZoomButton.IsVisible    = !_coordinator.GameViewModel.Options.HideZoomControls;
@@ -1528,15 +1570,29 @@ public partial class MainWindow : Window
         UpdateResponsiveLayout();
     }
 
+    private void UpdateSolitaireKeyHint(string tag, bool isCardGame)
+    {
+        if (SolitaireKeyHintLabel == null) return;
+        SolitaireKeyHintLabel.IsVisible = isCardGame;
+        if (!isCardGame) return;
+        SolitaireKeyHintLabel.Text = GetBaseGameTag(tag) switch
+        {
+            "Freecell" => "Arrows=Move Cursor   Space/Return=Select or Move   C=Free Cell   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor",
+            "Spider"   => "Arrows=Move Cursor   Space/Return=Select or Move   D=Deal   A=Autocomplete   Esc=Clear Cursor",
+            _          => "Arrows=Move Cursor   Space/Return=Select or Move   D=Draw   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor",
+        };
+    }
+
     private void UpdateResponsiveLayout()
     {
-        // Bounds aren't valid yet the first time this runs — it's called synchronously
-        // from the constructor (via the initial GameSelectionBox selection) before the
-        // window has been shown/laid out, so Bounds.Width/Height are still 0 here. Skip
-        // in that case rather than dividing by them and collapsing the board to scale 0;
-        // the real SizeChanged that fires once the window is shown will call this again
-        // with valid bounds.
-        if (this.Bounds.Width <= 0 || this.Bounds.Height <= 0) return;
+        // GameAreaGrid *is* row 1's actual content area (below the toolbar row), so its
+        // Bounds only ever reflect a completed layout pass — unlike this.Window's own
+        // Bounds/Width/Height, which can be read stale mid-game-switch (see the Bounds
+        // subscription wired up in the constructor: setting Window.Width/Height doesn't
+        // update Window.Bounds synchronously, so a same-tick read of it here reproduced
+        // the old game's — or, at first launch, no game's — sizing instead of the new
+        // one's). Bail out only if a layout genuinely hasn't happened yet at all.
+        if (GameAreaGrid.Bounds.Width <= 0 || GameAreaGrid.Bounds.Height <= 0) return;
 
         // 1. Dynamic Scaling
         //
@@ -1562,12 +1618,11 @@ public partial class MainWindow : Window
             naturalH = boardMinH - (TopBarBorder != null && TopBarBorder.Bounds.Height > 0 ? TopBarBorder.Bounds.Height : 80);
         }
 
-        double toolbarHeight = TopBarBorder != null && TopBarBorder.Bounds.Height > 0 ? TopBarBorder.Bounds.Height : 80;
-        double availableH = Math.Max(1, this.Bounds.Height - toolbarHeight);
+        double availableH = Math.Max(1, GameAreaGrid.Bounds.Height);
         // MainContentWrapper carries a 30px Margin on each side (see MainWindow.axaml) so
         // scaled cards never touch the window edge — match that here, otherwise scale-to-fit
         // sizes the board to the full window width and the margin clips the edge cards instead.
-        double availableW = Math.Max(1, this.Bounds.Width - 60);
+        double availableW = Math.Max(1, GameAreaGrid.Bounds.Width - 60);
 
         double scaleX = availableW / naturalW;
         double scaleY = availableH / naturalH;
@@ -1575,12 +1630,12 @@ public partial class MainWindow : Window
         // Remove configuredZoom cap entirely: cards now perfectly scale
         // up OR down to fill whatever space the window provides.
         double effectiveZoom = Math.Min(scaleX, scaleY);
-        
+
         _contentScale.ScaleX = effectiveZoom;
         _contentScale.ScaleY = effectiveZoom;
 
         // 2. Responsive Toolbar
-        bool isCompact = this.Bounds.Width < 700;
+        bool isCompact = GameAreaGrid.Bounds.Width < 700;
         
         if (NewGameButton != null) NewGameButton.Content = isCompact ? "➕" : "New Game";
         if (RestartButton != null) RestartButton.Content = isCompact ? "🔄" : "Restart";

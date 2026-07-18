@@ -34,14 +34,9 @@
             </Grid>
         </StackPanel>
 
-        <!-- Keyboard hint row — same styling/placement convention as Blackjack/Video
-             Poker's KeyHintLabel, anchored to the bottom of the board. -->
-        <TextBlock x:Name="KeyHintLabel"
-                   Text="Arrows=Move Cursor   Space/Return=Select or Move   D=Draw   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor"
-                   FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
-                   VerticalAlignment="Bottom"
-                   FontFamily="Segoe UI"
-                   Margin="0,4,0,8"/>
+        <!-- Keyboard hint row now lives in MainWindow's GameAreaGrid (SolitaireKeyHintLabel)
+             so it's pinned to the true bottom of the window instead of the bottom of this
+             board's own tight-fit content — see MainWindow.axaml for why. -->
 
         <!-- Global dragging canvas overlay -->
         <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />

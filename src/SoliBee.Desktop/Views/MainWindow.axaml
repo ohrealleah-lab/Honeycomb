@@ -110,11 +110,25 @@
         </Grid>
 
         <!-- Main Game Area -->
-        <Grid Grid.Row="1">
+        <Grid x:Name="GameAreaGrid" Grid.Row="1">
             <LayoutTransformControl x:Name="MainContentWrapper" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="30,0">
                 <ContentControl x:Name="MainContent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
             </LayoutTransformControl>
-            
+
+            <!-- Solitaire keyboard hint row (Klondike/Freecell/Spider — Blackjack/Video
+                 Poker have their own, positioned under their action buttons instead). Lives
+                 outside MainContentWrapper so it isn't measured/scaled with the board: a
+                 LayoutTransformControl always measures its child at infinite constraint to
+                 get its natural size, so a bottom-anchored TextBlock inside the board itself
+                 sits at the bottom of the board's own tight-fit content — i.e. right below
+                 however tall the current tableau happens to be — not the bottom of the
+                 window. Text/visibility are set per-game in MainWindow.axaml.cs. -->
+            <TextBlock x:Name="SolitaireKeyHintLabel"
+                       FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
+                       VerticalAlignment="Bottom" IsHitTestVisible="False"
+                       FontFamily="Segoe UI"
+                       Margin="0,4,0,8"/>
+
             <!-- Preferences Modal Dialog Overlay — spans both rows (Grid.RowSpan) so it
                  covers the full window instead of just Row 0's Auto-sized toolbar strip,
                  which otherwise made the panel center within that thin strip instead of
