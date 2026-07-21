@@ -200,6 +200,32 @@ The player can request a move hint at any time during Klondike or BeeCell games.
 
 ---
 
+### User Story 11 - Honeycomb (Triple Triad-Style Card Battle) (Priority: P1)
+
+The player battles an AI opponent on a 3×3 grid using 5-card hands drawn from an 800-card database (4 suits × 200 cards, 1★–5★ rarity). Placing a card next to an opponent's card compares the touching directional stats; the higher value captures (flips) the opponent's card, with chain-reaction combos possible. Up to two optional match rules can modify capture logic, hand visibility, or which card may legally be played each turn. Winners can permanently unlock played cards into a persistent Card Bank and build named decks subject to rarity caps.
+
+**Why this priority**: Honeycomb is a fully independent, complete game mode with its own card economy, AI, and progression system — comparable in scope to the five core card games.
+
+**Independent Test**: Start a match on Medium difficulty with no rules active, place a card adjacent to an opponent's card with a higher facing stat, verify the capture (and any resulting chain flips), fill the board, and verify the winner is declared and the post-game "Take a Card" prompt appears.
+
+**Acceptance Scenarios**:
+
+1. **Given** a card is placed adjacent to an enemy-owned card, **When** the attacking card's facing stat exceeds the defending card's opposite-facing stat, **Then** the defending card flips to the attacker's owner, and any of *its* neighbors that can now be captured are flipped in a chain (combo).
+2. **Given** the **Same** rule is active, **When** two or more of a placed card's touching neighbors have an equal facing stat to the attacker (friendly or enemy alike counts toward the trigger), **Then** all matching neighbors are captured.
+3. **Given** the **Plus** rule is active, **When** two or more touching neighbor pairs sum to the same value as the attacker's facing stat, **Then** all cards in that matching group are captured.
+4. **Given** **Ascension** (or **Descension**) is active, **When** a card of the affected suit is placed or already on the board, **Then** every card of that suit on the board gets `+1` (or `-1`) to all four sides for each card of that suit currently on the board, recalculated before that placement's captures resolve.
+5. **Given** **Reverse** is active, **When** an attacking card's facing stat is *lower* than the defending card's, **Then** the attacker captures (capture direction is fully inverted).
+6. **Given** **Fallen Ace** is active and the attacker's facing stat is `1` against a defending `10`, **Then** the attacker captures regardless of the normal (or Reverse) comparison.
+7. **Given** **All Open** (or **Three Open**) is active, **When** the match starts, **Then** the opponent's entire hand (or 3 random cards from it) is displayed face-up for the whole match, tracked by each card's stable identity so the correct cards stay revealed as the hand shrinks.
+8. **Given** **Swap** is active, **When** the match starts, **Then** one random card from each side's hand trades hands before the first turn; the swapped card plays for its new holder, but reverts to its original owner for Card Bank unlock and post-win "steal" eligibility if not recaptured.
+9. **Given** **Order** is active, **When** it is a side's turn, **Then** only the next card in that side's original deck order may legally be played. **Given** **Chaos** is active instead, **When** a side's turn begins, **Then** exactly one randomly re-rolled card from that hand is the only legal play, highlighted with a thick border in that side's ownership color; the opponent's mandated card is visible at least 2 seconds before the AI's move executes.
+10. **Given** a match ends 5-5, **When** the draw is detected, **Then** a "Sudden Death!" banner displays, the board clears, and a new round starts immediately with each side's end-of-round cards, alternating who goes first, repeating until a side wins outright.
+11. **Given** the player wins a match, **When** the post-game prompt appears, **Then** the player may drag any card the opponent played that round onto one of their own 5 active deck slots to swap it in, with a confirmation prompt before the swap completes.
+12. **Given** the player attempts to save a deck containing two 5★ cards, **Then** the save is blocked with a validation message; **Given** a deck has one 5★ card and two 4★ cards, **Then** the save is blocked; **Given** a deck has zero 5★ cards and up to two 4★ cards, **Then** the save is allowed.
+13. **Given** Ultra Hard difficulty with Reverse active, **When** the opponent's hand is dealt, **Then** all five cards are drawn from the 1★ tier (the tier with the lowest stat-sum band), keeping the match genuinely difficult under the inverted rule instead of handing out high-star cards that are secretly weak.
+
+---
+
 ### Edge Cases
 
 - **Corrupted Preferences**: If stored options or statistics are unreadable at launch, the app resets all to defaults (Felt Green, Vulpera card back, Standard scoring) without crashing.
@@ -210,6 +236,9 @@ The player can request a move hint at any time during Klondike or BeeCell games.
 - **Custom Background Deletion Conflict**: If a saved Theme references the background being deleted, the deletion is blocked until the referencing Theme is deleted first.
 - **Autocomplete Interruption (Klondike/BeeCell)**: If the user triggers Undo during an autocomplete sequence, the autoplay halts and the game returns to the pre-autocomplete snapshot.
 - **Window Resize During Autoplay**: If the window is resized while autocomplete is running, card layout and spacing recalculate correctly without disrupting the ongoing animation.
+- **Honeycomb Own-Card Same/Plus**: A player's own adjacent cards count toward the Same/Plus capture trigger threshold, not just the opponent's — this is intentional (enables "combo bait" deck archetypes), not a bug.
+- **Honeycomb Order/Chaos on an Empty Hand**: If the mandated-card rule (Order or Chaos) is active and a side's hand is empty, no card is treated as legally playable for that side.
+- **Honeycomb Corrupted Saved Deck**: If a saved deck slot does not contain exactly 5 valid card IDs, the match falls back to a randomly-generated weak deck rather than failing to start.
 
 ---
 
@@ -272,6 +301,28 @@ The player can request a move hint at any time during Klondike or BeeCell games.
 - **FR-040**: The board layout and card sizing MUST scale dynamically and proportionally when the user resizes the macOS window, maintaining crisp vector rendering at all scales.
 - **FR-041**: Zoom controls (0.6×–2.0×) MUST allow the player to adjust card display size independently of window size; the zoom level MUST persist.
 
+#### Honeycomb
+- **FR-042**: The game MUST be played on a 3×3 grid; placing a card adjacent to an opponent's card MUST compare the attacker's facing stat to the defender's opposite-facing stat, capturing the defender when the attacker's value is higher (or lower, if Reverse is active), including recursive chain-reaction combo captures.
+- **FR-043**: Up to two rules MUST be selectable simultaneously from the pool {Ascension, Descension, Same, Plus, Fallen Ace, Reverse, All Open, Three Open, Swap, Order, Chaos}; Ascension/Descension MUST be mutually exclusive, and Order/Chaos MUST be mutually exclusive.
+- **FR-044**: If no rules are manually selected, the match MUST default to Roulette mode, randomly selecting 0, 1, or 2 rules from the full pool (respecting the exclusivity pairs) at the start of every match.
+- **FR-045**: Same MUST capture all touching neighbors whose facing stat equals the attacker's; Plus MUST capture all touching neighbor groups of 2+ where attacker-plus-neighbor sums match; both MUST only evaluate on the initiating placement, not on cascading combo captures.
+- **FR-046**: Fallen Ace MUST let an attacking `1` capture a defending `10` (and, under Reverse, an attacking `10` capture a defending `1`), independent of the standard capture comparison.
+- **FR-047**: All Open MUST reveal the opponent's entire hand face-up for the match; Three Open MUST reveal exactly 3 random cards from the opponent's hand, with revealed-card identity tracked by a stable ID so the correct cards stay visible as the hand shrinks.
+- **FR-048**: Swap MUST exchange one random card between each side's hand before the first turn; a swapped card MUST play for its new holder but MUST revert to its original owner for Card Bank unlock eligibility and post-win steal eligibility.
+- **FR-049**: Order MUST restrict the legal play each turn to the next card in that side's original deck order; Chaos MUST re-roll a single random legal card index for that side the instant its turn begins. The currently-mandated card MUST be highlighted with a thick border in the owning side's highlight color, and the opponent's AI MUST wait at least 2 seconds (with the mandated card visibly highlighted) before executing its move.
+- **FR-050**: AI difficulty MUST scale by algorithm: Easy = uniform random move; Medium = greedy (maximizes this move's own capture count, ties broken randomly); Hard = minimax with alpha-beta pruning, 2-ply lookahead; Ultra Hard = minimax with alpha-beta pruning, 4-ply lookahead, both using a positional heuristic (corner cells weighted +3, edge cells +1, center +0).
+- **FR-051**: Under normal rules, AI deck composition by difficulty MUST be: Easy = four 1★ + one 2★; Medium = four 2★ + one 3★; Hard = three 3★ + one 4★ + one 5★; Ultra Hard = two 3★ + one 4★ + two 5★, biased within each tier toward the cards best-suited to the active ruleset.
+- **FR-052**: Under Reverse, each difficulty MUST use a dedicated Reverse-specific deck composition instead of its normal one, so that a nominally "hard" AI cannot be trivially defeated by exploiting the low-beats-high inversion: Easy borrows Ultra Hard's normal table; Medium borrows Hard's normal table; Hard uses an explicit two 1★ + three 2★ table; Ultra Hard uses five 1★ cards.
+- **FR-053**: A drawn (5-5) match MUST trigger Sudden Death: display a "Sudden Death!" banner, clear the board, and immediately start a new round using each side's exact end-of-round cards, alternating the starting player, repeating until a side wins outright.
+- **FR-054**: Deck-building MUST enforce: at most one 5★ card per deck; at most one 4★ card if a 5★ card is present in the deck, otherwise at most two 4★ cards; any combination of 1★-3★ cards otherwise. No Stress Mode MUST auto-assign a random deck each match (the player does not choose one), but that deal MUST still respect the same rarity caps — one 5★ + one 4★ + three 3★, the strongest composition the caps allow.
+- **FR-055**: A fresh install MUST grant three randomly-selected 1★ cards and two randomly-selected 2★ cards to the Card Bank as starter unlocks.
+- **FR-056**: A card MUST be permanently unlocked to the Card Bank only if it was in the player's active deck at the start of the match, was played onto the board during the match, was owned by the player (not merely its original owner, per Swap) at match end, and the player won the match.
+- **FR-057**: After a won match, the player MUST be able to drag any card the opponent played that round onto one of their own 5 active deck slots to swap it in, subject to a confirmation prompt; the replaced card MUST return to the Card Bank/Saved Decks.
+- **FR-058**: The player profile MUST support 5 named saved-deck slots; once a deck slot is given a name, that name MUST be permanently locked (though the cards within it may still be edited), with names capped at 20 characters.
+- **FR-059**: The card database MUST contain 800 cards split evenly across 4 suits (200 each), with per-tier stat ceilings of 7/7/8/9/10 for 1★-5★ (a `10` value MUST be exclusive to 5★ cards) and per-tier total-stat-sum bands of 12-15/16-21/20-25/24-28/25-30.
+- **FR-060**: Each suit MUST follow a distinct stat-generation archetype: Spades (pure offensive) concentrate the majority of a card's stat total on one opposite axis (Top/Bottom or Right/Left); Hearts (pure defensive) concentrate it on one adjacent corner pair instead; Diamonds (adaptive/all-rounder) keep all four sides within 1 point of each other; Clubs (tactical/combo bait) force 2-3 sides to share an identical low-to-mid value.
+- **FR-061**: Statistics tracked for Honeycomb MUST include: games played/won/lost/tied, current and longest win streak, win percentage, total unique Card Bank unlocks (of 800) with a per-suit breakdown (of 200 each) and per-star-rating breakdown, flawless (10-0) victory count, lifetime cards flipped, and lifetime Same/Plus trigger count.
+
 ### Key Entities
 
 - **Card**: rank (1–13), suit (spades/clubs/diamonds/hearts), faceUp state.
@@ -287,6 +338,13 @@ The player can request a move hint at any time during Klondike or BeeCell games.
 - **CustomFaceCardArt**: suit, face rank (J/Q/K/A), file path.
 - **CustomBackground**: name, file path (relative to App Support), scale, offsetX, offsetY.
 - **SoliBeeTheme**: name, felt color, card back theme identifier, background name (optional).
+- **HoneycombCardData**: numeric id, placeholder name, star rating (1-5), 4 directional stats (Top/Right/Bottom/Left), suit (Spade/Heart/Diamond/Club).
+- **HoneycombCard**: card data, current owner, original owner (differs from owner only under Swap), temporary Ascension/Descension modifier.
+- **HoneycombBoard**: 3×3 array of cells (each optionally holding a card), capture/combo resolution state, per-match Same/Plus trigger flags and count.
+- **HoneycombRule**: one of Ascension, Descension, Same, Plus, Fallen Ace, Reverse, All Open, Three Open, Swap, Order, Chaos.
+- **HoneycombDeckState**: deck name (lockable once set), 5 card IDs.
+- **HoneycombProfileManager**: set of unlocked Card Bank IDs, 5 saved deck slots.
+- **HoneycombStats**: games played/won/lost/tied, streaks, flawless victories, lifetime cards flipped, lifetime Same/Plus triggers.
 
 ---
 
@@ -304,6 +362,8 @@ The player can request a move hint at any time during Klondike or BeeCell games.
 - **SC-008**: The victory cascade animation sustains 60 FPS with up to 52 bouncing cards simultaneously.
 - **SC-009**: All automated unit tests pass in under 5 seconds via `make test`.
 - **SC-010**: The Video Poker hand evaluator produces correct results for 100% of hands in a randomized 10,000-hand test suite for all three variants.
+- **SC-011**: Honeycomb's Ultra Hard AI (4-ply minimax with alpha-beta pruning) selects a move in under 150ms in the worst case.
+- **SC-012**: Honeycomb's capture, combo, Same/Plus, and all 11 match rules resolve correctly (matching hand-verified expected outcomes) across a randomized 1,000-match test suite.
 
 ---
 
@@ -317,3 +377,6 @@ The player can request a move hint at any time during Klondike or BeeCell games.
 - **Rendering**: All gameplay visual components are programmatically rendered; raster images are only used for imported custom card backs, face art, and backgrounds.
 - **Window Sizing**: The app supports any window size from 1024×768 and larger; minimum viable layout is maintained at all sizes.
 - **Sound Files**: Shuffle, snap, and victory audio files are bundled locally in the application; no network audio is used.
+- **Honeycomb Card Ownership Colors**: Player/opponent card highlight colors are user-configurable (defaulting to blue/red) via the Themes panel's Custom Card Color section, rather than the fixed yellow/black originally documented in the Honeycomb design brief.
+- **Honeycomb Card Naming**: Card database entries currently use placeholder names (e.g. "Spade 1"); the card face does not render a name/rank label, showing only the suit icon, star rating, and NESW stats. Final thematic card names/art are out of scope for this spec.
+- **Honeycomb Deck Reset**: There is no dedicated "reset active deck to a random 3×1★/2×2★ assortment" action; a corrupted/incomplete saved deck instead falls back to five random 1★ cards (see Edge Cases).

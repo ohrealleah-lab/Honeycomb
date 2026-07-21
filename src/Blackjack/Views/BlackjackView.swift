@@ -18,6 +18,18 @@ public struct BlackjackView: View {
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
     @State private var idlePromptTask:   DispatchWorkItem? = nil
+    // Measured width of the top toolbar row — drives the icon-only compact button swap.
+    // Starts generous so buttons show full text before the first layout pass measures it.
+    @State private var toolbarWidth: CGFloat = 2000
+    @State private var windowContentHeight: CGFloat = 900
+    // Same idea, for the in-game action button row (Hit/Stand/Double/Split/etc.).
+    @State private var actionButtonsWidth: CGFloat = 2000
+    // Measured natural (unscaled) height of the board content — drives the fit-to-window
+    // scale math. Replaces a hand-estimated constant that drifted out of sync with the
+    // real content and let the action buttons get clipped by the window's bottom edge.
+    // Starts generous (more than any real mode needs) so the first-frame scale is an
+    // underestimate rather than an overflow before the first real measurement lands.
+    @State private var measuredBoardHeight: CGFloat = 900
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     private let cardScale: CGFloat = 1.4
@@ -30,22 +42,26 @@ public struct BlackjackView: View {
     private let tightOverlapFraction: CGFloat = 0.55
     private let tightestOverlapFraction: CGFloat = 0.75
 
-    // The toolbar stays fixed size regardless of zoom; only the board below it scales.
+    // The toolbar stays fixed size regardless of the board's scale; only the board below
+    // it scales to fit the window.
     static let toolbarHeight: CGFloat = 85
-    // The hotkey legend sits below the scaled board, outside boardBaseHeight, and never
-    // scales with zoom — reserve fixed room for it so it doesn't get clipped by the
-    // window's bottom edge at minimum size.
+    // The hotkey legend sits below the scaled board and never scales — reserve fixed room
+    // for it so it doesn't get clipped by the window's bottom edge at minimum size.
     private static let legendHeight: CGFloat = 28
-    private static let baseBoardHeight: CGFloat = 1012 - toolbarHeight
-
-    private var boardBaseHeight: CGFloat {
-        guard viewModel.isFreePlay else { return Self.baseBoardHeight }
-        // Free play hides the credit display, so the board only needs to fit the
-        // dealer/player card areas and action buttons — not that display's own
-        // height plus its VStack spacing gap.
-        let creditDisplayContribution: CGFloat = 84
-        return Self.baseBoardHeight - creditDisplayContribution
-    }
+    // Hard floor the window can be dragged down to — the board's own scale (see
+    // recomputeScale()) fits content to whatever size the window actually is, so this only
+    // needs to keep the toolbar legible and a sliver of the board visible. If the player
+    // drags the window down near this floor, cards may clip — an accepted tradeoff.
+    static let minWindowSize = NSSize(width: 340, height: 403)
+    // The size the window opens at when there's no saved "make current size the default"
+    // preference — numerically the same size this app has always opened at for normal
+    // play (previously toolbarHeight + boardBaseHeight + legendHeight + 28, at the old
+    // zoom=1 baseline).
+    static let defaultOpeningSize = NSSize(width: 905, height: 868)
+    // Below these measured widths, buttons swap their text label for an icon-only SF
+    // Symbol to save space — hand-estimated, not measured from a live render.
+    private static let compactToolbarWidthThreshold: CGFloat = 420
+    private static let compactActionButtonsWidthThreshold: CGFloat = 520
 
     public init(viewModel: BlackjackViewModel) {
         self.viewModel = viewModel
@@ -69,8 +85,12 @@ public struct BlackjackView: View {
 
                 Divider().overlay(Color.white.opacity(0.2))
 
-                // Scaled board area
-                VStack(spacing: 0) {
+                // Scaled board area — GeometryReader measures the true available width
+                // directly and the centering offset is computed as plain arithmetic and
+                // applied via .offset(x:), rather than relying on frame(alignment:) or
+                // Spacer-flanking, both of which proved inconsistent here across several
+                // attempts (worse the more the board is scaled down from its 905pt width).
+                GeometryReader { outerGeo in
                     VStack(spacing: 12) {
                         if !viewModel.isFreePlay {
                             creditDisplay
@@ -96,30 +116,19 @@ public struct BlackjackView: View {
                         actionButtons
                     }
                     .padding(.vertical, 16)
-
-                    Spacer()
+                    .frame(width: 905, alignment: .topLeading)
+                    .background(GeometryReader { geo in
+                        Color.clear
+                            .onAppear { measuredBoardHeight = geo.size.height }
+                            .onChange(of: geo.size.height) { _, newHeight in measuredBoardHeight = newHeight }
+                    })
+                    .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
+                    .frame(width: 905 * viewModel.zoomScale, height: measuredBoardHeight * viewModel.zoomScale, alignment: .topLeading)
+                    .offset(x: max(0, (outerGeo.size.width - 905 * viewModel.zoomScale) / 2))
                 }
-                .frame(width: 905, height: boardBaseHeight, alignment: .topLeading)
-                .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
-                .frame(width: 905 * viewModel.zoomScale, height: boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-            // Idle prompt overlay
-            if showIdlePrompt {
-                Text("Hit Space to Deal")
-                    .font(.display(28, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.55))
-                    .cornerRadius(8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
-                    .allowsHitTesting(false)
-                    .opacity(showIdlePrompt ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
-            }
 
             // Result banner overlay
             if showResultBanner && !viewModel.state.lastResultSummary.isEmpty {
@@ -134,27 +143,23 @@ public struct BlackjackView: View {
 
             HotkeyLegendView(text: "Space=Deal   H=Hit   S=Stand   D=Double Down   P=Split")
         }
-        .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
-               minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale + Self.legendHeight, maxHeight: .infinity)
+        .frame(minWidth: Self.minWindowSize.width, maxWidth: .infinity,
+               minHeight: Self.minWindowSize.height, maxHeight: .infinity)
         .onAppear {
             DispatchQueue.main.async {
-                snapToMinSize()
+                applyInitialWindowSize()
             }
         }
-        .background(WindowAccessor { window in
+        .background(WindowAccessor(callback: { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
             coordinator.activeWindow = window
             DispatchQueue.main.async {
-                if let saved = viewModel.defaultWindowSize {
-                    snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
-                } else {
-                    snapToMinSize()
-                }
+                applyInitialWindowSize()
             }
-        })
-        .onChange(of: viewModel.zoomScale) { snapToMinSize() }
-        .onChange(of: viewModel.options.noStressMode) { snapToMinSize() }
+        }, onResize: recomputeScale))
+        .onChange(of: viewModel.options.noStressMode) { recomputeScale() }
+        .onChange(of: measuredBoardHeight) { recomputeScale() }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .overlay {
@@ -163,7 +168,7 @@ public struct BlackjackView: View {
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .overlay(
-                        BlackjackOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions, coordinator: coordinator)
+                        BlackjackOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions, coordinator: coordinator, availableWidth: toolbarWidth, availableHeight: windowContentHeight)
                     )
                     .transition(.opacity)
             }
@@ -245,47 +250,20 @@ public struct BlackjackView: View {
 
     private var toolbarView: some View {
         HStack(spacing: 20) {
-            gameModeMenu
-            toolbarButton("Options", disabled: !viewModel.canOpenOptions) {
+            GameSelectionDropdown(coordinator: coordinator)
+            toolbarButton("Options", systemImage: "gearshape", disabled: !viewModel.canOpenOptions) {
                 isShowingOptions = true
             }
             Spacer()
         }
     }
 
-    private func toolbarButton(_ label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
-        GameToolbarButton(label: label, disabled: disabled, action: action)
-    }
-
-    private var gameModeMenu: some View {
-        Menu {
-            Button(GameMode.klondike.rawValue) {
-                if coordinator.gameMode != .klondike { coordinator.gameMode = .klondike; coordinator.startNewGame() }
-            }
-            Button(GameMode.beecell.rawValue) {
-                if coordinator.gameMode != .beecell { coordinator.gameMode = .beecell; coordinator.startNewGame() }
-            }
-            Button(GameMode.spider.rawValue) {
-                if coordinator.gameMode != .spider { coordinator.gameMode = .spider; coordinator.startNewGame() }
-            }
-            Button(GameMode.videoPoker.rawValue) {
-                if coordinator.gameMode != .videoPoker { coordinator.gameMode = .videoPoker }
-            }
-            Button(GameMode.blackjack.rawValue) {
-                if coordinator.gameMode != .blackjack { coordinator.gameMode = .blackjack }
-            }
-        } label: {
-            Text("Game Selection")
-                .font(.display(16))
-                .foregroundColor(.white)
-        }
-        .menuStyle(.borderlessButton)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.white.opacity(0.15))
-        .cornerRadius(4)
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-        .focusable(false)
+    private func toolbarButton(_ label: String, systemImage: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
+        GameToolbarButton(
+            label: label, systemImage: systemImage,
+            isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
+            disabled: disabled, action: action
+        )
     }
 
     // MARK: - Credit Display
@@ -484,10 +462,14 @@ public struct BlackjackView: View {
                                     .animation(.easeIn(duration: 0.15).delay(Double(cardIdx) * 0.08), value: cardsVisible)
                             }
                         }
-                        .padding(8)
+                        // No .padding() here — keeps the label-to-cards gap identical to
+                        // dealerArea's (which has no equivalent padding). The highlight
+                        // border's breathing room is added via negative padding on the
+                        // overlay itself instead, so it doesn't affect layout/spacing.
                         .background(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(isSplit && isActive ? Color.yellow.opacity(0.85) : Color.clear, lineWidth: 2)
+                                .padding(-8)
                         )
                     }
                 }
@@ -591,16 +573,16 @@ public struct BlackjackView: View {
             case .betting, .result:
                 HStack(spacing: 12) {
                     if !viewModel.isFreePlay {
-                        casinoButton("CLEAR BET", color: Color(white: 0.25)) { viewModel.clearBet() }
+                        casinoButton("CLEAR BET", systemImage: "xmark", color: Color(white: 0.25)) { viewModel.clearBet() }
                         Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
                     }
-                    casinoButton("DEAL  [Space]", color: .yellow,
+                    casinoButton("DEAL  [Space]", systemImage: "play.fill", color: .yellow,
                                  disabled: !viewModel.isFreePlay && viewModel.state.sessionCredits < viewModel.state.currentBet) {
                         viewModel.deal()
                     }
                     if viewModel.canRebuy {
                         Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
-                        casinoButton("REBUY", color: .red.opacity(0.8)) { viewModel.rebuy() }
+                        casinoButton("REBUY", systemImage: "creditcard", color: .red.opacity(0.8)) { viewModel.rebuy() }
                     }
                 }
 
@@ -612,33 +594,56 @@ public struct BlackjackView: View {
                         casinoButton("25", color: .green.opacity(0.75)) { viewModel.addToBet(25) }
                         casinoButton("2X", color: .orange.opacity(0.85)) { viewModel.doubleBet() }
                     }
+                } else {
+                    phantomChipRow
                 }
 
             case .playing:
                 HStack(spacing: 12) {
                     if viewModel.activeHand?.isSplitAce == true {
                         // Split Aces auto-stand after one card — no player action, just a brief pause.
-                        casinoButton("HIT  [H]",   color: .green.opacity(0.3), disabled: true) {}
-                        casinoButton("STAND  [S]", color: .red.opacity(0.3),   disabled: true) {}
+                        casinoButton("HIT  [H]",   systemImage: "plus.circle", color: .green.opacity(0.3), disabled: true) {}
+                        casinoButton("STAND  [S]", systemImage: "hand.raised", color: .red.opacity(0.3),   disabled: true) {}
                     } else {
-                        casinoButton("HIT  [H]",       color: .green.opacity(0.85))  { viewModel.hit() }
-                        casinoButton("STAND  [S]",     color: .red.opacity(0.75))    { viewModel.stand() }
+                        casinoButton("HIT  [H]",       systemImage: "plus.circle", color: .green.opacity(0.85))  { viewModel.hit() }
+                        casinoButton("STAND  [S]",     systemImage: "hand.raised", color: .red.opacity(0.75))    { viewModel.stand() }
                         if viewModel.canDouble {
-                            casinoButton("DOUBLE  [D]", color: .blue.opacity(0.75)) { viewModel.doubleDown() }
+                            casinoButton("DOUBLE  [D]", systemImage: "arrow.up.circle", color: .blue.opacity(0.75)) { viewModel.doubleDown() }
                         }
                         if viewModel.canSplit {
-                            casinoButton("SPLIT  [P]", color: .purple.opacity(0.75)) { viewModel.split() }
+                            casinoButton("SPLIT  [P]", systemImage: "square.split.2x1", color: .purple.opacity(0.75)) { viewModel.split() }
                         }
                     }
                 }
+                // Reserves the same second-row height the betting/result phase's chip row
+                // occupies, so switching phases never changes the board's measured height —
+                // that would otherwise re-trigger the fit-to-window scale and visibly shift
+                // everything above the buttons.
+                phantomChipRow
 
             case .dealerTurn:
                 HStack(spacing: 12) {
-                    casinoButton("HIT  [H]",       color: .green.opacity(0.3), disabled: true) {}
-                    casinoButton("STAND  [S]",     color: .red.opacity(0.3),   disabled: true) {}
+                    casinoButton("HIT  [H]",       systemImage: "plus.circle", color: .green.opacity(0.3), disabled: true) {}
+                    casinoButton("STAND  [S]",     systemImage: "hand.raised", color: .red.opacity(0.3),   disabled: true) {}
                 }
+                phantomChipRow
             }
         }
+    }
+
+    // Invisible stand-in for the betting/result chip row, reserving its exact height in
+    // every other phase so the action area's total height — and therefore the board's
+    // measured/scaled height — never changes when the phase changes.
+    private var phantomChipRow: some View {
+        HStack(spacing: 12) {
+            casinoButton("1", color: .clear, textColor: .clear) {}
+            casinoButton("5", color: .clear, textColor: .clear) {}
+            casinoButton("10", color: .clear, textColor: .clear) {}
+            casinoButton("25", color: .clear, textColor: .clear) {}
+            casinoButton("2X", color: .clear, textColor: .clear) {}
+        }
+        .opacity(0)
+        .allowsHitTesting(false)
     }
 
     private func stackedButton(_ label: String, hotkey: String, color: Color,
@@ -664,21 +669,30 @@ public struct BlackjackView: View {
         .disabled(disabled)
     }
 
-    private func casinoButton(_ label: String, color: Color, textColor: Color = .white,
+    private func casinoButton(_ label: String, systemImage: String? = nil, color: Color, textColor: Color = .white,
                                disabled: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.display(14, weight: .black))
-                .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 10)
-                .background(disabled ? Color.gray.opacity(0.3) : color)
-                .cornerRadius(6)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.3), lineWidth: 1))
+        let isCompact = systemImage != nil && actionButtonsWidth < Self.compactActionButtonsWidthThreshold
+        return Button(action: action) {
+            Group {
+                if isCompact, let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 16, weight: .black))
+                } else {
+                    Text(label)
+                        .font(.display(14, weight: .black))
+                }
+            }
+            .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
+            .padding(.horizontal, isCompact ? 14 : 18)
+            .padding(.vertical, 10)
+            .background(disabled ? Color.gray.opacity(0.3) : color)
+            .cornerRadius(6)
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.3), lineWidth: 1))
         }
         .buttonStyle(PressButtonStyle())
         .disabled(disabled)
         .focusable(false)
+        .accessibilityLabel(label)
     }
 
     // MARK: - Keyboard shortcuts
@@ -711,54 +725,42 @@ public struct BlackjackView: View {
 
     // MARK: - Helpers
 
-    private func updateMinSize() {
+    // Continuously refits the board's scale to the window's current content size — called
+    // on every window resize (via WindowAccessor's onResize) and whenever No Stress Mode
+    // changes without the window moving. Both toolbarHeight and legendHeight are excluded
+    // from the height side of the fit, since neither scales with the board. Never touches
+    // the window frame itself — a pure property write, which is what keeps this loop-safe.
+    private func recomputeScale() {
         guard let window = hostingWindow else { return }
-        let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight)
-        DispatchQueue.main.async {
-            window.contentMinSize = size
-        }
+        let contentSize = window.contentView?.frame.size ?? window.frame.size
+        toolbarWidth = contentSize.width
+        windowContentHeight = contentSize.height
+        actionButtonsWidth = contentSize.width
+        let scaleX = contentSize.width / 905.0
+        let scaleY = (contentSize.height - Self.toolbarHeight - Self.legendHeight) / measuredBoardHeight
+        viewModel.zoomScale = min(2.0, max(0.3, min(scaleX, scaleY)))
     }
 
-    private func snapToMinSize(overrideSize: NSSize? = nil) {
+    // Applies the window's opening size — called at app launch and every time this game
+    // becomes active again. Only actually snaps the window to this game's default size
+    // once, on the very first launch ever (HasLaunchedBefore); after that, switching
+    // games never resizes the window, so manual resizing stays seamless across games.
+    private func applyInitialWindowSize() {
         guard let window = hostingWindow else { return }
-        
-        var z = viewModel.zoomScale
-        if let screen = window.screen ?? NSScreen.main {
-            let maxH = screen.visibleFrame.height - 40
-            let reqH = Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight + 28
-            if reqH > maxH {
-                z = (maxH - Self.toolbarHeight - Self.legendHeight - 28) / boardBaseHeight
-                z = max(0.5, z)
-                if z < viewModel.zoomScale {
-                    viewModel.zoomScale = z
-                    return
-                }
-            }
-        }
-        
-        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight + 28)
-        let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
-        DispatchQueue.main.async {
-            window.contentMinSize = minSize
+        window.contentMinSize = Self.minWindowSize
 
-            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
-            // bottom-left anchor) so a height change — e.g. toggling No Stress Mode — never
-            // pushes the toolbar/title bar off the top of the screen.
-            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
-            let currentFrame = window.frame
-            newFrame.origin.x = currentFrame.origin.x
-            newFrame.origin.y = currentFrame.maxY - newFrame.height
-            if let visible = window.screen?.visibleFrame {
-                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
-                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+        if !UserDefaults.standard.bool(forKey: "HasLaunchedBefore") {
+            UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
+            let target = Self.defaultOpeningSize
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target))
+            if let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
+                newFrame.origin.x = visible.midX - newFrame.width / 2
+                newFrame.origin.y = visible.midY - newFrame.height / 2
             }
-
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.2
-                window.animator().setFrame(newFrame, display: true)
-            }
+            window.setFrame(newFrame, display: true)
         }
+
+        recomputeScale()
     }
 
     private func formatTime(_ seconds: Int) -> String {
@@ -777,164 +779,46 @@ struct BlackjackOptionsView: View {
     @State private var startingCredits: Int
     @State private var isSoundEnabled: Bool
     @State private var noStressMode: Bool
-    @State private var customSelectedColor: Color
-    @State private var showingThemes: Bool = false
+    let availableWidth: CGFloat
+    let availableHeight: CGFloat
 
-    let originalRed: Double
-    let originalGreen: Double
-    let originalBlue: Double
-    let originalFeltColor: FeltColorTheme
-    let originalCardBackTheme: String
-    let originalShowFeltVignette: Bool
-    let originalCustomCardColors: CustomCardColorGroup
-    let originalCustomBackgroundName: String?
-
-    init(viewModel: BlackjackViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>, coordinator: AppCoordinator) {
+    init(viewModel: BlackjackViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>, coordinator: AppCoordinator, availableWidth: CGFloat = 2000, availableHeight: CGFloat = 900) {
         self.viewModel = viewModel
         self._isShowingStats = isShowingStats
         self._isPresented = isPresented
         self.coordinator = coordinator
+        self.availableWidth = availableWidth
+        self.availableHeight = availableHeight
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
         _noStressMode    = State(initialValue: viewModel.options.noStressMode)
-        self.originalFeltColor = coordinator.feltColor
-        self.originalCardBackTheme = coordinator.cardBackTheme
-        self.originalShowFeltVignette = coordinator.showFeltVignette
-        self.originalCustomCardColors = coordinator.customCardColors
-        self.originalCustomBackgroundName = coordinator.customBackgroundName
-
-        let r = coordinator.customFeltRed
-        let g = coordinator.customFeltGreen
-        let b = coordinator.customFeltBlue
-        self.originalRed = r; self.originalGreen = g; self.originalBlue = b
-        let initColor: Color = (r == 0 && g == 0 && b == 0)
-            ? Color(red: 0.35, green: 0.15, blue: 0.45)
-            : Color(red: r, green: g, blue: b)
-        _customSelectedColor = State(initialValue: initColor)
     }
 
     var body: some View {
-        ZStack {
-        VStack(spacing: 20) {
-            Text("Preferences")
-                .font(.system(size: 16, weight: .bold))
-                .padding(.top, 12)
-
-            Divider()
-
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 10...10000, step: 10)
-                        .font(.system(.body))
-
-                    Divider()
-
-                    Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body))
-                    Toggle("No Stress Mode",    isOn: $noStressMode).font(.system(.body))
-
-                    Divider()
-
-                    Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showingThemes = true } }) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.primary)
-                                Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.primary.opacity(0.02))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider()
-                }
-                .padding(.horizontal, 24)
+        OptionsSheetShell(
+            isPresented: $isPresented,
+            coordinator: coordinator,
+            availableWidth: availableWidth,
+            availableHeight: availableHeight,
+            maxContentHeight: 560,
+            fixedSizeHorizontal: false,
+            onViewStats: { isShowingStats = true },
+            onOK: {
+                var o = viewModel.options
+                o.startingCredits = startingCredits
+                o.isSoundEnabled  = isSoundEnabled
+                o.noStressMode    = noStressMode
+                viewModel.options = o
             }
-            .frame(maxHeight: 560)
-
-            Divider()
-
-            HStack {
-                Button("Cancel") {
-                    // Revert any theme changes that were live-previewed via the Themes sub-panel.
-                    coordinator.customFeltRed = originalRed
-                    coordinator.customFeltGreen = originalGreen
-                    coordinator.customFeltBlue = originalBlue
-                    coordinator.feltColor = originalFeltColor
-                    coordinator.cardBackTheme = originalCardBackTheme
-                    coordinator.showFeltVignette = originalShowFeltVignette
-                    coordinator.customCardColors = originalCustomCardColors
-                    coordinator.customBackgroundName = originalCustomBackgroundName
-                    isPresented = false
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button(action: {
-                    isPresented = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { isShowingStats = true }
-                }) {
-                    Text("View Stats").foregroundColor(.blue).underline()
-                }
-                .buttonStyle(.plain)
+        ) {
+            Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 10...10000, step: 10)
                 .font(.system(.body))
 
-                Spacer()
+            Divider()
 
-                Button("OK") {
-                    var o = viewModel.options
-                    o.startingCredits = startingCredits
-                    o.isSoundEnabled  = isSoundEnabled
-                    o.noStressMode    = noStressMode
-                    viewModel.options = o
-                    isPresented = false
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
+            Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body))
+            Toggle("No Stress Mode",    isOn: $noStressMode).font(.system(.body))
         }
-        .frame(width: 440)
-        .fixedSize(horizontal: false, vertical: true)
-        .background(Color(NSColor.windowBackgroundColor))
-
-        if showingThemes {
-            ThemesOptionsView(
-                isShowing: $showingThemes,
-                isOptionsPresented: $isPresented,
-                feltColor: $coordinator.feltColor,
-                cardBackTheme: $coordinator.cardBackTheme,
-                showFeltVignette: $coordinator.showFeltVignette,
-                customSelectedColor: $customSelectedColor,
-                customCardColors: $coordinator.customCardColors,
-                customBackgroundName: $coordinator.customBackgroundName,
-                originalRed: originalRed,
-                originalGreen: originalGreen,
-                originalBlue: originalBlue,
-                originalCustomCardColors: originalCustomCardColors,
-                onCommit: { _ in }
-            )
-            .transition(.move(edge: .trailing))
-            .frame(width: 880)
-        }
-        } // ZStack
-        .frame(width: showingThemes ? 880 : 440)
-        .animation(.easeInOut(duration: 0.2), value: showingThemes)
     }
 }
 

@@ -76,17 +76,25 @@ public final class ThemeManager {
         }
     }
 
+    // Fixed, hardcoded ids — these must NEVER be regenerated. defaultThemes is a `static
+    // let` re-evaluated fresh on every process launch; without an explicit id here each
+    // entry would get a new random UUID() every launch, silently orphaning any persisted
+    // `activeThemeId` (or any other stored reference) that pointed at last launch's id.
     private static let defaultThemes: [SoliBeeTheme] = [
-        SoliBeeTheme(name: "Default",      cardBackTheme: "Moogle",       feltColor: .feltGreen,
+        SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000001")!,
+                     name: "Default",      cardBackTheme: "Moogle",       feltColor: .feltGreen,
                      customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
                      faceArts: [], customCardColors: CustomCardColorGroup()),
-        SoliBeeTheme(name: "Pareidolic 2", cardBackTheme: "Pareidolic 2", feltColor: .custom,
+        SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000002")!,
+                     name: "Pareidolic 2", cardBackTheme: "Pareidolic 2", feltColor: .custom,
                      customFeltRed: 0.5925555229187012, customFeltGreen: 0.5882400274276733, customFeltBlue: 0.8116011023521423,
                      faceArts: [], customCardColors: CustomCardColorGroup()),
-        SoliBeeTheme(name: "Desert",       cardBackTheme: "Vulpera",      feltColor: .desert,
+        SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000003")!,
+                     name: "Desert",       cardBackTheme: "Vulpera",      feltColor: .desert,
                      customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
                      faceArts: [], customCardColors: CustomCardColorGroup()),
-        SoliBeeTheme(name: "Forest",       cardBackTheme: "Forest",       feltColor: .custom,
+        SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000004")!,
+                     name: "Forest",       cardBackTheme: "Forest",       feltColor: .custom,
                      customFeltRed: 0.5211737751960754, customFeltGreen: 0.4769634008407593, customFeltBlue: 0.4559733271598816,
                      faceArts: [], customCardColors: {
                          var group = CustomCardColorGroup()
@@ -113,7 +121,8 @@ public final class ThemeManager {
                          group.shadowAlpha = 0.15
                          return group
                      }()),
-        SoliBeeTheme(name: "OceanSky",     cardBackTheme: "Pareidolic",   feltColor: .custom,
+        SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000005")!,
+                     name: "OceanSky",     cardBackTheme: "Pareidolic",   feltColor: .custom,
                      customFeltRed: 0.5867433547973633, customFeltGreen: 0.9626139998435974, customFeltBlue: 0.9703466296195984,
                      faceArts: [], customCardColors: {
                          var group = CustomCardColorGroup()
@@ -185,6 +194,14 @@ public final class ThemeManager {
         save()
     }
 
+    /// Overwrites an existing theme's saved values in place (same id and name,
+    /// everything else replaced), for the "Update" action on an already-saved theme.
+    public func updateTheme(_ theme: SoliBeeTheme) {
+        guard let idx = themes.firstIndex(where: { $0.id == theme.id }) else { return }
+        themes[idx] = theme
+        save()
+    }
+
     public func deleteTheme(id: UUID) {
         guard let theme = themes.first(where: { $0.id == id }) else { return }
         themes.removeAll { $0.id == id }
@@ -206,9 +223,13 @@ public final class ThemeManager {
         return themes.contains { $0.name.lowercased() == trimmed }
     }
 
-    /// Call whenever a theme-relevant setting (felt color, card back, custom card
-    /// colors, custom face art) changes outside of `applyTheme()`, so the UI can
-    /// tell the user has drifted away from whatever theme was last applied.
+    /// Clears which saved theme is considered "active." Deliberately NOT called for
+    /// felt color / card back / custom card colors / custom background edits — those are
+    /// meant to be live-tweakable while a theme stays "selected," so the Themes panel's
+    /// Update button stays available to save the tweaks back into it. Still called from
+    /// CustomFaceCardArtManager's mutators (add/update/remove/setEnabled), which also
+    /// drives `shouldWarnBeforeApplying()`'s "you'll lose your custom card art" check —
+    /// that's a separate concern from Update and hasn't been revisited here.
     public func invalidateActiveTheme() {
         activeThemeId = nil
     }

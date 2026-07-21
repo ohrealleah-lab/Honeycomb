@@ -77,30 +77,10 @@ struct SoliBeeApp: App {
             }
 
             CommandGroup(replacing: .toolbar) {
-                Button("Zoom In") {
-                    coordinator.zoomIn()
-                }
-                .keyboardShortcut("+", modifiers: .command)
-
-                Button("Zoom Out") {
-                    coordinator.zoomOut()
-                }
-                .keyboardShortcut("-", modifiers: .command)
-
-                Button("Reset Zoom") {
-                    coordinator.resetZoom()
-                }
-                .keyboardShortcut("0", modifiers: .command)
-
-                Divider()
-
-                Button("Make Current Zoom Default") {
-                    coordinator.makeCurrentZoomDefault()
-                }
-
-                Button("Make Current Window Size Default") {
-                    coordinator.makeCurrentWindowSizeDefault()
-                }
+                Toggle("Stay on Top", isOn: Binding(
+                    get: { coordinator.stayOnTop },
+                    set: { coordinator.stayOnTop = $0 }
+                ))
             }
         }
 

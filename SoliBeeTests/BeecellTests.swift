@@ -8,6 +8,7 @@ struct BeecellTests {
         testBeecellAutocompleteNotAvailableWhenUnsafe()
         testBeecellHintLogic()
         testBeecellCardHighlightIndexComputation()
+        testBeecellWinState()
     }
     
     static func testBeecellAutocompleteNotAvailableAtStart() {
@@ -319,5 +320,21 @@ struct BeecellTests {
         for idx in 0..<6 {
             assert(highlights[idx] == false, "Card at index \(idx) should not be highlighted")
         }
+    }
+
+    static func testBeecellWinState() {
+        let viewModel = BeecellViewModel()
+        assert(viewModel.options.deckCount == 1, "Test assumes default 1-deck mode (52 cards to win)")
+        assert(!viewModel.state.hasWon, "Fresh game should not be won")
+
+        // Fill all 4 foundations with a complete Ace-through-King run to simulate a win.
+        let suits: [Card.Suit] = [.spades, .clubs, .diamonds, .hearts]
+        viewModel.state.foundations = suits.enumerated().map { idx, suit in
+            Pile(id: "foundation_\(idx)", type: .foundation, cards: (1...13).map { Card(suit: suit, rank: $0, faceUp: true) })
+        }
+
+        viewModel.checkWinState()
+        assert(viewModel.state.hasWon, "Game should be won with all 52 foundation cards filled")
+        assert(!viewModel.state.isTimerActive, "Timer should stop on win")
     }
 }

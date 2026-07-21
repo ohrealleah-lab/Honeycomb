@@ -3,7 +3,35 @@ import AppKit
 
 public struct GameView: View {
     var viewModel: GameViewModel
-    
+
+    // The toolbar stays fixed size regardless of the board's scale; only the board below
+    // it scales to fit the window.
+    private static let toolbarHeight: CGFloat = 85
+
+    // Hard floor the window can be dragged down to — the board's own scale (see
+    // recomputeScale()) does all the work of fitting content to whatever size the window
+    // actually is, so this only needs to keep the toolbar legible and a sliver of the
+    // board visible; it's no longer tied to zoom or board content at all. If the player
+    // drags the window down near this floor, cards may clip as the tableau grows deeper
+    // during play — an accepted tradeoff of sizing the window down.
+    static let minWindowSize = NSSize(width: 600, height: 330)
+    // The size the window opens at when there's no saved "make current size the default"
+    // preference — numerically the same generous, fully-cascaded-board size this app has
+    // always opened at (previously computed as 85 + 950 + 24 + 28 height, max(1050,
+    // boardWidth) width, both at the old zoom=1 baseline).
+    static let defaultOpeningSize = NSSize(width: 1050, height: 1087)
+    // Below this measured toolbar width, buttons swap their text label for an icon-only
+    // SF Symbol to save space. Text is protected by lineLimit(1) (truncates rather than
+    // wraps) down to this point, so the threshold only needs to sit just above the hard
+    // window floor — text stays the default look across nearly the whole resizable range,
+    // icons kick in only once the window is genuinely narrow.
+    private static let compactToolbarWidthThreshold: CGFloat = 830
+
+    // Measured width of the top toolbar row — drives the icon-only compact button swap.
+    // Starts generous so buttons show full text before the first layout pass measures it.
+    @State private var toolbarWidth: CGFloat = 2000
+    @State private var windowContentHeight: CGFloat = 900
+
     // Drag-and-drop state
     @State private var draggedCards: [Card] = []
     @State private var dragSnapshot: NSImage? = nil
@@ -15,6 +43,8 @@ public struct GameView: View {
     @State private var isDrawInFlight: Bool = false
     @State private var showIdleStockHint: Bool = false
     @State private var idleStockHintTask: DispatchWorkItem? = nil
+    @State private var showNoHintsBanner: Bool = false
+    @State private var noHintsBannerTask: DispatchWorkItem? = nil
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
     @State private var isShowingNewGameConfirm: Bool = false
@@ -39,6 +69,9 @@ public struct GameView: View {
         let stackSpacing = viewModel.zoomScale > 1.0 ? max(4.0, 18.0 - 14.0 * (viewModel.zoomScale - 1.0)) : 18.0
         let columnCount = viewModel.state.tableau.count > 0 ? viewModel.state.tableau.count : 7
         let boardWidth = CGFloat(columnCount) * 128.0 + CGFloat(columnCount - 1) * stackSpacing + 40.0
+        let boardHeight = currentIntrinsicBoardHeight()
+        let scaledBoardWidth = boardWidth * viewModel.zoomScale
+        let scaledBoardHeight = boardHeight * viewModel.zoomScale
         let resolvedFeltColorTheme: FeltColorTheme = coordinator.feltColor
         let resolvedShowFeltVignette: Bool = coordinator.showFeltVignette
         let resolvedCardBackTheme: String = coordinator.cardBackTheme
@@ -57,128 +90,51 @@ public struct GameView: View {
                 // Stationary Top Control and Status Panel (1.0x Scale)
                 HStack(spacing: 20) {
                     // Game Selection Dropdown
-                    Menu {
-                        Button(GameMode.klondike.rawValue) {
-                            if coordinator.gameMode != .klondike {
-                                coordinator.gameMode = .klondike
-                                coordinator.startNewGame()
-                            }
-                        }
-                        Button(GameMode.beecell.rawValue) {
-                            if coordinator.gameMode != .beecell {
-                                coordinator.gameMode = .beecell
-                                coordinator.startNewGame()
-                            }
-                        }
-                        Button(GameMode.spider.rawValue) {
-                            if coordinator.gameMode != .spider {
-                                coordinator.gameMode = .spider
-                                coordinator.startNewGame()
-                            }
-                        }
-                        Button(GameMode.videoPoker.rawValue) {
-                            if coordinator.gameMode != .videoPoker {
-                                coordinator.gameMode = .videoPoker
-                            }
-                        }
-                        Button(GameMode.blackjack.rawValue) {
-                            if coordinator.gameMode != .blackjack {
-                                coordinator.gameMode = .blackjack
-                            }
-                        }
-                    } label: {
-                        Text("Game Selection")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                    }
-                    .menuStyle(.borderlessButton)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.white.opacity(0.15))
-                    .cornerRadius(4)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    .focusable(false)
+                    GameSelectionDropdown(coordinator: coordinator)
 
                     // New Game Button
-                    Button(action: { isShowingNewGameConfirm = true }) {
-                        Text("New Game")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .focusable(false)
+                    GameToolbarButton(
+                        label: "New Game", systemImage: "arrow.triangle.2.circlepath",
+                        isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
+                    ) { isShowingNewGameConfirm = true }
 
                     // Restart Button
-                    Button(action: { isShowingRestartConfirm = true }) {
-                        Text("Restart")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .focusable(false)
+                    GameToolbarButton(
+                        label: "Restart", systemImage: "arrow.counterclockwise",
+                        isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
+                    ) { isShowingRestartConfirm = true }
 
                     // Options Button
-                    Button(action: { isShowingOptions = true }) {
-                        Text("Options")
-                            .font(.display(16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .focusable(false)
+                    GameToolbarButton(
+                        label: "Options", systemImage: "gearshape",
+                        isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
+                    ) { isShowingOptions = true }
 
                     // Hint Button
                     if !viewModel.options.hideHintButton {
-                        Button(action: { viewModel.findHint() }) {
-                            Text("Hint")
-                                .font(.display(16))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.white.opacity(0.15))
-                                .cornerRadius(4)
-                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+                        GameToolbarButton(
+                            label: "Hint", systemImage: "lightbulb",
+                            isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
+                            disabled: viewModel.state.hasWon
+                        ) {
+                            if viewModel.hasHintsAvailable {
+                                viewModel.findHint()
+                            } else {
+                                flashNoHintsBanner()
+                            }
                         }
-                        .buttonStyle(HoverToolbarButtonStyle())
-                        .disabled(viewModel.state.hasWon || !viewModel.hasHintsAvailable)
-                        .focusable(false)
                         .keyboardShortcut("h", modifiers: .command)
                     }
 
                     // Undo Button
                     let canUndo = viewModel.canUndo && !viewModel.state.hasWon
-                    Button(action: { viewModel.undoLastAction() }) {
-                        Text("Undo")
-                            .font(.display(16))
-                            .foregroundColor(canUndo ? .white : .white.opacity(0.4))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(4)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(canUndo ? Color.white : Color.white.opacity(0.4), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(HoverToolbarButtonStyle())
-                    .disabled(!canUndo)
-                    .focusable(false)
+                    GameToolbarButton(
+                        label: "Undo", systemImage: "arrow.uturn.backward",
+                        isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
+                        disabled: !canUndo
+                    ) { viewModel.undoLastAction() }
                     .keyboardShortcut("z", modifiers: .command)
-                    
+
                     Spacer()
                     
                     if viewModel.options.isStatusBarVisible && !viewModel.options.noStressMode {
@@ -397,7 +353,7 @@ public struct GameView: View {
             // Game-over overlay (both Vegas and non-Vegas)
             if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
                 VStack {
-                    Spacer()
+                    Spacer(minLength: 8)
                     ZStack(alignment: .topTrailing) {
                         VStack(spacing: 12) {
                             Text("Game Over")
@@ -457,7 +413,7 @@ public struct GameView: View {
                         .buttonStyle(.plain)
                         .padding(10)
                     }
-                    Spacer()
+                    Spacer(minLength: 8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -465,7 +421,7 @@ public struct GameView: View {
             // Autocomplete overlay — centered
             if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning && !dismissedAutocompleteBanner {
                 VStack {
-                    Spacer()
+                    Spacer(minLength: 8)
                     ZStack(alignment: .topTrailing) {
                         VStack(spacing: 12) {
                             Text("Victory is guaranteed!")
@@ -504,21 +460,40 @@ public struct GameView: View {
                         .buttonStyle(.plain)
                         .padding(10)
                     }
-                    Spacer()
+                    Spacer(minLength: 8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
-            // Victory overlay (Classic Bouncing Card Cascade)
+            }
+            .frame(width: boardWidth, height: boardHeight, alignment: .topLeading)
+            .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
+            // minHeight: 0 (instead of a rigid fixed height) lets this subtree actually
+            // compress when the window is smaller than the toolbar + this board's full
+            // scaled height combined — a hard fixed frame here reports zero flexibility to
+            // the parent VStack, forcing 100% of any space deficit onto the toolbar
+            // regardless of its layoutPriority(1), which is what was making the toolbar
+            // shrink away below ~950pt of window height. Cards inside aren't clipped by
+            // this frame's allocated size either way (no .clipped() here), so this only
+            // changes how much space gets reserved for layout purposes, not how anything
+            // actually renders.
+            .frame(width: scaledBoardWidth, alignment: .topLeading)
+            .frame(minHeight: 0, idealHeight: scaledBoardHeight, maxHeight: scaledBoardHeight, alignment: .topLeading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            // Victory overlay (Classic Bouncing Card Cascade) — a top-level sibling (not
+            // nested inside the scaled board area) so it spans the whole window rather
+            // than being confined to the board's own reserved bounds.
             if viewModel.state.hasWon {
-                WinAnimationView(foundations: viewModel.state.foundations) {
+                WinAnimationView(foundations: viewModel.state.foundations, pileFrames: pileFrames, zoomScale: viewModel.zoomScale) {
                     // Optional finish callback (e.g. log win)
                 }
                 .ignoresSafeArea()
 
                 if !dismissedWinBanner {
                     VStack {
-                        Spacer()
+                        Spacer(minLength: 8)
                         ZStack(alignment: .topTrailing) {
                             VStack(spacing: 12) {
                                 Text("You win!")
@@ -561,18 +536,16 @@ public struct GameView: View {
                             .buttonStyle(.plain)
                             .padding(10)
                         }
-                        Spacer()
+                        Spacer(minLength: 8)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+
+            if showNoHintsBanner {
+                FlashBannerView(message: "Sorry! No hints available.")
             }
-            .frame(width: boardWidth, height: 950, alignment: .topLeading)
-            .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
-            .frame(width: boardWidth * viewModel.zoomScale, height: 950 * viewModel.zoomScale, alignment: .topLeading)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            
+
             // Drag overlay representation (positioned globally, scaled to match board)
             if !draggedCards.isEmpty {
                 let cardCount = CGFloat(draggedCards.count)
@@ -664,6 +637,8 @@ public struct GameView: View {
             }
             idleStockHintTask?.cancel()
             idleStockHintTask = nil
+            noHintsBannerTask?.cancel()
+            noHintsBannerTask = nil
         }
         .onChange(of: viewModel.state.movesCount) {
             scheduleIdleStockHint()
@@ -674,9 +649,9 @@ public struct GameView: View {
         .onChange(of: viewModel.gameGeneration) {
             scheduleIdleStockHint()
         }
-        .frame(minWidth: boardWidth * viewModel.zoomScale,
+        .frame(minWidth: Self.minWindowSize.width,
                maxWidth: .infinity,
-               minHeight: 85 + 950 * viewModel.zoomScale,
+               minHeight: Self.minWindowSize.height,
                maxHeight: .infinity)
         .overlay {
             if isShowingOptions {
@@ -684,7 +659,7 @@ public struct GameView: View {
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .overlay(
-                        OptionsView(viewModel: viewModel, isPresented: $isShowingOptions, coordinator: coordinator, onViewStats: {
+                        OptionsView(viewModel: viewModel, isPresented: $isShowingOptions, coordinator: coordinator, availableWidth: toolbarWidth, availableHeight: windowContentHeight, onViewStats: {
                             isShowingStats = true
                         })
                     )
@@ -732,19 +707,14 @@ public struct GameView: View {
                 break
             }
         }
-        .onAppear { snapToMinSize() }
-        .background(WindowAccessor { window in
+        .onAppear { applyInitialWindowSize() }
+        .background(WindowAccessor(callback: { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
             coordinator.activeWindow = window
-            if let saved = viewModel.defaultWindowSize {
-                snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
-            } else {
-                snapToMinSize()
-            }
-        })
-        .onChange(of: viewModel.zoomScale) { snapToMinSize() }
-        .onChange(of: viewModel.state.tableau.count) { updateMinSize() }
+            applyInitialWindowSize()
+        }, onResize: recomputeScale))
+        .onChange(of: viewModel.state.tableau.count) { recomputeScale() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { note in
             guard (note.object as? NSWindow) == hostingWindow, !draggedCards.isEmpty else { return }
             cancelDrag()
@@ -783,6 +753,16 @@ public struct GameView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: task)
     }
 
+    private func flashNoHintsBanner() {
+        noHintsBannerTask?.cancel()
+        withAnimation(.easeIn(duration: 0.15)) { showNoHintsBanner = true }
+        let task = DispatchWorkItem {
+            withAnimation(.easeOut(duration: 0.3)) { showNoHintsBanner = false }
+        }
+        noHintsBannerTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
+    }
+
     private func performStockDraw() {
         if viewModel.state.hasWon { return }
         if viewModel.state.stock.isEmpty && !viewModel.canRecycleStock { return }
@@ -819,63 +799,64 @@ public struct GameView: View {
         }
     }
 
-    private func updateMinSize() {
+    // Continuously refits the board's scale to the window's current content size — called
+    // on every window resize (via WindowAccessor's onResize) and whenever the board's own
+    // intrinsic size changes without the window moving (tableau column count). Toolbar
+    // height is excluded from the height side of the fit so the board never scales large
+    // enough to push itself under the toolbar. Never touches the window frame itself —
+    // this is a pure property write, which is what keeps this loop-safe (see GameView's
+    // WindowAccessor usage: nothing observes zoomScale to trigger a resize anymore).
+    private func recomputeScale() {
         guard let window = hostingWindow else { return }
-        let z = viewModel.zoomScale
-        let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
+        let contentSize = window.contentView?.frame.size ?? window.frame.size
+        toolbarWidth = contentSize.width
+        windowContentHeight = contentSize.height
         let cols = CGFloat(max(viewModel.state.tableau.count, 7))
-        let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
-        let minH = 85.0 + 950.0 * z + 24
-        DispatchQueue.main.async {
-            window.contentMinSize = NSSize(width: minW, height: minH)
-        }
+        let intrinsicWidth = cols * 128.0 + (cols - 1) * 18.0 + 40.0
+        let intrinsicHeight = currentIntrinsicBoardHeight()
+        let scaleX = contentSize.width / intrinsicWidth
+        let scaleY = (contentSize.height - Self.toolbarHeight) / intrinsicHeight
+        viewModel.zoomScale = min(2.0, max(0.3, min(scaleX, scaleY)))
     }
 
-    private func snapToMinSize(overrideSize: NSSize? = nil) {
+    // The board's true current height: the piles row (181) + row spacing (16) + the
+    // deepest tableau column's actual stacked height. A flat worst-case constant here
+    // (previously 950, sized for a maximally deep 13-card cascade) leaves most real
+    // games with much shorter tableaus under-scaled, wasting available window height
+    // instead of letting cards grow into it — matches the same per-card offsets
+    // (`offsetForCard`) TableauPileView already uses for its own layout, in PileView.swift.
+    private func currentIntrinsicBoardHeight() -> CGFloat {
+        let deepestColumn = viewModel.state.tableau.map { pile -> CGFloat in
+            guard !pile.cards.isEmpty else { return 181 }
+            var offset: CGFloat = 0
+            for card in pile.cards.dropLast() {
+                offset += card.faceUp ? 32 : 20
+            }
+            return offset + 181
+        }.max() ?? 181
+        return 20 + 181 + 16 + deepestColumn
+    }
+
+    // Applies the window's opening size — called at app launch and every time this game
+    // becomes active again. Only actually snaps the window to this game's default size
+    // once, on the very first launch ever (HasLaunchedBefore); after that, switching
+    // games never resizes the window, so manual resizing stays seamless across games.
+    private func applyInitialWindowSize() {
         guard let window = hostingWindow else { return }
-        
-        var z = viewModel.zoomScale
-        var minH = 85.0 + 950.0 * z + 24 + 28
-        
-        if let screen = window.screen ?? NSScreen.main {
-            let maxH = screen.visibleFrame.height - 40
-            let reqH = minH
-            if reqH > maxH {
-                z = (maxH - 85.0 - 24 - 28) / 950.0
-                z = max(0.5, z)
-                if z < viewModel.zoomScale {
-                    viewModel.zoomScale = z
-                    return
-                }
-            }
-        }
-        
-        let spacing = z > 1.0 ? max(4.0, 18.0 - 14.0 * (z - 1.0)) : 18.0
-        let cols = CGFloat(max(viewModel.state.tableau.count, 7))
-        let minW = (cols * 128.0 + (cols - 1) * spacing + 40.0) * z + 24
-        minH = 85.0 + 950.0 * z + 24 + 28
-        let minSize = NSSize(width: minW, height: minH)
-        let size = overrideSize.map { NSSize(width: max($0.width, minW), height: max($0.height, minH)) } ?? minSize
-        DispatchQueue.main.async {
-            window.contentMinSize = minSize
+        window.contentMinSize = Self.minWindowSize
 
-            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
-            // bottom-left anchor) so a height change never pushes the toolbar/title bar off
-            // the top of the screen.
-            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
-            let currentFrame = window.frame
-            newFrame.origin.x = currentFrame.origin.x
-            newFrame.origin.y = currentFrame.maxY - newFrame.height
-            if let visible = window.screen?.visibleFrame {
-                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
-                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+        if !UserDefaults.standard.bool(forKey: "HasLaunchedBefore") {
+            UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
+            let target = Self.defaultOpeningSize
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target))
+            if let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
+                newFrame.origin.x = visible.midX - newFrame.width / 2
+                newFrame.origin.y = visible.midY - newFrame.height / 2
             }
-
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.2
-                window.animator().setFrame(newFrame, display: true)
-            }
+            window.setFrame(newFrame, display: true)
         }
+
+        recomputeScale()
     }
 
     private func makeDragSnapshot(cards: [Card]) {
@@ -916,24 +897,29 @@ public struct GameView: View {
 
         var dropTarget: Pile? = nil
 
+        // Smart Drop Detection: a candidate "accepts" the drag if the full dragged stack, or
+        // some trimmed suffix of it (grabbed-end cards peeled off), forms a legal move.
+        func accepts(_ pile: Pile) -> Bool {
+            SmartDrop.resolve(cards: draggedCards, isValidMove: { viewModel.isValidMove(cards: $0, to: pile) }) != nil
+        }
+
         // 1. Check Tableau piles first (using horizontal alignment, open vertical bottoms, and prioritizing columns that accept the cards)
         struct CandidateTableau {
             let pile: Pile
             let accepts: Bool
             let distanceX: CGFloat
         }
-        
+
         var tableauCandidates: [CandidateTableau] = []
         for tab in viewModel.state.tableau {
             if let frame = pileFrames[tab.id] {
                 let margin: CGFloat = 16
                 let inX = releaseLocation.x >= frame.minX - margin && releaseLocation.x <= frame.maxX + margin
                 let inY = releaseLocation.y >= frame.minY - margin
-                
+
                 if inX && inY {
-                    let accepts = viewModel.isValidMove(cards: draggedCards, to: tab)
                     let distanceX = abs(releaseLocation.x - frame.midX)
-                    tableauCandidates.append(CandidateTableau(pile: tab, accepts: accepts, distanceX: distanceX))
+                    tableauCandidates.append(CandidateTableau(pile: tab, accepts: accepts(tab), distanceX: distanceX))
                 }
             }
         }
@@ -968,11 +954,10 @@ public struct GameView: View {
                     let inY = releaseLocation.y >= frame.minY - margin && releaseLocation.y <= frame.maxY + margin
                     
                     if inX && inY {
-                        let accepts = viewModel.isValidMove(cards: draggedCards, to: foundation)
                         let dx = releaseLocation.x - frame.midX
                         let dy = releaseLocation.y - frame.midY
                         let dist = sqrt(dx*dx + dy*dy)
-                        topCandidates.append(CandidateTopRow(pile: foundation, accepts: accepts, distance: dist))
+                        topCandidates.append(CandidateTopRow(pile: foundation, accepts: accepts(foundation), distance: dist))
                     }
                 }
             }
@@ -985,11 +970,10 @@ public struct GameView: View {
                     let inY = releaseLocation.y >= frame.minY - margin && releaseLocation.y <= frame.maxY + margin
                     
                     if inX && inY {
-                        let accepts = viewModel.isValidMove(cards: draggedCards, to: pile)
                         let dx = releaseLocation.x - frame.midX
                         let dy = releaseLocation.y - frame.midY
                         let dist = sqrt(dx*dx + dy*dy)
-                        topCandidates.append(CandidateTopRow(pile: pile, accepts: accepts, distance: dist))
+                        topCandidates.append(CandidateTopRow(pile: pile, accepts: accepts(pile), distance: dist))
                     }
                 }
             }
@@ -1007,9 +991,10 @@ public struct GameView: View {
             }
         }
         
-        if let target = dropTarget, let source = dragSourcePile {
+        if let target = dropTarget, let source = dragSourcePile,
+           let resolved = SmartDrop.resolve(cards: draggedCards, isValidMove: { viewModel.isValidMove(cards: $0, to: target) }) {
             viewModel.clearHint()
-            viewModel.moveCards(draggedCards, from: source, to: target)
+            viewModel.moveCards(resolved, from: source, to: target)
         }
 
         viewModel.clearHint()
@@ -1021,6 +1006,7 @@ public struct GameView: View {
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
+
 
     private var winSummaryText: String {
         let scorePart = viewModel.options.isVegasScoring
@@ -1036,14 +1022,23 @@ public struct GameView: View {
 struct StatusItemView: View {
     let label: String
     let value: String
-    
+
     var body: some View {
+        // fixedSize forces each Text to claim its true natural width rather than being
+        // negotiated down when the toolbar HStack is squeezed — without it, SwiftUI
+        // doesn't split any shortfall evenly across SCORE/MOVES/TIME, it takes it out of
+        // whichever needs the most room (TIME's "00:00" is the widest of the three), so
+        // TIME alone would truncate even while there's visible slack elsewhere in the row.
         VStack(spacing: 2) {
             Text(label)
                 .font(.display(13))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .foregroundColor(.white.opacity(0.6))
             Text(value)
                 .font(.system(size: 20, weight: .black))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .foregroundColor(.white)
         }
     }
@@ -1122,199 +1117,70 @@ struct OptionsView: View {
     @State private var drawMode: GameState.DrawMode
     @State private var hideHintButton: Bool
     @State private var noStressMode: Bool
-    @State private var customSelectedColor: Color
-    @State private var showingThemes: Bool = false
-
-    let originalRed: Double
-    let originalGreen: Double
-    let originalBlue: Double
-    let originalFeltColor: FeltColorTheme
-    let originalCardBackTheme: String
-    let originalShowFeltVignette: Bool
-    let originalCustomCardColors: CustomCardColorGroup
-    let originalCustomBackgroundName: String?
 
     let onViewStats: (() -> Void)?
+    let availableWidth: CGFloat
+    let availableHeight: CGFloat
 
-    init(viewModel: GameViewModel, isPresented: Binding<Bool>, coordinator: AppCoordinator, onViewStats: (() -> Void)? = nil) {
+    init(viewModel: GameViewModel, isPresented: Binding<Bool>, coordinator: AppCoordinator, availableWidth: CGFloat = 2000, availableHeight: CGFloat = 900, onViewStats: (() -> Void)? = nil) {
         self.viewModel = viewModel
         self._isPresented = isPresented
         self.coordinator = coordinator
         self.onViewStats = onViewStats
+        self.availableWidth = availableWidth
+        self.availableHeight = availableHeight
         _isStatusBarVisible = State(initialValue: viewModel.options.isStatusBarVisible)
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _isVegasScoring = State(initialValue: viewModel.options.isVegasScoring)
         _drawMode = State(initialValue: viewModel.state.drawMode)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
-        self.originalFeltColor = coordinator.feltColor
-        self.originalCardBackTheme = coordinator.cardBackTheme
-        self.originalShowFeltVignette = coordinator.showFeltVignette
-        self.originalCustomCardColors = coordinator.customCardColors
-        self.originalCustomBackgroundName = coordinator.customBackgroundName
-
-        let r = coordinator.customFeltRed
-        let g = coordinator.customFeltGreen
-        let b = coordinator.customFeltBlue
-        self.originalRed = r
-        self.originalGreen = g
-        self.originalBlue = b
-        let initialColor: Color
-        if r == 0 && g == 0 && b == 0 {
-            initialColor = Color(red: 0.35, green: 0.15, blue: 0.45)
-        } else {
-            initialColor = Color(red: r, green: g, blue: b)
-        }
-        _customSelectedColor = State(initialValue: initialColor)
     }
 
     var body: some View {
-        ZStack {
-        VStack(spacing: 20) {
-            Text("Preferences")
-                .font(.system(size: 16, weight: .bold))
-                .padding(.top, 12)
-            
-            Divider()
-            
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Picker("Draw Mode:", selection: $drawMode) {
-                        Text("Draw One").tag(GameState.DrawMode.drawOne)
-                        Text("Draw Three").tag(GameState.DrawMode.drawThree)
-                    }
-                    .pickerStyle(.segmented)
-                    
-                    Divider()
+        OptionsSheetShell(
+            isPresented: $isPresented,
+            coordinator: coordinator,
+            availableWidth: availableWidth,
+            availableHeight: availableHeight,
+            onViewStats: { onViewStats?() },
+            onOK: {
+                var updatedOpts = viewModel.options
+                updatedOpts.isStatusBarVisible = isStatusBarVisible
+                updatedOpts.isSoundEnabled = isSoundEnabled
+                updatedOpts.isVegasScoring = isVegasScoring
+                updatedOpts.hideHintButton = hideHintButton
+                updatedOpts.noStressMode = noStressMode
 
-                    Toggle("Sound Effects", isOn: $isSoundEnabled)
-                        .font(.system(.body))
-
-                    Toggle("Vegas Scoring Mode", isOn: $isVegasScoring)
-                        .font(.system(.body))
-
-                    Toggle("Hide Hint button", isOn: $hideHintButton)
-                        .font(.system(.body))
-
-                    Toggle("No Stress Mode", isOn: $noStressMode)
-                        .font(.system(.body))
-
-                    Divider()
-
-                    Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showingThemes = true } }) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.primary)
-                                Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.primary.opacity(0.02))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider()
+                updatedOpts.drawMode = drawMode
+                if viewModel.state.drawMode != drawMode {
+                    viewModel.state.drawMode = drawMode
+                    viewModel.startNewGame()
                 }
-                .padding(.horizontal, 24)
+
+                viewModel.options = updatedOpts
             }
-            .frame(maxHeight: 680)
+        ) {
+            Picker("Draw Mode:", selection: $drawMode) {
+                Text("Draw One").tag(GameState.DrawMode.drawOne)
+                Text("Draw Three").tag(GameState.DrawMode.drawThree)
+            }
+            .pickerStyle(.segmented)
 
             Divider()
-            
-            HStack {
-                Button("Cancel") {
-                    // Revert any theme changes that were live-previewed via the Themes sub-panel.
-                    coordinator.customFeltRed = originalRed
-                    coordinator.customFeltGreen = originalGreen
-                    coordinator.customFeltBlue = originalBlue
-                    coordinator.feltColor = originalFeltColor
-                    coordinator.cardBackTheme = originalCardBackTheme
-                    coordinator.showFeltVignette = originalShowFeltVignette
-                    coordinator.customCardColors = originalCustomCardColors
-                    coordinator.customBackgroundName = originalCustomBackgroundName
-                    isPresented = false
-                }
-                .keyboardShortcut(.cancelAction)
 
-                Spacer()
+            Toggle("Sound Effects", isOn: $isSoundEnabled)
+                .font(.system(.body))
 
-                Button(action: {
-                    isPresented = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        onViewStats?()
-                    }
-                }) {
-                    Text("View Stats")
-                        .underline()
-                        .foregroundColor(.blue)
-                        .font(.system(.body))
-                }
-                .buttonStyle(.plain)
-                
-                Spacer()
-                
-                Button("OK") {
-                    var updatedOpts = viewModel.options
-                    updatedOpts.isStatusBarVisible = isStatusBarVisible
-                    updatedOpts.isSoundEnabled = isSoundEnabled
-                    updatedOpts.isVegasScoring = isVegasScoring
-                    updatedOpts.hideHintButton = hideHintButton
-                    updatedOpts.noStressMode = noStressMode
+            Toggle("Vegas Scoring Mode", isOn: $isVegasScoring)
+                .font(.system(.body))
 
-                    updatedOpts.drawMode = drawMode
-                    if viewModel.state.drawMode != drawMode {
-                        viewModel.state.drawMode = drawMode
-                        viewModel.startNewGame()
-                    }
+            Toggle("Hide Hint button", isOn: $hideHintButton)
+                .font(.system(.body))
 
-                    viewModel.options = updatedOpts
-                    isPresented = false
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
+            Toggle("No Stress Mode", isOn: $noStressMode)
+                .font(.system(.body))
         }
-        .frame(width: 440)
-        .fixedSize(horizontal: true, vertical: true)
-        .background(Color(NSColor.windowBackgroundColor))
-
-        if showingThemes {
-            ThemesOptionsView(
-                isShowing: $showingThemes,
-                isOptionsPresented: $isPresented,
-                feltColor: $coordinator.feltColor,
-                cardBackTheme: $coordinator.cardBackTheme,
-                showFeltVignette: $coordinator.showFeltVignette,
-                customSelectedColor: $customSelectedColor,
-                customCardColors: $coordinator.customCardColors,
-                customBackgroundName: $coordinator.customBackgroundName,
-                originalRed: originalRed,
-                originalGreen: originalGreen,
-                originalBlue: originalBlue,
-                originalCustomCardColors: originalCustomCardColors,
-                onCommit: { _ in }
-            )
-            .transition(.move(edge: .trailing))
-            .frame(width: 880)
-        }
-        } // ZStack
-        .frame(width: showingThemes ? 880 : 440)
-        .animation(.easeInOut(duration: 0.2), value: showingThemes)
     }
 }
 
@@ -1440,7 +1306,10 @@ struct StatsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 360)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(
+            Color(NSColor.windowBackgroundColor)
+                .overlay(Color.primary.opacity(0.04))
+        )
     }
 }
 

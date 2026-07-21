@@ -226,6 +226,38 @@ struct UniversalBridge {
                 }
             }
 
+        case "Honeycomb":
+            let vm = HoneycombViewModel()
+            vm.options.noStressMode = noStress
+            vm.startNewGame()
+            if let data = try? encoder.encode(vm.state), let str = String(data: data, encoding: .utf8) {
+                print(str)
+                fflush(stdout)
+            }
+            while let line = readLine() {
+                guard let data = line.data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let action = json["action"] as? String else { continue }
+                switch action {
+                case "startNewGame": vm.startNewGame()
+                case "playCard":
+                    if let handIdx = json["handIndex"] as? Int,
+                       let boardIdx = json["boardIndex"] as? Int {
+                        vm.playerPlayCard(handIndex: handIdx, boardIndex: boardIdx)
+                    }
+                case "takeCard":
+                    if let boardIdx = json["boardIndex"] as? Int,
+                       let replaceHandIdx = json["replaceHandIndex"] as? Int {
+                        vm.takeCard(boardIndex: boardIdx, replaceHandIndex: replaceHandIdx)
+                    }
+                default: break
+                }
+                if let data = try? encoder.encode(vm.state), let str = String(data: data, encoding: .utf8) {
+                    print(str)
+                    fflush(stdout)
+                }
+            }
+
         default:
             print("Unknown game: \(gameName)")
             exit(1)

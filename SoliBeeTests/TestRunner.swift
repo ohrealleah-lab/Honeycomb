@@ -24,7 +24,11 @@ struct TestRunner {
         print("🧪 Running BeecellTests...")
         BeecellTests.run()
         print("✅ BeecellTests passed.")
-        
+
+        print("🧪 Running SmartDropTests...")
+        SmartDropTests.run()
+        print("✅ SmartDropTests passed.")
+
         print("🧪 Running CustomCardColorsTests...")
         CustomCardColorsTests.run()
         print("✅ CustomCardColorsTests passed.")

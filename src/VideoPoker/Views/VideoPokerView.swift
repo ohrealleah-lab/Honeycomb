@@ -17,6 +17,18 @@ public struct VideoPokerView: View {
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
     @State private var spaceMonitor: Any? = nil
+    // Measured width of the top toolbar row — drives the icon-only compact button swap.
+    // Starts generous so buttons show full text before the first layout pass measures it.
+    @State private var toolbarWidth: CGFloat = 2000
+    @State private var windowContentHeight: CGFloat = 900
+    // Same idea, for the in-game action button row (Deal/Draw/Hold All/etc.).
+    @State private var actionButtonsWidth: CGFloat = 2000
+    // Measured natural (unscaled) height of the board content — drives the fit-to-window
+    // scale math. Replaces hand-estimated per-mode constants that drifted out of sync with
+    // the real content and let the action buttons get clipped by the window's bottom edge.
+    // Starts generous (more than any real mode needs) so the first-frame scale is an
+    // underestimate rather than an overflow before the first real measurement lands.
+    @State private var measuredBoardHeight: CGFloat = 900
     @State private var resultBannerShowTask: DispatchWorkItem? = nil
     @State private var resultWinFlashTask:   DispatchWorkItem? = nil
     @State private var resultAnimationTask:  DispatchWorkItem? = nil
@@ -24,13 +36,27 @@ public struct VideoPokerView: View {
     @State private var idlePromptTask:       DispatchWorkItem? = nil
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
-    // The toolbar stays fixed size regardless of zoom; only the board below it scales.
+    // The toolbar stays fixed size regardless of the board's scale; only the board below
+    // it scales to fit the window.
     static let toolbarHeight: CGFloat = 85
-    // The hotkey legend sits below the scaled board, outside boardBaseHeight, and never
-    // scales with zoom — reserve fixed room for it so it doesn't get clipped by the
-    // window's bottom edge at minimum size.
+    // The hotkey legend sits below the scaled board and never scales — reserve fixed room
+    // for it so it doesn't get clipped by the window's bottom edge at minimum size.
     private static let legendHeight: CGFloat = 28
-    private static let singleBoardBaseHeight: CGFloat = 824 - toolbarHeight
+    // Hard floor the window can be dragged down to — the board's own scale (see
+    // recomputeScale()) fits content to whatever size the window actually is, so this only
+    // needs to keep the toolbar legible and a sliver of the board visible. If the player
+    // drags the window down near this floor, cards may clip — an accepted tradeoff.
+    static let minWindowSize = NSSize(width: 520, height: 450)
+    // The size the window opens at when there's no saved "make current size the default"
+    // preference — numerically the same size this app has always opened at for normal
+    // single-play mode (previously toolbarHeight + boardBaseHeight + legendHeight + 28, at
+    // the old zoom=1 baseline).
+    static let defaultOpeningSize = NSSize(width: 905, height: 680)
+    // Below this measured toolbar width, buttons swap their text label for an icon-only
+    // SF Symbol to save space — hand-estimated, not measured from a live render.
+    private static let compactToolbarWidthThreshold: CGFloat = 420
+    // Same idea, for the wider in-game action button row.
+    private static let compactActionButtonsWidthThreshold: CGFloat = 520
     // Triple Play never shows the pay table, so its cards can be a comfortable, fully
     // legible size (120pt wide — 100pt base bumped 20% — matching CardView's true
     // 128x181 native aspect ratio) rather than a tiny thumbnail.
@@ -40,32 +66,6 @@ public struct VideoPokerView: View {
     // offset animation has room without being clipped by the row's own bounds.
     private static let tripleRowSlack: CGFloat = 16
     private static let tripleRowHeight: CGFloat = 181 * tripleCardScale + tripleRowSlack
-
-    private var boardBaseHeight: CGFloat {
-        if viewModel.options.playMode == .triple {
-            // Triple Play hides the pay table AND the single-play result-label spacer (see
-            // body), so its board is built from the same non-hand-area chrome as single play
-            // (credit display, hold labels, action buttons, VStack spacing/padding) minus
-            // that 52pt label + 1 VStack gap, plus 3 card rows instead of 1, with a safety
-            // margin since these chrome heights are estimates. Free play additionally hides
-            // the credit display itself (+ its VStack gap), so subtract that too when both
-            // modes are active together.
-            let creditDisplayContribution: CGFloat = viewModel.isFreePlay ? 84 : 0
-            let nonHandAreaChrome: CGFloat = 292 - 52 - 16 - creditDisplayContribution
-            let safetyMargin: CGFloat = 90
-            let tripleHandAreaHeight = 3 * Self.tripleRowHeight + 2 * Self.tripleRowSpacing
-            return nonHandAreaChrome + tripleHandAreaHeight + safetyMargin
-        }
-        if viewModel.isFreePlay {
-            // Free play hides the pay table and credit display, leaving only the result
-            // label spacer, hand area, hold labels, and action buttons.
-            let nonHandAreaChrome: CGFloat = 200
-            let safetyMargin: CGFloat = 60
-            let singleHandAreaHeight = scaledCardH + 24
-            return nonHandAreaChrome + singleHandAreaHeight + safetyMargin
-        }
-        return Self.singleBoardBaseHeight
-    }
 
     public init(viewModel: VideoPokerViewModel) {
         self.viewModel = viewModel
@@ -89,51 +89,53 @@ public struct VideoPokerView: View {
 
                 Divider().overlay(Color.white.opacity(0.2))
 
-                // Scaled board area
-                VStack(spacing: 0) {
-                    if !(viewModel.options.hideBetBoard || viewModel.options.noStressMode) && viewModel.options.playMode != .triple {
-                        payTableGrid
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-                            .padding(.bottom, 6)
+                // Scaled board area — GeometryReader measures the true available width
+                // directly and the centering offset is computed as plain arithmetic and
+                // applied via .offset(x:), rather than relying on frame(alignment:) or
+                // Spacer-flanking, both of which proved inconsistent here across several
+                // attempts (worse the more the board is scaled down from its 905pt width).
+                GeometryReader { outerGeo in
+                    VStack(spacing: 0) {
+                        if !(viewModel.options.hideBetBoard || viewModel.options.noStressMode) && viewModel.options.playMode != .triple {
+                            payTableGrid
+                                .padding(.horizontal, 16)
+                                .padding(.top, 8)
+                                .padding(.bottom, 6)
 
-                        Divider().overlay(Color.white.opacity(0.1))
-                    }
+                            Divider().overlay(Color.white.opacity(0.1))
+                        }
 
-                    VStack(spacing: 16) {
-                        if !viewModel.isFreePlay {
-                            creditDisplay
-                        }
-                        if viewModel.options.playMode != .triple {
-                            resultLabel
-                        }
-                        handArea
-                            .overlay {
-                                if showIdlePrompt {
-                                    Text("Hit Space to Deal")
-                                        .font(.display(28, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 10)
-                                        .background(Color.black.opacity(0.55))
-                                        .cornerRadius(8)
-                                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1))
-                                        .allowsHitTesting(false)
-                                        .animation(.easeInOut(duration: 0.6), value: showIdlePrompt)
-                                }
+                        VStack(spacing: 16) {
+                            if !viewModel.isFreePlay {
+                                creditDisplay
                             }
-                        holdLabels
-                        actionButtons
+                            if viewModel.options.playMode != .triple {
+                                resultLabel
+                            }
+                            handArea
+                            holdLabels
+                            // +24pt (50% more than the surrounding 16pt VStack spacing +
+                            // holdLabels' own 16pt height = 48pt total gap between the cards and
+                            // the buttons below, before this) — added here rather than before
+                            // holdLabels so the hold indicators stay close to the cards they
+                            // label once cards are actually dealt.
+                            actionButtons
+                                .padding(.top, 24)
+                        }
+                        .padding(.horizontal, 12)
+                            .padding(.vertical, 24)
                     }
-                    .padding(.horizontal, 12)
-                        .padding(.vertical, 24)
-
-                    Spacer()
+                    .frame(width: 905, alignment: .topLeading)
+                    .background(GeometryReader { geo in
+                        Color.clear
+                            .onAppear { measuredBoardHeight = geo.size.height }
+                            .onChange(of: geo.size.height) { _, newHeight in measuredBoardHeight = newHeight }
+                    })
+                    .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
+                    .frame(width: 905 * viewModel.zoomScale, height: measuredBoardHeight * viewModel.zoomScale, alignment: .topLeading)
+                    .offset(x: max(0, (outerGeo.size.width - 905 * viewModel.zoomScale) / 2))
                 }
-                .frame(width: 905, height: boardBaseHeight, alignment: .topLeading)
-                .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
-                .frame(width: 905 * viewModel.zoomScale, height: boardBaseHeight * viewModel.zoomScale, alignment: .topLeading)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
@@ -145,28 +147,25 @@ public struct VideoPokerView: View {
 
             HotkeyLegendView(text: "Space/Enter/D=Deal or Draw   1-5=Toggle Hold   H=Hold All   C=Clear   M=Bet Max")
         }
-        .frame(minWidth: 905 * viewModel.zoomScale, maxWidth: .infinity,
-               minHeight: Self.toolbarHeight + boardBaseHeight * viewModel.zoomScale + Self.legendHeight, maxHeight: .infinity)
+        .frame(minWidth: Self.minWindowSize.width, maxWidth: .infinity,
+               minHeight: Self.minWindowSize.height, maxHeight: .infinity)
         .onAppear {
             DispatchQueue.main.async {
-                snapToMinSize()
+                applyInitialWindowSize()
             }
         }
-        .background(WindowAccessor { window in
+        .background(WindowAccessor(callback: { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
             coordinator.activeWindow = window
             DispatchQueue.main.async {
-                if let saved = viewModel.defaultWindowSize {
-                    snapToMinSize(overrideSize: NSSize(width: saved.width, height: saved.height))
-                } else {
-                    snapToMinSize()
-                }
+                applyInitialWindowSize()
             }
-        })
-        .onChange(of: viewModel.zoomScale) { snapToMinSize() }
-        .onChange(of: viewModel.options.playMode) { snapToMinSize() }
-        .onChange(of: viewModel.options.noStressMode) { snapToMinSize() }
+        }, onResize: recomputeScale))
+        .onChange(of: viewModel.options.playMode) { recomputeScale() }
+        .onChange(of: viewModel.options.noStressMode) { recomputeScale() }
+        .onChange(of: viewModel.options.hideBetBoard) { recomputeScale() }
+        .onChange(of: measuredBoardHeight) { recomputeScale() }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .overlay {
@@ -175,7 +174,7 @@ public struct VideoPokerView: View {
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .overlay(
-                        VideoPokerOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions, coordinator: coordinator)
+                        VideoPokerOptionsView(viewModel: viewModel, isShowingStats: $isShowingStats, isPresented: $isShowingOptions, coordinator: coordinator, availableWidth: toolbarWidth, availableHeight: windowContentHeight)
                     )
                     .transition(.opacity)
             }
@@ -306,47 +305,20 @@ public struct VideoPokerView: View {
 
     private var toolbarView: some View {
         HStack(spacing: 20) {
-            gameModeMenu
-            toolbarButton("Options", disabled: !viewModel.canOpenOptions) {
+            GameSelectionDropdown(coordinator: coordinator)
+            toolbarButton("Options", systemImage: "gearshape", disabled: !viewModel.canOpenOptions) {
                 isShowingOptions = true
             }
             Spacer()
         }
     }
 
-    private func toolbarButton(_ label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
-        GameToolbarButton(label: label, disabled: disabled, action: action)
-    }
-
-    private var gameModeMenu: some View {
-        Menu {
-            Button(GameMode.klondike.rawValue) {
-                if coordinator.gameMode != .klondike { coordinator.gameMode = .klondike; coordinator.startNewGame() }
-            }
-            Button(GameMode.beecell.rawValue) {
-                if coordinator.gameMode != .beecell { coordinator.gameMode = .beecell; coordinator.startNewGame() }
-            }
-            Button(GameMode.spider.rawValue) {
-                if coordinator.gameMode != .spider { coordinator.gameMode = .spider; coordinator.startNewGame() }
-            }
-            Button(GameMode.videoPoker.rawValue) {
-                if coordinator.gameMode != .videoPoker { coordinator.gameMode = .videoPoker }
-            }
-            Button(GameMode.blackjack.rawValue) {
-                if coordinator.gameMode != .blackjack { coordinator.gameMode = .blackjack }
-            }
-        } label: {
-            Text("Game Selection")
-                .font(.display(16))
-                .foregroundColor(.white)
-        }
-        .menuStyle(.borderlessButton)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.white.opacity(0.15))
-        .cornerRadius(4)
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
-        .focusable(false)
+    private func toolbarButton(_ label: String, systemImage: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
+        GameToolbarButton(
+            label: label, systemImage: systemImage,
+            isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
+            disabled: disabled, action: action
+        )
     }
 
     // MARK: - Pay Table Grid
@@ -742,52 +714,62 @@ public struct VideoPokerView: View {
             case .deal, .result:
                 if !viewModel.isFreePlay {
                     casinoButton("-", color: .white.opacity(0.2)) { viewModel.decreaseBet() }
-                    casinoButton("BET MAX  [M]", color: .orange.opacity(0.85)) { viewModel.maxBet() }
+                    casinoButton("BET MAX  [M]", systemImage: "dollarsign.circle", color: .orange.opacity(0.85)) { viewModel.maxBet() }
                     casinoButton("+", color: .white.opacity(0.2)) { viewModel.increaseBet() }
 
                     Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
                 }
 
-                casinoButton("DEAL  [Space]", color: .yellow, textColor: .black,
+                casinoButton("DEAL  [Space]", systemImage: "play.fill", color: .yellow, textColor: .black,
                              disabled: !viewModel.isFreePlay && viewModel.state.sessionCredits < viewModel.totalBet) {
                     viewModel.deal()
                 }
 
             case .holding:
-                casinoButton("HOLD ALL  [H]", color: .white.opacity(0.2)) { holdAll() }
-                casinoButton("CLEAR  [C]",    color: .white.opacity(0.2)) { clearHolds() }
+                casinoButton("HOLD ALL  [H]", systemImage: "hand.raised.fill", color: .white.opacity(0.2)) { holdAll() }
+                casinoButton("CLEAR  [C]", systemImage: "xmark", color: .white.opacity(0.2)) { clearHolds() }
 
                 Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
 
-                casinoButton("DRAW", color: .green.opacity(0.85)) { viewModel.draw() }
+                casinoButton("DRAW", systemImage: "arrow.triangle.2.circlepath", color: .green.opacity(0.85)) { viewModel.draw() }
             }
 
-            if !viewModel.isFreePlay && viewModel.state.sessionCredits < viewModel.totalBet && viewModel.state.phase != .holding {
-                casinoButton("REBUY", color: .red.opacity(0.8)) { viewModel.rebuy() }
+            if !viewModel.isFreePlay && viewModel.state.sessionCredits <= 10 && viewModel.state.phase != .holding {
+                casinoButton("REBUY", systemImage: "creditcard", color: .red.opacity(0.8)) { viewModel.rebuy() }
             }
         }
     }
 
     private func casinoButton(
         _ label: String,
+        systemImage: String? = nil,
         color: Color,
         textColor: Color = .white,
         disabled: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.display(14, weight: .black))
-                .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 10)
-                .background(disabled ? Color.gray.opacity(0.3) : color)
-                .cornerRadius(6)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.3), lineWidth: 1))
+        let isCompact = systemImage != nil && actionButtonsWidth < Self.compactActionButtonsWidthThreshold
+        return Button(action: action) {
+            Group {
+                if isCompact, let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 16, weight: .black))
+                } else {
+                    Text(label)
+                        .font(.display(14, weight: .black))
+                }
+            }
+            .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
+            .padding(.horizontal, isCompact ? 14 : 18)
+            .padding(.vertical, 10)
+            .background(disabled ? Color.gray.opacity(0.3) : color)
+            .cornerRadius(6)
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.3), lineWidth: 1))
         }
         .buttonStyle(PressButtonStyle())
         .disabled(disabled)
         .focusable(false)
+        .accessibilityLabel(label)
     }
 
     // MARK: - Keyboard Shortcuts
@@ -850,54 +832,43 @@ public struct VideoPokerView: View {
         viewModel.state.heldIndices.removeAll()
     }
 
-    private func updateMinSize() {
+    // Continuously refits the board's scale to the window's current content size — called
+    // on every window resize (via WindowAccessor's onResize) and whenever the board's own
+    // intrinsic size changes without the window moving (play mode, No Stress Mode, hide
+    // bet board). Both toolbarHeight and legendHeight are excluded from the height side of
+    // the fit, since neither scales with the board. Never touches the window frame itself
+    // — a pure property write, which is what keeps this loop-safe.
+    private func recomputeScale() {
         guard let window = hostingWindow else { return }
-        let z = viewModel.zoomScale
-        let size = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight)
-        DispatchQueue.main.async {
-            window.contentMinSize = size
-        }
+        let contentSize = window.contentView?.frame.size ?? window.frame.size
+        toolbarWidth = contentSize.width
+        windowContentHeight = contentSize.height
+        actionButtonsWidth = contentSize.width
+        let scaleX = contentSize.width / 905.0
+        let scaleY = (contentSize.height - Self.toolbarHeight - Self.legendHeight) / measuredBoardHeight
+        viewModel.zoomScale = min(2.0, max(0.3, min(scaleX, scaleY)))
     }
 
-    private func snapToMinSize(overrideSize: NSSize? = nil) {
+    // Applies the window's opening size — called at app launch and every time this game
+    // becomes active again. Only actually snaps the window to this game's default size
+    // once, on the very first launch ever (HasLaunchedBefore); after that, switching
+    // games never resizes the window, so manual resizing stays seamless across games.
+    private func applyInitialWindowSize() {
         guard let window = hostingWindow else { return }
-        
-        var z = viewModel.zoomScale
-        if let screen = window.screen ?? NSScreen.main {
-            let maxH = screen.visibleFrame.height - 40
-            let reqH = Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight + 28
-            if reqH > maxH {
-                z = (maxH - Self.toolbarHeight - Self.legendHeight - 28) / boardBaseHeight
-                z = max(0.5, z)
-                if z < viewModel.zoomScale {
-                    viewModel.zoomScale = z
-                    return
-                }
-            }
-        }
-        
-        let minSize = NSSize(width: 905 * z, height: Self.toolbarHeight + boardBaseHeight * z + Self.legendHeight + 28)
-        let size = overrideSize.map { NSSize(width: max($0.width, minSize.width), height: max($0.height, minSize.height)) } ?? minSize
-        DispatchQueue.main.async {
-            window.contentMinSize = minSize
+        window.contentMinSize = Self.minWindowSize
 
-            // Grow/shrink anchored to the window's top-left corner (not NSWindow's default
-            // bottom-left anchor) so a height change — e.g. switching Play Mode — never
-            // pushes the toolbar/title bar off the top of the screen.
-            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
-            let currentFrame = window.frame
-            newFrame.origin.x = currentFrame.origin.x
-            newFrame.origin.y = currentFrame.maxY - newFrame.height
-            if let visible = window.screen?.visibleFrame {
-                newFrame.origin.y = min(newFrame.origin.y, visible.maxY - newFrame.height)
-                newFrame.origin.y = max(newFrame.origin.y, visible.minY)
+        if !UserDefaults.standard.bool(forKey: "HasLaunchedBefore") {
+            UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
+            let target = Self.defaultOpeningSize
+            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target))
+            if let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
+                newFrame.origin.x = visible.midX - newFrame.width / 2
+                newFrame.origin.y = visible.midY - newFrame.height / 2
             }
-
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.2
-                window.animator().setFrame(newFrame, display: true)
-            }
+            window.setFrame(newFrame, display: true)
         }
+
+        recomputeScale()
     }
 
     private func formatTime(_ s: Int) -> String {
@@ -921,23 +892,16 @@ struct VideoPokerOptionsView: View {
     @State private var hideHintButton: Bool
     @State private var hideBetBoard: Bool
     @State private var noStressMode: Bool
-    @State private var customSelectedColor: Color
-    @State private var showingThemes: Bool = false
+    let availableWidth: CGFloat
+    let availableHeight: CGFloat
 
-    let originalRed: Double
-    let originalGreen: Double
-    let originalBlue: Double
-    let originalFeltColor: FeltColorTheme
-    let originalCardBackTheme: String
-    let originalShowFeltVignette: Bool
-    let originalCustomCardColors: CustomCardColorGroup
-    let originalCustomBackgroundName: String?
-
-    init(viewModel: VideoPokerViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>, coordinator: AppCoordinator) {
+    init(viewModel: VideoPokerViewModel, isShowingStats: Binding<Bool>, isPresented: Binding<Bool>, coordinator: AppCoordinator, availableWidth: CGFloat = 2000, availableHeight: CGFloat = 900) {
         self.viewModel = viewModel
         self._isShowingStats = isShowingStats
         self._isPresented = isPresented
         self.coordinator = coordinator
+        self.availableWidth = availableWidth
+        self.availableHeight = availableHeight
         _variant         = State(initialValue: viewModel.options.variant)
         _playMode        = State(initialValue: viewModel.options.playMode)
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
@@ -946,174 +910,66 @@ struct VideoPokerOptionsView: View {
         _hideHintButton  = State(initialValue: viewModel.options.hideHintButton)
         _hideBetBoard    = State(initialValue: viewModel.options.hideBetBoard)
         _noStressMode    = State(initialValue: viewModel.options.noStressMode)
-        self.originalFeltColor = coordinator.feltColor
-        self.originalCardBackTheme = coordinator.cardBackTheme
-        self.originalShowFeltVignette = coordinator.showFeltVignette
-        self.originalCustomCardColors = coordinator.customCardColors
-        self.originalCustomBackgroundName = coordinator.customBackgroundName
-
-        let r = coordinator.customFeltRed
-        let g = coordinator.customFeltGreen
-        let b = coordinator.customFeltBlue
-        self.originalRed = r; self.originalGreen = g; self.originalBlue = b
-        let init_c: Color = (r == 0 && g == 0 && b == 0)
-            ? Color(red: 0.35, green: 0.15, blue: 0.45)
-            : Color(red: r, green: g, blue: b)
-        _customSelectedColor = State(initialValue: init_c)
     }
 
     var body: some View {
-        ZStack {
-        VStack(spacing: 20) {
-            Text("Preferences")
-                .font(.system(size: 16, weight: .bold))
-                .padding(.top, 12)
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 12) {
-                    Picker("Variant:", selection: $variant) {
-                        ForEach(VideoPokerVariant.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
-                        }
-                    }
-                    .font(.system(.body))
-
-                    if VideoPokerPlayMode.tripleEnabled {
-                        Picker("Play Mode:", selection: $playMode) {
-                            ForEach(VideoPokerPlayMode.allCases, id: \.self) {
-                                Text($0.rawValue).tag($0)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .font(.system(.body))
-                    }
-
-                    Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 100...10000, step: 100)
-                        .font(.system(.body))
-
-                    Picker("Default Bet:", selection: $betPerHand) {
-                        ForEach(1...5, id: \.self) { n in Text("\(n) coin\(n == 1 ? "" : "s")").tag(n) }
-                    }
-                    .font(.system(.body))
-
-                    Divider()
-
-                    Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body))
-                    Toggle("Hide Bet Board",   isOn: $hideBetBoard).font(.system(.body))
-                    Toggle("No Stress Mode",   isOn: $noStressMode).font(.system(.body))
-
-                    Divider()
-
-                    Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showingThemes = true } }) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Visual Themes")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.primary)
-                                Text("Felt, card back, face card art, colors")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.primary.opacity(0.02))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider()
+        OptionsSheetShell(
+            isPresented: $isPresented,
+            coordinator: coordinator,
+            availableWidth: availableWidth,
+            availableHeight: availableHeight,
+            useScrollView: false,
+            fixedSizeHorizontal: false,
+            onViewStats: { isShowingStats = true },
+            onOK: {
+                let variantChanged  = variant  != viewModel.options.variant
+                let playModeChanged = playMode != viewModel.options.playMode
+                var o = viewModel.options
+                o.variant         = variant
+                o.playMode        = playMode
+                o.startingCredits = startingCredits
+                o.betPerHand      = betPerHand
+                o.isSoundEnabled  = isSoundEnabled
+                o.hideHintButton  = hideHintButton
+                o.hideBetBoard    = hideBetBoard
+                o.noStressMode    = noStressMode
+                viewModel.options = o
+                if variantChanged || playModeChanged {
+                    viewModel.resetHandDisplay()
+                }
             }
-            .padding(.horizontal, 24)
-
-            Divider()
-
-            HStack {
-                Button("Cancel") {
-                    // Revert any theme changes that were live-previewed via the Themes sub-panel.
-                    coordinator.customFeltRed = originalRed
-                    coordinator.customFeltGreen = originalGreen
-                    coordinator.customFeltBlue = originalBlue
-                    coordinator.feltColor = originalFeltColor
-                    coordinator.cardBackTheme = originalCardBackTheme
-                    coordinator.showFeltVignette = originalShowFeltVignette
-                    coordinator.customCardColors = originalCustomCardColors
-                    coordinator.customBackgroundName = originalCustomBackgroundName
-                    isPresented = false
+        ) {
+            Picker("Variant:", selection: $variant) {
+                ForEach(VideoPokerVariant.allCases, id: \.self) {
+                    Text($0.rawValue).tag($0)
                 }
-                .keyboardShortcut(.cancelAction)
+            }
+            .font(.system(.body))
 
-                Spacer()
-
-                Button(action: {
-                    isPresented = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { isShowingStats = true }
-                }) {
-                    Text("View Stats").foregroundColor(.blue).underline()
+            if VideoPokerPlayMode.tripleEnabled {
+                Picker("Play Mode:", selection: $playMode) {
+                    ForEach(VideoPokerPlayMode.allCases, id: \.self) {
+                        Text($0.rawValue).tag($0)
+                    }
                 }
-                .buttonStyle(.plain)
+                .pickerStyle(.segmented)
+                .font(.system(.body))
+            }
+
+            Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 100...10000, step: 100)
                 .font(.system(.body))
 
-                Spacer()
-
-                Button("OK") {
-                    let variantChanged  = variant  != viewModel.options.variant
-                    let playModeChanged = playMode != viewModel.options.playMode
-                    var o = viewModel.options
-                    o.variant         = variant
-                    o.playMode        = playMode
-                    o.startingCredits = startingCredits
-                    o.betPerHand      = betPerHand
-                    o.isSoundEnabled  = isSoundEnabled
-                    o.hideHintButton  = hideHintButton
-                    o.hideBetBoard    = hideBetBoard
-                    o.noStressMode    = noStressMode
-                    viewModel.options = o
-                    if variantChanged || playModeChanged {
-                        viewModel.resetHandDisplay()
-                    }
-                    isPresented = false
-                }
-                .keyboardShortcut(.defaultAction)
+            Picker("Default Bet:", selection: $betPerHand) {
+                ForEach(1...5, id: \.self) { n in Text("\(n) coin\(n == 1 ? "" : "s")").tag(n) }
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
-        }
-        .frame(width: 440)
-        .fixedSize(horizontal: false, vertical: true)
-        .background(Color(NSColor.windowBackgroundColor))
+            .font(.system(.body))
 
-        if showingThemes {
-            ThemesOptionsView(
-                isShowing: $showingThemes,
-                isOptionsPresented: $isPresented,
-                feltColor: $coordinator.feltColor,
-                cardBackTheme: $coordinator.cardBackTheme,
-                showFeltVignette: $coordinator.showFeltVignette,
-                customSelectedColor: $customSelectedColor,
-                customCardColors: $coordinator.customCardColors,
-                customBackgroundName: $coordinator.customBackgroundName,
-                originalRed: originalRed,
-                originalGreen: originalGreen,
-                originalBlue: originalBlue,
-                originalCustomCardColors: originalCustomCardColors,
-                onCommit: { _ in }
-            )
-            .transition(.move(edge: .trailing))
-            .frame(width: 880)
+            Divider()
+
+            Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body))
+            Toggle("Hide Bet Board",   isOn: $hideBetBoard).font(.system(.body))
+            Toggle("No Stress Mode",   isOn: $noStressMode).font(.system(.body))
         }
-        } // ZStack
-        .frame(width: showingThemes ? 880 : 440)
-        .animation(.easeInOut(duration: 0.2), value: showingThemes)
     }
 }
 

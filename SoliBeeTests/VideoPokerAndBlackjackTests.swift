@@ -13,7 +13,7 @@ struct VideoPokerAndBlackjackTests {
         testBlackjackSplitTwoSixes()
         testBlackjackChipButtonReplacesDefaultBet()
         testBlackjackCanRebuy()
-        testBlackjackPaysThreeToOne()
+        testBlackjackPaysThreeToTwo()
         testBlackjackFreePlayBypassesCreditChecks()
         print("✅ VideoPokerAndBlackjackTests passed.")
     }
@@ -242,7 +242,7 @@ struct VideoPokerAndBlackjackTests {
         assert(viewModel.canRebuy == false, "Rebuy should not be offered during the dealer's turn")
     }
 
-    static func testBlackjackPaysThreeToOne() {
+    static func testBlackjackPaysThreeToTwo() {
         let viewModel = BlackjackViewModel()
 
         // Bet already deducted (mirrors state after deal()); dealer has a non-blackjack 17 so no hit occurs.
@@ -263,7 +263,7 @@ struct VideoPokerAndBlackjackTests {
         viewModel.executeDealerTurn()
 
         assert(viewModel.state.playerHands[0].result == .blackjack, "Hand should resolve as blackjack")
-        assert(viewModel.state.sessionCredits == 140, "3:1 blackjack payout on a 10 bet should credit 40 (10 back + 30 profit), got \(viewModel.state.sessionCredits)")
+        assert(viewModel.state.sessionCredits == 125, "3:2 blackjack payout on a 10 bet should credit 25 (10 back + 15 profit), got \(viewModel.state.sessionCredits)")
     }
 
     static func testBlackjackFreePlayBypassesCreditChecks() {

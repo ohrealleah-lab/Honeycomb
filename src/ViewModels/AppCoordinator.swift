@@ -13,10 +13,34 @@ public final class AppCoordinator {
             case .klondike:   klondikeViewModel.stopTimer()
             case .beecell:    beecellViewModel.stopTimer()
             case .spider:     spiderViewModel.stopTimer()
-            case .videoPoker, .blackjack: break
+            case .videoPoker, .blackjack, .honeycomb: break
             }
             syncSharedOptions(from: oldValue, to: gameMode)
+            applyWindowSizeForCurrentGameMode()
         }
+    }
+
+    // Updates the window's minimum size for the newly-selected game.
+    // We intentionally avoid resetting the window size when switching games so that
+    // the user's manual resizing is preserved across the entire app.
+    private func applyWindowSizeForCurrentGameMode() {
+        guard let window = activeWindow else { return }
+        let minSize: NSSize
+        switch gameMode {
+        case .klondike:
+            minSize = GameView.minWindowSize
+        case .beecell:
+            minSize = BeecellView.minWindowSize
+        case .spider:
+            minSize = SpiderView.minWindowSize
+        case .videoPoker:
+            minSize = VideoPokerView.minWindowSize
+        case .blackjack:
+            minSize = BlackjackView.minWindowSize
+        case .honeycomb:
+            minSize = HoneycombView.minWindowSize
+        }
+        window.contentMinSize = minSize
     }
 
     public let klondikeViewModel   = GameViewModel()
@@ -24,6 +48,7 @@ public final class AppCoordinator {
     public let spiderViewModel     = SpiderViewModel()
     public let videoPokerViewModel = VideoPokerViewModel()
     public let blackjackViewModel  = BlackjackViewModel()
+    public let honeycombViewModel  = HoneycombViewModel()
 
     // MARK: - App-wide theme (single source of truth for all 5 games, live-shared —
     // not per-game, not copy-on-mode-switch). Persisted to the same UserDefaults keys
@@ -37,6 +62,15 @@ public final class AppCoordinator {
     }
     public var showFeltVignette: Bool {
         didSet { UserDefaults.standard.set(showFeltVignette, forKey: "showFeltVignette") }
+    }
+    // Keeps the main game window floating above other apps' windows. Applied via
+    // applyWindowLevel() both here and from activeWindow's didSet, so a saved "on"
+    // preference takes effect immediately on the next launch, not just on toggle.
+    public var stayOnTop: Bool {
+        didSet {
+            UserDefaults.standard.set(stayOnTop, forKey: "stayOnTop")
+            applyWindowLevel()
+        }
     }
     public var customCardColors: CustomCardColorGroup {
         didSet {
@@ -54,6 +88,56 @@ public final class AppCoordinator {
     public var customFeltBlue: Double {
         didSet { UserDefaults.standard.set(customFeltBlue, forKey: "custom_felt_blue") }
     }
+    // Board ownership highlight colors for Honeycomb — app-wide/live-shared like the
+    // felt color fields, same zero-sentinel-means-default convention.
+    public var honeycombPlayerHighlightRed: Double {
+        didSet { UserDefaults.standard.set(honeycombPlayerHighlightRed, forKey: "honeycomb_player_highlight_red") }
+    }
+    public var honeycombPlayerHighlightGreen: Double {
+        didSet { UserDefaults.standard.set(honeycombPlayerHighlightGreen, forKey: "honeycomb_player_highlight_green") }
+    }
+    public var honeycombPlayerHighlightBlue: Double {
+        didSet { UserDefaults.standard.set(honeycombPlayerHighlightBlue, forKey: "honeycomb_player_highlight_blue") }
+    }
+    public var honeycombOpponentHighlightRed: Double {
+        didSet { UserDefaults.standard.set(honeycombOpponentHighlightRed, forKey: "honeycomb_opponent_highlight_red") }
+    }
+    public var honeycombOpponentHighlightGreen: Double {
+        didSet { UserDefaults.standard.set(honeycombOpponentHighlightGreen, forKey: "honeycomb_opponent_highlight_green") }
+    }
+    public var honeycombOpponentHighlightBlue: Double {
+        didSet { UserDefaults.standard.set(honeycombOpponentHighlightBlue, forKey: "honeycomb_opponent_highlight_blue") }
+    }
+
+    public var honeycombPlayerHighlightColor: Color {
+        get {
+            if honeycombPlayerHighlightRed == 0 && honeycombPlayerHighlightGreen == 0 && honeycombPlayerHighlightBlue == 0 {
+                return .blue
+            }
+            return Color(red: honeycombPlayerHighlightRed, green: honeycombPlayerHighlightGreen, blue: honeycombPlayerHighlightBlue)
+        }
+        set {
+            guard let rgb = NSColor(newValue).usingColorSpace(.deviceRGB) else { return }
+            honeycombPlayerHighlightRed = Double(rgb.redComponent)
+            honeycombPlayerHighlightGreen = Double(rgb.greenComponent)
+            honeycombPlayerHighlightBlue = Double(rgb.blueComponent)
+        }
+    }
+    public var honeycombOpponentHighlightColor: Color {
+        get {
+            if honeycombOpponentHighlightRed == 0 && honeycombOpponentHighlightGreen == 0 && honeycombOpponentHighlightBlue == 0 {
+                return .red
+            }
+            return Color(red: honeycombOpponentHighlightRed, green: honeycombOpponentHighlightGreen, blue: honeycombOpponentHighlightBlue)
+        }
+        set {
+            guard let rgb = NSColor(newValue).usingColorSpace(.deviceRGB) else { return }
+            honeycombOpponentHighlightRed = Double(rgb.redComponent)
+            honeycombOpponentHighlightGreen = Double(rgb.greenComponent)
+            honeycombOpponentHighlightBlue = Double(rgb.blueComponent)
+        }
+    }
+
     // nil means "no custom background — render Felt Color instead". App-wide/live-shared,
     // same as the felt color fields above.
     public var customBackgroundName: String? {
@@ -84,7 +168,16 @@ public final class AppCoordinator {
     // The NSWindow currently hosting the active game mode's view, kept up to date
     // by each game view's WindowAccessor so window-level actions (e.g. "make current
     // window size default") can be triggered from menu commands that don't own a window.
-    @ObservationIgnored public weak var activeWindow: NSWindow?
+    // There's only ever one underlying window for the whole app (switching games swaps
+    // SwiftUI content within it, not the window itself), so re-applying stayOnTop here
+    // covers every game with no per-game code.
+    @ObservationIgnored public weak var activeWindow: NSWindow? {
+        didSet { applyWindowLevel() }
+    }
+
+    private func applyWindowLevel() {
+        activeWindow?.level = stayOnTop ? .floating : .normal
+    }
 
     public init() {
         let saved = UserDefaults.standard.string(forKey: "selectedGameMode") ?? GameMode.klondike.rawValue
@@ -94,6 +187,8 @@ public final class AppCoordinator {
         self.cardBackTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
         self.showFeltVignette = UserDefaults.standard.object(forKey: "showFeltVignette") != nil
             ? UserDefaults.standard.bool(forKey: "showFeltVignette") : true
+        self.stayOnTop = UserDefaults.standard.object(forKey: "stayOnTop") != nil
+            ? UserDefaults.standard.bool(forKey: "stayOnTop") : false
         if let data = UserDefaults.standard.data(forKey: "customCardColors"),
            let decoded = try? JSONDecoder().decode(CustomCardColorGroup.self, from: data) {
             self.customCardColors = decoded
@@ -103,6 +198,12 @@ public final class AppCoordinator {
         self.customFeltRed   = UserDefaults.standard.double(forKey: "custom_felt_red")
         self.customFeltGreen = UserDefaults.standard.double(forKey: "custom_felt_green")
         self.customFeltBlue  = UserDefaults.standard.double(forKey: "custom_felt_blue")
+        self.honeycombPlayerHighlightRed     = UserDefaults.standard.double(forKey: "honeycomb_player_highlight_red")
+        self.honeycombPlayerHighlightGreen   = UserDefaults.standard.double(forKey: "honeycomb_player_highlight_green")
+        self.honeycombPlayerHighlightBlue    = UserDefaults.standard.double(forKey: "honeycomb_player_highlight_blue")
+        self.honeycombOpponentHighlightRed   = UserDefaults.standard.double(forKey: "honeycomb_opponent_highlight_red")
+        self.honeycombOpponentHighlightGreen = UserDefaults.standard.double(forKey: "honeycomb_opponent_highlight_green")
+        self.honeycombOpponentHighlightBlue  = UserDefaults.standard.double(forKey: "honeycomb_opponent_highlight_blue")
         self.customBackgroundName = UserDefaults.standard.string(forKey: "custom_background_name")
 
         // Synchronously warm the cache for whichever background is active so that
@@ -132,6 +233,7 @@ public final class AppCoordinator {
         case .spider:     UISound.isEnabled = spiderViewModel.options.isSoundEnabled
         case .videoPoker: UISound.isEnabled = videoPokerViewModel.options.isSoundEnabled
         case .blackjack:  UISound.isEnabled = blackjackViewModel.options.isSoundEnabled
+        case .honeycomb:  UISound.isEnabled = honeycombViewModel.options.isSoundEnabled
         }
     }
 
@@ -174,6 +276,11 @@ public final class AppCoordinator {
             hideHintButton    = nil  // Blackjack has no Hint button/preference to propagate
             noStressMode      = blackjackViewModel.options.noStressMode
             isTimed           = nil  // don't propagate BJ's timer concept to solitaire games
+        case .honeycomb:
+            isSoundEnabled    = honeycombViewModel.options.isSoundEnabled
+            hideHintButton    = nil
+            noStressMode      = honeycombViewModel.options.noStressMode
+            isTimed           = nil
         }
 
         if old != .klondike {
@@ -203,6 +310,10 @@ public final class AppCoordinator {
             blackjackViewModel.options.isSoundEnabled   = isSoundEnabled
             blackjackViewModel.options.noStressMode     = noStressMode
         }
+        if old != .honeycomb {
+            honeycombViewModel.options.isSoundEnabled   = isSoundEnabled
+            honeycombViewModel.options.noStressMode     = noStressMode
+        }
     }
 
     // MARK: - Game actions
@@ -214,6 +325,7 @@ public final class AppCoordinator {
         case .spider:    spiderViewModel.startNewGame()
         case .videoPoker: videoPokerViewModel.startNewGame()
         case .blackjack:  blackjackViewModel.startNewGame()
+        case .honeycomb:  honeycombViewModel.startNewGame()
         }
     }
 
@@ -224,6 +336,7 @@ public final class AppCoordinator {
         case .spider:     spiderViewModel.restartCurrentGame()
         case .videoPoker: videoPokerViewModel.restartCurrentGame()
         case .blackjack:  blackjackViewModel.restartCurrentGame()
+        case .honeycomb:  honeycombViewModel.restartCurrentGame()
         }
     }
 
@@ -232,6 +345,7 @@ public final class AppCoordinator {
         case .klondike:  klondikeViewModel.undoLastAction()
         case .beecell:   beecellViewModel.undoLastAction()
         case .spider:    spiderViewModel.undoLastAction()
+        case .honeycomb: honeycombViewModel.undoLastAction()
         case .videoPoker, .blackjack: break
         }
     }
@@ -241,59 +355,8 @@ public final class AppCoordinator {
         case .klondike:  return klondikeViewModel.canUndo
         case .beecell:   return beecellViewModel.canUndo
         case .spider:    return spiderViewModel.canUndo
+        case .honeycomb: return honeycombViewModel.canUndo
         case .videoPoker, .blackjack: return false
-        }
-    }
-
-    public func zoomIn() {
-        switch gameMode {
-        case .klondike:   klondikeViewModel.zoomIn()
-        case .beecell:    beecellViewModel.zoomIn()
-        case .spider:     spiderViewModel.zoomIn()
-        case .videoPoker: videoPokerViewModel.zoomIn()
-        case .blackjack:  blackjackViewModel.zoomIn()
-        }
-    }
-
-    public func zoomOut() {
-        switch gameMode {
-        case .klondike:   klondikeViewModel.zoomOut()
-        case .beecell:    beecellViewModel.zoomOut()
-        case .spider:     spiderViewModel.zoomOut()
-        case .videoPoker: videoPokerViewModel.zoomOut()
-        case .blackjack:  blackjackViewModel.zoomOut()
-        }
-    }
-
-    public func resetZoom() {
-        switch gameMode {
-        case .klondike:   klondikeViewModel.resetZoom()
-        case .beecell:    beecellViewModel.resetZoom()
-        case .spider:     spiderViewModel.resetZoom()
-        case .videoPoker: videoPokerViewModel.resetZoom()
-        case .blackjack:  blackjackViewModel.resetZoom()
-        }
-    }
-
-    public func makeCurrentZoomDefault() {
-        switch gameMode {
-        case .klondike:   klondikeViewModel.makeCurrentZoomDefault()
-        case .beecell:    beecellViewModel.makeCurrentZoomDefault()
-        case .spider:     spiderViewModel.makeCurrentZoomDefault()
-        case .videoPoker: videoPokerViewModel.makeCurrentZoomDefault()
-        case .blackjack:  blackjackViewModel.makeCurrentZoomDefault()
-        }
-    }
-
-    public func makeCurrentWindowSizeDefault() {
-        guard let window = activeWindow else { return }
-        let size = window.contentView?.frame.size ?? window.frame.size
-        switch gameMode {
-        case .klondike:   klondikeViewModel.makeCurrentWindowSizeDefault(size)
-        case .beecell:    beecellViewModel.makeCurrentWindowSizeDefault(size)
-        case .spider:     spiderViewModel.makeCurrentWindowSizeDefault(size)
-        case .videoPoker: videoPokerViewModel.makeCurrentWindowSizeDefault(size)
-        case .blackjack:  blackjackViewModel.makeCurrentWindowSizeDefault(size)
         }
     }
 
@@ -304,6 +367,7 @@ public final class AppCoordinator {
         case .spider:     spiderViewModel.resetStatistics()
         case .videoPoker: videoPokerViewModel.resetStatistics()
         case .blackjack:  blackjackViewModel.resetStatistics()
+        case .honeycomb:  honeycombViewModel.resetStatistics()
         }
     }
 
@@ -348,7 +412,7 @@ public final class AppCoordinator {
             let count = max(spiderViewModel.state.foundations.count, 4)
             spiderViewModel.state.foundations = fullFoundations(count: count)
             spiderViewModel.state.hasWon = true
-        case .videoPoker, .blackjack:
+        case .videoPoker, .blackjack, .honeycomb:
             break   // no card-cascade win animation for poker/casino modes
         }
     }
@@ -365,6 +429,7 @@ public final class AppCoordinator {
             case .spider:     self.spiderViewModel.debugBannerRequest     = kind
             case .videoPoker: self.videoPokerViewModel.debugBannerRequest = kind
             case .blackjack:  self.blackjackViewModel.debugBannerRequest  = kind
+            case .honeycomb:  self.honeycombViewModel.debugBannerRequest  = kind
             }
         }
     }

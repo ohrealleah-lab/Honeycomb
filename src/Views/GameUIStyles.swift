@@ -1,6 +1,31 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Width Measurement
+
+/// Publishes the width of whatever it's attached to, for toolbars/action-button rows that
+/// need to know their own available width to decide when to swap text labels for
+/// icon-only buttons. Same GeometryReader-in-background idiom already used elsewhere in
+/// this codebase for pile-frame tracking.
+private struct MeasuredWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+extension View {
+    /// Reports this view's rendered width into `width` on every layout pass.
+    func measureWidth(into width: Binding<CGFloat>) -> some View {
+        self.background(
+            GeometryReader { geo in
+                Color.clear.preference(key: MeasuredWidthKey.self, value: geo.size.width)
+            }
+        )
+        .onPreferenceChange(MeasuredWidthKey.self) { width.wrappedValue = $0 }
+    }
+}
+
 // MARK: - Press Button Style
 
 struct PressButtonStyle: ButtonStyle {
@@ -51,6 +76,29 @@ enum UISound {
         let sound = NSSound(named: "Pop")
         sound?.volume = 0.25
         sound?.play()
+    }
+
+    // Shared game-effect player (shuffle/snap/victory/etc.) used by every game's ViewModel.
+    // `respectHeadlessMode` defaults to false to preserve each game's pre-existing behavior —
+    // only BlackjackViewModel checked isHeadlessMode before this was consolidated.
+    static func play(named name: String, enabled: Bool, respectHeadlessMode: Bool = false) {
+        guard enabled, !(respectHeadlessMode && isHeadlessMode) else { return }
+
+        if let soundURL = Bundle.main.url(forResource: name, withExtension: "aiff"),
+           let sound = NSSound(contentsOf: soundURL, byReference: true) {
+            sound.play()
+            return
+        }
+
+        let systemName: String
+        switch name {
+        case "shuffle": systemName = "Blow"
+        case "snap": systemName = "Tink"
+        case "victory": systemName = "Hero"
+        default: systemName = name
+        }
+
+        NSSound(named: NSSound.Name(systemName))?.play()
     }
 }
 
@@ -179,22 +227,108 @@ struct HotkeyLegendView: View {
 /// which targets modal editors sitting on an adaptive light/dark window background.
 struct GameToolbarButton: View {
     let label: String
+    var systemImage: String? = nil
+    var isCompact: Bool = false
     var disabled: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(label)
-                .font(.display(16))
-                .foregroundColor(disabled ? .white.opacity(0.4) : .white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.white.opacity(0.15))
-                .cornerRadius(4)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(disabled ? Color.white.opacity(0.4) : Color.white, lineWidth: 1))
+            Group {
+                if isCompact, let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 14, weight: .semibold))
+                } else {
+                    Text(label)
+                        .font(.display(16))
+                        .lineLimit(1)
+                }
+            }
+            .foregroundColor(disabled ? .white.opacity(0.4) : .white)
+            .padding(.horizontal, isCompact ? 10 : 12)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(0.15))
+            .cornerRadius(4)
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(disabled ? Color.white.opacity(0.4) : Color.white, lineWidth: 1))
         }
         .buttonStyle(HoverToolbarButtonStyle())
         .disabled(disabled)
+        .focusable(false)
+        .accessibilityLabel(label)
+    }
+}
+
+/// The toolbar's game-picker trigger + popover, shared by all 5 games so their pickers
+/// can't visually drift from each other. A plain Button (not SwiftUI's `Menu`) — `Menu`
+/// is backed by AppKit's NSPopUpButton, which under width pressure can render its
+/// truncated title using system default styling instead of respecting this label's
+/// custom colors (first surfaced on Klondike, whose toolbar sits closest to the width
+/// floor of all 5 games). A plain Button never has that failure mode.
+struct GameSelectionDropdown: View {
+    @Bindable var coordinator: AppCoordinator
+
+    // Solitaire games deal a fresh hand on entry; Video Poker/Blackjack have no
+    // equivalent "start a new game" action to fire when switching to them.
+    private static let gamesThatStartNewGame: Set<GameMode> = [.klondike, .beecell, .spider]
+
+    @State private var isShowingMenu = false
+
+    var body: some View {
+        Button(action: { isShowingMenu = true }) {
+            HStack(spacing: 4) {
+                Text("Game Selection")
+                    .font(.display(16))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(0.15))
+            .cornerRadius(4)
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+        }
+        .buttonStyle(HoverToolbarButtonStyle())
+        .focusable(false)
+        .popover(isPresented: $isShowingMenu, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(GameMode.allCases) { mode in
+                    row(for: mode)
+                }
+            }
+            .padding(6)
+            .frame(width: 190)
+        }
+    }
+
+    private func row(for mode: GameMode) -> some View {
+        let isActive = coordinator.gameMode == mode
+        return Button(action: {
+            isShowingMenu = false
+            guard coordinator.gameMode != mode else { return }
+            coordinator.gameMode = mode
+            if Self.gamesThatStartNewGame.contains(mode) { coordinator.startNewGame() }
+        }) {
+            HStack(spacing: 8) {
+                Text(mode.displayName)
+                    .font(.display(16, weight: isActive ? .bold : .regular))
+                    .lineLimit(1)
+                    .foregroundColor(.primary)
+                Spacer()
+                if isActive {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(isActive ? Color.accentColor.opacity(0.15) : Color.clear)
+            .cornerRadius(6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
         .focusable(false)
     }
 }

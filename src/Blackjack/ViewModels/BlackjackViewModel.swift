@@ -38,20 +38,6 @@ public final class BlackjackViewModel {
         state.sessionCredits = options.startingCredits
         state.currentBet = 1
 
-        if let saved = UserDefaults.standard.value(forKey: "blackjack_defaultZoomScale") as? Double {
-            self.defaultZoomScale = CGFloat(saved)
-        }
-        if let saved = UserDefaults.standard.value(forKey: "blackjack_zoomScale") as? Double {
-            self.zoomScale = CGFloat(saved)
-        } else {
-            self.zoomScale = self.defaultZoomScale
-        }
-
-        if let savedWidth = UserDefaults.standard.value(forKey: "blackjack_defaultWindowWidth") as? Double,
-           let savedHeight = UserDefaults.standard.value(forKey: "blackjack_defaultWindowHeight") as? Double {
-            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
-        }
-
         UISound.isEnabled = self.options.isSoundEnabled
     }
 
@@ -101,7 +87,7 @@ public final class BlackjackViewModel {
     public var canRebuy: Bool {
         !isFreePlay
             && (state.phase == .betting || state.phase == .result)
-            && state.sessionCredits < state.currentBet
+            && state.sessionCredits <= 10
     }
 
     public var activeHand: BlackjackHand? {
@@ -335,9 +321,9 @@ public final class BlackjackViewModel {
                 payout = hand.bet
                 statistics.pushes += 1
             } else if playerBJ {
-                // Blackjack pays 3:1
+                // Blackjack pays 3:2 (standard real-world blackjack payout)
                 result = .blackjack
-                payout = hand.bet + hand.bet * 3
+                payout = hand.bet + Int(Double(hand.bet) * 1.5)
                 statistics.blackjacks += 1
                 statistics.handsWon += 1
                 playSound(named: "victory")
@@ -394,17 +380,7 @@ public final class BlackjackViewModel {
     // MARK: - Sound
 
     public func playSound(named name: String) {
-        guard !UISound.isHeadlessMode && options.isSoundEnabled else { return }
-        if let url = Bundle.main.url(forResource: name, withExtension: "aiff"),
-           let sound = NSSound(contentsOf: url, byReference: true) { sound.play(); return }
-        let sys: String
-        switch name {
-        case "shuffle": sys = "Blow"
-        case "snap":    sys = "Tink"
-        case "victory": sys = "Hero"
-        default:        sys = name
-        }
-        NSSound(named: NSSound.Name(sys))?.play()
+        UISound.play(named: name, enabled: options.isSoundEnabled, respectHeadlessMode: true)
     }
 
     // MARK: - Statistics / AppCoordinator stubs
@@ -459,31 +435,7 @@ public final class BlackjackViewModel {
     public func undoLastAction() {}
     public var canUndo: Bool { false }
 
-    // MARK: - Zoom
-    public var zoomScale: CGFloat = 1.0 {
-        didSet { UserDefaults.standard.set(Double(zoomScale), forKey: "blackjack_zoomScale") }
-    }
-    public var defaultZoomScale: CGFloat = 1.0
-
-    public func zoomIn() { zoomScale = min(2.0, zoomScale + 0.1) }
-    public func zoomOut() { zoomScale = max(0.6, zoomScale - 0.1) }
-    public func resetZoom() {
-        zoomScale = defaultZoomScale
-        defaultWindowSize = nil
-        UserDefaults.standard.removeObject(forKey: "blackjack_defaultWindowWidth")
-        UserDefaults.standard.removeObject(forKey: "blackjack_defaultWindowHeight")
-    }
-    public func makeCurrentZoomDefault() {
-        defaultZoomScale = zoomScale
-        UserDefaults.standard.set(Double(defaultZoomScale), forKey: "blackjack_defaultZoomScale")
-    }
-
-    // MARK: - Default Window Size
-    public var defaultWindowSize: CGSize?
-
-    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
-        defaultWindowSize = size
-        UserDefaults.standard.set(Double(size.width), forKey: "blackjack_defaultWindowWidth")
-        UserDefaults.standard.set(Double(size.height), forKey: "blackjack_defaultWindowHeight")
-    }
+    // Board scale — no longer manual; BlackjackView.recomputeScale() continuously derives
+    // this from the window's current size. Not persisted, purely a function of window size.
+    public var zoomScale: CGFloat = 1.0
 }

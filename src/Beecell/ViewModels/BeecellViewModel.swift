@@ -5,7 +5,7 @@ import AppKit
 @Observable
 public final class BeecellViewModel {
     public var state: BeecellState
-    public var timer: Timer?
+    private let gameTimer = GameTimer()
     
     public var options: BeecellOptions {
         didSet {
@@ -29,7 +29,7 @@ public final class BeecellViewModel {
     public var isStuck: Bool = false
     
     // Undo stack
-    private var undoStack: [BeecellState] = []
+    private var undoStack = UndoStack<BeecellState>()
     
     // Initial state for game replay
     private var initialState: BeecellState?
@@ -61,14 +61,10 @@ public final class BeecellViewModel {
 
     public var scoreString: String { String(state.score) }
     
-    // Zoom implementation
-    public var zoomScale: CGFloat = 1.0 {
-        didSet {
-            UserDefaults.standard.set(Double(zoomScale), forKey: "beecell_zoomScale")
-        }
-    }
-    public var defaultZoomScale: CGFloat = 1.0
-    
+    // Board scale — no longer manual; BeecellView.recomputeScale() continuously derives
+    // this from the window's current size. Not persisted, purely a function of window size.
+    public var zoomScale: CGFloat = 1.0
+
     private func saveOptions() {
         if let encoded = try? JSONEncoder().encode(options) {
             UserDefaults.standard.set(encoded, forKey: "beecell_options")
@@ -104,26 +100,7 @@ public final class BeecellViewModel {
     }
     
     public func playSound(named name: String) {
-        guard options.isSoundEnabled else { return }
-        
-        if let soundURL = Bundle.main.url(forResource: name, withExtension: "aiff") {
-            if let sound = NSSound(contentsOf: soundURL, byReference: true) {
-                sound.play()
-                return
-            }
-        }
-        
-        let systemName: String
-        switch name {
-        case "shuffle": systemName = "Blow"
-        case "snap": systemName = "Tink"
-        case "victory": systemName = "Hero"
-        default: systemName = name
-        }
-        
-        if let sound = NSSound(named: NSSound.Name(systemName)) {
-            sound.play()
-        }
+        UISound.play(named: name, enabled: options.isSoundEnabled)
     }
     
     public func recordWin(timeInSeconds: Int) {
@@ -157,9 +134,8 @@ public final class BeecellViewModel {
         )
         self.options = BeecellOptions()
         self.statistics = BeecellStatistics()
-        self.defaultZoomScale = 1.0
         self.zoomScale = 1.0
-        
+
         // Load options
         if let data = UserDefaults.standard.data(forKey: "beecell_options"),
            let decoded = try? JSONDecoder().decode(BeecellOptions.self, from: data) {
@@ -172,23 +148,6 @@ public final class BeecellViewModel {
         if let data = UserDefaults.standard.data(forKey: "beecell_statistics"),
            let decoded = try? JSONDecoder().decode(BeecellStatistics.self, from: data) {
             self.statistics = decoded
-        }
-        
-        // Load zoom settings
-        if let savedDefault = UserDefaults.standard.value(forKey: "beecell_defaultZoomScale") as? Double {
-            self.defaultZoomScale = CGFloat(savedDefault)
-        }
-        
-        if let savedZoom = UserDefaults.standard.value(forKey: "beecell_zoomScale") as? Double {
-            self.zoomScale = CGFloat(savedZoom)
-        } else {
-            self.zoomScale = self.defaultZoomScale
-        }
-
-        // Load default window size setting
-        if let savedWidth = UserDefaults.standard.value(forKey: "beecell_defaultWindowWidth") as? Double,
-           let savedHeight = UserDefaults.standard.value(forKey: "beecell_defaultWindowHeight") as? Double {
-            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
         }
 
         UISound.isEnabled = self.options.isSoundEnabled
@@ -475,28 +434,24 @@ public final class BeecellViewModel {
 
     public func startTimerIfNeeded() {
         guard effectiveTimed(options) else { return }
-        guard !state.isTimerActive else { return }
-        state.isTimerActive = true
-        
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            self.state.timerSeconds += 1
-        }
+        gameTimer.start(
+            isActive: { state.isTimerActive },
+            setActive: { state.isTimerActive = $0 },
+            tick: { [weak self] in self?.state.timerSeconds += 1 }
+        )
     }
-    
+
     public func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-        state.isTimerActive = false
+        gameTimer.stop(setActive: { state.isTimerActive = $0 })
     }
-    
+
     // MARK: - Victory Verification
-    
+
     public func checkWinState() {
         let totalFoundationCards = state.foundations.reduce(0) { $0 + $1.cards.count }
         let expectedCards = options.deckCount * 52
-        
-        if totalFoundationCards == expectedCards && !state.hasWon {
+
+        if WinDetection.hasWon(foundationCardCount: totalFoundationCards, totalCards: expectedCards, alreadyWon: state.hasWon) {
             state.hasWon = true
             stopTimer()
             recordWin(timeInSeconds: state.timerSeconds)
@@ -890,19 +845,16 @@ public final class BeecellViewModel {
     
     private func saveStateForUndo() {
         guard !isAutoplayRunning else { return }
-        undoStack.append(state)
-        if undoStack.count > 100 {
-            undoStack.removeFirst()
-        }
+        undoStack.push(state)
     }
-    
+
     public func undoLastAction() {
-        guard !undoStack.isEmpty else { return }
+        guard let previous = undoStack.pop() else { return }
         // The timer must keep running forward through an undo, not rewind to whatever it
         // read when the undone move's snapshot was saved.
         let currentTimerSeconds = state.timerSeconds
         let currentIsTimerActive = state.isTimerActive
-        state = undoStack.removeLast()
+        state = previous
         state.timerSeconds = currentTimerSeconds
         state.isTimerActive = currentIsTimerActive
         isAutoplayRunning = false
@@ -912,37 +864,6 @@ public final class BeecellViewModel {
         checkWinState()
         checkAutocompleteState()
         checkStuckState()
-    }
-
-    // MARK: - Zoom Actions
-    
-    public func zoomIn() {
-        zoomScale = min(2.0, zoomScale + 0.1)
-    }
-    
-    public func zoomOut() {
-        zoomScale = max(0.6, zoomScale - 0.1)
-    }
-    
-    public func resetZoom() {
-        zoomScale = defaultZoomScale
-        defaultWindowSize = nil
-        UserDefaults.standard.removeObject(forKey: "beecell_defaultWindowWidth")
-        UserDefaults.standard.removeObject(forKey: "beecell_defaultWindowHeight")
-    }
-
-    public func makeCurrentZoomDefault() {
-        defaultZoomScale = zoomScale
-        UserDefaults.standard.set(Double(defaultZoomScale), forKey: "beecell_defaultZoomScale")
-    }
-
-    // MARK: - Default Window Size
-    public var defaultWindowSize: CGSize?
-
-    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
-        defaultWindowSize = size
-        UserDefaults.standard.set(Double(size.width), forKey: "beecell_defaultWindowWidth")
-        UserDefaults.standard.set(Double(size.height), forKey: "beecell_defaultWindowHeight")
     }
 
     public func resetStatistics() {

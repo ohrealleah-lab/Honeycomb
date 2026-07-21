@@ -26,6 +26,10 @@ struct AppRouterView: View {
                 BlackjackView(viewModel: coordinator.blackjackViewModel)
                     .id(GameMode.blackjack.rawValue)
                     .transition(.opacity)
+            case .honeycomb:
+                HoneycombView(viewModel: coordinator.honeycombViewModel)
+                    .id(GameMode.honeycomb.rawValue)
+                    .transition(.opacity)
             }
         }
         .ignoresSafeArea()

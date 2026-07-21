@@ -5,7 +5,13 @@ import AppKit
 @Observable
 public final class SpiderViewModel {
     public var state: SpiderState
-    public var timer: Timer?
+    private let gameTimer = GameTimer()
+
+    // Bumped on every fresh deal (startNewGame/restartCurrentGame) — lets the view
+    // recompute its fit-to-window scale against the newly-dealt tableau's real column
+    // depths, since tableau.count never changes for Spider (always 10 columns) and can't
+    // serve as that signal the way it does for Klondike/Beecell.
+    public private(set) var gameGeneration: Int = 0
     
     public var options: SpiderOptions {
         didSet {
@@ -74,7 +80,7 @@ public final class SpiderViewModel {
     public var isStuck: Bool = false
     
     // Undo stack
-    private var undoStack: [SpiderState] = []
+    private var undoStack = UndoStack<SpiderState>()
     
     // Initial state for game replay
     private var initialState: SpiderState?
@@ -83,15 +89,10 @@ public final class SpiderViewModel {
         !undoStack.isEmpty && !state.hasWon
     }
     
-    public var defaultZoomScale: CGFloat = 1.0
-    
-    // Zoom implementation
-    public var zoomScale: CGFloat = 1.0 {
-        didSet {
-            UserDefaults.standard.set(Double(zoomScale), forKey: "spider_zoomScale")
-        }
-    }
-    
+    // Board scale — no longer manual; SpiderView.recomputeScale() continuously derives
+    // this from the window's current size. Not persisted, purely a function of window size.
+    public var zoomScale: CGFloat = 1.0
+
     private func saveOptions() {
         if let encoded = try? JSONEncoder().encode(options) {
             UserDefaults.standard.set(encoded, forKey: "spider_options")
@@ -127,26 +128,7 @@ public final class SpiderViewModel {
     }
     
     public func playSound(named name: String) {
-        guard options.isSoundEnabled else { return }
-        
-        if let soundURL = Bundle.main.url(forResource: name, withExtension: "aiff") {
-            if let sound = NSSound(contentsOf: soundURL, byReference: true) {
-                sound.play()
-                return
-            }
-        }
-        
-        let systemName: String
-        switch name {
-        case "shuffle": systemName = "Blow"
-        case "snap": systemName = "Tink"
-        case "victory": systemName = "Hero"
-        default: systemName = name
-        }
-        
-        if let sound = NSSound(named: NSSound.Name(systemName)) {
-            sound.play()
-        }
+        UISound.play(named: name, enabled: options.isSoundEnabled)
     }
     
     public func recordWin(timeInSeconds: Int) {
@@ -183,26 +165,6 @@ public final class SpiderViewModel {
             self.statistics = decoded
         } else {
             self.statistics = SpiderStatistics()
-        }
-        
-        // Load default zoom setting
-        if let savedDefault = UserDefaults.standard.value(forKey: "spider_defaultZoomScale") as? Double {
-            self.defaultZoomScale = CGFloat(savedDefault)
-        } else {
-            self.defaultZoomScale = 1.0
-        }
-        
-        // Load saved zoom setting
-        if let savedZoom = UserDefaults.standard.value(forKey: "spider_zoomScale") as? Double {
-            self.zoomScale = CGFloat(savedZoom)
-        } else {
-            self.zoomScale = self.defaultZoomScale
-        }
-
-        // Load default window size setting
-        if let savedWidth = UserDefaults.standard.value(forKey: "spider_defaultWindowWidth") as? Double,
-           let savedHeight = UserDefaults.standard.value(forKey: "spider_defaultWindowHeight") as? Double {
-            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
         }
 
         UISound.isEnabled = self.options.isSoundEnabled
@@ -307,6 +269,7 @@ public final class SpiderViewModel {
         isStuck = false
         initialState = state
         clearKeyboardCursor()
+        gameGeneration += 1
     }
 
     public func restartCurrentGame() {
@@ -318,6 +281,7 @@ public final class SpiderViewModel {
         isAutoplayRunning = false
         isStuck = false
         clearKeyboardCursor()
+        gameGeneration += 1
     }
     
     // MARK: - Core Interactions
@@ -527,7 +491,7 @@ public final class SpiderViewModel {
     public func checkWinState() {
         // Game is won when all 8 foundations are completed (8 * 13 = 104 cards)
         let totalFoundationCards = state.foundations.reduce(0) { $0 + $1.cards.count }
-        if totalFoundationCards == 104 && !state.hasWon {
+        if WinDetection.hasWon(foundationCardCount: totalFoundationCards, totalCards: 104, alreadyWon: state.hasWon) {
             state.hasWon = true
             stopTimer()
             recordWin(timeInSeconds: state.timerSeconds)
@@ -551,38 +515,31 @@ public final class SpiderViewModel {
 
     public func startTimerIfNeeded() {
         guard effectiveTimed(options) else { return }
-        guard !state.isTimerActive else { return }
-        state.isTimerActive = true
-        
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            self.state.timerSeconds += 1
-        }
+        gameTimer.start(
+            isActive: { state.isTimerActive },
+            setActive: { state.isTimerActive = $0 },
+            tick: { [weak self] in self?.state.timerSeconds += 1 }
+        )
     }
-    
+
     public func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-        state.isTimerActive = false
+        gameTimer.stop(setActive: { state.isTimerActive = $0 })
     }
-    
+
     // MARK: - Undo Implementation
-    
+
     private func saveStateForUndo() {
         guard !isAutoplayRunning else { return }
-        undoStack.append(state)
-        if undoStack.count > 100 {
-            undoStack.removeFirst()
-        }
+        undoStack.push(state)
     }
-    
+
     public func undoLastAction() {
-        guard !undoStack.isEmpty else { return }
+        guard let previous = undoStack.pop() else { return }
         // The timer must keep running forward through an undo, not rewind to whatever it
         // read when the undone move's snapshot was saved.
         let currentTimerSeconds = state.timerSeconds
         let currentIsTimerActive = state.isTimerActive
-        state = undoStack.removeLast()
+        state = previous
         state.timerSeconds = currentTimerSeconds
         state.isTimerActive = currentIsTimerActive
         isAutoplayRunning = false
@@ -843,37 +800,6 @@ public final class SpiderViewModel {
         lastMoveTargetId = nil
     }
     
-    // MARK: - Zoom Controls
-    
-    public func zoomIn() {
-        zoomScale = min(2.0, zoomScale + 0.1)
-    }
-    
-    public func zoomOut() {
-        zoomScale = max(0.5, zoomScale - 0.1)
-    }
-    
-    public func resetZoom() {
-        zoomScale = defaultZoomScale
-        defaultWindowSize = nil
-        UserDefaults.standard.removeObject(forKey: "spider_defaultWindowWidth")
-        UserDefaults.standard.removeObject(forKey: "spider_defaultWindowHeight")
-    }
-
-    public func makeCurrentZoomDefault() {
-        defaultZoomScale = zoomScale
-        UserDefaults.standard.set(Double(defaultZoomScale), forKey: "spider_defaultZoomScale")
-    }
-
-    // MARK: - Default Window Size
-    public var defaultWindowSize: CGSize?
-
-    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
-        defaultWindowSize = size
-        UserDefaults.standard.set(Double(size.width), forKey: "spider_defaultWindowWidth")
-        UserDefaults.standard.set(Double(size.height), forKey: "spider_defaultWindowHeight")
-    }
-
     public func resetStatistics() {
         gamesWon = 0
         gamesPlayed = 0

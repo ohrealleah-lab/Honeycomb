@@ -12,7 +12,6 @@ struct GameViewModelTests {
         testStuckDetectionRecognizesUnblockingMoves()
         testStuckDetectionIgnoresPointlessKingShuffle()
         testUndoAction()
-        testZoomAndDefaultZoom()
         testGamesWonCounter()
         testGamesPlayedCounter()
         testFoundationOrder()
@@ -227,40 +226,6 @@ struct GameViewModelTests {
         assert(viewModel.state.stock.cards.count == initialStockCount, "Stock count should be restored")
         assert(viewModel.state.waste.isEmpty, "Waste should be empty again")
         assert(!viewModel.canUndo, "Should not be able to undo after restoring initial state")
-    }
-    
-    static func testZoomAndDefaultZoom() {
-        let viewModel = GameViewModel()
-        
-        // Save current defaults to restore later
-        let originalDefault = viewModel.defaultZoomScale
-        let originalZoom = viewModel.zoomScale
-        
-        // 1. Zoom actions
-        viewModel.zoomIn()
-        assert(viewModel.zoomScale > 1.0 || viewModel.zoomScale == 2.0, "Zoom in should increase scale")
-        
-        viewModel.zoomOut()
-        assert(viewModel.zoomScale == 1.0 || viewModel.zoomScale == originalZoom, "Zoom out should decrease scale")
-        
-        // 2. Setting default zoom
-        viewModel.zoomIn()
-        viewModel.zoomIn()
-        let newZoom = viewModel.zoomScale
-        viewModel.makeCurrentZoomDefault()
-        assert(viewModel.defaultZoomScale == newZoom, "Default zoom scale should match new zoom scale")
-        
-        // 3. Reset zoom
-        viewModel.zoomOut()
-        assert(viewModel.zoomScale != newZoom, "Zoom should have changed")
-        viewModel.resetZoom()
-        assert(viewModel.zoomScale == newZoom, "Reset zoom should restore default zoom scale")
-        
-        // Restore defaults
-        viewModel.defaultZoomScale = originalDefault
-        UserDefaults.standard.set(Double(originalDefault), forKey: "defaultZoomScale")
-        viewModel.zoomScale = originalZoom
-        UserDefaults.standard.set(Double(originalZoom), forKey: "zoomScale")
     }
     
     static func testGamesWonCounter() {

@@ -28,6 +28,7 @@ build:
 	cp src/shuffle.aiff $(APP_BUNDLE)/Contents/Resources/shuffle.aiff
 	cp src/snap.aiff $(APP_BUNDLE)/Contents/Resources/snap.aiff
 	cp src/victory.aiff $(APP_BUNDLE)/Contents/Resources/victory.aiff
+	cp src/Honeycomb/cards_db.json $(APP_BUNDLE)/Contents/Resources/cards_db.json
 	# Copy compiled binary from SPM build path to the app bundle
 	cp .build/release/$(APP_NAME) $(MACOS_BIN)
 	chmod +x $(MACOS_BIN)
@@ -43,7 +44,7 @@ clean:
 
 test:
 	# Compile test runner excluding SoliBeeApp.swift (which has the GUI @main entry)
-	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Debug/*.swift SoliBeeTests/*.swift
+	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Honeycomb/Models/*.swift src/Honeycomb/ViewModels/*.swift src/Honeycomb/Views/*.swift src/Debug/*.swift SoliBeeTests/*.swift
 	# Run tests
 	./test_runner
 	# Cleanup test runner binary
@@ -51,7 +52,7 @@ test:
 
 bridge:
 	# Compile the Universal Agent Bridge
-	swiftc -o solibee_bridge -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Debug/*.swift SoliBeeBridge/UniversalBridge.swift
+	swiftc -o solibee_bridge -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Honeycomb/Models/*.swift src/Honeycomb/ViewModels/*.swift src/Honeycomb/Views/*.swift src/Debug/*.swift SoliBeeBridge/UniversalBridge.swift
 
 run: build
 	open $(APP_BUNDLE)

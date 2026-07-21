@@ -13,6 +13,7 @@ struct ThemesSectionView: View {
     @State private var saveError: String? = nil
     @State private var themeToDelete: SoliBeeTheme? = nil
     @State private var themeToApply: SoliBeeTheme? = nil
+    @State private var themeToUpdate: SoliBeeTheme? = nil
 
     private var manager: ThemeManager { ThemeManager.shared }
 
@@ -103,6 +104,18 @@ struct ThemesSectionView: View {
         } message: {
             Text("Applying a new theme will remove your custom card art. Cancel and save as a new theme, if needed.")
         }
+        .alert("Update Theme", isPresented: Binding(
+            get: { themeToUpdate != nil },
+            set: { if !$0 { themeToUpdate = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { themeToUpdate = nil }
+            Button("Update") {
+                if let t = themeToUpdate { updateTheme(t) }
+                themeToUpdate = nil
+            }
+        } message: {
+            Text("Are you sure you want to update \"\(themeToUpdate?.name ?? "")\"?")
+        }
     }
 
     // Skip the warning if the user is currently on a saved, non-Default theme (nothing
@@ -137,6 +150,15 @@ struct ThemesSectionView: View {
             }
 
             Spacer()
+
+            if manager.activeThemeId == theme.id {
+                Button("Update") {
+                    themeToUpdate = theme
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .focusable(false)
+            }
 
             Button("Apply") {
                 if shouldWarnBeforeApplying() {
@@ -188,5 +210,21 @@ struct ThemesSectionView: View {
         showingSaveRow = false
         newThemeName = ""
         saveError = nil
+    }
+
+    private func updateTheme(_ theme: SoliBeeTheme) {
+        let updated = SoliBeeTheme(
+            id: theme.id,
+            name: theme.name,
+            cardBackTheme: coordinator.cardBackTheme,
+            feltColor: coordinator.feltColor,
+            customFeltRed: coordinator.customFeltRed,
+            customFeltGreen: coordinator.customFeltGreen,
+            customFeltBlue: coordinator.customFeltBlue,
+            faceArts: CustomFaceCardArtManager.shared.faceArts,
+            customCardColors: coordinator.customCardColors,
+            customBackgroundName: coordinator.customBackgroundName
+        )
+        manager.updateTheme(updated)
     }
 }

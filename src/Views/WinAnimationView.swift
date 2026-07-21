@@ -12,6 +12,8 @@ struct BouncingCard: Identifiable {
 
 public struct WinAnimationView: View {
     let foundations: [Pile]
+    let pileFrames: [String: CGRect]
+    let zoomScale: CGFloat
     let onFinished: () -> Void
 
     @State private var activeCards: [BouncingCard] = []
@@ -19,8 +21,10 @@ public struct WinAnimationView: View {
     @State private var lastSpawnTime: Date = Date()
     @State private var lastFrameDate: Date? = nil
 
-    public init(foundations: [Pile], onFinished: @escaping () -> Void) {
+    public init(foundations: [Pile], pileFrames: [String: CGRect], zoomScale: CGFloat, onFinished: @escaping () -> Void) {
         self.foundations = foundations
+        self.pileFrames = pileFrames
+        self.zoomScale = zoomScale
         self.onFinished = onFinished
     }
 
@@ -43,6 +47,7 @@ public struct WinAnimationView: View {
                 } symbols: {
                     ForEach(activeCards) { bouncing in
                         CardView(card: bouncing.card)
+                            .scaleEffect(zoomScale)
                             .tag(bouncing.id)
                     }
                 }
@@ -94,8 +99,16 @@ public struct WinAnimationView: View {
                 pile.cards.contains { $0.id == nextCard.id }
             } ?? 0
 
-            let startX = screenSize.width * 0.5 + CGFloat(foundationIndex) * 98 + 40
-            let startY: CGFloat = 80
+            let pileId = foundations[foundationIndex].id
+            let startX: CGFloat
+            let startY: CGFloat
+            if let frame = pileFrames[pileId] {
+                startX = frame.midX
+                startY = frame.midY
+            } else {
+                startX = screenSize.width * 0.5 + CGFloat(foundationIndex) * 98 + 40
+                startY = 80
+            }
 
             // Velocities in pixels per second (equivalent to original ±4 and -6…-2 px/frame @ 60 fps)
             let vx = CGFloat.random(in: -240...240)
@@ -108,8 +121,8 @@ public struct WinAnimationView: View {
         // Physics constants (pixels/s and pixels/s²)
         let gravity: CGFloat = 980     // ≈ 0.28 px/frame² × 60² fps
         let elasticity: CGFloat = 0.85
-        let cardWidth: CGFloat = 80
-        let cardHeight: CGFloat = 112
+        let cardWidth: CGFloat = 128 * zoomScale
+        let cardHeight: CGFloat = 181 * zoomScale
 
         var remainingCards: [BouncingCard] = []
 

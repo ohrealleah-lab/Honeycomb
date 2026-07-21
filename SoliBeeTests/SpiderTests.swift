@@ -4,6 +4,7 @@ struct SpiderTests {
     static func run() {
         testSpiderInitialization()
         testSpiderValidation()
+        testSpiderWinState()
     }
     
     static func testSpiderInitialization() {
@@ -36,5 +37,20 @@ struct SpiderTests {
         // Check non-matching suit sequence is invalid for drag
         let card3 = Card(suit: .hearts, rank: 4, faceUp: true)
         assert(!viewModel.isValidDragSequence([card1, card3]), "Non-matching suit sequence should be invalid for drag")
+    }
+
+    static func testSpiderWinState() {
+        let viewModel = SpiderViewModel()
+        assert(!viewModel.state.hasWon, "Fresh game should not be won")
+
+        // Fill all 8 foundations with a complete King-to-Ace run to simulate a win
+        // (8 * 13 = 104 cards, matching Spider's full deck).
+        viewModel.state.foundations = (0..<8).map { idx in
+            Pile(id: "foundation_\(idx)", type: .foundation, cards: (1...13).reversed().map { Card(suit: .spades, rank: $0, faceUp: true) })
+        }
+
+        viewModel.checkWinState()
+        assert(viewModel.state.hasWon, "Game should be won with all 104 foundation cards filled")
+        assert(!viewModel.state.isTimerActive, "Timer should stop on win")
     }
 }

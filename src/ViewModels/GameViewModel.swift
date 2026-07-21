@@ -5,7 +5,7 @@ import AppKit
 @Observable
 public final class GameViewModel {
     public var state: GameState
-    public var timer: Timer?
+    private let gameTimer = GameTimer()
     
     public var options: GameOptions {
         didSet {
@@ -102,7 +102,7 @@ public final class GameViewModel {
     public private(set) var gameGeneration: Int = 0
 
     // Undo stack
-    private var undoStack: [GameState] = []
+    private var undoStack = UndoStack<GameState>()
 
     // Initial state for game replay
     private var initialState: GameState?
@@ -139,7 +139,6 @@ public final class GameViewModel {
         }
     }
     
-    public var defaultZoomScale: CGFloat = 1.0
 
     private func saveOptions() {
         if let encoded = try? JSONEncoder().encode(options) {
@@ -187,26 +186,7 @@ public final class GameViewModel {
     }
     
     public func playSound(named name: String) {
-        guard options.isSoundEnabled else { return }
-        
-        if let soundURL = Bundle.main.url(forResource: name, withExtension: "aiff") {
-            if let sound = NSSound(contentsOf: soundURL, byReference: true) {
-                sound.play()
-                return
-            }
-        }
-        
-        let systemName: String
-        switch name {
-        case "shuffle": systemName = "Blow"
-        case "snap": systemName = "Tink"
-        case "victory": systemName = "Hero"
-        default: systemName = name
-        }
-        
-        if let sound = NSSound(named: NSSound.Name(systemName)) {
-            sound.play()
-        }
+        UISound.play(named: name, enabled: options.isSoundEnabled)
     }
     
     public func recordWin(timeInSeconds: Int) {
@@ -256,26 +236,6 @@ public final class GameViewModel {
         }
 
         self.vegasBankroll = 0
-        
-        // Load default zoom setting
-        if let savedDefault = UserDefaults.standard.value(forKey: "defaultZoomScale") as? Double {
-            self.defaultZoomScale = CGFloat(savedDefault)
-        } else {
-            self.defaultZoomScale = 1.0
-        }
-        
-        // Load saved zoom setting
-        if let savedZoom = UserDefaults.standard.value(forKey: "zoomScale") as? Double {
-            self.zoomScale = CGFloat(savedZoom)
-        } else {
-            self.zoomScale = self.defaultZoomScale
-        }
-
-        // Load default window size setting
-        if let savedWidth = UserDefaults.standard.value(forKey: "defaultWindowWidth") as? Double,
-           let savedHeight = UserDefaults.standard.value(forKey: "defaultWindowHeight") as? Double {
-            self.defaultWindowSize = CGSize(width: savedWidth, height: savedHeight)
-        }
 
         UISound.isEnabled = self.options.isSoundEnabled
 
@@ -596,27 +556,23 @@ public final class GameViewModel {
 
     public func startTimerIfNeeded() {
         guard effectiveTimed(options) else { return }
-        guard !state.isTimerActive else { return }
-        state.isTimerActive = true
-        
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            self.state.timerSeconds += 1
-        }
+        gameTimer.start(
+            isActive: { state.isTimerActive },
+            setActive: { state.isTimerActive = $0 },
+            tick: { [weak self] in self?.state.timerSeconds += 1 }
+        )
     }
-    
+
     public func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-        state.isTimerActive = false
+        gameTimer.stop(setActive: { state.isTimerActive = $0 })
     }
-    
+
     // MARK: - Victory Verification
-    
+
     public func checkWinState() {
         // Game is won when all 4 foundations have 13 cards (total 52 cards)
         let totalFoundationCards = state.foundations.reduce(0) { $0 + $1.cards.count }
-        if totalFoundationCards == 52 && !state.hasWon {
+        if WinDetection.hasWon(foundationCardCount: totalFoundationCards, totalCards: 52, alreadyWon: state.hasWon) {
             state.hasWon = true
             stopTimer()
             recordWin(timeInSeconds: state.timerSeconds)
@@ -1012,20 +968,17 @@ public final class GameViewModel {
     
     private func saveStateForUndo() {
         guard !isAutoplayRunning else { return }
-        undoStack.append(state)
-        if undoStack.count > 100 {
-            undoStack.removeFirst()
-        }
+        undoStack.push(state)
     }
-    
+
     public func undoLastAction() {
-        guard !undoStack.isEmpty else { return }
+        guard let previous = undoStack.pop() else { return }
         // The timer must keep running forward through an undo, not rewind to whatever it
         // read when the undone move's snapshot was saved.
         let currentTimerSeconds = state.timerSeconds
         let currentIsTimerActive = state.isTimerActive
         let scoreBeforeUndo = state.score
-        state = undoStack.removeLast()
+        state = previous
         state.timerSeconds = currentTimerSeconds
         state.isTimerActive = currentIsTimerActive
         // Standard-mode undo penalty: deducts the points the undone move(s) earned, on
@@ -1053,41 +1006,12 @@ public final class GameViewModel {
         checkStuckState()
     }
     
-    // MARK: - Zoom Implementation
-    public var zoomScale: CGFloat = 1.0 {
-        didSet {
-            UserDefaults.standard.set(Double(zoomScale), forKey: "zoomScale")
-        }
-    }
-    
-    public func zoomIn() {
-        zoomScale = min(2.0, zoomScale + 0.1)
-    }
-    
-    public func zoomOut() {
-        zoomScale = max(0.6, zoomScale - 0.1)
-    }
-    
-    public func resetZoom() {
-        zoomScale = defaultZoomScale
-        defaultWindowSize = nil
-        UserDefaults.standard.removeObject(forKey: "defaultWindowWidth")
-        UserDefaults.standard.removeObject(forKey: "defaultWindowHeight")
-    }
-
-    public func makeCurrentZoomDefault() {
-        defaultZoomScale = zoomScale
-        UserDefaults.standard.set(Double(defaultZoomScale), forKey: "defaultZoomScale")
-    }
-
-    // MARK: - Default Window Size
-    public var defaultWindowSize: CGSize?
-
-    public func makeCurrentWindowSizeDefault(_ size: CGSize) {
-        defaultWindowSize = size
-        UserDefaults.standard.set(Double(size.width), forKey: "defaultWindowWidth")
-        UserDefaults.standard.set(Double(size.height), forKey: "defaultWindowHeight")
-    }
+    // MARK: - Board scale
+    // No longer a manual, user-set value — GameView.recomputeScale() continuously derives
+    // this from the window's current size to fit the board to it, replacing the old
+    // manual zoom system entirely. Not persisted: it's purely a function of window size,
+    // recomputed fresh every launch from whatever size the window opens at.
+    public var zoomScale: CGFloat = 1.0
 
     public func resetStatistics() {
         gamesWon = 0
