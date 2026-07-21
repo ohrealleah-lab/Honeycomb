@@ -58,6 +58,9 @@
                 <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="AlwaysOnTopCheckBox" Content="Always on Top" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                <!-- Klondike/Freecell/Spider only (per-game, not shared like the toggles
+                     above) — hidden for Video Poker/Blackjack, which don't have this. -->
+                <CheckBox x:Name="PointHighlightsCheckBox" Content="Point Highlights" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
             </StackPanel>
 
             <Rectangle x:Name="VisualThemesDivider" Height="1" Fill="#DDDDDD" Margin="0,4,0,4"/>

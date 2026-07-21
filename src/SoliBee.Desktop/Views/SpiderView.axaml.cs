@@ -228,9 +228,7 @@ public partial class SpiderView : CardGameView
                 if (vm.State.HasWon) TriggerVictoryCascade();
                 else
                 {
-                    _winTriggered = false;
-                    VictoryOverlay.StopAnimation();
-                    VictoryOverlay.IsVisible = false;
+                    ResetVictoryTrigger();
                 }
             }
             else if (e.PropertyName == "Tableaus")
@@ -273,7 +271,7 @@ public partial class SpiderView : CardGameView
             }
             else if (e.PropertyName == nameof(SpiderViewModel.HasNoMoves))
             {
-                if (vm.HasNoMoves) NoMovesStatsLabel.Text = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
+                if (vm.HasNoMoves) NoMovesBanner.StatsText = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
                 NoMovesBanner.IsVisible = vm.HasNoMoves;
             }
             else if (e.PropertyName == nameof(SpiderViewModel.IsAutocompletable) ||
@@ -285,6 +283,13 @@ public partial class SpiderView : CardGameView
             else if (e.PropertyName == nameof(SpiderViewModel.ActiveHint))
             {
                 ApplyHint(vm.ActiveHint, AllPileViews());
+            }
+            else if (e.PropertyName == nameof(SpiderViewModel.PointPopup))
+            {
+                // Deferred to Loaded priority — see the matching comment in
+                // GameView.axaml.cs for why (avoids landing on the card's stale
+                // pre-move CardView instead of the one it actually moved to).
+                Dispatcher.UIThread.Post(() => ApplyPointPopup(vm.PointPopup, AllPileViews()), DispatcherPriority.Loaded);
             }
             else if (e.PropertyName == nameof(SpiderViewModel.Options))
             {
@@ -383,10 +388,16 @@ public partial class SpiderView : CardGameView
         e.Handled = true;
     }
 
-    private bool _winTriggered;
+    protected override WinAnimationView VictoryOverlayControl => VictoryOverlay;
+    protected override StuckBanner NoMovesBannerControl => NoMovesBanner;
+    protected override AutocompleteBanner AutocompleteBannerControl => AutocompleteBanner;
+    protected override FlashToast HintToastControl => HintToast;
 
-    private List<Point> ComputeFoundationSpawnPoints()
+    protected override List<Point> ComputeFoundationSpawnPoints()
     {
+        // Force a real layout pass so TranslatePoint/Bounds below reflect the board's
+        // current actual size (see the matching comment in WinAnimationView.StartAnimation).
+        this.UpdateLayout();
         var views = new[] { Foundation0, Foundation1, Foundation2, Foundation3, Foundation4, Foundation5, Foundation6, Foundation7 };
         var pts = new List<Point>(views.Length);
         foreach (var fv in views)
@@ -395,102 +406,6 @@ public partial class SpiderView : CardGameView
             pts.Add(new Point(topLeft.X + fv.Bounds.Width / 2.0, topLeft.Y));
         }
         return pts;
-    }
-
-    private void TriggerVictoryCascade()
-    {
-        if (_winTriggered) return;
-        _winTriggered = true;
-        VictoryOverlay.IsVisible = true;
-        if (DataContext is SpiderViewModel vm)
-        {
-            Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
-            }, DispatcherPriority.Loaded);
-        }
-        else
-        {
-            VictoryOverlay.StartAnimation();
-        }
-        SoundService.PlaySolitaireWin();
-    }
-
-    // Dev-only banner preview, wired to the toolbar's local-only "Banners" dropdown
-    // (the dropdown itself is only made visible in DEBUG builds — see MainWindow).
-    public void DebugShowWinBanner()
-    {
-        VictoryOverlay.IsVisible = true;
-        if (DataContext is SpiderViewModel vm)
-        {
-            Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
-            }, DispatcherPriority.Loaded);
-        }
-        else
-        {
-            VictoryOverlay.StartAnimation();
-        }
-    }
-
-    // Dev-only — always plays the full demo cascade (the no-arg overload's fake 52-card
-    // deck) regardless of the real foundations' current contents, so the bouncing-card
-    // animation itself can be reviewed even mid-game when few/no cards are actually up.
-    public void DebugPlayWinAnimation()
-    {
-        VictoryOverlay.IsVisible = true;
-        Dispatcher.UIThread.Post(() => {
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints());
-        }, DispatcherPriority.Loaded);
-        SoundService.PlaySolitaireWin();
-    }
-
-    public void DebugShowLossBanner()
-    {
-        if (DataContext is SpiderViewModel vm)
-            NoMovesStatsLabel.Text = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
-        NoMovesBanner.IsVisible = true;
-    }
-
-    public void DebugShowAutocompleteBanner() => AutocompleteBanner.IsVisible = true;
-
-    private void NoMovesNewGame_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not SpiderViewModel vm) return;
-        NoMovesBanner.IsVisible = false;
-        AutocompleteBanner.IsVisible = false;
-        vm.InitializeGame();
-        SoundService.PlayShuffle();
-        e.Handled = true;
-    }
-
-    private void NoMovesRestart_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not SpiderViewModel vm) return;
-        NoMovesBanner.IsVisible = false;
-        AutocompleteBanner.IsVisible = false;
-        vm.RestartGame();
-        SoundService.PlayShuffle();
-        e.Handled = true;
-    }
-
-    private void AutocompleteGame_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not SpiderViewModel vm) return;
-        AutocompleteBanner.IsVisible = false;
-        vm.Autocomplete();
-        e.Handled = true;
-    }
-
-    private void NoMovesDismiss_Click(object? sender, RoutedEventArgs e)
-    {
-        NoMovesBanner.IsVisible = false;
-        e.Handled = true;
-    }
-
-    private void AutocompleteDismiss_Click(object? sender, RoutedEventArgs e)
-    {
-        AutocompleteBanner.IsVisible = false;
-        e.Handled = true;
     }
 
     private void ApplyFeltColor(GameOptions options)

@@ -127,9 +127,15 @@ public partial class MainWindow : Window
             // Safety net for the very first game switch: it runs from the constructor,
             // before the window is shown, so Bounds is still invalid the whole way through
             // and the posted UpdateResponsiveLayout() in ApplyGameSwitch can end up racing
-            // an early/incomplete layout pass instead of the fully-shown one. Opened fires
-            // once the window is genuinely up with final Bounds, so recompute here too.
-            UpdateResponsiveLayout();
+            // an early/incomplete layout pass instead of the fully-shown one. A single call
+            // here (Opened firing once the window is genuinely up) wasn't reliable enough in
+            // practice — the exact frame the active game view's content finishes populating
+            // relative to Opened firing has proven inconsistent.
+            //
+            // MainContentWrapper starts at Opacity=0 (see MainWindow.axaml) specifically so
+            // this settling process isn't visible — once SettleResponsiveLayout below
+            // decides it's stable, reveal it via the Opacity transition already defined there.
+            SettleResponsiveLayout(() => MainContentWrapper.Opacity = 1);
         };
 
         // Preload custom art into display-resolution cache before first scroll
@@ -449,6 +455,12 @@ public partial class MainWindow : Window
         else if (_pendingAction.StartsWith("SwitchGame:"))
         {
             string targetTag = _pendingAction.Substring("SwitchGame:".Length);
+            // Unlike the direct-switch path in GameSelectionBox_SelectionChanged (no game
+            // in progress, so no confirmation needed), this path was missing this call —
+            // any window resize made during that game session was silently discarded on
+            // switch, only surviving if the app happened to be closed first (Closing also
+            // calls this, saving under whatever _currentGameTag still was at that point).
+            SaveCurrentWindowSize();
             _currentGameTag = targetTag;
             _revertingSelection = true;
             GameSelectionBox.SelectedIndex = GameModeToIndex(targetTag);
@@ -551,13 +563,26 @@ public partial class MainWindow : Window
 
     private void Hint_Click(object? sender, RoutedEventArgs e)
     {
+        HintMove? activeHint = null;
         if (this.DataContext is GameViewModel klondikeVm)
+        {
             klondikeVm.FindHint();
+            activeHint = klondikeVm.ActiveHint;
+        }
         else if (this.DataContext is FreecellViewModel freecellVm)
+        {
             freecellVm.FindHint();
+            activeHint = freecellVm.ActiveHint;
+        }
         else if (this.DataContext is SpiderViewModel spiderVm)
+        {
             spiderVm.FindHint();
+            activeHint = spiderVm.ActiveHint;
+        }
         // Video Poker has no hint
+
+        if (activeHint?.Card.Id == "no_move" && MainContent.Content is CardGameView gameView)
+            gameView.FlashHintUnavailable();
     }
 
     private void ShowStatsPanel()
@@ -945,13 +970,6 @@ public partial class MainWindow : Window
         _                                                   => 0,
     };
 
-    private void ResizeWindowForGame(string tag)
-    {
-        // Dynamic scaling and responsive layout happens automatically
-        // via UpdateResponsiveLayout(), which is called in ApplyGameSwitch.
-        UpdateResponsiveLayout();
-    }
-
     private void GameSelectionBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (GameSelectionBox == null || _coordinator == null || _revertingSelection) return;
@@ -1092,7 +1110,6 @@ public partial class MainWindow : Window
             activeView.Loaded += (_, _) => UpdateResponsiveLayout();
 
         this.DataContext = _coordinator.ActiveViewModel;
-        ResizeWindowForGame(tag);
         RestoreWindowSizeForGame(tag);
         // RestoreWindowSizeForGame is the authoritative final size for this game switch,
         // but setting Window.Width/Height doesn't update this.Bounds synchronously — the
@@ -1101,9 +1118,10 @@ public partial class MainWindow : Window
         // synchronous UpdateResponsiveLayout() call here would still read the *old* Bounds
         // and scale the board for the previous game's window size, which is exactly what
         // made Blackjack look "zoomed in" until the user grabbed the resize handle (an OS
-        // resize that *does* update Bounds immediately). Posting at Loaded priority defers
-        // this until after that layout pass has actually happened.
-        Dispatcher.UIThread.Post(UpdateResponsiveLayout, DispatcherPriority.Loaded);
+        // resize that *does* update Bounds immediately). SettleResponsiveLayout retries
+        // until it stabilizes instead of a single deferred call, since even a Loaded-
+        // priority deferral hasn't proven reliable enough on its own (see its own comment).
+        SettleResponsiveLayout();
 
         // Re-point the hint-availability tracker at whichever viewmodel is now active,
         // so the Hint button disables itself the moment a deadlock leaves no legal moves.
@@ -1287,6 +1305,7 @@ public partial class MainWindow : Window
         SettingsService.SaveOptions(opts);
     }
 
+
     // Keeps the window from growing/restoring larger than the actual screen and from
     // sitting partially off-screen afterward — without this, a size restored from a
     // different/bigger monitor (RestoreWindowSizeForGame) could leave the window's
@@ -1311,30 +1330,48 @@ public partial class MainWindow : Window
         Position = new PixelPoint((int)x, (int)y);
     }
 
-    // Called when the board's own minimum footprint changes at a fixed zoom level (e.g.
-    // Freecell 1-deck ↔ 2-deck adds a whole extra FreeCells+Foundations row) — recomputes
-    // Min bounds and snaps the window to exactly that size, growing OR shrinking as
-    // needed. There's only one saved Freecell window size (not one per deck count), so
-    // switching 2-deck → 1-deck must actively shrink back down here — otherwise it would
-    // stay oversized from 2-deck with no way to reach a correctly-sized window short of
-    // a manual resize. Setting Width/Height alone (without touching Position) already
-    // resizes anchored at the window's current top-left corner; ClampWindowToScreen then
-    // keeps it on-screen.
+    // Called when the board's own footprint changes at a fixed zoom level (currently
+    // just Freecell 1-deck ↔ 2-deck, which adds a whole extra FreeCells+Foundations row).
+    // Standing rule: switching games or game modes never resizes the window — the
+    // window size is the user's, and content always scales to fit whatever size it
+    // currently is. So this only refreshes the Min floor (2-deck's own minimum may
+    // differ) and re-triggers the responsive scale-to-fit for the new, bigger board —
+    // it does NOT touch Width/Height. SettleResponsiveLayout retries until stable rather
+    // than a single deferred call — this is a reproducible case where one recompute
+    // (even deferred past FreecellView's own Options-changed layout update) can still
+    // land on a wrong scale that only a later resize would otherwise correct.
     private void EnsureWindowFitsBoard(string tag)
     {
         var (minW, minH) = ComputeBoardMinSize(tag);
-
-        if (WindowState == WindowState.Maximized) return;
-        if (Width == minW && Height == minH) return;
-
-        Width  = minW;
-        Height = minH;
-        ClampWindowToScreen();
+        this.MinWidth = minW;
+        this.MinHeight = minH;
+        SettleResponsiveLayout();
     }
+
+    // Set once the first game of this run has had its saved size restored — deliberately
+    // in-memory only (not a GameOptions field), so it's true for "the rest of this
+    // process" but resets to false on every fresh launch. Restoring a differently-sized
+    // saved Width/Height on every in-session game switch fought the responsive-scaling
+    // feature: shrink the window down to work with a small board, switch games, and the
+    // window would snap back to whatever size was last saved for the new game instead of
+    // staying put and letting that game's content scale to fit the size you're already
+    // at. Restoring once per launch (so re-opening the app still remembers your last
+    // size) while leaving the window alone on every later switch — updating only
+    // MinWidth/MinHeight, still per-game — gets both: a remembered size across restarts,
+    // and free responsive resizing within a session.
+    private bool _hasRestoredWindowSizeThisSession = false;
 
     private void RestoreWindowSizeForGame(string tag)
     {
         var opts = _coordinator.GameViewModel.Options;
+
+        var (minW, minH) = ComputeBoardMinSize(tag);
+        this.MinWidth = minW;
+        this.MinHeight = minH;
+
+        if (_hasRestoredWindowSizeThisSession) return;
+        _hasRestoredWindowSizeThisSession = true;
+
         (double w, double h, bool max) = GetBaseGameTag(tag) switch
         {
             "Freecell"   => (opts.FreecellWidth,    opts.FreecellHeight,    opts.FreecellMaximized),
@@ -1343,6 +1380,7 @@ public partial class MainWindow : Window
             "Blackjack"  => (opts.BlackjackWidth,  opts.BlackjackHeight,  opts.BlackjackMaximized),
             _            => (opts.KlondikeWidth,   opts.KlondikeHeight,   opts.KlondikeMaximized),
         };
+
         if (max)
         {
             WindowState = WindowState.Maximized;
@@ -1358,45 +1396,27 @@ public partial class MainWindow : Window
 
     private (double minWidth, double minHeight) ComputeBoardMinSize(string tag)
     {
+        // These floors are deliberately small — matching the original Mac app's actual
+        // minimum window sizes — not "big enough that nothing ever needs to shrink to
+        // fit." That was the old assumption (this method predates the responsive
+        // scale-to-fit system): the board's content used to render at a fixed size, so
+        // the floor had to be tall/wide enough that a worst-case board (a fully cascaded
+        // King-to-2 tableau column, a maxed-out 2-deck Freecell layout, etc.) never
+        // clipped. Now UpdateResponsiveLayout scales the whole board down to fit
+        // whatever size the window actually is, so the floor only needs to be "small
+        // enough to still be usable," not "tall enough to avoid ever scaling."
         string baseTag = GetBaseGameTag(tag);
         double baseMinWidth = baseTag switch
         {
-            "Freecell"   => tag == "Freecell2" ? 1390 : 1120,
-            // 712.5 is the exact pixel width of the 5-card row (190px per card, with -59.375px margins).
-            // 743 gives exactly ~15px padding on each side so the card stroke doesn't scrape the absolute edge.
-            "VideoPoker" => 743,
-            "Blackjack"  => 743,
-            _            => 1060,
+            "VideoPoker" => 520,
+            "Blackjack"  => 340,
+            _            => 600, // Klondike, Freecell (both deck counts), Spider
         };
         double baseMinHeight = baseTag switch
         {
-            "VideoPoker" => 580,
-            // Must match GameOptions.BlackjackHeight's default (920) — that's the actual
-            // content height needed to fit dealer/player cards + action buttons without
-            // clipping; a lower floor let the window (and saved BlackjackHeight) shrink
-            // below what the board needs. -30 vs. the old 950: the hotkey-legend strip
-            // moved from a bottom-anchored flexible row (which needed a reserved buffer
-            // so it wouldn't clip against the window edge) to sitting directly under the
-            // button grid in an Auto row, which sizes to it exactly — no buffer needed.
-            "Blackjack"  => 920,
-            // These three floors are sized so a maxed-out tableau column — a full
-            // King-to-2 run (12 face-up cards) for Klondike/Freecell, or a completed
-            // 13-card same-suit run for Spider — fits under the toolbar without being
-            // clipped or scrolled out of view. Math.Max(MinHeight, saved height) in
-            // RestoreWindowSizeForGame means this also repairs any already-saved
-            // window height that was set before this floor existed. +30 on each of
-            // these three reserves room for the bottom hotkey-legend strip — Blackjack/
-            // Video Poker previously got clipped against the window's bottom edge when
-            // that strip was added without a matching floor bump.
-            "Klondike"   => 930,
-            // 2-deck Freecell stacks a second FreeCells+Foundations row (TopRow2) below
-            // the first — real height, not just extra columns — so it needs its own
-            // taller floor: +189 for that row (128×181 PileView + the 8px Spacing between
-            // TopRow1/TopRow2 in FreecellView.axaml), matching the Mac original's two
-            // separate hand-tuned profiles (950/1120) for 1-deck vs 2-deck.
-            "Freecell"   => tag == "Freecell2" ? 1270 : 1080,
-            "Spider"     => 980,
-            _            => 640,
+            "VideoPoker" => 450,
+            "Blackjack"  => 403,
+            _            => 330, // Klondike, Freecell (both deck counts), Spider
         };
 
         double minWidth  = baseMinWidth;
@@ -1415,6 +1435,22 @@ public partial class MainWindow : Window
         }
 
         return (minWidth, minHeight);
+    }
+
+    // The board's win-celebration overlay (WinAnimationView, hosted per-game as
+    // VictoryOverlay) lives inside the scaled subtree, so ordinary Stretch alignment
+    // only ever fills the *board's own natural content size* — never the actual window
+    // — since LayoutTransformControl arranges its child at that natural size, not the
+    // window's. That's usually fine, but right at a win the tableau piles have mostly
+    // drained into the foundations, so the board's natural height shrinks well below
+    // the window's, leaving the overlay's dimmed background and bouncing-card cascade
+    // confined to a smaller area than the window with a visible edge where the dimming
+    // stops. Callers explicitly size VictoryOverlay to this (the real window's game
+    // area, converted back to the board's own pre-scale coordinate space) instead.
+    public Size GetUnscaledGameAreaSize()
+    {
+        double scale = _contentScale.ScaleX > 0 ? _contentScale.ScaleX : 1.0;
+        return new Size(GameAreaGrid.Bounds.Width / scale, GameAreaGrid.Bounds.Height / scale);
     }
 
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -1438,6 +1474,36 @@ public partial class MainWindow : Window
         };
     }
 
+    // Retries UpdateResponsiveLayout every 100ms (up to 1s) until two consecutive
+    // attempts agree on the same scale. A single recompute right after a game/mode
+    // switch has repeatedly proven unreliable — Freecell 1-deck→2-deck switched while
+    // the window is already at its minimum size is a reproducible example: the first
+    // attempt sometimes measures a not-yet-settled layout and computes a wrong scale
+    // that nothing else corrects, even though a plain window resize afterward (which
+    // re-runs UpdateResponsiveLayout with fresh data) fixes it instantly. Rather than
+    // keep chasing the exact single right moment to recompute, retry until the result
+    // stops changing — whichever attempt lands after everything has actually settled is
+    // what sticks. onSettled (optional) runs once, when the loop stops for any reason.
+    private void SettleResponsiveLayout(Action? onSettled = null)
+    {
+        int attempts = 0;
+        double? lastScale = null;
+        var settleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        settleTimer.Tick += (_, _) =>
+        {
+            UpdateResponsiveLayout();
+            attempts++;
+            bool stable = lastScale.HasValue && Math.Abs(lastScale.Value - _contentScale.ScaleX) < 0.001;
+            lastScale = _contentScale.ScaleX;
+            if (stable || attempts >= 10)
+            {
+                settleTimer.Stop();
+                onSettled?.Invoke();
+            }
+        };
+        settleTimer.Start();
+    }
+
     private void UpdateResponsiveLayout()
     {
         // GameAreaGrid *is* row 1's actual content area (below the toolbar row), so its
@@ -1458,10 +1524,18 @@ public partial class MainWindow : Window
         // them as the "natural size" reference here made the board shrink well below 1.0x
         // — and hence leave a large unused margin — any time the window wasn't tall enough
         // to fit that worst case, even though the actual dealt board fit comfortably.
-        // Measure(Infinity) forces an immediate, up-to-date pass (layout is otherwise
-        // deferred to the next frame, which would read a stale size right after a game
-        // switch) and reports MainContent's true desired size unaffected by the current
-        // LayoutTransform scale.
+        // Layout is otherwise deferred to the next frame, which would read a stale size
+        // right after a game switch (e.g. Blackjack/Video Poker populate their card
+        // panels from their own Loaded handler, after any earlier measurement ran with
+        // those panels still empty). InvalidateMeasure() before Measure() — not after —
+        // is the standard "force a guaranteed-fresh measurement right now" idiom:
+        // invalidating first means Avalonia's own layout manager doesn't consider
+        // MainContent's old measurement valid anymore, so the immediately-following
+        // Measure(Infinity) can't be short-circuited by a stale cached result, and
+        // MainContent is left in a properly-validated state afterward instead of one
+        // that needs a second invalidation to undo. Measure(Infinity) also reports
+        // MainContent's true desired size unaffected by the current LayoutTransform scale.
+        MainContent.InvalidateMeasure();
         MainContent.Measure(Size.Infinity);
         double naturalW = MainContent.DesiredSize.Width;
         double naturalH = MainContent.DesiredSize.Height;
@@ -1497,12 +1571,6 @@ public partial class MainWindow : Window
         if (OptionsButton != null) OptionsButton.Content = isCompact ? "⚙️" : "Options";
         if (HintButton != null)    HintButton.Content    = isCompact ? "💡" : "Hint";
         if (UndoButton != null)    UndoButton.Content    = isCompact ? "↩️" : "Undo";
-
-        // Push responsive state to Blackjack/VideoPoker if they are active
-        if (MainContent.Content is BlackjackView bjView)
-            bjView.SetResponsiveMode(isCompact);
-        else if (MainContent.Content is VideoPokerView vpView)
-            vpView.SetResponsiveMode(isCompact);
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)

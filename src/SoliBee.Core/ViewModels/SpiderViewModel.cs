@@ -9,7 +9,7 @@ using SoliBee.Core.Services;
 
 namespace SoliBee.Core.ViewModels;
 
-public partial class SpiderViewModel : ObservableObject
+public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
 {
     [ObservableProperty]
     private GameState _state = new();
@@ -31,6 +31,9 @@ public partial class SpiderViewModel : ObservableObject
 
     [ObservableProperty]
     private HintMove? _activeHint;
+
+    [ObservableProperty]
+    private CardPointPopup? _pointPopup;
 
     public List<Pile> StockPiles { get; } = new();
     public List<Pile> Tableaus { get; } = new();
@@ -58,6 +61,9 @@ public partial class SpiderViewModel : ObservableObject
     // Windows-fork deviation: once autocomplete has ever run this game, Undo stays
     // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
     private bool _autocompleteLocked;
+
+    private System.Threading.Timer? _pointPopupTimer;
+    private int _pointPopupGeneration;
 
     // SuitKey of the game currently in progress, captured at the end of each
     // InitializeGame call. Needed because callers (suit-count change) mutate Options
@@ -180,6 +186,7 @@ public partial class SpiderViewModel : ObservableObject
         IsAutocompletable = false;
         HasNoMoves = false;
         ClearHintCycle();
+        PointPopup = null;
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
         _initialSnapshot = CaptureSnapshot();
@@ -219,6 +226,7 @@ public partial class SpiderViewModel : ObservableObject
         IsAutocompletable = false;
         HasNoMoves = false;
         ClearHintCycle();
+        PointPopup = null;
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
         _autocompleteTimer?.Dispose();
@@ -363,9 +371,13 @@ public partial class SpiderViewModel : ObservableObject
         FlipTopCard(source);
 
         State.Score = Math.Max(0, State.Score - 1);
+        string? movedAnchorCardId = cards.Last().Id;
 
         State.MovesCount++;
-        TryCompleteRuns();
+        // A completed run (+100, anchored to its Ace) is the more significant event —
+        // let it win over this move's own -1 (same "later/more significant event wins"
+        // rule as Klondike/Freecell's compound cases) when both happen in one move.
+        string? completedRunAnchorId = TryCompleteRuns();
         CheckVictory();
         CheckAutocomplete();
         CheckDeadlock();
@@ -378,6 +390,12 @@ public partial class SpiderViewModel : ObservableObject
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(TimeDisplay));
         OnPropertyChanged(nameof(ScoreDisplay));
+
+        // Deliberately last — see the matching comment in GameViewModel.MoveCard: the UI
+        // looks up the anchor CardView by card id in reaction to PointPopup's own change
+        // notification, so it must fire after the pile notifications above.
+        if (completedRunAnchorId != null) ShowPointPopup(completedRunAnchorId, "+100");
+        else ShowPointPopup(movedAnchorCardId, "-1");
     }
 
     private void FlipTopCard(Pile pile)
@@ -408,7 +426,10 @@ public partial class SpiderViewModel : ObservableObject
         State.Score = Math.Max(0, State.Score - 1);
 
         State.MovesCount++;
-        TryCompleteRuns();
+        // No popup for the deal's own -1 — there's no single card to anchor it to (it
+        // affects all ten columns at once) — but a run it happens to complete still gets
+        // its usual +100 popup, anchored to that run's Ace.
+        string? completedRunAnchorId = TryCompleteRuns();
         CheckVictory();
         CheckAutocomplete();
         CheckDeadlock();
@@ -419,12 +440,41 @@ public partial class SpiderViewModel : ObservableObject
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(ScoreDisplay));
+
+        if (completedRunAnchorId != null) ShowPointPopup(completedRunAnchorId, "+100");
+    }
+
+    // Point Highlights: unlike Klondike/Freecell there's no single "the move scored"
+    // function here — every scoring event (tableau move's flat -1, a completed run's
+    // +100) calls this directly. Auto-clears after ~1s via a generation counter, same
+    // stale-callback guard the game/autocomplete timers above use via _syncContext.
+    private void ShowPointPopup(string cardId, string displayText)
+    {
+        if (!Options.SpiderShowPointHighlights || IsAutoplayRunning) return;
+
+        _pointPopupGeneration++;
+        int generation = _pointPopupGeneration;
+        PointPopup = new CardPointPopup(cardId, displayText);
+
+        _pointPopupTimer?.Dispose();
+        _pointPopupTimer = new System.Threading.Timer(_ =>
+        {
+            _syncContext?.Post(_ =>
+            {
+                if (_pointPopupGeneration == generation) PointPopup = null;
+            }, null);
+        }, null, 1000, Timeout.Infinite);
     }
 
     // MARK: - Complete Run Detection
 
-    private void TryCompleteRuns()
+    // Returns the Ace card id (the card that visually lands in/on top of the
+    // foundation) of the last run completed in this call, or null if none completed —
+    // callers turn that into the +100 popup themselves, once their own pile-changed
+    // notifications have fired (see the callers' comments for why the ordering matters).
+    private string? TryCompleteRuns()
     {
+        string? lastCompletedAnchorId = null;
         bool found;
         do
         {
@@ -445,11 +495,15 @@ public partial class SpiderViewModel : ObservableObject
                 FlipTopCard(tableau);
 
                 State.Score += 100;
+                // Cards is ordered bottom-to-top, so the King sits at run[0] and the Ace
+                // is last.
+                lastCompletedAnchorId = run.Last().Id;
 
                 found = true;
                 break;
             }
         } while (found);
+        return lastCompletedAnchorId;
     }
 
     private static bool IsCompleteRun(List<Card> cards)
@@ -735,9 +789,10 @@ public partial class SpiderViewModel : ObservableObject
         if (_undoStack.Count == 0 || State.HasWon) return;
         RestoreSnapshot(_undoStack.Pop());
         ClearHintCycle();
+        PointPopup = null;
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
-        HasNoMoves = false;
+        CheckDeadlock();
 
         // A win disposes _gameTimer (see CheckVictory); undoing past that win leaves
         // State.HasWon false again, so the timer must be recreated here or TimeDisplay

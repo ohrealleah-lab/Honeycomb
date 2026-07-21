@@ -17,7 +17,7 @@ public record FaceCardArtChangedMessage();
 // single-hint queue shows no prefix, which is exactly the desired display for those.
 public record HintMove(Card Card, string SourcePileId, string TargetPileId, string Description, int Index = 1, int Total = 1);
 
-public partial class FreecellViewModel : ObservableObject
+public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewModel
 {
     [ObservableProperty]
     private GameState _state = new();
@@ -39,6 +39,9 @@ public partial class FreecellViewModel : ObservableObject
 
     [ObservableProperty]
     private HintMove? _activeHint;
+
+    [ObservableProperty]
+    private CardPointPopup? _pointPopup;
 
     public List<Pile> FreeCells { get; } = new();
     public List<Pile> Foundations { get; } = new();
@@ -66,6 +69,9 @@ public partial class FreecellViewModel : ObservableObject
     // Windows-fork deviation: once autocomplete has ever run this game, Undo stays
     // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
     private bool _autocompleteLocked;
+
+    private System.Threading.Timer? _pointPopupTimer;
+    private int _pointPopupGeneration;
 
     // ModeKey of the game that's currently in progress, captured at the end of each
     // InitializeGame call. Needed because callers (deck-count change) mutate Options
@@ -116,6 +122,7 @@ public partial class FreecellViewModel : ObservableObject
         bool wasAbandonedGame = State.MovesCount > 0 && !State.HasWon;
 
         ClearHintCycle();
+        PointPopup = null;
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
         _autocompleteTimer?.Dispose();
@@ -232,6 +239,7 @@ public partial class FreecellViewModel : ObservableObject
         IsAutocompletable = false;
         HasNoMoves = false;
         ClearHintCycle();
+        PointPopup = null;
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
         _autocompleteTimer?.Dispose();
@@ -375,6 +383,12 @@ public partial class FreecellViewModel : ObservableObject
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(TimeDisplay));
+
+        // Deliberately last — see the matching comment in GameViewModel.MoveCard: the UI
+        // looks up the anchor CardView by card id in reaction to this notification, so it
+        // must fire after the pile notifications above have let the views rebuild for
+        // the move that just happened.
+        UpdatePointPopup(cards.Last(), source.Type, target.Type, cards.Count);
     }
 
     private void UpdateScore(PileType source, PileType target, int cardCount)
@@ -386,6 +400,41 @@ public partial class FreecellViewModel : ObservableObject
         if (target == PileType.Foundation && source != PileType.Foundation) State.Score += 10 * cardCount;
         else if (source == PileType.Foundation && target != PileType.Foundation) State.Score = Math.Max(0, State.Score - 15 * cardCount);
         OnPropertyChanged(nameof(ScoreDisplay));
+    }
+
+    // Point Highlights: mirrors UpdateScore's branching, anchored to the moved card
+    // (its bottom-most card — cards.Last() — matching this fork's convention elsewhere).
+    private void UpdatePointPopup(Card anchorCard, PileType source, PileType target, int cardCount)
+    {
+        if (!Options.FreecellShowPointHighlights || IsAutoplayRunning) return;
+
+        CardPointPopup? popup;
+        if (target == PileType.Foundation && source != PileType.Foundation)
+            popup = new CardPointPopup(anchorCard.Id, $"+{10 * cardCount}");
+        else if (source == PileType.Foundation && target != PileType.Foundation)
+            popup = new CardPointPopup(anchorCard.Id, $"-{15 * cardCount}");
+        else
+            popup = null;
+
+        if (popup != null) ShowPointPopup(popup);
+    }
+
+    // Auto-clears after ~1s via a generation counter, same stale-callback guard the
+    // game/autocomplete timers above use via _syncContext to marshal onto the UI thread.
+    private void ShowPointPopup(CardPointPopup popup)
+    {
+        _pointPopupGeneration++;
+        int generation = _pointPopupGeneration;
+        PointPopup = popup;
+
+        _pointPopupTimer?.Dispose();
+        _pointPopupTimer = new System.Threading.Timer(_ =>
+        {
+            _syncContext?.Post(_ =>
+            {
+                if (_pointPopupGeneration == generation) PointPopup = null;
+            }, null);
+        }, null, 1000, Timeout.Infinite);
     }
 
     // MARK: - Victory
@@ -819,9 +868,10 @@ public partial class FreecellViewModel : ObservableObject
         if (_undoStack.Count == 0 || State.HasWon) return;
         RestoreSnapshot(_undoStack.Pop());
         ClearHintCycle();
+        PointPopup = null;
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
-        HasNoMoves = false;
+        CheckDeadlock();
 
         // A win disposes _gameTimer (see CheckVictory); undoing past that win leaves
         // State.HasWon false again, so the timer must be recreated here or TimeDisplay

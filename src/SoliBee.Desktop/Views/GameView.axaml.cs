@@ -254,9 +254,7 @@ public partial class GameView : CardGameView
                     TriggerVictoryCascade();
                 else
                 {
-                    _winTriggered = false;
-                    VictoryOverlay.StopAnimation();
-                    VictoryOverlay.IsVisible = false;
+                    ResetVictoryTrigger();
                     ArmDealNudgeTimer();
                 }
             }
@@ -313,7 +311,7 @@ public partial class GameView : CardGameView
             {
                 if (DataContext is GameViewModel vm)
                 {
-                    if (vm.HasNoMoves) NoMovesStatsLabel.Text = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
+                    if (vm.HasNoMoves) NoMovesBanner.StatsText = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
                     NoMovesBanner.IsVisible = vm.HasNoMoves;
                 }
             }
@@ -321,6 +319,17 @@ public partial class GameView : CardGameView
             {
                 if (DataContext is GameViewModel vm)
                     ApplyHint(vm.ActiveHint, AllPileViews());
+            }
+            else if (e.PropertyName == nameof(GameViewModel.PointPopup))
+            {
+                // Deferred to Loaded priority (not run inline here) — same reasoning as
+                // MainWindow's SettleResponsiveLayout/TriggerVictoryCascade: this
+                // notification's own Default-priority job can still end up scheduled
+                // ahead of the Tableaus/Foundations jobs that rebuild the pile views for
+                // the move that just happened, landing the popup on the card's stale
+                // pre-move CardView instead of the one it actually moved to.
+                if (DataContext is GameViewModel vm)
+                    Dispatcher.UIThread.Post(() => ApplyPointPopup(vm.PointPopup, AllPileViews()), DispatcherPriority.Loaded);
             }
         });
     }
@@ -349,7 +358,10 @@ public partial class GameView : CardGameView
         Tableau6.Pile = vm.Tableaus[6];
     }
 
-    private bool _winTriggered;
+    protected override WinAnimationView VictoryOverlayControl => VictoryOverlay;
+    protected override StuckBanner NoMovesBannerControl => NoMovesBanner;
+    protected override AutocompleteBanner AutocompleteBannerControl => AutocompleteBanner;
+    protected override FlashToast HintToastControl => HintToast;
 
     private void ApplyFeltColor(GameOptions options)
     {
@@ -357,46 +369,6 @@ public partial class GameView : CardGameView
         // already carries this same felt color, and staying transparent here lets the single
         // app-wide vignette overlay (rendered behind the board content) show through in the gaps.
         BoardFeltGrid.Background = Brushes.Transparent;
-    }
-
-    private void AutocompleteGame_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not GameViewModel vm) return;
-        AutocompleteBanner.IsVisible = false;
-        vm.Autocomplete();
-        e.Handled = true;
-    }
-
-    private void NoMovesNewGame_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not GameViewModel vm) return;
-        NoMovesBanner.IsVisible = false;
-        AutocompleteBanner.IsVisible = false;
-        vm.InitializeGame();
-        SoundService.PlayShuffle();
-        e.Handled = true;
-    }
-
-    private void NoMovesRestart_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not GameViewModel vm) return;
-        NoMovesBanner.IsVisible = false;
-        AutocompleteBanner.IsVisible = false;
-        vm.RestartGame();
-        SoundService.PlayShuffle();
-        e.Handled = true;
-    }
-
-    private void NoMovesDismiss_Click(object? sender, RoutedEventArgs e)
-    {
-        NoMovesBanner.IsVisible = false;
-        e.Handled = true;
-    }
-
-    private void AutocompleteDismiss_Click(object? sender, RoutedEventArgs e)
-    {
-        AutocompleteBanner.IsVisible = false;
-        e.Handled = true;
     }
 
     private void StockPileControl_Clicked(object? sender, EventArgs e)
@@ -440,8 +412,11 @@ public partial class GameView : CardGameView
             cv.BeginSlideIn(-48, 0, 200);
     }
 
-    private List<Point> ComputeFoundationSpawnPoints()
+    protected override List<Point> ComputeFoundationSpawnPoints()
     {
+        // Force a real layout pass so TranslatePoint/Bounds below reflect the board's
+        // current actual size (see the matching comment in WinAnimationView.StartAnimation).
+        this.UpdateLayout();
         var views = new[] { Foundation0, Foundation1, Foundation2, Foundation3 };
         var pts = new List<Point>(views.Length);
         foreach (var fv in views)
@@ -451,61 +426,4 @@ public partial class GameView : CardGameView
         }
         return pts;
     }
-
-    private void TriggerVictoryCascade()
-    {
-        if (_winTriggered) return;
-        _winTriggered = true;
-        VictoryOverlay.IsVisible = true;
-        if (DataContext is GameViewModel vm)
-        {
-            Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
-            }, DispatcherPriority.Loaded);
-        }
-        else
-        {
-            VictoryOverlay.StartAnimation();
-        }
-        SoundService.PlaySolitaireWin();
-    }
-
-    // Dev-only banner preview, wired to the toolbar's local-only "Banners" dropdown
-    // (the dropdown itself is only made visible in DEBUG builds — see MainWindow).
-    public void DebugShowWinBanner()
-    {
-        VictoryOverlay.IsVisible = true;
-        if (DataContext is GameViewModel vm)
-        {
-            Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
-            }, DispatcherPriority.Loaded);
-        }
-        else
-        {
-            VictoryOverlay.StartAnimation();
-        }
-    }
-
-    // Dev-only — always plays the full demo cascade (the no-arg overload's fake 52-card
-    // deck) regardless of the real foundations' current contents, so the bouncing-card
-    // animation itself can be reviewed even mid-game when few/no cards are actually up.
-    public void DebugPlayWinAnimation()
-    {
-        VictoryOverlay.IsVisible = true;
-        Dispatcher.UIThread.Post(() => {
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints());
-        }, DispatcherPriority.Loaded);
-        SoundService.PlaySolitaireWin();
-    }
-
-    public void DebugShowLossBanner()
-    {
-        if (DataContext is GameViewModel vm)
-            NoMovesStatsLabel.Text = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
-        NoMovesBanner.IsVisible = true;
-    }
-
-    public void DebugShowAutocompleteBanner() => AutocompleteBanner.IsVisible = true;
-
 }

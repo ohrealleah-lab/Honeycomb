@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.Views.AutocompleteBanner"
+             ZIndex="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <!-- "Victory is guaranteed!" banner — identical across Klondike/Freecell/Spider. -->
+    <Grid>
+        <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared static
+             soft gold halo (no offset, 16px blur, 50% opacity — matches the Mac
+             original's .shadow(color: gold.opacity(0.5), radius: 16)). -->
+        <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="400">
+            <StackPanel Spacing="12" HorizontalAlignment="Center">
+                <TextBlock Text="Victory is guaranteed!" FontSize="36" FontWeight="Black"
+                           Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                           TextAlignment="Center" TextWrapping="Wrap"/>
+                <TextBlock Text="All remaining cards can be moved to foundations."
+                           FontSize="14" Foreground="White" HorizontalAlignment="Center"
+                           FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                <Button Classes="banner-action" Content="Autocomplete Game" Click="Autocomplete_Click"
+                        HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+        <!-- Dismiss button anchored TopRight, overlapping corner -->
+        <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="Dismiss_Click"/>
+    </Grid>
+</UserControl>

@@ -1252,6 +1252,46 @@ public partial class CardView : UserControl
         if (SelectionHighlightBorder != null) SelectionHighlightBorder.IsVisible = false;
     }
 
+    // Point Highlights: purely a dumb visual setter — timing (the ~1s auto-clear) is
+    // owned entirely by the ViewModel's own generation-guarded timer, which the caller
+    // (CardGameView.ApplyPointPopup) reacts to by calling ShowPointPopup/HidePointPopup
+    // here in response. No independent timer on this side to avoid it drifting from that
+    // one, or racing a second popup landing on the same card before the first clears.
+    public void ShowPointPopup(string text)
+    {
+        if (PointPopupRoot == null || PointPopupText == null || PointPopupTextGlow == null) return;
+        // Avalonia's field codegen doesn't expose x:Name'd non-Control objects nested
+        // this deep in property-element syntax (RenderTransform/Effect) as fields, so
+        // these are found by casting instead.
+        if (PointPopupRoot.RenderTransform is not ScaleTransform scale) return;
+        if (PointPopupText.Effect is not DropShadowEffect colorGlow) return;
+
+        // Same suit-color source UpdateCardFace uses for rank/suit text — automatically
+        // respects FF mode and any custom card-color theme without duplicating that logic.
+        bool isRed = Card != null && (Card.Suit == CardSuit.Hearts || Card.Suit == CardSuit.Diamonds);
+        var brush = isRed ? _brushTextRed : _brushTextBlackNormal;
+
+        PointPopupText.Text = text;
+        PointPopupTextGlow.Text = text;
+        PointPopupText.Foreground = brush;
+        colorGlow.Color = brush.Color;
+
+        PointPopupRoot.Opacity = 1;
+        scale.ScaleX = 1;
+        scale.ScaleY = 1;
+    }
+
+    public void HidePointPopup()
+    {
+        if (PointPopupRoot == null) return;
+        PointPopupRoot.Opacity = 0;
+        if (PointPopupRoot.RenderTransform is ScaleTransform scale)
+        {
+            scale.ScaleX = 0.6;
+            scale.ScaleY = 0.6;
+        }
+    }
+
     private static List<Card> GetCardsFromCard(Card fromCard, Pile pile)
     {
         int idx = pile.Cards.IndexOf(fromCard);
@@ -1337,6 +1377,7 @@ public partial class CardView : UserControl
             var dragCanvas = gameView.FindControl<Canvas>("DragCanvas");
             if (dragCanvas != null)
             {
+                gameView.SizeDragCanvasToWindow(dragCanvas);
                 _isDragging = true;
                 _dragCanvas = dragCanvas;
                 _dragStartPoint = e.GetPosition(dragCanvas);
@@ -1479,15 +1520,33 @@ public partial class CardView : UserControl
         if (targetPileView != null && targetPileView != _sourcePileView && targetPileView.Pile != null && _sourcePileView?.Pile != null)
         {
             var cardsToMove = GetCardsFromCard(Card!, _sourcePileView.Pile);
-            if (gameView.TryMoveCards(cardsToMove, _sourcePileView.Pile, targetPileView.Pile))
+            moved = gameView.TryMoveCards(cardsToMove, _sourcePileView.Pile, targetPileView.Pile);
+
+            // Smart Drop: the exact card the player grabbed usually isn't a whole-stack
+            // miss but a slightly-too-high click on a tightly packed column — they meant
+            // to grab the valid run just below it. Rather than reject the drop outright,
+            // peel leading cards off the grabbed stack one at a time and retry; the first
+            // (largest) remaining tail that's a legal move wins, and whatever was peeled
+            // off stays behind in the source pile — ResetDraggedStack below re-lays it out
+            // there exactly as if it had never left, same as any other rejected drag.
+            if (!moved)
             {
-                moved = true;
-                if (gameView.SelectedCardView != null)
+                for (int skip = 1; skip < cardsToMove.Count; skip++)
                 {
-                    gameView.SelectedCardView.ClearSelection();
-                    gameView.SelectedCardView = null;
-                    gameView.SelectedSourcePile = null;
+                    var subStack = cardsToMove.GetRange(skip, cardsToMove.Count - skip);
+                    if (gameView.TryMoveCards(subStack, _sourcePileView.Pile, targetPileView.Pile))
+                    {
+                        moved = true;
+                        break;
+                    }
                 }
+            }
+
+            if (moved && gameView.SelectedCardView != null)
+            {
+                gameView.SelectedCardView.ClearSelection();
+                gameView.SelectedCardView = null;
+                gameView.SelectedSourcePile = null;
             }
         }
 

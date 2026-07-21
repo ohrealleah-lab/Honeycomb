@@ -16,6 +16,14 @@ public partial class VideoPokerViewModel : ObservableObject
     [ObservableProperty] private VideoPokerOptions _options = new();
     [ObservableProperty] private VideoPokerStatistics _stats = new();
 
+    // The player's actual chosen bet, independent of State.CurrentBet — Deal() clamps
+    // CurrentBet down to whatever credits remain when they're short (it also doubles as
+    // "amount wagered this hand" for Draw()'s payout math, so it can't just track the
+    // player's preference directly). Restoring CurrentBet from this once credits recover
+    // (rebuy, or a win) is what makes that clamp temporary instead of a permanent,
+    // unannounced bet reduction the player has to notice and manually undo.
+    private int _preferredBet = 1;
+
     public bool IsBetBoardVisible => !Options.IsNoStressMode && !Options.HideBetBoard;
 
     private List<Card> _deck = new();
@@ -92,7 +100,10 @@ public partial class VideoPokerViewModel : ObservableObject
     public bool   CanUndo         => false;
     public bool   IsDealing       => State.Phase == VideoPokerPhase.Deal || State.Phase == VideoPokerPhase.Result;
     public bool   IsHolding       => State.Phase == VideoPokerPhase.Holding;
-    public bool   NeedsRebuy      => !Options.IsNoStressMode && State.SessionCredits < State.CurrentBet;
+    // Early low-credits warning (10, not "can't afford the current bet") — Deal/Draw
+    // stays visible alongside it (RebuyButton doesn't hide it in the XAML), so this
+    // isn't a hard block, just a heads-up before the player actually runs out.
+    public bool   NeedsRebuy      => !Options.IsNoStressMode && State.SessionCredits <= 10;
     public string DealDrawLabel   => IsHolding ? "Draw  [D]" : "Deal  [D]";
     public string VariantName     => Options.Variant switch
     {
@@ -107,7 +118,8 @@ public partial class VideoPokerViewModel : ObservableObject
         Options = LoadOptions();
         Stats   = LoadStatistics();
         State.SessionCredits = Options.StartingCredits;
-        State.CurrentBet     = Math.Clamp(Options.BetPerHand, 1, 5);
+        _preferredBet        = Math.Clamp(Options.BetPerHand, 1, 5);
+        State.CurrentBet     = _preferredBet;
 
         // Sync shared visual settings from global options at startup
         var shared = SettingsService.LoadOptions();
@@ -136,7 +148,18 @@ public partial class VideoPokerViewModel : ObservableObject
     public void Deal()
     {
         bool freePlay = Options.IsNoStressMode;
-        if (!freePlay && State.SessionCredits < State.CurrentBet) return;
+        if (!freePlay)
+        {
+            // Credits have recovered (rebuy, or carried winnings) enough to cover what
+            // the player actually wants to bet — restore it instead of leaving CurrentBet
+            // stuck at whatever it got clamped down to on a previous low-credit hand.
+            if (State.SessionCredits >= _preferredBet) State.CurrentBet = _preferredBet;
+            if (State.SessionCredits < State.CurrentBet)
+            {
+                if (State.SessionCredits == 0) return;
+                State.CurrentBet = State.SessionCredits;
+            }
+        }
         if (!freePlay) State.SessionCredits -= State.CurrentBet;
         State.HeldSlots        = new bool[5];
         State.WinningCardMask  = new bool[5];
@@ -232,6 +255,7 @@ public partial class VideoPokerViewModel : ObservableObject
     {
         if (State.Phase == VideoPokerPhase.Holding) return;
         State.CurrentBet = Math.Min(5, Math.Max(1, State.SessionCredits));
+        _preferredBet = State.CurrentBet;
         Deal();
     }
 
@@ -239,6 +263,7 @@ public partial class VideoPokerViewModel : ObservableObject
     {
         if (State.Phase == VideoPokerPhase.Holding) return;
         State.CurrentBet = Math.Min(5, State.CurrentBet + 1);
+        _preferredBet = State.CurrentBet;
         NotifyStateChanged();
     }
 
@@ -246,12 +271,14 @@ public partial class VideoPokerViewModel : ObservableObject
     {
         if (State.Phase == VideoPokerPhase.Holding) return;
         State.CurrentBet = Math.Max(1, State.CurrentBet - 1);
+        _preferredBet = State.CurrentBet;
         NotifyStateChanged();
     }
 
     public void Rebuy()
     {
         State.SessionCredits += Options.StartingCredits;
+        if (State.SessionCredits >= _preferredBet) State.CurrentBet = _preferredBet;
         Stats.Rebuys++;
         SaveStatistics();
         NotifyStateChanged();
@@ -267,10 +294,11 @@ public partial class VideoPokerViewModel : ObservableObject
     public void StartNewGame()
     {
         _sessionHandsPlayed = 0;
+        _preferredBet = Math.Clamp(Options.BetPerHand, 1, 5);
         State = new VideoPokerState
         {
             SessionCredits = Options.StartingCredits,
-            CurrentBet     = Math.Clamp(Options.BetPerHand, 1, 5),
+            CurrentBet     = _preferredBet,
         };
         NotifyStateChanged();
     }

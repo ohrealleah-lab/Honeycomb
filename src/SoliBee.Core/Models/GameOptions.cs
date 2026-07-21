@@ -43,6 +43,13 @@ public class GameOptions
     public int FreecellDeckCount { get; set; } = 1;
     public int SpiderSuitCount { get; set; } = 1;
 
+    // Point Highlights: transient "+N"/"-N" popup flashed over the card responsible for
+    // a score change. Genuinely per-game (not a single global toggle synced across all
+    // three), matching how every other card-game setting in this class is scoped.
+    public bool KlondikeShowPointHighlights { get; set; } = true;
+    public bool FreecellShowPointHighlights { get; set; } = true;
+    public bool SpiderShowPointHighlights { get; set; } = true;
+
     public bool IsVignetteEnabled { get; set; } = true;
     // Turns off timers (solitaire) and enables free play (VP/Blackjack — hides the
     // credit/bet board and betting controls; hands are played without wagering).

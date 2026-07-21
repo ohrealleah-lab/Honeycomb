@@ -9,7 +9,7 @@ using SoliBee.Core.Services;
 
 namespace SoliBee.Core.ViewModels;
 
-public partial class GameViewModel : ObservableObject
+public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 {
     [ObservableProperty]
     private GameState _state = new();
@@ -31,6 +31,9 @@ public partial class GameViewModel : ObservableObject
 
     [ObservableProperty]
     private HintMove? _activeHint;
+
+    [ObservableProperty]
+    private CardPointPopup? _pointPopup;
 
     public Pile Stock { get; } = new("Stock", PileType.Stock);
     public Pile Waste { get; } = new("Waste", PileType.Waste);
@@ -78,6 +81,9 @@ public partial class GameViewModel : ObservableObject
     // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
     private bool _autocompleteLocked;
 
+    private System.Threading.Timer? _pointPopupTimer;
+    private int _pointPopupGeneration;
+
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
 
     public string ScoreDisplay => ScoreFormatter.FormatScore(State.Score, Options?.IsVegasScoring == true);
@@ -123,6 +129,7 @@ public partial class GameViewModel : ObservableObject
             Stats.CurrentStreak = 0;
 
         ClearHintCycle();
+        PointPopup = null;
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
         _autocompleteTimer?.Dispose();
@@ -136,8 +143,8 @@ public partial class GameViewModel : ObservableObject
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
-        _vegasBalanceBeforeDeal = State.Score;
-        int startScore = Options.IsVegasScoring ? State.Score - 5200 : 0;
+        _vegasBalanceBeforeDeal = Options.IsVegasScoring ? -5200 : 0;
+        int startScore = Options.IsVegasScoring ? -5200 : 0;
         _vegasGameStartScore = startScore;
 
         State = new GameState
@@ -274,6 +281,7 @@ public partial class GameViewModel : ObservableObject
         IsAutocompletable = false;
         HasNoMoves = false;
         ClearHintCycle();
+        PointPopup = null;
 
         var deckCopy = _initialDeck.Select(c => c).ToList();
 
@@ -549,6 +557,14 @@ public partial class GameViewModel : ObservableObject
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(CanUndo));
+
+        // Deliberately last: the popup is anchored to a specific CardView the UI looks
+        // up by card id once it reacts to PointPopup's own change notification. Raising
+        // that notification before the Foundations/Tableaus ones above would let the UI
+        // go looking for the card before the pile views have rebuilt themselves for the
+        // move that just happened, landing the popup on whatever card used to sit at
+        // that now-stale visual slot instead.
+        UpdatePointPopup(cardsToMove.Last(), sourcePile.Type, targetPile.Type);
     }
 
     private void UpdateScoreForMove(PileType source, PileType target, bool didFlip = false)
@@ -582,6 +598,64 @@ public partial class GameViewModel : ObservableObject
         }
     }
 
+    // Point Highlights: mirrors UpdateScoreForMove's branching, except the standalone
+    // reveal bonus (+5, no other event) — see the comment inside for why that one
+    // deliberately gets no popup of its own.
+    private void UpdatePointPopup(Card anchorCard, PileType source, PileType target)
+    {
+        if (!Options.KlondikeShowPointHighlights || IsAutoplayRunning) return;
+
+        CardPointPopup? popup;
+        if (Options.IsVegasScoring)
+        {
+            if (target == PileType.Foundation && source != PileType.Foundation)
+                popup = new CardPointPopup(anchorCard.Id, "+$5");
+            else if (source == PileType.Foundation && target == PileType.Tableau)
+                popup = new CardPointPopup(anchorCard.Id, "-$5");
+            else
+                popup = null;
+        }
+        else
+        {
+            // No standalone popup for a plain tableau-to-tableau reveal (didFlip with no
+            // other scoring event) — that would anchor the popup to a *different* card
+            // than the one the player just moved, which reads as "the popup is on the
+            // wrong card" even though it's technically correct (see the reveal-bonus
+            // comment on UpdateScoreForMove — the +5 still scores, it just doesn't get
+            // its own popup here).
+            if (target == PileType.Foundation)
+                popup = new CardPointPopup(anchorCard.Id, "+10");
+            else if (source == PileType.Waste && target == PileType.Tableau)
+                popup = new CardPointPopup(anchorCard.Id, "+5");
+            else if (source == PileType.Foundation && target == PileType.Tableau)
+                popup = new CardPointPopup(anchorCard.Id, "-15");
+            else
+                popup = null;
+        }
+
+        if (popup != null) ShowPointPopup(popup);
+    }
+
+    // Auto-clears after ~1s via a generation counter (bumped on every new popup; the
+    // delayed clear only applies if the generation it captured still matches), the same
+    // stale-callback guard the game timer and autocomplete timer above already use via
+    // _syncContext to marshal back onto the UI thread.
+    private void ShowPointPopup(CardPointPopup popup)
+    {
+        _pointPopupGeneration++;
+        int generation = _pointPopupGeneration;
+        PointPopup = popup;
+
+        _pointPopupTimer?.Dispose();
+        _pointPopupTimer = new System.Threading.Timer(_ =>
+        {
+            _syncContext?.Post(_ =>
+            {
+                if (_pointPopupGeneration == generation) PointPopup = null;
+            }, null);
+        }, null, 1000, Timeout.Infinite);
+    }
+
     public void SaveStateForUndo()
     {
         // No-op during autoplay so every move it makes bundles into the single
@@ -613,6 +687,7 @@ public partial class GameViewModel : ObservableObject
     {
         if (_undoStack.Count == 0 || State.HasWon) return;
         ClearHintCycle();
+        PointPopup = null;
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
 
@@ -657,7 +732,7 @@ public partial class GameViewModel : ObservableObject
             index++;
         }
 
-        HasNoMoves = false;
+        CheckDeadlock();
         CheckAutocomplete();
         OnPropertyChanged(nameof(Stock));
         OnPropertyChanged(nameof(Waste));

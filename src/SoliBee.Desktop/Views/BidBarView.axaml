@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.Views.BidBarView">
+    <!-- Credits / Bet / Hands bar — identical markup shared by Blackjack and Video
+         Poker, which previously duplicated it verbatim (only the code-behind that
+         pushes text into it differed). -->
+    <Border Background="#59000000" CornerRadius="6"
+            HorizontalAlignment="Center" VerticalAlignment="Center" Width="290" Padding="0,8">
+        <Grid ColumnDefinitions="96,Auto,96,Auto,96">
+            <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
+                <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold"
+                           Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="CreditsLabel" FontSize="28" FontWeight="Black"
+                           Foreground="White" HorizontalAlignment="Center"/>
+            </StackPanel>
+            <Rectangle Grid.Column="1" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
+            <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
+                <TextBlock Text="BET" FontSize="10" FontWeight="Bold"
+                           Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="BetLabel" FontSize="28" FontWeight="Black"
+                           Foreground="#FFD700" HorizontalAlignment="Center"/>
+            </StackPanel>
+            <Rectangle Grid.Column="3" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
+            <StackPanel Grid.Column="4" Spacing="1" VerticalAlignment="Center">
+                <TextBlock Text="HANDS" FontSize="10" FontWeight="Bold"
+                           Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="HandsLabel" FontSize="28" FontWeight="Black"
+                           Foreground="White" HorizontalAlignment="Center" Text="0"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

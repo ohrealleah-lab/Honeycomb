@@ -343,7 +343,7 @@
                             <TextBlock Text="Payouts" Classes="help-heading"/>
                             <StackPanel Spacing="3">
                                 <TextBlock Classes="help-body" Text="Win               — 1:1 (you get your bet back plus the same amount)"/>
-                                <TextBlock Classes="help-body" Text="Natural Blackjack — 3:1 (e.g. bet 2 → win 6; bet 1 → win 3)"/>
+                                <TextBlock Classes="help-body" Text="Natural Blackjack — 3:2 (e.g. bet 2 → win 3; bet 1 → win 2, rounded up)"/>
                                 <TextBlock Classes="help-body" Text="Push (tie)        — Bet returned, no gain or loss"/>
                                 <TextBlock Classes="help-body" Text="Bust / Loss       — Bet forfeited"/>
                             </StackPanel>

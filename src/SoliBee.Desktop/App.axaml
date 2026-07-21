@@ -87,5 +87,108 @@
             <Setter Property="Background" Value="#CC3333" />
             <Setter Property="Foreground" Value="White" />
         </Style>
+
+        <!-- Casino (Blackjack/Video Poker) button base + color-coded action variants —
+             both games' button ladders were previously defined nearly identically per
+             view (only class-name prefix differed: bj-button-* vs vp-button-*). Kept
+             app-wide, like the other shared button classes above, so a game-specific
+             XAML only needs its own genuinely unique variants (Blackjack's Split/Buy-in,
+             Video Poker's Rebuy) on top of these. -->
+        <Style Selector="Button.casino-button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#65FFFFFF" Offset="0"/>
+                        <GradientStop Color="#35FFFFFF" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#A0FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.casino-button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#85FFFFFF" Offset="0"/>
+                        <GradientStop Color="#55FFFFFF" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Green: Blackjack Hit/Rebuy, Video Poker Draw -->
+        <Style Selector="Button.casino-button-green">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC4CAF50" Offset="0"/>
+                        <GradientStop Color="#CC2E7D32" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AA81C784"/>
+        </Style>
+        <Style Selector="Button.casino-button-green:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC66BB6A" Offset="0"/>
+                        <GradientStop Color="#CC388E3C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Red: Blackjack Stand, Video Poker Clear -->
+        <Style Selector="Button.casino-button-red">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCE53935" Offset="0"/>
+                        <GradientStop Color="#CCB71C1C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AAEF9A9A"/>
+        </Style>
+        <Style Selector="Button.casino-button-red:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCEF5350" Offset="0"/>
+                        <GradientStop Color="#CCC62828" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Blue: Blackjack Double, Video Poker Hold All -->
+        <Style Selector="Button.casino-button-blue">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC2196F3" Offset="0"/>
+                        <GradientStop Color="#CC1565C0" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AA90CAF9"/>
+        </Style>
+        <Style Selector="Button.casino-button-blue:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC42A5F5" Offset="0"/>
+                        <GradientStop Color="#CC1976D2" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Application.Styles>
 </Application>

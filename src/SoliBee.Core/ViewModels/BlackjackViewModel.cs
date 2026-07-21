@@ -57,7 +57,11 @@ public partial class BlackjackViewModel : ObservableObject
     public bool CanDeal        => State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result;
     public bool IsPlaying      => State.Phase == BlackjackPhase.Playing;
     public bool CanChangeBet   => State.Phase is BlackjackPhase.Betting or BlackjackPhase.Result;
-    public bool CanRebuy       => CanChangeBet && !Options.IsNoStressMode && State.Credits < State.CurrentBet;
+    // Shown as an early low-credits warning (10, not "can no longer afford the current
+    // bet") so the player sees Buy In before they're actually stuck — not a hard block,
+    // since Deal stays visible/usable alongside it as long as they can still afford
+    // something (see DealButton.IsVisible in BlackjackView.axaml.cs).
+    public bool CanRebuy       => CanChangeBet && !Options.IsNoStressMode && State.Credits <= 10;
     public bool CanUndo        => false;
 
     public string CreditDisplay => State.Credits.ToString();
@@ -411,7 +415,12 @@ public partial class BlackjackViewModel : ObservableObject
         switch (hand.Result)
         {
             case BlackjackHandResult.Blackjack:
-                int bjReturn = hand.Bet + hand.Bet * 3;  // 3:1 payout (bet returned + 3x bet profit)
+                // 3:2 payout (bet returned + 1.5x bet profit), rounded half-up rather than
+                // truncated — chip denominations (1/5/10/25) make bet*3 odd more often than
+                // not, and integer division would otherwise always shortchange the player
+                // (e.g. bet=1 truncating to a profit of 1 instead of the fair 1.5) and never
+                // the house.
+                int bjReturn = hand.Bet + (hand.Bet * 3 + 1) / 2;
                 Stats.HandsWon++;
                 Stats.Blackjacks++;
                 if (!freePlay)

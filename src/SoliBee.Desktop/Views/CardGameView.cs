@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using SoliBee.Core.Models;
 using SoliBee.Core.ViewModels;
+using SoliBee.Desktop.Services;
 
 namespace SoliBee.Desktop.Views;
 
@@ -31,6 +33,178 @@ public abstract class CardGameView : UserControl
     public abstract bool TryMoveCards(List<Card> cards, Pile sourcePile, Pile targetPile);
     public abstract bool TryAutoMoveToFoundation(Card card, Pile sourcePile);
 
+    // VictoryOverlay lives inside the scaled board subtree, so ordinary Stretch
+    // alignment only fills the board's own natural content size, not the real window —
+    // and that natural size shrinks right at a win, once the tableaus have drained into
+    // the foundations. Explicitly size it to the real window (converted back to this
+    // subtree's own pre-scale units) so the dimmed background and cascade cover the
+    // whole window instead of a visibly smaller area. Shared here (rather than
+    // duplicated per-game) since GameView/FreecellView/SpiderView each have their own
+    // XAML-named VictoryOverlay instance but no common base-class property to hang a
+    // single implementation off — callers pass their own instance in.
+    protected void SizeVictoryOverlayToWindow(WinAnimationView overlay)
+    {
+        if (TopLevel.GetTopLevel(this) is MainWindow mw)
+        {
+            var size = mw.GetUnscaledGameAreaSize();
+            overlay.Width = size.Width;
+            overlay.Height = size.Height;
+        }
+    }
+
+    // DragCanvas has the same problem as VictoryOverlay above: it lives inside the
+    // scaled board subtree, so Stretch alignment only fills the board's own natural
+    // (tight-fit) content size, not the real window — so a stack dragged toward the
+    // bottom of the window got clipped well above the actual window edge, before it
+    // could clear the solitaire keyboard-hint row that sits (deliberately) outside the
+    // scaled subtree. Sized fresh at the start of every drag rather than kept in sync
+    // continuously, since that's the only moment it matters. Public rather than
+    // protected, like RelinquishKeyboardCursor above: CardView's PointerPressed
+    // drag-start calls this on the CardGameView instance it just walked up to, not on
+    // itself.
+    public void SizeDragCanvasToWindow(Canvas dragCanvas)
+    {
+        if (TopLevel.GetTopLevel(this) is MainWindow mw)
+        {
+            var size = mw.GetUnscaledGameAreaSize();
+            dragCanvas.Width = size.Width;
+            dragCanvas.Height = size.Height;
+        }
+    }
+
+    // The named controls TriggerVictoryCascade/DebugShowWinBanner/etc. below need —
+    // each subclass's own XAML-named element, exposed once here so the logic that
+    // touches them can live in one place instead of being copy-pasted per game.
+    protected abstract WinAnimationView VictoryOverlayControl { get; }
+    protected abstract StuckBanner NoMovesBannerControl { get; }
+    protected abstract AutocompleteBanner AutocompleteBannerControl { get; }
+
+    // Per-game: converts each Foundation PileView's on-screen position into the point
+    // the win-cascade's cards should spawn from/fly toward. Stays abstract (not folded
+    // into the methods below) because each game has its own fixed set of named
+    // Foundation PileView controls (Klondike/Spider always the same count; Freecell's
+    // varies with deck count) that only that subclass's generated XAML fields can see.
+    protected abstract List<Point> ComputeFoundationSpawnPoints();
+
+    private bool _winTriggered;
+
+    // Shows the overlay, sizes it to the real window (see SizeVictoryOverlayToWindow),
+    // and starts its bounce-cascade animation against the live foundations — or the
+    // overlay's plain demo cascade if no live view-model data is available (the
+    // DataContext-not-yet-set window during initial XAML load). Shared by
+    // TriggerVictoryCascade and DebugShowWinBanner, which previously duplicated this
+    // identically across GameView/FreecellView/SpiderView, differing only in which
+    // concrete ViewModel type DataContext held.
+    private void ShowVictoryOverlay()
+    {
+        var overlay = VictoryOverlayControl;
+        overlay.IsVisible = true;
+        SizeVictoryOverlayToWindow(overlay);
+        if (DataContext is ISolitaireGameViewModel vm)
+        {
+            string timeDisplay = vm.Options.IsNoStressMode ? "" : vm.TimeDisplay;
+            Dispatcher.UIThread.Post(() =>
+            {
+                overlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, timeDisplay);
+            }, DispatcherPriority.Loaded);
+        }
+        else
+        {
+            overlay.StartAnimation();
+        }
+    }
+
+    // Real win path — the property-changed handlers below call this once per game
+    // (each guarded the same way this guards itself: _winTriggered so a win reached via
+    // more than one notification in the same tick, e.g. both Foundations and Tableaus
+    // changing on the same move, only plays the cascade/sound once).
+    protected void TriggerVictoryCascade()
+    {
+        if (_winTriggered) return;
+        _winTriggered = true;
+        ShowVictoryOverlay();
+        SoundService.PlaySolitaireWin();
+    }
+
+    // A new deal/restart (State changing while not a win) needs to re-arm the guard
+    // above so the *next* win still plays — call from the same State-changed branch
+    // that would otherwise call TriggerVictoryCascade.
+    protected void ResetVictoryTrigger()
+    {
+        _winTriggered = false;
+        VictoryOverlayControl.StopAnimation();
+        VictoryOverlayControl.IsVisible = false;
+    }
+
+    // Dev-only banner preview, wired to the toolbar's local-only "Banners" dropdown
+    // (the dropdown itself is only made visible in DEBUG builds — see MainWindow).
+    public void DebugShowWinBanner() => ShowVictoryOverlay();
+
+    // Dev-only — always plays the full demo cascade (WinAnimationView's fake 52-card
+    // deck, via its no-foundations StartAnimation overload) regardless of the real
+    // foundations' current contents, so the bouncing-card animation itself can be
+    // reviewed even mid-game when few/no cards are actually up.
+    public void DebugPlayWinAnimation()
+    {
+        var overlay = VictoryOverlayControl;
+        overlay.IsVisible = true;
+        SizeVictoryOverlayToWindow(overlay);
+        Dispatcher.UIThread.Post(() =>
+        {
+            overlay.StartAnimation(ComputeFoundationSpawnPoints());
+        }, DispatcherPriority.Loaded);
+        SoundService.PlaySolitaireWin();
+    }
+
+    public void DebugShowLossBanner()
+    {
+        if (DataContext is ISolitaireGameViewModel vm)
+            NoMovesBannerControl.StatsText = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
+        NoMovesBannerControl.IsVisible = true;
+    }
+
+    public void DebugShowAutocompleteBanner() => AutocompleteBannerControl.IsVisible = true;
+
+    // "Stuck" (no legal moves left) and "autocomplete available" banners' button
+    // handlers — identical across all three CardGameView subclasses since they only
+    // ever needed the shared ISolitaireGameViewModel surface, never a game-specific
+    // action. Each subclass's XAML wires StuckBanner/AutocompleteBanner's own CLR
+    // events straight to these inherited handlers.
+    protected void NoMovesNewGame_Click(object? sender, EventArgs e)
+    {
+        if (DataContext is not ISolitaireGameViewModel vm) return;
+        NoMovesBannerControl.IsVisible = false;
+        AutocompleteBannerControl.IsVisible = false;
+        vm.InitializeGame();
+        SoundService.PlayShuffle();
+    }
+
+    protected void NoMovesRestart_Click(object? sender, EventArgs e)
+    {
+        if (DataContext is not ISolitaireGameViewModel vm) return;
+        NoMovesBannerControl.IsVisible = false;
+        AutocompleteBannerControl.IsVisible = false;
+        vm.RestartGame();
+        SoundService.PlayShuffle();
+    }
+
+    protected void NoMovesDismiss_Click(object? sender, EventArgs e)
+    {
+        NoMovesBannerControl.IsVisible = false;
+    }
+
+    protected void AutocompleteGame_Click(object? sender, EventArgs e)
+    {
+        if (DataContext is not ISolitaireGameViewModel vm) return;
+        AutocompleteBannerControl.IsVisible = false;
+        vm.Autocomplete();
+    }
+
+    protected void AutocompleteDismiss_Click(object? sender, EventArgs e)
+    {
+        AutocompleteBannerControl.IsVisible = false;
+    }
+
     // Handles a double-click on a face-up card. Default behavior is "try to auto-move it
     // to a foundation" — the same action Klondike/FreeCell's F hotkey performs — since
     // for those two games double-click-to-foundation is exactly what a double-click means.
@@ -42,6 +216,19 @@ public abstract class CardGameView : UserControl
     // Called when a hint's on-screen timer expires, so the queue is cleared and the
     // next Hint press starts fresh rather than cycling to a hint that's no longer shown.
     protected abstract void ClearActiveHint();
+
+    // Each subclass's own XAML-named FlashToast instance.
+    protected abstract FlashToast HintToastControl { get; }
+
+    // Called from MainWindow's Hint_Click right after FindHint(), when the resulting
+    // ActiveHint is the "no_move" sentinel — deliberately not driven off ActiveHint's
+    // own PropertyChanged (via ApplyHint) instead, because HintMove is a record and the
+    // no_move sentinel is built identically every time (same Id/Index/Total), so two
+    // consecutive presses while stuck produce value-equal HintMoves that
+    // [ObservableProperty]'s default equality check treats as "unchanged" and never
+    // re-raises — silently swallowing the flash on the second and later presses. Calling
+    // this directly from the click handler fires on every press, not just the first.
+    public void FlashHintUnavailable() => HintToastControl.Flash("Sorry! No hints available.");
 
     private readonly List<CardView> _hintedCardViews = new();
     private readonly List<PileView> _hintedPileViews = new();
@@ -94,6 +281,41 @@ public abstract class CardGameView : UserControl
         }
 
         StartDismissTimer();
+    }
+
+    // Point Highlights: finds whichever CardView currently displays the card the
+    // ViewModel's PointPopup is anchored to (by card id, not object identity — piles
+    // reuse/reposition their CardView children by index on every layout refresh, so the
+    // same card can be a different CardView instance move to move) and flashes it there,
+    // clearing whatever was previously flashing first. Callers must raise PointPopup's
+    // change notification only after their own pile-changed notifications have already
+    // been raised (see the ViewModel comments), so by the time this runs, every pile's
+    // CardsCanvas already reflects the move that just happened — otherwise this would
+    // find the card at its stale pre-move position, or a reused CardView that's since
+    // been reassigned to a different card entirely.
+    private CardView? _pointPopupCardView;
+
+    protected void ApplyPointPopup(CardPointPopup? popup, IEnumerable<PileView> allPiles)
+    {
+        _pointPopupCardView?.HidePointPopup();
+        _pointPopupCardView = null;
+
+        if (popup == null) return;
+
+        foreach (var pv in allPiles)
+        {
+            var canvas = pv.FindControl<Canvas>("CardsCanvas");
+            if (canvas == null) continue;
+            foreach (var child in canvas.Children)
+            {
+                if (child is CardView cv && cv.Card?.Id == popup.CardId)
+                {
+                    cv.ShowPointPopup(popup.DisplayText);
+                    _pointPopupCardView = cv;
+                    return;
+                }
+            }
+        }
     }
 
     private void HighlightStackFrom(PileView pv, Card fromCard)

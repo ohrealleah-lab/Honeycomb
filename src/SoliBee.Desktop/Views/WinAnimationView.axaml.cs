@@ -111,6 +111,17 @@ public partial class WinAnimationView : UserControl
     public void StartAnimation(IEnumerable<Pile> foundations, IReadOnlyList<Point>? foundationPoints = null,
         string scoreText = "", string timeText = "")
     {
+        // This overlay was just flipped IsVisible=true by the caller, and the responsive
+        // auto-scaling system (MainWindow.UpdateResponsiveLayout) forces its own explicit
+        // Measure(Size.Infinity) passes elsewhere on the tree outside Avalonia's normal
+        // layout scheduling — between the two, AnimationCanvas.Bounds (read every tick
+        // below for the fall/off-screen bounds) isn't guaranteed fresh yet even after the
+        // caller's Dispatcher.Post(..., DispatcherPriority.Loaded) delay. Force a real
+        // synchronous layout pass so the physics uses this overlay's actual current size
+        // instead of a stale/smaller one, which otherwise made cards vanish (culled as
+        // "off canvas") partway across the board instead of using its full width.
+        this.UpdateLayout();
+
         StopAnimation();
         _foundationPoints = foundationPoints;
 

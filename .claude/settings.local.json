@@ -144,7 +144,16 @@
       "Bash(git reset *)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Program Files\",\"C:\\\\Program Files \\(x86\\)\",\"$env:LOCALAPPDATA\",\"$env:USERPROFILE\" -Filter \"gh.exe\" -Recurse -ErrorAction SilentlyContinue -Depth 3 | Select-Object -First 5 FullName)",
       "PowerShell(winget list --id GitHub.cli 2>&1)",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Read(//tmp/**)",
+      "Bash(mkdir -p /c/Users/Leahbee/AppData/Local/Temp/claude/C--Users-Leahbee-SolibeeWin/71978fcf-1a11-4497-aa39-3e51544175e2/scratchpad/frames)",
+      "Bash(ffmpeg -y -i \"/c/Users/Leahbee/AppData/Local/Temp/vmware-Leahbee/VMwareDnD/847894f7/bug.mov\" -vf \"fps=6\" /c/Users/Leahbee/AppData/Local/Temp/claude/C--Users-Leahbee-SolibeeWin/71978fcf-1a11-4497-aa39-3e51544175e2/scratchpad/frames/frame_%03d.png)",
+      "Bash(ls /c/Users/Leahbee/AppData/Local/Temp/claude/C--Users-Leahbee-SolibeeWin/71978fcf-1a11-4497-aa39-3e51544175e2/scratchpad/frames/)",
+      "Bash(awk '/Inline stuck banner/,/<\\\\/Grid>/' src/SoliBee.Desktop/Views/FreecellView.axaml)",
+      "Bash(awk '/Inline stuck banner/,/<\\\\/Grid>/' src/SoliBee.Desktop/Views/SpiderView.axaml)",
+      "Bash(ls /c/Users/Leahbee/SolibeeMAC/src 2>&1 | head -30)",
+      "Bash(find / -iname \"Avalonia.dll\" 2>/dev/null | head -3 *)",
+      "Bash(git -C /c/Users/Leahbee/SolibeeWin status --short)"
     ]
   }
 }

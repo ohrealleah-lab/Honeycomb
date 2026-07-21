@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.Views.FlashToast"
+             IsVisible="False" IsHitTestVisible="False" ZIndex="5"
+             HorizontalAlignment="Center" VerticalAlignment="Center">
+    <!-- Generic transient "flash a short message" banner — same banner-glow dark-card,
+         gold-headline look as the other overlay banners (e.g. Video Poker's
+         "Not today, partner!" toast), but headline-only and self-dismissing rather than
+         needing a dismiss button, since the message is purely informational. -->
+    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="360">
+        <TextBlock x:Name="MessageText" FontSize="28" FontWeight="Black" Foreground="#FFD600"
+                   HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+    </Border>
+</UserControl>

@@ -77,22 +77,10 @@ public partial class VideoPokerView : UserControl
         this.Unloaded += VideoPokerView_Unloaded;
     }
 
-    private bool _isCompact;
-    public void SetResponsiveMode(bool isCompact)
-    {
-        _isCompact = isCompact;
-        UpdateDealDrawButton();
-    }
-
     private void UpdateDealDrawButton()
     {
         if (DataContext is VideoPokerViewModel vm)
-        {
-            if (_isCompact)
-                DealDrawButton.Content = vm.IsHolding ? "🔀" : "▶";
-            else
-                DealDrawButton.Content = vm.DealDrawLabel;
-        }
+            DealDrawButton.Content = vm.DealDrawLabel;
     }
 
     private void VideoPokerView_Loaded(object? sender, RoutedEventArgs e)
@@ -304,8 +292,8 @@ public partial class VideoPokerView : UserControl
     private void UpdateControls(VideoPokerViewModel vm)
     {
         AnimateCreditsTo(vm.CreditDisplay);
-        BetLabel.Text          = vm.BetDisplay;
-        HandsLabel.Text        = vm.HandsDisplay;
+        BidBar.BetText         = vm.BetDisplay;
+        BidBar.HandsText       = vm.HandsDisplay;
         RebuyButton.IsVisible  = vm.NeedsRebuy;
         BetButtonRow.IsVisible = !vm.Options.IsNoStressMode;
 
@@ -744,8 +732,8 @@ public partial class VideoPokerView : UserControl
 
     private void AnimateCreditsTo(string newDisplay)
     {
-        if (!int.TryParse(newDisplay, out int target)) { CreditsLabel.Text = newDisplay; return; }
-        if (_displayedCredits < 0) { _displayedCredits = target; CreditsLabel.Text = newDisplay; return; }
+        if (!int.TryParse(newDisplay, out int target)) { BidBar.CreditsText = newDisplay; return; }
+        if (_displayedCredits < 0) { _displayedCredits = target; BidBar.CreditsText = newDisplay; return; }
         if (_displayedCredits == target) return;
 
         _creditAnimTimer?.Stop();
@@ -762,11 +750,11 @@ public partial class VideoPokerView : UserControl
             double t    = Math.Min(1.0, elapsed / (double)totalMs);
             double ease = 1.0 - Math.Pow(1.0 - t, 2); // quadratic ease-out
             _displayedCredits = start + (int)(delta * ease);
-            CreditsLabel.Text = _displayedCredits.ToString();
+            BidBar.CreditsText = _displayedCredits.ToString();
             if (t >= 1.0)
             {
                 _displayedCredits = target;
-                CreditsLabel.Text = target.ToString();
+                BidBar.CreditsText = target.ToString();
                 _creditAnimTimer!.Stop();
                 _creditAnimTimer = null;
             }

@@ -81,31 +81,7 @@
             </Grid.RowDefinitions>
 
             <!-- Credits / Bet / Hands bar — centered in the top spacer row -->
-            <Border x:Name="BidBar" Grid.Row="0" Background="#59000000" CornerRadius="6"
-                    HorizontalAlignment="Center" VerticalAlignment="Center" Width="290" Padding="0,8">
-                <Grid ColumnDefinitions="96,Auto,96,Auto,96">
-                    <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
-                        <TextBlock Text="CREDITS" FontSize="10" FontWeight="Bold"
-                                   Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="CreditsLabel" FontSize="28" FontWeight="Black"
-                                   Foreground="White" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                    <Rectangle Grid.Column="1" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
-                    <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
-                        <TextBlock Text="BET" FontSize="10" FontWeight="Bold"
-                                   Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="BetLabel" FontSize="28" FontWeight="Black"
-                                   Foreground="#FFD700" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                    <Rectangle Grid.Column="3" Width="1" Fill="#40FFFFFF" Margin="0,8" VerticalAlignment="Stretch"/>
-                    <StackPanel Grid.Column="4" Spacing="1" VerticalAlignment="Center">
-                        <TextBlock Text="HANDS" FontSize="10" FontWeight="Bold"
-                                   Foreground="#70FFFFFF" HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="HandsLabel" FontSize="28" FontWeight="Black"
-                                   Foreground="White" HorizontalAlignment="Center" Text="0"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
+            <local:BidBarView x:Name="BidBar" Grid.Row="0"/>
 
             <!-- Cards + overlays — centered in the Auto row -->
             <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -113,35 +89,35 @@
 
                     <StackPanel x:Name="CardsRow" Orientation="Horizontal" Spacing="0" HorizontalAlignment="Center">
 
-                        <Grid x:Name="CardSlot0" Width="190" Height="268.375"
+                        <!-- CardSlot size matches CardView's own native 128x181 exactly (was
+                             190x268.375, ~1.48x bigger, making the Viewbox this used to wrap
+                             each CardView in scale cards up well past Blackjack's — which
+                             renders CardView at native size with no Viewbox at all). Now that
+                             slot size == child size, that Viewbox was a no-op for sizing but
+                             still an extra transform node the hold-wobble's RotateTransform had
+                             to compose through, which was throwing the wobble's rotation off —
+                             removed, CardView is a direct child now, same as Blackjack. The
+                             overlap margin is scaled down to -40 (128 * 0.3125) to keep the
+                             same 31.25% overlap proportion the fan of cards had at the old size. -->
+                        <Grid x:Name="CardSlot0" Width="128" Height="181"
                               Tag="0" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <Viewbox Stretch="Uniform">
-                                <local:CardView x:Name="Card0View" IsHitTestVisible="False" Width="128" Height="181"/>
-                            </Viewbox>
+                            <local:CardView x:Name="Card0View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
-                        <Grid x:Name="CardSlot1" Width="190" Height="268.375" Margin="-59.375,0,0,0"
+                        <Grid x:Name="CardSlot1" Width="128" Height="181" Margin="-40,0,0,0"
                               Tag="1" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <Viewbox Stretch="Uniform">
-                                <local:CardView x:Name="Card1View" IsHitTestVisible="False" Width="128" Height="181"/>
-                            </Viewbox>
+                            <local:CardView x:Name="Card1View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
-                        <Grid x:Name="CardSlot2" Width="190" Height="268.375" Margin="-59.375,0,0,0"
+                        <Grid x:Name="CardSlot2" Width="128" Height="181" Margin="-40,0,0,0"
                               Tag="2" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <Viewbox Stretch="Uniform">
-                                <local:CardView x:Name="Card2View" IsHitTestVisible="False" Width="128" Height="181"/>
-                            </Viewbox>
+                            <local:CardView x:Name="Card2View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
-                        <Grid x:Name="CardSlot3" Width="190" Height="268.375" Margin="-59.375,0,0,0"
+                        <Grid x:Name="CardSlot3" Width="128" Height="181" Margin="-40,0,0,0"
                               Tag="3" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <Viewbox Stretch="Uniform">
-                                <local:CardView x:Name="Card3View" IsHitTestVisible="False" Width="128" Height="181"/>
-                            </Viewbox>
+                            <local:CardView x:Name="Card3View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
-                        <Grid x:Name="CardSlot4" Width="190" Height="268.375" Margin="-59.375,0,0,0"
+                        <Grid x:Name="CardSlot4" Width="128" Height="181" Margin="-40,0,0,0"
                               Tag="4" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <Viewbox Stretch="Uniform">
-                                <local:CardView x:Name="Card4View" IsHitTestVisible="False" Width="128" Height="181"/>
-                            </Viewbox>
+                            <local:CardView x:Name="Card4View" IsHitTestVisible="False" Width="128" Height="181"/>
                         </Grid>
 
                     </StackPanel>
@@ -217,30 +193,30 @@
                     <Button x:Name="HoldAllButton"
                             Content="Hold All  [H]" Height="46" Padding="20,0"
                             IsEnabled="{Binding IsHolding}"
-                            Click="HoldAll_Click" Classes="vp-button vp-button-hold"/>
+                            Click="HoldAll_Click" Classes="casino-button casino-button-blue"/>
                     <Button x:Name="ClearButton"
                             Content="Clear  [Q]" Height="46" Padding="20,0"
                             IsEnabled="{Binding IsHolding}"
-                            Click="ClearAll_Click" Classes="vp-button vp-button-clear"/>
+                            Click="ClearAll_Click" Classes="casino-button casino-button-red"/>
                     <Button x:Name="DealDrawButton"
                             Height="46" Padding="28,0"
-                            Click="DealDraw_Click" Classes="vp-button vp-button-draw"/>
+                            Click="DealDraw_Click" Classes="casino-button casino-button-green"/>
                     <Button x:Name="RebuyButton"
                             Content="Buy In" Height="46" Padding="16,0"
                             IsVisible="False"
-                            Click="Rebuy_Click" Classes="vp-button vp-button-rebuy"/>
+                            Click="Rebuy_Click" Classes="casino-button vp-button-rebuy"/>
                 </StackPanel>
 
                 <StackPanel x:Name="BetButtonRow" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                     <Button Content="− Bet" Height="34" Padding="14,0"
                             IsEnabled="{Binding IsDealing}"
-                            Click="DecreaseBet_Click" Classes="vp-button vp-bet-button"/>
+                            Click="DecreaseBet_Click" Classes="casino-button vp-bet-button"/>
                     <Button Content="Bet Max" Height="34" Padding="14,0"
                             IsEnabled="{Binding IsDealing}"
-                            Click="BetMax_Click" Classes="vp-button vp-bet-button"/>
+                            Click="BetMax_Click" Classes="casino-button vp-bet-button"/>
                     <Button Content="+ Bet" Height="34" Padding="14,0"
                             IsEnabled="{Binding IsDealing}"
-                            Click="IncreaseBet_Click" Classes="vp-button vp-bet-button"/>
+                            Click="IncreaseBet_Click" Classes="casino-button vp-bet-button"/>
                 </StackPanel>
 
             </StackPanel>
@@ -256,104 +232,15 @@
     </Grid>
 
     <UserControl.Styles>
-        <Style Selector="Button.vp-button">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#65FFFFFF" Offset="0"/>
-                        <GradientStop Color="#35FFFFFF" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#A0FFFFFF"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="5"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style Selector="Button.vp-button:pointerover /template/ ContentPresenter">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#85FFFFFF" Offset="0"/>
-                        <GradientStop Color="#55FFFFFF" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style Selector="Button.vp-button-draw">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#CC4CAF50" Offset="0"/>
-                        <GradientStop Color="#CC2E7D32" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="BorderBrush" Value="#AA81C784"/>
-        </Style>
-        <Style Selector="Button.vp-button-draw:pointerover /template/ ContentPresenter">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#CC66BB6A" Offset="0"/>
-                        <GradientStop Color="#CC388E3C" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- Base translucent-white style + green/red/blue action-color variants now
+             live in App.axaml as Button.casino-button(-green|-red|-blue), shared with
+             Blackjack. Only Video Poker's own unique Rebuy color and the flat bet-row
+             style stay defined here. -->
         <Style Selector="Button.vp-button-rebuy">
             <Setter Property="Background" Value="#CC664400"/>
             <Setter Property="BorderBrush" Value="#FFAA44"/>
         </Style>
 
-        <!-- Hold All / Clear get the same opaque, color-coded treatment as Draw so their
-             text stays readable against the felt instead of blending into it. -->
-        <Style Selector="Button.vp-button-hold">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#CC2196F3" Offset="0"/>
-                        <GradientStop Color="#CC1565C0" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="BorderBrush" Value="#AA90CAF9"/>
-        </Style>
-        <Style Selector="Button.vp-button-hold:pointerover /template/ ContentPresenter">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#CC42A5F5" Offset="0"/>
-                        <GradientStop Color="#CC1976D2" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style Selector="Button.vp-button-clear">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#CCE53935" Offset="0"/>
-                        <GradientStop Color="#CCB71C1C" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="BorderBrush" Value="#AAEF9A9A"/>
-        </Style>
-        <Style Selector="Button.vp-button-clear:pointerover /template/ ContentPresenter">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#CCEF5350" Offset="0"/>
-                        <GradientStop Color="#CCC62828" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-        </Style>
         <Style Selector="Button.vp-bet-button">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Opacity" Value="0.80"/>

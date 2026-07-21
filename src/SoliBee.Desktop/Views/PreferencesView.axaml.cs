@@ -138,6 +138,28 @@ public partial class PreferencesView : UserControl
         }
     }
 
+    // Point Highlights is genuinely per-game (unlike No Stress Mode/Hide Hint/Always on
+    // Top above, which are single fields shared across every game) — these two map the
+    // one checkbox to whichever of the three GameOptions fields ActiveGameFamily
+    // currently points at.
+    private bool GetPointHighlights(GameOptions options) => ActiveGameFamily switch
+    {
+        "Klondike" => options.KlondikeShowPointHighlights,
+        "Freecell" => options.FreecellShowPointHighlights,
+        "Spider"   => options.SpiderShowPointHighlights,
+        _          => true,
+    };
+
+    private void SetPointHighlights(GameOptions options, bool value)
+    {
+        switch (ActiveGameFamily)
+        {
+            case "Klondike": options.KlondikeShowPointHighlights = value; break;
+            case "Freecell": options.FreecellShowPointHighlights = value; break;
+            case "Spider":   options.SpiderShowPointHighlights   = value; break;
+        }
+    }
+
     // Syncs all UI controls to match the provided options. Call inside _initializing guard.
     private void SyncUIFromOptions(GameOptions options)
     {
@@ -193,6 +215,11 @@ public partial class PreferencesView : UserControl
         CardOutlineColorPicker.Color = Color.Parse(options.ThemeFaceBorderNormal ?? "#D9000000");
         CardTextBlackColorPicker.Color = Color.Parse(options.ThemeTextBlackNormal ?? "#1A1A1A");
         CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
+
+        // Point Highlights — per-game (Klondike/Freecell/Spider only; not Video
+        // Poker/Blackjack, which don't have this feature).
+        PointHighlightsCheckBox.IsVisible = ActiveGameFamily is "Klondike" or "Freecell" or "Spider";
+        PointHighlightsCheckBox.IsChecked = GetPointHighlights(options);
 
         // Game Mode section
         if (!string.IsNullOrEmpty(ActiveGameFamily) && ActiveGameFamily != "VideoPoker")
@@ -287,6 +314,7 @@ public partial class PreferencesView : UserControl
     {
         VegasCheckBox.IsVisible        = false;
         HideBetBoardCheckBox.IsVisible = true;
+        PointHighlightsCheckBox.IsVisible = false;
 
         HideBetBoardCheckBox.IsChecked = options.HideBetBoard;
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
@@ -699,6 +727,8 @@ public partial class PreferencesView : UserControl
             options.IsVignetteEnabled  = VignetteCheckBox.IsChecked     ?? true;
             options.HideHintButton     = HideHintCheckBox.IsChecked     ?? false;
             options.IsAlwaysOnTop      = AlwaysOnTopCheckBox.IsChecked  ?? false;
+            if (PointHighlightsCheckBox.IsVisible)
+                SetPointHighlights(options, PointHighlightsCheckBox.IsChecked ?? true);
 
             NotifySettingsChanged(options);
         }

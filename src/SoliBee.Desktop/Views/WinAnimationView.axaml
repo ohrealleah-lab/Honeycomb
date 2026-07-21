@@ -3,8 +3,11 @@
              x:Class="SoliBee.Desktop.Views.WinAnimationView">
 
     <Grid>
-        <!-- Bouncing card canvas (bottom layer) -->
-        <Canvas x:Name="AnimationCanvas" Background="#18000000"
+        <!-- Bouncing card canvas (bottom layer). Background is Transparent rather than
+             unset — Avalonia only hit-tests a Canvas with a non-null Background, and this
+             one needs to keep blocking board clicks while the win banner is up (see
+             AnimationCanvas.IsHitTestVisible in WinAnimationView.axaml.cs). -->
+        <Canvas x:Name="AnimationCanvas" Background="Transparent"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
         <!-- Win info panel (top layer) — same blue/gold scheme as the Autocomplete

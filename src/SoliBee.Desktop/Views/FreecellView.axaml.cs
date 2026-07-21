@@ -228,9 +228,7 @@ public partial class FreecellView : CardGameView
                 if (vm.State.HasWon) TriggerVictoryCascade();
                 else
                 {
-                    _winTriggered = false;
-                    VictoryOverlay.StopAnimation();
-                    VictoryOverlay.IsVisible = false;
+                    ResetVictoryTrigger();
                 }
             }
             else if (e.PropertyName == "FreeCells" || e.PropertyName == "Foundations" || e.PropertyName == "Tableaus")
@@ -261,12 +259,19 @@ public partial class FreecellView : CardGameView
             }
             else if (e.PropertyName == nameof(FreecellViewModel.HasNoMoves))
             {
-                if (vm.HasNoMoves) NoMovesStatsLabel.Text = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
+                if (vm.HasNoMoves) NoMovesBanner.StatsText = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
                 NoMovesBanner.IsVisible = vm.HasNoMoves;
             }
             else if (e.PropertyName == nameof(FreecellViewModel.ActiveHint))
             {
                 ApplyHint(vm.ActiveHint, AllPileViews());
+            }
+            else if (e.PropertyName == nameof(FreecellViewModel.PointPopup))
+            {
+                // Deferred to Loaded priority — see the matching comment in
+                // GameView.axaml.cs for why (avoids landing on the card's stale
+                // pre-move CardView instead of the one it actually moved to).
+                Dispatcher.UIThread.Post(() => ApplyPointPopup(vm.PointPopup, AllPileViews()), DispatcherPriority.Loaded);
             }
         });
     }
@@ -345,10 +350,16 @@ public partial class FreecellView : CardGameView
         }
     }
 
-    private bool _winTriggered;
+    protected override WinAnimationView VictoryOverlayControl => VictoryOverlay;
+    protected override StuckBanner NoMovesBannerControl => NoMovesBanner;
+    protected override AutocompleteBanner AutocompleteBannerControl => AutocompleteBanner;
+    protected override FlashToast HintToastControl => HintToast;
 
     private List<Point> ComputeFoundationSpawnPoints(int count)
     {
+        // Force a real layout pass so TranslatePoint/Bounds below reflect the board's
+        // current actual size (see the matching comment in WinAnimationView.StartAnimation).
+        this.UpdateLayout();
         var allViews = new[] { Foundation0, Foundation1, Foundation2, Foundation3, Foundation4, Foundation5, Foundation6, Foundation7 };
         var pts = new List<Point>(count);
         for (int i = 0; i < count && i < allViews.Length; i++)
@@ -359,101 +370,8 @@ public partial class FreecellView : CardGameView
         return pts;
     }
 
-    private void TriggerVictoryCascade()
-    {
-        if (_winTriggered) return;
-        _winTriggered = true;
-        VictoryOverlay.IsVisible = true;
-        if (DataContext is FreecellViewModel vm)
-        {
-            Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
-            }, DispatcherPriority.Loaded);
-        }
-        else
-        {
-            VictoryOverlay.StartAnimation();
-        }
-        SoundService.PlaySolitaireWin();
-    }
-
-    // Dev-only banner preview, wired to the toolbar's local-only "Banners" dropdown
-    // (the dropdown itself is only made visible in DEBUG builds — see MainWindow).
-    public void DebugShowWinBanner()
-    {
-        VictoryOverlay.IsVisible = true;
-        if (DataContext is FreecellViewModel vm)
-        {
-            Dispatcher.UIThread.Post(() => {
-                VictoryOverlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(vm.Foundations.Count), vm.ScoreDisplay, !vm.Options.IsNoStressMode ? vm.TimeDisplay : "");
-            }, DispatcherPriority.Loaded);
-        }
-        else
-        {
-            VictoryOverlay.StartAnimation();
-        }
-    }
-
-    // Dev-only — always plays the full demo cascade (the no-arg overload's fake 52-card
-    // deck) regardless of the real foundations' current contents, so the bouncing-card
-    // animation itself can be reviewed even mid-game when few/no cards are actually up.
-    public void DebugPlayWinAnimation()
-    {
-        VictoryOverlay.IsVisible = true;
-        Dispatcher.UIThread.Post(() => {
-            VictoryOverlay.StartAnimation(ComputeFoundationSpawnPoints(4));
-        }, DispatcherPriority.Loaded);
-        SoundService.PlaySolitaireWin();
-    }
-
-    public void DebugShowLossBanner()
-    {
-        if (DataContext is FreecellViewModel vm)
-            NoMovesStatsLabel.Text = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
-        NoMovesBanner.IsVisible = true;
-    }
-
-    public void DebugShowAutocompleteBanner() => AutocompleteBanner.IsVisible = true;
-
-    private void AutocompleteGame_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not FreecellViewModel vm) return;
-        AutocompleteBanner.IsVisible = false;
-        vm.Autocomplete();
-        e.Handled = true;
-    }
-
-    private void NoMovesNewGame_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not FreecellViewModel vm) return;
-        NoMovesBanner.IsVisible = false;
-        AutocompleteBanner.IsVisible = false;
-        vm.InitializeGame();
-        SoundService.PlayShuffle();
-        e.Handled = true;
-    }
-
-    private void NoMovesRestart_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not FreecellViewModel vm) return;
-        NoMovesBanner.IsVisible = false;
-        AutocompleteBanner.IsVisible = false;
-        vm.RestartGame();
-        SoundService.PlayShuffle();
-        e.Handled = true;
-    }
-
-    private void NoMovesDismiss_Click(object? sender, RoutedEventArgs e)
-    {
-        NoMovesBanner.IsVisible = false;
-        e.Handled = true;
-    }
-
-    private void AutocompleteDismiss_Click(object? sender, RoutedEventArgs e)
-    {
-        AutocompleteBanner.IsVisible = false;
-        e.Handled = true;
-    }
+    protected override List<Point> ComputeFoundationSpawnPoints() =>
+        ComputeFoundationSpawnPoints(DataContext is FreecellViewModel vm ? vm.Foundations.Count : 8);
 
     private void ApplyFeltColor(GameOptions options)
     {

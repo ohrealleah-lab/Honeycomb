@@ -52,19 +52,6 @@ public partial class BlackjackView : UserControl
         this.Unloaded += BlackjackView_Unloaded;
     }
 
-    private bool _isCompact;
-    public void SetResponsiveMode(bool isCompact)
-    {
-        _isCompact = isCompact;
-        UpdateDealButtonContent();
-    }
-
-    private void UpdateDealButtonContent()
-    {
-        if (DealButton != null)
-            DealButton.Content = _isCompact ? "▶" : "Deal  [Space]";
-    }
-
     private void BlackjackView_Loaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not BlackjackViewModel vm) return;
@@ -96,9 +83,9 @@ public partial class BlackjackView : UserControl
 
     private void Refresh(BlackjackViewModel vm)
     {
-        CreditsLabel.Text = vm.CreditDisplay;
-        BetLabel.Text     = vm.BetDisplay;
-        HandsLabel.Text   = vm.HandsDisplay;
+        BidBar.CreditsText = vm.CreditDisplay;
+        BidBar.BetText     = vm.BetDisplay;
+        BidBar.HandsText   = vm.HandsDisplay;
 
         // Phase-transition sounds
         PlayTransitionSounds(vm);
@@ -365,7 +352,10 @@ public partial class BlackjackView : UserControl
         BidBar.IsVisible        = !freePlay;
         ChipButtonRow.IsVisible = !freePlay;
         ClearBetButton.IsVisible = !freePlay;
-        DealButton.IsVisible   = vm.CanDeal && !vm.CanRebuy;
+        // CanRebuy now triggers as an early low-credits warning (<=10), not "can't afford
+        // to deal" — Deal stays visible/usable alongside Buy In as long as the phase
+        // allows it, rather than being replaced by it.
+        DealButton.IsVisible   = vm.CanDeal;
         RebuyButton.IsVisible  = vm.CanRebuy;
         RebuyDivider.IsVisible = vm.CanRebuy;
 
