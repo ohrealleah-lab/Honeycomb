@@ -60,7 +60,7 @@ jobs:
             /tr http://timestamp.digicert.com `
             /f cert.pfx `
             /p $env:CERT_PASSWORD `
-            src\SoliBee.Desktop\bin\publish\win-x64\SoliBee.Desktop.exe
+            src\SoliBee.Desktop\bin\publish\win-x64\Honeycomb.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Remove certificate
@@ -75,16 +75,16 @@ jobs:
         run: |
           Compress-Archive `
             -Path src\SoliBee.Desktop\bin\publish\win-x64\* `
-            -DestinationPath SoliBee-win-x64.zip
+            -DestinationPath Honeycomb-win-x64.zip
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: SoliBee-win-x64.zip
+          subject-path: Honeycomb-win-x64.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SoliBee-win-x64
-          path: SoliBee-win-x64.zip
+          name: Honeycomb-win-x64
+          path: Honeycomb-win-x64.zip
           retention-days: 30

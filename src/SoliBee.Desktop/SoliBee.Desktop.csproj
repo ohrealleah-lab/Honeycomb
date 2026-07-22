@@ -7,7 +7,8 @@
     <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <Product>SoliBee Solitaire Suite</Product>
+    <AssemblyName>Honeycomb</AssemblyName>
+    <Product>Honeycomb Card Suite</Product>
     <Company>Leahbee</Company>
     <Copyright>© 2026 Leahbee. All rights reserved.</Copyright>
     <Description>A solitaire suite featuring Klondike, Freecell, and Spider Solitaire.</Description>
@@ -59,7 +60,7 @@
        so `dotnet publish` produces one file ready to hand off/upload. -->
   <Target Name="ZipPublishOutput" AfterTargets="Publish">
     <PropertyGroup>
-      <PublishZipFile>$(PublishDir)..\SoliBee-$(RuntimeIdentifier).zip</PublishZipFile>
+      <PublishZipFile>$(PublishDir)..\Honeycomb-$(RuntimeIdentifier).zip</PublishZipFile>
     </PropertyGroup>
     <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(PublishZipFile)" Overwrite="true" />
     <Message Importance="high" Text="Zipped publish output to $(PublishZipFile)" />

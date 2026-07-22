@@ -924,7 +924,7 @@ public partial class CardView : UserControl
             else
             {
                 StopGifAnimation();
-                string resourceUri = $"avares://SoliBee.Desktop/Assets/{filename}";
+                string resourceUri = $"avares://Honeycomb/Assets/{filename}";
                 CardBackImage.Source = GetCachedBitmap(resourceUri);
             }
         }

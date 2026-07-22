@@ -10,7 +10,7 @@ dotnet build src/SoliBee.Desktop/SoliBee.Desktop.csproj
 
 # Windows release executable (~118 MB self-contained)
 dotnet publish src/SoliBee.Desktop/SoliBee.Desktop.csproj /p:PublishProfile=win-x64
-# Output: src/SoliBee.Desktop/bin/publish/win-x64/SoliBee.Desktop.exe  (+ Assets/ folder)
+# Output: src/SoliBee.Desktop/bin/publish/win-x64/Honeycomb.exe  (+ Assets/ folder)
 ```
 
 WAV files (`shuffle.wav`, `snap.wav`, `victory.wav`) must sit in the same directory as the `.exe` — they're `Content` files copied to output, not embedded. Audio uses `winmm.dll` P/Invoke compiled in only when `WINDOWS` symbol is defined.

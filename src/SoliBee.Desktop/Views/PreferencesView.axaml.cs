@@ -852,13 +852,13 @@ public partial class PreferencesView : UserControl
         {
             string theme = options.CardBackTheme;
             if (theme == "Dingwall")
-                return new Bitmap(AssetLoader.Open(new Uri("avares://SoliBee.Desktop/Assets/dingwall.jpg")));
+                return new Bitmap(AssetLoader.Open(new Uri("avares://Honeycomb/Assets/dingwall.jpg")));
             if (theme == "Moogle")
-                return new Bitmap(AssetLoader.Open(new Uri("avares://SoliBee.Desktop/Assets/moogle.jpg")));
+                return new Bitmap(AssetLoader.Open(new Uri("avares://Honeycomb/Assets/moogle.jpg")));
             if (theme == "Vulpera")
-                return new Bitmap(AssetLoader.Open(new Uri("avares://SoliBee.Desktop/Assets/vulpera.png")));
+                return new Bitmap(AssetLoader.Open(new Uri("avares://Honeycomb/Assets/vulpera.png")));
             if (_houliAssets.TryGetValue(theme, out var assetFile))
-                return new Bitmap(AssetLoader.Open(new Uri($"avares://SoliBee.Desktop/Assets/{assetFile}")));
+                return new Bitmap(AssetLoader.Open(new Uri($"avares://Honeycomb/Assets/{assetFile}")));
 
             var customBack = options.CustomCardBacks.Find(c => c.Name == theme);
             if (customBack != null && PathSafety.IsSafeFileName(customBack.FileName))
@@ -869,7 +869,7 @@ public partial class PreferencesView : UserControl
                 if (File.Exists(path))
                     return new Bitmap(path);
             }
-            return new Bitmap(AssetLoader.Open(new Uri("avares://SoliBee.Desktop/Assets/vulpera.png")));
+            return new Bitmap(AssetLoader.Open(new Uri("avares://Honeycomb/Assets/vulpera.png")));
         }
         catch { return null; }
     }

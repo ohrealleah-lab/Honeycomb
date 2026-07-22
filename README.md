@@ -74,7 +74,7 @@ Solibee supports five fully implemented, distinct games selectable via the **Gam
   ```bash
   dotnet publish src/SoliBee.Desktop/SoliBee.Desktop.csproj /p:PublishProfile=win-x64
   ```
-  *Output: `src/SoliBee.Desktop/bin/publish/win-x64/SoliBee.Desktop.exe` — copy the `.exe` and the `Assets/` folder together to run.*
+  *Output: `src/SoliBee.Desktop/bin/publish/win-x64/Honeycomb.exe` — copy the `.exe` and the `Assets/` folder together to run.*
 
 ---
 

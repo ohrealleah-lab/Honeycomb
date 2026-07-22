@@ -25,7 +25,7 @@
 
                     <!-- Decorative letter for Face Cards J, Q, K -->
                     <TextBlock x:Name="FaceLetterText"
-                               FontFamily="avares://SoliBee.Desktop/Assets/#Apple Chancery"
+                               FontFamily="avares://Honeycomb/Assets/#Apple Chancery"
                                FontWeight="Bold"
                                FontSize="120"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
