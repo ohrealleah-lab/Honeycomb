@@ -40,9 +40,12 @@ public class HoneycombProfileManager {
         } else {
             // Initialize 5 empty deck slots
             savedDecks = Array(repeating: HoneycombDeckState(), count: 5)
-            // Put the starter cards in deck 0 as a default if it's the first time
+            // Put the starter cards in deck 0, named "Default", if it's the first time.
+            // (Options.activeDeckIndex already defaults to 0, so this is also the
+            // active deck — there's always an active deck to save changes to.)
             let starters = Array(unlockedCardIds)
             if starters.count == 5 {
+                savedDecks[0].name = "Default"
                 savedDecks[0].cardIds = starters
             }
             saveDecks()
@@ -62,15 +65,29 @@ public class HoneycombProfileManager {
         unlockedCardIds.count >= HoneycombDatabase.shared.allCards.count
     }
 
+    // The composition a never-played Deck 1 starts with: three 1-star, two 2-star.
+    private static let defaultStarterComposition: [Int] = [1, 1, 1, 2, 2]
+
     // Pure core of Start Over, factored out so it's testable without touching the
     // shared singleton's real persisted UserDefaults state: wipes every saved deck
-    // except Deck 1 (index 0), re-granting starter cards into it if it was empty.
-    public static func computeStartOverDecks(currentDecks: [HoneycombDeckState], starterProvider: () -> [Int]) -> [HoneycombDeckState] {
+    // except Deck 1 (index 0), renames it "Default", and regenerates it with freshly
+    // drawn cards that match its previous star-tier composition — so a player who
+    // built up a deck of e.g. a 5-star, a 4-star, and three 3-stars gets that same
+    // composition back (new specific cards, reseeded stats) rather than the literal
+    // same card ids. A never-played Deck 1 (empty) falls back to the default starter
+    // composition. The caller is responsible for also making Deck 1 the active deck.
+    public static func computeStartOverDecks(
+        currentDecks: [HoneycombDeckState],
+        starLookup: (Int) -> Int?,
+        randomCard: (Int) -> Int?
+    ) -> [HoneycombDeckState] {
         var decks = Array(repeating: HoneycombDeckState(), count: 5)
-        decks[0] = currentDecks[0]
-        if decks[0].cardIds.isEmpty {
-            decks[0].cardIds = starterProvider()
-        }
+        decks[0].name = "Default"
+        let previousCardIds = currentDecks[0].cardIds
+        let starComposition = previousCardIds.isEmpty
+            ? defaultStarterComposition
+            : previousCardIds.compactMap(starLookup)
+        decks[0].cardIds = starComposition.compactMap(randomCard)
         return decks
     }
 
@@ -78,10 +95,12 @@ public class HoneycombProfileManager {
     // reroll/reseed of HoneycombDatabase itself is a separate call the caller makes
     // right after this, since that's shared match/AI state this manager doesn't own.
     public func startOver() {
-        savedDecks = HoneycombProfileManager.computeStartOverDecks(currentDecks: savedDecks) {
-            let db = HoneycombDatabase.shared
-            return db.randomCards(stars: 1, count: 3).map(\.id) + db.randomCards(stars: 2, count: 2).map(\.id)
-        }
+        let db = HoneycombDatabase.shared
+        savedDecks = HoneycombProfileManager.computeStartOverDecks(
+            currentDecks: savedDecks,
+            starLookup: { db.card(id: $0)?.stars },
+            randomCard: { stars in db.randomCards(stars: stars, count: 1).first?.id }
+        )
         unlockedCardIds = Set(savedDecks[0].cardIds)
         favoriteCardIds = []
         saveUnlockedCards()

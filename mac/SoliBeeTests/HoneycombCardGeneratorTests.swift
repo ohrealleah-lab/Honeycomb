@@ -72,23 +72,42 @@ struct HoneycombCardGeneratorTests {
             HoneycombDeckState(name: "Slot Two", cardIds: [6, 7, 8, 9, 10]),
         ] + Array(repeating: HoneycombDeckState(), count: 3)
 
-        let result = HoneycombProfileManager.computeStartOverDecks(currentDecks: currentDecks) {
-            assertionFailure("Starter provider should not be called when Deck 1 already has cards")
-            return []
-        }
+        // Mirrors "a 5, 4, three 3s": ids 1-3 are 3-star, id 4 is 4-star, id 5 is 5-star.
+        let stars: [Int: Int] = [1: 3, 2: 3, 3: 3, 4: 4, 5: 5]
+        var drawnComposition: [Int] = []
+        let result = HoneycombProfileManager.computeStartOverDecks(
+            currentDecks: currentDecks,
+            starLookup: { stars[$0] },
+            randomCard: { starTier in
+                drawnComposition.append(starTier)
+                return starTier * 1000 // fake new id, distinguishable from the old ones
+            }
+        )
 
-        assert(result[0].cardIds == [1, 2, 3, 4, 5], "Deck 1 must survive Start Over unchanged")
-        assert(result[0].name == "Keep Me", "Deck 1's name must survive Start Over unchanged")
+        assert(drawnComposition == [3, 3, 3, 4, 5], "Deck 1 must be redrawn matching its previous star composition")
+        assert(result[0].cardIds == [3000, 3000, 3000, 4000, 5000], "Deck 1 must get freshly drawn cards, not the old ids")
+        assert(result[0].name == "Default", "Deck 1 must be renamed \"Default\" by Start Over")
         for index in 1..<5 {
             assert(result[index].cardIds.isEmpty, "Deck \(index + 1) must be cleared by Start Over")
         }
 
-        // Edge case: Deck 1 was never filled — starters must be granted.
+        // Edge case: Deck 1 was never filled — the default starter composition
+        // (three 1-star, two 2-star) must be drawn instead.
         let emptyDecks = Array(repeating: HoneycombDeckState(), count: 5)
-        let resultWithStarters = HoneycombProfileManager.computeStartOverDecks(currentDecks: emptyDecks) {
-            [100, 101, 102, 103, 104]
-        }
-        assert(resultWithStarters[0].cardIds == [100, 101, 102, 103, 104], "Empty Deck 1 must be re-granted starter cards")
+        var starterComposition: [Int] = []
+        let resultWithStarters = HoneycombProfileManager.computeStartOverDecks(
+            currentDecks: emptyDecks,
+            starLookup: { _ in
+                assertionFailure("Star lookup should not be called when Deck 1 was never filled")
+                return nil
+            },
+            randomCard: { starTier in
+                starterComposition.append(starTier)
+                return starTier * 1000
+            }
+        )
+        assert(starterComposition == [1, 1, 1, 2, 2], "Empty Deck 1 must draw the default starter composition")
+        assert(resultWithStarters[0].cardIds == [1000, 1000, 1000, 2000, 2000], "Empty Deck 1 must be filled with freshly drawn starter-tier cards")
     }
 
     static func testDatabaseSmokeTest() {

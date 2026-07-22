@@ -10,7 +10,6 @@ public struct HoneycombDecksView: View {
     @State private var newDeckName: String = ""
     @State private var editingDeckCards: [Int] = []
     @State private var validationError: String? = nil
-    @State private var isNameLocked: Bool = false
     @State private var showStartOverConfirmation = false
 
     // Card Bank filter — nil means "All".
@@ -189,7 +188,6 @@ public struct HoneycombDecksView: View {
                     editingDeckIndex = index
                     newDeckName = deck.name
                     editingDeckCards = deck.cardIds
-                    isNameLocked = !deck.name.isEmpty
                     validateDeck()
                 }
             }
@@ -286,10 +284,6 @@ public struct HoneycombDecksView: View {
             TextField("Deck Name (Max 20 chars)", text: $newDeckName)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .frame(width: 300)
-                .disabled(isNameLocked)
-            if isNameLocked {
-                Text("Deck name is locked once saved.").foregroundColor(.secondary).font(.caption)
-            }
 
             if let error = validationError {
                 Text(error).foregroundColor(.red).font(.subheadline)

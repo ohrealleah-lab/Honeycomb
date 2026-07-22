@@ -1265,13 +1265,16 @@ public final class HoneycombViewModel {
         saveStats()
     }
 
-    // Wipes saved decks/card bank back to Deck 1 and rerolls the entire card database
-    // with a new seed, so a maxed-out collection can be played again with a different
-    // set of cards. Order matters: the profile wipe reads Deck 1's cards under the
-    // *current* seed before HoneycombDatabase regenerates under a new one.
+    // Wipes saved decks/card bank back to Deck 1 (renamed "Default") and rerolls the
+    // entire card database with a new seed, so a maxed-out collection can be played
+    // again with a different set of cards. Order matters: the profile wipe reads
+    // Deck 1's cards under the *current* seed before HoneycombDatabase regenerates
+    // under a new one. Deck 1 becomes the active deck since every other slot is
+    // wiped and a stale index into an now-empty slot would be nonsensical.
     public func startOver() {
         HoneycombProfileManager.shared.startOver()
         HoneycombDatabase.shared.reseed()
+        options.activeDeckIndex = 0
         stats.timesStartedOver += 1
         saveStats()
     }

@@ -476,9 +476,10 @@ public struct HoneycombView: View {
             // Shown right after a steal is confirmed instead of the full post-game
             // overlay reappearing — forces an explicit Rematch/New Game choice rather
             // than letting the player loop straight into stealing another card off the
-            // same finished board. Dismissing (the "x") falls back to that full
-            // overlay so the board/hands are still reviewable and Steal Card remains
-            // available from there.
+            // same finished board. Dismissing (the "x") clears showPostGamePrompt too,
+            // so the player lands on the plain finished board — not back on the "You
+            // Win!" overlay they already acted on by stealing a card. Rematch/New Game
+            // both stay reachable from the toolbar if they want them.
             if showRematchPrompt {
                 ZStack(alignment: .topTrailing) {
                     VStack(spacing: 16) {
@@ -505,6 +506,7 @@ public struct HoneycombView: View {
 
                     Button {
                         showRematchPrompt = false
+                        viewModel.showPostGamePrompt = false
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 22))
@@ -754,6 +756,10 @@ public struct HoneycombView: View {
         .padding(.vertical, 18)
         .background(Color.black.opacity(0.75))
         .cornerRadius(16)
+        // A second rule line makes this taller than the reserved rulesBannerHeight —
+        // bottom-align it in that reserved box so the extra height grows upward into
+        // the empty space above instead of pushing the board down below it.
+        .frame(height: Self.rulesBannerHeight, alignment: .bottom)
     }
 
     // "PLAYER"/"DEALER" label above each hand column.
