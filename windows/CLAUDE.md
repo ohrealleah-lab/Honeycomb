@@ -41,26 +41,11 @@ SoliBee.Desktop/
 - `FaceCardImage` (J/Q/K/A art): default AXAML 70 × 60; overridden in code per mode (see below)
 - `CardBack` Border: `HorizontalAlignment=Stretch, VerticalAlignment=Stretch` (not fixed size — important for border stroke visibility)
 
-## Final Fantasy mode
-Enabled via `GameOptions.IsFinalFantasyMode`. Key visual differences applied in `CardView.UpdateCardFace()`:
-
-| Element | Normal | FF mode |
-|---|---|---|
-| Card face background | White | `#1E1E1E` |
-| Red suit color | `#CC1A1A` | `#FF4444` |
-| Black suit / text color | Black | `#C0C0C0` (silver) |
-| Card back border | 0.75px dark | 2px silver `#C0C0C0` |
-| FaceCardImage size | 70 × 60 | 86 × 138 (fills CenterGrid) |
-| Custom art transforms | Scale/Offset applied | **No transforms** — centered raw at 86×138 |
-
-FF default face images (Ace → chocobo, J/Q/K → tonberry/moogle/cactuar) live in `Assets/`.
-
 ## Face card art system (8-slot custom art)
 - **`FaceCardSlot` enum**: BlackAce, RedAce, BlackJack, RedJack, BlackQueen, RedQueen, BlackKing, RedKing
 - **`FaceCardArtService`** (static singleton, `_loaded` flag): loads art config from JSON; `GetArt(slot)` returns `CustomFaceArt?`
 - **`CustomFaceArt`**: `RelativePath` (filename in art dir), `Scale`, `OffsetX`, `OffsetY`, `IsEnabled`
 - **`_customBitmapCache`** (static dict in `CardView`): cleared by `CardView.InvalidateFaceArtCache()`; populated lazily by `GetCachedFaceArtBitmap(path)`
-- Scale/Offset transforms are **only applied in normal mode**, not FF mode. In FF mode art is displayed at 86×138 without transforms.
 
 ## Pointer / async gotcha
 `PointerPressed` + `async void` + `ShowDialog` leaves implicit pointer capture on the element. Always call `e.Pointer.Capture(null)` before awaiting, and guard with an `_isOpen` bool field to prevent re-entry. See `PreferencesView.axaml.cs` → `CardBackPreview_Click` for the pattern.

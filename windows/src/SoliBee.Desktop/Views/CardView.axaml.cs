@@ -1267,7 +1267,7 @@ public partial class CardView : UserControl
         if (PointPopupText.Effect is not DropShadowEffect colorGlow) return;
 
         // Same suit-color source UpdateCardFace uses for rank/suit text — automatically
-        // respects FF mode and any custom card-color theme without duplicating that logic.
+        // respects any custom card-color theme without duplicating that logic.
         bool isRed = Card != null && (Card.Suit == CardSuit.Hearts || Card.Suit == CardSuit.Diamonds);
         var brush = isRed ? _brushTextRed : _brushTextBlackNormal;
 
