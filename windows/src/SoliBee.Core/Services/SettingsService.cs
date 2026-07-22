@@ -194,6 +194,12 @@ public static class SettingsService
                 if (GetValue("HasAppliedDefaultTheme") is bool hat) options.HasAppliedDefaultTheme = hat;
                 if (GetValue("LastGameMode") is string lgm) options.LastGameMode = lgm;
 
+                if (GetValue("UpdateChecksDisabled") is bool ucd) options.UpdateChecksDisabled = ucd;
+                if (GetValue("UpdateChecksDisabledAtVersion") is string ucdv) options.UpdateChecksDisabledAtVersion = ucdv;
+                if (GetValue("LastUpdateCheckUtc") is string lucStr
+                    && DateTime.TryParse(lucStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var luc))
+                    options.LastUpdateCheckUtc = luc;
+
                 if (GetValue("VignetteScale")  is double vsc) options.VignetteScale  = vsc;
 
                 if (GetValue("KlondikeWidth")       is double klW)  options.KlondikeWidth       = klW;
@@ -295,6 +301,11 @@ public static class SettingsService
 
                 SetValue("HasAppliedDefaultTheme", options.HasAppliedDefaultTheme);
                 SetValue("LastGameMode", options.LastGameMode);
+
+                SetValue("UpdateChecksDisabled", options.UpdateChecksDisabled);
+                void WriteOrClearUpdate(string k, string? v) { if (v != null) SetValue(k, v); else RemoveValue(k); }
+                WriteOrClearUpdate("UpdateChecksDisabledAtVersion", options.UpdateChecksDisabledAtVersion);
+                WriteOrClearUpdate("LastUpdateCheckUtc", options.LastUpdateCheckUtc?.ToString("o"));
 
                 SetValue("VignetteScale",  options.VignetteScale);
 

@@ -20,6 +20,7 @@ struct SoliBeeApp: App {
                 .onAppear {
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
+                    UpdateChecker.shared.checkIfDue()
                 }
         }
         .windowStyle(.hiddenTitleBar)
@@ -67,9 +68,7 @@ struct SoliBeeApp: App {
             }
 
             CommandGroup(replacing: .appInfo) {
-                Button("About SoliBee") {
-                    NSApp.orderFrontStandardAboutPanel(nil)
-                }
+                AboutMenuCommand()
             }
 
             CommandGroup(replacing: .help) {
@@ -118,6 +117,19 @@ struct SoliBeeApp: App {
             ThemesHelpView()
         }
         .windowResizability(.contentSize)
+
+        WindowGroup("About Honeycomb", id: "about-honeycomb") {
+            AboutHoneycombView()
+        }
+        .windowResizability(.contentSize)
+    }
+}
+
+private struct AboutMenuCommand: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("About Honeycomb") { openWindow(id: "about-honeycomb") }
     }
 }
 

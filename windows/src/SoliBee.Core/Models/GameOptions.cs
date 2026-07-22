@@ -91,6 +91,13 @@ public class GameOptions
     public string? ThemeTextBlackNormal { get; set; }
     public string? ThemeCardShadow { get; set; }
 
+    // Update-check state (see UpdateCheckService). UpdateChecksDisabledAtVersion
+    // records which version was running when the user declined, so a later install
+    // of anything newer than that can clear the flag automatically.
+    public bool UpdateChecksDisabled { get; set; } = false;
+    public string? UpdateChecksDisabledAtVersion { get; set; }
+    public DateTime? LastUpdateCheckUtc { get; set; }
+
     // Deep-copies CustomCardBacks (not just the list container) so callers can diff
     // "old vs new" against the live options object — a shallow element copy would let
     // an in-place edit to an existing entry (e.g. the Card Back Editor adjusting scale/

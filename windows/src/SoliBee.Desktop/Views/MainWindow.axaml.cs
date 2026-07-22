@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -136,6 +137,8 @@ public partial class MainWindow : Window
             // this settling process isn't visible — once SettleResponsiveLayout below
             // decides it's stable, reveal it via the Opacity transition already defined there.
             SettleResponsiveLayout(() => MainContentWrapper.Opacity = 1);
+
+            _ = CheckForUpdatesOnLaunchAsync();
         };
 
         // Preload custom art into display-resolution cache before first scroll
@@ -144,6 +147,17 @@ public partial class MainWindow : Window
             CardView.PreloadFaceArt();
             CardView.PreloadCardBacks(_coordinator.GameViewModel.Options);
         };
+    }
+
+    // Respects UpdateCheckService's own 30-day cadence and disabled flag, and fails
+    // silently on any network error — see UpdateCheckService.CheckIfDueAsync.
+    private async Task CheckForUpdatesOnLaunchAsync()
+    {
+        var outcome = await UpdateCheckService.CheckIfDueAsync();
+        if (outcome != null)
+        {
+            new UpdateAvailableWindow(outcome).Show(this);
+        }
     }
 
     private void ApplyFeltColor(GameOptions options)

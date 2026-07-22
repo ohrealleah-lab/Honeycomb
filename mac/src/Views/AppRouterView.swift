@@ -2,6 +2,8 @@ import SwiftUI
 
 struct AppRouterView: View {
     @Bindable var coordinator: AppCoordinator
+    @State private var updateChecker = UpdateChecker.shared
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ZStack {
@@ -35,5 +37,21 @@ struct AppRouterView: View {
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.25), value: coordinator.gameMode)
         .environment(coordinator)
+        .alert(
+            "Update Available",
+            isPresented: Binding(
+                get: { updateChecker.pendingAutomaticPrompt != nil },
+                set: { if !$0 { updateChecker.dismissAutomaticPrompt() } }
+            )
+        ) {
+            if let outcome = updateChecker.pendingAutomaticPrompt {
+                Button("Don't Ask Again") { updateChecker.declineUpdate() }
+                Button("View Release") { openURL(outcome.releaseURL) }
+            }
+        } message: {
+            if let outcome = updateChecker.pendingAutomaticPrompt {
+                Text("Version \(outcome.latestVersion) of Honeycomb is available. You're on \(updateChecker.currentVersion).")
+            }
+        }
     }
 }
