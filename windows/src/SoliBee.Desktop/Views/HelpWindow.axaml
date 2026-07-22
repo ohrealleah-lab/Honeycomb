@@ -38,6 +38,7 @@
                             <Button x:Name="IdxSpider"    Content="Spider Solitaire"     Click="GoTo_Spider"      Classes="help-link"/>
                             <Button x:Name="IdxVP"        Content="Video Poker"          Click="GoTo_VideoPoker"  Classes="help-link"/>
                             <Button x:Name="IdxBJ"        Content="Video Blackjack"      Click="GoTo_Blackjack"   Classes="help-link"/>
+                            <Button x:Name="IdxHoneycomb" Content="Honeycomb"            Click="GoTo_Honeycomb"   Classes="help-link"/>
                             <Button x:Name="IdxNoStress"  Content="No Stress Mode"       Click="GoTo_NoStress"   Classes="help-link"/>
                             <Button x:Name="IdxThemes"    Content="Custom Themes &amp; Art" Click="GoTo_Themes"    Classes="help-link"/>
                         </StackPanel>
@@ -352,6 +353,102 @@
                             <TextBlock Text="Tips" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
                                        Text="Always double down on 11 when the dealer shows 2–10. Stand on any hard 17 or higher. Never split 10-value cards — a 20 is already a strong hand. Always split Aces and 8s. If the dealer shows 2–6, they are likely to bust, so stand on hard 12 or higher and let them come to you."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Honeycomb ───────────────────────────────────────────── -->
+                <Border x:Name="HoneycombAnchor" Margin="0,0,0,6">
+                    <TextBlock Text="HONEYCOMB"
+                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               Foreground="#1155AA"/>
+                </Border>
+                <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,8">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Battle an AI opponent on a 3×3 grid. Place your 5 cards one at a time; when a placement's facing stat beats an adjacent enemy card's opposite facing stat, you capture it. Whoever controls more of the 9 cells once the board fills wins the match."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="How to Play" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Drag a card from your hand onto any empty board cell, or tap a hand card to select it and then tap an empty cell. You and the dealer alternate turns until the board is full."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Capturing &amp; Combos" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Each card shows 4 stats — Top, Right, Bottom, Left. Placing a card next to an enemy card compares your facing stat to their opposite facing stat; the higher value flips the loser to your side (10 is shown as &quot;A&quot;). A card captured this way can immediately capture its own neighbors in a chain reaction, called a Combo."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Match Rules Overview" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Up to 2 rules can be active per match, chosen in Options before you Start Match. Ascension and Descension can't both be picked (they're opposites), and neither can Order and Chaos. Leave rule selection empty (and Normal Mode off) and Roulette randomly rolls 0–2 rules for you every match instead — Roulette is also the only way Reverse can appear, since it's too easily exploited to pick on purpose."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Ascension / Descension" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="At the start of the match, 2 of the 4 suits are randomly chosen to be affected. Under Ascension, every card of an affected suit gains +1 to all four of its stats for each card of that suit currently on the board — recalculated before every placement's captures resolve, so the bonus grows as more of that suit hits the table. Descension is the same idea in reverse: −1 per card of that suit on the board. A card of an unaffected suit plays completely normally."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Same" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="If 2 or more of a placed card's touching neighbors have a facing stat exactly equal to the attacker's matching facing stat, every one of those matching neighbors is captured at once — not just the strongest one. Your own adjacent cards count toward the trigger too, not only the dealer's, so a placement boxed in by 2 of your own matching cards can still fire Same (this is intentional, not a bug)."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Plus" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="If 2 or more touching neighbor pairs each sum (attacker's facing stat + that neighbor's facing stat) to the same total as each other, every card in that matching group is captured — even if the shared sum isn't the attacker's own stat. Like Same, your own adjacent cards count toward the trigger."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Fallen Ace" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="A card showing a 1 that attacks a card showing a 10 (&quot;A&quot;) always captures it, overriding the normal higher-beats-lower comparison — a 1 is the one value that can topple an Ace. Under Reverse, this flips too: an attacking 10 always captures a defending 1."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Reverse" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Capture direction is fully inverted: the attacker wins when its facing stat is lower than the defender's, not higher. Reverse only ever appears via Roulette, never by manual selection — the AI's own deck (and, under Fallen Ace, its capture math) is specially adjusted per difficulty so a nominally &quot;easy&quot; opponent doesn't become trivial under the inversion."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="All Open / Three Open" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="All Open reveals the dealer's entire hand face-up for the whole match; Three Open reveals exactly 3 random cards from it, staying revealed by that specific card's identity as the hand shrinks. Either way the reveal is symmetric — the dealer's AI gets the same look at your hand it's giving you, so nobody's playing with hidden information the other side lacks."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Swap" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Before the first turn, one random card from your hand trades places with one random card from the dealer's hand. The swapped card plays for whoever now holds it, but for Card Bank unlock and post-win steal eligibility it still belongs to its original owner if you don't recapture it during the match."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Order / Chaos" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Order restricts your legal play each turn to strictly the next card in your original deck order — no choosing. Chaos instead re-rolls one random legal card the instant a side's turn begins, highlighted with a thick yellow border; you'll see the dealer's mandated card highlighted at least 2 seconds before its AI actually plays it."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Sudden Death" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="A 5-5 tie sends the match into Sudden Death: the board clears and immediately replays with each side's exact end-of-round cards, alternating who starts, until someone wins outright."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Difficulty" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Easy plays randomly. Medium greedily maximizes its own captures each turn. Hard and Ultra Hard search several moves ahead using a full positional evaluation, with Ultra Hard also fielding the strongest overall deck."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Hint" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="On any difficulty below Ultra Hard, the Hint button suggests the strongest card-and-cell placement — found with the same search Ultra Hard's own AI uses — highlighting it for 2 seconds. It only ever considers dealer cards you've actually been shown, never one still hidden from you."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Card Bank &amp; Decks" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Winning a card isn't automatic — after a win, you may drag one card the dealer played that round onto one of your 5 active deck slots, permanently unlocking it into your Card Bank. This steal is capped at one per match; Rematch (or start a new match) to steal again. Build named decks from Manage Decks, subject to rarity caps: at most one 5★ card, and at most one 4★ if a 5★ is already in the deck (otherwise up to two 4★)."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="No Stress Mode" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="Deals a fixed, strong deck every match (one 5★, one 4★, three 3★) instead of your chosen active deck, and hides Steal Card — a relaxed way to play without managing a collection. This is a shared setting — enabling it here also enables it across the other games."/>
                         </StackPanel>
                     </StackPanel>
                 </Border>

@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SoliBee.Desktop.Views.HoneycombStatsWindow"
+        Title="Honeycomb Statistics" Width="600" Height="700"
+        Background="#1E1E1E">
+    <Grid Margin="20" RowDefinitions="Auto, *">
+        <TextBlock Text="Honeycomb Statistics" FontSize="28" FontWeight="Bold" Foreground="White" Margin="0,0,0,20" />
+        
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="15">
+                
+                <TextBlock Text="General" FontSize="20" FontWeight="Bold" Foreground="#FFD700" />
+                <Grid ColumnDefinitions="*, *" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Games Played:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="GamesPlayedText" Grid.Row="0" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                    
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Matches Won:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="MatchesWonText" Grid.Row="1" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                    
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Matches Lost:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="MatchesLostText" Grid.Row="2" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                    
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Matches Drawn:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="MatchesDrawnText" Grid.Row="3" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                </Grid>
+                
+                <Separator Background="#444444" Margin="0,10" />
+                
+                <TextBlock Text="Gameplay" FontSize="20" FontWeight="Bold" Foreground="#FFD700" />
+                <Grid ColumnDefinitions="*, *" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Total Cards Captured:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="CardsCapturedText" Grid.Row="0" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                    
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Cards Steals (Plus/Same):" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="CardsStolenText" Grid.Row="1" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                    
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Fallen Aces Triggered:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="FallenAcesText" Grid.Row="2" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                    
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Sudden Deaths Triggered:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="SuddenDeathCountText" Grid.Row="3" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                    
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Flawless Victories:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="FlawlessVictoriesText" Grid.Row="4" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                </Grid>
+                
+                <Separator Background="#444444" Margin="0,10" />
+                
+                <TextBlock Text="Streaks" FontSize="20" FontWeight="Bold" Foreground="#FFD700" />
+                <Grid ColumnDefinitions="*, *" RowDefinitions="Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Current Win Streak:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="CurrentWinStreakText" Grid.Row="0" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                    
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Longest Win Streak:" Foreground="White" FontSize="16" />
+                    <TextBlock x:Name="LongestWinStreakText" Grid.Row="1" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
+                </Grid>
+                
+                <Button Content="Close" Background="#444444" Foreground="White" HorizontalAlignment="Center" Margin="0,30,0,0" Padding="30,10" Click="Close_Click" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

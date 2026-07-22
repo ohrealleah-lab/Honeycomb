@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.HoneycombView">
+
+    <UserControl.Styles>
+        <Style Selector="Button.honeycomb-action">
+            <Setter Property="Background" Value="#FFD700" />
+            <Setter Property="Foreground" Value="Black" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Padding" Value="20,10" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Background="Transparent">
+        <!-- Main Layout -->
+        <Grid ColumnDefinitions="Auto, *, Auto, *, Auto" HorizontalAlignment="Center" VerticalAlignment="Center">
+            
+            <!-- Left Column: Player Hand (2-2-1 Pyramid) -->
+            <Grid Grid.Column="0" Width="260" Height="500" Margin="20">
+                <local:HoneycombCardView x:Name="PlayerHand0" HorizontalAlignment="Left" VerticalAlignment="Top" DragDrop.AllowDrop="True" />
+                <local:HoneycombCardView x:Name="PlayerHand1" HorizontalAlignment="Right" VerticalAlignment="Top" DragDrop.AllowDrop="True" />
+                
+                <local:HoneycombCardView x:Name="PlayerHand2" HorizontalAlignment="Left" VerticalAlignment="Center" DragDrop.AllowDrop="True" />
+                <local:HoneycombCardView x:Name="PlayerHand3" HorizontalAlignment="Right" VerticalAlignment="Center" DragDrop.AllowDrop="True" />
+                
+                <local:HoneycombCardView x:Name="PlayerHand4" HorizontalAlignment="Center" VerticalAlignment="Bottom" DragDrop.AllowDrop="True" />
+                
+                <!-- Turn indicator -->
+                <Border x:Name="PlayerTurnIndicator" IsVisible="False" Background="#403B82F6" CornerRadius="10" Margin="-10" IsHitTestVisible="False" />
+            </Grid>
+
+            <!-- Center Column: Rules Banner + Board -->
+            <Grid Grid.Column="2" RowDefinitions="120, Auto" VerticalAlignment="Center" Margin="20">
+                
+                <!-- Rules Banner (bottom aligned in its 120px reserved height) -->
+                <StackPanel Grid.Row="0" VerticalAlignment="Bottom" Margin="0,0,0,20">
+                    <TextBlock Text="Rules:" FontSize="20" FontWeight="Bold" Foreground="White" />
+                    <ItemsControl x:Name="RulesList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" FontSize="16" Foreground="#DDDDDD" Margin="10,2,0,0" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Board (3x3 Grid) -->
+                <Grid x:Name="BoardGrid" Grid.Row="1" Width="380" Height="500" ColumnDefinitions="*,*,*" RowDefinitions="*,*,*">
+                    <!-- Placeholders and CardViews populated in code-behind -->
+                </Grid>
+            </Grid>
+
+            <!-- Right Column: Opponent Hand (2-2-1 Pyramid) -->
+            <Grid Grid.Column="4" Width="260" Height="500" Margin="20">
+                <local:HoneycombCardView x:Name="OpponentHand0" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                <local:HoneycombCardView x:Name="OpponentHand1" HorizontalAlignment="Right" VerticalAlignment="Top" />
+                
+                <local:HoneycombCardView x:Name="OpponentHand2" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <local:HoneycombCardView x:Name="OpponentHand3" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                
+                <local:HoneycombCardView x:Name="OpponentHand4" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+                
+                <!-- Turn indicator -->
+                <Border x:Name="OpponentTurnIndicator" IsVisible="False" Background="#40FF0000" CornerRadius="10" Margin="-10" IsHitTestVisible="False" />
+            </Grid>
+        </Grid>
+
+        <!-- Overlay: Pre-match / Post-match panels -->
+        <Border x:Name="OverlayPanel" Background="#C0000000" IsVisible="True">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+                <TextBlock x:Name="OverlayTitle" Text="Honeycomb" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                <TextBlock x:Name="OverlaySubtitle" Text="Ready to play?" FontSize="24" Foreground="#CCCCCC" HorizontalAlignment="Center" />
+                
+                <Button x:Name="StartMatchButton" Content="Start Match" Classes="honeycomb-action" HorizontalAlignment="Center" Click="StartMatch_Click" />
+                <Button x:Name="StealCardButton" Content="Steal Card" Classes="honeycomb-action" HorizontalAlignment="Center" Click="StealCard_Click" IsVisible="False" />
+                
+                <TextBlock x:Name="BankFullWarningText" Text="Your card bank is full. Start over in manage decks to steal again." IsVisible="False" FontSize="16" Foreground="#FF9999" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <!-- Overlay: Swap Confirmation -->
+        <Border x:Name="SwapConfirmationPanel" Background="#E0000000" IsVisible="False">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+                <TextBlock Text="Confirm Swap" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                <TextBlock x:Name="SwapConfirmationText" Text="Trade Outgoing for Incoming?" FontSize="20" Foreground="#CCCCCC" HorizontalAlignment="Center" />
+                <TextBlock x:Name="SwapErrorText" Text="" FontSize="16" Foreground="#FF5555" HorizontalAlignment="Center" IsVisible="False" TextWrapping="Wrap" MaxWidth="300"/>
+                
+                <StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center">
+                    <Button Content="Confirm" Classes="honeycomb-action" Click="ConfirmSwap_Click" />
+                    <Button Content="Cancel" Classes="light-secondary" Click="CancelSwap_Click" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Steal Instruction Bar (Slim top bar) -->
+        <Border x:Name="StealInstructionBar" Background="#C0000000" IsVisible="False" VerticalAlignment="Top" HorizontalAlignment="Stretch" Padding="20">
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBlock Grid.Column="0" Text="Drag an opponent's card from the board onto your hand to steal it." FontSize="18" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                <Button Grid.Column="1" Content="Cancel" Classes="light-secondary" Click="CancelSteal_Click" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- UI Controls (Top Left/Right) -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20" Spacing="10">
+            <Button Content="Quit Match" Classes="light-secondary" Click="Quit_Click" />
+            <Button x:Name="UndoButton" Content="Undo" Classes="light-secondary" Click="Undo_Click" />
+            <Button x:Name="HintButton" Content="Hint" Classes="light-secondary" Click="Hint_Click" />
+        </StackPanel>
+        
+        <!-- Score display -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Spacing="40">
+            <TextBlock x:Name="PlayerScoreText" FontSize="36" FontWeight="Bold" Foreground="White" />
+            <TextBlock Text="VS" FontSize="24" Foreground="#888888" VerticalAlignment="Center" />
+            <TextBlock x:Name="OpponentScoreText" FontSize="36" FontWeight="Bold" Foreground="White" />
+        </StackPanel>
+
+    </Grid>
+</UserControl>

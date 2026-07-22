@@ -289,6 +289,8 @@ public partial class MainWindow : Window
             return vpVm.State != null && vpVm.State.Phase == VideoPokerPhase.Holding;
         if (this.DataContext is BlackjackViewModel bjVm)
             return bjVm.State != null && bjVm.IsPlaying;
+        if (this.DataContext is HoneycombViewModel hVm)
+            return hVm.State != null && hVm.State.Phase == HoneycombPhase.Playing;
         return false;
     }
 
@@ -348,6 +350,8 @@ public partial class MainWindow : Window
                 vpVm.StartNewGame();
             else if (this.DataContext is BlackjackViewModel bjVm)
                 bjVm.StartNewGame();
+            else if (this.DataContext is HoneycombViewModel hVm)
+                hVm.InitializeGame();
         });
     }
 
@@ -365,6 +369,8 @@ public partial class MainWindow : Window
                 vpVm.StartNewGame();
             else if (this.DataContext is BlackjackViewModel bjVm)
                 bjVm.StartNewGame();
+            else if (this.DataContext is HoneycombViewModel hVm)
+                hVm.RestartGame();
         });
     }
 
@@ -498,6 +504,7 @@ public partial class MainWindow : Window
             else if (this.DataContext is SpiderViewModel spiderVm) spiderVm.ResetStats();
             else if (this.DataContext is BlackjackViewModel blackjackVm) blackjackVm.ResetStats();
             else if (this.DataContext is VideoPokerViewModel videoPokerVm) videoPokerVm.ResetStats();
+            else if (this.DataContext is HoneycombViewModel hVm) hVm.ResetStats();
             PopulateStatsPanel();
         }
         _pendingAction = "";
@@ -559,6 +566,8 @@ public partial class MainWindow : Window
             freecellVm.Undo();
         else if (this.DataContext is SpiderViewModel spiderVm)
             spiderVm.Undo();
+        else if (this.DataContext is HoneycombViewModel hVm)
+            hVm.Undo();
         // Video Poker has no undo
     }
 
@@ -683,6 +692,14 @@ public partial class MainWindow : Window
         if (this.DataContext is VideoPokerViewModel videoPokerVm)
         {
             PopulateVideoPokerStats(videoPokerVm);
+            return;
+        }
+        if (this.DataContext is HoneycombViewModel hVm)
+        {
+            var statsWindow = new HoneycombStatsWindow();
+            statsWindow.ShowDialog(this);
+            // Hide the overlay since we show a separate window for Honeycomb
+            StatsOverlay.IsVisible = false;
             return;
         }
 
@@ -968,6 +985,7 @@ public partial class MainWindow : Window
         "Spider1"    or "Spider2"    or "Spider4" or "Spider" => 2,
         "VideoPoker"                                        => 3,
         "Blackjack"                                         => 4,
+        "Honeycomb"                                         => 5,
         _                                                   => 0,
     };
 
@@ -1097,6 +1115,11 @@ public partial class MainWindow : Window
             _coordinator.BlackjackViewModel.PrepareForResume();
             this.MainContent.Content = new BlackjackView { DataContext = _coordinator.BlackjackViewModel };
         }
+        else if (tag == "Honeycomb")
+        {
+            _coordinator.SwitchToHoneycomb();
+            this.MainContent.Content = new HoneycombView { DataContext = _coordinator.HoneycombViewModel };
+        }
 
         // Blackjack/VideoPoker (and likely the others) populate their card visuals from
         // their own Loaded handler, not synchronously on construction — DealerCardsPanel /
@@ -1132,9 +1155,9 @@ public partial class MainWindow : Window
         UpdateHintButtonEnabled();
         UpdateOptionsButtonEnabled();
 
-        bool isCardGame = tag != "VideoPoker" && tag != "Blackjack";
+        bool isCardGame = tag != "VideoPoker" && tag != "Blackjack" && tag != "Honeycomb";
         UpdateSolitaireKeyHint(tag, isCardGame);
-        // Hint is solitaire-only (no hint logic exists for VP/Blackjack).
+        // Hint is solitaire-only (no hint logic exists for VP/Blackjack/Honeycomb).
         if (HintButton != null)    HintButton.IsVisible    = isCardGame && !_coordinator.GameViewModel.Options.HideHintButton;
         if (UndoButton != null)    UndoButton.IsVisible    = isCardGame;
         if (TimeStatPanel != null)  TimeStatPanel.IsVisible  = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;

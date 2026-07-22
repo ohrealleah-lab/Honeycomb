@@ -29,6 +29,7 @@
                             <ComboBoxItem Content="Spider Solibee"   Tag="Spider" />
                             <ComboBoxItem Content="Video Poker"      Tag="VideoPoker" />
                             <ComboBoxItem Content="Video Blackjack"  Tag="Blackjack" />
+                            <ComboBoxItem Content="Honeycomb"        Tag="Honeycomb" />
                         </ComboBox>
                         <Button x:Name="NewGameButton" Content="New Game" Click="NewGame_Click" Classes="toolbar" />
                         <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
@@ -70,6 +71,12 @@
                                     <MenuItem Header="Blackjack">
                                         <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Blackjack:Win" />
                                         <MenuItem Header="Loss" Click="DebugBanner_Click" Tag="Blackjack:Loss" />
+                                    </MenuItem>
+                                    <MenuItem Header="Honeycomb">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Honeycomb:Win" />
+                                        <MenuItem Header="Loss" Click="DebugBanner_Click" Tag="Honeycomb:Loss" />
+                                        <MenuItem Header="Draw" Click="DebugBanner_Click" Tag="Honeycomb:Draw" />
+                                        <MenuItem Header="Sudden Death" Click="DebugBanner_Click" Tag="Honeycomb:SuddenDeath" />
                                     </MenuItem>
                                 </MenuFlyout>
                             </Button.Flyout>

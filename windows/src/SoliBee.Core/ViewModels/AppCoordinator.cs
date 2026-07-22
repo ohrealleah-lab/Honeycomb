@@ -26,6 +26,9 @@ public partial class AppCoordinator : ObservableObject
     private BlackjackViewModel _blackjackViewModel;
 
     [ObservableProperty]
+    private HoneycombViewModel _honeycombViewModel;
+
+    [ObservableProperty]
     private object _activeViewModel;
 
     private static readonly string LastModeFile = Path.Combine(
@@ -39,6 +42,7 @@ public partial class AppCoordinator : ObservableObject
         SpiderViewModel     = new SpiderViewModel();
         VideoPokerViewModel = new VideoPokerViewModel();
         BlackjackViewModel  = new BlackjackViewModel();
+        HoneycombViewModel  = new HoneycombViewModel(isHeadless: false);
 
         ActiveViewModel = LoadLastMode() switch
         {
@@ -46,6 +50,7 @@ public partial class AppCoordinator : ObservableObject
             "Spider"     => (object)SpiderViewModel,
             "VideoPoker" => (object)VideoPokerViewModel,
             "Blackjack"  => (object)BlackjackViewModel,
+            "Honeycomb"  => (object)HoneycombViewModel,
             _            => (object)GameViewModel
         };
     }
@@ -55,6 +60,7 @@ public partial class AppCoordinator : ObservableObject
         GameViewModel gvm       => gvm.CanUndo,
         FreecellViewModel bvm    => bvm.CanUndo,
         SpiderViewModel svm     => svm.CanUndo,
+        HoneycombViewModel hvm  => hvm.CanUndo,
         VideoPokerViewModel _   => false,
         BlackjackViewModel _    => false,
         _                       => false
@@ -103,6 +109,14 @@ public partial class AppCoordinator : ObservableObject
         OnPropertyChanged(nameof(CanUndo));
     }
 
+    public void SwitchToHoneycomb()
+    {
+        PauseTimer(ActiveViewModel);
+        ActiveViewModel = HoneycombViewModel;
+        SaveLastMode("Honeycomb");
+        OnPropertyChanged(nameof(CanUndo));
+    }
+
     // The background game timer in GameViewModel/FreecellViewModel/SpiderViewModel keeps
     // ticking regardless of which game's View is on screen, so it must be explicitly
     // paused whenever we're about to switch away from whichever game is currently active.
@@ -122,6 +136,7 @@ public partial class AppCoordinator : ObservableObject
         if (ActiveViewModel is GameViewModel gvm) gvm.Undo();
         else if (ActiveViewModel is FreecellViewModel bvm) bvm.Undo();
         else if (ActiveViewModel is SpiderViewModel svm) svm.Undo();
+        else if (ActiveViewModel is HoneycombViewModel hvm) hvm.Undo();
         OnPropertyChanged(nameof(CanUndo));
     }
 
