@@ -198,7 +198,7 @@ struct BlackjackHelpView: View {
                         text: "Hit — draw one more card\nStand — keep your current hand\nDouble Down — double your bet, draw exactly one card, then stand (available on your first two cards)\nSplit — if your first two cards have the same rank, split them into two separate hands each with its own bet")
 
             RuleSection(title: "Payouts",
-                        text: "Win — pays 2× your bet (profit of 1×)\nBlackjack (Ace + 10-value card) — pays 3:2 (profit of 1.5×)\nPush (tie) — your bet is returned\nBust or Loss — bet is forfeited\n\nDealer must stand on 17 and hit on 16 or lower.")
+                        text: "Win — pays 2× your bet (profit of 1×)\nBlackjack (Ace + 10-value card) — pays 3:1 (profit of 3×)\nPush (tie) — your bet is returned\nBust or Loss — bet is forfeited\n\nDealer must stand on 17 and hit on 16 or lower.")
 
             RuleSection(title: "Credits",
                         text: "You start each session with 100 credits. If your credits drop to zero, a Rebuy button adds another 100 credits to keep playing.")

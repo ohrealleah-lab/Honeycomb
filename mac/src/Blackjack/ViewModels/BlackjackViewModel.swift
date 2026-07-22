@@ -321,9 +321,11 @@ public final class BlackjackViewModel {
                 payout = hand.bet
                 statistics.pushes += 1
             } else if playerBJ {
-                // Blackjack pays 3:2 (standard real-world blackjack payout)
+                // Blackjack pays 3:1 (bet returned + 3x bet profit) — always a whole
+                // number for any bet, unlike the old 3:2 payout, which truncated
+                // unfairly on odd bets.
                 result = .blackjack
-                payout = hand.bet + Int(Double(hand.bet) * 1.5)
+                payout = hand.bet * 4
                 statistics.blackjacks += 1
                 statistics.handsWon += 1
                 playSound(named: "victory")

@@ -415,12 +415,10 @@ public partial class BlackjackViewModel : ObservableObject
         switch (hand.Result)
         {
             case BlackjackHandResult.Blackjack:
-                // 3:2 payout (bet returned + 1.5x bet profit), rounded half-up rather than
-                // truncated — chip denominations (1/5/10/25) make bet*3 odd more often than
-                // not, and integer division would otherwise always shortchange the player
-                // (e.g. bet=1 truncating to a profit of 1 instead of the fair 1.5) and never
-                // the house.
-                int bjReturn = hand.Bet + (hand.Bet * 3 + 1) / 2;
+                // 3:1 payout (bet returned + 3x bet profit) — always a whole number for
+                // any integer bet, unlike the old 3:2 payout, which needed half-up
+                // rounding to avoid shortchanging the player on odd bets.
+                int bjReturn = hand.Bet * 4;
                 Stats.HandsWon++;
                 Stats.Blackjacks++;
                 if (!freePlay)

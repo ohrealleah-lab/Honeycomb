@@ -13,7 +13,7 @@ struct VideoPokerAndBlackjackTests {
         testBlackjackSplitTwoSixes()
         testBlackjackChipButtonReplacesDefaultBet()
         testBlackjackCanRebuy()
-        testBlackjackPaysThreeToTwo()
+        testBlackjackPaysThreeToOne()
         testBlackjackFreePlayBypassesCreditChecks()
         print("✅ VideoPokerAndBlackjackTests passed.")
     }
@@ -219,21 +219,29 @@ struct VideoPokerAndBlackjackTests {
     static func testBlackjackCanRebuy() {
         let viewModel = BlackjackViewModel()
 
-        // Betting phase with insufficient credits should offer rebuy
+        // canRebuy is a flat "you're running low" gas light (sessionCredits <= 10),
+        // deliberately not bet-relative — see the comment above canRebuy in
+        // BlackjackViewModel: it's an early warning, not "can't afford this bet."
         viewModel.state.phase = .betting
         viewModel.state.sessionCredits = 0
         viewModel.state.currentBet = 1
-        assert(viewModel.canRebuy == true, "Rebuy should be offered when credits are below the current bet in betting phase")
+        assert(viewModel.canRebuy == true, "Rebuy should be offered when credits are low in betting phase")
 
-        // Result phase with insufficient credits should also offer rebuy
+        // Result phase, still low on credits: rebuy should also be offered
         viewModel.state.phase = .result
-        assert(viewModel.canRebuy == true, "Rebuy should be offered when credits are below the current bet in result phase")
+        assert(viewModel.canRebuy == true, "Rebuy should be offered when credits are low in result phase")
 
-        // Sufficient credits: no rebuy needed
+        viewModel.state.sessionCredits = 10
+        assert(viewModel.canRebuy == true, "Rebuy should still be offered right at the threshold, regardless of the bet")
+
+        viewModel.state.sessionCredits = 11
+        assert(viewModel.canRebuy == false, "Rebuy should not be offered just above the threshold")
+
+        // Plenty of credits: no rebuy needed
         viewModel.state.sessionCredits = 100
-        assert(viewModel.canRebuy == false, "Rebuy should not be offered when credits cover the current bet")
+        assert(viewModel.canRebuy == false, "Rebuy should not be offered with plenty of credits")
 
-        // Insufficient credits but mid-hand: rebuy should not be offered (only in betting/result)
+        // Low on credits but mid-hand: rebuy should not be offered (only in betting/result)
         viewModel.state.phase = .playing
         viewModel.state.sessionCredits = 0
         assert(viewModel.canRebuy == false, "Rebuy should not be offered during an active hand")
@@ -242,7 +250,7 @@ struct VideoPokerAndBlackjackTests {
         assert(viewModel.canRebuy == false, "Rebuy should not be offered during the dealer's turn")
     }
 
-    static func testBlackjackPaysThreeToTwo() {
+    static func testBlackjackPaysThreeToOne() {
         let viewModel = BlackjackViewModel()
 
         // Bet already deducted (mirrors state after deal()); dealer has a non-blackjack 17 so no hit occurs.
@@ -263,7 +271,7 @@ struct VideoPokerAndBlackjackTests {
         viewModel.executeDealerTurn()
 
         assert(viewModel.state.playerHands[0].result == .blackjack, "Hand should resolve as blackjack")
-        assert(viewModel.state.sessionCredits == 125, "3:2 blackjack payout on a 10 bet should credit 25 (10 back + 15 profit), got \(viewModel.state.sessionCredits)")
+        assert(viewModel.state.sessionCredits == 140, "3:1 blackjack payout on a 10 bet should credit 40 (10 back + 30 profit), got \(viewModel.state.sessionCredits)")
     }
 
     static func testBlackjackFreePlayBypassesCreditChecks() {

@@ -203,18 +203,24 @@ public class BlackjackViewModelTests
     // ── CanRebuy ────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void TestCanRebuyOnlyWhenShortOnCreditsInBettingOrResultPhase()
+    public void TestCanRebuyOnlyWhenLowOnCreditsInBettingOrResultPhase()
     {
         var vm = new BlackjackViewModel();
         vm.Options.IsNoStressMode = false;
 
+        // CanRebuy is a flat "you're running low" gas light (Credits <= 10),
+        // deliberately not bet-relative — see the comment above CanRebuy in
+        // BlackjackViewModel: it's an early warning, not "can't afford this bet."
         vm.State.Phase      = BlackjackPhase.Betting;
         vm.State.Credits    = 5;
         vm.State.CurrentBet = 10;
         Assert.True(vm.CanRebuy);
 
         vm.State.Credits = 10;
-        Assert.False(vm.CanRebuy); // enough credits to cover the bet
+        Assert.True(vm.CanRebuy); // still at the threshold, regardless of the bet
+
+        vm.State.Credits = 11;
+        Assert.False(vm.CanRebuy); // just above the threshold
 
         vm.State.Credits = 5;
         vm.State.Phase   = BlackjackPhase.Result;
@@ -257,6 +263,13 @@ public class BlackjackViewModelTests
         vm.State.Credits         = 100;
         vm.State.ActiveHandIndex = 0;
         int handsWonBefore = vm.Stats.HandsWon;
+        int streakBefore = vm.ConsecutiveWins;
+
+        // Free play is driven by a private snapshot taken at Deal() time (see
+        // BlackjackViewModel's _handFreePlay comment) rather than a live read of
+        // Options.IsNoStressMode, so scripting a hand directly like this test does
+        // has to prime that snapshot by hand.
+        SetHandFreePlay(vm, true);
 
         var hand = new BlackjackHand { Bet = 10, Result = BlackjackHandResult.Won };
         hand.Cards.Add(new Card("p1", CardSuit.Spades, 10, true));
@@ -271,8 +284,8 @@ public class BlackjackViewModelTests
         vm.Stand();
 
         Assert.Equal(100, vm.State.Credits);                // no credits earned
-        Assert.Equal(handsWonBefore + 1, vm.Stats.HandsWon); // win still tracked
-        Assert.Equal(1, vm.ConsecutiveWins);                 // streak still tracked
+        Assert.Equal(handsWonBefore + 1, vm.Stats.HandsWon);  // win still tracked
+        Assert.Equal(streakBefore + 1, vm.ConsecutiveWins);   // streak still tracked
     }
 
     [Fact]
@@ -295,6 +308,10 @@ public class BlackjackViewModelTests
         vm.State.Phase           = BlackjackPhase.Playing;
         vm.State.Credits         = 0;
         vm.State.ActiveHandIndex = 0;
+
+        // See TestFreePlayStillTracksWinsAndStreaksButNotCredits — CanDouble/CanSplit
+        // read this same private snapshot, not the live Options flag.
+        SetHandFreePlay(vm, true);
 
         var hand = new BlackjackHand { Bet = 10 };
         hand.Cards.Add(new Card("p1", CardSuit.Spades, 5, true));
@@ -323,5 +340,16 @@ public class BlackjackViewModelTests
 
         Assert.Equal(BlackjackPhase.Betting, vm.State.Phase);
         Assert.Equal(dealerCardsBefore, vm.State.DealerHand.Cards.Count);
+    }
+
+    // BlackjackViewModel snapshots No Stress Mode into a private field at Deal()
+    // time, deliberately not re-reading the live Options flag (see its own comment)
+    // — tests that script a hand directly without calling Deal() have to set that
+    // snapshot by hand to exercise free-play behavior.
+    private static void SetHandFreePlay(BlackjackViewModel vm, bool value)
+    {
+        typeof(BlackjackViewModel)
+            .GetField("_handFreePlay", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .SetValue(vm, value);
     }
 }
