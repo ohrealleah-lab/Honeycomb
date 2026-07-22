@@ -1,0 +1,21 @@
+.DS_Store
+.build/
+Honeycomb.app/
+.build*
+test_runner
+solibee_bridge
+blackjack_bridge
+*.swp
+*.lock
+
+.gemini/
+.swiftpm/
+SoliBee.zip
+
+# QA Simulation Scripts
+qa_sim.py
+massive_sim.py
+sim.sh
+sim_database.py
+sim_results.db
+list_models.py
