@@ -1,0 +1,2 @@
+# Root-level ignores — mac/ and windows/ have their own more specific .gitignore files
+.DS_Store
