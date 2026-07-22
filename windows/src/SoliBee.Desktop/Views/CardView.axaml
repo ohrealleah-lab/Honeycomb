@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.Views.CardView"
+             PointerPressed="CardView_PointerPressed"
+             PointerMoved="CardView_PointerMoved"
+             PointerReleased="CardView_PointerReleased">
+
+    <Grid x:Name="CardRoot" Width="128" Height="181">
+        <!-- Card Face (Face Up) -->
+        <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="0.75" Background="White" CornerRadius="10" Padding="4" BoxShadow="0 4 16 0 #60000000, 0 2 4 0 #80000000" ClipToBounds="True">
+            <Grid>
+                <!-- Top-Left Value & Suit Display (Horizontal) -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="2" Margin="4,2,0,0">
+                    <TextBlock x:Name="RankText" FontSize="17" FontFamily="Segoe UI" FontWeight="Bold" Foreground="Black" />
+                    <TextBlock x:Name="MiniSuitText" FontSize="14" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" Foreground="Black" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Center Content: Grid for numbered cards OR single large letter for face cards -->
+                <Grid x:Name="CenterGrid" Width="86" Height="138" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- Standard canvas for numbered cards (2-10) -->
+                    <Canvas x:Name="SuitCanvas" Width="86" Height="138" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
+
+                    <!-- Large stylized letter for Ace -->
+                    <TextBlock x:Name="LargeAceText" FontSize="76" LineHeight="76" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" IsVisible="False" />
+
+                    <!-- Decorative letter for Face Cards J, Q, K -->
+                    <TextBlock x:Name="FaceLetterText"
+                               FontFamily="avares://Honeycomb/Assets/#Apple Chancery"
+                               FontWeight="Bold"
+                               FontSize="120"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               TextAlignment="Center" IsVisible="False" />
+
+                    <!-- Image for custom face art (J/Q/K/A slots) -->
+                    <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="HighQuality" />
+
+                    <!-- SkiaSharp-rendered pip for Ace (ink-bounds centered) -->
+                    <Image x:Name="AcePipImage" Width="86" Height="86" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                </Grid>
+
+                <!-- Bottom-Right Value & Suit Display (Horizontal, Rotated 180 degrees) -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Spacing="2" Margin="0,0,4,2" RenderTransformOrigin="50%,50%">
+                    <StackPanel.RenderTransform>
+                        <RotateTransform Angle="180" />
+                    </StackPanel.RenderTransform>
+                    <TextBlock x:Name="RankTextBottom" FontSize="17" FontFamily="Segoe UI" FontWeight="Bold" Foreground="Black" />
+                    <TextBlock x:Name="MiniSuitTextBottom" FontSize="14" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" Foreground="Black" VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Selection highlight — a card "picked up" pending a move, set by either mouse
+             click-to-select or the keyboard cursor's Space/Return select action (both
+             paths share this same visual and the SelectedCardView/SelectedSourcePile
+             state in CardGameView, so they can never show conflicting selection state). -->
+        <Border x:Name="SelectionHighlightBorder" IsVisible="False" IsHitTestVisible="False"
+                BorderBrush="#3B82F6" BorderThickness="3.5" CornerRadius="10" Background="Transparent" />
+
+        <!-- Keyboard focus cursor — purely "what arrow keys currently point at", distinct
+             from the selection above and from the gold Hint pulse, so all three can be
+             reasoned about (and toggled) independently without fighting over one border. -->
+        <Border x:Name="CursorHighlightBorder" IsVisible="False" IsHitTestVisible="False"
+                BorderBrush="#00E5FF" BorderThickness="3" CornerRadius="10" Background="Transparent" />
+
+        <!-- Point Highlights: transient "+N"/"-N" popup flashed over the top-right
+             corner of the specific card responsible for a score change — that corner is
+             otherwise empty on every card face. Kept "always visible" at Opacity=0 by
+             default and animated via Opacity/Scale (never IsVisible) rather than toggled
+             on/off, matching MainContentWrapper's own opacity-reveal pattern in
+             MainWindow.axaml — toggling IsVisible has no prior-frame to transition from
+             in Avalonia. Two stacked glow layers (soft white halo behind, so black-suit
+             text still reads against the white card, then the suit-colored glow itself
+             on top) rather than one, set up and driven from code-behind
+             (ShowPointPopup/HidePointPopup) since the color depends on the card's suit
+             and any active custom card-color theme. -->
+        <Grid x:Name="PointPopupRoot" Opacity="0" IsHitTestVisible="False"
+              HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,10,0"
+              RenderTransformOrigin="50%,50%">
+            <Grid.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                </Transitions>
+            </Grid.Transitions>
+            <Grid.RenderTransform>
+                <ScaleTransform ScaleX="0.6" ScaleY="0.6">
+                    <ScaleTransform.Transitions>
+                        <Transitions>
+                            <DoubleTransition Property="ScaleX" Duration="0:0:0.2"/>
+                            <DoubleTransition Property="ScaleY" Duration="0:0:0.2"/>
+                        </Transitions>
+                    </ScaleTransform.Transitions>
+                </ScaleTransform>
+            </Grid.RenderTransform>
+            <TextBlock x:Name="PointPopupTextGlow" FontSize="25" FontWeight="Black"
+                       FontFamily="Consolas" Foreground="White">
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="White" BlurRadius="6" OffsetX="0" OffsetY="0" Opacity="1"/>
+                </TextBlock.Effect>
+            </TextBlock>
+            <TextBlock x:Name="PointPopupText" FontSize="25" FontWeight="Black" FontFamily="Consolas">
+                <TextBlock.Effect>
+                    <DropShadowEffect BlurRadius="8" OffsetX="0" OffsetY="0" Opacity="0.9"/>
+                </TextBlock.Effect>
+            </TextBlock>
+        </Grid>
+
+        <!-- Card Back (Face Down) -->
+        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="0.75" CornerRadius="10" IsVisible="False" Padding="0" Background="White" BoxShadow="0 4 16 0 #60000000, 0 2 4 0 #80000000" ClipToBounds="True">
+            <!-- Themes like Moogle apply a scale/offset RenderTransform to CardBackImage
+                 that can push it well past the card's own bounds; ClipToBounds on the
+                 outer Border doesn't reliably clip a child's RenderTransform overflow,
+                 which was covering the thin border stroke. This inner Border (inset 1px,
+                 same rounded-corner clipping trick CardFace/CardBack already use) guarantees
+                 the border always stays visible on top. -->
+            <Border Margin="0" CornerRadius="9" ClipToBounds="True">
+                <Grid x:Name="CardBackGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

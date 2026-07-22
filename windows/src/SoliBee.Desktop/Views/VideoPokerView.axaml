@@ -1,0 +1,262 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.VideoPokerView">
+
+    <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto">
+
+        <!-- ─── Pay Table Bar (top) ──────────────────────────────────────────── -->
+        <Border x:Name="PayTableBar" Grid.Row="0" Background="Transparent" Padding="12,6,12,8" Margin="0,14,0,6">
+
+                <!-- Two-column pay table -->
+                <Grid ColumnDefinitions="*,12,*">
+
+                    <!-- Left column -->
+                    <StackPanel Grid.Column="0" Spacing="0">
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"/>
+                            <TextBlock x:Name="PayColHdr1"  Text="1" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="1" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr2"  Text="2" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="2" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr3"  Text="3" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="3" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr4"  Text="4" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="4" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdr5"  Text="5" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="5" HorizontalAlignment="Center"/>
+                        </Grid>
+                        <StackPanel x:Name="PayTablePanelLeft" Spacing="1"/>
+                    </StackPanel>
+
+                    <!-- Divider -->
+                    <Rectangle Grid.Column="1" Fill="#20FFFFFF" Width="1" VerticalAlignment="Stretch" HorizontalAlignment="Center"/>
+
+                    <!-- Right column -->
+                    <StackPanel Grid.Column="2" Spacing="0">
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="32"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"/>
+                            <TextBlock x:Name="PayColHdrR1" Text="1" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="1" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR2" Text="2" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="2" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR3" Text="3" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="3" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR4" Text="4" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="4" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="PayColHdrR5" Text="5" FontSize="11" Foreground="#60FFFFFF" FontFamily="Segoe UI" Grid.Column="5" HorizontalAlignment="Center"/>
+                        </Grid>
+                        <StackPanel x:Name="PayTablePanelRight" Spacing="1"/>
+                    </StackPanel>
+
+                </Grid>
+        </Border>
+
+        <!-- ─── Game Area ─────────────────────────────────────────────────────── -->
+        <!-- Cards and buttons sit in their own Auto rows, one fixed gap apart, flanked
+             by spacer * rows that keep the whole block centered in the window. Under
+             the old "*,*" split, cards and buttons were each independently centered in
+             their own half — that gap is mathematically fixed at half the leftover
+             window space no matter how the two star rows are weighted against each
+             other, so it can't be tuned by a ratio; an explicit margin is the only way
+             to set it directly.
+             The Credits/Bet/Hands bar now lives in the top spacer row too (instead of
+             its own fixed Auto row right under the pay table), centered vertically in
+             the same leftover space, so it sits centered between the pay table and the
+             cards rather than pinned to the top of that gap. -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <!-- Ensure the spacer row is always tall enough to contain the BidBar (approx 60px) -->
+                <RowDefinition Height="1.3*" MinHeight="80" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Credits / Bet / Hands bar — centered in the top spacer row -->
+            <local:BidBarView x:Name="BidBar" Grid.Row="0"/>
+
+            <!-- Cards + overlays — centered in the Auto row -->
+            <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Margin="0,28,0,0">
+
+                    <StackPanel x:Name="CardsRow" Orientation="Horizontal" Spacing="0" HorizontalAlignment="Center">
+
+                        <!-- CardSlot size matches CardView's own native 128x181 exactly (was
+                             190x268.375, ~1.48x bigger, making the Viewbox this used to wrap
+                             each CardView in scale cards up well past Blackjack's — which
+                             renders CardView at native size with no Viewbox at all). Now that
+                             slot size == child size, that Viewbox was a no-op for sizing but
+                             still an extra transform node the hold-wobble's RotateTransform had
+                             to compose through, which was throwing the wobble's rotation off —
+                             removed, CardView is a direct child now, same as Blackjack. The
+                             overlap margin is scaled down to -40 (128 * 0.3125) to keep the
+                             same 31.25% overlap proportion the fan of cards had at the old size. -->
+                        <Grid x:Name="CardSlot0" Width="128" Height="181"
+                              Tag="0" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                            <local:CardView x:Name="Card0View" IsHitTestVisible="False" Width="128" Height="181"/>
+                        </Grid>
+                        <Grid x:Name="CardSlot1" Width="128" Height="181" Margin="-40,0,0,0"
+                              Tag="1" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                            <local:CardView x:Name="Card1View" IsHitTestVisible="False" Width="128" Height="181"/>
+                        </Grid>
+                        <Grid x:Name="CardSlot2" Width="128" Height="181" Margin="-40,0,0,0"
+                              Tag="2" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                            <local:CardView x:Name="Card2View" IsHitTestVisible="False" Width="128" Height="181"/>
+                        </Grid>
+                        <Grid x:Name="CardSlot3" Width="128" Height="181" Margin="-40,0,0,0"
+                              Tag="3" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                            <local:CardView x:Name="Card3View" IsHitTestVisible="False" Width="128" Height="181"/>
+                        </Grid>
+                        <Grid x:Name="CardSlot4" Width="128" Height="181" Margin="-40,0,0,0"
+                              Tag="4" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
+                            <local:CardView x:Name="Card4View" IsHitTestVisible="False" Width="128" Height="181"/>
+                        </Grid>
+
+                    </StackPanel>
+
+                    <!-- Idle nudge prompt — overlays across the card row -->
+                    <Border x:Name="IdlePrompt" Opacity="0" IsHitTestVisible="False" ZIndex="10"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Background="#80000000" Padding="24,16" CornerRadius="8">
+                        <TextBlock Text="Hit Space to Deal" HorizontalAlignment="Center"
+                                   FontSize="32" FontWeight="Black" Foreground="White"/>
+                    </Border>
+
+                    <!-- Overlay layer -->
+                    <Grid Height="226" VerticalAlignment="Top">
+
+                        <Grid x:Name="NoWinOverlay" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
+                                 static soft gold halo matching the other overlay banners. -->
+                            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="460"
+                                    IsHitTestVisible="True" PointerPressed="NoWinOverlay_PointerPressed">
+                                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                                    <TextBlock Text="Not today, partner!"
+                                               FontSize="36" FontWeight="Black" Foreground="#FFD600"
+                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
+                                    <StackPanel x:Name="NoWinPayoutRow" Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="-" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding BetDisplay}" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                        <TextBlock Text=" credits" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <!-- Dismiss button anchored TopRight, overlapping corner -->
+                            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"/>
+                        </Grid>
+
+                        <Grid x:Name="WinBanner" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
+                                 static soft gold halo matching the other overlay banners. -->
+                            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320"
+                                    IsHitTestVisible="True" PointerPressed="WinBanner_PointerPressed">
+                                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="WinHandNameBlock"
+                                               FontSize="36" FontWeight="Black" Foreground="#FFD600"
+                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="WinPayoutBlock"
+                                               FontSize="14" Foreground="White" FontWeight="Regular"
+                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                                    <!-- Optional streak line for completeness (always hidden in Video Poker since no streak is tracked) -->
+                                    <TextBlock x:Name="WinStreakBlock" IsVisible="False"
+                                               FontSize="14" FontWeight="Bold" Foreground="#FFD600" Opacity="0.90"
+                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- Dismiss button anchored TopRight, overlapping corner -->
+                            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"/>
+                        </Grid>
+
+                    </Grid>
+                </Grid>
+
+            <!-- Particle burst canvas -->
+            <Canvas x:Name="ParticleCanvas" Grid.Row="1" Grid.RowSpan="2" IsHitTestVisible="False" ZIndex="50"/>
+
+            <!-- Buttons — sit directly below the cards, in their own Auto row -->
+            <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8" Margin="0,24,0,0">
+
+                <StackPanel x:Name="ButtonRow" Orientation="Horizontal" Spacing="10"
+                            HorizontalAlignment="Center">
+                    <Button x:Name="HoldAllButton"
+                            Content="Hold All  [H]" Height="46" Padding="20,0"
+                            IsEnabled="{Binding IsHolding}"
+                            Click="HoldAll_Click" Classes="casino-button casino-button-blue"/>
+                    <Button x:Name="ClearButton"
+                            Content="Clear  [Q]" Height="46" Padding="20,0"
+                            IsEnabled="{Binding IsHolding}"
+                            Click="ClearAll_Click" Classes="casino-button casino-button-red"/>
+                    <Button x:Name="DealDrawButton"
+                            Height="46" Padding="28,0"
+                            Click="DealDraw_Click" Classes="casino-button casino-button-green"/>
+                    <Button x:Name="RebuyButton"
+                            Content="Buy In" Height="46" Padding="16,0"
+                            IsVisible="False"
+                            Click="Rebuy_Click" Classes="casino-button vp-button-rebuy"/>
+                </StackPanel>
+
+                <StackPanel x:Name="BetButtonRow" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <Button Content="− Bet" Height="34" Padding="14,0"
+                            IsEnabled="{Binding IsDealing}"
+                            Click="DecreaseBet_Click" Classes="casino-button vp-bet-button"/>
+                    <Button Content="Bet Max" Height="34" Padding="14,0"
+                            IsEnabled="{Binding IsDealing}"
+                            Click="BetMax_Click" Classes="casino-button vp-bet-button"/>
+                    <Button Content="+ Bet" Height="34" Padding="14,0"
+                            IsEnabled="{Binding IsDealing}"
+                            Click="IncreaseBet_Click" Classes="casino-button vp-bet-button"/>
+                </StackPanel>
+
+            </StackPanel>
+
+        </Grid>
+
+        <!-- Keyboard hint row -->
+        <TextBlock Grid.Row="2" x:Name="KeyHintLabel"
+                   Text="H=Hold All   Q=Clear All   1-5=Toggle Hold   Space/Enter/D=Deal or Draw"
+                   FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
+                   FontFamily="Segoe UI"
+                   Margin="0,4,0,8"/>
+    </Grid>
+
+    <UserControl.Styles>
+        <!-- Base translucent-white style + green/red/blue action-color variants now
+             live in App.axaml as Button.casino-button(-green|-red|-blue), shared with
+             Blackjack. Only Video Poker's own unique Rebuy color and the flat bet-row
+             style stay defined here. -->
+        <Style Selector="Button.vp-button-rebuy">
+            <Setter Property="Background" Value="#CC664400"/>
+            <Setter Property="BorderBrush" Value="#FFAA44"/>
+        </Style>
+
+        <Style Selector="Button.vp-bet-button">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Opacity" Value="0.80"/>
+        </Style>
+        <Style Selector="Button.vp-bet-button:disabled">
+            <Setter Property="Opacity" Value="0.28"/>
+        </Style>
+        <Style Selector="ComboBox#VariantComboBox">
+            <Setter Property="Background" Value="#22FFFFFF"/>
+            <Setter Property="Foreground" Value="#FFD700"/>
+            <Setter Property="BorderBrush" Value="#44FFD700"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </UserControl.Styles>
+
+</UserControl>

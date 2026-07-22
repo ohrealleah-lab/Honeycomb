@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.StuckBanner"
+             ZIndex="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <!-- "No moves remaining" banner — identical across Klondike/Freecell/Spider except
+         Klondike's optional Vegas-mode bankroll line, projected in via ExtraContent
+         rather than duplicated per game. -->
+    <Grid>
+        <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared static
+             soft gold halo (no offset, 16px blur, 50% opacity — matches the Mac
+             original's .shadow(color: gold.opacity(0.5), radius: 16)). -->
+        <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320">
+            <StackPanel Spacing="12" HorizontalAlignment="Center">
+                <TextBlock Text="Game Over" FontSize="36" FontWeight="Black"
+                           Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                           TextAlignment="Center"/>
+
+                <TextBlock Text="No moves remaining." FontSize="14" FontWeight="Bold"
+                           Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                           TextAlignment="Center"/>
+
+                <!-- Hidden label to compile with code-behind -->
+                <TextBlock x:Name="NoMovesStatsLabel" IsVisible="False" />
+
+                <ContentControl Content="{Binding $parent[local:StuckBanner].ExtraContent}" />
+
+                <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                    <Button Classes="banner-action" Content="New Game" Click="NewGame_Click"/>
+                    <Button Classes="banner-action" Content="Restart Game" Click="Restart_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+        <!-- Dismiss button anchored TopRight, overlapping corner -->
+        <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="Dismiss_Click"/>
+    </Grid>
+</UserControl>

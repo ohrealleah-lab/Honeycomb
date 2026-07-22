@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SoliBee.Desktop.Views.BackgroundEditorWindow"
+        x:Name="Root"
+        Title="Edit Background"
+        Width="340" Height="560"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="White"
+        ShowInTaskbar="False">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20,18,20,20">
+
+        <!-- Name -->
+        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
+            <TextBlock Text="Name" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" />
+            <TextBox x:Name="NameTextBox" Watermark="Background name…" BorderBrush="#CCCCCC" Foreground="Black" />
+        </StackPanel>
+
+        <!-- Mock board preview -->
+        <Border Grid.Row="1" Width="280" Height="160" CornerRadius="6" ClipToBounds="True"
+                BorderBrush="#D9000000" BorderThickness="0.75"
+                HorizontalAlignment="Center" Background="#008000" Margin="0,0,0,12">
+            <Grid Width="280" Height="160" ClipToBounds="True">
+                <Image x:Name="PreviewImage" Width="280" Height="160" Stretch="UniformToFill" />
+                <Rectangle x:Name="PreviewVignette" Width="280" Height="160" IsHitTestVisible="False" IsVisible="False">
+                    <Rectangle.Fill>
+                        <RadialGradientBrush Center="50%,50%" Radius="0.8">
+                            <GradientStop Color="#00000000" Offset="0.2"/>
+                            <GradientStop Color="#60000000" Offset="1.0"/>
+                        </RadialGradientBrush>
+                    </Rectangle.Fill>
+                </Rectangle>
+            </Grid>
+        </Border>
+
+        <!-- Sliders -->
+        <StackPanel x:Name="SliderPanel" Grid.Row="2" Spacing="5">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Scale:" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
+                <TextBlock x:Name="ScaleValueText" Text="1.00" Foreground="#555555" FontSize="12" VerticalAlignment="Center" />
+            </StackPanel>
+            <Slider x:Name="ScaleSlider" Minimum="1.0" Maximum="3.0" Value="1.0"
+                    ValueChanged="Slider_Changed" />
+
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Horizontal Offset:" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
+                <TextBlock x:Name="OffsetXValueText" Text="0" Foreground="#555555" FontSize="12" VerticalAlignment="Center" />
+            </StackPanel>
+            <Slider x:Name="OffsetXSlider" Minimum="-300" Maximum="300" Value="0"
+                    ValueChanged="Slider_Changed" />
+
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Vertical Offset:" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
+                <TextBlock x:Name="OffsetYValueText" Text="0" Foreground="#555555" FontSize="12" VerticalAlignment="Center" />
+            </StackPanel>
+            <Slider x:Name="OffsetYSlider" Minimum="-300" Maximum="300" Value="0"
+                    ValueChanged="Slider_Changed" />
+        </StackPanel>
+
+        <!-- Save / Cancel -->
+        <Grid Grid.Row="3" ColumnDefinitions="*,*" Margin="0,12,0,0">
+            <Button Content="Cancel" Click="Cancel_Click" Grid.Column="0"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Classes="light-secondary" Margin="0,0,4,0" />
+            <Button Content="Save" Click="Save_Click" Grid.Column="1"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Classes="light-primary" Margin="4,0,0,0" />
+        </Grid>
+    </Grid>
+</Window>

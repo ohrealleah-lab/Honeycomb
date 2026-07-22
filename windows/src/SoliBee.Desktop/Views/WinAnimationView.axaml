@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.Views.WinAnimationView">
+
+    <Grid>
+        <!-- Bouncing card canvas (bottom layer). Background is Transparent rather than
+             unset — Avalonia only hit-tests a Canvas with a non-null Background, and this
+             one needs to keep blocking board clicks while the win banner is up (see
+             AnimationCanvas.IsHitTestVisible in WinAnimationView.axaml.cs). -->
+        <Canvas x:Name="AnimationCanvas" Background="Transparent"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+        <!-- Win info panel (top layer) — same blue/gold scheme as the Autocomplete
+             banner (Background #1A44CC, yellow button) for consistency. -->
+        <Grid x:Name="WinInfoPanel" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared static
+                 soft gold halo (no offset, 16px blur, 50% opacity — matches the Mac
+                 original's .shadow(color: gold.opacity(0.5), radius: 16)). -->
+            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+
+                    <TextBlock Text="You win!"
+                               FontSize="40" FontWeight="Black" Foreground="#FFD600"
+                               FontFamily="Segoe UI"
+                               HorizontalAlignment="Center"/>
+
+                    <TextBlock x:Name="WinStatsLabel"
+                               FontSize="14" Foreground="White"
+                               FontFamily="Segoe UI"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"/>
+
+                    <Button x:Name="PlayAgainButton"
+                            Classes="banner-action"
+                            Click="PlayAgain_Click"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="Play Again"
+                                   FontSize="14" FontWeight="Bold"
+                                   FontFamily="Segoe UI"/>
+                    </Button>
+
+                </StackPanel>
+            </Border>
+            <!-- Dismiss button anchored TopRight, overlapping corner -->
+            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="Close_Click"/>
+        </Grid>
+
+        <!-- Particle burst canvas (top layer — bursts in front of the win banner,
+             same as Blackjack/Video Poker's win banners) -->
+        <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+    </Grid>
+
+</UserControl>

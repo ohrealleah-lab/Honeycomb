@@ -1,0 +1,137 @@
+<local:CardGameView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.SpiderView"
+             ClipToBounds="False">
+
+    <!-- Outer grid: scroll area + drag canvas overlay -->
+    <Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
+                <!--
+                    Single grid with shared ColumnDefinitions ensures the stock/foundation row
+                    and the tableau row share one layout pass — guarantees pixel-perfect alignment.
+                    ColDefs: 128,12 × 10 = 1388px (10 card cols, 9 gaps)
+                -->
+                <Grid x:Name="BoardGrid" Width="1388" Margin="20,10,20,20"
+                      HorizontalAlignment="Left" VerticalAlignment="Top"
+                      ClipToBounds="False"
+                      ColumnDefinitions="128,12,128,12,128,12,128,12,128,12,128,12,128,12,128,12,128,12,128">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />  <!-- row 0: stock + foundations -->
+                        <RowDefinition Height="18" />    <!-- row 1: gap  -->
+                        <RowDefinition Height="Auto" />  <!-- row 2: tableaus -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Stock deal area (col 0, row 0) -->
+                    <Grid Grid.Column="0" Grid.Row="0"
+                          Width="128" Height="181"
+                          HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <Grid.Styles>
+                            <!-- StockCursorPileView exists only so the shared keyboard-cursor
+                                 machinery (which operates on PileView instances) has a real
+                                 target for "the stock" — it has no Pile bound and never draws
+                                 cards, so its own empty-slot outline/symbol must stay hidden;
+                                 the real stock graphic underneath (SpiderStock*) is what's
+                                 actually seen. Only its CursorHighlightBorder is ever shown. -->
+                            <Style Selector="local|PileView#StockCursorPileView Rectangle#EmptyOutline">
+                                <Setter Property="IsVisible" Value="False"/>
+                            </Style>
+                            <Style Selector="local|PileView#StockCursorPileView TextBlock#EmptySymbolText">
+                                <Setter Property="IsVisible" Value="False"/>
+                            </Style>
+                        </Grid.Styles>
+                        <Rectangle x:Name="SpiderStockEmptyOutline"
+                                   Width="128" Height="181"
+                                   Stroke="White" StrokeThickness="1.5"
+                                   RadiusX="10" RadiusY="10"
+                                   Opacity="0.35" Fill="#15FFFFFF"
+                                   IsVisible="False"
+                                   HorizontalAlignment="Left" VerticalAlignment="Top" />
+                        <Canvas x:Name="SpiderStockCanvas"
+                                Width="128" Height="181"
+                                HorizontalAlignment="Left" VerticalAlignment="Top" />
+                        <Border x:Name="SpiderStockOverlay"
+                                Background="#01000000"
+                                Cursor="Hand"
+                                PointerPressed="StockButton_PointerPressed"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                        <local:PileView x:Name="StockCursorPileView" IsHitTestVisible="False" />
+                    </Grid>
+
+                    <!-- 8 Foundation slots (cols 2–16, row 0) -->
+                    <local:PileView x:Name="Foundation0" Grid.Column="2"  Grid.Row="0" />
+                    <local:PileView x:Name="Foundation1" Grid.Column="4"  Grid.Row="0" />
+                    <local:PileView x:Name="Foundation2" Grid.Column="6"  Grid.Row="0" />
+                    <local:PileView x:Name="Foundation3" Grid.Column="8"  Grid.Row="0" />
+                    <local:PileView x:Name="Foundation4" Grid.Column="10" Grid.Row="0" />
+                    <local:PileView x:Name="Foundation5" Grid.Column="12" Grid.Row="0" />
+                    <local:PileView x:Name="Foundation6" Grid.Column="14" Grid.Row="0" />
+                    <local:PileView x:Name="Foundation7" Grid.Column="16" Grid.Row="0" />
+
+                    <!-- 10 Tableau columns (cols 0–18, row 2) -->
+                    <local:PileView x:Name="Tableau0"  Grid.Column="0"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau1"  Grid.Column="2"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau2"  Grid.Column="4"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau3"  Grid.Column="6"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau4"  Grid.Column="8"  Grid.Row="2" />
+                    <local:PileView x:Name="Tableau5"  Grid.Column="10" Grid.Row="2" />
+                    <local:PileView x:Name="Tableau6"  Grid.Column="12" Grid.Row="2" />
+                    <local:PileView x:Name="Tableau7"  Grid.Column="14" Grid.Row="2" />
+                    <local:PileView x:Name="Tableau8"  Grid.Column="16" Grid.Row="2" />
+                    <local:PileView x:Name="Tableau9"  Grid.Column="18" Grid.Row="2" />
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Drag overlay sits outside the ScrollViewer so it covers the full view -->
+        <!-- HorizontalAlignment="Center" (not Stretch) — see the matching comment in
+             GameView.axaml for why: the board is horizontally centered but only
+             top-anchored vertically, so an oversized DragCanvas needs to overflow
+             symmetrically left/right (Center) to reach both true window edges, while
+             Stretch's overflow-from-origin already reaches the true bottom edge. -->
+        <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Stretch" />
+
+        <!-- Keyboard hint row now lives in MainWindow's GameAreaGrid (SolitaireKeyHintLabel)
+             so it's pinned to the true bottom of the window instead of the bottom of this
+             board's own tight-fit content — see MainWindow.axaml for why. -->
+
+        <!-- Win animation overlay -->
+        <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
+
+        <!-- Inline deal-blocked warning banner — shown (mouse or keyboard path alike) when
+             a deal is attempted while a tableau column is empty, matching the mouse deal
+             click's feedback so a keyboard D press is never a silent no-op. -->
+        <Grid x:Name="DealBlockedBanner" IsVisible="False" ZIndex="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="360">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <TextBlock Text="Cannot Deal" FontSize="28" FontWeight="Black"
+                               Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                               TextAlignment="Center"/>
+                    <TextBlock Text="Every tableau column must have at least one card before dealing a new row."
+                               FontSize="14" Foreground="White" HorizontalAlignment="Center"
+                               FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+            <!-- Dismiss button anchored TopRight, overlapping corner -->
+            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="DealBlockedDismiss_Click"/>
+        </Grid>
+
+        <!-- Inline autocomplete banner -->
+        <local:AutocompleteBanner x:Name="AutocompleteBanner" IsVisible="False"
+                                   AutocompleteClicked="AutocompleteGame_Click"
+                                   DismissClicked="AutocompleteDismiss_Click"/>
+
+        <!-- Inline stuck banner -->
+        <local:StuckBanner x:Name="NoMovesBanner" IsVisible="False"
+                            NewGameClicked="NoMovesNewGame_Click"
+                            RestartClicked="NoMovesRestart_Click"
+                            DismissClicked="NoMovesDismiss_Click"/>
+
+        <!-- Flashed when Hint has nothing to suggest -->
+        <local:FlashToast x:Name="HintToast"/>
+    </Grid>
+
+</local:CardGameView>

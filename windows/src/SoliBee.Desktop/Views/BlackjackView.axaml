@@ -1,0 +1,252 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.BlackjackView">
+
+    <Grid>
+        <!-- The actual game board felt grid -->
+        <Grid x:Name="BoardFeltGrid">
+            <Grid.RowDefinitions>
+                <!-- MinHeight guards against this row collapsing below BidBar's own
+                     content height, which was clipping/flattening its rounded corners
+                     against the toolbar when the window is close to its minimum size. -->
+                <RowDefinition Height="*" MinHeight="90"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
+            <!-- Lives in the top spacer row, centered vertically, so it sits centered
+                 between the title bar and the dealer cards instead of pinned to the
+                 top of that gap (it was previously its own fixed Auto row). -->
+            <local:BidBarView x:Name="BidBar" Grid.Row="0"/>
+
+            <!-- ─── Dealer area ──────────────────────────────────────────────────── -->
+            <!-- Top margin trimmed from 28 to 9 (and Spacing 12→4) to make room for the
+                 count label without changing this block's total height, so the VS line
+                 and button row don't shift. -->
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4"
+                        Margin="0,9,0,7">
+                <TextBlock x:Name="DealerCountLabel" Text="DEALER" FontSize="11" FontWeight="Bold"
+                           Foreground="#80FFFFFF" HorizontalAlignment="Center"
+                           FontFamily="Segoe UI" LetterSpacing="2"/>
+                <StackPanel x:Name="DealerCardsPanel" Orientation="Horizontal"
+                            HorizontalAlignment="Center" Background="Transparent"
+                            PointerPressed="CardBack_PointerPressed"/>
+            </StackPanel>
+
+            <!-- ─── VS divider ───────────────────────────────────────────────────── -->
+            <Grid Grid.Row="2" Margin="0,1">
+                <Rectangle Height="1" Fill="#30FFFFFF" VerticalAlignment="Center"/>
+                <Border Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="14,0">
+                    <TextBlock Text="VS" FontSize="10" FontWeight="Bold"
+                               Foreground="#55FFFFFF" LetterSpacing="3"
+                               FontFamily="Segoe UI"/>
+                </Border>
+
+                <!-- Idle nudge prompt — disabled (see BlackjackView.axaml.cs ResetIdleTimer);
+                     IsVisible="False" so it no longer reserves layout space in this row. -->
+                <Border x:Name="IdlePrompt" Opacity="0" IsVisible="False" IsHitTestVisible="False" ZIndex="10"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#80000000" Padding="24,16" CornerRadius="8">
+                    <TextBlock Text="Hit Space to Deal" HorizontalAlignment="Center"
+                               FontSize="32" FontWeight="Black" Foreground="White"/>
+                </Border>
+            </Grid>
+
+            <!-- ─── Player area ──────────────────────────────────────────────────── -->
+            <!-- Top margin trimmed from 14 to 0 (and Spacing 12→4) to make room for the
+                 count label above the cards (moved from below, to match the dealer side)
+                 without changing this block's total height. -->
+            <StackPanel Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4"
+                        Margin="0,0,0,8">
+                <TextBlock x:Name="PlayerCountLabel" Text="PLAYER" FontSize="11" FontWeight="Bold"
+                           Foreground="#80FFFFFF" HorizontalAlignment="Center"
+                           FontFamily="Segoe UI" LetterSpacing="2"/>
+                <StackPanel x:Name="PlayerHandsContainer" Orientation="Horizontal" Spacing="16"
+                            HorizontalAlignment="Center" Background="Transparent"
+                            PointerPressed="CardBack_PointerPressed"/>
+            </StackPanel>
+
+            <!-- ─── Action buttons + chip bet row ───────────────────────────────── -->
+            <!-- Top margin trimmed from 8 to 3 — Player's top margin alone (14) wasn't
+                 quite enough budget to absorb its new count label, so the last few
+                 pixels are borrowed here to keep the overall board height (and button
+                 position) unchanged. -->
+            <StackPanel Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,3,0,12" Spacing="7">
+
+                <Grid Height="98">
+
+                    <!-- Bet chips + actions (visible when not playing), split into two rows: -->
+                    <StackPanel x:Name="BetButtonRow" Spacing="8" HorizontalAlignment="Center">
+                        <!-- Row 1: Clear / Deal / (Rebuy, only when out of credits for the bet) -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <Button x:Name="ClearBetButton" Content="Clear Bet" Height="46" Padding="14,0"
+                                    Click="ClearBet_Click" Classes="casino-button"/>
+                            <Button x:Name="DealButton" Content="Deal  [Space]" Height="46" Padding="28,0"
+                                Click="Deal_Click"   Classes="casino-button bj-button-buyin"/>
+                            <Rectangle x:Name="RebuyDivider" Width="1" Fill="#40FFFFFF" Margin="4,4" IsVisible="False"/>
+                            <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
+                                    Click="Rebuy_Click"  Classes="casino-button casino-button-green" IsVisible="False"/>
+                        </StackPanel>
+                        <!-- Row 2: flat chip buttons — 1/5/10/25 add to the bet, 2X doubles it -->
+                        <StackPanel x:Name="ChipButtonRow" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                            <Button x:Name="Chip1Button"  Content="1"  Tag="1"  Click="Chip_Click" Classes="bj-chip bj-chip-1"/>
+                            <Button x:Name="Chip5Button"  Content="5"  Tag="5"  Click="Chip_Click" Classes="bj-chip bj-chip-2"/>
+                            <Button x:Name="Chip10Button" Content="10" Tag="10" Click="Chip_Click" Classes="bj-chip bj-chip-3"/>
+                            <Button x:Name="Chip25Button" Content="25" Tag="25" Click="Chip_Click" Classes="bj-chip bj-chip-4"/>
+                            <Button x:Name="DoubleBetButton" Content="2X" Click="DoubleBet_Click" Classes="bj-chip bj-chip-5"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Action buttons (visible while playing) -->
+                    <StackPanel x:Name="ActionButtonRow" Orientation="Horizontal" Spacing="10"
+                                HorizontalAlignment="Center" VerticalAlignment="Top">
+                        <Button x:Name="HitButton"    Content="Hit  [H]"      Height="46" Padding="22,0"
+                                Click="Hit_Click"    Classes="casino-button casino-button-green"/>
+                        <Button x:Name="StandButton"  Content="Stand  [S]"    Height="46" Padding="22,0"
+                                Click="Stand_Click"  Classes="casino-button casino-button-red"/>
+                        <Button x:Name="DoubleButton" Content="Double  [D]"   Height="46" Padding="16,0"
+                                Click="Double_Click" Classes="casino-button casino-button-blue"/>
+                        <Button x:Name="SplitButton"  Content="Split  [P]"    Height="46" Padding="16,0"
+                                Click="Split_Click"  Classes="casino-button bj-button-split"/>
+                    </StackPanel>
+
+                </Grid>
+
+                <!-- Keyboard hint row -->
+                <TextBlock x:Name="KeyHintLabel"
+                           Text="Space/Enter=Deal   H=Hit   S=Stand   D=Double   P=Split"
+                           FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
+                           FontFamily="Segoe UI"/>
+
+            </StackPanel>
+
+        </Grid>
+
+
+        <!-- ─── Particle burst canvas (layered over the entire board) ─── -->
+        <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False" ZIndex="50"/>
+
+        <!-- ─── Result overlay (layered over the entire board) ─── -->
+        <Grid x:Name="ResultOverlayContainer" HorizontalAlignment="Center" VerticalAlignment="Center" ZIndex="40">
+            <!-- Classes="banner-glow" (App.axaml) applies the shared static soft gold halo
+                 as a default; code-behind (UpdateResult/DebugShowResultBanner) re-sets
+                 BoxShadow explicitly to the same BannerStyles.GoldGlowBoxShadow value on
+                 every result since it also needs to change Background per outcome. -->
+            <Border x:Name="ResultOverlay" IsVisible="False" Classes="banner-glow"
+                    Background="#BF000000" CornerRadius="12" Padding="24,24"
+                    IsHitTestVisible="True"
+                    PointerPressed="ResultOverlay_PointerPressed">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <TextBlock x:Name="ResultHeadline" FontSize="36" FontWeight="Black"
+                               Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                               TextAlignment="Center"/>
+                    <TextBlock x:Name="ResultSubline"  FontSize="14" FontWeight="Regular"
+                               Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                               TextAlignment="Center"/>
+                    <StackPanel Spacing="2" HorizontalAlignment="Center">
+                        <TextBlock x:Name="ResultDealerTotal" FontSize="14" FontWeight="Bold"
+                                   Foreground="#B3FFFFFF" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                                   TextAlignment="Center"/>
+                        <TextBlock x:Name="ResultPlayerTotal" FontSize="14" FontWeight="Bold"
+                                   Foreground="#B3FFFFFF" HorizontalAlignment="Center" FontFamily="Segoe UI"
+                                   TextAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ResultStreak"   FontSize="14" FontWeight="Bold"
+                               Foreground="#FFD600" Opacity="0.9" HorizontalAlignment="Center"
+                               IsVisible="False" FontFamily="Segoe UI" TextAlignment="Center"/>
+                </StackPanel>
+            </Border>
+            <!-- Dismiss button anchored TopRight, overlapping corner -->
+            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"
+                    IsVisible="{Binding #ResultOverlay.IsVisible}"/>
+        </Grid>
+
+    </Grid>
+
+    <UserControl.Styles>
+        <!-- Base translucent-white style + green/red/blue action-color variants now
+             live in App.axaml as Button.casino-button(-green|-red|-blue), shared with
+             Video Poker. Only Blackjack's own unique colors (Buy In's yellow, Split's
+             purple) stay defined here. -->
+        <Style Selector="Button.bj-button-buyin">
+            <Setter Property="Background" Value="#FFCC00"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+            <Setter Property="BorderBrush" Value="#AAFFE680"/>
+        </Style>
+        <Style Selector="Button.bj-button-buyin:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#FFD633"/>
+        </Style>
+
+        <Style Selector="Button.bj-button-split">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC9C27B0" Offset="0"/>
+                        <GradientStop Color="#CC6A1B9A" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AACE93D8"/>
+        </Style>
+        <Style Selector="Button.bj-button-split:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCAB47BC" Offset="0"/>
+                        <GradientStop Color="#CC7B1FA2" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Chip buttons -->
+        <Style Selector="Button.bj-chip">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="CornerRadius" Value="22"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Black"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.bj-chip:disabled">
+            <Setter Property="Opacity" Value="0.35"/>
+        </Style>
+        <Style Selector="Button.bj-chip-1">
+            <Setter Property="Background" Value="#CCCCCC"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+            <Setter Property="BorderBrush" Value="#888888"/>
+        </Style>
+        <Style Selector="Button.bj-chip-2">
+            <Setter Property="Background" Value="#1565C0"/>
+            <Setter Property="BorderBrush" Value="#90CAF9"/>
+        </Style>
+        <Style Selector="Button.bj-chip-3">
+            <Setter Property="Background" Value="#B71C1C"/>
+            <Setter Property="BorderBrush" Value="#EF9A9A"/>
+        </Style>
+        <Style Selector="Button.bj-chip-4">
+            <Setter Property="Background" Value="#1B5E20"/>
+            <Setter Property="BorderBrush" Value="#A5D6A7"/>
+        </Style>
+        <Style Selector="Button.bj-chip-5">
+            <Setter Property="Background" Value="#E65100"/>
+            <Setter Property="BorderBrush" Value="#FFCC80"/>
+        </Style>
+        <Style Selector="Button.bj-chip:pointerover /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.85"/>
+        </Style>
+    </UserControl.Styles>
+
+</UserControl>

@@ -1,0 +1,92 @@
+<local:CardGameView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.FreecellView"
+             ClipToBounds="False">
+
+    <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
+        <StackPanel x:Name="BoardPanel" Width="1066" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,10,0,0" ClipToBounds="False">
+
+                    <!-- Top area: FreeCells (left) and Foundations (right) -->
+                    <StackPanel Spacing="8" ClipToBounds="False">
+                        <!-- TopRow1 -->
+                        <Grid x:Name="TopRow1" ColumnDefinitions="Auto,*,Auto" Width="1066" HorizontalAlignment="Center" ClipToBounds="False">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="FreeCell0" />
+                                <local:PileView x:Name="FreeCell1" />
+                                <local:PileView x:Name="FreeCell2" />
+                                <local:PileView x:Name="FreeCell3" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="Foundation0" />
+                                <local:PileView x:Name="Foundation1" />
+                                <local:PileView x:Name="Foundation2" />
+                                <local:PileView x:Name="Foundation3" />
+                            </StackPanel>
+                        </Grid>
+                        
+                        <!-- TopRow2 -->
+                        <Grid x:Name="TopRow2" ColumnDefinitions="Auto,*,Auto" Width="1066" HorizontalAlignment="Center" IsVisible="False" ClipToBounds="False">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="FreeCell4" />
+                                <local:PileView x:Name="FreeCell5" />
+                                <local:PileView x:Name="FreeCell6" />
+                                <local:PileView x:Name="FreeCell7" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                <local:PileView x:Name="Foundation4" />
+                                <local:PileView x:Name="Foundation5" />
+                                <local:PileView x:Name="Foundation6" />
+                                <local:PileView x:Name="Foundation7" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Bottom row: Tableaus -->
+                    <Grid x:Name="TableauGrid" ColumnDefinitions="128,6,128,6,128,6,128,6,128,6,128,6,128,6,128,6,128,6,128" Width="1066" HorizontalAlignment="Center">
+                        <local:PileView x:Name="Tableau0" Grid.Column="0" />
+                        <local:PileView x:Name="Tableau1" Grid.Column="2" />
+                        <local:PileView x:Name="Tableau2" Grid.Column="4" />
+                        <local:PileView x:Name="Tableau3" Grid.Column="6" />
+                        <local:PileView x:Name="Tableau4" Grid.Column="8" />
+                        <local:PileView x:Name="Tableau5" Grid.Column="10" />
+                        <local:PileView x:Name="Tableau6" Grid.Column="12" />
+                        <local:PileView x:Name="Tableau7" Grid.Column="14" />
+                        <local:PileView x:Name="Tableau8" Grid.Column="16" IsVisible="False" />
+                        <local:PileView x:Name="Tableau9" Grid.Column="18" IsVisible="False" />
+                    </Grid>
+
+        </StackPanel>
+
+        <!-- Keyboard hint row now lives in MainWindow's GameAreaGrid (SolitaireKeyHintLabel)
+             so it's pinned to the true bottom of the window instead of the bottom of this
+             board's own tight-fit content — see MainWindow.axaml for why. -->
+
+        <!-- Drag overlay -->
+        <!-- HorizontalAlignment="Center" (not Stretch) — see the matching comment in
+             GameView.axaml for why: the board is horizontally centered but only
+             top-anchored vertically, so an oversized DragCanvas needs to overflow
+             symmetrically left/right (Center) to reach both true window edges, while
+             Stretch's overflow-from-origin already reaches the true bottom edge. -->
+        <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Stretch" />
+
+        <!-- Win animation overlay -->
+        <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
+
+        <!-- Inline stuck banner -->
+        <local:StuckBanner x:Name="NoMovesBanner" IsVisible="False"
+                            NewGameClicked="NoMovesNewGame_Click"
+                            RestartClicked="NoMovesRestart_Click"
+                            DismissClicked="NoMovesDismiss_Click"/>
+
+        <!-- Inline autocomplete banner -->
+        <local:AutocompleteBanner x:Name="AutocompleteBanner" IsVisible="False"
+                                   AutocompleteClicked="AutocompleteGame_Click"
+                                   DismissClicked="AutocompleteDismiss_Click"/>
+
+        <!-- Flashed when Hint has nothing to suggest -->
+        <local:FlashToast x:Name="HintToast"/>
+
+    </Grid>
+
+</local:CardGameView>

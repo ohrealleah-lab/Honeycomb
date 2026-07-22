@@ -1,0 +1,194 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.App"
+             RequestedThemeVariant="Default">
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
+
+        <!-- Shared soft gold halo used by every overlay banner (win/stuck/autocomplete
+             banners, and Blackjack/Video Poker's win-loss banners). Keep this literal in
+             sync with BannerStyles.GoldGlowBoxShadow (used by BlackjackView.axaml.cs,
+             which sets BoxShadow at runtime) — a Setter can't use {x:Static} here because
+             Avalonia assigns the value directly without running the property's
+             string->BoxShadows TypeConverter, so a static string reference throws
+             InvalidCastException at startup instead of being parsed. -->
+        <Style Selector="Border.banner-glow">
+            <Setter Property="BoxShadow" Value="0 0 16 0 #80FFD600" />
+        </Style>
+
+        <!-- Shared close "X" circle button used on every dismissible banner
+             (WinAnimationView, and the No-Moves/Autocomplete banners in
+             GameView/FreecellView/SpiderView). Only Content, Click, and Margin
+             vary per usage. -->
+        <Style Selector="Button.banner-close">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Background" Value="#33FFFFFF" />
+            <Setter Property="Foreground" Value="#DDFFFFFF" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <!-- Shared action button used on every win/stuck/autocomplete banner (Restart
+             Game, New Game, Autocomplete Game, Play Again). FluentTheme's default Button
+             ControlTheme applies its own hover tint on an internal template part that
+             overrides a plain Background attribute — same issue already worked around
+             for Button.toolbar below — so the :pointerover override here re-asserts the
+             same colors to keep the button static regardless of pointer state. -->
+        <Style Selector="Button.banner-action">
+            <Setter Property="Padding" Value="20,10" />
+            <Setter Property="Background" Value="#007AFF" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="Button.banner-action:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#007AFF" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <!-- Light-themed buttons used across the (light, Mac-style) Preferences/Themes
+             panels and their dialogs, plus any other window that needs the same look
+             (e.g. CardBackEditorWindow) — app-wide so every Window can share them
+             instead of redefining per-window. Same FluentTheme pointerover-tint
+             workaround as the other shared button classes above. -->
+        <Style Selector="Button.light-secondary">
+            <Setter Property="Background" Value="#E5E5E5" />
+            <Setter Property="Foreground" Value="#1A1A1A" />
+        </Style>
+        <Style Selector="Button.light-secondary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#E5E5E5" />
+            <Setter Property="Foreground" Value="#1A1A1A" />
+        </Style>
+        <Style Selector="Button.light-primary">
+            <Setter Property="Background" Value="#1155AA" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.light-primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1155AA" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.light-danger">
+            <Setter Property="Background" Value="#CC3333" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.light-danger:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#CC3333" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <!-- Casino (Blackjack/Video Poker) button base + color-coded action variants —
+             both games' button ladders were previously defined nearly identically per
+             view (only class-name prefix differed: bj-button-* vs vp-button-*). Kept
+             app-wide, like the other shared button classes above, so a game-specific
+             XAML only needs its own genuinely unique variants (Blackjack's Split/Buy-in,
+             Video Poker's Rebuy) on top of these. -->
+        <Style Selector="Button.casino-button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#65FFFFFF" Offset="0"/>
+                        <GradientStop Color="#35FFFFFF" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#A0FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.casino-button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#85FFFFFF" Offset="0"/>
+                        <GradientStop Color="#55FFFFFF" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Green: Blackjack Hit/Rebuy, Video Poker Draw -->
+        <Style Selector="Button.casino-button-green">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC4CAF50" Offset="0"/>
+                        <GradientStop Color="#CC2E7D32" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AA81C784"/>
+        </Style>
+        <Style Selector="Button.casino-button-green:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC66BB6A" Offset="0"/>
+                        <GradientStop Color="#CC388E3C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Red: Blackjack Stand, Video Poker Clear -->
+        <Style Selector="Button.casino-button-red">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCE53935" Offset="0"/>
+                        <GradientStop Color="#CCB71C1C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AAEF9A9A"/>
+        </Style>
+        <Style Selector="Button.casino-button-red:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CCEF5350" Offset="0"/>
+                        <GradientStop Color="#CCC62828" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Blue: Blackjack Double, Video Poker Hold All -->
+        <Style Selector="Button.casino-button-blue">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC2196F3" Offset="0"/>
+                        <GradientStop Color="#CC1565C0" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#AA90CAF9"/>
+        </Style>
+        <Style Selector="Button.casino-button-blue:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC42A5F5" Offset="0"/>
+                        <GradientStop Color="#CC1976D2" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Application.Styles>
+</Application>

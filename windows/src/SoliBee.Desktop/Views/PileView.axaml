@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.Views.PileView"
+             PointerPressed="PileView_PointerPressed"
+             ClipToBounds="False">
+
+    <Grid x:Name="PileGrid" Width="128" HorizontalAlignment="Left" ClipToBounds="False">
+        <!-- Programmatic vector empty pile slot outline -->
+        <Rectangle x:Name="EmptyOutline" Width="128" Height="181" Stroke="White" StrokeThickness="1.5" RadiusX="10" RadiusY="10" Opacity="0.35" Fill="#15FFFFFF" HorizontalAlignment="Left" VerticalAlignment="Top" />
+
+        <!-- Symbol for empty foundations ("A") or Stock recycle ("↺") -->
+        <TextBlock x:Name="EmptySymbolText" Width="128" FontSize="51" Foreground="White" Opacity="0.2" HorizontalAlignment="Left" VerticalAlignment="Center" TextAlignment="Center" Margin="0,0,0,10" IsHitTestVisible="False" />
+
+        <!-- Programmatic container for overlaying card stack views -->
+        <Canvas x:Name="CardsCanvas" Width="128" Height="181" HorizontalAlignment="Left" VerticalAlignment="Top" ClipToBounds="False" />
+
+        <!-- Whole-pile hint highlight (foundation / free cell / stock / waste) -->
+        <Border x:Name="HintHighlightBorder" Width="128" Height="181" IsVisible="False" IsHitTestVisible="False"
+                BorderBrush="#FFD700" BorderThickness="3.5" CornerRadius="10" Background="Transparent"
+                HorizontalAlignment="Left" VerticalAlignment="Top" />
+
+        <!-- Whole-pile keyboard cursor outline — shown when the focus cursor is on an
+             empty or non-card pile (empty foundation/free cell, stock, empty tableau
+             column) where there's no individual CardView to outline instead. Distinct
+             element from HintHighlightBorder so the (rare, 2s auto-dismiss) Hint pulse
+             and the (persistent) keyboard cursor never fight over the same border. -->
+        <Border x:Name="CursorHighlightBorder" Width="128" Height="181" IsVisible="False" IsHitTestVisible="False"
+                BorderBrush="#00E5FF" BorderThickness="3" CornerRadius="10" Background="Transparent"
+                HorizontalAlignment="Left" VerticalAlignment="Top" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,307 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SoliBee.Desktop.Views.MainWindow"
+        Title="Honeycomb Card Suite"
+        Icon="avares://Honeycomb/Assets/AppIcon.png"
+        Width="1120" Height="768"
+        MinWidth="400" MinHeight="300"
+        WindowStartupLocation="Manual"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Command Bar/Navigation and Stats (Colored solid background matching macOS) -->
+        <!-- Command Bar/Navigation and Stats (Colored solid background matching macOS) -->
+        <!-- ZIndex above VignetteOverlay (90) so toolbar buttons/stats stay unaffected by the darkening -->
+        <Grid Grid.Row="0" ZIndex="100">
+            <Border x:Name="TopBarBorder" Padding="15,35,15,5" Background="Transparent" PointerPressed="TopBar_PointerPressed">
+                <DockPanel LastChildFill="False" Background="Transparent">
+                    <!-- Buttons on the Left -->
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <ComboBox x:Name="GameSelectionBox" Classes="toolbar-combo" SelectionChanged="GameSelectionBox_SelectionChanged">
+                            <ComboBoxItem Content="Klondike Solibee" Tag="Klondike" />
+                            <ComboBoxItem Content="Beecell"          Tag="Freecell" />
+                            <ComboBoxItem Content="Spider Solibee"   Tag="Spider" />
+                            <ComboBoxItem Content="Video Poker"      Tag="VideoPoker" />
+                            <ComboBoxItem Content="Video Blackjack"  Tag="Blackjack" />
+                        </ComboBox>
+                        <Button x:Name="NewGameButton" Content="New Game" Click="NewGame_Click" Classes="toolbar" />
+                        <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
+                        <Button x:Name="OptionsButton" Content="Options" Click="Preferences_Click" Classes="toolbar" />
+                        <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
+                        <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
+                                  SelectionChanged="PokerVariantBox_SelectionChanged">
+                            <ComboBoxItem Content="Jacks or Better"/>
+                            <ComboBoxItem Content="Deuces Wild"/>
+                            <ComboBoxItem Content="Bonus Poker"/>
+                        </ComboBox>
+                        <Button x:Name="UndoButton" Content="Undo" Click="Undo_Click" Classes="toolbar" IsEnabled="{Binding CanUndo}" />
+                        <Button Content="Theme Editor" Click="ThemeEditor_Click" Classes="toolbar" IsVisible="False" />
+                        <Button x:Name="DebugBannerButton" Content="Banners" Classes="toolbar" IsVisible="False">
+                            <Button.Flyout>
+                                <MenuFlyout>
+                                    <MenuItem Header="Klondike">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Klondike:Win" />
+                                        <MenuItem Header="Play Win Animation" Click="DebugBanner_Click" Tag="Klondike:PlayWinAnimation" />
+                                        <MenuItem Header="Loss (No Moves)" Click="DebugBanner_Click" Tag="Klondike:Loss" />
+                                        <MenuItem Header="Autocomplete" Click="DebugBanner_Click" Tag="Klondike:Autocomplete" />
+                                    </MenuItem>
+                                    <MenuItem Header="Freecell">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Freecell:Win" />
+                                        <MenuItem Header="Play Win Animation" Click="DebugBanner_Click" Tag="Freecell:PlayWinAnimation" />
+                                        <MenuItem Header="Loss (No Moves)" Click="DebugBanner_Click" Tag="Freecell:Loss" />
+                                        <MenuItem Header="Autocomplete" Click="DebugBanner_Click" Tag="Freecell:Autocomplete" />
+                                    </MenuItem>
+                                    <MenuItem Header="Spider">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Spider:Win" />
+                                        <MenuItem Header="Play Win Animation" Click="DebugBanner_Click" Tag="Spider:PlayWinAnimation" />
+                                        <MenuItem Header="Loss (No Moves)" Click="DebugBanner_Click" Tag="Spider:Loss" />
+                                        <MenuItem Header="Autocomplete" Click="DebugBanner_Click" Tag="Spider:Autocomplete" />
+                                    </MenuItem>
+                                    <MenuItem Header="Video Poker">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="VideoPoker:Win" />
+                                        <MenuItem Header="Loss" Click="DebugBanner_Click" Tag="VideoPoker:Loss" />
+                                    </MenuItem>
+                                    <MenuItem Header="Blackjack">
+                                        <MenuItem Header="Win" Click="DebugBanner_Click" Tag="Blackjack:Win" />
+                                        <MenuItem Header="Loss" Click="DebugBanner_Click" Tag="Blackjack:Loss" />
+                                    </MenuItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Stats on the Right -->
+                    <StackPanel x:Name="StatsBarPanel" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="25" VerticalAlignment="Center">
+                        <!-- SCORE -->
+                        <StackPanel x:Name="ScoreStatPanel" Spacing="2" HorizontalAlignment="Center">
+                            <TextBlock Text="SCORE" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding ScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <!-- MOVES -->
+                        <StackPanel x:Name="MovesStatPanel" Spacing="2" HorizontalAlignment="Center">
+                            <TextBlock Text="MOVES" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding State.MovesCount}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <!-- TIME -->
+                        <StackPanel x:Name="TimeStatPanel" Spacing="2" HorizontalAlignment="Center">
+                            <TextBlock Text="TIME" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+        </Grid>
+
+        <!-- Main Game Area -->
+        <Grid x:Name="GameAreaGrid" Grid.Row="1">
+            <!-- Starts transparent — MainWindow's Opened handler reveals it (fading in via
+                 the Transitions below) only once the responsive scale-to-fit calculation
+                 has settled on a stable value, so the very first launch doesn't show the
+                 board briefly at the wrong size before visibly snapping to the right one. -->
+            <LayoutTransformControl x:Name="MainContentWrapper" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="30,0" Opacity="0">
+                <LayoutTransformControl.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.25"/>
+                    </Transitions>
+                </LayoutTransformControl.Transitions>
+                <ContentControl x:Name="MainContent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+            </LayoutTransformControl>
+
+            <!-- Solitaire keyboard hint row (Klondike/Freecell/Spider — Blackjack/Video
+                 Poker have their own, positioned under their action buttons instead). Lives
+                 outside MainContentWrapper so it isn't measured/scaled with the board: a
+                 LayoutTransformControl always measures its child at infinite constraint to
+                 get its natural size, so a bottom-anchored TextBlock inside the board itself
+                 sits at the bottom of the board's own tight-fit content — i.e. right below
+                 however tall the current tableau happens to be — not the bottom of the
+                 window. Text/visibility are set per-game in MainWindow.axaml.cs. -->
+            <TextBlock x:Name="SolitaireKeyHintLabel"
+                       FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
+                       VerticalAlignment="Bottom" IsHitTestVisible="False"
+                       FontFamily="Segoe UI"
+                       Margin="0,4,0,8"/>
+
+            <!-- Preferences Modal Dialog Overlay — spans both rows (Grid.RowSpan) so it
+                 covers the full window instead of just Row 0's Auto-sized toolbar strip,
+                 which otherwise made the panel center within that thin strip instead of
+                 the whole window (ZIndex above VignetteOverlay so its buttons stay unaffected) -->
+            <Grid x:Name="PreferencesOverlay" Background="Transparent" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="95">
+                <!-- Insets the panel so its bound MaxHeight below leaves breathing room
+                     instead of touching the window edges exactly. -->
+                <Grid x:Name="PreferencesInset" Margin="20">
+                    <!-- Caps the panel to the available window height (per-game window sizes
+                         vary — e.g. Freecell's taller board) and makes the settings content
+                         scroll internally instead of being silently clipped off the bottom,
+                         while the title and Cancel/OK/View Stats row stay always visible. -->
+                    <Border x:Name="PreferencesPanel" Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="{Binding #PreferencesInset.Bounds.Height}" BoxShadow="0 4 20 0 #A0000000">
+                        <Grid RowDefinitions="Auto,*,Auto">
+                            <TextBlock Grid.Row="0" Text="Preferences" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" Margin="0,0,0,15" />
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <ContentControl x:Name="PreferencesContent" />
+                            </ScrollViewer>
+                            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,15,0,0">
+                                <TextBlock Text="View Stats" Grid.Column="0"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="#1155AA" TextDecorations="Underline"
+                                           Cursor="Hand" PointerPressed="ViewStats_PointerPressed"/>
+                                <Button Classes="light-secondary" Content="Cancel" Click="CancelPreferences_Click" Grid.Column="1"
+                                        Width="80" HorizontalContentAlignment="Center" Margin="0,0,8,0" />
+                                <Button Classes="light-primary" Content="OK" Click="ClosePreferences_Click" Grid.Column="2"
+                                        Width="80" HorizontalContentAlignment="Center" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Stats Modal Dialog Overlay — same Grid.RowSpan fix as PreferencesOverlay above,
+                 so it centers in the full window instead of just Row 0's toolbar strip
+                 (ZIndex above VignetteOverlay so its buttons stay unaffected) -->
+            <Grid x:Name="StatsOverlay" Background="#90000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="95">
+                <Border Background="White" CornerRadius="8" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
+                    <StackPanel Spacing="14" Width="300">
+                        <TextBlock x:Name="StatsTitleText" Text="Klondike Statistics" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
+                        <Rectangle Height="1" Fill="#DDDDDD" />
+                        <StackPanel x:Name="StatsFixedRows" Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Games Played" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsGamesPlayedText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Games Won" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsGamesWonText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="High Score" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsHighScoreText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Win Percentage" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsWinPctText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Current Streak" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsCurrentStreakText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Longest Streak" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsLongestStreakText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Avg Winning Time" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsAvgWinTimeText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Fastest Win" Foreground="#1A1A1A" />
+                                <TextBlock Grid.Column="1" x:Name="StatsFastestWinText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            </Grid>
+                        </StackPanel>
+                        <!-- Blackjack / Video Poker have a different field set (no streaks/timing),
+                             so their rows are built in code-behind rather than fixed like above. -->
+                        <StackPanel x:Name="StatsDynamicRows" Spacing="8" IsVisible="False" />
+                        <Rectangle Height="1" Fill="#DDDDDD" />
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Button Content="Reset Stats" Click="ResetStats_Click" Grid.Column="0"
+                                    Background="Transparent" Foreground="#CC3333" BorderThickness="0" />
+                            <Button Content="Close" Click="CloseStats_Click" Grid.Column="2"
+                                    Width="80" HorizontalContentAlignment="Center" Classes="light-secondary" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Game Action Confirmation Overlay — ZIndex above the toolbar (100) so it actually
+                 blocks toolbar clicks (e.g. GameSelectionBox/PokerVariantBox) while a confirmation
+                 is pending; otherwise a second toolbar action could silently swap out _pendingAction
+                 with no acknowledgment that the first request was dropped. -->
+            <Grid x:Name="ConfirmActionOverlay" Background="Transparent" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="101">
+                <Border Background="White" CornerRadius="8" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                    <StackPanel Spacing="15" Width="260">
+                        <TextBlock x:Name="ConfirmActionTitle" Text="Start New Game?" FontSize="16" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="ConfirmActionMessage" Text="Are you sure you want to abandon the current game and start a new one?" FontSize="12" Foreground="#555555" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
+                        <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
+                            <Button x:Name="ConfirmActionButton" Classes="light-danger" Content="New Game" Click="ConfirmAction_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,4,0" />
+                            <Button Classes="light-secondary" Content="Cancel" Click="CancelConfirmAction_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="4,0,0,0" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Custom board background image (replaces flat felt color when set) — sits behind
+             everything, ZIndex set at runtime in ApplyBoardBackground (below VignetteOverlay's
+             runtime ZIndex so the vignette still darkens it the same way it darkens felt color) -->
+        <Image x:Name="BoardBackgroundImage" Grid.Row="0" Grid.RowSpan="2"
+               IsHitTestVisible="False" IsVisible="False" Stretch="UniformToFill" ZIndex="80"
+               RenderOptions.BitmapInterpolationMode="HighQuality" />
+
+        <!-- App-wide Vignette depth overlay (covers both top bar and game board) -->
+        <Rectangle x:Name="VignetteOverlay" Grid.Row="0" Grid.RowSpan="2" IsHitTestVisible="False" IsVisible="False" ZIndex="90">
+            <Rectangle.Fill>
+                <RadialGradientBrush Center="50%,50%" Radius="0.8">
+                    <GradientStop Color="#00000000" Offset="0.2"/>
+                    <GradientStop Color="#60000000" Offset="1.0"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+    </Grid>
+
+    <Window.Styles>
+        <!-- Toolbar Button Styles -->
+        <Style Selector="Button.toolbar">
+            <Setter Property="Background" Value="#26FFFFFF" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08"/>
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.toolbar:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#40FFFFFF" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="White" />
+        </Style>
+        <Style Selector="Button.toolbar:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.04)" />
+        </Style>
+        <Style Selector="Button.toolbar:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.93)" />
+        </Style>
+        
+        <!-- Toolbar ComboBox Styles -->
+        <Style Selector="ComboBox.toolbar-combo">
+            <Setter Property="Background" Value="#26FFFFFF" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+        <Style Selector="ComboBox.toolbar-combo:pointerover /template/ Border">
+            <Setter Property="Background" Value="#40FFFFFF" />
+            <Setter Property="BorderBrush" Value="White" />
+        </Style>
+        <Style Selector="ComboBox.toolbar-combo /template/ PathIcon">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+    </Window.Styles>
+</Window>
