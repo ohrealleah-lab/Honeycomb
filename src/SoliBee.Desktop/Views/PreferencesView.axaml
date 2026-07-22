@@ -86,7 +86,7 @@
             <Button Content="Help Guide" Click="Help_Click" Classes="light-secondary"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
 
-            <Button Content="About SoliBee" Click="About_Click" Classes="light-secondary"
+            <Button Content="About Honeycomb" Click="About_Click" Classes="light-secondary"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                     Margin="0,4,0,0" />
         </StackPanel>
