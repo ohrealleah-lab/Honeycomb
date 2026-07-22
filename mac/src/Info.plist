@@ -22,25 +22,5 @@
     <string>AppIcon</string>
     <key>NSHumanReadableCopyright</key>
     <string>© 2026 Leahbee. All rights reserved.</string>
-
-    <!-- Sparkle (github.com/sparkle-project/Sparkle) auto-update config. -->
-    <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/ohrealleah-lab/Honeycomb/main/mac/appcast.xml</string>
-    <key>SUEnableAutomaticChecks</key>
-    <true/>
-    <!-- 30 days, in seconds — matches the cadence the old hand-rolled UpdateChecker used. -->
-    <key>SUScheduledCheckInterval</key>
-    <integer>2592000</integer>
-    <!--
-      REPLACE ME: Sparkle's own EdDSA update-authenticity signature (separate from, and not
-      a substitute for, real Apple code signing/notarization — this only stops a tampered/
-      MITM'd update download from being accepted, it does nothing for Gatekeeper).
-      Generate a real keypair with Sparkle's bundled `generate_keys` tool (after `swift
-      build`, find it under .build/.../artifacts or run `swift package plugin` per Sparkle's
-      docs), keep the private key OUT of the repo (store it as a GitHub Actions secret for
-      the release workflow's `sign_update` step), and paste the public key below.
-    -->
-    <key>SUPublicEDKey</key>
-    <string>REPLACE_WITH_GENERATED_PUBLIC_KEY</string>
 </dict>
 </plist>

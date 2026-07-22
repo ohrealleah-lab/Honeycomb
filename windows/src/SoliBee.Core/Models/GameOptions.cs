@@ -61,6 +61,8 @@ public class GameOptions
     // live options against this theme's saved snapshot detects unsaved drift.
     public Guid? ActiveThemeId { get; set; } = null;
     public string LastGameMode { get; set; } = "SolitaireDraw1";
+    public int HoneycombActiveDeckIndex { get; set; } = 0;
+    public List<int> PlayerDeckIds { get; set; } = new List<int> { 1, 2, 3, 4, 5 };
 
     // Debug option to scale the vignette (0.5–2.0)
     public double VignetteScale   { get; set; } = 1.0;
@@ -90,13 +92,6 @@ public class GameOptions
     public string? ThemeTextRed { get; set; }
     public string? ThemeTextBlackNormal { get; set; }
     public string? ThemeCardShadow { get; set; }
-
-    // Update-check state (see UpdateCheckService). UpdateChecksDisabledAtVersion
-    // records which version was running when the user declined, so a later install
-    // of anything newer than that can clear the flag automatically.
-    public bool UpdateChecksDisabled { get; set; } = false;
-    public string? UpdateChecksDisabledAtVersion { get; set; }
-    public DateTime? LastUpdateCheckUtc { get; set; }
 
     // Deep-copies CustomCardBacks (not just the list container) so callers can diff
     // "old vs new" against the live options object — a shallow element copy would let

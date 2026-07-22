@@ -55,21 +55,12 @@
                        Width="260"
                        IsVisible="False" />
 
-            <StackPanel x:Name="UpdateActionsPanel"
-                        Orientation="Horizontal" Spacing="8"
-                        HorizontalAlignment="Center"
-                        IsVisible="False">
-                <Button x:Name="DeclineUpdateButton"
-                        Content="Don't Ask Again"
-                        Click="DeclineUpdate_Click"
-                        Classes="light-secondary"
-                        FontSize="11" />
-                <Button x:Name="InstallUpdateButton"
-                        Content="Install &amp; Restart"
-                        Click="InstallUpdate_Click"
-                        Classes="light-primary"
-                        FontSize="11" />
-            </StackPanel>
+            <Button x:Name="ViewReleaseButton"
+                    Content="View Release"
+                    Click="ViewRelease_Click"
+                    Classes="light-primary"
+                    FontSize="11"
+                    IsVisible="False" />
         </StackPanel>
 
         <Button Grid.Row="1"

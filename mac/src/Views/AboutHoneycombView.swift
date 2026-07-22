@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AboutHoneycombView: View {
     @State private var checker = UpdateChecker.shared
+    @Environment(\.openURL) private var openURL
 
     private var versionString: String {
         "Version \(checker.currentVersion)"
@@ -35,15 +36,60 @@ struct AboutHoneycombView: View {
 
             Divider().padding(.vertical, 4)
 
-            // Sparkle owns the actual check/download/install flow and shows its own
-            // native alert from here — this button just kicks it off.
-            Button("Check for Updates…") {
-                checker.checkForUpdates()
-            }
-            .buttonStyle(.link)
-            .font(.system(size: 12))
+            checkForUpdatesSection
         }
         .padding(32)
         .frame(width: 320)
+    }
+
+    @ViewBuilder
+    private var checkForUpdatesSection: some View {
+        switch checker.manualCheckState {
+        case .idle:
+            Button("Check for Updates…") {
+                checker.checkNow()
+            }
+            .buttonStyle(.link)
+            .font(.system(size: 12))
+
+        case .checking:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Checking for updates…")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+
+        case .upToDate:
+            VStack(spacing: 4) {
+                Text("You're up to date.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Button("Check Again") { checker.checkNow() }
+                    .buttonStyle(.link)
+                    .font(.system(size: 11))
+            }
+
+        case .failed:
+            VStack(spacing: 4) {
+                Text("Couldn't check for updates. Check your internet connection.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Try Again") { checker.checkNow() }
+                    .buttonStyle(.link)
+                    .font(.system(size: 12))
+            }
+
+        case .newerAvailable(let outcome):
+            VStack(spacing: 8) {
+                Text("Version \(outcome.latestVersion) is available.")
+                    .font(.system(size: 12, weight: .semibold))
+                Button("View Release") {
+                    openURL(outcome.releaseURL)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
     }
 }

@@ -12,11 +12,8 @@ blackjack_bridge
 .swiftpm/
 SoliBee.zip
 
-# CI-only release build byproducts (DMG output, downloaded Sparkle CLI tools, staged signing key)
+# CI-only release build byproduct (DMG output)
 dist/
-sparkle-tools/
-sparkle-tools.tar.xz
-ed_key.txt
 
 # QA Simulation Scripts
 qa_sim.py
