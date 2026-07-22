@@ -1,5 +1,3 @@
-using System;
-using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using SoliBee.Core.Services;
@@ -8,8 +6,6 @@ namespace SoliBee.Desktop.Views;
 
 public partial class AboutWindow : Window
 {
-    private UpdateCheckOutcome? _lastOutcome;
-
     public AboutWindow()
     {
         InitializeComponent();
@@ -29,7 +25,6 @@ public partial class AboutWindow : Window
         try
         {
             var outcome = await UpdateCheckService.CheckNowAsync();
-            _lastOutcome = outcome;
 
             if (outcome.IsNewer)
             {
@@ -60,16 +55,25 @@ public partial class AboutWindow : Window
         CheckForUpdatesButton.IsVisible = true;
     }
 
-    private void ViewRelease_Click(object? sender, RoutedEventArgs e)
+    // Downloads and applies the update found by CheckForUpdates_Click above, then restarts
+    // the app — no browser hand-off anymore, Velopack handles the whole install in place.
+    private async void InstallUpdate_Click(object? sender, RoutedEventArgs e)
     {
-        if (_lastOutcome == null) return;
+        DeclineUpdateButton.IsEnabled = false;
+        InstallUpdateButton.IsEnabled = false;
+        UpdateStatusText.Text = "Downloading update…";
+
         try
         {
-            Process.Start(new ProcessStartInfo(_lastOutcome.ReleaseUrl) { UseShellExecute = true });
+            await UpdateCheckService.InstallUpdateAsync();
+            // ApplyUpdatesAndRestart above exits and relaunches the process — nothing
+            // after this point normally runs.
         }
         catch
         {
-            // Best-effort — nothing sensible to do if the OS can't hand off to a browser.
+            UpdateStatusText.Text = "Couldn't download the update. Check your internet connection.";
+            DeclineUpdateButton.IsEnabled = true;
+            InstallUpdateButton.IsEnabled = true;
         }
     }
 }

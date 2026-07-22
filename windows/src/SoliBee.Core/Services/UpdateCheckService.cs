@@ -1,30 +1,35 @@
 using System;
-using System.Net.Http;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading.Tasks;
 using SoliBee.Core.Models;
+using Velopack;
+using Velopack.Sources;
 
 namespace SoliBee.Core.Services;
 
+// ReleaseUrl still points at the GitHub release page (for a player who wants to read the
+// changelog before updating) even though the actual update no longer needs a browser at
+// all — InstallUpdateAsync downloads and applies it directly via Velopack.
 public sealed record UpdateCheckOutcome(string LatestVersion, string ReleaseUrl, bool IsNewer);
 
-// Checks GitHub Releases for a newer Honeycomb build. Two entry points:
-// CheckIfDueAsync (launch-time, respects the 30-day cadence and the disabled flag)
-// and CheckNowAsync (the About window's manual "Check for Updates" button, which
-// always hits the network live regardless of either). Both funnel through the
-// same fetch/compare logic; only how the result is surfaced differs.
+// Checks Velopack's GitHub-hosted release feed for a newer Honeycomb build, and can
+// download + apply it directly (no browser hand-off). Two check entry points:
+// CheckIfDueAsync (launch-time, respects the 30-day cadence and the disabled flag) and
+// CheckNowAsync (the About window's manual "Check for Updates" button, which always hits
+// the network live regardless of either). Both funnel through the same fetch/compare
+// logic; only how the result is surfaced differs.
 public static class UpdateCheckService
 {
     private const string Repo = "ohrealleah-lab/Honeycomb";
     private const double CheckIntervalDays = 30;
 
-    private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+    private static readonly UpdateManager Manager =
+        new(new GithubSource($"https://github.com/{Repo}", null, false));
 
-    static UpdateCheckService()
-    {
-        Http.DefaultRequestHeaders.UserAgent.ParseAdd("Honeycomb-App");
-    }
+    // Stashed from the most recent successful check so InstallUpdateAsync doesn't need to
+    // re-fetch — Velopack's actual download/apply calls need the full UpdateInfo object,
+    // not just the version string UpdateCheckOutcome exposes to callers.
+    private static UpdateInfo? _pendingUpdate;
 
     public static string CurrentVersion =>
         Assembly.GetExecutingAssembly()
@@ -35,8 +40,8 @@ public static class UpdateCheckService
     // Automatic launch-time check: resets a stale "disabled" flag if a newer version
     // has since been installed, then — if not disabled and the 30-day cadence is due —
     // checks live. Returns null when no prompt is warranted (disabled, not due, no
-    // newer version, or the check failed — offline handling is deliberately silent
-    // here so a launch never surfaces a network error to the user).
+    // newer version, not a real Velopack install, or the check failed — offline handling
+    // is deliberately silent here so a launch never surfaces a network error to the user).
     public static async Task<UpdateCheckOutcome?> CheckIfDueAsync()
     {
         var options = SettingsService.LoadOptions();
@@ -51,7 +56,7 @@ public static class UpdateCheckService
         }
 
         var outcome = await FetchLatestReleaseAsync();
-        if (outcome == null) return null; // offline/failed — stay silent, retry next launch
+        if (outcome == null) return null; // offline/failed/not installed — stay silent, retry next launch
 
         options.LastUpdateCheckUtc = DateTime.UtcNow;
         SettingsService.SaveOptions(options);
@@ -65,13 +70,24 @@ public static class UpdateCheckService
     public static async Task<UpdateCheckOutcome> CheckNowAsync()
     {
         var outcome = await FetchLatestReleaseAsync()
-            ?? throw new InvalidOperationException("Unable to reach GitHub to check for updates.");
+            ?? throw new InvalidOperationException("Unable to check for updates.");
 
         var options = SettingsService.LoadOptions();
         options.LastUpdateCheckUtc = DateTime.UtcNow;
         SettingsService.SaveOptions(options);
 
         return outcome;
+    }
+
+    // Downloads and applies the update found by the most recent CheckIfDueAsync/CheckNowAsync
+    // call, then restarts the app into the new version. Throws if there's no pending update
+    // to install (i.e. called without a preceding successful newer-version check).
+    public static async Task InstallUpdateAsync()
+    {
+        var info = _pendingUpdate
+            ?? throw new InvalidOperationException("No update is pending — check for updates first.");
+        await Manager.DownloadUpdatesAsync(info);
+        Manager.ApplyUpdatesAndRestart(info);
     }
 
     // "Don't Ask Again" from either the automatic prompt or the About window.
@@ -96,28 +112,23 @@ public static class UpdateCheckService
 
     private static async Task<UpdateCheckOutcome?> FetchLatestReleaseAsync()
     {
+        // Not a real Velopack install (e.g. a local dev/debug run) — there's nothing to
+        // update in place, so don't even attempt the network call.
+        if (!Manager.IsInstalled) return null;
+
         try
         {
-            var response = await Http.GetAsync($"https://api.github.com/repos/{Repo}/releases/latest");
-            if (!response.IsSuccessStatusCode) return null;
+            var info = await Manager.CheckForUpdatesAsync();
+            _pendingUpdate = info;
+            if (info == null) return null;
 
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var doc = await JsonDocument.ParseAsync(stream);
-            var root = doc.RootElement;
-            if (!root.TryGetProperty("tag_name", out var tagProp) ||
-                !root.TryGetProperty("html_url", out var urlProp))
-            {
-                return null;
-            }
-
-            var tagName = tagProp.GetString() ?? "";
-            var releaseUrl = urlProp.GetString() ?? "";
-            if (tagName.Length == 0 || releaseUrl.Length == 0) return null;
-
-            return new UpdateCheckOutcome(tagName, releaseUrl, IsVersionNewer(tagName, CurrentVersion));
+            var latestVersion = info.TargetFullRelease.Version.ToString();
+            var releaseUrl = $"https://github.com/{Repo}/releases/tag/{latestVersion}";
+            return new UpdateCheckOutcome(latestVersion, releaseUrl, IsVersionNewer(latestVersion, CurrentVersion));
         }
         catch
         {
+            _pendingUpdate = null;
             return null;
         }
     }

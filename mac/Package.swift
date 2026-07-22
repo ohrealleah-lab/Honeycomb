@@ -9,11 +9,15 @@ let package = Package(
     products: [
         .executable(name: "Honeycomb", targets: ["Honeycomb"])
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.4")
+    ],
     targets: [
         .executableTarget(
             name: "Honeycomb",
-            dependencies: [],
+            dependencies: [
+                .product(name: "Sparkle", package: "Sparkle")
+            ],
             path: "src"
         ),
         .testTarget(

@@ -64,9 +64,9 @@
                         Click="DeclineUpdate_Click"
                         Classes="light-secondary"
                         FontSize="11" />
-                <Button x:Name="ViewReleaseButton"
-                        Content="View Release"
-                        Click="ViewRelease_Click"
+                <Button x:Name="InstallUpdateButton"
+                        Content="Install &amp; Restart"
+                        Click="InstallUpdate_Click"
                         Classes="light-primary"
                         FontSize="11" />
             </StackPanel>

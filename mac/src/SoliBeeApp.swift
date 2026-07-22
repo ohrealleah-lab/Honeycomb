@@ -20,7 +20,10 @@ struct SoliBeeApp: App {
                 .onAppear {
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
-                    UpdateChecker.shared.checkIfDue()
+                    // Touching the singleton starts Sparkle's SPUStandardUpdaterController,
+                    // which then owns its own automatic-check schedule (SUScheduledCheckInterval
+                    // in Info.plist) and shows its own native alert when it finds something.
+                    _ = UpdateChecker.shared
                 }
         }
         .windowStyle(.hiddenTitleBar)

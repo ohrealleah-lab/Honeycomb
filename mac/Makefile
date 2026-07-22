@@ -31,7 +31,15 @@ build:
 	# Copy compiled binary from SPM build path to the app bundle
 	cp .build/release/$(APP_NAME) $(MACOS_BIN)
 	chmod +x $(MACOS_BIN)
-	# Sign the app bundle so macOS doesn't kill it on launch
+	# Sparkle.framework must ship inside the bundle — the binary's @loader_path rpath
+	# (see `otool -l`) expects it right next to the executable, matching where SwiftPM
+	# itself already puts it under .build/release/.
+	cp -R .build/release/Sparkle.framework $(APP_BUNDLE)/Contents/MacOS/Sparkle.framework
+	# Sign the app bundle so macOS doesn't kill it on launch. NOTE: --deep re-signs
+	# Sparkle.framework's own nested XPC helpers too, which Sparkle's docs advise against
+	# once this moves to real Developer ID signing (sign Sparkle.framework's components
+	# individually first, then the outer bundle without --deep) — fine for now since
+	# everything here is only ad-hoc signed anyway.
 	codesign --force --deep --sign - $(APP_BUNDLE)
 	@echo "Build successful! $(APP_BUNDLE) created."
 
@@ -42,16 +50,23 @@ clean:
 	rm -f test_runner
 
 test:
-	# Compile test runner excluding SoliBeeApp.swift (which has the GUI @main entry)
-	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Honeycomb/Models/*.swift src/Honeycomb/ViewModels/*.swift src/Honeycomb/Views/*.swift src/Debug/*.swift SoliBeeTests/*.swift
-	# Run tests
-	./test_runner
+	# Ensure .build/release/Sparkle.framework exists (SwiftPM resolves/places it here;
+	# cheap no-op rebuild if already up to date).
+	swift build -c release
+	# Compile test runner excluding SoliBeeApp.swift (which has the GUI @main entry).
+	# -F points at the resolved Sparkle.framework above so `import Sparkle` in
+	# UpdateChecker.swift compiles here too, since this bypasses SwiftPM's own dependency
+	# resolution entirely.
+	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 -F .build/release src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Honeycomb/Models/*.swift src/Honeycomb/ViewModels/*.swift src/Honeycomb/Views/*.swift src/Debug/*.swift SoliBeeTests/*.swift
+	# Run tests — DYLD_FRAMEWORK_PATH so the freshly-linked test_runner can find Sparkle.framework at runtime too
+	DYLD_FRAMEWORK_PATH=.build/release ./test_runner
 	# Cleanup test runner binary
 	rm -f test_runner
 
 bridge:
+	swift build -c release
 	# Compile the Universal Agent Bridge
-	swiftc -o solibee_bridge -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Honeycomb/Models/*.swift src/Honeycomb/ViewModels/*.swift src/Honeycomb/Views/*.swift src/Debug/*.swift SoliBeeBridge/UniversalBridge.swift
+	swiftc -o solibee_bridge -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 -F .build/release src/Models/*.swift src/ViewModels/*.swift src/Views/*.swift src/Beecell/Models/*.swift src/Beecell/ViewModels/*.swift src/Beecell/Views/*.swift src/Spider/Models/*.swift src/Spider/ViewModels/*.swift src/Spider/Views/*.swift src/Blackjack/Models/*.swift src/Blackjack/ViewModels/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Models/*.swift src/VideoPoker/ViewModels/*.swift src/VideoPoker/Views/*.swift src/Honeycomb/Models/*.swift src/Honeycomb/ViewModels/*.swift src/Honeycomb/Views/*.swift src/Debug/*.swift SoliBeeBridge/UniversalBridge.swift
 
 run: build
 	open $(APP_BUNDLE)

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sparkle appcast feed for Honeycomb (macOS). Hosted at:
+  https://raw.githubusercontent.com/ohrealleah-lab/Honeycomb/main/mac/appcast.xml
+  (see Info.plist's SUFeedURL).
+
+  The mac release workflow appends a new <item> here on every tagged release —
+  this file should always be committed with at least the entries for versions
+  still worth updating from. Do not hand-edit sle:enclosure length/sparkle:edSignature
+  values; those come from Sparkle's `sign_update` tool run against the real DMG.
+-->
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>Honeycomb Card Suite</title>
+        <link>https://raw.githubusercontent.com/ohrealleah-lab/Honeycomb/main/mac/appcast.xml</link>
+        <description>Updates for Honeycomb Card Suite (macOS)</description>
+        <language>en</language>
+        <!-- Release entries are appended above this comment by CI, newest first. -->
+    </channel>
+</rss>

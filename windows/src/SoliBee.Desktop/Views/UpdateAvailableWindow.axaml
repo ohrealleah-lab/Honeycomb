@@ -25,11 +25,13 @@
                     Orientation="Horizontal" Spacing="8"
                     HorizontalAlignment="Center"
                     Margin="0,16,0,0">
-            <Button Content="Don't Ask Again"
+            <Button x:Name="DeclineUpdateButton"
+                    Content="Don't Ask Again"
                     Click="DeclineUpdate_Click"
                     Classes="light-secondary" />
-            <Button Content="View Release"
-                    Click="ViewRelease_Click"
+            <Button x:Name="InstallUpdateButton"
+                    Content="Install &amp; Restart"
+                    Click="InstallUpdate_Click"
                     Classes="light-primary" />
         </StackPanel>
     </Grid>

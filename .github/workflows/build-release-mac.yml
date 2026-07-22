@@ -1,0 +1,124 @@
+name: Build and Release (macOS)
+
+# Mirrors build-sign-windows.yml's shape: build (and test) on every push/PR as a sanity
+# check, but only package a DMG / update the Sparkle appcast / publish a GitHub Release
+# on an actual `v*` tag push.
+#
+# NOTE: this file must live here, at the repo root's .github/workflows/ — GitHub Actions
+# only discovers workflows at that exact path, never inside a subdirectory's own
+# .github/workflows/.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mac
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: make test
+
+      # ── Package + release (tag pushes only) ──────────────────────────────────
+      # Everything below only runs for an actual `v*` tag push — branch pushes and PRs
+      # stop after build/test above.
+
+      - name: Determine version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Install create-dmg
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: brew install create-dmg
+
+      - name: Build DMG
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p dist
+          create-dmg \
+            --volname "Honeycomb ${{ steps.version.outputs.version }}" \
+            --app-drop-link 450 150 \
+            "dist/Honeycomb-${{ steps.version.outputs.version }}.dmg" \
+            "Honeycomb.app" \
+            || true
+          # create-dmg exits non-zero on some harmless warnings (e.g. Finder AppleEvents
+          # not available in a headless CI session) even when the DMG was written fine —
+          # verify the actual output file exists rather than trusting its exit code alone.
+          test -f "dist/Honeycomb-${{ steps.version.outputs.version }}.dmg"
+
+      # ── Sparkle signing + appcast update (skipped when SPARKLE_ED_PRIVATE_KEY is absent) ──
+      # To enable: generate a keypair with Sparkle's bundled `generate_keys` tool, add the
+      # PRIVATE key (raw string, not base64) as a repository secret named
+      # SPARKLE_ED_PRIVATE_KEY, and paste the PUBLIC key into src/Info.plist's
+      # SUPublicEDKey. Until that's done, this step is skipped and the release still gets
+      # built and attached to the GitHub Release below — it just won't be discoverable by
+      # Sparkle's in-app auto-updater yet (appcast.xml won't have a new entry).
+      - name: Download Sparkle CLI tools
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.SPARKLE_ED_PRIVATE_KEY != ''
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          curl -L -o sparkle-tools.tar.xz \
+            https://github.com/sparkle-project/Sparkle/releases/download/2.9.4/Sparkle-2.9.4.tar.xz
+          mkdir -p sparkle-tools
+          tar -xf sparkle-tools.tar.xz -C sparkle-tools
+
+      - name: Generate appcast + sign release
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.SPARKLE_ED_PRIVATE_KEY != ''
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          echo -n "$SPARKLE_ED_PRIVATE_KEY" > ed_key.txt
+          sparkle-tools/bin/generate_appcast --ed-key-file ed_key.txt dist/
+          rm -f ed_key.txt
+
+      - name: Commit updated appcast.xml
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.SPARKLE_ED_PRIVATE_KEY != ''
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          cp dist/appcast.xml appcast.xml
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml
+          git diff --cached --quiet && exit 0
+          git commit -m "Update appcast.xml for ${{ steps.version.outputs.version }}"
+          git push origin HEAD:main
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            dist/*.dmg \
+            --title "Honeycomb Card Suite ${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            --draft=false || \
+          gh release upload "${{ github.ref_name }}" dist/*.dmg --clobber
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Honeycomb-mac
+          path: |
+            mac/Honeycomb.app
+            mac/dist/
+          retention-days: 30
