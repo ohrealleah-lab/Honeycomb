@@ -175,9 +175,12 @@ public struct SpiderView: View {
                             ForEach(viewModel.state.foundations) { pile in
                                 ZStack {
                                     EmptyPileView(symbol: "K")
-                                    
+
                                     if let topCard = pile.topCard {
-                                        CardView(card: topCard)
+                                        CardView(
+                                            card: topCard,
+                                            pointPopupText: viewModel.pointPopup?.cardId == topCard.id ? viewModel.pointPopup?.displayText : nil
+                                        )
                                     }
                                 }
                             }
@@ -195,6 +198,7 @@ public struct SpiderView: View {
                                     focusedCardIndex: viewModel.activeCursor?.pileId == pile.id ? viewModel.activeCursor?.cardIndex : nil,
                                     isSelected: viewModel.selectedCardsSource == pile.id,
                                     selectedCardIndex: viewModel.selectedCardsSource == pile.id ? viewModel.selectedCardsIndex : nil,
+                                    pointPopup: viewModel.pointPopup,
                                     onDragStarted: { card, stack, startLoc in
                                         viewModel.clearKeyboardCursor()
                                         viewModel.clearHint()
@@ -763,6 +767,7 @@ struct SpiderOptionsView: View {
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
     @State private var noStressMode: Bool
+    @State private var showPointHighlights: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -777,6 +782,7 @@ struct SpiderOptionsView: View {
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
+        _showPointHighlights = State(initialValue: viewModel.options.showPointHighlights)
     }
 
     var body: some View {
@@ -792,6 +798,7 @@ struct SpiderOptionsView: View {
                 updatedOpts.isSoundEnabled = isSoundEnabled
                 updatedOpts.hideHintButton = hideHintButton
                 updatedOpts.noStressMode = noStressMode
+                updatedOpts.showPointHighlights = showPointHighlights
 
                 viewModel.options = updatedOpts
             }
@@ -813,6 +820,9 @@ struct SpiderOptionsView: View {
                 .font(.system(.body))
 
             Toggle("No Stress Mode", isOn: $noStressMode)
+                .font(.system(.body))
+
+            Toggle("Point Highlights", isOn: $showPointHighlights)
                 .font(.system(.body))
         }
     }

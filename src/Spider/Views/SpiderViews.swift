@@ -42,11 +42,14 @@ public struct SpiderTableauView: View {
     public var focusedCardIndex: Int? = nil
     public var isSelected: Bool = false
     public var selectedCardIndex: Int? = nil
+    // Point Highlights: the "-1"/"+100" popup shown when this pile's top card is the
+    // one the ViewModel just scored via.
+    public var pointPopup: CardPointPopup? = nil
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
     let onDoubleClick: (Card) -> Void
-    
+
     public init(
         pile: Pile,
         draggedCardIDs: Set<UUID>,
@@ -55,6 +58,7 @@ public struct SpiderTableauView: View {
         focusedCardIndex: Int? = nil,
         isSelected: Bool = false,
         selectedCardIndex: Int? = nil,
+        pointPopup: CardPointPopup? = nil,
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void,
@@ -67,6 +71,7 @@ public struct SpiderTableauView: View {
         self.focusedCardIndex = focusedCardIndex
         self.isSelected = isSelected
         self.selectedCardIndex = selectedCardIndex
+        self.pointPopup = pointPopup
         self.onDragStarted = onDragStarted
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
@@ -106,8 +111,12 @@ public struct SpiderTableauView: View {
                 
                 let cardIsFocused = isFocused && index == focusedCardIndex
                 let cardIsSelected = isSelected && index == selectedCardIndex
-                
-                CardView(card: card, isFocused: cardIsFocused, isSelected: cardIsSelected)
+                let isTopCard = index == pile.cards.count - 1
+
+                CardView(
+                    card: card, isFocused: cardIsFocused, isSelected: cardIsSelected,
+                    pointPopupText: isTopCard && pointPopup?.cardId == card.id ? pointPopup?.displayText : nil
+                )
                     .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: CGFloat(index) * offset)

@@ -1,9 +1,9 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
-echo "================================"
-echo "  SoliBee Build Tool"
-echo "================================"
+echo "===================================================="
+echo "  Hey Cutie Bee, Welcome to the Honeycomb Build Tool"
+echo "===================================================="
 echo ""
 echo "  1) Build"
 echo "  2) Build & Run"

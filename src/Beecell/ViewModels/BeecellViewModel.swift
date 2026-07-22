@@ -25,6 +25,11 @@ public final class BeecellViewModel {
     public var isAutocompleteAvailable: Bool = false
     public var isAutoplayRunning: Bool = false
 
+    // Point Highlights: transient "+N"/"-N" popup over the card responsible for a score
+    // change — not part of `state`/undo snapshots, same precedent as isAutoplayRunning.
+    public var pointPopup: CardPointPopup? = nil
+    private var pointPopupGeneration: Int = 0
+
     // Stuck detection
     public var isStuck: Bool = false
     
@@ -373,7 +378,8 @@ public final class BeecellViewModel {
         
         // 3. Scoring
         adjustScore(from: sourcePile.type, to: targetPile.type)
-        
+        updatePointPopup(anchorCard: cards.last, source: sourcePile.type, target: targetPile.type)
+
         state.movesCount += 1
         checkWinState()
         checkAutocompleteState()
@@ -421,7 +427,28 @@ public final class BeecellViewModel {
             state.score = max(0, state.score - 15)
         }
     }
-    
+
+    // Point Highlights: mirrors adjustScore's branching.
+    private func updatePointPopup(anchorCard: Card?, source: Pile.PileType, target: Pile.PileType) {
+        guard options.showPointHighlights, !isAutoplayRunning, let anchorCard else { return }
+        let popup: CardPointPopup?
+        if target == .foundation {
+            popup = CardPointPopup(cardId: anchorCard.id, displayText: "+10", isPositive: true)
+        } else if source == .foundation {
+            popup = CardPointPopup(cardId: anchorCard.id, displayText: "-15", isPositive: false)
+        } else {
+            popup = nil
+        }
+        guard let popup else { return }
+        pointPopupGeneration += 1
+        let generation = pointPopupGeneration
+        pointPopup = popup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self, self.pointPopupGeneration == generation else { return }
+            self.pointPopup = nil
+        }
+    }
+
     // MARK: - Timer Handling
 
     // `isTimed` has no UI control anymore (the old "Timed Game" toggle was replaced by
@@ -859,6 +886,7 @@ public final class BeecellViewModel {
         state.isTimerActive = currentIsTimerActive
         isAutoplayRunning = false
         isStuck = false
+        pointPopup = nil
         clearHint()
         clearKeyboardCursor()
         checkWinState()

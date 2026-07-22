@@ -212,6 +212,65 @@ struct BlackjackHelpView: View {
     }
 }
 
+// MARK: - Honeycomb Guide
+
+struct HoneycombHelpView: View {
+    var body: some View {
+        HelpShell(title: "Honeycomb", subtitle: "Triple Triad-style card battle") {
+            RuleSection(title: "Objective",
+                        text: "Battle an AI opponent on a 3×3 grid. Place your 5 cards one at a time; when a placement's facing stat beats an adjacent enemy card's opposite facing stat, you capture it. Whoever controls more of the 9 cells once the board fills wins the match.")
+
+            RuleSection(title: "How to Play",
+                        text: "Drag a card from your hand onto any empty board cell, or tap a hand card to select it and then tap an empty cell. You and the dealer alternate turns until the board is full.")
+
+            RuleSection(title: "Capturing & Combos",
+                        text: "Each card shows 4 stats — Top, Right, Bottom, Left. Placing a card next to an enemy card compares your facing stat to their opposite facing stat; the higher value flips the loser to your side (10 is shown as \"A\"). A card captured this way can immediately capture its own neighbors in a chain reaction, called a Combo.")
+
+            RuleSection(title: "Match Rules Overview",
+                        text: "Up to 2 rules can be active per match, chosen in Options before you Start Match. Ascension and Descension can't both be picked (they're opposites), and neither can Order and Chaos. Leave rule selection empty (and Normal Mode off) and Roulette randomly rolls 0–2 rules for you every match instead — Roulette is also the only way Reverse can appear, since it's too easily exploited to pick on purpose.")
+
+            RuleSection(title: "Ascension / Descension",
+                        text: "At the start of the match, 2 of the 4 suits are randomly chosen to be affected. Under Ascension, every card of an affected suit gains +1 to all four of its stats for each card of that suit currently on the board — recalculated before every placement's captures resolve, so the bonus grows as more of that suit hits the table. Descension is the same idea in reverse: −1 per card of that suit on the board. A card of an unaffected suit plays completely normally.")
+
+            RuleSection(title: "Same",
+                        text: "If 2 or more of a placed card's touching neighbors have a facing stat exactly equal to the attacker's matching facing stat, every one of those matching neighbors is captured at once — not just the strongest one. Your own adjacent cards count toward the trigger too, not only the dealer's, so a placement boxed in by 2 of your own matching cards can still fire Same (this is intentional, not a bug).")
+
+            RuleSection(title: "Plus",
+                        text: "If 2 or more touching neighbor pairs each sum (attacker's facing stat + that neighbor's facing stat) to the same total as each other, every card in that matching group is captured — even if the shared sum isn't the attacker's own stat. Like Same, your own adjacent cards count toward the trigger.")
+
+            RuleSection(title: "Fallen Ace",
+                        text: "A card showing a 1 that attacks a card showing a 10 (\"A\") always captures it, overriding the normal higher-beats-lower comparison — a 1 is the one value that can topple an Ace. Under Reverse, this flips too: an attacking 10 always captures a defending 1.")
+
+            RuleSection(title: "Reverse",
+                        text: "Capture direction is fully inverted: the attacker wins when its facing stat is lower than the defender's, not higher. Reverse only ever appears via Roulette, never by manual selection — the AI's own deck (and, under Fallen Ace, its capture math) is specially adjusted per difficulty so a nominally \"easy\" opponent doesn't become trivial under the inversion.")
+
+            RuleSection(title: "All Open / Three Open",
+                        text: "All Open reveals the dealer's entire hand face-up for the whole match; Three Open reveals exactly 3 random cards from it, staying revealed by that specific card's identity as the hand shrinks. Either way the reveal is symmetric — the dealer's AI gets the same look at your hand it's giving you, so nobody's playing with hidden information the other side lacks.")
+
+            RuleSection(title: "Swap",
+                        text: "Before the first turn, one random card from your hand trades places with one random card from the dealer's hand. The swapped card plays for whoever now holds it, but for Card Bank unlock and post-win steal eligibility it still belongs to its original owner if you don't recapture it during the match.")
+
+            RuleSection(title: "Order / Chaos",
+                        text: "Order restricts your legal play each turn to strictly the next card in your original deck order — no choosing. Chaos instead re-rolls one random legal card the instant a side's turn begins, highlighted with a thick yellow border; you'll see the dealer's mandated card highlighted at least 2 seconds before its AI actually plays it.")
+
+            RuleSection(title: "Sudden Death",
+                        text: "A 5-5 tie sends the match into Sudden Death: the board clears and immediately replays with each side's exact end-of-round cards, alternating who starts, until someone wins outright.")
+
+            RuleSection(title: "Difficulty",
+                        text: "Easy plays randomly. Medium greedily maximizes its own captures each turn. Hard and Ultra Hard search several moves ahead using a full positional evaluation, with Ultra Hard also fielding the strongest overall deck.")
+
+            RuleSection(title: "Hint",
+                        text: "On any difficulty below Ultra Hard, the Hint button suggests the strongest card-and-cell placement — found with the same search Ultra Hard's own AI uses — highlighting it for 2 seconds. It only ever considers dealer cards you've actually been shown, never one still hidden from you.")
+
+            RuleSection(title: "Card Bank & Decks",
+                        text: "Winning a card isn't automatic — after a win, you may drag one card the dealer played that round onto one of your 5 active deck slots, permanently unlocking it into your Card Bank. This steal is capped at one per match; Rematch (or start a new match) to steal again. Build named decks from Manage Decks, subject to rarity caps: at most one 5★ card, and at most one 4★ if a 5★ is already in the deck (otherwise up to two 4★).")
+
+            RuleSection(title: "No Stress Mode",
+                        text: "Deals a fixed, strong deck every match (one 5★, one 4★, three 3★) instead of your chosen active deck, and hides Steal Card — a relaxed way to play without managing a collection. This is a shared setting — enabling it here also enables it across the other games.")
+        }
+    }
+}
+
 struct ThemesHelpView: View {
     var body: some View {
         HelpShell(title: "Themes", subtitle: "Customize the look of every game") {
@@ -246,4 +305,5 @@ struct ThemesHelpView: View {
 #Preview("Spider Help") { SpiderHelpView() }
 #Preview("Video Poker Help") { VideoPokerHelpView() }
 #Preview("Blackjack Help") { BlackjackHelpView() }
+#Preview("Honeycomb Help") { HoneycombHelpView() }
 #Preview("Themes Help") { ThemesHelpView() }

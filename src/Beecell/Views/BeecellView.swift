@@ -205,6 +205,7 @@ public struct BeecellView: View {
                                             draggedCardIDs: Set(draggedCards.map { $0.id }),
                                             isFocused: viewModel.activeCursor?.pileId == foundation.id,
                                             isSelected: viewModel.selectedCardsSource == foundation.id,
+                                            pointPopup: viewModel.pointPopup,
                                             onDragStarted: { card, stack, startLoc in
                                                 viewModel.clearKeyboardCursor()
                                                 viewModel.clearHint()
@@ -272,6 +273,7 @@ public struct BeecellView: View {
                                             draggedCardIDs: Set(draggedCards.map { $0.id }),
                                             isFocused: viewModel.activeCursor?.pileId == foundation.id,
                                             isSelected: viewModel.selectedCardsSource == foundation.id,
+                                            pointPopup: viewModel.pointPopup,
                                             onDragStarted: { card, stack, startLoc in
                                                 viewModel.clearKeyboardCursor()
                                                 viewModel.clearHint()
@@ -331,6 +333,7 @@ public struct BeecellView: View {
                                             draggedCardIDs: Set(draggedCards.map { $0.id }),
                                             isFocused: viewModel.activeCursor?.pileId == foundation.id,
                                             isSelected: viewModel.selectedCardsSource == foundation.id,
+                                            pointPopup: viewModel.pointPopup,
                                             onDragStarted: { card, stack, startLoc in
                                                 viewModel.clearKeyboardCursor()
                                                 viewModel.clearHint()
@@ -364,6 +367,7 @@ public struct BeecellView: View {
                                     activeHint: viewModel.activeHint,
                                     isFocused: viewModel.activeCursor?.pileId == pile.id,
                                     isSelected: viewModel.selectedCardsSource == pile.id,
+                                    pointPopup: viewModel.pointPopup,
                                     onDragStarted: { card, stack, startLoc in
                                         viewModel.clearKeyboardCursor()
                                         viewModel.clearHint()
@@ -1050,6 +1054,7 @@ struct BeecellOptionsView: View {
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
     @State private var noStressMode: Bool
+    @State private var showPointHighlights: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -1064,6 +1069,7 @@ struct BeecellOptionsView: View {
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
+        _showPointHighlights = State(initialValue: viewModel.options.showPointHighlights)
     }
 
     var body: some View {
@@ -1079,6 +1085,7 @@ struct BeecellOptionsView: View {
                 updatedOpts.isSoundEnabled = isSoundEnabled
                 updatedOpts.hideHintButton = hideHintButton
                 updatedOpts.noStressMode = noStressMode
+                updatedOpts.showPointHighlights = showPointHighlights
 
                 viewModel.options = updatedOpts
             }
@@ -1098,6 +1105,9 @@ struct BeecellOptionsView: View {
                 .font(.system(.body))
 
             Toggle("No Stress Mode", isOn: $noStressMode)
+                .font(.system(.body))
+
+            Toggle("Point Highlights", isOn: $showPointHighlights)
                 .font(.system(.body))
         }
     }

@@ -2,23 +2,23 @@
 import PackageDescription
 
 let package = Package(
-    name: "SoliBee",
+    name: "Honeycomb",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "SoliBee", targets: ["SoliBee"])
+        .executable(name: "Honeycomb", targets: ["Honeycomb"])
     ],
     dependencies: [],
     targets: [
         .executableTarget(
-            name: "SoliBee",
+            name: "Honeycomb",
             dependencies: [],
             path: "src"
         ),
         .testTarget(
             name: "SoliBeeTests",
-            dependencies: ["SoliBee"],
+            dependencies: ["Honeycomb"],
             path: "SoliBeeTests"
         )
     ]

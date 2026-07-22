@@ -1,6 +1,6 @@
 .DS_Store
 .build/
-SoliBee.app/
+Honeycomb.app/
 .build*
 test_runner
 solibee_bridge

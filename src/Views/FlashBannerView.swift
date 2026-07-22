@@ -12,6 +12,7 @@ struct FlashBannerView: View {
             Text(message)
                 .font(.system(size: 28, weight: .black))
                 .foregroundColor(.yellow)
+                .multilineTextAlignment(.center)
                 .shadow(radius: 3)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 18)

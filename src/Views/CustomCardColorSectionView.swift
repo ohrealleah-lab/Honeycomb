@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct CustomCardColorSectionView: View {
-    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
     @Binding var customCardColors: CustomCardColorGroup
     @State private var isShowingResetConfirm = false
 
@@ -57,28 +56,6 @@ struct CustomCardColorSectionView: View {
                     Spacer()
                     ColorPicker("", selection: $customCardColors.redSuitColor)
                         .labelsHidden()
-                }
-
-                HStack {
-                    Text("Honeycomb Player Highlight")
-                        .font(.system(.body))
-                    Spacer()
-                    ColorPicker("", selection: Binding(
-                        get: { coordinator.honeycombPlayerHighlightColor },
-                        set: { coordinator.honeycombPlayerHighlightColor = $0 }
-                    ))
-                    .labelsHidden()
-                }
-
-                HStack {
-                    Text("Honeycomb Opponent Highlight")
-                        .font(.system(.body))
-                    Spacer()
-                    ColorPicker("", selection: Binding(
-                        get: { coordinator.honeycombOpponentHighlightColor },
-                        set: { coordinator.honeycombOpponentHighlightColor = $0 }
-                    ))
-                    .labelsHidden()
                 }
             }
         }

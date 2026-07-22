@@ -13,6 +13,59 @@ public final class HoneycombViewModel {
         // Explicitly locks the match to zero active rules — distinct from merely having
         // an empty `selectedRules`, which means "let roulette decide" instead.
         public var forceNormalMode: Bool = false
+        // Flashes the attacker's winning stat right before a capture flips the board.
+        public var showPointHighlights: Bool = true
+        public var hideHintButton: Bool = false
+
+        public init() {}
+
+        // Manual decodeIfPresent-based init (rather than relying on synthesized
+        // Codable) so a new field added later — like showPointHighlights just now —
+        // can't cause an old save missing that key to fail decoding this whole struct
+        // (the caller only ever uses `try?`, so any decode error silently resets every
+        // field to its default, not just the missing one).
+        private enum CodingKeys: String, CodingKey {
+            case isSoundEnabled, noStressMode, difficulty, activeDeckIndex, selectedRules, forceNormalMode, showPointHighlights
+            case hideHintButton
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            isSoundEnabled = try container.decodeIfPresent(Bool.self, forKey: .isSoundEnabled) ?? true
+            noStressMode = try container.decodeIfPresent(Bool.self, forKey: .noStressMode) ?? false
+            difficulty = try container.decodeIfPresent(HoneycombDifficulty.self, forKey: .difficulty) ?? .medium
+            activeDeckIndex = try container.decodeIfPresent(Int.self, forKey: .activeDeckIndex) ?? 0
+            // Reverse is no longer manually selectable (it stays roulette-only, since
+            // it's easily exploitable when a player can pick it on purpose) — strip it
+            // from any save made back when it was a selectable rule.
+            selectedRules = (try container.decodeIfPresent(Set<HoneycombRule>.self, forKey: .selectedRules) ?? []).subtracting([.reverse])
+            forceNormalMode = try container.decodeIfPresent(Bool.self, forKey: .forceNormalMode) ?? false
+            showPointHighlights = try container.decodeIfPresent(Bool.self, forKey: .showPointHighlights) ?? true
+            hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(isSoundEnabled, forKey: .isSoundEnabled)
+            try container.encode(noStressMode, forKey: .noStressMode)
+            try container.encode(difficulty, forKey: .difficulty)
+            try container.encode(activeDeckIndex, forKey: .activeDeckIndex)
+            try container.encode(selectedRules, forKey: .selectedRules)
+            try container.encode(forceNormalMode, forKey: .forceNormalMode)
+            try container.encode(showPointHighlights, forKey: .showPointHighlights)
+            try container.encode(hideHintButton, forKey: .hideHintButton)
+        }
+
+        public static func == (lhs: Options, rhs: Options) -> Bool {
+            lhs.isSoundEnabled == rhs.isSoundEnabled
+                && lhs.noStressMode == rhs.noStressMode
+                && lhs.difficulty == rhs.difficulty
+                && lhs.activeDeckIndex == rhs.activeDeckIndex
+                && lhs.selectedRules == rhs.selectedRules
+                && lhs.forceNormalMode == rhs.forceNormalMode
+                && lhs.showPointHighlights == rhs.showPointHighlights
+                && lhs.hideHintButton == rhs.hideHintButton
+        }
     }
 
     public var options = Options() {
@@ -37,6 +90,13 @@ public final class HoneycombViewModel {
     // shrinks as cards are played, which shifts every later card's index down by one, so
     // an index-based set would silently drift onto the wrong cards mid-match.
     public var openOpponentCardIds: Set<String> = []
+    // Mirrors openOpponentCardIds for the player's hand — All Open/Three Open reveal
+    // both hands to both sides (matching real Triple Triad), not just the opponent's
+    // hand to the human. The human always sees their own cards regardless (there's no
+    // UI-hiding concern here); this set's only consumer is aiPlayTurn(), which uses it
+    // to decide what the AI is allowed to actually know about the player's hand rather
+    // than reading playerHand directly.
+    public var openPlayerCardIds: Set<String> = []
 
     // The session's current active deck once a post-win "Take a Card" swap has
     // happened — takes priority over the persisted saved-deck slot until the
@@ -55,9 +115,20 @@ public final class HoneycombViewModel {
     public var pendingSwap: PendingSwap? = nil
     
     public var activeRules: [HoneycombRule] = []
+    // The 2 suits Ascension/Descension affects this match, rolled once in setupRules()
+    // and mirrored onto `board.ascensionDescensionSuits` every time the board resets
+    // (startNewGame, Sudden Death) so it's never re-rolled mid-match. Empty when
+    // neither rule is active. Also drives the "Ascension: Hearts, Spades" rules-banner
+    // text in HoneycombView.
+    public private(set) var ascensionDescensionSuits: Set<String> = []
     public var gameState: HoneycombGameState = .setup
     public var isPlayerTurn: Bool = true
-    private var playerStartedLastMatch: Bool = false
+    // Coin toss for who starts each match, with "bad luck protection": once the same
+    // side has started 3 matches in a row, the 4th is forced to the other side (e.g.
+    // 3 player starts in a row guarantees the opponent starts match #4), so an unlucky
+    // streak can't run indefinitely the way a plain coin toss could.
+    private var starterStreak: Int = 0
+    private var lastMatchStarterWasPlayer: Bool? = nil
 
     // "Chaos": the single playable card each turn is re-rolled at random the instant
     // that side's turn begins (not fixed once at match start) — nil once that hand's
@@ -102,7 +173,25 @@ public final class HoneycombViewModel {
     public var matchResult: String = "" // "You Win!", "You Lose", "Draw"
     public var flashRuleBanner: String? = nil
     public var sessionCardsCaptured: Int = 0
-    
+
+    // Which of the attacker's N/E/S/W stats (0=Top,1=Right,2=Bottom,3=Left) are
+    // currently flashing because they just won a capture — transient, not part of
+    // HoneycombSnapshot (undo doesn't need to rewind a mid-animation highlight).
+    public var pointHighlight: (cardId: String, statIndices: Set<Int>)? = nil
+
+    // Maps a captured neighbor's board index to which of the attacker's 4 stats faces
+    // it — same neighbor layout as HoneycombBoard.resolveCaptures (3x3 grid, row-major).
+    // Returns nil if the two indices aren't actually adjacent.
+    private func neighborDirection(from attackerIndex: Int, to neighborIndex: Int) -> Int? {
+        let row = attackerIndex / 3
+        let col = attackerIndex % 3
+        if neighborIndex == attackerIndex - 3 && row > 0 { return 0 } // Top
+        if neighborIndex == attackerIndex + 1 && col < 2 { return 1 } // Right
+        if neighborIndex == attackerIndex + 3 && row < 2 { return 2 } // Bottom
+        if neighborIndex == attackerIndex - 1 && col > 0 { return 3 } // Left
+        return nil
+    }
+
     // Stats
     public var stats = HoneycombStats()
     
@@ -116,7 +205,13 @@ public final class HoneycombViewModel {
                 }
             }
         } else if gameState == .gameOver && showPostGamePrompt && matchResult == "You Win!" {
-            let opponentBoardIndices = (0..<9).filter { board.cells[$0].card?.originalOwner == .opponent }
+            // Matches requestSwap's real eligibility: captured this round (owner ==
+            // .player, not just originalOwner == .opponent), not already owned, and
+            // the one-steal-per-match cap not already spent.
+            let opponentBoardIndices = hasStolenThisMatch ? [] : (0..<9).filter {
+                guard let card = board.cells[$0].card, card.originalOwner == .opponent, card.owner == .player else { return false }
+                return !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id)
+            }
             for bIdx in opponentBoardIndices {
                 for rIdx in 0..<playerStartingDeck.count {
                     moves.append(HoneycombLegalMove(action: "takeCard", handIndex: nil, boardIndex: bIdx, replaceHandIndex: rIdx))
@@ -160,6 +255,18 @@ public final class HoneycombViewModel {
     // from a match the player already left can't reach into the new one.
     private var handSetupGeneration: Int = 0
 
+    // Snapshot of the opponent's hand/rules as they were actually resolved (post any
+    // Swap trade) at the start of the most recent genuinely-new match — captured only
+    // by startNewGame(), never by rematch() itself, so any number of chained Rematches
+    // keep replaying the exact same opponent instead of drifting to whatever the last
+    // rematch happened to look like. This is what lets a player farm a single
+    // opponent's whole hand across repeated Rematch + Steal Card cycles.
+    private var rematchOpponentHand: [HoneycombCard] = []
+    private var rematchActiveRules: [HoneycombRule] = []
+    private var rematchAscensionDescensionSuits: Set<String> = []
+
+    public var canRematch: Bool { !rematchOpponentHand.isEmpty }
+
     public func startNewGame() {
         // Invalidates any AI move computation still in flight on a background queue from
         // the match/round this is resetting (e.g. Surrender calling straight into this
@@ -169,19 +276,37 @@ public final class HoneycombViewModel {
         let generation = handSetupGeneration
         undoStack.removeAll()
         swapHighlightCardIds.removeAll()
+        clearHint()
 
         board = HoneycombBoard()
         setupRules()
+        board.ascensionDescensionSuits = ascensionDescensionSuits
         setupPlayerHand()
         let swapResult = setupOpponentHand()
 
+        // Snapshot the opponent's hand as it will actually end up (post-swap) once the
+        // animation below finishes, plus this match's rules — this becomes the
+        // baseline every future rematch() call replays, until the next real
+        // startNewGame() overwrites it.
+        var resolvedOpponentHand = opponentHand
+        if let swapResult, let idx = resolvedOpponentHand.firstIndex(where: { $0.id == swapResult.preSwapOpponentCard.id }) {
+            resolvedOpponentHand[idx] = swapResult.finalOpponentCard
+        }
+        rematchOpponentHand = resolvedOpponentHand
+        rematchActiveRules = activeRules
+        rematchAscensionDescensionSuits = ascensionDescensionSuits
+
         if let swapResult {
-            // playerStartingDeck (Card Bank unlock eligibility) reflects the final
-            // post-swap hand right away — Swap conceptually happens "before the match
-            // begins" — even though the *visual* trade is staged below.
-            var startingDeck = playerHand
-            startingDeck[swapResult.playerIndex] = swapResult.finalPlayerCard
-            playerStartingDeck = startingDeck
+            // playerStartingDeck deliberately keeps the player's real, pre-swap card
+            // here — it's what "Your Deck"/Take-a-Card and the rarity-cap check at
+            // match end are based on, so every one of the 5 slots stays normally
+            // replaceable and reflects the deck the player actually owns. If it showed
+            // the swapped-in opponent card instead, that card would occupy a
+            // permanent-looking deck slot despite never being unlocked, and — worse —
+            // its stats would corrupt the rarity-cap math (e.g. rejecting a stolen 5★
+            // as "too many 5★" because the player's own 5★ no longer looked present).
+            // If the player wants to keep the swapped-in card, they still can — by
+            // capturing/stealing it off the board like any other opponent card.
 
             // Stage 1 (T+0.5s): highlight the two real, not-yet-swapped cards and flash
             // the "Swap!" banner, so the player sees exactly which two are about to
@@ -215,13 +340,40 @@ public final class HoneycombViewModel {
             }
         }
 
+        finishMatchSetup()
+    }
+
+    // Shared tail between startNewGame() and rematch() — decides who moves first,
+    // flashes the opening banner, and (if the opponent starts) kicks off their move.
+    // Everything before this point differs between the two (rule/hand setup); once
+    // board/activeRules/playerHand/opponentHand are all in place, the rest is identical.
+    private func finishMatchSetup() {
         gameState = .playing
         showPostGamePrompt = false
         sessionCardsCaptured = 0
         board.sessionSamePlusTriggers = 0
-        playerStartedLastMatch.toggle()
-        isPlayerTurn = playerStartedLastMatch
+        board.sessionFallenAceCaptures = 0
+        hasStolenThisMatch = false
+        let playerStarts: Bool
+        if starterStreak >= 3, let lastMatchStarterWasPlayer {
+            playerStarts = !lastMatchStarterWasPlayer
+        } else {
+            playerStarts = Bool.random()
+        }
+        if let lastMatchStarterWasPlayer, lastMatchStarterWasPlayer == playerStarts {
+            starterStreak += 1
+        } else {
+            starterStreak = 1
+        }
+        lastMatchStarterWasPlayer = playerStarts
+        isPlayerTurn = playerStarts
         rerollChaosIndexIfNeeded(forPlayerSide: isPlayerTurn)
+        // Second line reuses the same Text/font as the headline above (FlashBannerView
+        // just renders whatever's after the "\n"), so the match's rules are visible
+        // right alongside who's moving first instead of only in the separate,
+        // always-on Rules banner above the board.
+        let firstMoveLine = isPlayerTurn ? "First Move: Player!" : "First Move: Opponent!"
+        flashRuleBanner = "\(firstMoveLine)\n\(activeRulesSummaryText())"
 
         if options.isSoundEnabled {
             UISound.play(named: "shuffle", enabled: true)
@@ -238,10 +390,54 @@ public final class HoneycombViewModel {
         }
     }
 
+    // Replays the last genuinely-new match (see rematchOpponentHand) with the exact
+    // same opponent hand and rules — the board resets and the player's hand is rebuilt
+    // from their current active deck (so a card just stolen via Take a Card carries
+    // forward), but the opponent's 5 cards and the match's rules stay frozen. Repeated
+    // Rematches keep facing the same opponent hand until startNewGame() rolls a fresh
+    // one, which is what lets a player steal their way through an opponent's whole hand.
+    public func rematch() {
+        guard canRematch else {
+            startNewGame()
+            return
+        }
+        aiMoveGeneration += 1
+        handSetupGeneration += 1
+        undoStack.removeAll()
+        swapHighlightCardIds.removeAll()
+        clearHint()
+
+        board = HoneycombBoard()
+        activeRules = rematchActiveRules
+        ascensionDescensionSuits = rematchAscensionDescensionSuits
+        board.ascensionDescensionSuits = ascensionDescensionSuits
+        setupPlayerHand()
+        opponentHand = rematchOpponentHand
+
+        // No swap-reveal animation to stage here — the opponent's hand (including any
+        // Swap trade) is already fully resolved from the snapshot, so there's nothing
+        // left to "discover." A card whose originalOwner differs from its current
+        // owner is a swapped card the player already knows, so it stays revealed the
+        // same way it would have by the end of the original match's swap animation.
+        openOpponentCardIds = Set(opponentHand.filter { $0.originalOwner != $0.owner }.map { $0.id })
+        openPlayerCardIds = Set(playerHand.filter { $0.originalOwner != $0.owner }.map { $0.id })
+        if activeRules.contains(.allOpen) {
+            openOpponentCardIds = Set(opponentHand.map { $0.id })
+            openPlayerCardIds = Set(playerHand.map { $0.id })
+        } else if activeRules.contains(.threeOpen) {
+            openOpponentCardIds.formUnion(opponentHand.map { $0.id }.shuffled().prefix(3))
+            openPlayerCardIds.formUnion(playerHand.map { $0.id }.shuffled().prefix(3))
+        }
+
+        finishMatchSetup()
+    }
+
     // A deliberate pause before the opponent's move actually lands — long enough to
     // read the board (and, under Order/Chaos, to see which of their cards is
     // highlighted as the one they're about to play) before it happens.
     private static let opponentMoveDelay: TimeInterval = 2.5
+    // How long a capture's winning stat(s) flash before the flip actually happens.
+    private static let pointHighlightDelay: TimeInterval = 0.5
 
     private func setupRules() {
         if options.forceNormalMode {
@@ -252,6 +448,12 @@ public final class HoneycombViewModel {
             // Roulette mode — can now occasionally roll 0 rules too, for a genuine
             // Normal match, instead of always forcing at least one.
             var pool = HoneycombRule.allCases
+            if options.difficulty == .easy {
+                // Ascension/Descension and Fallen Ace punish misreads of the board in
+                // ways that are especially brutal for a new player — keep Easy's
+                // roulette pool to rules that don't compound an opponent-favoring swing.
+                pool.removeAll { $0 == .ascension || $0 == .descension || $0 == .fallenAce }
+            }
             let count = Int.random(in: 0...2)
             activeRules = []
             for _ in 0..<count {
@@ -275,6 +477,12 @@ public final class HoneycombViewModel {
             }
         } else {
             activeRules = Array(options.selectedRules)
+        }
+
+        if activeRules.contains(.ascension) || activeRules.contains(.descension) {
+            ascensionDescensionSuits = Set(["S", "H", "D", "C"].shuffled().prefix(2))
+        } else {
+            ascensionDescensionSuits = []
         }
     }
     
@@ -335,17 +543,19 @@ public final class HoneycombViewModel {
 
     // Under Reverse, low stats win, so a difficulty's Reverse deck should be built from
     // whichever tiers are actually strong under that inverted rule instead of its
-    // normal (high-star-heavy) table. Easy/Medium borrow their opposite difficulty's
-    // normal table wholesale (see setupOpponentHand); Hard gets an explicit two 1*,
-    // three 2* table instead of Medium's borrowed one — Medium's table (four 2*, one
-    // 3*) left Hard too close to Medium's own Reverse strength. Ultra Hard goes all the
-    // way to five 1* cards — 1* is the tier with the lowest possible stat sum (see
-    // TIER_CONFIG in cards_db.json's generation), so an Ultra Hard deck borrowing even
-    // Easy's one 2* slot was still measurably weaker under Reverse than an all-1* deck.
+    // normal (high-star-heavy) table. Easy borrows Hard's normal table wholesale (see
+    // setupOpponentHand); Medium reuses its own normal table, since under Reverse its
+    // four 2*, one 3* composition is already low-stat-heavy enough to hold up as its
+    // own Reverse deck. Hard gets an explicit two 1*, three 2* table instead of
+    // borrowing Medium's — Medium's table left Hard too close to Medium's own Reverse
+    // strength. Ultra Hard goes all the way to five 1* cards — 1* is the tier with the
+    // lowest possible stat sum (see TIER_CONFIG in cards_db.json's generation), so an
+    // Ultra Hard deck borrowing even Easy's one 2* slot was still measurably weaker
+    // under Reverse than an all-1* deck.
     private func reverseComposition(for difficulty: HoneycombDifficulty) -> [(stars: Int, count: Int)] {
         switch difficulty {
-        case .easy: return normalComposition(for: .ultraHard)
-        case .medium: return normalComposition(for: .hard)
+        case .easy: return normalComposition(for: .hard)
+        case .medium: return normalComposition(for: .medium)
         case .hard: return [(1, 2), (2, 3)]
         case .ultraHard: return [(1, 5)]
         }
@@ -401,6 +611,27 @@ public final class HoneycombViewModel {
             openOpponentCardIds.insert(swap.finalOpponentCard.id)
         }
 
+        // Symmetric reveal: All Open/Three Open uncover both hands, not just the
+        // opponent's — matching real Triple Triad and giving HoneycombAI.aiPlayTurn a
+        // real, non-cheating notion of what it's actually allowed to see of the
+        // player's hand.
+        openPlayerCardIds.removeAll()
+        var eventualPlayerIds = playerHand.map { $0.id }
+        if let swap = swapResult {
+            eventualPlayerIds[swap.playerIndex] = swap.finalPlayerCard.id
+        }
+        if activeRules.contains(.allOpen) {
+            openPlayerCardIds = Set(eventualPlayerIds)
+        } else if activeRules.contains(.threeOpen) {
+            openPlayerCardIds = Set(eventualPlayerIds.shuffled().prefix(3))
+        }
+        // A card that came from the opponent's hand via Swap stays visible to the
+        // opponent for the rest of the match — the AI already knows exactly what it is,
+        // it was its own card a moment ago.
+        if let swap = swapResult {
+            openPlayerCardIds.insert(swap.finalPlayerCard.id)
+        }
+
         return swapResult
     }
 
@@ -447,18 +678,140 @@ public final class HoneycombViewModel {
         return openOpponentCardIds.contains(cardId)
     }
 
-    // Ascension/Descension are always-on modifiers, but only flash on the player's own
-    // placements (not the opponent's) so the banner doesn't fire every single turn.
-    // Same/Plus only matter on the turns they actually match a capture, so those flash
-    // whenever board.last{Same,Plus}Triggered says something really fired, regardless
-    // of who placed the card.
-    private func flashRuleBannerIfNeeded(isPlayerAction: Bool, flipsCount: Int) {
+    public func isPlayerCardVisibleToOpponent(cardId: String) -> Bool {
+        return openPlayerCardIds.contains(cardId)
+    }
+
+    // MARK: - Hint
+
+    public struct HintMove: Equatable {
+        public let handIndex: Int
+        public let boardIndex: Int
+    }
+
+    public var activeHint: HintMove? = nil
+    private var hintClearTask: DispatchWorkItem?
+    // Bumped on every findHint() call and every player/opponent placement — guards the
+    // background minimax search below (up to ~2.6s at Ultra Hard's 6-ply depth, same
+    // cost as aiPlayTurn's own worst case) from landing after the board it was computed
+    // against no longer matches reality, e.g. the player played a card by hand while a
+    // hint was still computing.
+    private var hintGeneration: Int = 0
+
+    // Cheap synchronous check for whether a hint is even possible right now — doesn't
+    // run the actual search, just whether there's a legal card+cell to suggest.
+    public var hasHintsAvailable: Bool {
+        gameState == .playing && isPlayerTurn && !playerHand.isEmpty
+            && !HoneycombAI.emptyBoardIndices(board: board).isEmpty
+    }
+
+    // Highlights the suggested card in hand and the board cell to place it on, matching
+    // Beecell/Spider's hint pattern: one suggestion per press, auto-clearing after 2s.
+    // Always searches at Ultra Hard's caliber (see HoneycombAI.computeHint) regardless
+    // of the match's own difficulty, and only ever sees opponent cards actually revealed
+    // to the player, matching the AI's own fairness guard against reading hidden hands.
+    public func findHint() {
+        hintClearTask?.cancel()
+        activeHint = nil
+        guard hasHintsAvailable else { return }
+
+        hintGeneration += 1
+        let generation = hintGeneration
+
+        let boardSnapshot = board
+        let empties = HoneycombAI.emptyBoardIndices(board: boardSnapshot)
+        let eligibleHands: [Int]
+        if let mandated = mandatedPlayerHandIndex {
+            eligibleHands = [mandated]
+        } else {
+            eligibleHands = Array(0..<playerHand.count)
+        }
+        let playerDeckData = playerHand.map { $0.data }
+        let visibleOpponentCards = opponentHand.filter { isOpponentCardVisible(cardId: $0.id) }
+        let opponentDeckData = visibleOpponentCards.map { $0.data }
+        let unknownOpponentCardCount = opponentHand.count - visibleOpponentCards.count
+        let rules = activeRules
+
+        func compute() -> HintMove? {
+            if let move = HoneycombAI.computeHint(
+                board: boardSnapshot,
+                playerDeck: playerDeckData,
+                opponentDeck: opponentDeckData,
+                unknownOpponentCardCount: unknownOpponentCardCount,
+                eligibleHands: eligibleHands,
+                empties: empties,
+                rules: rules
+            ) {
+                return HintMove(handIndex: move.handIndex, boardIndex: move.boardIndex)
+            }
+            // The minimax search should never actually come back empty here — hasHintsAvailable
+            // already guarantees eligibleHands/empties are both non-empty, which is all
+            // computeHint needs to produce a candidate. But if it ever does (an
+            // unanticipated edge case), still surface *some* legal placement rather than
+            // silently showing nothing — a non-optimal suggestion beats none at all.
+            guard let fallbackHand = eligibleHands.first, let fallbackCell = empties.first else { return nil }
+            return HintMove(handIndex: fallbackHand, boardIndex: fallbackCell)
+        }
+
+        if UISound.isHeadlessMode {
+            activeHint = compute()
+            if activeHint != nil { scheduleHintClear() }
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let hint = compute()
+            DispatchQueue.main.async {
+                guard let self, self.hintGeneration == generation else { return }
+                self.activeHint = hint
+                if hint != nil { self.scheduleHintClear() }
+            }
+        }
+    }
+
+    private func scheduleHintClear() {
+        let task = DispatchWorkItem { [weak self] in
+            self?.activeHint = nil
+        }
+        hintClearTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
+    }
+
+    public func clearHint() {
+        hintGeneration += 1
+        hintClearTask?.cancel()
+        activeHint = nil
+    }
+
+    // Comma-joined summary of this match's active rules — "Normal" if none — used as
+    // the "First Move" banner's second line. Mirrors HoneycombView's rulesBannerLines
+    // formatting for Ascension/Descension (calling out the 2 affected suits) so the two
+    // banners never disagree about what the match's rules actually are.
+    private func activeRulesSummaryText() -> String {
+        if activeRules.isEmpty { return "Normal" }
+        return activeRules.map { rule -> String in
+            if (rule == .ascension || rule == .descension), !ascensionDescensionSuits.isEmpty {
+                let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }
+                return "\(rule.rawValue): \(suitNames.joined(separator: ", "))"
+            }
+            return rule.rawValue
+        }.joined(separator: ", ")
+    }
+
+    // Ascension/Descension now only affects 2 chosen suits (not every card), so this
+    // flashes for either side's placement as long as the placed card's own suit is
+    // actually one of them — unlike the old blanket-effect version, this can no longer
+    // fire "every single turn," so there's no more reason to suppress it on the
+    // opponent's moves. Same/Plus/Fallen Ace only matter on the turns they actually
+    // match/win a capture, so those flash whenever board.last{Same,Plus,FallenAce}
+    // Triggered says something really fired, regardless of who placed the card.
+    private func flashRuleBannerIfNeeded(placedSuit: String) {
         var parts: [String] = []
         // Skip on the game's last move (the one that fills the board) — the win/lose
         // overlay appears immediately after, and an Ascension/Descension banner flashing
         // at the same moment just clutters that transition. Same/Plus/Combo still show,
         // since those describe what the final move itself actually did.
-        if isPlayerAction && !board.isFull {
+        if !board.isFull && board.ascensionDescensionSuits.contains(placedSuit) {
             if activeRules.contains(.ascension) {
                 parts.append("Ascension!")
             } else if activeRules.contains(.descension) {
@@ -467,8 +820,11 @@ public final class HoneycombViewModel {
         }
         if board.lastSameTriggered { parts.append("Same!") }
         if board.lastPlusTriggered { parts.append("Plus!") }
-        if flipsCount > 1 {
-            parts.append("COMBO x\(flipsCount)!")
+        if board.lastFallenAceTriggered { parts.append("Fallen Ace!") }
+        // Combo = a Same/Plus-triggered flip going on to capture its own neighbors —
+        // not just any move that happens to flip 2+ ordinary neighbors at once.
+        if board.lastComboFlipCount > 0 {
+            parts.append("COMBO x\(board.lastComboFlipCount)!")
         }
         if !parts.isEmpty {
             flashRuleBanner = parts.joined(separator: " ")
@@ -476,32 +832,43 @@ public final class HoneycombViewModel {
     }
 
 
-    public func playerPlayCard(handIndex: Int, boardIndex: Int) {
-        guard gameState == .playing, isPlayerTurn else { return }
-        guard handIndex >= 0 && handIndex < playerHand.count else { return }
-        guard board.cells[boardIndex].card == nil else { return }
-        // Order/Chaos restrict which single card is legal to play this turn.
-        guard mandatedPlayerHandIndex == nil || mandatedPlayerHandIndex == handIndex else { return }
+    // Set for the entire span of a placement that's showing a point highlight — i.e.
+    // between the delay starting and `finishPlacement` running. Distinct from
+    // `isPlayerTurn`/`gameState`, which (deliberately) don't change until after the
+    // delay resolves, to avoid disturbing Sudden Death's turn-alternation toggle
+    // (`triggerSuddenDeath` flips `isPlayerTurn` based on its value at that time, which
+    // must still reflect "did the player just move," not get overwritten early). This
+    // flag exists purely to keep `canUndo` and re-entrant taps blocked during the delay.
+    public private(set) var isAnimatingPlacement: Bool = false
 
+    // Returns whether the card was actually placed — callers (HoneycombView's tap/drop
+    // handlers) use this to decide whether to clear their selected-card state. Every
+    // guard below is a legitimate reason the move might not happen (most narrowly,
+    // isAnimatingPlacement being briefly true right as the player's turn starts, while
+    // the previous move's point-highlight flash is still finishing) — if the view
+    // cleared the selection unconditionally regardless of this return value, a tap that
+    // landed in that window would silently do nothing while still deselecting the card,
+    // making it look like the tap "didn't work" until the player reselected and tried
+    // again.
+    @discardableResult
+    public func playerPlayCard(handIndex: Int, boardIndex: Int) -> Bool {
+        guard gameState == .playing, isPlayerTurn, !isAnimatingPlacement else { return false }
+        guard handIndex >= 0 && handIndex < playerHand.count else { return false }
+        guard board.cells[boardIndex].card == nil else { return false }
+        // Order/Chaos restrict which single card is legal to play this turn.
+        guard mandatedPlayerHandIndex == nil || mandatedPlayerHandIndex == handIndex else { return false }
+
+        clearHint()
         saveStateForUndo()
 
         let card = playerHand.remove(at: handIndex)
-        let flips = board.placeCard(card, at: boardIndex, rules: activeRules)
-        sessionCardsCaptured += flips.count
-        flashRuleBannerIfNeeded(isPlayerAction: true, flipsCount: flips.count)
-
-        if options.isSoundEnabled {
-            UISound.play(named: "snap", enabled: true)
-        }
-
-        checkWinCondition()
-
-        if gameState == .playing {
-            isPlayerTurn = false
+        applyPlacement(card: card, boardIndex: boardIndex) { [weak self] in
+            guard let self, self.gameState == .playing else { return }
+            self.isPlayerTurn = false
             // Reroll now (not lazily inside aiPlayTurn) so the mandated card is already
             // highlighted for the player to see during the delay below, before the AI
             // actually plays it.
-            rerollChaosIndexIfNeeded(forPlayerSide: false)
+            self.rerollChaosIndexIfNeeded(forPlayerSide: false)
             if UISound.isHeadlessMode {
                 self.aiPlayTurn()
             } else {
@@ -510,8 +877,57 @@ public final class HoneycombViewModel {
                 }
             }
         }
+        return true
     }
-    
+
+    // Places `card`, optionally staging a "flash the winning stat(s), then flip"
+    // sequence before the capture becomes visible (Point Highlights). `completion` runs
+    // once the placement (and its capture/flip, if any) has fully resolved — each
+    // caller uses it to schedule whatever comes next (the opponent's turn, or the
+    // player's), so that scheduling can't race ahead of an in-progress animation.
+    private func applyPlacement(card: HoneycombCard, boardIndex: Int, completion: @escaping () -> Void) {
+        var finalBoard = board
+        let flips = finalBoard.placeCard(card, at: boardIndex, rules: activeRules)
+
+        // Only the directly-placed card's own captures get highlighted — secondary
+        // combo/chain flips (a captured card immediately flipping its own neighbors)
+        // just flip along with everything else below, no separate highlight cycle.
+        let directStatIndices = Set(flips.compactMap { neighborDirection(from: boardIndex, to: $0) })
+
+        if options.showPointHighlights, !directStatIndices.isEmpty, !UISound.isHeadlessMode {
+            // Show the new card placed but not yet flipped — captured cells keep their
+            // pre-capture owner for one beat while the attacker's winning stat(s) flash.
+            var intermediateBoard = board
+            intermediateBoard.cells[boardIndex].card = card
+            board = intermediateBoard
+            pointHighlight = (cardId: card.id, statIndices: directStatIndices)
+            isAnimatingPlacement = true
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.pointHighlightDelay) { [weak self] in
+                guard let self else { return }
+                self.pointHighlight = nil
+                withAnimation {
+                    self.board = finalBoard
+                }
+                self.isAnimatingPlacement = false
+                self.finishPlacement(placedSuit: card.data.suit, flipsCount: flips.count, completion: completion)
+            }
+        } else {
+            board = finalBoard
+            finishPlacement(placedSuit: card.data.suit, flipsCount: flips.count, completion: completion)
+        }
+    }
+
+    private func finishPlacement(placedSuit: String, flipsCount: Int, completion: @escaping () -> Void) {
+        sessionCardsCaptured += flipsCount
+        flashRuleBannerIfNeeded(placedSuit: placedSuit)
+        if options.isSoundEnabled {
+            UISound.play(named: "snap", enabled: true)
+        }
+        checkWinCondition()
+        completion()
+    }
+
     // Bumped every time a new AI turn is computed (and on any hard reset, e.g.
     // startNewGame/Surrender) so a stale background computation from a previous turn
     // or match can detect it's no longer current and silently drop itself instead of
@@ -529,6 +945,7 @@ public final class HoneycombViewModel {
         let playerHand: [HoneycombCard]
         let opponentHand: [HoneycombCard]
         let openOpponentCardIds: Set<String>
+        let openPlayerCardIds: Set<String>
         let isPlayerTurn: Bool
         let sessionCardsCaptured: Int
         let chaosPlayerIndex: Int?
@@ -540,7 +957,7 @@ public final class HoneycombViewModel {
     // each of the player's placements, so restoring one lands back at the start of the
     // player's turn (after whatever the AI most recently played), never mid-AI-turn.
     public var canUndo: Bool {
-        !undoStack.isEmpty && gameState == .playing && isPlayerTurn
+        !undoStack.isEmpty && gameState == .playing && isPlayerTurn && !isAnimatingPlacement
     }
 
     private func saveStateForUndo() {
@@ -549,6 +966,7 @@ public final class HoneycombViewModel {
             playerHand: playerHand,
             opponentHand: opponentHand,
             openOpponentCardIds: openOpponentCardIds,
+            openPlayerCardIds: openPlayerCardIds,
             isPlayerTurn: isPlayerTurn,
             sessionCardsCaptured: sessionCardsCaptured,
             chaosPlayerIndex: chaosPlayerIndex,
@@ -562,16 +980,20 @@ public final class HoneycombViewModel {
         // given canUndo requires isPlayerTurn, but matches the same safety net
         // startNewGame uses in case a stale background result lands after this.
         aiMoveGeneration += 1
+        clearHint()
 
         board = previous.board
         playerHand = previous.playerHand
         opponentHand = previous.opponentHand
         openOpponentCardIds = previous.openOpponentCardIds
+        openPlayerCardIds = previous.openPlayerCardIds
         isPlayerTurn = previous.isPlayerTurn
         sessionCardsCaptured = previous.sessionCardsCaptured
         chaosPlayerIndex = previous.chaosPlayerIndex
         chaosOpponentIndex = previous.chaosOpponentIndex
         flashRuleBanner = nil
+        pointHighlight = nil
+        isAnimatingPlacement = false
     }
 
     public func aiPlayTurn() {
@@ -587,7 +1009,14 @@ public final class HoneycombViewModel {
         // synchronously inside the delayed main-thread closure.
         let boardSnapshot = board
         let opponentDeckData = opponentHand.map { $0.data }
-        let playerDeckData = playerHand.map { $0.data }
+        // Only cards actually revealed to the opponent (All Open/Three Open — see
+        // openPlayerCardIds) are passed through; any remaining hidden cards are counted
+        // but never exposed as concrete data, so the AI can't read the player's hand it
+        // isn't supposed to see. See HoneycombAI.minimaxScore's unknownPlayerCardCount
+        // handling for how the search responds when some of the player's hand is hidden.
+        let visiblePlayerCards = playerHand.filter { isPlayerCardVisibleToOpponent(cardId: $0.id) }
+        let playerDeckData = visiblePlayerCards.map { $0.data }
+        let unknownPlayerCardCount = playerHand.count - visiblePlayerCards.count
         let rules = activeRules
         let difficulty = options.difficulty
         let eligibleHands = eligibleOpponentHandIndices()
@@ -599,6 +1028,7 @@ public final class HoneycombViewModel {
                 board: boardSnapshot,
                 opponentDeck: opponentDeckData,
                 playerDeck: playerDeckData,
+                unknownPlayerCardCount: unknownPlayerCardCount,
                 eligibleHands: eligibleHands,
                 empties: empties,
                 rules: rules
@@ -626,26 +1056,21 @@ public final class HoneycombViewModel {
         guard let bestMove = move else { return }
 
         let cardToPlay = opponentHand.remove(at: bestMove.handIndex)
-        let flips = board.placeCard(cardToPlay, at: bestMove.boardIndex, rules: activeRules)
-        sessionCardsCaptured += flips.count
-        flashRuleBannerIfNeeded(isPlayerAction: false, flipsCount: flips.count)
-
-        if options.isSoundEnabled {
-            UISound.play(named: "snap", enabled: true)
-        }
-
-        checkWinCondition()
-
-        if gameState == .playing {
-            isPlayerTurn = true
+        applyPlacement(card: cardToPlay, boardIndex: bestMove.boardIndex) { [weak self] in
+            guard let self, self.gameState == .playing else { return }
+            self.isPlayerTurn = true
             // Reroll now so the player's mandated card (under Chaos) is highlighted
             // the instant it becomes their turn, not lazily on their first tap.
-            rerollChaosIndexIfNeeded(forPlayerSide: true)
+            self.rerollChaosIndexIfNeeded(forPlayerSide: true)
         }
     }
 
     private func checkWinCondition() {
         if board.isFull {
+            // The board just filled, which always ends either the match (win/lose) or
+            // this round (draw, into Sudden Death) — any Hint highlight still showing
+            // from the move that just landed is no longer relevant either way.
+            clearHint()
             let pScore = board.playerScore + playerHand.count
             let oScore = board.opponentScore + opponentHand.count
             
@@ -653,34 +1078,35 @@ public final class HoneycombViewModel {
                 matchResult = "You Win!"
                 gameState = .gameOver
                 if options.isSoundEnabled { UISound.play(named: "victory", enabled: true) }
-                stats.recordGame(won: true, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: oScore == 0, isUltraHard: options.difficulty == .ultraHard)
-
-                // Keep what you hold: unlock original player cards
-                for cell in board.cells {
-                    if let card = cell.card, card.owner == .player, card.originalOwner == .player {
-                        HoneycombProfileManager.shared.unlockCard(id: card.data.id)
-                    }
-                }
+                stats.recordGame(won: true, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: oScore == 0, difficulty: options.difficulty, fallenAceCaptures: board.sessionFallenAceCaptures)
             } else if oScore > pScore {
                 matchResult = "You Lose"
                 gameState = .gameOver
-                stats.recordGame(won: false, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false)
+                stats.recordGame(won: false, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
             } else {
                 matchResult = "Draw - Sudden Death!"
                 gameState = .suddenDeath
                 flashRuleBanner = "Sudden Death!"
-                stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false)
+                stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                     self.triggerSuddenDeath()
                 }
                 return
             }
             saveStats()
+            // HoneycombView holds the win/lose overlay back on its own (gated on its
+            // showingRuleBanner state) until any Combo/Same/Plus/Ascension/Descension
+            // banner currently on screen finishes — that covers a banner from the move
+            // right before this one too, not just one fired on this exact placement, so
+            // showPostGamePrompt can just be set immediately here.
             showPostGamePrompt = true
         }
     }
     
     private func triggerSuddenDeath() {
+        stats.suddenDeathCount += 1
+        saveStats()
+
         // A new round's board bears no resemblance to the just-ended one, so nothing in
         // the undo stack applies to it anymore.
         undoStack.removeAll()
@@ -700,6 +1126,9 @@ public final class HoneycombViewModel {
         opponentHand = oCards
         
         board = HoneycombBoard()
+        // Sudden Death doesn't reroll rules, so the same suits chosen at match start
+        // (setupRules) carry over rather than picking a fresh pair for the tie-break.
+        board.ascensionDescensionSuits = ascensionDescensionSuits
         gameState = .playing
         // alternate turns on sudden death
         isPlayerTurn.toggle()
@@ -724,6 +1153,12 @@ public final class HoneycombViewModel {
     // their way to a deck with two 5★ cards or three 4★ cards.
     public var swapValidationError: String? = nil
 
+    // "Take a Card" is capped at one successful steal per match — the player must
+    // Rematch (or start a new match) to steal again, even if multiple opponent cards
+    // were captured this round. Reset in finishMatchSetup, the shared tail of both
+    // startNewGame() and rematch().
+    public private(set) var hasStolenThisMatch: Bool = false
+
     // Same caps as HoneycombDecksView.validateDeck: at most one 5★ card; at most one
     // 4★ card if a 5★ card is present, else at most two 4★ cards. Returns the message
     // to show the player, or nil if the hypothetical deck is within the caps.
@@ -746,11 +1181,16 @@ public final class HoneycombViewModel {
     // Stages a "Take a Card" swap so the UI can show a confirmation alert before
     // it's applied (spec: "A confirmation alert is shown before the swap is completed").
     public func requestSwap(boardIndex: Int, replaceHandIndex: Int) {
-        // Any card the opponent originally played is stealable, regardless of who
-        // currently holds it — a card recaptured back by the player doesn't unlock via
-        // the win-bonus either (that requires originalOwner == .player), so without
-        // this it'd be permanently stuck outside the player's collection.
-        guard let incoming = board.cells[boardIndex].card, incoming.originalOwner == .opponent else { return }
+        // Stealable requires the player to have actually captured this card this
+        // round — it must be one the opponent originally played (originalOwner) AND
+        // currently sitting under the player's control (owner) at match end. A card
+        // the opponent still holds was never captured, so it isn't eligible. Already
+        // owning the card (it's in the player's card bank) is also disqualifying —
+        // stealing it would gain nothing and just burn the one steal this match allows.
+        guard !hasStolenThisMatch else { return }
+        guard let incoming = board.cells[boardIndex].card,
+              incoming.originalOwner == .opponent, incoming.owner == .player,
+              !HoneycombProfileManager.shared.unlockedCardIds.contains(incoming.data.id) else { return }
         guard replaceHandIndex >= 0 && replaceHandIndex < playerStartingDeck.count else { return }
 
         var hypotheticalDeck = playerStartingDeck.map { $0.data }
@@ -769,24 +1209,34 @@ public final class HoneycombViewModel {
         pendingSwap = nil
     }
 
-    // Applies a confirmed swap. This only updates the session's active deck —
-    // persisting it into a saved deck slot is a separate, explicit action
-    // (persistActiveDeckToSlot), matching spec §7's "you can overwrite a
-    // pre-saved deck slot... via a confirmation prompt."
+    // Applies a confirmed swap. Only the one targeted deck slot changes — this used to
+    // also call startNewGame(), which dealt an entirely fresh hand and made it look
+    // like the whole deck had been replaced instead of the single stolen card. This
+    // only updates the session's active deck in place, leaving the just-finished match
+    // on screen so the player can review the result, steal another eligible card, or
+    // start a new game themselves whenever they're ready. Persisting it into a saved
+    // deck slot is a separate, explicit action (persistActiveDeckToSlot), matching spec
+    // §7's "you can overwrite a pre-saved deck slot... via a confirmation prompt."
     public func confirmPendingSwap() {
         guard let swap = pendingSwap else { return }
         pendingSwap = nil
         guard let card = board.cells[swap.boardIndex].card, card.originalOwner == .opponent else { return }
+        guard swap.replaceHandIndex >= 0 && swap.replaceHandIndex < playerStartingDeck.count else { return }
 
         HoneycombProfileManager.shared.unlockCard(id: card.data.id)
+        stats.cardsStolen += 1
+        saveStats()
+        hasStolenThisMatch = true
 
-        var newDeck = playerStartingDeck.map { $0.data }
-        if swap.replaceHandIndex >= 0 && swap.replaceHandIndex < newDeck.count {
-            newDeck[swap.replaceHandIndex] = card.data
-        }
-        sessionHandOverride = newDeck
-
-        startNewGame()
+        // Mutate playerStartingDeck itself (not just sessionHandOverride) so the
+        // post-game "Your Deck" display — which reads playerStartingDeck directly —
+        // immediately reflects the swap. Without this, the display kept showing the
+        // pre-steal card in that slot even though the data underneath had changed,
+        // so a second steal (aimed at what still looked like an untouched slot) could
+        // land on a different slot than intended, replacing more than the one card
+        // the player meant to swap.
+        playerStartingDeck[swap.replaceHandIndex] = HoneycombCard(data: card.data, owner: .player)
+        sessionHandOverride = playerStartingDeck.map { $0.data }
     }
 
     public func takeCard(boardIndex: Int, replaceHandIndex: Int) {
@@ -812,6 +1262,17 @@ public final class HoneycombViewModel {
     
     public func resetStatistics() {
         stats = HoneycombStats()
+        saveStats()
+    }
+
+    // Wipes saved decks/card bank back to Deck 1 and rerolls the entire card database
+    // with a new seed, so a maxed-out collection can be played again with a different
+    // set of cards. Order matters: the profile wipe reads Deck 1's cards under the
+    // *current* seed before HoneycombDatabase regenerates under a new one.
+    public func startOver() {
+        HoneycombProfileManager.shared.startOver()
+        HoneycombDatabase.shared.reseed()
+        stats.timesStartedOver += 1
         saveStats()
     }
     public func stopTimer() {}

@@ -6,6 +6,16 @@ public struct HoneycombCardData: Codable, Identifiable, Equatable {
     public let stars: Int
     public let stats: [Int] // 0: Top, 1: Right, 2: Bottom, 3: Left
     public let suit: String
+
+    public static func suitDisplayName(_ code: String) -> String {
+        switch code {
+        case "S": return "Spades"
+        case "H": return "Hearts"
+        case "D": return "Diamonds"
+        case "C": return "Clubs"
+        default: return code
+        }
+    }
 }
 
 public enum CardOwner: String, Codable, Equatable {
@@ -34,8 +44,8 @@ public struct HoneycombCard: Codable, Identifiable, Equatable {
 
     public func stat(at index: Int) -> Int {
         let val = data.stats[index] + modifier
-        // Max stat display is usually A (10), but mechanically can be higher?
-        // Stat value cannot drop below 1
-        return max(1, val)
+        // Matches FFXIV Triple Triad: stats are clamped to the 1-10 (A) range in all
+        // capture math, so an Ascension-boosted 8 behaves exactly as a 10, not an 11.
+        return min(10, max(1, val))
     }
 }

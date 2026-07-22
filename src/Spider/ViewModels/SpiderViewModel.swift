@@ -76,6 +76,23 @@ public final class SpiderViewModel {
     public var isAutocompleteAvailable: Bool = false
     public var isAutoplayRunning: Bool = false
 
+    // Point Highlights: transient "+N"/"-N" popup over the card responsible for a score
+    // change — not part of `state`/undo snapshots, same precedent as isAutoplayRunning.
+    // No popup for the stock deal's flat -1 (no single card to anchor it to).
+    public var pointPopup: CardPointPopup? = nil
+    private var pointPopupGeneration: Int = 0
+
+    private func showPointPopup(cardId: UUID, displayText: String, isPositive: Bool) {
+        guard options.showPointHighlights, !isAutoplayRunning else { return }
+        pointPopupGeneration += 1
+        let generation = pointPopupGeneration
+        pointPopup = CardPointPopup(cardId: cardId, displayText: displayText, isPositive: isPositive)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self, self.pointPopupGeneration == generation else { return }
+            self.pointPopup = nil
+        }
+    }
+
     // Stuck detection
     public var isStuck: Bool = false
     
@@ -372,9 +389,12 @@ public final class SpiderViewModel {
         if let tgtIdx = state.tableau.firstIndex(where: { $0.id == targetPile.id }) {
             state.tableau[tgtIdx].cards.append(contentsOf: cards)
         }
-        
+
         state.score = max(0, state.score - 1)
         state.movesCount += 1
+        if let anchorCard = cards.last {
+            showPointPopup(cardId: anchorCard.id, displayText: "-1", isPositive: false)
+        }
 
         checkCompletedRuns()
         checkStuckState()
@@ -475,8 +495,15 @@ public final class SpiderViewModel {
                 }
 
                 state.foundations[fdnIdx].cards = subrange
-                
+
                 state.score += 100
+                // Anchored to the completed run's Ace (subrange.last), the card that
+                // visually lands in the foundation — wins over any "-1" popup from the
+                // move that triggered this sweep, since it fires after that in the same
+                // call chain (moveCards → checkCompletedRuns).
+                if let anchorCard = subrange.last {
+                    showPointPopup(cardId: anchorCard.id, displayText: "+100", isPositive: true)
+                }
                 break // check one run per cycle to be safe, loops will trigger next clears on next moves anyway
             }
         }
@@ -544,13 +571,14 @@ public final class SpiderViewModel {
         state.isTimerActive = currentIsTimerActive
         isAutoplayRunning = false
         isStuck = false
+        pointPopup = nil
         clearHint()
         clearKeyboardCursor()
         checkWinState()
         checkStuckState()
         checkAutocompleteState()
     }
-    
+
     // MARK: - Stuck Detection
 
     private func hasValidMoves() -> Bool {

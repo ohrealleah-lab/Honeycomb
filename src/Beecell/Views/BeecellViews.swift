@@ -65,15 +65,19 @@ public struct BeecellFoundationView: View {
     let draggedCardIDs: Set<UUID>
     public var isFocused: Bool = false
     public var isSelected: Bool = false
+    // Point Highlights: the "+10" popup shown when this pile's top card is the one the
+    // ViewModel just scored via.
+    public var pointPopup: CardPointPopup? = nil
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
-    
+
     public init(
         pile: Pile,
         draggedCardIDs: Set<UUID>,
         isFocused: Bool = false,
         isSelected: Bool = false,
+        pointPopup: CardPointPopup? = nil,
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void
@@ -82,17 +86,21 @@ public struct BeecellFoundationView: View {
         self.draggedCardIDs = draggedCardIDs
         self.isFocused = isFocused
         self.isSelected = isSelected
+        self.pointPopup = pointPopup
         self.onDragStarted = onDragStarted
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
     }
-    
+
     public var body: some View {
         ZStack {
             EmptyPileView(symbol: "A", isFocused: isFocused && pile.isEmpty, isSelected: isSelected && pile.isEmpty)
-            
+
             if let topCard = pile.topCard {
-                CardView(card: topCard, isFocused: isFocused, isSelected: isSelected)
+                CardView(
+                    card: topCard, isFocused: isFocused, isSelected: isSelected,
+                    pointPopupText: pointPopup?.cardId == topCard.id ? pointPopup?.displayText : nil
+                )
                     .opacity(draggedCardIDs.contains(topCard.id) ? 0.0 : 1.0)
                     .gesture(
                         DragGesture(minimumDistance: 5, coordinateSpace: .global)
@@ -116,17 +124,21 @@ public struct BeecellTableauView: View {
     let activeHint: BeecellViewModel.HintMove?
     public var isFocused: Bool = false
     public var isSelected: Bool = false
+    // Point Highlights: the "+N"/"-N" popup shown when this pile's top card is the one
+    // the ViewModel just scored via.
+    public var pointPopup: CardPointPopup? = nil
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
     let onDoubleClick: (Card) -> Void
-    
+
     public init(
         pile: Pile,
         draggedCardIDs: Set<UUID>,
         activeHint: BeecellViewModel.HintMove?,
         isFocused: Bool = false,
         isSelected: Bool = false,
+        pointPopup: CardPointPopup? = nil,
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void,
@@ -137,6 +149,7 @@ public struct BeecellTableauView: View {
         self.activeHint = activeHint
         self.isFocused = isFocused
         self.isSelected = isSelected
+        self.pointPopup = pointPopup
         self.onDragStarted = onDragStarted
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
@@ -172,8 +185,12 @@ public struct BeecellTableauView: View {
                 
                 let cardIsFocused = isFocused && index == pile.cards.count - 1
                 let cardIsSelected = isSelected && index == pile.cards.count - 1
-                
-                CardView(card: card, isFocused: cardIsFocused, isSelected: cardIsSelected)
+                let isTopCard = index == pile.cards.count - 1
+
+                CardView(
+                    card: card, isFocused: cardIsFocused, isSelected: cardIsSelected,
+                    pointPopupText: isTopCard && pointPopup?.cardId == card.id ? pointPopup?.displayText : nil
+                )
                     .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: CGFloat(index) * 32)

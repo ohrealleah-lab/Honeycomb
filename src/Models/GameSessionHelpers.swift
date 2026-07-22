@@ -76,3 +76,21 @@ enum WinDetection {
         foundationCardCount == totalCards && !alreadyWon
     }
 }
+
+// Point Highlights: a transient "+N"/"-N" (or "+$0.50"/"-$5.00" in Vegas mode) popup
+// flashed over the specific card responsible for a score change. Each ViewModel
+// (Klondike/Beecell/Spider) holds one of these directly as a plain `var` — not part of
+// its Codable state struct, same precedent as `isAutoplayRunning`/`isStuck` — and clears
+// it after a short delay via a generation counter, the same stale-callback guard used
+// for `aiMoveGeneration` in Honeycomb's HoneycombViewModel.
+public struct CardPointPopup: Equatable {
+    public let cardId: UUID
+    public let displayText: String   // e.g. "+10", "-15", "+$0.50" — already formatted
+    public let isPositive: Bool      // drives popup color (green vs red)
+
+    public init(cardId: UUID, displayText: String, isPositive: Bool) {
+        self.cardId = cardId
+        self.displayText = displayText
+        self.isPositive = isPositive
+    }
+}

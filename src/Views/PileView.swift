@@ -201,15 +201,21 @@ public struct FoundationPileView: View {
     let suit: Card.Suit
     public var isFocused: Bool = false
     public var isSelected: Bool = false
+    // Point Highlights: the "+N"/"+$0.50" popup shown when this pile's top card is the
+    // one the ViewModel just scored via (e.g. a move that just landed here).
+    public var pointPopup: CardPointPopup? = nil
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
-    
+
     public var body: some View {
         if pile.isEmpty {
             EmptyPileView(symbol: "A", isFocused: isFocused, isSelected: isSelected)
         } else {
-            CardView(card: pile.topCard!, isFocused: isFocused, isSelected: isSelected)
+            CardView(
+                card: pile.topCard!, isFocused: isFocused, isSelected: isSelected,
+                pointPopupText: pointPopup?.cardId == pile.topCard!.id ? pointPopup?.displayText : nil
+            )
                 .gesture(
                     DragGesture(minimumDistance: 5, coordinateSpace: .global)
                         .onChanged { val in
@@ -234,11 +240,14 @@ public struct TableauPileView: View {
     public var focusedCardIndex: Int? = nil
     public var isSelected: Bool = false
     public var selectedCardIndex: Int? = nil
+    // Point Highlights: the "+N"/"-N" popup shown when this pile's top card is the one
+    // the ViewModel just scored via (a move landing here, or a revealed face-down card).
+    public var pointPopup: CardPointPopup? = nil
     let onDragStarted: (Card, [Card], CGPoint) -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
     let onDoubleClick: (Card) -> Void
-    
+
     private var totalHeight: CGFloat {
         if pile.isEmpty {
             return 181
@@ -268,8 +277,12 @@ public struct TableauPileView: View {
                 
                 let cardIsFocused = isFocused && index == focusedCardIndex
                 let cardIsSelected = isSelected && index == selectedCardIndex
-                
-                CardView(card: card, isFocused: cardIsFocused, isSelected: cardIsSelected)
+                let isTopCard = index == pile.cards.count - 1
+
+                CardView(
+                    card: card, isFocused: cardIsFocused, isSelected: cardIsSelected,
+                    pointPopupText: isTopCard && pointPopup?.cardId == card.id ? pointPopup?.displayText : nil
+                )
                     .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
                     .offset(y: offsetForCard(at: index))

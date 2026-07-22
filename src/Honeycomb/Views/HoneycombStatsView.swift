@@ -5,6 +5,7 @@ public struct HoneycombStatsView: View {
     var viewModel: HoneycombViewModel
 
     @State private var profile = HoneycombProfileManager.shared
+    @State private var showingResetConfirmation = false
     private let db = HoneycombDatabase.shared
 
     private var suitOrder: [(code: String, label: String)] {
@@ -24,48 +25,49 @@ public struct HoneycombStatsView: View {
     }
 
     public var body: some View {
+        let stats = viewModel.stats
+        let decisiveGames = stats.gamesPlayed - stats.matchesDrawn
+        let winRate = decisiveGames > 0 ? Double(stats.matchesWon) / Double(decisiveGames) * 100 : 0
+        let totalUnlocked = profile.unlockedCardIds.count
+        let totalCards = db.allCards.count
+        let unlockedPercent = totalCards > 0 ? Double(totalUnlocked) / Double(totalCards) * 100 : 0
+
         VStack(spacing: 20) {
-            HStack {
-                Text("Honeycomb Statistics")
-                    .font(.largeTitle)
-                    .bold()
-                Spacer()
-                Button("Done") {
-                    dismiss()
-                }
-                .padding()
-            }
-            .padding()
-            
-            let stats = viewModel.stats
-            let decisiveGames = stats.gamesPlayed - stats.matchesDrawn
-            let winRate = decisiveGames > 0 ? Double(stats.matchesWon) / Double(decisiveGames) * 100 : 0
-            
+            Text("Honeycomb Statistics")
+                .font(.system(size: 16, weight: .bold))
+                .padding(.top, 12)
+
+            Divider()
+
             ScrollView {
-                VStack(spacing: 15) {
+                VStack(alignment: .leading, spacing: 12) {
                     StatRow(label: "Games Played", value: "\(stats.gamesPlayed)")
                     StatRow(label: "Matches Won", value: "\(stats.matchesWon)")
                     StatRow(label: "Matches Lost", value: "\(stats.matchesLost)")
                     StatRow(label: "Matches Drawn", value: "\(stats.matchesDrawn)")
+                    StatRow(label: "Most Sudden Deaths", value: "\(stats.suddenDeathCount)")
                     StatRow(label: "Win Rate", value: String(format: "%.1f%%", winRate))
-                    
-                    Divider().padding(.vertical, 5)
-                    
+
+                    Divider()
+
                     StatRow(label: "Current Win Streak", value: "\(stats.currentWinStreak)")
                     StatRow(label: "Longest Win Streak", value: "\(stats.longestWinStreak)")
                     StatRow(label: "Flawless Victories (10-0 Sweep)", value: "\(stats.flawlessVictories)")
+                    StatRow(label: "Easy Wins", value: "\(stats.easyWins)")
+                    StatRow(label: "Medium Wins", value: "\(stats.mediumWins)")
+                    StatRow(label: "Hard Wins", value: "\(stats.hardWins)")
                     StatRow(label: "Ultra Hard Wins", value: "\(stats.ultraHardWins)")
 
-                    Divider().padding(.vertical, 5)
+                    Divider()
 
                     StatRow(label: "Total Cards Flipped", value: "\(stats.cardsCaptured)")
+                    StatRow(label: "Fallen Aces", value: "\(stats.fallenAces)")
                     StatRow(label: "Same/Plus Combos Triggered", value: "\(stats.samePlusTriggers)")
+                    StatRow(label: "Cards Stolen", value: "\(stats.cardsStolen)")
+                    StatRow(label: "Times Started Over", value: "\(stats.timesStartedOver)")
 
-                    Divider().padding(.vertical, 5)
+                    Divider()
 
-                    let totalUnlocked = profile.unlockedCardIds.count
-                    let totalCards = db.allCards.count
-                    let unlockedPercent = totalCards > 0 ? Double(totalUnlocked) / Double(totalCards) * 100 : 0
                     StatRow(label: "Cards Unlocked", value: "\(totalUnlocked)/\(totalCards) (\(String(format: "%.0f%%", unlockedPercent)))")
 
                     ForEach(suitOrder, id: \.code) { entry in
@@ -73,36 +75,60 @@ public struct HoneycombStatsView: View {
                         StatRow(label: "\(entry.label) Unlocked", value: "\(progress.unlocked)/\(progress.total)")
                     }
 
-                    Divider().padding(.vertical, 5)
+                    Divider()
 
                     ForEach(1...5, id: \.self) { star in
                         let progress = starProgress(star)
-                        StatRow(label: "\(star)★ Unlocked", value: "\(progress.unlocked)/\(progress.total)")
+                        StatRow(label: "\(star)\u{2605} Unlocked", value: "\(progress.unlocked)/\(progress.total)")
                     }
                 }
-                .padding()
-                .background(Color.black.opacity(0.1))
-                .cornerRadius(12)
-                .padding(.horizontal)
+                .padding(.horizontal, 36)
             }
+
+            Divider()
+
+            HStack {
+                Button("Reset Stats") {
+                    showingResetConfirmation = true
+                }
+                .buttonStyle(.borderless)
+                .foregroundColor(.red)
+                .font(.system(.body))
+                .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
+                    Button("Reset", role: .destructive) { viewModel.resetStatistics() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will permanently clear all statistics. This cannot be undone.")
+                }
+
+                Spacer()
+
+                Button("Close") {
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 16)
         }
-        .frame(width: 400, height: 600)
-        .onAppear {
-            profile = HoneycombProfileManager.shared
-        }
+        .frame(width: 440, height: 560)
+        .background(
+            Color(NSColor.windowBackgroundColor)
+                .overlay(Color.primary.opacity(0.04))
+        )
     }
 }
 
 fileprivate struct StatRow: View {
     let label: String
     let value: String
-    
+
     var body: some View {
         HStack {
-            Text(label).foregroundColor(.secondary)
+            Text(label)
             Spacer()
-            Text(value).bold()
+            Text(value)
         }
-        .font(.title3)
+        .font(.system(.body))
     }
 }

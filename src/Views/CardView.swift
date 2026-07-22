@@ -5,6 +5,9 @@ public struct CardView: View {
     public var isAnimated: Bool = false
     public var isFocused: Bool = false
     public var isSelected: Bool = false
+    // Point Highlights: a "+N"/"-N" (or "+$5"/"-$5" in Vegas mode) popup, shown when
+    // this specific card is the one the caller's ViewModel just scored via.
+    public var pointPopupText: String? = nil
     @Environment(\.activeCardBackTheme) private var cardBackTheme: String
     @Environment(\.activeCustomCardColors) private var customCardColors: CustomCardColorGroup
 
@@ -16,6 +19,16 @@ public struct CardView: View {
             return Color(red: 0.35, green: 0.35, blue: 0.36)
         }
         return Color.black.opacity(0.85)
+    }
+
+    // Point Highlights: matches the card's own suit color (same source as
+    // CardFrontView.color) rather than a fixed color, so it reads as "this card's"
+    // popup rather than a generic banner.
+    private var pointPopupColor: Color {
+        if customCardColors.isEnabled {
+            return card.isRed ? customCardColors.redSuitColor : customCardColors.blackSuitColor
+        }
+        return card.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1)
     }
 
     public var body: some View {
@@ -35,6 +48,22 @@ public struct CardView: View {
         )
         .shadow(color: Color.black.opacity(0.15), radius: 1.5, x: 0, y: 1.5)
         .modifier(KeyboardFocusHighlightModifier(isFocused: isFocused, isSelected: isSelected))
+        .overlay(alignment: .topTrailing) {
+            if let pointPopupText {
+                Text(pointPopupText)
+                    .font(.system(size: 24, weight: .black, design: .monospaced))
+                    .foregroundColor(pointPopupColor)
+                    // Glow: a soft white halo first (so it reads against the white card
+                    // background even for black-suit text), then the suit color itself
+                    // glowing outward on top of that.
+                    .shadow(color: .white, radius: 3)
+                    .shadow(color: pointPopupColor.opacity(0.9), radius: 6)
+                    .padding(.top, 10)
+                    .padding(.trailing, 10)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.3), value: pointPopupText)
     }
 }
 

@@ -5,13 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-make build   # Compile (release), assemble SoliBee.app bundle, codesign
-make run     # build + open SoliBee.app
+make build   # Compile (release), assemble Honeycomb.app bundle, codesign
+make run     # build + open Honeycomb.app
 make test    # Compile and run SoliBeeTests/
-make clean   # Remove SoliBee.app and .build/
+make clean   # Remove Honeycomb.app and .build/
 ```
 
-`make build` is the only way to produce a runnable app — it compiles with `swift build -c release`, copies the binary and all resource files (images, audio, plist, icon) into `SoliBee.app/Contents/`, and re-signs the bundle. Any new resource files added to the project root or `src/` must be manually added to the Makefile `cp` block.
+`make build` is the only way to produce a runnable app — it compiles with `swift build -c release`, copies the binary and all resource files (images, audio, plist, icon) into `Honeycomb.app/Contents/`, and re-signs the bundle. Any new resource files added to the project root or `src/` must be manually added to the Makefile `cp` block.
 
 Tests use a custom `TestRunner.swift` entry point (not XCTest) so the GUI `@main` is excluded from the test compile. Run individual tests by editing `TestRunner.swift` to call only the desired suite.
 

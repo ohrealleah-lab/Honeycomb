@@ -88,56 +88,6 @@ public final class AppCoordinator {
     public var customFeltBlue: Double {
         didSet { UserDefaults.standard.set(customFeltBlue, forKey: "custom_felt_blue") }
     }
-    // Board ownership highlight colors for Honeycomb — app-wide/live-shared like the
-    // felt color fields, same zero-sentinel-means-default convention.
-    public var honeycombPlayerHighlightRed: Double {
-        didSet { UserDefaults.standard.set(honeycombPlayerHighlightRed, forKey: "honeycomb_player_highlight_red") }
-    }
-    public var honeycombPlayerHighlightGreen: Double {
-        didSet { UserDefaults.standard.set(honeycombPlayerHighlightGreen, forKey: "honeycomb_player_highlight_green") }
-    }
-    public var honeycombPlayerHighlightBlue: Double {
-        didSet { UserDefaults.standard.set(honeycombPlayerHighlightBlue, forKey: "honeycomb_player_highlight_blue") }
-    }
-    public var honeycombOpponentHighlightRed: Double {
-        didSet { UserDefaults.standard.set(honeycombOpponentHighlightRed, forKey: "honeycomb_opponent_highlight_red") }
-    }
-    public var honeycombOpponentHighlightGreen: Double {
-        didSet { UserDefaults.standard.set(honeycombOpponentHighlightGreen, forKey: "honeycomb_opponent_highlight_green") }
-    }
-    public var honeycombOpponentHighlightBlue: Double {
-        didSet { UserDefaults.standard.set(honeycombOpponentHighlightBlue, forKey: "honeycomb_opponent_highlight_blue") }
-    }
-
-    public var honeycombPlayerHighlightColor: Color {
-        get {
-            if honeycombPlayerHighlightRed == 0 && honeycombPlayerHighlightGreen == 0 && honeycombPlayerHighlightBlue == 0 {
-                return .blue
-            }
-            return Color(red: honeycombPlayerHighlightRed, green: honeycombPlayerHighlightGreen, blue: honeycombPlayerHighlightBlue)
-        }
-        set {
-            guard let rgb = NSColor(newValue).usingColorSpace(.deviceRGB) else { return }
-            honeycombPlayerHighlightRed = Double(rgb.redComponent)
-            honeycombPlayerHighlightGreen = Double(rgb.greenComponent)
-            honeycombPlayerHighlightBlue = Double(rgb.blueComponent)
-        }
-    }
-    public var honeycombOpponentHighlightColor: Color {
-        get {
-            if honeycombOpponentHighlightRed == 0 && honeycombOpponentHighlightGreen == 0 && honeycombOpponentHighlightBlue == 0 {
-                return .red
-            }
-            return Color(red: honeycombOpponentHighlightRed, green: honeycombOpponentHighlightGreen, blue: honeycombOpponentHighlightBlue)
-        }
-        set {
-            guard let rgb = NSColor(newValue).usingColorSpace(.deviceRGB) else { return }
-            honeycombOpponentHighlightRed = Double(rgb.redComponent)
-            honeycombOpponentHighlightGreen = Double(rgb.greenComponent)
-            honeycombOpponentHighlightBlue = Double(rgb.blueComponent)
-        }
-    }
-
     // nil means "no custom background — render Felt Color instead". App-wide/live-shared,
     // same as the felt color fields above.
     public var customBackgroundName: String? {
@@ -198,12 +148,6 @@ public final class AppCoordinator {
         self.customFeltRed   = UserDefaults.standard.double(forKey: "custom_felt_red")
         self.customFeltGreen = UserDefaults.standard.double(forKey: "custom_felt_green")
         self.customFeltBlue  = UserDefaults.standard.double(forKey: "custom_felt_blue")
-        self.honeycombPlayerHighlightRed     = UserDefaults.standard.double(forKey: "honeycomb_player_highlight_red")
-        self.honeycombPlayerHighlightGreen   = UserDefaults.standard.double(forKey: "honeycomb_player_highlight_green")
-        self.honeycombPlayerHighlightBlue    = UserDefaults.standard.double(forKey: "honeycomb_player_highlight_blue")
-        self.honeycombOpponentHighlightRed   = UserDefaults.standard.double(forKey: "honeycomb_opponent_highlight_red")
-        self.honeycombOpponentHighlightGreen = UserDefaults.standard.double(forKey: "honeycomb_opponent_highlight_green")
-        self.honeycombOpponentHighlightBlue  = UserDefaults.standard.double(forKey: "honeycomb_opponent_highlight_blue")
         self.customBackgroundName = UserDefaults.standard.string(forKey: "custom_background_name")
 
         // Synchronously warm the cache for whichever background is active so that
@@ -278,7 +222,7 @@ public final class AppCoordinator {
             isTimed           = nil  // don't propagate BJ's timer concept to solitaire games
         case .honeycomb:
             isSoundEnabled    = honeycombViewModel.options.isSoundEnabled
-            hideHintButton    = nil
+            hideHintButton    = honeycombViewModel.options.hideHintButton
             noStressMode      = honeycombViewModel.options.noStressMode
             isTimed           = nil
         }
@@ -313,6 +257,7 @@ public final class AppCoordinator {
         if old != .honeycomb {
             honeycombViewModel.options.isSoundEnabled   = isSoundEnabled
             honeycombViewModel.options.noStressMode     = noStressMode
+            if let hideHintButton { honeycombViewModel.options.hideHintButton = hideHintButton }
         }
     }
 

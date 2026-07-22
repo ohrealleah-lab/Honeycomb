@@ -270,6 +270,7 @@ public struct GameView: View {
                             suit: suit,
                             isFocused: viewModel.activeCursor?.pileId == pile.id,
                             isSelected: viewModel.selectedCardsSource == pile.id,
+                            pointPopup: viewModel.pointPopup,
                             onDragStarted: { card, stack, startLoc in
                                 viewModel.clearKeyboardCursor()
                                 viewModel.clearHint()
@@ -312,6 +313,7 @@ public struct GameView: View {
                             focusedCardIndex: viewModel.activeCursor?.pileId == pile.id ? viewModel.activeCursor?.cardIndex : nil,
                             isSelected: viewModel.selectedCardsSource == pile.id,
                             selectedCardIndex: viewModel.selectedCardsSource == pile.id ? viewModel.selectedCardsIndex : nil,
+                            pointPopup: viewModel.pointPopup,
                             onDragStarted: { card, stack, startLoc in
                                 viewModel.clearKeyboardCursor()
                                 viewModel.clearHint()
@@ -1117,6 +1119,7 @@ struct OptionsView: View {
     @State private var drawMode: GameState.DrawMode
     @State private var hideHintButton: Bool
     @State private var noStressMode: Bool
+    @State private var showPointHighlights: Bool
 
     let onViewStats: (() -> Void)?
     let availableWidth: CGFloat
@@ -1135,6 +1138,7 @@ struct OptionsView: View {
         _drawMode = State(initialValue: viewModel.state.drawMode)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
+        _showPointHighlights = State(initialValue: viewModel.options.showPointHighlights)
     }
 
     var body: some View {
@@ -1151,6 +1155,7 @@ struct OptionsView: View {
                 updatedOpts.isVegasScoring = isVegasScoring
                 updatedOpts.hideHintButton = hideHintButton
                 updatedOpts.noStressMode = noStressMode
+                updatedOpts.showPointHighlights = showPointHighlights
 
                 updatedOpts.drawMode = drawMode
                 if viewModel.state.drawMode != drawMode {
@@ -1179,6 +1184,9 @@ struct OptionsView: View {
                 .font(.system(.body))
 
             Toggle("No Stress Mode", isOn: $noStressMode)
+                .font(.system(.body))
+
+            Toggle("Point Highlights", isOn: $showPointHighlights)
                 .font(.system(.body))
         }
     }

@@ -14,13 +14,22 @@ public struct HoneycombStats: Codable, Equatable {
     // Added after the initial Codable rollout — decoded via decodeIfPresent so older
     // saved stats (missing this key) don't fail to decode and silently reset to zero.
     public var ultraHardWins: Int = 0
+    public var timesStartedOver: Int = 0
+    public var easyWins: Int = 0
+    public var mediumWins: Int = 0
+    public var hardWins: Int = 0
+    public var cardsStolen: Int = 0
+    public var fallenAces: Int = 0
+    public var suddenDeathCount: Int = 0
 
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
         case gamesPlayed, matchesWon, matchesLost, matchesDrawn, cardsCaptured
         case currentWinStreak, longestWinStreak, flawlessVictories, samePlusTriggers
-        case ultraHardWins
+        case ultraHardWins, timesStartedOver
+        case easyWins, mediumWins, hardWins
+        case cardsStolen, fallenAces, suddenDeathCount
     }
 
     public init(from decoder: Decoder) throws {
@@ -35,12 +44,20 @@ public struct HoneycombStats: Codable, Equatable {
         flawlessVictories = try container.decodeIfPresent(Int.self, forKey: .flawlessVictories) ?? 0
         samePlusTriggers = try container.decodeIfPresent(Int.self, forKey: .samePlusTriggers) ?? 0
         ultraHardWins = try container.decodeIfPresent(Int.self, forKey: .ultraHardWins) ?? 0
+        timesStartedOver = try container.decodeIfPresent(Int.self, forKey: .timesStartedOver) ?? 0
+        easyWins = try container.decodeIfPresent(Int.self, forKey: .easyWins) ?? 0
+        mediumWins = try container.decodeIfPresent(Int.self, forKey: .mediumWins) ?? 0
+        hardWins = try container.decodeIfPresent(Int.self, forKey: .hardWins) ?? 0
+        cardsStolen = try container.decodeIfPresent(Int.self, forKey: .cardsStolen) ?? 0
+        fallenAces = try container.decodeIfPresent(Int.self, forKey: .fallenAces) ?? 0
+        suddenDeathCount = try container.decodeIfPresent(Int.self, forKey: .suddenDeathCount) ?? 0
     }
 
-    public mutating func recordGame(won: Bool, drawn: Bool, captures: Int, sessionCombos: Int, flawless: Bool, isUltraHard: Bool = false) {
+    public mutating func recordGame(won: Bool, drawn: Bool, captures: Int, sessionCombos: Int, flawless: Bool, difficulty: HoneycombDifficulty? = nil, fallenAceCaptures: Int = 0) {
         gamesPlayed += 1
         cardsCaptured += captures
         samePlusTriggers += sessionCombos
+        fallenAces += fallenAceCaptures
 
         if drawn {
             matchesDrawn += 1
@@ -54,8 +71,12 @@ public struct HoneycombStats: Codable, Equatable {
             if flawless {
                 flawlessVictories += 1
             }
-            if isUltraHard {
-                ultraHardWins += 1
+            switch difficulty {
+            case .easy: easyWins += 1
+            case .medium: mediumWins += 1
+            case .hard: hardWins += 1
+            case .ultraHard: ultraHardWins += 1
+            case nil: break
             }
         } else {
             matchesLost += 1

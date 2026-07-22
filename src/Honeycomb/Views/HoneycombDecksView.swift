@@ -3,6 +3,7 @@ import SwiftUI
 public struct HoneycombDecksView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var activeDeckIndex: Int
+    var viewModel: HoneycombViewModel
 
     @State private var profile = HoneycombProfileManager.shared
     @State private var editingDeckIndex: Int? = nil
@@ -10,10 +11,12 @@ public struct HoneycombDecksView: View {
     @State private var editingDeckCards: [Int] = []
     @State private var validationError: String? = nil
     @State private var isNameLocked: Bool = false
+    @State private var showStartOverConfirmation = false
 
     // Card Bank filter — nil means "All".
     @State private var filterStar: Int? = nil
     @State private var filterSuit: String? = nil
+    @State private var filterFavoritesOnly: Bool = false
 
     private var filteredCardBank: [Int] {
         let db = HoneycombDatabase.shared
@@ -21,8 +24,20 @@ public struct HoneycombDecksView: View {
             guard let card = db.card(id: id) else { return false }
             if let star = filterStar, card.stars != star { return false }
             if let suit = filterSuit, card.suit != suit { return false }
+            if filterFavoritesOnly && !profile.favoriteCardIds.contains(id) { return false }
             return true
         }
+    }
+
+    // Favoriting only happens from the main browse grid (Deck Builder's grid already
+    // uses a tap to add/remove the card from the deck being edited, so a second,
+    // conflicting meaning for the same tap would be confusing there).
+    private func toggleFavorite(cardId: Int) {
+        profile.toggleFavorite(id: cardId)
+    }
+
+    private func performStartOver() {
+        viewModel.startOver()
     }
 
     public var body: some View {
@@ -56,6 +71,8 @@ public struct HoneycombDecksView: View {
                                 }
                             }
                         }
+
+                        startOverPanel
                     }
                     .padding()
                     .frame(width: leftWidth, alignment: .top)
@@ -65,7 +82,7 @@ public struct HoneycombDecksView: View {
                     // Right: Card Bank
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("CARD BANK")
+                            Text("CARD BANK (Max \(HoneycombDatabase.shared.allCards.count))")
                                 .font(.caption).bold()
                                 .foregroundColor(.secondary)
                             Spacer()
@@ -81,7 +98,30 @@ public struct HoneycombDecksView: View {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 12)], spacing: 12) {
                                 ForEach(filteredCardBank, id: \.self) { cardId in
                                     if let cardData = HoneycombDatabase.shared.card(id: cardId) {
-                                        HoneycombCardView(card: HoneycombCard(data: cardData, owner: .player), size: CGSize(width: 90, height: 127), isFlipped: false, useOwnershipColoring: false)
+                                        // A real Button (rather than a bare .onTapGesture) so AppKit's
+                                        // own hit-testing resolves which card was clicked — inside a
+                                        // LazyVGrid, a raw tap gesture could occasionally resolve
+                                        // against a neighboring cell's recognizer instead of the one
+                                        // actually under the cursor.
+                                        Button {
+                                            toggleFavorite(cardId: cardId)
+                                        } label: {
+                                            HoneycombCardView(card: HoneycombCard(data: cardData, owner: .player), size: CGSize(width: 90, height: 127), isFlipped: false, useOwnershipColoring: false)
+                                                .overlay(alignment: .topTrailing) {
+                                                    // Always rendered (opacity-toggled) rather than conditionally
+                                                    // included/excluded — a Button label nested this deep inside a
+                                                    // LazyVGrid can be slow to re-diff an if/else branch, which made
+                                                    // un-favoriting look like it silently failed until the next
+                                                    // full redraw even though the underlying state updated.
+                                                    Image(systemName: "heart.fill")
+                                                        .foregroundColor(.red)
+                                                        .font(.system(size: 16))
+                                                        .padding(6)
+                                                        .shadow(color: .white, radius: 2)
+                                                        .opacity(profile.favoriteCardIds.contains(cardId) ? 1 : 0)
+                                                }
+                                        }
+                                        .buttonStyle(.plain)
                                     }
                                 }
                             }
@@ -100,8 +140,29 @@ public struct HoneycombDecksView: View {
         )) { wrapper in
             deckBuilder(wrapper: wrapper)
         }
-        .onAppear {
-            profile = HoneycombProfileManager.shared
+    }
+
+    private var startOverPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Want a fresh start? Starting over clears your saved decks and card bank, then reseeds the game with a whole new set of cards.")
+                .foregroundColor(.white)
+
+            Button("Start Over") {
+                showStartOverConfirmation = true
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.yellow)
+            .foregroundColor(.black)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.red)
+        .cornerRadius(10)
+        .alert("Start Over?", isPresented: $showStartOverConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Start Over", role: .destructive) { performStartOver() }
+        } message: {
+            Text("Starting over reseeds the game with an entirely new set of cards. All saved decks and card bank progress will be removed except Deck 1. This can't be undone.")
         }
     }
 
@@ -167,10 +228,26 @@ public struct HoneycombDecksView: View {
                 filterChip(label: filterSuit.map { suitLabel($0) } ?? "All Suits")
             }
 
-            if filterStar != nil || filterSuit != nil {
+            Button {
+                filterFavoritesOnly.toggle()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: filterFavoritesOnly ? "heart.fill" : "heart")
+                        .foregroundColor(filterFavoritesOnly ? .red : .primary)
+                    Text("Favorites").font(.caption).bold()
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(filterFavoritesOnly ? Color.red.opacity(0.12) : Color.black.opacity(0.08))
+                .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+
+            if filterStar != nil || filterSuit != nil || filterFavoritesOnly {
                 Button("Clear") {
                     filterStar = nil
                     filterSuit = nil
+                    filterFavoritesOnly = false
                 }
                 .font(.caption)
             }

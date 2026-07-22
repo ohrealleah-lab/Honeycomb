@@ -32,7 +32,11 @@ struct TestRunner {
         print("🧪 Running CustomCardColorsTests...")
         CustomCardColorsTests.run()
         print("✅ CustomCardColorsTests passed.")
-        
+
+        print("🧪 Running HoneycombCardGeneratorTests...")
+        HoneycombCardGeneratorTests.run()
+        print("✅ HoneycombCardGeneratorTests passed.")
+
         VideoPokerAndBlackjackTests.run()
         
         print("🎉 ALL TESTS PASSED SUCCESSFULLY!")

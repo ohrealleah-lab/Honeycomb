@@ -85,6 +85,11 @@ public final class GameViewModel {
     public var isAutocompleteAvailable: Bool = false
     public var isAutoplayRunning: Bool = false
 
+    // Point Highlights: transient "+N"/"-N" popup over the card responsible for a score
+    // change — not part of `state`/undo snapshots, same precedent as isAutoplayRunning.
+    public var pointPopup: CardPointPopup? = nil
+    private var pointPopupGeneration: Int = 0
+
     // Stuck / stock exhaustion
     public var isStuck: Bool = false
     public var isStockExhausted: Bool = false
@@ -459,6 +464,7 @@ public final class GameViewModel {
         // Remove cards from source
         let cardIDs = Set(cards.map { $0.id })
         var revealedFaceDownCard = false
+        var revealedCardId: UUID? = nil
 
         if sourcePile.type == .stock {
             state.stock.cards.removeAll { cardIDs.contains($0.id) }
@@ -478,6 +484,7 @@ public final class GameViewModel {
                 if !state.tableau[idx].cards.isEmpty && !state.tableau[idx].cards.last!.faceUp {
                     state.tableau[idx].cards[state.tableau[idx].cards.count - 1].faceUp = true
                     revealedFaceDownCard = true
+                    revealedCardId = state.tableau[idx].cards.last!.id
                 }
             }
         } else if sourcePile.type == .foundation {
@@ -499,6 +506,8 @@ public final class GameViewModel {
 
         // Score adjustments
         adjustScore(from: sourcePile.type, to: targetPile.type, revealedFaceDownCard: revealedFaceDownCard)
+        updatePointPopup(anchorCard: cards.last, source: sourcePile.type, target: targetPile.type,
+                         revealedFaceDownCard: revealedFaceDownCard, revealedCardId: revealedCardId)
 
         state.movesCount += 1
         checkWinState()
@@ -543,7 +552,53 @@ public final class GameViewModel {
             }
         }
     }
-    
+
+    // Point Highlights: mirrors adjustScore's branching (move-type events take
+    // precedence over the reveal-only case, since a single moveCards call can trigger
+    // both — e.g. a tableau→foundation move that also reveals the card underneath —
+    // and the popup's one slot can only show one at a time; the moved card's own event
+    // is the more relevant one to show).
+    private func updatePointPopup(anchorCard: Card?, source: Pile.PileType, target: Pile.PileType, revealedFaceDownCard: Bool, revealedCardId: UUID?) {
+        guard options.showPointHighlights, !isAutoplayRunning else { return }
+        let popup: CardPointPopup?
+        if options.isVegasScoring {
+            if target == .foundation, let anchorCard {
+                popup = CardPointPopup(cardId: anchorCard.id, displayText: Self.currencyString(cents: 500), isPositive: true)
+            } else if source == .foundation && target == .tableau, let anchorCard {
+                popup = CardPointPopup(cardId: anchorCard.id, displayText: Self.currencyString(cents: -500), isPositive: false)
+            } else {
+                popup = nil
+            }
+        } else {
+            if target == .foundation, let anchorCard {
+                popup = CardPointPopup(cardId: anchorCard.id, displayText: "+10", isPositive: true)
+            } else if (source == .stock || source == .waste) && target == .tableau, let anchorCard {
+                popup = CardPointPopup(cardId: anchorCard.id, displayText: "+5", isPositive: true)
+            } else if source == .foundation && target == .tableau, let anchorCard {
+                popup = CardPointPopup(cardId: anchorCard.id, displayText: "-15", isPositive: false)
+            } else if revealedFaceDownCard, let revealedCardId {
+                popup = CardPointPopup(cardId: revealedCardId, displayText: "+5", isPositive: true)
+            } else {
+                popup = nil
+            }
+        }
+        guard let popup else { return }
+        pointPopupGeneration += 1
+        let generation = pointPopupGeneration
+        pointPopup = popup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self, self.pointPopupGeneration == generation else { return }
+            self.pointPopup = nil
+        }
+    }
+
+    // Point Highlights only ever deals in whole-dollar amounts (±$5 today), so this
+    // skips cents entirely rather than always showing "+$5.00".
+    private static func currencyString(cents: Int) -> String {
+        let dollars = Int(cents / 100)
+        return dollars >= 0 ? "+$\(dollars)" : "-$\(abs(dollars))"
+    }
+
     // MARK: - Timer Handling
 
     // `isTimed` has no UI control anymore (the old "Timed Game" toggle was replaced by
@@ -999,6 +1054,7 @@ public final class GameViewModel {
         }
         isAutoplayRunning = false
         isStuck = false
+        pointPopup = nil
         clearHint()
         clearKeyboardCursor()
         checkWinState()

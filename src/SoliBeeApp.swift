@@ -16,7 +16,7 @@ struct SoliBeeApp: App {
     var body: some Scene {
         WindowGroup {
             AppRouterView(coordinator: coordinator)
-                .navigationTitle("SoliBee Suite")
+                .navigationTitle("Honeycomb Card Suite")
                 .onAppear {
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
@@ -109,6 +109,11 @@ struct SoliBeeApp: App {
         }
         .windowResizability(.contentSize)
 
+        WindowGroup("Honeycomb Help", id: "honeycomb-help") {
+            HoneycombHelpView()
+        }
+        .windowResizability(.contentSize)
+
         WindowGroup("Themes Help", id: "themes-help") {
             ThemesHelpView()
         }
@@ -125,6 +130,7 @@ private struct HelpMenuCommands: View {
         Button("Spider Solitaire Help")   { openWindow(id: "spider-help") }
         Button("Video Poker Help")        { openWindow(id: "videopoker-help") }
         Button("Video Blackjack Help")    { openWindow(id: "blackjack-help") }
+        Button("Honeycomb Help")          { openWindow(id: "honeycomb-help") }
         Button("Themes Help")             { openWindow(id: "themes-help") }
     }
 }

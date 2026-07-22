@@ -14,11 +14,21 @@ public struct HoneycombCardView: View {
     // cards the opponent originally played, which the player can steal regardless of
     // who currently owns them on the board.
     public var stealHighlight: Bool = false
+    // Point Highlights: which of this card's N/E/S/W stats (0=Top,1=Right,2=Bottom,
+    // 3=Left) just won a capture, briefly flashed gold before the flip happens.
+    public var highlightedStatIndices: Set<Int> = []
 
     @Environment(\.activeCustomCardColors) private var customCardColors: CustomCardColorGroup
 
     @State private var flipDegrees: Double = 0.0
     @State private var statPulseScale: CGFloat = 1.0
+    @State private var pointHighlightPulseScale: CGFloat = 1.0
+    // Ascension/Descension badge: glows brightly for ~1s after the modifier changes,
+    // then the glow (not the number itself) fades out — same hold-then-fade timing as
+    // the Solitaire point popups. Guarded by a generation counter since the modifier is
+    // recomputed every turn and can change again mid-fade.
+    @State private var modifierGlowOpacity: Double = 0.0
+    @State private var modifierGlowGeneration: Int = 0
     // The owner actually rendered — lags one half-flip behind `card.owner` so the
     // ownership-dependent border color swaps at the rotation's 90° midpoint (when the
     // card is edge-on and invisible) instead of instantly at the start of the
@@ -31,12 +41,13 @@ public struct HoneycombCardView: View {
     // normally instead of showing backwards text.
     @State private var isPastFlipMidpoint: Bool = false
 
-    public init(card: HoneycombCard, size: CGSize, isFlipped: Bool, useOwnershipColoring: Bool = true, stealHighlight: Bool = false) {
+    public init(card: HoneycombCard, size: CGSize, isFlipped: Bool, useOwnershipColoring: Bool = true, stealHighlight: Bool = false, highlightedStatIndices: Set<Int> = []) {
         self.card = card
         self.size = size
         self.isFlipped = isFlipped
         self.useOwnershipColoring = useOwnershipColoring
         self.stealHighlight = stealHighlight
+        self.highlightedStatIndices = highlightedStatIndices
         _displayedOwner = State(initialValue: card.owner)
     }
 
@@ -77,43 +88,30 @@ public struct HoneycombCardView: View {
                 // +N/-N badge over the suit, not baked into these numbers.
                 Text(statString(card.data.stats[0]))
                     .font(.system(size: numberFontSize, weight: .bold, design: .monospaced))
-                    .foregroundColor(currentColor)
-                    .scaleEffect(statPulseScale)
+                    .foregroundColor(statColor(for: 0))
+                    .scaleEffect(statScale(for: 0))
                     .position(x: size.width / 2, y: numberPadding + numberGlyphHalfHeight)
 
                 // West (Left)
                 Text(statString(card.data.stats[3]))
                     .font(.system(size: numberFontSize, weight: .bold, design: .monospaced))
-                    .foregroundColor(currentColor)
-                    .scaleEffect(statPulseScale)
+                    .foregroundColor(statColor(for: 3))
+                    .scaleEffect(statScale(for: 3))
                     .position(x: numberPadding + numberGlyphHalfWidth, y: size.height / 2)
 
                 // East (Right)
                 Text(statString(card.data.stats[1]))
                     .font(.system(size: numberFontSize, weight: .bold, design: .monospaced))
-                    .foregroundColor(currentColor)
-                    .scaleEffect(statPulseScale)
+                    .foregroundColor(statColor(for: 1))
+                    .scaleEffect(statScale(for: 1))
                     .position(x: size.width - (numberPadding + numberGlyphHalfWidth), y: size.height / 2)
 
                 // South (Bottom)
                 Text(statString(card.data.stats[2]))
                     .font(.system(size: numberFontSize, weight: .bold, design: .monospaced))
-                    .foregroundColor(currentColor)
-                    .scaleEffect(statPulseScale)
+                    .foregroundColor(statColor(for: 2))
+                    .scaleEffect(statScale(for: 2))
                     .position(x: size.width / 2, y: size.height - (numberPadding + numberGlyphHalfHeight))
-
-                // Ascension/Descension modifier badge — sits to the northeast of the
-                // suit, clear of both the suit/stars cluster and the North/East
-                // numbers, so it doesn't get lost in the middle of the card and reads
-                // clearly as a separate bonus/penalty. Colored (not white, since it's
-                // no longer sitting on top of the colored suit — it's on the plain
-                // white card background here) and sized up for emphasis.
-                if card.modifier != 0 {
-                    Text(card.modifier > 0 ? "+\(card.modifier)" : "\(card.modifier)")
-                        .font(.system(size: size.width * 0.22, weight: .black, design: .monospaced))
-                        .foregroundColor(card.modifier > 0 ? .green : .red)
-                        .position(x: size.width * 0.72, y: size.height * 0.28)
-                }
 
                 // Stars — dead center of the card, over the suit icon (declared after
                 // it in this ZStack, so they render on top). White, with a row split
@@ -159,6 +157,30 @@ public struct HoneycombCardView: View {
                         statPulseScale = 1.0
                     }
                 }
+                if newMod != 0 {
+                    modifierGlowGeneration += 1
+                    let generation = modifierGlowGeneration
+                    modifierGlowOpacity = 1.0
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        guard modifierGlowGeneration == generation else { return }
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            modifierGlowOpacity = 0.0
+                        }
+                    }
+                } else {
+                    modifierGlowOpacity = 0.0
+                }
+            }
+        }
+        .onChange(of: highlightedStatIndices) { _, newValue in
+            guard !newValue.isEmpty else { return }
+            withAnimation(.easeOut(duration: 0.15)) {
+                pointHighlightPulseScale = 1.4
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation(.easeIn(duration: 0.2)) {
+                    pointHighlightPulseScale = 1.0
+                }
             }
         }
         // White backing — applied to both the face-up card and CardBackView alike (like
@@ -173,6 +195,21 @@ public struct HoneycombCardView: View {
                 .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
         )
         .shadow(color: .black.opacity(0.15), radius: 1.5, x: 0, y: 1.5)
+        // Ascension/Descension badge — same top-right corner spot as the Solitaire
+        // point popups (proportional to this view's own size, since Honeycomb cards
+        // render at several different sizes), so it reads as the same "here's what just
+        // happened to your points" language across every game.
+        .overlay(alignment: .topTrailing) {
+            if !isFlipped && card.modifier != 0 {
+                Text(card.modifier > 0 ? "+\(card.modifier)" : "\(card.modifier)")
+                    .font(.system(size: size.width * (24.0 / 128.0), weight: .black, design: .monospaced))
+                    .foregroundColor(currentColor)
+                    .shadow(color: .white.opacity(modifierGlowOpacity), radius: size.width * (3.0 / 128.0))
+                    .shadow(color: currentColor.opacity(0.9 * modifierGlowOpacity), radius: size.width * (6.0 / 128.0))
+                    .padding(.top, size.height * (10.0 / 181.0))
+                    .padding(.trailing, size.width * (10.0 / 128.0))
+            }
+        }
     }
     
     private func statString(_ stat: Int) -> String {
@@ -202,6 +239,16 @@ public struct HoneycombCardView: View {
         }
         let isRed = card.data.suit == "H" || card.data.suit == "D"
         return suitColor(isRed: isRed)
+    }
+
+    // Point Highlights: the specific N/E/S/W stat that just won a capture flashes gold
+    // and briefly scales up, overriding the normal ownership color for that one number.
+    private func statColor(for index: Int) -> Color {
+        highlightedStatIndices.contains(index) ? .yellow : currentColor
+    }
+
+    private func statScale(for index: Int) -> CGFloat {
+        highlightedStatIndices.contains(index) ? statPulseScale * pointHighlightPulseScale : statPulseScale
     }
 
     private func suitColor(isRed: Bool) -> Color {

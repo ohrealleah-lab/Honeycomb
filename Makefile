@@ -1,4 +1,4 @@
-APP_NAME=SoliBee
+APP_NAME=Honeycomb
 APP_BUNDLE=$(APP_NAME).app
 MACOS_BIN=$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)
 
@@ -28,7 +28,6 @@ build:
 	cp src/shuffle.aiff $(APP_BUNDLE)/Contents/Resources/shuffle.aiff
 	cp src/snap.aiff $(APP_BUNDLE)/Contents/Resources/snap.aiff
 	cp src/victory.aiff $(APP_BUNDLE)/Contents/Resources/victory.aiff
-	cp src/Honeycomb/cards_db.json $(APP_BUNDLE)/Contents/Resources/cards_db.json
 	# Copy compiled binary from SPM build path to the app bundle
 	cp .build/release/$(APP_NAME) $(MACOS_BIN)
 	chmod +x $(MACOS_BIN)
