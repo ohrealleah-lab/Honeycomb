@@ -24,6 +24,11 @@ jobs:
     defaults:
       run:
         working-directory: mac
+    # The `secrets` context isn't allowed directly inside `if:` conditions (only in `env:`
+    # blocks or `run:` steps) — mirroring it into job-level env here is what lets the
+    # conditional signing steps below actually check whether it's set.
+    env:
+      SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
 
     steps:
       - name: Checkout
@@ -71,9 +76,7 @@ jobs:
       # built and attached to the GitHub Release below — it just won't be discoverable by
       # Sparkle's in-app auto-updater yet (appcast.xml won't have a new entry).
       - name: Download Sparkle CLI tools
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.SPARKLE_ED_PRIVATE_KEY != ''
-        env:
-          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        if: startsWith(github.ref, 'refs/tags/v') && env.SPARKLE_ED_PRIVATE_KEY != ''
         run: |
           curl -L -o sparkle-tools.tar.xz \
             https://github.com/sparkle-project/Sparkle/releases/download/2.9.4/Sparkle-2.9.4.tar.xz
@@ -81,18 +84,14 @@ jobs:
           tar -xf sparkle-tools.tar.xz -C sparkle-tools
 
       - name: Generate appcast + sign release
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.SPARKLE_ED_PRIVATE_KEY != ''
-        env:
-          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        if: startsWith(github.ref, 'refs/tags/v') && env.SPARKLE_ED_PRIVATE_KEY != ''
         run: |
           echo -n "$SPARKLE_ED_PRIVATE_KEY" > ed_key.txt
           sparkle-tools/bin/generate_appcast --ed-key-file ed_key.txt dist/
           rm -f ed_key.txt
 
       - name: Commit updated appcast.xml
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.SPARKLE_ED_PRIVATE_KEY != ''
-        env:
-          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        if: startsWith(github.ref, 'refs/tags/v') && env.SPARKLE_ED_PRIVATE_KEY != ''
         run: |
           cp dist/appcast.xml appcast.xml
           git config user.name "github-actions[bot]"

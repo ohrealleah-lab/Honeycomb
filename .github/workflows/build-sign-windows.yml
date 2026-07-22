@@ -29,6 +29,11 @@ jobs:
     defaults:
       run:
         working-directory: windows
+    # The `secrets` context isn't allowed directly inside `if:` conditions (only in `env:`
+    # blocks or `run:` steps) — mirroring it into job-level env here is what lets the
+    # conditional signing steps below actually check whether it's set.
+    env:
+      CERT_PFX_BASE64: ${{ secrets.CERT_PFX_BASE64 }}
 
     steps:
       - name: Checkout
@@ -57,14 +62,14 @@ jobs:
       #   [Convert]::ToBase64String([IO.File]::ReadAllBytes('your-cert.pfx')) | Set-Clipboard
 
       - name: Decode certificate
-        if: ${{ secrets.CERT_PFX_BASE64 != '' }}
+        if: env.CERT_PFX_BASE64 != ''
         shell: pwsh
         run: |
           $bytes = [Convert]::FromBase64String('${{ secrets.CERT_PFX_BASE64 }}')
           [IO.File]::WriteAllBytes('cert.pfx', $bytes)
 
       - name: Sign executable
-        if: ${{ secrets.CERT_PFX_BASE64 != '' }}
+        if: env.CERT_PFX_BASE64 != ''
         shell: pwsh
         env:
           CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
