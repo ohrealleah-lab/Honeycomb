@@ -70,7 +70,7 @@ public struct HoneycombCardView: View {
 
     public var body: some View {
         ZStack {
-            if isFlipped {
+            if isFlipped || card.isFaceDown {
                 CardBackView()
             } else {
                 // Large Center Suit (Like an Ace) — dead center of the card.

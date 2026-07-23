@@ -377,7 +377,7 @@ public final class HoneycombViewModel {
         // right alongside who's moving first instead of only in the separate,
         // always-on Rules banner above the board.
         let firstMoveLine = isPlayerTurn ? "First Move: Player!" : "First Move: Opponent!"
-        flashRuleBanner = "\(firstMoveLine)\n\(activeRulesSummaryText())"
+        flashRuleBanner = "\(firstMoveLine)"
 
         if options.isSoundEnabled {
             UISound.play(named: "shuffle", enabled: true)
@@ -876,7 +876,7 @@ public final class HoneycombViewModel {
         saveStateForUndo()
 
         let card = playerHand.remove(at: handIndex)
-        applyPlacement(card: card, boardIndex: boardIndex) { [weak self] in
+        applyPlacement(card: card, boardIndex: boardIndex, isFirstCard: playerHand.count == 4) { [weak self] in
             guard let self, self.gameState == .playing else { return }
             self.isPlayerTurn = false
             // Reroll now (not lazily inside aiPlayTurn) so the mandated card is already
@@ -899,9 +899,16 @@ public final class HoneycombViewModel {
     // once the placement (and its capture/flip, if any) has fully resolved — each
     // caller uses it to schedule whatever comes next (the opponent's turn, or the
     // player's), so that scheduling can't race ahead of an in-progress animation.
-    private func applyPlacement(card: HoneycombCard, boardIndex: Int, completion: @escaping () -> Void) {
+    private func applyPlacement(card: HoneycombCard, boardIndex: Int, isFirstCard: Bool, completion: @escaping () -> Void) {
         var finalBoard = board
-        let flips = finalBoard.placeCard(card, at: boardIndex, rules: activeRules)
+        var placedCard = card
+        
+        let isBombShelterFirst = activeRules.contains(.bombShelter) && isFirstCard
+        if isBombShelterFirst {
+            placedCard.isFaceDown = true
+        }
+        
+        let flips = finalBoard.placeCard(placedCard, at: boardIndex, rules: activeRules, skipCaptures: isBombShelterFirst)
 
         // Only the directly-placed card's own captures get highlighted — secondary
         // combo/chain flips (a captured card immediately flipping its own neighbors)
@@ -912,9 +919,9 @@ public final class HoneycombViewModel {
             // Show the new card placed but not yet flipped — captured cells keep their
             // pre-capture owner for one beat while the attacker's winning stat(s) flash.
             var intermediateBoard = board
-            intermediateBoard.cells[boardIndex].card = card
+            intermediateBoard.cells[boardIndex].card = placedCard
             board = intermediateBoard
-            pointHighlight = (cardId: card.id, statIndices: directStatIndices)
+            pointHighlight = (cardId: placedCard.id, statIndices: directStatIndices)
             isAnimatingPlacement = true
 
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.pointHighlightDelay) { [weak self] in
@@ -924,11 +931,11 @@ public final class HoneycombViewModel {
                     self.board = finalBoard
                 }
                 self.isAnimatingPlacement = false
-                self.finishPlacement(placedSuit: card.data.suit, flipsCount: flips.count, completion: completion)
+                self.finishPlacement(placedSuit: placedCard.data.suit, flipsCount: flips.count, completion: completion)
             }
         } else {
             board = finalBoard
-            finishPlacement(placedSuit: card.data.suit, flipsCount: flips.count, completion: completion)
+            finishPlacement(placedSuit: placedCard.data.suit, flipsCount: flips.count, completion: completion)
         }
     }
 
@@ -1070,7 +1077,7 @@ public final class HoneycombViewModel {
         guard let bestMove = move else { return }
 
         let cardToPlay = opponentHand.remove(at: bestMove.handIndex)
-        applyPlacement(card: cardToPlay, boardIndex: bestMove.boardIndex) { [weak self] in
+        applyPlacement(card: cardToPlay, boardIndex: bestMove.boardIndex, isFirstCard: opponentHand.count == 4) { [weak self] in
             guard let self, self.gameState == .playing else { return }
             self.isPlayerTurn = true
             // Reroll now so the player's mandated card (under Chaos) is highlighted
@@ -1080,6 +1087,60 @@ public final class HoneycombViewModel {
     }
 
     private func checkWinCondition() {
+        if board.isFull {
+            if activeRules.contains(.bombShelter) {
+                revealBombSheltersAndSettle()
+            } else {
+                settleMatch()
+            }
+        }
+    }
+
+    private func revealBombSheltersAndSettle() {
+        isAnimatingPlacement = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else { return }
+
+            let starterOwner: CardOwner = self.playerHand.isEmpty ? .player : .opponent
+            
+            var starterCell = -1
+            var secondCell = -1
+            
+            for i in 0..<9 {
+                if let card = self.board.cells[i].card, card.isFaceDown {
+                    if card.originalOwner == starterOwner { starterCell = i }
+                    else { secondCell = i }
+                }
+            }
+
+            if starterCell != -1 {
+                let flips = self.board.revealFaceDownCard(at: starterCell, rules: self.activeRules)
+                if !flips.isEmpty && self.options.isSoundEnabled {
+                    UISound.play(named: "snap", enabled: true)
+                }
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                guard let self = self else { return }
+                
+                if secondCell != -1 {
+                    let flips = self.board.revealFaceDownCard(at: secondCell, rules: self.activeRules)
+                    if !flips.isEmpty && self.options.isSoundEnabled {
+                        UISound.play(named: "snap", enabled: true)
+                    }
+                }
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                    guard let self = self else { return }
+                    self.isAnimatingPlacement = false
+                    self.settleMatch()
+                }
+            }
+        }
+    }
+
+    private func settleMatch() {
         if board.isFull {
             // The board just filled, which always ends either the match (win/lose) or
             // this round (draw, into Sudden Death) — any Hint highlight still showing
@@ -1100,10 +1161,12 @@ public final class HoneycombViewModel {
             } else {
                 matchResult = "Draw - Sudden Death!"
                 gameState = .suddenDeath
-                flashRuleBanner = "Sudden Death!"
                 stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    self.triggerSuddenDeath()
+                
+                // Give enough time for the final card placement and any combo animations to fully resolve
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                    self?.flashRuleBanner = "Sudden Death!"
+                    self?.triggerSuddenDeath()
                 }
                 return
             }

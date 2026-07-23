@@ -12,6 +12,7 @@ public enum HoneycombRule: String, Codable, CaseIterable {
     case swap = "Swap"
     case order = "Order"
     case chaos = "Chaos"
+    case bombShelter = "Bomb Shelter"
 }
 
 public struct HoneycombCell: Codable, Identifiable, Equatable {
@@ -66,7 +67,7 @@ public struct HoneycombBoard: Codable, Equatable {
         self.cells = (0..<9).map { _ in HoneycombCell(card: nil) }
     }
 
-    public mutating func placeCard(_ card: HoneycombCard, at index: Int, rules: [HoneycombRule]) -> [Int] {
+    public mutating func placeCard(_ card: HoneycombCard, at index: Int, rules: [HoneycombRule], skipCaptures: Bool = false) -> [Int] {
         guard index >= 0 && index < cells.count, cells[index].card == nil else { return [] }
 
         cells[index].card = card
@@ -79,9 +80,28 @@ public struct HoneycombBoard: Codable, Equatable {
         // newly placed card immediately benefits (or suffers) from the current suit
         // count, including the card it's about to fight with.
         updateModifiers(rules: rules)
+        
+        if skipCaptures { return [] }
+        
         let flips = resolveCaptures(at: index, rules: rules, isCombo: false)
 
         return flips
+    }
+    
+    public mutating func revealFaceDownCard(at index: Int, rules: [HoneycombRule]) -> [Int] {
+        guard index >= 0 && index < cells.count, let card = cells[index].card, card.isFaceDown else { return [] }
+
+        cells[index].card!.isFaceDown = false
+        
+        var ruleClone = rules
+        ruleClone.removeAll { $0 == .same || $0 == .plus || $0 == .fallenAce }
+
+        lastSameTriggered = false
+        lastPlusTriggered = false
+        lastFallenAceTriggered = false
+        lastComboFlipCount = 0
+
+        return resolveCaptures(at: index, rules: ruleClone, isCombo: false)
     }
     
     private func suitCount(suit: String) -> Int {
@@ -152,25 +172,25 @@ public struct HoneycombBoard: Codable, Equatable {
         
         if row > 0 { // Top
             let tIdx = index - cols
-            if let tCard = cells[tIdx].card {
+            if let tCard = cells[tIdx].card, !tCard.isFaceDown {
                 neighbors.append((0, tIdx, attacker.stat(at: 0), tCard.stat(at: 2), tCard.owner != attacker.owner))
             }
         }
         if col < cols - 1 { // Right
             let tIdx = index + 1
-            if let tCard = cells[tIdx].card {
+            if let tCard = cells[tIdx].card, !tCard.isFaceDown {
                 neighbors.append((1, tIdx, attacker.stat(at: 1), tCard.stat(at: 3), tCard.owner != attacker.owner))
             }
         }
         if row < rows - 1 { // Bottom
             let tIdx = index + cols
-            if let tCard = cells[tIdx].card {
+            if let tCard = cells[tIdx].card, !tCard.isFaceDown {
                 neighbors.append((2, tIdx, attacker.stat(at: 2), tCard.stat(at: 0), tCard.owner != attacker.owner))
             }
         }
         if col > 0 { // Left
             let tIdx = index - 1
-            if let tCard = cells[tIdx].card {
+            if let tCard = cells[tIdx].card, !tCard.isFaceDown {
                 neighbors.append((3, tIdx, attacker.stat(at: 3), tCard.stat(at: 1), tCard.owner != attacker.owner))
             }
         }

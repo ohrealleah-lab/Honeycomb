@@ -59,10 +59,10 @@
             <Border x:Name="RulesBannerBar" Grid.Row="0" Grid.Column="2" Background="#BF000000" CornerRadius="12" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="24,24" Margin="0,0,0,20">
                 <StackPanel Spacing="12" HorizontalAlignment="Center">
                     <TextBlock Text="Rules:" FontSize="28" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" />
-                    <ItemsControl x:Name="RulesList">
+                    <ItemsControl x:Name="RulesList" HorizontalAlignment="Stretch">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="22" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding}" FontSize="22" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -105,7 +105,7 @@
                 <Button Content="✕" Click="CloseOverlay_Click" Classes="manage-decks" Background="#66000000" BorderThickness="0" Foreground="#999999" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-15,-15,0" Padding="12,8" CornerRadius="20"/>
                 
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" Margin="0,30,0,0">
-                    <TextBlock x:Name="OverlayTitle" Text="You Win!" FontSize="64" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI" />
+                    <TextBlock x:Name="OverlayTitle" Text="You Win!" FontSize="64" FontWeight="Black" Foreground="#FFD700" HorizontalAlignment="Center" FontFamily="Segoe UI" />
                     <!-- Subtitle hidden/removed as requested to match mockup -->
                     <TextBlock x:Name="OverlayLoseTitle" Text="Not today, partner!" FontSize="36" FontWeight="Black" Foreground="#FFD700" HorizontalAlignment="Center" FontFamily="Segoe UI" IsVisible="False" />
                     <TextBlock x:Name="OverlaySubtitle" Text="" FontSize="24" Foreground="#CCCCCC" HorizontalAlignment="Center" IsVisible="False" />
@@ -156,10 +156,13 @@
 
         <!-- Score display removed, moved to title bar -->
 
-        <Canvas x:Name="HoneycombDragCanvas" IsHitTestVisible="False" />
+        <Canvas x:Name="HoneycombDragCanvas" IsHitTestVisible="False">
+            <Border x:Name="CursorHighlightBorder" IsVisible="False" IsHitTestVisible="False"
+                    BorderBrush="#00E5FF" BorderThickness="4" CornerRadius="8" Background="Transparent" />
+        </Canvas>
 
         <!-- Rule Popups -->
-        <local:FlashToast x:Name="RuleToast" />
+        <local:FlashToast x:Name="RuleToast" ZIndex="250" IsHitTestVisible="False" />
 
 
     </Grid>

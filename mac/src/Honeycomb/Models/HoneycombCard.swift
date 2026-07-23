@@ -29,6 +29,7 @@ public struct HoneycombCard: Codable, Identifiable, Equatable {
     public var owner: CardOwner
     public let originalOwner: CardOwner
     public var modifier: Int = 0
+    public var isFaceDown: Bool = false
 
     // originalOwner defaults to owner (the normal case), but the "Swap" rule needs to
     // construct a card whose current holder (owner, for battle purposes) differs from

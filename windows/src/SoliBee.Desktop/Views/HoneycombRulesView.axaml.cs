@@ -10,13 +10,21 @@ using SoliBee.Core.ViewModels;
 
 namespace SoliBee.Desktop.Views;
 
-public partial class HoneycombRulesWindow : Window
+public partial class HoneycombRulesView : UserControl
 {
-    private HoneycombViewModel _vm;
+    private HoneycombViewModel? _vm;
     private HoneycombOptions _localOpts;
     private bool _initializing = true;
 
-    public HoneycombRulesWindow(HoneycombViewModel vm)
+    public event EventHandler<bool>? OnCloseRequested;
+
+    public HoneycombRulesView()
+    {
+        InitializeComponent();
+        _localOpts = new HoneycombOptions(); // temp
+    }
+
+    public void Initialize(HoneycombViewModel vm)
     {
         _vm = vm;
         
@@ -28,11 +36,8 @@ public partial class HoneycombRulesWindow : Window
             ManualRules = vm.Options.ManualRules?.ToList() ?? new List<HoneycombRule>(),
             BannedRules = vm.Options.BannedRules?.ToList() ?? new List<string>()
         };
-
-        InitializeComponent();
         
         SyncUI();
-        _initializing = false;
     }
 
     private void SyncUI()
@@ -60,6 +65,7 @@ public partial class HoneycombRulesWindow : Window
         HoneycombRule_Swap.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Swap);
         HoneycombRule_Order.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Order);
         HoneycombRule_Chaos.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Chaos);
+        HoneycombRule_BombShelter.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.BombShelter);
 
         // Ban List
         Ban_NormalMode.IsChecked = _localOpts.BannedRules.Contains("Normal Mode");
@@ -67,12 +73,13 @@ public partial class HoneycombRulesWindow : Window
         Ban_Descension.IsChecked = _localOpts.BannedRules.Contains("Descension");
         Ban_Same.IsChecked = _localOpts.BannedRules.Contains("Same");
         Ban_Plus.IsChecked = _localOpts.BannedRules.Contains("Plus");
-        Ban_FallenAce.IsChecked = _localOpts.BannedRules.Contains("Fallen Ace");
-        Ban_AllOpen.IsChecked = _localOpts.BannedRules.Contains("All Open");
-        Ban_ThreeOpen.IsChecked = _localOpts.BannedRules.Contains("Three Open");
+        Ban_FallenAce.IsChecked = _localOpts.BannedRules.Contains("FallenAce");
+        Ban_AllOpen.IsChecked = _localOpts.BannedRules.Contains("AllOpen");
+        Ban_ThreeOpen.IsChecked = _localOpts.BannedRules.Contains("ThreeOpen");
         Ban_Swap.IsChecked = _localOpts.BannedRules.Contains("Swap");
         Ban_Order.IsChecked = _localOpts.BannedRules.Contains("Order");
         Ban_Chaos.IsChecked = _localOpts.BannedRules.Contains("Chaos");
+        Ban_BombShelter.IsChecked = _localOpts.BannedRules.Contains("BombShelter");
         Ban_Reverse.IsChecked = _localOpts.BannedRules.Contains("Reverse");
         
         CheckBanLimit();
@@ -176,6 +183,8 @@ public partial class HoneycombRulesWindow : Window
 
     private void OK_Click(object? sender, RoutedEventArgs e)
     {
+        if (_vm == null) return;
+
         // Apply changes
         _vm.Options.Difficulty = _localOpts.Difficulty;
         _vm.Options.ForceNormalRules = _localOpts.ForceNormalRules;
@@ -184,11 +193,11 @@ public partial class HoneycombRulesWindow : Window
         
         SettingsService.SaveHoneycombOptions(_vm.Options);
         
-        Close(true);
+        OnCloseRequested?.Invoke(this, true);
     }
 
-    private void Cancel_Click(object? sender, RoutedEventArgs e)
+    public void Cancel_Click(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        OnCloseRequested?.Invoke(this, false);
     }
 }

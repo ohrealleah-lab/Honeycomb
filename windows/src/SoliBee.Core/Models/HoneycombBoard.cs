@@ -56,7 +56,7 @@ public class HoneycombBoard
         return clone;
     }
 
-    public List<int> PlaceCard(HoneycombCard card, int index, HashSet<HoneycombRule> rules)
+    public List<int> PlaceCard(HoneycombCard card, int index, HashSet<HoneycombRule> rules, bool skipCaptures = false)
     {
         if (index < 0 || index >= 9 || !Cells[index].IsEmpty)
             return new List<int>();
@@ -70,8 +70,30 @@ public class HoneycombBoard
 
         UpdateModifiers(rules);
 
+        if (skipCaptures) return new List<int>();
+
         var flipped = ResolveCaptures(index, rules, isCombo: false);
         return flipped;
+    }
+
+    public List<int> RevealFaceDownCard(int index, HashSet<HoneycombRule> rules)
+    {
+        if (index < 0 || index >= 9 || Cells[index].IsEmpty || !Cells[index].Card!.IsFaceDown) return new List<int>();
+
+        Cells[index].Card!.IsFaceDown = false;
+        
+        // Cannot trigger combos, so we remove Same, Plus, FallenAce temporarily for this capture
+        var ruleClone = new HashSet<HoneycombRule>(rules);
+        ruleClone.Remove(HoneycombRule.Same);
+        ruleClone.Remove(HoneycombRule.Plus);
+        ruleClone.Remove(HoneycombRule.FallenAce);
+
+        LastSameTriggered = false;
+        LastPlusTriggered = false;
+        LastFallenAceTriggered = false;
+        LastComboFlipCount = 0;
+
+        return ResolveCaptures(index, ruleClone, isCombo: false);
     }
 
     private void UpdateModifiers(HashSet<HoneycombRule> rules)
@@ -123,7 +145,7 @@ public class HoneycombBoard
         var attacker = Cells[index].Card!;
         var flippedThisTurn = new List<int>();
         var comboQueue = new List<int>();
-        var neighbors = GetNeighbors(index);
+        var neighbors = GetNeighbors(index).Where(n => !Cells[n.Index].Card!.IsFaceDown).ToList();
         var samePlusFlipped = new HashSet<int>();
 
         if (!isCombo)

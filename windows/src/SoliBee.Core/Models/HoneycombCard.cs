@@ -18,6 +18,7 @@ public class HoneycombCard
     public int OriginalOwner { get; set; }
     public int Owner { get; set; }
     public Guid UniqueInstanceId { get; set; } = Guid.NewGuid();
+    public bool IsFaceDown { get; set; } = false;
 
     public HoneycombCard(HoneycombCardData data, int owner)
     {
@@ -38,7 +39,8 @@ public class HoneycombCard
         {
             Modifier = Modifier,
             OriginalOwner = OriginalOwner,
-            UniqueInstanceId = UniqueInstanceId
+            UniqueInstanceId = UniqueInstanceId,
+            IsFaceDown = IsFaceDown
         };
     }
 }

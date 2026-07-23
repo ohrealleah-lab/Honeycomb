@@ -53,10 +53,10 @@ public struct HoneycombStatsView: View {
                     StatRow(label: "Current Win Streak", value: "\(stats.currentWinStreak)")
                     StatRow(label: "Longest Win Streak", value: "\(stats.longestWinStreak)")
                     StatRow(label: "Flawless Victories (10-0 Sweep)", value: "\(stats.flawlessVictories)")
-                    StatRow(label: "Easy Wins", value: "\(stats.easyWins)")
-                    StatRow(label: "Medium Wins", value: "\(stats.mediumWins)")
-                    StatRow(label: "Hard Wins", value: "\(stats.hardWins)")
-                    StatRow(label: "Ultra Hard Wins", value: "\(stats.ultraHardWins)")
+                    StatRow(label: "Baby Bee Wins", value: "\(stats.easyWins)")
+                    StatRow(label: "Honey Bee Wins", value: "\(stats.mediumWins)")
+                    StatRow(label: "Queen Bee Wins", value: "\(stats.hardWins)")
+                    StatRow(label: "Killer Bee Wins", value: "\(stats.ultraHardWins)")
 
                     Divider()
 

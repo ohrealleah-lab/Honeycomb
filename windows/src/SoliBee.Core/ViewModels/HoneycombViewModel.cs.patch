@@ -1,0 +1,9 @@
+--- /Users/leah/Honeycomb/windows/src/SoliBee.Core/ViewModels/HoneycombViewModel.cs
++++ /Users/leah/Honeycomb/windows/src/SoliBee.Core/ViewModels/HoneycombViewModel.cs
+@@ -165,6 +165,7 @@
+         }
+ 
++        System.IO.File.WriteAllText("/tmp/comp.txt", string.Join(", ", comp.Select(x => $"{x.stars}*{x.count}")));
+         State.OpponentHand = new List<HoneycombCard>();
+         foreach (var (stars, count) in comp)
+         {

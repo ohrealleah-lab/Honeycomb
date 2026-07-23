@@ -337,6 +337,7 @@ enum HoneycombAI {
         var score = 0
         for (idx, cell) in board.cells.enumerated() {
             guard let card = cell.card else { continue }
+            if card.isFaceDown && card.originalOwner == .player { continue }
             var cardScore = 10
             for direction in 0..<4 {
                 guard let neighbor = neighborIndex(from: idx, direction: direction),
@@ -380,7 +381,8 @@ enum HoneycombAI {
             var facingStats: [(owner: CardOwner, stat: Int)] = []
             for direction in 0..<4 {
                 guard let neighbor = neighborIndex(from: emptyIdx, direction: direction),
-                      let card = board.cells[neighbor].card else { continue }
+                      let card = board.cells[neighbor].card,
+                      !card.isFaceDown else { continue }
                 let towardEmptyDirection = (direction + 2) % 4
                 facingStats.append((card.owner, card.stat(at: towardEmptyDirection)))
             }

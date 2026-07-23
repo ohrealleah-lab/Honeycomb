@@ -597,6 +597,11 @@ public partial class MainWindow : Window
             spiderVm.FindHint();
             activeHint = spiderVm.ActiveHint;
         }
+        else if (this.DataContext is HoneycombViewModel honeycombVm)
+        {
+            honeycombVm.FindHint();
+            // Honeycomb hint always falls back to random, never shows unavailable toast
+        }
         // Video Poker has no hint
 
         if (activeHint?.Card.Id == "no_move" && MainContent.Content is CardGameView gameView)
@@ -802,8 +807,19 @@ public partial class MainWindow : Window
         
         if (this.DataContext is HoneycombViewModel hVm)
         {
-            var rulesWindow = new HoneycombRulesWindow(hVm);
-            rulesWindow.ShowDialog(this);
+            this.TopBarBorder.IsEnabled = false;
+            HoneycombRulesViewControl.Initialize(hVm);
+            
+            EventHandler<bool>? closeHandler = null;
+            closeHandler = (s, result) =>
+            {
+                HoneycombRulesViewControl.OnCloseRequested -= closeHandler;
+                this.HoneycombRulesOverlay.IsVisible = false;
+                this.TopBarBorder.IsEnabled = true;
+            };
+            
+            HoneycombRulesViewControl.OnCloseRequested += closeHandler;
+            this.HoneycombRulesOverlay.IsVisible = true;
         }
     }
 
@@ -881,6 +897,16 @@ public partial class MainWindow : Window
         if (IsOptionsBlockedDuringHand()) return;
 
         _manageDecksView = new ManageDecksView();
+        _manageDecksView.OnRequestDeckBuilder += (slotIndex) => {
+            var deckBuilder = new DeckBuilderView(slotIndex);
+            deckBuilder.OnDismiss += () => {
+                this.DeckBuilderOverlay.IsVisible = false;
+                this.DeckBuilderContent.Content = null;
+                _manageDecksView?.RefreshUI();
+            };
+            this.DeckBuilderContent.Content = deckBuilder;
+            this.DeckBuilderOverlay.IsVisible = true;
+        };
         this.ManageDecksContent.Content = _manageDecksView;
         this.ManageDecksOverlay.IsVisible = true;
         this.TopBarBorder.IsEnabled = false;
@@ -1756,6 +1782,12 @@ public partial class MainWindow : Window
             {
                 e.Handled = true;
                 CancelPreferences_Click(sender, e);
+                return;
+            }
+            if (HoneycombRulesOverlay != null && HoneycombRulesOverlay.IsVisible)
+            {
+                e.Handled = true;
+                HoneycombRulesViewControl.Cancel_Click(sender, e);
                 return;
             }
         }

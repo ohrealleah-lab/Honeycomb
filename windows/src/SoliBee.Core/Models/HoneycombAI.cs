@@ -54,7 +54,7 @@ public static class HoneycombAI
                 if (hIdx >= hand.Count) continue;
 
                 var simBoard = board.Clone();
-                var card = hand[hIdx];
+                var card = hand[hIdx].Clone();
                 int ownerBefore = 0;
                 for (int c = 0; c < 9; c++)
                     if (!simBoard.Cells[c].IsEmpty && simBoard.Cells[c].Card!.Owner == owner) ownerBefore++;
@@ -89,6 +89,7 @@ public static class HoneycombAI
         int bestScore = int.MinValue;
         int maxCaptures = -1;
 
+        if (rules.Contains(HoneycombRule.Order)) mandatedHandIndex = 0;
         var handIndices = mandatedHandIndex.HasValue ? new[] { mandatedHandIndex.Value } : Enumerable.Range(0, aiHand.Count).ToArray();
         var orderedMoves = new List<(int HIdx, int CIdx, int Captures, HoneycombBoard BoardAfter, List<HoneycombCard> HandAfter)>();
 
@@ -101,7 +102,7 @@ public static class HoneycombAI
                 if (hIdx >= aiHand.Count) continue;
 
                 var simBoard = board.Clone();
-                var card = aiHand[hIdx];
+                var card = aiHand[hIdx].Clone();
                 int ownerBefore = 0;
                 for (int c = 0; c < 9; c++)
                     if (!simBoard.Cells[c].IsEmpty && simBoard.Cells[c].Card!.Owner == aiOwner) ownerBefore++;
@@ -184,6 +185,7 @@ public static class HoneycombAI
 
         var activeHand = isMaximizing ? aiHand : playerHand;
         var activeOwner = isMaximizing ? aiOwner : playerOwner;
+        if (rules.Contains(HoneycombRule.Order)) mandatedHandIndex = 0;
         var handIndices = mandatedHandIndex.HasValue ? new[] { mandatedHandIndex.Value } : Enumerable.Range(0, activeHand.Count).ToArray();
 
         var orderedMoves = new List<(int HIdx, int CIdx, int Captures, HoneycombBoard BoardAfter, List<HoneycombCard> HandAfter)>();
@@ -197,7 +199,7 @@ public static class HoneycombAI
                 if (hIdx >= activeHand.Count) continue;
 
                 var simBoard = board.Clone();
-                var card = activeHand[hIdx];
+                var card = activeHand[hIdx].Clone();
                 int ownerBefore = 0;
                 for (int c = 0; c < 9; c++)
                     if (!simBoard.Cells[c].IsEmpty && simBoard.Cells[c].Card!.Owner == activeOwner) ownerBefore++;
@@ -254,6 +256,8 @@ public static class HoneycombAI
             if (board.Cells[i].IsEmpty) continue;
 
             var card = board.Cells[i].Card!;
+            if (card.IsFaceDown && card.OriginalOwner == playerOwner) continue; // Ignore player's face down card (treated as empty/unknown)
+
             int cardScore = 10;
             
             int row = i / 3;
@@ -302,13 +306,13 @@ public static class HoneycombAI
             int row = i / 3;
             int col = i % 3;
 
-            if (row > 0 && !board.Cells[i - 3].IsEmpty) 
+            if (row > 0 && !board.Cells[i - 3].IsEmpty && !board.Cells[i - 3].Card!.IsFaceDown) 
                 neighbors.Add((board.Cells[i - 3].Card!.Owner, board.Cells[i - 3].Card!.Stat(2)));
-            if (col < 2 && !board.Cells[i + 1].IsEmpty) 
+            if (col < 2 && !board.Cells[i + 1].IsEmpty && !board.Cells[i + 1].Card!.IsFaceDown) 
                 neighbors.Add((board.Cells[i + 1].Card!.Owner, board.Cells[i + 1].Card!.Stat(3)));
-            if (row < 2 && !board.Cells[i + 3].IsEmpty) 
+            if (row < 2 && !board.Cells[i + 3].IsEmpty && !board.Cells[i + 3].Card!.IsFaceDown) 
                 neighbors.Add((board.Cells[i + 3].Card!.Owner, board.Cells[i + 3].Card!.Stat(0)));
-            if (col > 0 && !board.Cells[i - 1].IsEmpty) 
+            if (col > 0 && !board.Cells[i - 1].IsEmpty && !board.Cells[i - 1].Card!.IsFaceDown) 
                 neighbors.Add((board.Cells[i - 1].Card!.Owner, board.Cells[i - 1].Card!.Stat(1)));
 
             foreach (var owner in new[] { aiOwner, playerOwner })

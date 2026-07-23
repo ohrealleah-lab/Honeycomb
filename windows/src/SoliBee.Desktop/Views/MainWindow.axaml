@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:SoliBee.Desktop.Views"
         x:Class="SoliBee.Desktop.Views.MainWindow"
         Title="Honeycomb Card Suite"
         Icon="avares://Honeycomb/Assets/AppIcon.png"
@@ -153,6 +154,27 @@
                        VerticalAlignment="Bottom" IsHitTestVisible="False"
                        FontFamily="Segoe UI"
                        Margin="0,4,0,8"/>
+
+            <!-- Honeycomb Rules Overlay -->
+            <Grid x:Name="HoneycombRulesOverlay" Background="Transparent" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="95">
+                <Grid x:Name="HoneycombRulesInset" Margin="20">
+                    <Border Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="{Binding #HoneycombRulesInset.Bounds.Height}" MaxWidth="{Binding #HoneycombRulesInset.Bounds.Width}" BoxShadow="0 4 20 0 #A0000000">
+                        <Grid RowDefinitions="Auto, *">
+                            <TextBlock Grid.Row="0" Text="Honeycomb Rules" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" Margin="0,0,0,15" />
+                            <views:HoneycombRulesView x:Name="HoneycombRulesViewControl" Grid.Row="1" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Deck Builder Overlay -->
+            <Grid x:Name="DeckBuilderOverlay" Background="Transparent" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="96">
+                <Grid x:Name="DeckBuilderInset" Margin="20">
+                    <Border Background="White" CornerRadius="16" Padding="0" HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="{Binding #DeckBuilderInset.Bounds.Height}" MaxWidth="{Binding #DeckBuilderInset.Bounds.Width}" BoxShadow="0 4 20 0 #A0000000">
+                        <ContentControl x:Name="DeckBuilderContent" />
+                    </Border>
+                </Grid>
+            </Grid>
 
             <!-- Preferences Modal Dialog Overlay — spans both rows (Grid.RowSpan) so it
                  covers the full window instead of just Row 0's Auto-sized toolbar strip,

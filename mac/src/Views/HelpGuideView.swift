@@ -242,7 +242,7 @@ struct HoneycombHelpView: View {
                         text: "A card showing a 1 that attacks a card showing a 10 (\"A\") always captures it, overriding the normal higher-beats-lower comparison — a 1 is the one value that can topple an Ace. Under Reverse, this flips too: an attacking 10 always captures a defending 1.")
 
             RuleSection(title: "Reverse",
-                        text: "Capture direction is fully inverted: the attacker wins when its facing stat is lower than the defender's, not higher. Reverse only ever appears via Roulette, never by manual selection — the AI's own deck (and, under Fallen Ace, its capture math) is specially adjusted per difficulty so a nominally \"easy\" opponent doesn't become trivial under the inversion.")
+                        text: "Capture direction is fully inverted: the attacker wins when its facing stat is lower than the defender's, not higher. Reverse only ever appears via Roulette, never by manual selection — the AI's own deck (and, under Fallen Ace, its capture math) is specially adjusted per difficulty so a nominally \"Baby Bee\" opponent doesn't become trivial under the inversion.")
 
             RuleSection(title: "All Open / Three Open",
                         text: "All Open reveals the dealer's entire hand face-up for the whole match; Three Open reveals exactly 3 random cards from it, staying revealed by that specific card's identity as the hand shrinks. Either way the reveal is symmetric — the dealer's AI gets the same look at your hand it's giving you, so nobody's playing with hidden information the other side lacks.")
@@ -253,14 +253,17 @@ struct HoneycombHelpView: View {
             RuleSection(title: "Order / Chaos",
                         text: "Order restricts your legal play each turn to strictly the next card in your original deck order — no choosing. Chaos instead re-rolls one random legal card the instant a side's turn begins, highlighted with a thick yellow border; you'll see the dealer's mandated card highlighted at least 2 seconds before its AI actually plays it.")
 
+            RuleSection(title: "Bomb Shelter",
+                        text: "The first card a player plays remains face down, unknown to the opponent. At the end of game, the face down cards get flipped. The starting player’s card gets exposed first. Cannot trigger combos.")
+
             RuleSection(title: "Sudden Death",
                         text: "A 5-5 tie sends the match into Sudden Death: the board clears and immediately replays with each side's exact end-of-round cards, alternating who starts, until someone wins outright.")
 
             RuleSection(title: "Difficulty",
-                        text: "Easy plays randomly. Medium greedily maximizes its own captures each turn. Hard and Ultra Hard search several moves ahead using a full positional evaluation, with Ultra Hard also fielding the strongest overall deck.")
+                        text: "Baby Bee plays randomly. Honey Bee greedily maximizes its own captures each turn. Queen Bee and Killer Bee search several moves ahead using a full positional evaluation, with Killer Bee also fielding the strongest overall deck.")
 
             RuleSection(title: "Hint",
-                        text: "On any difficulty below Ultra Hard, the Hint button suggests the strongest card-and-cell placement — found with the same search Ultra Hard's own AI uses — highlighting it for 2 seconds. It only ever considers dealer cards you've actually been shown, never one still hidden from you.")
+                        text: "On any difficulty below Killer Bee, the Hint button suggests the strongest card-and-cell placement — found with the same search Killer Bee's own AI uses — highlighting it for 2 seconds. It only ever considers dealer cards you've actually been shown, never one still hidden from you.")
 
             RuleSection(title: "Card Bank & Decks",
                         text: "Winning a card isn't automatic — after a win, you may drag one card the dealer played that round onto one of your 5 active deck slots, permanently unlocking it into your Card Bank. This steal is capped at one per match; Rematch (or start a new match) to steal again. Build named decks from Manage Decks, subject to rarity caps: at most one 5★ card, and at most one 4★ if a 5★ is already in the deck (otherwise up to two 4★).")

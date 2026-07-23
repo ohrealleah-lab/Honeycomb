@@ -408,7 +408,7 @@
                         <StackPanel Spacing="4">
                             <TextBlock Text="Reverse" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Capture direction is fully inverted: the attacker wins when its facing stat is lower than the defender's, not higher. Reverse only ever appears via Roulette, never by manual selection — the AI's own deck (and, under Fallen Ace, its capture math) is specially adjusted per difficulty so a nominally &quot;easy&quot; opponent doesn't become trivial under the inversion."/>
+                                       Text="Capture direction is fully inverted: the attacker wins when its facing stat is lower than the defender's, not higher. Reverse only ever appears via Roulette, never by manual selection — the AI's own deck (and, under Fallen Ace, its capture math) is specially adjusted per difficulty so a nominally &quot;Baby Bee&quot; opponent doesn't become trivial under the inversion."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Text="All Open / Three Open" Classes="help-heading"/>
@@ -426,6 +426,11 @@
                                        Text="Order restricts your legal play each turn to strictly the next card in your original deck order — no choosing. Chaos instead re-rolls one random legal card the instant a side's turn begins, highlighted with a thick yellow border; you'll see the dealer's mandated card highlighted at least 2 seconds before its AI actually plays it."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
+                            <TextBlock Text="Bomb Shelter" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="The first card a player plays remains face down, unknown to the opponent. At the end of game, the face down cards get flipped. The starting player’s card gets exposed first. Cannot trigger combos."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
                             <TextBlock Text="Sudden Death" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
                                        Text="A 5-5 tie sends the match into Sudden Death: the board clears and immediately replays with each side's exact end-of-round cards, alternating who starts, until someone wins outright."/>
@@ -433,12 +438,12 @@
                         <StackPanel Spacing="4">
                             <TextBlock Text="Difficulty" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Easy plays randomly. Medium greedily maximizes its own captures each turn. Hard and Ultra Hard search several moves ahead using a full positional evaluation, with Ultra Hard also fielding the strongest overall deck."/>
+                                       Text="Baby Bee plays randomly. Honey Bee greedily maximizes its own captures each turn. Queen Bee and Killer Bee search several moves ahead using a full positional evaluation, with Killer Bee also fielding the strongest overall deck."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Text="Hint" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="On any difficulty below Ultra Hard, the Hint button suggests the strongest card-and-cell placement — found with the same search Ultra Hard's own AI uses — highlighting it for 2 seconds. It only ever considers dealer cards you've actually been shown, never one still hidden from you."/>
+                                       Text="On any difficulty below Killer Bee, the Hint button suggests the strongest card-and-cell placement — found with the same search Killer Bee's own AI uses — highlighting it for 2 seconds. It only ever considers dealer cards you've actually been shown, never one still hidden from you."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Text="Card Bank &amp; Decks" Classes="help-heading"/>

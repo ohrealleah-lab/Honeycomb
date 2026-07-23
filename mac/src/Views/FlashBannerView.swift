@@ -10,8 +10,8 @@ struct FlashBannerView: View {
         VStack {
             Spacer(minLength: 8)
             Text(message)
-                .font(.system(size: 28, weight: .black))
-                .foregroundColor(.yellow)
+                .font(.system(size: 60, weight: .black))
+                .foregroundColor(message.hasPrefix("First Move:") ? .yellow : .white)
                 .multilineTextAlignment(.center)
                 .shadow(radius: 3)
                 .padding(.horizontal, 24)

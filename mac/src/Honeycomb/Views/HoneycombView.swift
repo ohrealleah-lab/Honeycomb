@@ -414,6 +414,8 @@ public struct HoneycombView: View {
                             Text("Not today, partner!")
                                 .font(.system(size: 36, weight: .black))
                                 .foregroundColor(.yellow)
+                        } else if viewModel.matchResult == "You Win!" {
+                            Text(viewModel.matchResult).font(.system(size: 60, weight: .bold)).foregroundColor(.yellow)
                         } else {
                             Text(viewModel.matchResult).font(.system(size: 60, weight: .bold)).foregroundColor(.white)
                         }
@@ -734,7 +736,7 @@ public struct HoneycombView: View {
         if isStealingCard {
             VStack {
                 Text(stealBoardIndex == nil
-                     ? "Tap an opponent's card on the board to steal it."
+                     ? "Drag and drop a captured opponent’s card on the board to steal it."
                      : "Now tap one of your own cards to replace with the stolen card.")
                     .font(.headline)
                     .foregroundColor(.white)
@@ -1009,7 +1011,7 @@ struct HoneycombRulesView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Picker("Difficulty", selection: $difficulty) {
                         ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
-                            Text(diff.rawValue).tag(diff)
+                            Text(diff.displayName).tag(diff)
                         }
                     }
                     .padding(.bottom, 10)

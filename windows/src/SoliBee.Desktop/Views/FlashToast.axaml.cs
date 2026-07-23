@@ -20,6 +20,11 @@ public partial class FlashToast : UserControl
     public void Flash(string message, TimeSpan? duration = null)
     {
         MessageText.Text = message;
+        if (message.StartsWith("First Move:"))
+            MessageText.Foreground = Avalonia.Media.SolidColorBrush.Parse("#FFD700");
+        else
+            MessageText.Foreground = Avalonia.Media.Brushes.White;
+            
         IsVisible = true;
         
         // Use a tiny delay to allow Avalonia to process IsVisible=true before setting Opacity,

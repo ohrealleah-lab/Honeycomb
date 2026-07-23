@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.Views.HoneycombRulesView">
+
+    <Grid RowDefinitions="Auto, *, Auto">
+        <!-- Difficulty at top -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,10">
+            <TextBlock Text="Difficulty:" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
+            <ComboBox x:Name="HoneycombDifficultyCombo" Width="100" SelectionChanged="HoneycombDifficultyCombo_SelectionChanged">
+                <ComboBoxItem Content="Baby Bee" Tag="Easy"/>
+                <ComboBoxItem Content="Honey Bee" Tag="Medium"/>
+                <ComboBoxItem Content="Queen Bee" Tag="Hard"/>
+                <ComboBoxItem Content="Killer Bee" Tag="UltraHard"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- Scrollable lists -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Rectangle Height="1" Fill="#DDDDDD" Margin="0,0,0,15" />
+                <Grid ColumnDefinitions="*,*">
+                    <!-- Left Column: Game Choice -->
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0" Spacing="6">
+                        <TextBlock Text="Game Choice" FontSize="16" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,0,0,2"/>
+                        
+                        <TextBlock Text="Select up to 2 rules. Leave empty to let roulette decide each match rules." 
+                                   FontSize="11" Foreground="#707070" TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+                        <StackPanel x:Name="HoneycombRulesPanel" Spacing="2">
+                            <CheckBox x:Name="HoneycombRule_ForceNormal" Content="Normal Mode (Force Zero Rules)" Tag="ForceNormal" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Ascension" Content="Ascension" Tag="Ascension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Descension" Content="Descension" Tag="Descension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Same" Content="Same" Tag="Same" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Plus" Content="Plus" Tag="Plus" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_FallenAce" Content="Fallen Ace" Tag="FallenAce" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_AllOpen" Content="All Open" Tag="AllOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_ThreeOpen" Content="Three Open" Tag="ThreeOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Swap" Content="Swap" Tag="Swap" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Order" Content="Order" Tag="Order" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Chaos" Content="Chaos" Tag="Chaos" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_BombShelter" Content="Bomb Shelter" Tag="BombShelter" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Right Column: Ban List -->
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="6">
+                        <TextBlock Text="Ban List" FontSize="16" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,0,0,2"/>
+                        
+                        <TextBlock Text="Select games to ban from roulettes." FontSize="11" Foreground="#707070" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                        
+                        <StackPanel Spacing="2">
+                            <CheckBox x:Name="Ban_NormalMode" Content="Normal Mode" Tag="Normal Mode" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Ascension" Content="Ascension" Tag="Ascension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Descension" Content="Descension" Tag="Descension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Same" Content="Same" Tag="Same" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Plus" Content="Plus" Tag="Plus" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_FallenAce" Content="Fallen Ace" Tag="FallenAce" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_AllOpen" Content="All Open" Tag="AllOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_ThreeOpen" Content="Three Open" Tag="ThreeOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Swap" Content="Swap" Tag="Swap" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Order" Content="Order" Tag="Order" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Chaos" Content="Chaos" Tag="Chaos" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_BombShelter" Content="Bomb Shelter" Tag="BombShelter" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Reverse" Content="Reverse" Tag="Reverse" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                        </StackPanel>
+                        
+                        <TextBlock x:Name="SillyBeeWarning" Text="You cannot blacklist every game, silly bee." FontSize="11" FontWeight="SemiBold" Foreground="#E53935" IsVisible="False" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
+            <Button Content="Cancel" Click="Cancel_Click" Width="80" HorizontalContentAlignment="Center" Classes="light-secondary" />
+            <Button Content="OK" Click="OK_Click" Width="80" HorizontalContentAlignment="Center" Classes="light-primary" />
+        </StackPanel>
+    </Grid>
+</UserControl>

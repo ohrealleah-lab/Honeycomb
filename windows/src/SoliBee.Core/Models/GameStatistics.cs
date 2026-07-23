@@ -9,6 +9,7 @@ public class GameStatistics
     public int CurrentStreak { get; set; }
     public int LongestStreak { get; set; }
     public int VegasHighScore { get; set; }
+    public int VegasCumulativeScore { get; set; }
     public int StandardHighScore { get; set; }
     public int ShortestWinSeconds { get; set; }
 

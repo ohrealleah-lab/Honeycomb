@@ -5,6 +5,15 @@ public enum HoneycombDifficulty: String, Codable, CaseIterable {
     case medium = "Medium"
     case hard = "Hard"
     case ultraHard = "Ultra Hard"
+    
+    public var displayName: String {
+        switch self {
+        case .easy: return "Baby Bee"
+        case .medium: return "Honey Bee"
+        case .hard: return "Queen Bee"
+        case .ultraHard: return "Killer Bee"
+        }
+    }
 }
 
 public enum HoneycombGameState: String, Codable, Equatable {

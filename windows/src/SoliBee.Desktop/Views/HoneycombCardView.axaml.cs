@@ -145,14 +145,13 @@ public partial class HoneycombCardView : UserControl
 
         if (card.Modifier != 0)
         {
-            ModifierBadge.IsVisible = true;
-            ModifierText.Text = card.Modifier > 0 ? $"+{card.Modifier}" : card.Modifier.ToString();
-            ModifierBadge.Background = card.Modifier > 0 ? Brushes.Green : Brushes.DarkRed;
-            ModifierBadge.BoxShadow = card.Modifier > 0 ? Avalonia.Media.BoxShadows.Parse("0 0 10 2 Green") : Avalonia.Media.BoxShadows.Parse("0 0 10 2 DarkRed");
+            AscensionModifierText.IsVisible = true;
+            AscensionModifierText.Text = card.Modifier > 0 ? $"+{card.Modifier}" : card.Modifier.ToString();
+            AscensionModifierText.Foreground = color;
         }
         else
         {
-            ModifierBadge.IsVisible = false;
+            AscensionModifierText.IsVisible = false;
         }
     }
 

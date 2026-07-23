@@ -86,16 +86,26 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
 
-    public string ScoreDisplay => ScoreFormatter.FormatScore(State.Score, Options?.IsVegasScoring == true);
+    public string ScoreDisplay => ScoreFormatter.FormatScore(State?.Score ?? 0, Options?.IsVegasScoring == true);
 
-    partial void OnStateChanged(GameState value) => OnPropertyChanged(nameof(ScoreDisplay));
-    partial void OnOptionsChanged(GameOptions value) => OnPropertyChanged(nameof(ScoreDisplay));
+    private void SyncVegasScore()
+    {
+        if (Options?.IsVegasScoring == true && State != null && Stats != null)
+        {
+            Stats.VegasCumulativeScore = State.Score;
+        }
+        OnPropertyChanged(nameof(ScoreDisplay));
+    }
+
+    partial void OnStateChanged(GameState value) => SyncVegasScore();
+    partial void OnOptionsChanged(GameOptions value) => SyncVegasScore();
 
     public GameViewModel()
     {
         _syncContext = SynchronizationContext.Current;
         Options = SettingsService.LoadOptions();
         Stats = StatsService.LoadStats();
+        Stats.VegasCumulativeScore = 0; // Clear bankroll on new app launch
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
@@ -143,8 +153,8 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
-        _vegasBalanceBeforeDeal = Options.IsVegasScoring ? -5200 : 0;
-        int startScore = Options.IsVegasScoring ? -5200 : 0;
+        _vegasBalanceBeforeDeal = Options.IsVegasScoring ? Stats.VegasCumulativeScore : 0;
+        int startScore = Options.IsVegasScoring ? Stats.VegasCumulativeScore - 5200 : 0;
         _vegasGameStartScore = startScore;
 
         State = new GameState
@@ -271,7 +281,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         // foundation gains, rather than charging a fresh buy-in like a new deal would.
         State.Score = Options.IsVegasScoring ? _vegasBalanceBeforeDeal : 0;
         _vegasGameStartScore = State.Score;
-        OnPropertyChanged(nameof(ScoreDisplay));
+        SyncVegasScore();
         State.MovesCount = 0;
         State.TimerSeconds = 0;
         State.IsTimerActive = false;
@@ -579,7 +589,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
                 State.Score += 500;
             else if (source == PileType.Foundation && target == PileType.Tableau)
                 State.Score -= 500;
-            OnPropertyChanged(nameof(ScoreDisplay));
+            SyncVegasScore();
         }
         else
         {
@@ -594,7 +604,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             else if (source == PileType.Tableau && target == PileType.Foundation) State.Score += 10;
             else if (source == PileType.Foundation && target == PileType.Tableau) State.Score -= 15;
             if (didFlip) State.Score += 5;
-            OnPropertyChanged(nameof(ScoreDisplay));
+            SyncVegasScore();
         }
     }
 
@@ -738,7 +748,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         OnPropertyChanged(nameof(Waste));
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(Tableaus));
-        OnPropertyChanged(nameof(ScoreDisplay));
+        SyncVegasScore();
         OnPropertyChanged(nameof(CanUndo));
     }
 
@@ -865,7 +875,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
                         {
                             State.Score += 700000 / State.TimerSeconds;
                         }
-                        OnPropertyChanged(nameof(ScoreDisplay));
+                        SyncVegasScore();
                     }
 
                     if (State.Score > Stats.StandardHighScore)
@@ -889,6 +899,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         stats.CurrentStreak      = 0;
         stats.LongestStreak      = 0;
         stats.VegasHighScore     = 0;
+        stats.VegasCumulativeScore = 0;
         stats.StandardHighScore  = 0;
         stats.ShortestWinSeconds = 0;
         stats.TotalWinSeconds    = 0;
