@@ -6,7 +6,7 @@
         <!-- Difficulty at top -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,10">
             <TextBlock Text="Difficulty:" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
-            <ComboBox x:Name="HoneycombDifficultyCombo" Width="100" SelectionChanged="HoneycombDifficultyCombo_SelectionChanged">
+            <ComboBox x:Name="HoneycombDifficultyCombo" Width="120" SelectionChanged="HoneycombDifficultyCombo_SelectionChanged">
                 <ComboBoxItem Content="Baby Bee" Tag="Easy"/>
                 <ComboBoxItem Content="Honey Bee" Tag="Medium"/>
                 <ComboBoxItem Content="Queen Bee" Tag="Hard"/>
