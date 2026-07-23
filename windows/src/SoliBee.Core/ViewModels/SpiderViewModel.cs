@@ -736,8 +736,17 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
                         var subSeq = maxSeq.GetRange(maxSeq.Count - len, len);
                         if (!CanMoveSequence(subSeq, tgt)) continue;
 
-                        int startIdx        = src.Cards.Count - len;
+                        int startIdx = src.Cards.Count - len;
                         bool revealsHidden   = startIdx == firstFaceUpIdx && firstFaceUpIdx > 0;
+
+                        // Check for lateral move: if the card we are breaking from is identical to the target
+                        if (startIdx > 0 && src.Cards[startIdx - 1].IsFaceUp && 
+                            src.Cards[startIdx - 1].Suit == tgt.Cards.Last().Suit && 
+                            src.Cards[startIdx - 1].Rank == tgt.Cards.Last().Rank)
+                        {
+                            continue;
+                        }
+
                         bool sameSuit        = subSeq[0].Suit == tgt.Cards.Last().Suit;
                         int score = (sameSuit, revealsHidden) switch
                         {

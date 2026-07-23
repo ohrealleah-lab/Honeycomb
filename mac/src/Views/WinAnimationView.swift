@@ -60,6 +60,7 @@ public struct WinAnimationView: View {
             }
             .background(Color.clear)
         }
+        .allowsHitTesting(false)
     }
 
     // MARK: - Setup Spawning Queue

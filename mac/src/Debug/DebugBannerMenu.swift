@@ -2,6 +2,7 @@ import SwiftUI
 
 public enum DebugBannerKind {
     case win, loss, stuck, autocomplete
+    case same, plus, suddenDeath
 }
 
 struct DebugBannerCommands: View {
@@ -30,6 +31,14 @@ struct DebugBannerCommands: View {
         Menu("Blackjack") {
             Button("Win")  { coordinator.debugFireBanner(.win,  for: .blackjack) }
             Button("Loss") { coordinator.debugFireBanner(.loss, for: .blackjack) }
+        }
+        Menu("Honeycomb") {
+            Button("Win")          { coordinator.debugFireBanner(.win,         for: .honeycomb) }
+            Button("Loss")         { coordinator.debugFireBanner(.loss,        for: .honeycomb) }
+            Divider()
+            Button("Same")         { coordinator.debugFireBanner(.same,        for: .honeycomb) }
+            Button("Plus")         { coordinator.debugFireBanner(.plus,        for: .honeycomb) }
+            Button("Sudden Death") { coordinator.debugFireBanner(.suddenDeath, for: .honeycomb) }
         }
     }
 }

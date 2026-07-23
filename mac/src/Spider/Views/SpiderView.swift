@@ -87,7 +87,7 @@ public struct SpiderView: View {
                     GameToolbarButton(
                         label: "New Game", systemImage: "arrow.triangle.2.circlepath",
                         isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
-                    ) { isShowingNewGameConfirm = true }
+                    ) { requestNewGame() }
 
                     // Options
                     GameToolbarButton(
@@ -120,7 +120,7 @@ public struct SpiderView: View {
                     ) { viewModel.undoLastAction() }
                     .keyboardShortcut("z", modifiers: .command)
 
-                    Button(action: { isShowingNewGameConfirm = true }) { EmptyView() }
+                    Button(action: { requestNewGame() }) { EmptyView() }
                         .keyboardShortcut("n", modifiers: .command).frame(width: 0, height: 0).opacity(0)
 
                     Spacer()
@@ -412,17 +412,17 @@ public struct SpiderView: View {
                             .font(.system(.body))
                             .foregroundColor(.white)
 
-                        Button("Play Again") {
-                            viewModel.startNewGame()
-                        }
-                        .font(.system(.body))
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color.blue)
-                        .cornerRadius(6)
-                        .buttonStyle(.plain)
+                        Text("Play Again")
+                            .font(.system(.body))
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.blue)
+                            .cornerRadius(6)
+                            .onTapGesture {
+                                viewModel.startNewGame()
+                            }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 24)
@@ -570,6 +570,8 @@ public struct SpiderView: View {
                 viewModel.isAutocompleteAvailable = true
             case .loss:
                 break
+            case .same, .plus, .suddenDeath:
+                break
             }
         }
         .onAppear { applyInitialWindowSize() }
@@ -679,6 +681,14 @@ public struct SpiderView: View {
         }
         noHintsBannerTask = task
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
+    }
+
+    private func requestNewGame() {
+        if viewModel.state.movesCount == 0 {
+            viewModel.startNewGame()
+        } else {
+            isShowingNewGameConfirm = true
+        }
     }
 
     private func handleDragEnded() {

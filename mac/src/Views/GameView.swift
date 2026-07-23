@@ -96,7 +96,7 @@ public struct GameView: View {
                     GameToolbarButton(
                         label: "New Game", systemImage: "arrow.triangle.2.circlepath",
                         isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
-                    ) { isShowingNewGameConfirm = true }
+                    ) { requestNewGame() }
 
                     // Restart Button
                     GameToolbarButton(
@@ -154,13 +154,13 @@ public struct GameView: View {
                         }
                     }
                     
-                    Button(action: { pendingDrawMode = .drawOne; isShowingNewGameConfirm = true }) { EmptyView() }
+                    Button(action: { requestNewGame(mode: .drawOne) }) { EmptyView() }
                         .keyboardShortcut("1", modifiers: .command).frame(width: 0, height: 0).opacity(0)
 
-                    Button(action: { pendingDrawMode = .drawThree; isShowingNewGameConfirm = true }) { EmptyView() }
+                    Button(action: { requestNewGame(mode: .drawThree) }) { EmptyView() }
                         .keyboardShortcut("3", modifiers: .command).frame(width: 0, height: 0).opacity(0)
 
-                    Button(action: { isShowingNewGameConfirm = true }) { EmptyView() }
+                    Button(action: { requestNewGame() }) { EmptyView() }
                         .keyboardShortcut("n", modifiers: .command).frame(width: 0, height: 0).opacity(0)
                 }
                 .padding(.horizontal, 16)
@@ -510,17 +510,17 @@ public struct GameView: View {
                                     .font(.system(.body))
                                     .foregroundColor(.white)
 
-                                Button("Play Again") {
-                                    viewModel.startNewGame()
-                                }
-                                .font(.system(.body))
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.blue)
-                                .cornerRadius(6)
-                                .buttonStyle(.plain)
+                                Text("Play Again")
+                                    .font(.system(.body))
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(Color.blue)
+                                    .cornerRadius(6)
+                                    .onTapGesture {
+                                        viewModel.startNewGame()
+                                    }
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 24)
@@ -530,13 +530,13 @@ public struct GameView: View {
                             .cornerRadius(12)
                             .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
-                            Button(action: { dismissedWinBanner = true }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.white.opacity(0.7))
-                            }
-                            .buttonStyle(.plain)
-                            .padding(10)
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white.opacity(0.7))
+                                .padding(10)
+                                .onTapGesture {
+                                    dismissedWinBanner = true
+                                }
                         }
                         Spacer(minLength: 8)
                     }
@@ -707,6 +707,8 @@ public struct GameView: View {
                 viewModel.isAutocompleteAvailable = true
             case .loss:
                 break
+            case .same, .plus, .suddenDeath:
+                break
             }
         }
         .onAppear { applyInitialWindowSize() }
@@ -763,6 +765,19 @@ public struct GameView: View {
         }
         noHintsBannerTask = task
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
+    }
+
+    private func requestNewGame(mode: GameState.DrawMode? = nil) {
+        if let mode { pendingDrawMode = mode }
+        if viewModel.state.movesCount == 0 {
+            if let mode = pendingDrawMode {
+                viewModel.state.drawMode = mode
+                pendingDrawMode = nil
+            }
+            viewModel.startNewGame()
+        } else {
+            isShowingNewGameConfirm = true
+        }
     }
 
     private func performStockDraw() {

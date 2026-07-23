@@ -628,9 +628,92 @@ public final class SpiderViewModel {
             return
         }
 
-        // Autocomplete is safe and available whenever there is at least one safe
-        // move found by findNextAutocompleteMove.
-        isAutocompleteAvailable = !state.hasWon && findNextAutocompleteMove() != nil
+        isAutocompleteAvailable = !state.hasWon && canSimulateAutocompleteWin()
+    }
+
+    private func canSimulateAutocompleteWin() -> Bool {
+        guard state.stock.isEmpty else { return false }
+        
+        var simTableau = state.tableau
+        var didMove = true
+        
+        while didMove {
+            didMove = false
+            var nextMove: (cards: [Card], sourceIdx: Int, targetIdx: Int)? = nil
+            
+            for srcIdx in 0..<simTableau.count where !simTableau[srcIdx].cards.isEmpty {
+                let source = simTableau[srcIdx]
+                guard let lastCard = source.cards.last, lastCard.faceUp else { continue }
+                var seq = [lastCard]
+                
+                if source.cards.count > 1 {
+                    for i in stride(from: source.cards.count - 2, through: 0, by: -1) {
+                        let card = source.cards[i]
+                        let prevCard = source.cards[i + 1]
+                        if card.faceUp, card.suit == prevCard.suit, card.rank == prevCard.rank + 1 {
+                            seq.insert(card, at: 0)
+                        } else {
+                            break
+                        }
+                    }
+                }
+                
+                guard let firstCard = seq.first else { continue }
+                
+                for tgtIdx in 0..<simTableau.count where tgtIdx != srcIdx {
+                    let target = simTableau[tgtIdx]
+                    if let topCard = target.topCard, topCard.suit == firstCard.suit, topCard.rank == firstCard.rank + 1 {
+                        nextMove = (seq, srcIdx, tgtIdx)
+                        break
+                    }
+                }
+                if nextMove != nil { break }
+            }
+            
+            if let move = nextMove {
+                didMove = true
+                let cardIDs = Set(move.cards.map { $0.id })
+                simTableau[move.sourceIdx].cards.removeAll { cardIDs.contains($0.id) }
+                
+                if !simTableau[move.sourceIdx].cards.isEmpty && !simTableau[move.sourceIdx].cards.last!.faceUp {
+                    simTableau[move.sourceIdx].cards[simTableau[move.sourceIdx].cards.count - 1].faceUp = true
+                }
+                
+                simTableau[move.targetIdx].cards.append(contentsOf: move.cards)
+                
+                var completedRunFound = false
+                repeat {
+                    completedRunFound = false
+                    for i in 0..<simTableau.count {
+                        let cards = simTableau[i].cards
+                        guard cards.count >= 13 else { continue }
+                        let subrange = Array(cards.suffix(13))
+                        guard subrange[0].rank == 13 else { continue }
+                        
+                        var isValidRun = true
+                        let suit = subrange[0].suit
+                        for j in 0..<13 {
+                            if subrange[j].rank != 13 - j || subrange[j].suit != suit || !subrange[j].faceUp {
+                                isValidRun = false
+                                break
+                            }
+                        }
+                        
+                        if isValidRun {
+                            completedRunFound = true
+                            let completedIDs = Set(subrange.map { $0.id })
+                            simTableau[i].cards.removeAll { completedIDs.contains($0.id) }
+                            if !simTableau[i].cards.isEmpty && !simTableau[i].cards.last!.faceUp {
+                                simTableau[i].cards[simTableau[i].cards.count - 1].faceUp = true
+                            }
+                            break
+                        }
+                    }
+                } while completedRunFound
+            }
+        }
+        
+        return simTableau.allSatisfy { $0.cards.isEmpty }
     }
 
     public func runAutocomplete() {
@@ -660,14 +743,33 @@ public final class SpiderViewModel {
 
     private func findNextAutocompleteMove() -> (cards: [Card], source: Pile, target: Pile)? {
         for source in state.tableau where !source.cards.isEmpty {
-            guard isValidDragSequence(source.cards), let firstCard = source.cards.first else { continue }
+            let seq = getLongestValidSequence(in: source)
+            guard let firstCard = seq.first else { continue }
+            
             for target in state.tableau where target.id != source.id {
                 if let topCard = target.topCard, topCard.suit == firstCard.suit, topCard.rank == firstCard.rank + 1 {
-                    return (source.cards, source, target)
+                    return (seq, source, target)
                 }
             }
         }
         return nil
+    }
+
+    private func getLongestValidSequence(in pile: Pile) -> [Card] {
+        guard !pile.cards.isEmpty, let lastCard = pile.cards.last, lastCard.faceUp else { return [] }
+        var result = [lastCard]
+        if pile.cards.count == 1 { return result }
+        
+        for i in stride(from: pile.cards.count - 2, through: 0, by: -1) {
+            let card = pile.cards[i]
+            let prevCard = pile.cards[i + 1]
+            if card.faceUp, card.suit == prevCard.suit, card.rank == prevCard.rank + 1 {
+                result.insert(card, at: 0)
+            } else {
+                break
+            }
+        }
+        return result
     }
 
     // MARK: - Hints
@@ -750,7 +852,7 @@ public final class SpiderViewModel {
                 // scores a hint for this target — otherwise a long run with an empty
                 // column available (any length is legal onto an empty target) would
                 // generate one near-duplicate entry per length.
-                for k in (minValidK...(col.cards.count - 1)).reversed() {
+                for k in minValidK...(col.cards.count - 1) {
                     let dragStack = Array(col.cards[k...])
                     let faceDownBelow = k == firstFaceUpIdx ? firstFaceUpIdx : 0
                     let freesColumn = k == 0
@@ -769,6 +871,11 @@ public final class SpiderViewModel {
                             break
                         }
                     } else if let topCard = targetCol.topCard, topCard.rank == dragStack.first!.rank + 1 {
+                        // Check for lateral move: if the card we are breaking from is identical to the target
+                        if k > 0 && col.cards[k-1].faceUp && col.cards[k-1].suit == topCard.suit && col.cards[k-1].rank == topCard.rank {
+                            continue
+                        }
+                        
                         let sameSuit = topCard.suit == dragStack.first!.suit
                         let faceDownBonus = faceDownBelow * 100
                         if sameSuit {

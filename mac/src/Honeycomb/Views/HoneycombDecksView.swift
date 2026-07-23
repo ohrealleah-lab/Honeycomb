@@ -81,13 +81,10 @@ public struct HoneycombDecksView: View {
                     // Right: Card Bank
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("CARD BANK (Max \(HoneycombDatabase.shared.allCards.count))")
+                            Text("CARD BANK (\(profile.unlockedCardIds.count) of \(HoneycombDatabase.shared.allCards.count))")
                                 .font(.caption).bold()
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("\(filteredCardBank.count)/\(profile.unlockedCardIds.count) shown")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 4)
 
@@ -161,7 +158,7 @@ public struct HoneycombDecksView: View {
             Button("Cancel", role: .cancel) {}
             Button("Start Over", role: .destructive) { performStartOver() }
         } message: {
-            Text("Starting over reseeds the game with an entirely new set of cards. All saved decks and card bank progress will be removed except Deck 1. This can't be undone.")
+            Text("Starting over reseeds the game with an entirely new set of cards. All saved decks and card bank progress. This can't be undone.")
         }
     }
 

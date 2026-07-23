@@ -83,7 +83,49 @@ public final class HoneycombViewModel {
         }
     }
 
-    public var debugBannerRequest: DebugBannerKind?
+    public var debugBannerRequest: DebugBannerKind? = nil {
+        didSet {
+            if let kind = debugBannerRequest {
+                debugSetupBannerState(kind)
+                debugBannerRequest = nil
+            }
+        }
+    }
+
+    public func debugSetupBannerState(_ kind: DebugBannerKind) {
+        switch kind {
+        case .win:
+            gameState = .gameOver
+            playerHand.removeAll()
+            opponentHand.removeAll()
+            // To simulate a win, just fill the board with player's color
+            for i in 0..<board.cells.count {
+                if board.cells[i].card != nil {
+                    board.cells[i].card?.owner = .player
+                }
+            }
+            showPostGamePrompt = true
+        case .loss, .stuck:
+            gameState = .gameOver
+            playerHand.removeAll()
+            opponentHand.removeAll()
+            // To simulate a loss, fill with opponent color
+            for i in 0..<board.cells.count {
+                if board.cells[i].card != nil {
+                    board.cells[i].card?.owner = .opponent
+                }
+            }
+            showPostGamePrompt = true
+        case .autocomplete:
+            break
+        case .same:
+            flashRuleBanner = "SAME!"
+        case .plus:
+            flashRuleBanner = "PLUS!"
+        case .suddenDeath:
+            flashRuleBanner = "SUDDEN DEATH!"
+        }
+    }
     public var zoomScale: CGFloat = 1.0
 
     public var board = HoneycombBoard()

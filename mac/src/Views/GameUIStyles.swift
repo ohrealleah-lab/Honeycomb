@@ -382,3 +382,11 @@ extension Font {
             .width(.condensed)
     }
 }
+
+/// A button style that disables the default macOS hover effect and click dimming.
+public struct NoHoverButtonStyle: ButtonStyle {
+    public init() {}
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+    }
+}

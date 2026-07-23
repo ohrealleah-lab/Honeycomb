@@ -93,6 +93,8 @@ public struct HoneycombView: View {
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
 
     @State private var isShowingSaveDeckConfirm = false
+    @State private var isShowingNewGameConfirm = false
+    @State private var isShowingRematchConfirm = false
 
     // Shared across both hand columns so a Swap trade's two cards can visually slide
     // from one hand to the other — SwiftUI interpolates a matchedGeometryEffect'd
@@ -189,17 +191,18 @@ public struct HoneycombView: View {
                         // Never shown on Ultra Hard — that difficulty is meant to stay
                         // fully self-directed, no optimal-move assistance.
                         if !viewModel.options.hideHintButton && viewModel.options.difficulty != .ultraHard {
-                            GameToolbarButton(
-                                label: "Hint", systemImage: "lightbulb",
-                                isCompact: toolbarWidth < compactToolbarWidthThreshold,
-                                disabled: !viewModel.isPlayerTurn || viewModel.isAnimatingPlacement
-                            ) {
-                                if viewModel.hasHintsAvailable {
-                                    viewModel.findHint()
-                                } else {
-                                    flashNoHintsBanner()
-                                }
+                        GameToolbarButton(
+                            label: "Hint", systemImage: "lightbulb",
+                            isCompact: toolbarWidth < compactToolbarWidthThreshold,
+                            disabled: !viewModel.isPlayerTurn || viewModel.isAnimatingPlacement
+                        ) {
+                            if viewModel.hasHintsAvailable {
+                                viewModel.findHint()
+                            } else {
+                                flashNoHintsBanner()
                             }
+                        }
+                        .keyboardShortcut("h", modifiers: .command)
                         }
 
                         GameToolbarButton(
@@ -207,6 +210,7 @@ public struct HoneycombView: View {
                             isCompact: toolbarWidth < compactToolbarWidthThreshold,
                             disabled: !viewModel.canUndo
                         ) { viewModel.undoLastAction() }
+                        .keyboardShortcut("z", modifiers: .command)
                     } else {
                         GameToolbarButton(
                             label: "Manage Decks", systemImage: "square.grid.2x2",
@@ -542,6 +546,26 @@ public struct HoneycombView: View {
                 FlashBannerView(message: "Sorry! No hints available.")
                     .zIndex(100)
             }
+            
+            Button(action: {
+                if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
+                    isShowingNewGameConfirm = true
+                } else {
+                    viewModel.startNewGame()
+                }
+            }) { EmptyView() }
+            .keyboardShortcut("n", modifiers: .command).frame(width: 0, height: 0).opacity(0)
+            
+            Button(action: {
+                if viewModel.canRematch {
+                    if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
+                        isShowingRematchConfirm = true
+                    } else {
+                        viewModel.rematch()
+                    }
+                }
+            }) { EmptyView() }
+            .keyboardShortcut("r", modifiers: .command).frame(width: 0, height: 0).opacity(0)
         }
         .sheet(isPresented: $showingRules) {
             HoneycombRulesView(
@@ -595,7 +619,7 @@ public struct HoneycombView: View {
             Text("You will replace one card in your active deck with the stolen card. Your other cards are unaffected.")
         }
         .alert(
-            "Can't Steal That Card",
+            "Can't Steal That Card!",
             isPresented: Binding(
                 get: { viewModel.swapValidationError != nil },
                 set: { if !$0 { viewModel.swapValidationError = nil } }
@@ -610,6 +634,14 @@ public struct HoneycombView: View {
             Button("Save") { viewModel.persistActiveDeckToSlot(index: viewModel.options.activeDeckIndex) }
         } message: {
             Text("This will overwrite your active saved deck slot with the cards you currently have, including any swaps from post-match rewards.")
+        }
+        .confirmationDialog("Start a new match? Your current match will end.", isPresented: $isShowingNewGameConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("New Match", role: .destructive) { viewModel.startNewGame() }
+        }
+        .confirmationDialog("Rematch? Your current match will end.", isPresented: $isShowingRematchConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Rematch", role: .destructive) { viewModel.rematch() }
         }
         .sheet(isPresented: $showingDecks) {
             HoneycombDecksView(activeDeckIndex: $viewModel.options.activeDeckIndex, viewModel: viewModel)
@@ -736,7 +768,7 @@ public struct HoneycombView: View {
         if isStealingCard {
             VStack {
                 Text(stealBoardIndex == nil
-                     ? "Drag and drop a captured opponent’s card on the board to steal it."
+                     ? "Drag and drop a captured opponent's card on the board to steal it."
                      : "Now tap one of your own cards to replace with the stolen card.")
                     .font(.headline)
                     .foregroundColor(.white)
@@ -997,6 +1029,7 @@ struct HoneycombRulesView: View {
             coordinator: coordinator,
             availableWidth: availableWidth,
             availableHeight: availableHeight,
+            onViewStats: {},
             onOK: {
                 var updatedOpts = viewModel.options
                 updatedOpts.difficulty = difficulty
@@ -1006,6 +1039,7 @@ struct HoneycombRulesView: View {
                 viewModel.options = updatedOpts
             }
         ) {
+<<<<<<< HEAD
             HStack(alignment: .top, spacing: 40) {
                 // Left Column: Game Choice
                 VStack(alignment: .leading, spacing: 10) {
@@ -1013,13 +1047,26 @@ struct HoneycombRulesView: View {
                         ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
                             Text(diff.displayName).tag(diff)
                         }
+=======
+            VStack(alignment: .leading, spacing: 20) {
+                Picker("Difficulty", selection: $difficulty) {
+                    ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
+                        Text(diff.rawValue).tag(diff)
+>>>>>>> 0a347c2 (Update game UI styles and view models)
                     }
-                    .padding(.bottom, 10)
+                }
+                .pickerStyle(MenuPickerStyle())
+                .frame(minWidth: 120)
+                
+                Divider()
+                
+                HStack(alignment: .top, spacing: 40) {
+                    // Left Column: Game Choice
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Game Choice")
+                            .font(.title2).bold()
                     
-                    Text("Game Choice")
-                        .font(.title2).bold()
-                    
-                    Text("Select up to 2 rules. Leave empty (and Normal Mode off) to let roulette decide each match — including occasionally rolling no rules at all.")
+                    Text("Select up to 2 rules. Leave empty to let roulette decide each match rules.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1102,6 +1149,7 @@ struct HoneycombRulesView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
             }
         }
     }

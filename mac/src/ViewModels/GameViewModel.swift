@@ -267,6 +267,13 @@ public final class GameViewModel {
                 statistics = stats
             }
             gamesPlayed += 1
+        } else {
+            // Re-dealing because of an option change, not a player-initiated new game.
+            // If Vegas mode is active, the initial state.score is -5200, but we shouldn't
+            // double-charge their cumulative bankroll for this re-deal.
+            if options.isVegasScoring && state.movesCount > 0 {
+                vegasBankroll -= -5200 // Refund the cost of the aborted layout
+            }
         }
 
         undoStack.removeAll()
@@ -317,6 +324,10 @@ public final class GameViewModel {
         // 6. Set State
         let initialScore = options.isVegasScoring ? -5200 : 0
         if options.isVegasScoring {
+            // Refund the previous start cost if the game was abandoned without making a single move
+            if state.movesCount == 0 && gameGeneration > 0 {
+                vegasBankroll -= -5200
+            }
             vegasBankroll += initialScore
             vegasBankrollAtGameStart = vegasBankroll
         }

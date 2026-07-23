@@ -80,6 +80,10 @@ struct SoliBeeApp: App {
                     set: { coordinator.stayOnTop = $0 }
                 ))
             }
+
+            CommandMenu("Banners") {
+                DebugBannerCommands(coordinator: coordinator)
+            }
         }
 
         WindowGroup("Klondike Solitaire Help", id: "klondike-help") {
