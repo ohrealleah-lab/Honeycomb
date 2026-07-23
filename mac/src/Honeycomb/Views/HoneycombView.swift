@@ -1039,20 +1039,10 @@ struct HoneycombRulesView: View {
                 viewModel.options = updatedOpts
             }
         ) {
-<<<<<<< HEAD
-            HStack(alignment: .top, spacing: 40) {
-                // Left Column: Game Choice
-                VStack(alignment: .leading, spacing: 10) {
-                    Picker("Difficulty", selection: $difficulty) {
-                        ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
-                            Text(diff.displayName).tag(diff)
-                        }
-=======
             VStack(alignment: .leading, spacing: 20) {
                 Picker("Difficulty", selection: $difficulty) {
                     ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
-                        Text(diff.rawValue).tag(diff)
->>>>>>> 0a347c2 (Update game UI styles and view models)
+                        Text(diff.displayName).tag(diff)
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
