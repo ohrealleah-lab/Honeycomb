@@ -12,8 +12,39 @@ public class HoneycombDatabase
     public ulong CurrentSeed { get; private set; }
     public IReadOnlyList<HoneycombCardData> AllCards { get; private set; } = Array.Empty<HoneycombCardData>();
 
-    private static readonly string DataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
-    private static readonly string SeedPath = Path.Combine(DataDir, "honeycomb_seed.json");
+    private static string GetLocalFolderPath()
+    {
+        try
+        {
+            var appDataType = Type.GetType("Windows.Storage.ApplicationData, Windows, Version=255.255.255.255, Culture=neutral, PublicKeyToken=null, ContentType=WindowsRuntime");
+            if (appDataType != null)
+            {
+                var currentProp = appDataType.GetProperty("Current", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                var currentInstance = currentProp?.GetValue(null);
+                if (currentInstance != null)
+                {
+                    var localFolderProp = currentInstance.GetType().GetProperty("LocalFolder", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    var localFolderInstance = localFolderProp?.GetValue(currentInstance);
+                    if (localFolderInstance != null)
+                    {
+                        var pathProp = localFolderInstance.GetType().GetProperty("Path", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                        var path = pathProp?.GetValue(localFolderInstance) as string;
+                        if (!string.IsNullOrEmpty(path))
+                        {
+                            return path;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
+        return fallbackDir;
+    }
+
+    private static string DataDir => GetLocalFolderPath();
+    private static string SeedPath => Path.Combine(DataDir, "honeycomb_seed.json");
 
     private HoneycombDatabase()
     {

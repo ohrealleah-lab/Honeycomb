@@ -50,7 +50,7 @@
                           SelectionChanged="GameMode_Changed"/>
                 <Rectangle Height="1" Fill="#DDDDDD" Margin="0,4,0,0"/>
             </StackPanel>
-
+            
             <StackPanel Spacing="2">
                 <CheckBox x:Name="NoStressModeCheckBox" Content="No Stress Mode"     Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="HideBetBoardCheckBox" Content="Hide Bet Board"       Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A" IsVisible="False"/>

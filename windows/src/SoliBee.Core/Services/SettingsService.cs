@@ -367,4 +367,61 @@ public static class SettingsService
             // Ignore
         }
     }
+
+    public static HoneycombOptions LoadHoneycombOptions()
+    {
+        var options = new HoneycombOptions();
+        var localSettings = GetLocalSettings();
+        if (localSettings != null)
+        {
+            try
+            {
+                if (GetValue("HoneycombOptionsJson") is string jsonStr)
+                {
+                    return JsonSerializer.Deserialize<HoneycombOptions>(jsonStr) ?? options;
+                }
+            }
+            catch {}
+        }
+
+        try
+        {
+            string path = Path.Combine(FallbackDirectory, "honeycomb_settings.json");
+            if (File.Exists(path))
+            {
+                var json = File.ReadAllText(path);
+                var loaded = JsonSerializer.Deserialize<HoneycombOptions>(json);
+                if (loaded != null) return loaded;
+            }
+        }
+        catch {}
+
+        return options;
+    }
+
+    public static void SaveHoneycombOptions(HoneycombOptions options)
+    {
+        var localSettings = GetLocalSettings();
+        if (localSettings != null)
+        {
+            try
+            {
+                SetValue("HoneycombOptionsJson", JsonSerializer.Serialize(options));
+                return;
+            }
+            catch {}
+        }
+
+        try
+        {
+            if (!Directory.Exists(FallbackDirectory))
+            {
+                Directory.CreateDirectory(FallbackDirectory);
+            }
+            string path = Path.Combine(FallbackDirectory, "honeycomb_settings.json");
+            var json = JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(path, json);
+        }
+        catch {}
+    }
 }

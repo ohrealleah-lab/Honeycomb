@@ -1,0 +1,92 @@
+Created At: 2026-07-22T11:42:23-04:00
+Completed At: 2026-07-22T11:42:23-04:00
+File Path: `file:///Users/leah/.claude/plans/as-you-know-we-mutable-owl.md`
+Total Lines: 548
+Total Bytes: 59640
+Showing lines 1 to 548
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: . Numbers/suit glyph render black for player-owned, red for opponent-owned — **this overrides the card's natural suit color** (an opponent-owned heart card still renders in red, not its natural red — same color either way here, but a player-owned spade renders black same as natural; the point is ownership color always wins over suit color, they just happen to coincide for red suits under mac's black/red scheme). Modifier badge (`+N`/`-N`) in a corner when Ascension/Descension is boosting/penalizing that card. A brief highlight/flash on the specific winning stat(s) just before a capture visually resolves (gate this behind the point-highlights options toggle). A 180°-flip animation when a card's owner changes (color-swap should happen at the animation's midpoint, when the card is edge-on/invisible, so the flip never visibly shows the "wrong" color mid-flip).
+2: - Toolbar: Start Match/Quit Match, Options, Manage Decks (pre/post-match) vs Hint/Undo (mid-match), score display once a match is live.
+3: - Post-game overlay: win/lose result with New Game / Rematch / Steal Card actions.
+4: - Wiring into `MainWindow`/`AppCoordinator` (see Phase 9) needs a new toolbar-chrome category — Honeycomb isn't a solitaire game but (unlike Blackjack/VideoPoker) it *does* need Hint and Undo, so the existing `isCardGame` boolean gate in `MainWindow.ApplyGameSwitch` can't just be reused as-is; add a category that shows Hint/Undo for solitaire games *and* Honeycomb, while still hiding solitaire-only chrome (Restart, stat panel) that doesn't apply to Honeycomb.
+5: 
+6: ---
+7: 
+8: ## Phase 7 — Deck Builder / Card Bank Window
+9: 
+10: **Build:** `HoneycombDecksWindow.axaml`/`.axaml.cs`.
+11: 
+12: Replicate `HoneycombDecksView.swift`'s structure: left panel = the 5 saved-deck rows (name or "Empty Slot N", "(Active)" tag, Set Active / Create-Edit button, small card-preview row) plus a "Start Over" panel with a destructive confirmation prompt; right panel = the full Card Bank grid with a filter bar (star-tier filter, suit filter, Favorites-only toggle, Clear-filters button) and a favorite-heart toggle overlay per card. The Deck Builder itself opens as a sub-view/dialog: deck-name text field (max 20 chars, editable even after saving — matches the "allow editing deck names once saved" fix already shipped on mac and windows for the saved-decks list itself, so don't reintroduce a name-lock here either), a 5-slot "your deck" row (tap to remove), the Card Bank grid below it (tap to add; already-in-deck cards shown dimmed), live validation error text (rules in Phase 4), Save disabled until valid + full + named.
+13: 
+14: ---
+15: 
+16: ## Phase 8 — Stats Window
+17: 
+18: **Build:** `HoneycombStatsWindow.axaml`/`.axaml.cs`.
+19: 
+20: Replicate `HoneycombStatsView.swift`'s grouped stat rows: Games Played/Won/Lost/Drawn/Sudden Deaths/Win Rate; streak + flawless-victory + per-difficulty win counts; captures/Fallen-Aces/combos/steals/start-overs; total card-bank unlock progress plus per-suit and per-star unlock breakdowns (computed live from `HoneycombDatabase.AllCards` vs `UnlockedCardIds`, not persisted). Win rate = `MatchesWon / (GamesPlayed - MatchesDrawn) * 100`. Include a destructive, confirmed "Reset Stats" action and a Close button.
+21: 
+22: ---
+23: 
+24: ## Phase 9 — Wiring & Help Text
+25: 
+26: ### Wiring into the app shell
+27: 
+28: - `AppCoordinator.cs`: add `[ObservableProperty] private HoneycombViewModel _honeycombViewModel;`, a `SwitchToHoneycomb()` method mirroring `SwitchToBlackjack()`, and a new arm in every `switch (ActiveViewModel)` block (`CanUndo`, `Undo()`, `ResetStatistics`, `ApplyTheme`, `TriggerWinAnimation`) — Honeycomb needs real arms in `CanUndo`/`Undo()` (unlike Blackjack/VideoPoker's `false`/no-op fallthrough), since it has real Undo support.
+29: - `MainWindow.axaml`: add a `ComboBoxItem Tag="Honeycomb"` to the game-selection combo box.
+30: - `MainWindow.axaml.cs`: add a `tag == "Honeycomb"` branch to `ApplyGameSwitch` instantiating `new HoneycombView { DataContext = _coordinator.HoneycombViewModel }`; add `Honeycomb` to `GameModeToIndex`/its reverse mapping; add window-size-restore entries (the `RestoreWindowSizeForGame` switch and the persisted-size property additions to `GameOptions.cs`/`SettingsService.cs`, per the Architecture Decisions section above); extend the `isCardGame`-style toolbar-chrome gate as described in Phase 6.
+31: 
+32: ### Help window content
+33: 
+34: Add a `HoneycombAnchor` section to `HelpWindow.axaml` (index entry + `GoTo_Honeycomb` handler in the code-behind, following the exact anchor/index/content-block pattern every other game's help section already uses — see `BlackjackAnchor`/`GoTo_Blackjack` as the template). Use this content, adapted only for Windows' click-based interaction (mac describes drag-or-tap-then-tap; Windows should describe whatever your actual input model ends up being — click-to-select-then-click-to-place is the natural equivalent) — this is mac's actual shipped help copy, quoted in full so there's no ambiguity about what each rule should say:
+35: 
+36: > **Objective** — Battle an AI opponent on a 3×3 grid. Place your 5 cards one at a time; when a placement's facing stat beats an adjacent enemy card's opposite facing stat, you capture it. Whoever controls more of the 9 cells once the board fills wins the match.
+37: >
+38: > **How to Play** — [adapt for Windows input model; mac: "Drag a card from your hand onto any empty board cell, or tap a hand card to select it and then tap an empty cell."] You and the dealer alternate turns until the board is full.
+39: >
+40: > **Capturing & Combos** — Each card shows 4 stats — Top, Right, Bottom, Left. Placing a card next to an enemy card compares your facing stat to their opposite facing stat; the higher value flips the loser to your side (10 is shown as "A"). A card captured this way can immediately capture its own neighbors in a chain reaction, called a Combo.
+41: >
+42: > **Match Rules Overview** — Up to 2 rules can be active per match, chosen in Options before you Start Match. Ascension and Descension can't both be picked (they're opposites), and neither can Order and Chaos. Leave rule selection empty (and Normal Mode off) and Roulette randomly rolls 0–2 rules for you every match instead — Roulette is also the only way Reverse can appear, since it's too easily exploited to pick on purpose.
+43: >
+44: > **Ascension / Descension** — At the start of the match, 2 of the 4 suits are randomly chosen to be affected. Under Ascension, every card of an affected suit gains +1 to all four of its stats for each card of that suit currently on the board — recalculated before every placement's captures resolve, so the bonus grows as more of that suit hits the table. Descension is the same idea in reverse: −1 per card of that suit on the board. A card of an unaffected suit plays completely normally.
+45: >
+46: > **Same** — If 2 or more of a placed card's touching neighbors have a facing stat exactly equal to the attacker's matching facing stat, every one of those matching neighbors is captured at once — not just the strongest one. Your own adjacent cards count toward the trigger too, not only the dealer's, so a placement boxed in by 2 of your own matching cards can still fire Same (this is intentional, not a bug).
+47: >
+48: > **Plus** — If 2 or more touching neighbor pairs each sum (attacker's facing stat + that neighbor's facing stat) to the same total as each other, every card in that matching group is captured — even if the shared sum isn't the attacker's own stat. Like Same, your own adjacent cards count toward the trigger.
+49: >
+50: > **Fallen Ace** — A card showing a 1 that attacks a card showing a 10 ("A") always captures it, overriding the normal higher-beats-lower comparison — a 1 is the one value that can topple an Ace. Under Reverse, this flips too: an attacking 10 always captures a defending 1.
+51: >
+52: > **Reverse** — Capture direction is fully inverted: the attacker wins when its facing stat is lower than the defender's, not higher. Reverse only ever appears via Roulette, never by manual selection — the AI's own deck (and, under Fallen Ace, its capture math) is specially adjusted per difficulty so a nominally "easy" opponent doesn't become trivial under the inversion.
+53: >
+54: > **All Open / Three Open** — All Open reveals the dealer's entire hand face-up for the whole match; Three Open reveals exactly 3 random cards from it, staying revealed by that specific card's identity as the hand shrinks. Either way the reveal is symmetric — the dealer's AI gets the same look at your hand it's giving you, so nobody's playing with hidden information the other side lacks.
+55: >
+56: > **Swap** — Before the first turn, one random card from your hand trades places with one random card from the dealer's hand. The swapped card plays for whoever now holds it, but for Card Bank unlock and post-win steal eligibility it still belongs to its original owner if you don't recapture it during the match.
+57: >
+58: > **Order / Chaos** — Order restricts your legal play each turn to strictly the next card in your original deck order — no choosing. Chaos instead re-rolls one random legal card the instant a side's turn begins, highlighted with a thick yellow border; you'll see the dealer's mandated card highlighted at least 2 seconds before its AI actually plays it.
+59: >
+60: > **Sudden Death** — A 5-5 tie sends the match into Sudden Death: the board clears and immediately replays with each side's exact end-of-round cards, alternating who starts, until someone wins outright.
+61: >
+62: > **Difficulty** — Easy plays randomly. Medium greedily maximizes its own captures each turn. Hard and Ultra Hard search several moves ahead using a full positional evaluation, with Ultra Hard also fielding the strongest overall deck.
+63: >
+64: > **Hint** — On any difficulty below Ultra Hard, the Hint button suggests the strongest card-and-cell placement — found with the same search Ultra Hard's own AI uses — highlighting it for 2 seconds. It only ever considers dealer cards you've actually been shown, never one still hidden from you.
+65: >
+66: > **Card Bank & Decks** — Winning a card isn't automatic — after a win, you may [drag/click, per your input model] one card the dealer played that round onto one of your 5 active deck slots, permanently unlocking it into your Card Bank. This steal is capped at one per match; Rematch (or start a new match) to steal again. Build named decks from Manage Decks, subject to rarity caps: at most one 5★ card, and at most one 4★ if a 5★ is already in the deck (otherwise up to two 4★).
+67: >
+68: > **No Stress Mode** — Deals a fixed, strong deck every match (one 5★, one 4★, three 3★) instead of your chosen active deck, and hides Steal Card — a relaxed way to play without managing a collection. This is a shared setting — enabling it here also enables it across the other games.
+69: 
+70: ---
+71: 
+72: ## Verification / acceptance criteria
+73: 
+74: Run in order — each phase's tests must pass before starting the next phase's implementation:
+75: 
+76: 1. **Phase 1**: `dotnet test --filter "FullyQualifiedName~HoneycombCardGeneratorTests"` — raw `SplitMix64` vectors, both seed-1 and seed-42 full generated-card vectors, plus the ported structural tests (counts/budgets/no-duplicates), all green.
+77: 2. **Phase 2**: `HoneycombBoardTests.cs` — hand-construct board states exercising: a plain higher-beats-lower capture, a Reverse capture, Same firing across 2+ neighbors (including the "boxed in by your own matching cards" case), Plus firing on a shared sum, a combo chain flipping a second card, Fallen Ace's win case AND its blocked-mirror case (both directions, under both Reverse states), Ascension modifier scaling as suit count grows, Descension going negative, edge/corner cells correctly having fewer neighbors.
+78: 3. **Phase 3**: `HoneycombAITests.cs` — Easy AI never crashes and always plays a legal move over many random trials; Medium AI always picks an available immediate-capture move when one exists; Hard/Ultra-Hard AI picks a move at least as good (by the heuristic) as a hand-picked "obviously bad" alternative in a constructed scenario; `RulesAwareCards` under `preferLowStats=true` returns lower-average-total cards than `preferLowStats=false` for the same tier.
+79: 4. **Phase 4**: deck-validation rule tests (each rejection message, each boundary — exactly one 5★ allowed, exactly two 4★ when no 5★, etc.), Start Over composition test (mirroring the existing mac/windows `computeStartOverDecks`-style pure-function test — given a previous deck's star composition, assert the redrawn deck matches that composition with different specific card ids).
+80: 5. **Phase 5**: `HoneycombViewModelTests.cs` — full match flow smoke test (place all 5 player + 5 opponent cards, verify board fills, winner determined correctly by score); Sudden Death triggers correctly on a tied board and preserves `AscensionDescensionSuits`; Undo restores the exact pre-placement state; stats recording increments the right counters for a won/lost/drawn/flawless match.
+81: 6. **Phase 6–8 (UI)**: manual verification — run the Windows app, switch to Honeycomb from the game selector, play a full match against each difficulty at least once, confirm the rules banner grows upward (not downward) with 2 active rules, confirm Undo/Hint work mid-match, open Manage Decks and build/save/edit a deck, open Stats and confirm numbers update after a match, open Help and confirm the Honeycomb section renders and its TOC link jumps to it.
+82: 7. **Full regression**: `dotnet build` (0 errors) and `dotnet test` (full suite, not just Honeycomb's new tests — confirm nothing else broke) before considering the port done.
+83: 
+The above content shows the entire, complete file contents of the requested file.
+

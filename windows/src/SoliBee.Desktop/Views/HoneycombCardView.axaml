@@ -1,25 +1,26 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
              x:Class="SoliBee.Desktop.Views.HoneycombCardView"
              PointerPressed="Card_PointerPressed">
 
-    <Grid x:Name="CardRoot" Width="120" Height="160">
+    <Grid x:Name="CardRoot" Width="195" Height="276">
         <!-- Flip Container for animation -->
         <Border x:Name="FlipContainer" RenderTransformOrigin="50%,50%">
             <!-- Card Face -->
             <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="1.5" Background="#F0F0F0" CornerRadius="8" ClipToBounds="True">
                 <Grid>
                     <!-- Center Suit Glyph -->
-                    <TextBlock x:Name="SuitText" FontSize="60" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Image x:Name="SuitImage" Width="150" Height="150" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
                     
-                    <!-- Star Rating (e.g. ★★★☆☆) -->
-                    <TextBlock x:Name="StarsText" FontSize="14" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,15,0,0" />
+                    <!-- Star Rating Layout -->
+                    <StackPanel x:Name="StarsPanel" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="1" />
                     
                     <!-- The 4 Stats -->
-                    <TextBlock x:Name="TopStat" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,0" />
-                    <TextBlock x:Name="RightStat" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" />
-                    <TextBlock x:Name="BottomStat" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,2" />
-                    <TextBlock x:Name="LeftStat" FontSize="18" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0" />
+                    <TextBlock x:Name="TopStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,15,0,0" />
+                    <TextBlock x:Name="RightStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <TextBlock x:Name="BottomStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,15" />
+                    <TextBlock x:Name="LeftStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" />
                     
                     <!-- Modifier Badge (+N / -N) in top-left corner -->
                     <Border x:Name="ModifierBadge" IsVisible="False" Background="#404040" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,4,0,0" Padding="3,1">
@@ -31,16 +32,18 @@
                     <Border x:Name="RightFlash" IsVisible="False" Background="#B2FFFF00" HorizontalAlignment="Right" Width="28" />
                     <Border x:Name="BottomFlash" IsVisible="False" Background="#B2FFFF00" VerticalAlignment="Bottom" Height="28" CornerRadius="0,0,8,8" />
                     <Border x:Name="LeftFlash" IsVisible="False" Background="#B2FFFF00" HorizontalAlignment="Left" Width="28" />
+                    
+                    <!-- Steal Highlight Border -->
+                    <Border x:Name="StealHighlightBorder" IsVisible="False" BorderBrush="Yellow" BorderThickness="8" CornerRadius="8" IsHitTestVisible="False" />
                 </Grid>
             </Border>
         </Border>
 
         <!-- Card Back -->
-        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="8" IsVisible="False" Background="#2B2B2B" ClipToBounds="True">
-            <Grid>
-                <!-- Honeycomb pattern or simple logo on back -->
-                <TextBlock Text="SoliBee" FontSize="20" FontWeight="Bold" Foreground="#FFD700" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Grid>
+        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="8" IsVisible="False" ClipToBounds="True" Background="White">
+            <Viewbox Stretch="Fill">
+                <local:CardView x:Name="BackCardView" IsHitTestVisible="False" Width="128" Height="181" />
+            </Viewbox>
         </Border>
     </Grid>
 </UserControl>

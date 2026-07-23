@@ -45,7 +45,24 @@ public partial class PreferencesView : UserControl
     private VideoPokerOptions? _originalVideoPokerOptions;
     private GameOptions? _originalSharedOptionsForVideoPoker;
 
-    public string ActiveGameFamily { get; set; } = "";
+    public static readonly StyledProperty<string> ActiveGameFamilyProperty =
+        AvaloniaProperty.Register<PreferencesView, string>(nameof(ActiveGameFamily), "Klondike");
+
+    public static readonly StyledProperty<HoneycombOptions?> HoneycombOptionsProperty =
+        AvaloniaProperty.Register<PreferencesView, HoneycombOptions?>(nameof(HoneycombOptions), null);
+
+    public string ActiveGameFamily
+    {
+        get => GetValue(ActiveGameFamilyProperty);
+        set => SetValue(ActiveGameFamilyProperty, value);
+    }
+    
+    public HoneycombOptions? HoneycombOptions
+    {
+        get => GetValue(HoneycombOptionsProperty);
+        set => SetValue(HoneycombOptionsProperty, value);
+    }
+
     public VideoPokerViewModel? VideoPokerVm { get; set; }
 
     public bool ShowVegasOption
@@ -222,7 +239,7 @@ public partial class PreferencesView : UserControl
         PointHighlightsCheckBox.IsChecked = GetPointHighlights(options);
 
         // Game Mode section
-        if (!string.IsNullOrEmpty(ActiveGameFamily) && ActiveGameFamily != "VideoPoker")
+        if (ActiveGameFamily is "Klondike" or "Freecell" or "Spider")
         {
             PopulateGameModeCombo(options, ActiveGameFamily);
             GameModeSection.IsVisible = true;
@@ -238,6 +255,8 @@ public partial class PreferencesView : UserControl
         if (DataContext is GameOptions options)
         {
             _originalGameOptions = options.Clone();
+            
+
             SyncUIFromOptions(options);
             RefreshThemeList();
         }
@@ -1554,5 +1573,21 @@ public partial class PreferencesView : UserControl
     {
         SettingsService.SaveOptions(options);
         WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(options));
+    }
+
+        
+
+    private void SaveHoneycombOptionsAndNotify()
+    {
+        if (HoneycombOptions == null) return;
+        
+        SettingsService.SaveHoneycombOptions(HoneycombOptions);
+        if (App.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            if (desktop.MainWindow is MainWindow mw && mw.DataContext is HoneycombViewModel hVm)
+            {
+                hVm.Options = HoneycombOptions;
+            }
+        }
     }
 }

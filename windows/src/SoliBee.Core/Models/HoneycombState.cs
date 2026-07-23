@@ -28,6 +28,7 @@ public class HoneycombState
     public HoneycombPhase Phase { get; set; } = HoneycombPhase.PreMatch;
     public HoneycombBoard Board { get; set; } = new();
     public List<HoneycombCard> PlayerHand { get; set; } = new();
+    public List<HoneycombCard> PlayerStartingDeck { get; set; } = new();
     public List<HoneycombCard> OpponentHand { get; set; } = new();
     public HashSet<Guid> PlayerRevealedIds { get; set; } = new();
     public HashSet<Guid> OpponentRevealedIds { get; set; } = new();

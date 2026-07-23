@@ -16,6 +16,7 @@ public final class HoneycombViewModel {
         // Flashes the attacker's winning stat right before a capture flips the board.
         public var showPointHighlights: Bool = true
         public var hideHintButton: Bool = false
+        public var bannedRules: Set<String> = []
 
         public init() {}
 
@@ -26,7 +27,7 @@ public final class HoneycombViewModel {
         // field to its default, not just the missing one).
         private enum CodingKeys: String, CodingKey {
             case isSoundEnabled, noStressMode, difficulty, activeDeckIndex, selectedRules, forceNormalMode, showPointHighlights
-            case hideHintButton
+            case hideHintButton, bannedRules
         }
 
         public init(from decoder: Decoder) throws {
@@ -42,6 +43,7 @@ public final class HoneycombViewModel {
             forceNormalMode = try container.decodeIfPresent(Bool.self, forKey: .forceNormalMode) ?? false
             showPointHighlights = try container.decodeIfPresent(Bool.self, forKey: .showPointHighlights) ?? true
             hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
+            bannedRules = try container.decodeIfPresent(Set<String>.self, forKey: .bannedRules) ?? []
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -54,6 +56,7 @@ public final class HoneycombViewModel {
             try container.encode(forceNormalMode, forKey: .forceNormalMode)
             try container.encode(showPointHighlights, forKey: .showPointHighlights)
             try container.encode(hideHintButton, forKey: .hideHintButton)
+            try container.encode(bannedRules, forKey: .bannedRules)
         }
 
         public static func == (lhs: Options, rhs: Options) -> Bool {
@@ -65,6 +68,7 @@ public final class HoneycombViewModel {
                 && lhs.forceNormalMode == rhs.forceNormalMode
                 && lhs.showPointHighlights == rhs.showPointHighlights
                 && lhs.hideHintButton == rhs.hideHintButton
+                && lhs.bannedRules == rhs.bannedRules
         }
     }
 
@@ -448,13 +452,23 @@ public final class HoneycombViewModel {
             // Roulette mode — can now occasionally roll 0 rules too, for a genuine
             // Normal match, instead of always forcing at least one.
             var pool = HoneycombRule.allCases
+            // Remove banned rules from pool
+            pool.removeAll { options.bannedRules.contains($0.rawValue) }
+            
             if options.difficulty == .easy {
                 // Ascension/Descension and Fallen Ace punish misreads of the board in
                 // ways that are especially brutal for a new player — keep Easy's
                 // roulette pool to rules that don't compound an opponent-favoring swing.
                 pool.removeAll { $0 == .ascension || $0 == .descension || $0 == .fallenAce }
             }
-            let count = Int.random(in: 0...2)
+            
+            // If Normal Mode is banned, force at least 1 rule
+            let minRules = options.bannedRules.contains("Normal Mode") ? 1 : 0
+            // If the pool has fewer than 2 rules left, don't try to draw more than it has
+            let maxRules = min(2, pool.count)
+            
+            let count = maxRules >= minRules ? Int.random(in: minRules...maxRules) : maxRules
+            
             activeRules = []
             for _ in 0..<count {
                 if let randomRule = pool.randomElement() {
@@ -480,7 +494,7 @@ public final class HoneycombViewModel {
         }
 
         if activeRules.contains(.ascension) || activeRules.contains(.descension) {
-            ascensionDescensionSuits = Set(["S", "H", "D", "C"].shuffled().prefix(2))
+            ascensionDescensionSuits = Set(["S", "H", "D", "C"].shuffled().prefix(1))
         } else {
             ascensionDescensionSuits = []
         }
@@ -792,7 +806,7 @@ public final class HoneycombViewModel {
         return activeRules.map { rule -> String in
             if (rule == .ascension || rule == .descension), !ascensionDescensionSuits.isEmpty {
                 let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }
-                return "\(rule.rawValue): \(suitNames.joined(separator: ", "))"
+                return "\(rule.rawValue) Suit: \(suitNames.joined(separator: ", "))"
             }
             return rule.rawValue
         }.joined(separator: ", ")

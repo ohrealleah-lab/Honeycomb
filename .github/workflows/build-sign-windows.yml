@@ -1,164 +1,44 @@
-name: Build and Sign (Windows)
+name: Build and Publish Windows
 
-# Runs on pushes to main and the active port branch, all version tags,
-# PRs targeting main, and on-demand via workflow_dispatch. Packaging with
-# Velopack and publishing a GitHub Release only happens on an actual `v*`
-# tag push — plain branch/PR runs just build (and sign, if configured) as
-# a sanity check, without creating release noise on every commit.
-#
-# NOTE: this file must live here, at the repo root's .github/workflows/ —
-# GitHub Actions only discovers workflows at that exact path, never inside a
-# subdirectory's own .github/workflows/ (this file used to live at
-# windows/.github/workflows/, where it was never actually being run at all).
 on:
   push:
-    branches: [main, '004-windows-port']
-    tags: ['v*']
-  pull_request:
-    branches: [main]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
-permissions:
-  contents: write
-  id-token: write
-  attestations: write
-
 jobs:
-  build-sign:
+  build:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: windows
-    # The `secrets` context isn't allowed directly inside `if:` conditions (only in `env:`
-    # blocks or `run:` steps) — mirroring it into job-level env here is what lets the
-    # conditional signing steps below actually check whether it's set.
-    env:
-      CERT_PFX_BASE64: ${{ secrets.CERT_PFX_BASE64 }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Set up .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
 
-      # No Properties/PublishProfiles/win-x64.pubxml file actually exists in this repo —
-      # /p:PublishProfile=win-x64 is a harmless no-op (MSBuild just warns NETSDK1198).
-      # Publish behavior is driven entirely by the settings baked into the .csproj itself
-      # (SelfContained/PublishSingleFile/RuntimeIdentifier). `dotnet publish` defaults to
-      # Release configuration, and with no custom PublishDir the real output always lands
-      # at bin/Release/net8.0/win-x64/publish/ — every step below that references the
-      # publish output uses that exact path, not the `bin\publish\win-x64\` path this
-      # workflow used to (incorrectly) assume.
-      - name: Publish win-x64
-        run: dotnet publish src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Release -r win-x64 --self-contained true
+    - name: Setup Velopack
+      run: dotnet tool install -g vpk
 
-      # ── Signing (skipped when CERT_PFX_BASE64 secret is absent) ────────────
-      # To enable: add CERT_PFX_BASE64 (base64-encoded PFX) and CERT_PASSWORD
-      # as repository secrets under Settings → Secrets and variables → Actions.
-      # Generate the base64 value with:
-      #   [Convert]::ToBase64String([IO.File]::ReadAllBytes('your-cert.pfx')) | Set-Clipboard
+    - name: Publish App
+      working-directory: windows/src/SoliBee.Desktop
+      run: dotnet publish -c Release -r win-x64 --self-contained -o publish-dir
 
-      - name: Decode certificate
-        if: env.CERT_PFX_BASE64 != ''
-        shell: pwsh
-        run: |
-          $bytes = [Convert]::FromBase64String('${{ secrets.CERT_PFX_BASE64 }}')
-          [IO.File]::WriteAllBytes('cert.pfx', $bytes)
+    - name: Pack with Velopack
+      working-directory: windows/src/SoliBee.Desktop
+      run: vpk pack -u Honeycomb -v ${{ github.ref_name }} -p publish-dir -e Honeycomb.exe -i Assets/AppIcon.ico -o releases
 
-      - name: Sign executable
-        if: env.CERT_PFX_BASE64 != ''
-        shell: pwsh
-        env:
-          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
-        run: |
-          $tool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin' `
-                    -Recurse -Filter signtool.exe |
-                  Sort-Object FullName -Descending |
-                  Select-Object -First 1 -ExpandProperty FullName
-          & $tool sign `
-            /fd SHA256 `
-            /td SHA256 `
-            /tr http://timestamp.digicert.com `
-            /f cert.pfx `
-            /p $env:CERT_PASSWORD `
-            src\SoliBee.Desktop\bin\Release\net8.0\win-x64\publish\Honeycomb.exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-releases
+        path: windows/src/SoliBee.Desktop/releases/
 
-      - name: Remove certificate
-        if: always()
-        shell: pwsh
-        run: Remove-Item cert.pfx -ErrorAction SilentlyContinue
-
-      # ── Package with Velopack + publish a real GitHub Release (tag pushes only) ──
-      # Everything below only runs for an actual `v*` tag push — branch pushes and PRs
-      # stop after the build/sign steps above.
-
-      - name: Determine version from tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        id: version
-        shell: pwsh
-        run: |
-          $version = "${{ github.ref_name }}" -replace '^v', ''
-          echo "version=$version" >> $env:GITHUB_OUTPUT
-
-      - name: Install Velopack CLI
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: dotnet tool install -g vpk
-
-      # Downloads the previous release's assets (if any) into ./releases so `vpk pack`
-      # can compute a delta update against them — harmless/no-op on the very first release.
-      - name: Download previous release assets
-        if: startsWith(github.ref, 'refs/tags/v')
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          vpk download github --repoUrl https://github.com/${{ github.repository }} `
-            --token ${{ secrets.GITHUB_TOKEN }} -o releases
-
-      - name: Pack with Velopack
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
-        run: |
-          vpk pack `
-            -u Honeycomb `
-            -v ${{ steps.version.outputs.version }} `
-            -p src\SoliBee.Desktop\bin\Release\net8.0\win-x64\publish `
-            -e Honeycomb.exe `
-            -i src\SoliBee.Desktop\Assets\AppIcon.ico `
-            -o releases
-
-      - name: Attest build provenance
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/attest-build-provenance@v1
-        with:
-          subject-path: windows/releases/*
-
-      # Uploads everything in ./releases (Setup.exe, full + delta .nupkg, RELEASES
-      # manifest) and creates/updates the GitHub Release for this tag in one step —
-      # this is what was missing entirely before: the workflow used to only upload a
-      # 30-day workflow artifact, never an actual downloadable release asset (on top of
-      # never actually running at all, per the note at the top of this file).
-      - name: Publish GitHub Release via Velopack
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
-        run: |
-          vpk upload github `
-            --repoUrl https://github.com/${{ github.repository }} `
-            --token ${{ secrets.GITHUB_TOKEN }} `
-            --publish `
-            --releaseName "Honeycomb Card Suite ${{ steps.version.outputs.version }}" `
-            --tag ${{ github.ref_name }}
-
-      # Also upload as a workflow artifact for non-tag runs (build validation), and as a
-      # convenient always-available copy even on tag runs.
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Honeycomb-win-x64
-          path: |
-            windows/src/SoliBee.Desktop/bin/Release/net8.0/win-x64/publish/
-            windows/releases/
-          retention-days: 30
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: windows/src/SoliBee.Desktop/releases/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

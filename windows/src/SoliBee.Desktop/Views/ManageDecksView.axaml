@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SoliBee.Desktop.Views"
+             x:Class="SoliBee.Desktop.Views.ManageDecksView"
+             MinHeight="500">
+             
+    <UserControl.Styles>
+        <Style Selector="Button.honeycomb-action">
+            <Setter Property="Background" Value="#A0C0FF" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Padding" Value="20,10" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <Style Selector="Button.honeycomb-danger">
+            <Setter Property="Background" Value="#FFD700" />
+            <Setter Property="Foreground" Value="Black" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Padding" Value="15,8" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#F0F0F0" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,5" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="*, *" Margin="10">
+        
+        <!-- Left Side: Saved Decks -->
+        <Grid Grid.Column="0" RowDefinitions="Auto, *, Auto" MinWidth="350">
+            <TextBlock Grid.Row="0" Text="SAVED DECKS" FontSize="14" FontWeight="Bold" Foreground="#888888" Margin="0,0,0,15" />
+            
+            <ScrollViewer Grid.Row="1">
+                <StackPanel x:Name="DecksListPanel" Spacing="15" Margin="0,0,20,0">
+                    <!-- Populated in code-behind -->
+                </StackPanel>
+            </ScrollViewer>
+            
+            <Border Grid.Row="2" Background="#F05050" CornerRadius="12" Padding="20" Margin="0,20,20,0">
+                <StackPanel>
+                    <TextBlock Text="Want a fresh start? Starting over clears your saved decks and card bank, then reseeds the game with a whole new set of cards." FontSize="14" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,15" />
+                    <Button x:Name="StartOverBtn" Content="Start Over" Classes="honeycomb-danger" HorizontalAlignment="Left" Click="StartOver_Click" />
+                </StackPanel>
+            </Border>
+        </Grid>
+        
+        <Rectangle Grid.Column="0" Width="1" Fill="#E0E0E0" HorizontalAlignment="Right" Margin="0,0,10,0" />
+        
+        <!-- Right Side: Card Bank -->
+        <Grid Grid.Column="1" RowDefinitions="Auto, Auto, *" Margin="10,0,0,0" MinWidth="400">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,15">
+                <TextBlock Text="CARD BANK (Max 552)" FontSize="14" FontWeight="Bold" Foreground="#888888" VerticalAlignment="Center" />
+                <TextBlock x:Name="CardCountText" Grid.Column="2" Text="0/0 shown" FontSize="12" Foreground="#888888" VerticalAlignment="Center" />
+            </Grid>
+            
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,5,0,15">
+                <ComboBox x:Name="StarsFilter" Width="110" SelectionChanged="FilterCombo_SelectionChanged">
+                    <ComboBoxItem Content="All Stars" />
+                    <ComboBoxItem Content="1 Star" />
+                    <ComboBoxItem Content="2 Stars" />
+                    <ComboBoxItem Content="3 Stars" />
+                    <ComboBoxItem Content="4 Stars" />
+                    <ComboBoxItem Content="5 Stars" />
+                </ComboBox>
+                <ComboBox x:Name="SuitsFilter" Width="110" SelectionChanged="FilterCombo_SelectionChanged">
+                    <ComboBoxItem Content="All Suits" />
+                    <ComboBoxItem Content="Spades" />
+                    <ComboBoxItem Content="Hearts" />
+                    <ComboBoxItem Content="Diamonds" />
+                    <ComboBoxItem Content="Clubs" />
+                </ComboBox>
+                <ToggleButton x:Name="FavoritesFilter" Content="♡ Favorites" CornerRadius="8" Background="#F0F0F0" Padding="10,5" Checked="FilterToggle_CheckedChanged" Unchecked="FilterToggle_CheckedChanged"/>
+            </StackPanel>
+            
+            <ScrollViewer Grid.Row="2" Margin="0,15,0,0">
+                <WrapPanel x:Name="BankPanel" ItemWidth="95" ItemHeight="135" />
+            </ScrollViewer>
+        </Grid>
+        
+    </Grid>
+</UserControl>

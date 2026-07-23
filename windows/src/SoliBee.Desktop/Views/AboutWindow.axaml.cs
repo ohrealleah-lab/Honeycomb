@@ -22,7 +22,7 @@ public partial class AboutWindow : Window
     private async void CheckForUpdates_Click(object? sender, RoutedEventArgs e)
     {
         CheckForUpdatesButton.IsVisible = false;
-        ViewReleaseButton.IsVisible = false;
+        InstallUpdateButton.IsVisible = false;
         UpdateStatusText.IsVisible = true;
         UpdateStatusText.Text = "Checking for updates…";
 
@@ -31,10 +31,10 @@ public partial class AboutWindow : Window
             var outcome = await UpdateCheckService.CheckNowAsync();
             _lastOutcome = outcome;
 
-            if (outcome.IsNewer)
+            if (outcome.IsNewer && outcome.UpdateInfo != null)
             {
-                UpdateStatusText.Text = $"Version {outcome.LatestVersion} is available.";
-                ViewReleaseButton.IsVisible = true;
+                UpdateStatusText.Text = $"Version {outcome.UpdateInfo.TargetFullRelease.Version} is available.";
+                InstallUpdateButton.IsVisible = true;
             }
             else
             {
@@ -51,16 +51,31 @@ public partial class AboutWindow : Window
         }
     }
 
-    private void ViewRelease_Click(object? sender, RoutedEventArgs e)
+    private async void InstallUpdate_Click(object? sender, RoutedEventArgs e)
     {
-        if (_lastOutcome == null) return;
+        if (_lastOutcome?.UpdateInfo == null) return;
+        
+        InstallUpdateButton.IsEnabled = false;
+        UpdateStatusText.Text = "Downloading update...";
+
         try
         {
-            Process.Start(new ProcessStartInfo(_lastOutcome.ReleaseUrl) { UseShellExecute = true });
+            await UpdateCheckService.DownloadAndApplyUpdatesAsync(_lastOutcome.UpdateInfo, progress => 
+            {
+                // Must marshal to UI thread if we want to show real-time progress
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => 
+                {
+                    UpdateStatusText.Text = $"Downloading update... {progress}%";
+                });
+            });
         }
         catch
         {
-            // Best-effort — nothing sensible to do if the OS can't hand off to a browser.
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => 
+            {
+                UpdateStatusText.Text = "Failed to download the update.";
+                InstallUpdateButton.IsEnabled = true;
+            });
         }
     }
 }

@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private string _pendingAction = "";
     private bool _revertingSelection = false;
     private PreferencesView? _preferencesView;
+    private ManageDecksView? _manageDecksView;
     private bool _closePreferencesAfterModeConfirm;
     private INotifyPropertyChanged? _hintTrackedVm;
 
@@ -507,6 +508,13 @@ public partial class MainWindow : Window
             else if (this.DataContext is HoneycombViewModel hVm) hVm.ResetStats();
             PopulateStatsPanel();
         }
+        else if (_pendingAction == "HoneycombQuit")
+        {
+            if (this.DataContext is HoneycombViewModel hVm)
+            {
+                hVm.State = new HoneycombState(); // Reset back to pre-match
+            }
+        }
         _pendingAction = "";
     }
 
@@ -772,6 +780,33 @@ public partial class MainWindow : Window
         StatsFastestWinText.Text  = gamesWon > 0 ? $"{fastestWinSec}s" : "--";
     }
 
+    private void SetupHoneycombMode()
+    {
+        HoneycombStartMatchButton.IsVisible  = true;
+        HoneycombManageDecksButton.IsVisible = true;
+        HoneycombQuitMatchButton.IsVisible   = true;
+        HoneycombRulesButton.IsVisible       = true;
+    }
+
+    private void SetupNormalMode()
+    {
+        HoneycombStartMatchButton.IsVisible  = false;
+        HoneycombManageDecksButton.IsVisible = false;
+        HoneycombQuitMatchButton.IsVisible   = false;
+        HoneycombRulesButton.IsVisible       = false;
+    }
+
+    private void HoneycombRules_Click(object? sender, RoutedEventArgs e)
+    {
+        if (IsOptionsBlockedDuringHand()) return;
+        
+        if (this.DataContext is HoneycombViewModel hVm)
+        {
+            var rulesWindow = new HoneycombRulesWindow(hVm);
+            rulesWindow.ShowDialog(this);
+        }
+    }
+
     private void Preferences_Click(object? sender, RoutedEventArgs e)
     {
         // Belt-and-suspenders alongside OptionsButton.IsEnabled — blocks the F2 shortcut
@@ -798,19 +833,24 @@ public partial class MainWindow : Window
                 GameViewModel vm      => vm.Options,
                 FreecellViewModel vm  => vm.Options,
                 SpiderViewModel vm    => vm.Options,
+                HoneycombViewModel vm => _coordinator.GameViewModel.Options,
                 _                     => _coordinator.GameViewModel.Options
             };
-            // Clone, don't share the live instance — otherwise each ViewModel's
-            // OptionsChangedMessage handler compares the object to itself and never
-            // detects a change for whichever game is currently active.
+            // Clone, don't share the live instance
             _preferencesView.DataContext = options.Clone();
             _preferencesView.ActiveGameFamily = this.DataContext switch
             {
                 GameViewModel _      => "Klondike",
                 FreecellViewModel _  => "Freecell",
                 SpiderViewModel _    => "Spider",
+                HoneycombViewModel _ => "Honeycomb",
                 _                    => "",
             };
+            
+            if (this.DataContext is HoneycombViewModel hVm)
+            {
+                _preferencesView.HoneycombOptions = hVm.Options;
+            }
         }
 
         _preferencesView.ShowVegasOption = this.DataContext is GameViewModel;
@@ -834,6 +874,47 @@ public partial class MainWindow : Window
         this.PreferencesOverlay.IsVisible = false;
         this.PreferencesContent.Content   = null;
         this.TopBarBorder.IsEnabled = true;
+    }
+
+    private void ManageDecks_Click(object? sender, RoutedEventArgs e)
+    {
+        if (IsOptionsBlockedDuringHand()) return;
+
+        _manageDecksView = new ManageDecksView();
+        this.ManageDecksContent.Content = _manageDecksView;
+        this.ManageDecksOverlay.IsVisible = true;
+        this.TopBarBorder.IsEnabled = false;
+    }
+
+    private void CloseManageDecks_Click(object? sender, RoutedEventArgs e)
+    {
+        var pm = HoneycombProfileManager.Shared;
+        var opts = SettingsService.LoadOptions();
+        
+        // Ensure active deck is valid, otherwise fallback
+        var activeDeck = pm.SavedDecks[opts.HoneycombActiveDeckIndex];
+        if (activeDeck.CardIds.Count != 5)
+        {
+            opts.HoneycombActiveDeckIndex = 0;
+            activeDeck = pm.SavedDecks[0];
+        }
+        
+        opts.PlayerDeckIds = new List<int>(activeDeck.CardIds);
+        SettingsService.SaveOptions(opts);
+
+        this.ManageDecksOverlay.IsVisible = false;
+        this.ManageDecksContent.Content = null;
+        this.TopBarBorder.IsEnabled = true;
+        _manageDecksView = null;
+        
+        // Refresh Honeycomb View in case decks were changed
+        if (this.DataContext is HoneycombViewModel hVm)
+        {
+            if (MainContent.Content is HoneycombView hv)
+            {
+                hv.Refresh(hVm);
+            }
+        }
     }
 
     private void Help_Click(object? sender, RoutedEventArgs e)
@@ -1158,13 +1239,33 @@ public partial class MainWindow : Window
         bool isCardGame = tag != "VideoPoker" && tag != "Blackjack" && tag != "Honeycomb";
         UpdateSolitaireKeyHint(tag, isCardGame);
         // Hint is solitaire-only (no hint logic exists for VP/Blackjack/Honeycomb).
-        if (HintButton != null)    HintButton.IsVisible    = isCardGame && !_coordinator.GameViewModel.Options.HideHintButton;
-        if (UndoButton != null)    UndoButton.IsVisible    = isCardGame;
+        if (HintButton != null)    HintButton.IsVisible    = isCardGame && !_coordinator.GameViewModel.Options.HideHintButton || tag == "Honeycomb";
+        if (UndoButton != null)    UndoButton.IsVisible    = isCardGame || tag == "Honeycomb";
         if (TimeStatPanel != null)  TimeStatPanel.IsVisible  = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
-        if (ScoreStatPanel != null) ScoreStatPanel.IsVisible = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
-        if (MovesStatPanel != null) MovesStatPanel.IsVisible = isCardGame && !_coordinator.GameViewModel.Options.IsNoStressMode;
+        if (ScoreStatPanel != null) ScoreStatPanel.IsVisible = isCardGame && tag != "Honeycomb" && !_coordinator.GameViewModel.Options.IsNoStressMode;
+        if (MovesStatPanel != null) MovesStatPanel.IsVisible = isCardGame && tag != "Honeycomb" && !_coordinator.GameViewModel.Options.IsNoStressMode;
         if (RestartButton != null) RestartButton.IsVisible = isCardGame;
-        if (StatsBarPanel != null) StatsBarPanel.IsVisible = isCardGame;
+        if (NewGameButton != null) NewGameButton.IsVisible = tag != "Honeycomb" && tag != "Blackjack" && tag != "VideoPoker";
+        if (StatsBarPanel != null) StatsBarPanel.IsVisible = isCardGame || tag == "Honeycomb";
+        var hcYou = this.FindControl<StackPanel>("HoneycombYouStatPanel");
+        var hcOpp = this.FindControl<StackPanel>("HoneycombOpponentStatPanel");
+        if (hcYou != null) hcYou.IsVisible = tag == "Honeycomb";
+        if (hcOpp != null) hcOpp.IsVisible = tag == "Honeycomb";
+        if (tag == "Honeycomb")
+        {
+            SetupHoneycombMode();
+            var phase = _coordinator.HoneycombViewModel.State?.Phase ?? HoneycombPhase.PreMatch;
+            if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = phase == HoneycombPhase.PreMatch;
+            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = phase == HoneycombPhase.PreMatch;
+            if (HoneycombQuitMatchButton != null) HoneycombQuitMatchButton.IsVisible = phase != HoneycombPhase.PreMatch;
+        }
+        else
+        {
+            SetupNormalMode();
+            if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = false;
+            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = false;
+            if (HoneycombQuitMatchButton != null) HoneycombQuitMatchButton.IsVisible = false;
+        }
         var options = SettingsService.LoadOptions();
         string baseTag = GetBaseGameTag(tag);
 
@@ -1258,6 +1359,9 @@ public partial class MainWindow : Window
                 if (kind == "Win") bjv.DebugShowResultBanner(true);
                 else if (kind == "Loss") bjv.DebugShowResultBanner(false);
                 break;
+            case HoneycombView hv:
+                hv.DebugShowResultBanner(kind);
+                break;
         }
     }
 
@@ -1267,6 +1371,44 @@ public partial class MainWindow : Window
             UpdateHintButtonEnabled();
         else if (e.PropertyName == nameof(BlackjackViewModel.State) || e.PropertyName == nameof(VideoPokerViewModel.State))
             UpdateOptionsButtonEnabled();
+            
+        if (this.DataContext is HoneycombViewModel hVm)
+        {
+            if (e.PropertyName == nameof(HoneycombViewModel.State) || e.PropertyName == nameof(HoneycombViewModel.IsPlaying))
+            {
+                UpdateHoneycombButtons();
+            }
+        }
+    }
+    
+    private void UpdateHoneycombButtons()
+    {
+        if (this.DataContext is HoneycombViewModel hVm && hVm.State != null)
+        {
+            if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = hVm.State.Phase == HoneycombPhase.PreMatch;
+            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = hVm.State.Phase == HoneycombPhase.PreMatch;
+            HoneycombQuitMatchButton.IsVisible = hVm.State.Phase != HoneycombPhase.PreMatch;
+        }
+    }
+
+    private void HoneycombStartMatch_Click(object? sender, RoutedEventArgs e)
+    {
+        if (this.DataContext is HoneycombViewModel hVm)
+        {
+            hVm.StartNewMatch();
+        }
+    }
+
+    private void HoneycombQuitMatch_Click(object? sender, RoutedEventArgs e)
+    {
+        if (this.DataContext is HoneycombViewModel hVm)
+        {
+            _pendingAction = "HoneycombQuit";
+            ConfirmActionTitle.Text = "Quit Match?";
+            ConfirmActionMessage.Text = "Are you sure you want to abandon the current match?";
+            ConfirmActionButton.Content = "Quit";
+            ConfirmActionOverlay.IsVisible = true;
+        }
     }
 
     private void UpdateHintButtonEnabled()

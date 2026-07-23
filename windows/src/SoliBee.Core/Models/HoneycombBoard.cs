@@ -200,13 +200,13 @@ public class HoneycombBoard
             int baseAttackerStat = attacker.Data.Stats[n.AttackerEdge];
             int baseTargetStat = targetCard.Data.Stats[n.NeighborEdge];
 
-            if (baseAttackerStat == 1 && baseTargetStat == 10)
-            {
-                SessionFallenAceCaptures++;
-            }
-
             if (CanCapture(attackerStat, targetStat, rules))
             {
+                if (baseAttackerStat == 1 && baseTargetStat == 10)
+                {
+                    SessionFallenAceCaptures++;
+                }
+
                 if (rules.Contains(HoneycombRule.FallenAce))
                 {
                     bool reverse = rules.Contains(HoneycombRule.Reverse);

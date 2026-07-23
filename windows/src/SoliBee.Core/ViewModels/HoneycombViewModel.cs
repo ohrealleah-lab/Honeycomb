@@ -35,17 +35,19 @@ public partial class HoneycombViewModel : ObservableObject
 
     public bool IsPlaying => State.Phase == HoneycombPhase.Playing;
     public bool CanUndo => State.UndoStack.Count > 0 && IsPlaying && State.CurrentTurn == 1 && !_isAnimating;
+    
+    public event Action<string>? OnFlashBanner;
 
     public HoneycombViewModel(bool isHeadless = false)
     {
         _isHeadless = isHeadless;
-        Options = LoadOptions();
+        Options = SettingsService.LoadHoneycombOptions();
         Stats = LoadStats();
         
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
             var oldOpts = SettingsService.LoadOptions();
-            Options = LoadOptions();
+            Options = SettingsService.LoadHoneycombOptions();
             var newOpts = SettingsService.LoadOptions();
             if (oldOpts.HoneycombActiveDeckIndex != newOpts.HoneycombActiveDeckIndex || 
                 oldOpts.IsNoStressMode != newOpts.IsNoStressMode)
@@ -63,15 +65,17 @@ public partial class HoneycombViewModel : ObservableObject
 
         if (Options.ManualRules != null && Options.ManualRules.Count > 0)
         {
-            var clean = Options.ManualRules.Where(r => r != HoneycombRule.Reverse).ToList();
-            if (clean.Count > 2) clean = clean.Take(2).ToList();
-            return clean;
+            return Options.ManualRules.ToList();
         }
 
-        int count = Random.Shared.Next(0, 3);
-        if (count == 0) return new List<HoneycombRule>();
-
         var pool = Enum.GetValues<HoneycombRule>().ToList();
+        
+        // Remove banned rules from pool
+        if (Options.BannedRules != null)
+        {
+            pool.RemoveAll(r => Options.BannedRules.Contains(r.ToString()));
+        }
+        
         
         if (Options.Difficulty == "Easy")
         {
@@ -79,6 +83,15 @@ public partial class HoneycombViewModel : ObservableObject
             pool.Remove(HoneycombRule.Descension);
             pool.Remove(HoneycombRule.FallenAce);
         }
+
+        // If Normal Mode is banned, force at least 1 rule
+        int minRules = (Options.BannedRules != null && Options.BannedRules.Contains("Normal Mode")) ? 1 : 0;
+        int maxRules = Math.Min(2, pool.Count);
+        
+        if (maxRules < minRules) return new List<HoneycombRule>();
+        
+        int count = Random.Shared.Next(minRules, maxRules + 1);
+        if (count == 0) return new List<HoneycombRule>();
 
         var selected = new List<HoneycombRule>();
         for (int i = 0; i < count; i++)
@@ -113,12 +126,12 @@ public partial class HoneycombViewModel : ObservableObject
 
         if (State.ActiveRules.Contains(HoneycombRule.Ascension))
         {
-            var suits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(2).Select(s => s.ToString()).ToList();
+            var suits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(1).Select(s => s.ToString()).ToList();
             State.Board.AscensionDescensionSuits = suits;
         }
         else if (State.ActiveRules.Contains(HoneycombRule.Descension))
         {
-            var suits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(2).Select(s => s.ToString()).ToList();
+            var suits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(1).Select(s => s.ToString()).ToList();
             State.Board.AscensionDescensionSuits = suits;
         }
 
@@ -146,6 +159,7 @@ public partial class HoneycombViewModel : ObservableObject
                 playerIds = HoneycombProfileManager.ComputeStartOverDeck(null);
         }
         State.PlayerHand = playerIds.Select(id => new HoneycombCard(HoneycombDatabase.Shared.Card(id)!, 1)).ToList();
+        State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
 
         bool reverse = State.ActiveRules.Contains(HoneycombRule.Reverse);
         var comp = new List<(int stars, int count)>();
@@ -164,7 +178,6 @@ public partial class HoneycombViewModel : ObservableObject
             else { comp.Add((1, 5)); }
         }
 
-        System.IO.File.WriteAllText("/tmp/comp.txt", string.Join(", ", comp.Select(x => $"{x.stars}*{x.count}")));
         State.OpponentHand = new List<HoneycombCard>();
         foreach (var (stars, count) in comp)
         {
@@ -220,6 +233,21 @@ public partial class HoneycombViewModel : ObservableObject
         }
         
         State.CurrentTurn = starter;
+        
+        var ruleNames = State.ActiveRules.Select(r => 
+        {
+            var name = System.Text.RegularExpressions.Regex.Replace(r.ToString(), "(\\B[A-Z])", " $1");
+            if ((r == HoneycombRule.Ascension || r == HoneycombRule.Descension) && State.Board.AscensionDescensionSuits.Count > 0)
+            {
+                return $"{name} Suit: {string.Join(", ", State.Board.AscensionDescensionSuits)}";
+            }
+            return name;
+        }).ToList();
+        if (ruleNames.Count == 0) ruleNames.Add("Normal");
+        
+        string starterName = starter == 1 ? "Player" : "Opponent";
+        OnFlashBanner?.Invoke($"First Move: {starterName}!\n" + string.Join(", ", ruleNames));
+        
         StartTurn();
     }
 
@@ -358,7 +386,7 @@ public partial class HoneycombViewModel : ObservableObject
             // Better to compute captures explicitly or let Stats handle it.
             if (State.CurrentTurn == 1)
             {
-                State.CardsCapturedThisMatch += Math.Max(0, postScore - preScore - 1); // -1 for the card we just placed
+                State.CardsCapturedThisMatch += Math.Max(0, postScore - preScore); // preScore already includes the card placed from hand
             }
 
         if (IsBoardFull())
@@ -463,21 +491,39 @@ public partial class HoneycombViewModel : ObservableObject
         }
     }
 
-    private static readonly string DataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
-    private static readonly string OptionsPath = Path.Combine(DataDir, "honeycomb_options.json");
-    private static readonly string StatisticsPath = Path.Combine(DataDir, "honeycomb_stats.json");
+    private static string GetLocalFolderPath()
+    {
+        try
+        {
+            var appDataType = Type.GetType("Windows.Storage.ApplicationData, Windows, Version=255.255.255.255, Culture=neutral, PublicKeyToken=null, ContentType=WindowsRuntime");
+            if (appDataType != null)
+            {
+                var currentProp = appDataType.GetProperty("Current", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                var currentInstance = currentProp?.GetValue(null);
+                if (currentInstance != null)
+                {
+                    var localFolderProp = currentInstance.GetType().GetProperty("LocalFolder", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    var localFolderInstance = localFolderProp?.GetValue(currentInstance);
+                    if (localFolderInstance != null)
+                    {
+                        var pathProp = localFolderInstance.GetType().GetProperty("Path", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                        var path = pathProp?.GetValue(localFolderInstance) as string;
+                        if (!string.IsNullOrEmpty(path)) return path;
+                    }
+                }
+            }
+        }
+        catch { }
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
+    }
+
+    private static string DataDir => GetLocalFolderPath();
+    private static string OptionsPath => Path.Combine(DataDir, "honeycomb_options.json");
+    private static string StatisticsPath => Path.Combine(DataDir, "honeycomb_stats.json");
 
     public void SaveOptions()
     {
-        try { Directory.CreateDirectory(DataDir); File.WriteAllText(OptionsPath, JsonSerializer.Serialize(Options, new JsonSerializerOptions { WriteIndented = true })); }
-        catch { }
-    }
-
-    private static HoneycombOptions LoadOptions()
-    {
-        try { if (File.Exists(OptionsPath)) { var o = JsonSerializer.Deserialize<HoneycombOptions>(File.ReadAllText(OptionsPath)); if (o != null) return o; } }
-        catch { }
-        return new HoneycombOptions();
+        SettingsService.SaveHoneycombOptions(Options);
     }
 
     private void SaveStats()
@@ -495,6 +541,11 @@ public partial class HoneycombViewModel : ObservableObject
 
     private void NotifyStateChanged()
     {
+        if (State != null)
+        {
+            State.PlayerScore = CountPlayerCards(State.Board, State.PlayerHand);
+            State.OpponentScore = CountOpponentCards(State.Board, State.OpponentHand);
+        }
         OnPropertyChanged(nameof(State));
         OnPropertyChanged(nameof(IsPlaying));
         OnPropertyChanged(nameof(CanUndo));
@@ -510,11 +561,12 @@ public partial class HoneycombViewModel : ObservableObject
     public void RequestSwap(int boardIndex, int replaceHandIndex)
     {
         if (State.HasStolenThisMatch) return;
+        if (State.PlayerScore <= State.OpponentScore) return; // Must win to steal
         var incoming = State.Board.Cells[boardIndex].Card;
         if (incoming == null || incoming.OriginalOwner != -1 || incoming.Owner != 1) return;
         if (HoneycombProfileManager.Shared.UnlockedCardIds.Contains(incoming.Data.Id)) return;
         
-        var playerStartingDeck = _sessionHandOverride != null ? _sessionHandOverride : State.PlayerHand.Select(c => c.Data).ToList();
+        var playerStartingDeck = _sessionHandOverride != null ? _sessionHandOverride : State.PlayerStartingDeck.Select(c => c.Data).ToList();
         if (replaceHandIndex < 0 || replaceHandIndex >= playerStartingDeck.Count) return;
 
         var hypotheticalDeck = new List<HoneycombCardData>(playerStartingDeck);
@@ -552,7 +604,7 @@ public partial class HoneycombViewModel : ObservableObject
         SaveStats();
         State.HasStolenThisMatch = true;
 
-        var playerStartingDeck = _sessionHandOverride != null ? new List<HoneycombCardData>(_sessionHandOverride) : State.PlayerHand.Select(c => c.Data).ToList();
+        var playerStartingDeck = _sessionHandOverride != null ? new List<HoneycombCardData>(_sessionHandOverride) : State.PlayerStartingDeck.Select(c => c.Data).ToList();
         playerStartingDeck[swap.ReplaceHandIndex] = incoming.Data;
         _sessionHandOverride = playerStartingDeck;
         OnPropertyChanged(nameof(HasUnsavedActiveDeck));

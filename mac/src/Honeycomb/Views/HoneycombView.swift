@@ -74,6 +74,7 @@ public struct HoneycombView: View {
     @State private var showingDecks = false
     @State private var showingStats = false
     @State private var showingOptions = false
+    @State private var showingRules = false
 
     @State private var draggingOpponentCardIndex: Int? = nil
 
@@ -172,6 +173,12 @@ public struct HoneycombView: View {
                         isCompact: toolbarWidth < compactToolbarWidthThreshold,
                         disabled: viewModel.gameState == .playing || viewModel.gameState == .suddenDeath
                     ) { showingOptions = true }
+
+                    GameToolbarButton(
+                        label: "Rules", systemImage: "checklist",
+                        isCompact: toolbarWidth < compactToolbarWidthThreshold,
+                        disabled: viewModel.gameState == .playing || viewModel.gameState == .suddenDeath
+                    ) { showingRules = true }
 
                     // Manage Decks/Save Deck are shown for .setup *and* .gameOver — the
                     // match is already over at that point (same "match in progress"
@@ -520,33 +527,7 @@ public struct HoneycombView: View {
                 .shadow(radius: 20)
             }
 
-            // Steal Card mode — replaces the full overlay with a slim instruction bar
-            // so the board and hands stay visible and tappable.
-            if isStealingCard {
-                VStack {
-                    Text(stealBoardIndex == nil
-                         ? "Tap an opponent's card on the board to steal it."
-                         : "Now tap one of your own cards to replace with the stolen card.")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color.black.opacity(0.8))
-                        .cornerRadius(10)
-                        .shadow(radius: 10)
-
-                    Button("Cancel") {
-                        isStealingCard = false
-                        stealBoardIndex = nil
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.white)
-                    .foregroundColor(.black)
-                    .padding(.top, 6)
-                }
-                .padding(.top, 60)
-                .frame(maxHeight: .infinity, alignment: .top)
-            }
+            // Steal Card mode instruction bar has been moved to rulesBanner
             
             // Banner Overlay — shared by Ascension/Descension/Same/Plus/Sudden Death.
             if showingRuleBanner {
@@ -559,6 +540,15 @@ public struct HoneycombView: View {
                 FlashBannerView(message: "Sorry! No hints available.")
                     .zIndex(100)
             }
+        }
+        .sheet(isPresented: $showingRules) {
+            HoneycombRulesView(
+                viewModel: viewModel,
+                isPresented: $showingRules,
+                coordinator: coordinator,
+                availableWidth: windowContentHeight * 1.5,
+                availableHeight: windowContentHeight
+            )
         }
         .onChange(of: viewModel.gameState) { _, newState in
             // Safety net: however the match ends up leaving .gameOver (New Game
@@ -720,7 +710,7 @@ public struct HoneycombView: View {
                 if rule == .ascension || rule == .descension, !viewModel.ascensionDescensionSuits.isEmpty {
                     let suitNames = viewModel.ascensionDescensionSuits.sorted()
                         .map { HoneycombCardData.suitDisplayName($0) }
-                    return "\(rule.rawValue): \(suitNames.joined(separator: ", "))"
+                    return "\(rule.rawValue) Suit: \(suitNames.joined(separator: ", "))"
                 }
                 return rule.rawValue
             }
@@ -739,27 +729,53 @@ public struct HoneycombView: View {
     // Active-rules banner shown above the board. Every Text here is .fixedSize() —
     // same reasoning as StatusItemView elsewhere in the app — so it always claims its
     // true natural width instead of being squeezed/truncated when the row is tight.
+    @ViewBuilder
     private var rulesBanner: some View {
-        VStack(spacing: 6) {
-            Text("Rules:")
-                .font(.system(size: 28, weight: .black))
-                .foregroundColor(.yellow)
-                .fixedSize()
-            ForEach(rulesBannerLines, id: \.self) { line in
-                Text(line)
-                    .font(.system(size: 22, weight: .black))
+        if isStealingCard {
+            VStack {
+                Text(stealBoardIndex == nil
+                     ? "Tap an opponent's card on the board to steal it."
+                     : "Now tap one of your own cards to replace with the stolen card.")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.8))
+                    .cornerRadius(10)
+                    .shadow(radius: 10)
+
+                Button("Cancel") {
+                    isStealingCard = false
+                    stealBoardIndex = nil
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.white)
+                .foregroundColor(.black)
+                .padding(.top, 6)
+            }
+            .frame(height: Self.rulesBannerHeight, alignment: .bottom)
+        } else {
+            VStack(spacing: 6) {
+                Text("Rules:")
+                    .font(.system(size: 28, weight: .black))
                     .foregroundColor(.yellow)
                     .fixedSize()
+                ForEach(rulesBannerLines, id: \.self) { line in
+                    Text(line)
+                        .font(.system(size: 22, weight: .black))
+                        .foregroundColor(.yellow)
+                        .fixedSize()
+                }
             }
+            .padding(.horizontal, 28)
+            .padding(.vertical, 18)
+            .background(Color.black.opacity(0.75))
+            .cornerRadius(16)
+            // A second rule line makes this taller than the reserved rulesBannerHeight —
+            // bottom-align it in that reserved box so the extra height grows upward into
+            // the empty space above instead of pushing the board down below it.
+            .frame(height: Self.rulesBannerHeight, alignment: .bottom)
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 18)
-        .background(Color.black.opacity(0.75))
-        .cornerRadius(16)
-        // A second rule line makes this taller than the reserved rulesBannerHeight —
-        // bottom-align it in that reserved box so the extra height grows upward into
-        // the empty space above instead of pushing the board down below it.
-        .frame(height: Self.rulesBannerHeight, alignment: .bottom)
     }
 
     // "PLAYER"/"DEALER" label above each hand column.
@@ -942,63 +958,148 @@ struct HoneycombOptionsView: View {
                 .font(.system(.body))
 
             Divider()
+        }
+    }
+}
 
-            // Difficulty and match rules bind straight to viewModel.options (live,
-            // like the Themes sub-panel binds straight to the coordinator) rather than
-            // through the staged local @State above — they take effect immediately as
-            // each one is picked, matching how they behaved in the standalone Game
-            // Rules sheet this content used to live in, so there's no separate
-            // Cancel-revert behavior to build for them.
-            Picker("Difficulty", selection: $viewModel.options.difficulty) {
-                ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
-                    Text(diff.rawValue).tag(diff)
-                }
+// MARK: - Rules Sheet
+struct HoneycombRulesView: View {
+    @Bindable var viewModel: HoneycombViewModel
+    @Binding var isPresented: Bool
+    @Bindable var coordinator: AppCoordinator
+
+    @State private var difficulty: HoneycombDifficulty
+    @State private var forceNormalMode: Bool
+    @State private var selectedRules: Set<HoneycombRule>
+    @State private var bannedRules: Set<String>
+    
+    let availableWidth: CGFloat
+    let availableHeight: CGFloat
+
+    init(viewModel: HoneycombViewModel, isPresented: Binding<Bool>, coordinator: AppCoordinator, availableWidth: CGFloat = 2000, availableHeight: CGFloat = 900) {
+        self.viewModel = viewModel
+        self._isPresented = isPresented
+        self.coordinator = coordinator
+        self.availableWidth = availableWidth
+        self.availableHeight = availableHeight
+        
+        _difficulty = State(initialValue: viewModel.options.difficulty)
+        _forceNormalMode = State(initialValue: viewModel.options.forceNormalMode)
+        _selectedRules = State(initialValue: viewModel.options.selectedRules)
+        _bannedRules = State(initialValue: viewModel.options.bannedRules)
+    }
+
+    var body: some View {
+        OptionsSheetShell(
+            isPresented: $isPresented,
+            coordinator: coordinator,
+            availableWidth: availableWidth,
+            availableHeight: availableHeight,
+            onOK: {
+                var updatedOpts = viewModel.options
+                updatedOpts.difficulty = difficulty
+                updatedOpts.forceNormalMode = forceNormalMode
+                updatedOpts.selectedRules = selectedRules
+                updatedOpts.bannedRules = bannedRules
+                viewModel.options = updatedOpts
             }
-            Text("Select up to 2 rules. Leave empty (and Normal Mode off) to let roulette decide each match — including occasionally rolling no rules at all.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Toggle("Normal Mode (Force Zero Rules)", isOn: Binding(
-                get: { viewModel.options.forceNormalMode },
-                set: { isOn in
-                    viewModel.options.forceNormalMode = isOn
-                    if isOn {
-                        // Locking in "definitely zero rules" is exclusive with
-                        // any manual rule picks below.
-                        viewModel.options.selectedRules.removeAll()
-                    }
-                }
-            ))
-
-
-            // Reverse stays roulette-only — it's easily exploitable when a player can
-            // pick it on purpose (see reverseComposition), so it's excluded from the
-            // manual up-to-2-rules picker below.
-            ForEach(HoneycombRule.allCases.filter { $0 != .reverse }, id: \.self) { rule in
-                Toggle(rule.rawValue, isOn: Binding(
-                    get: { viewModel.options.selectedRules.contains(rule) },
-                    set: { isOn in
-                        if isOn {
-                            // Max 2 rules
-                            if viewModel.options.selectedRules.count < 2 {
-                                viewModel.options.selectedRules.insert(rule)
-                                // Mutually exclusive logic
-                                if rule == .ascension { viewModel.options.selectedRules.remove(.descension) }
-                                if rule == .descension { viewModel.options.selectedRules.remove(.ascension) }
-                                if rule == .order { viewModel.options.selectedRules.remove(.chaos) }
-                                if rule == .chaos { viewModel.options.selectedRules.remove(.order) }
-                                if rule == .allOpen { viewModel.options.selectedRules.remove(.threeOpen) }
-                                if rule == .threeOpen { viewModel.options.selectedRules.remove(.allOpen) }
-                                // Picking an actual rule overrides forced Normal Mode.
-                                viewModel.options.forceNormalMode = false
-                            }
-                        } else {
-                            viewModel.options.selectedRules.remove(rule)
+        ) {
+            HStack(alignment: .top, spacing: 40) {
+                // Left Column: Game Choice
+                VStack(alignment: .leading, spacing: 10) {
+                    Picker("Difficulty", selection: $difficulty) {
+                        ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
+                            Text(diff.rawValue).tag(diff)
                         }
                     }
-                ))
-                .font(.system(.body))
-                .disabled(viewModel.options.forceNormalMode)
+                    .padding(.bottom, 10)
+                    
+                    Text("Game Choice")
+                        .font(.title2).bold()
+                    
+                    Text("Select up to 2 rules. Leave empty (and Normal Mode off) to let roulette decide each match — including occasionally rolling no rules at all.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Toggle("Normal Mode (Force Zero Rules)", isOn: Binding(
+                        get: { forceNormalMode },
+                        set: { isOn in
+                            forceNormalMode = isOn
+                            if isOn {
+                                selectedRules.removeAll()
+                            }
+                        }
+                    ))
+                    
+                    ForEach(HoneycombRule.allCases.filter { $0 != .reverse }, id: \.self) { rule in
+                        Toggle(rule.rawValue, isOn: Binding(
+                            get: { selectedRules.contains(rule) },
+                            set: { isOn in
+                                if isOn {
+                                    if selectedRules.count < 2 {
+                                        selectedRules.insert(rule)
+                                        if rule == .ascension { selectedRules.remove(.descension) }
+                                        if rule == .descension { selectedRules.remove(.ascension) }
+                                        if rule == .order { selectedRules.remove(.chaos) }
+                                        if rule == .chaos { selectedRules.remove(.order) }
+                                        if rule == .allOpen { selectedRules.remove(.threeOpen) }
+                                        if rule == .threeOpen { selectedRules.remove(.allOpen) }
+                                        forceNormalMode = false
+                                    }
+                                } else {
+                                    selectedRules.remove(rule)
+                                }
+                            }
+                        ))
+                        .font(.system(.body))
+                        .disabled(forceNormalMode)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Right Column: Ban List
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Ban List")
+                        .font(.title2).bold()
+                    
+                    Text("Select games to ban from roulettes.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    
+                    let allBanItems = ["Normal Mode"] + HoneycombRule.allCases.map { $0.rawValue }
+                    
+                    ForEach(allBanItems, id: \.self) { ruleName in
+                        HStack {
+                            Toggle(ruleName, isOn: Binding(
+                                get: { bannedRules.contains(ruleName) },
+                                set: { isOn in
+                                    if isOn {
+                                        // "Silly bee" guard
+                                        if bannedRules.count == allBanItems.count - 1 {
+                                            // Do nothing, but maybe we can show a warning?
+                                            // The prompt says "don't allow the last checkbox to check, and warn user"
+                                            // We will handle the warning inline below.
+                                        } else {
+                                            bannedRules.insert(ruleName)
+                                        }
+                                    } else {
+                                        bannedRules.remove(ruleName)
+                                    }
+                                }
+                            ))
+                            .font(.system(.body))
+                            
+                            if bannedRules.count == allBanItems.count - 1 && !bannedRules.contains(ruleName) {
+                                Text("You cannot blacklist every game, silly bee.")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

@@ -15,21 +15,39 @@ public partial class FlashToast : UserControl
         InitializeComponent();
     }
 
-    // Shows message, then hides itself again after duration (default 1.6s) — callers
-    // don't need to track or clear their own timer for this. A second Flash() call
-    // while one is still showing just restarts the clock with the new message.
+    public event Action? OnDismissed;
+
     public void Flash(string message, TimeSpan? duration = null)
     {
         MessageText.Text = message;
         IsVisible = true;
+        
+        // Use a tiny delay to allow Avalonia to process IsVisible=true before setting Opacity,
+        // so the transition engine picks it up.
+        Dispatcher.UIThread.Post(() => {
+            Opacity = 1;
+        }, DispatcherPriority.Render);
 
         _dismissTimer?.Stop();
-        _dismissTimer = new DispatcherTimer { Interval = duration ?? DefaultDuration };
+        
+        // Subtract 0.2s from the wait to account for the fade out time
+        var waitDuration = (duration ?? DefaultDuration) - TimeSpan.FromSeconds(0.2);
+        if (waitDuration.TotalSeconds <= 0) waitDuration = TimeSpan.FromSeconds(0.1);
+        
+        _dismissTimer = new DispatcherTimer { Interval = waitDuration };
         _dismissTimer.Tick += (_, _) =>
         {
             _dismissTimer!.Stop();
-            _dismissTimer = null;
-            IsVisible = false;
+            Opacity = 0;
+            
+            var hideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(0.25) };
+            hideTimer.Tick += (s, e) => {
+                hideTimer.Stop();
+                IsVisible = false;
+                _dismissTimer = null;
+                OnDismissed?.Invoke();
+            };
+            hideTimer.Start();
         };
         _dismissTimer.Start();
     }

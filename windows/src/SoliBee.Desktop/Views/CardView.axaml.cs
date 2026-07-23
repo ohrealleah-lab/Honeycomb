@@ -22,6 +22,15 @@ namespace SoliBee.Desktop.Views;
 
 public partial class CardView : UserControl
 {
+    public void DisableBorderAndShadowsForStretch()
+    {
+        CardBack.CornerRadius = new Avalonia.CornerRadius(0);
+        CardBack.BorderThickness = new Avalonia.Thickness(0);
+        CardBack.BoxShadow = new Avalonia.Media.BoxShadows();
+        
+        InnerCardBack.CornerRadius = new Avalonia.CornerRadius(0);
+    }
+
     private bool _isDragging;
     private Point _dragStartPoint;
     private List<CardView> _draggedStack = new();
@@ -604,7 +613,7 @@ public partial class CardView : UserControl
         _aceBitmapCache.Clear();
     }
 
-    private static Bitmap GetOrCreateAceBitmap(string suitChar, IBrush brush)
+    internal static Bitmap GetOrCreateAceBitmap(string suitChar, IBrush brush)
     {
         var color = brush is SolidColorBrush scb ? scb.Color : Colors.Black;
         uint argb = ((uint)color.A << 24) | ((uint)color.R << 16) | ((uint)color.G << 8) | color.B;

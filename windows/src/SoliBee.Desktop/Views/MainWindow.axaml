@@ -33,7 +33,11 @@
                         </ComboBox>
                         <Button x:Name="NewGameButton" Content="New Game" Click="NewGame_Click" Classes="toolbar" />
                         <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
+                        <Button x:Name="HoneycombStartMatchButton" Content="Start Match" Click="HoneycombStartMatch_Click" Classes="toolbar" IsVisible="False" />
+                        <Button x:Name="HoneycombManageDecksButton" Content="Manage Decks" Click="ManageDecks_Click" Classes="toolbar" IsVisible="False" />
+                        <Button x:Name="HoneycombQuitMatchButton" Content="Quit Match" Click="HoneycombQuitMatch_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="OptionsButton" Content="Options" Click="Preferences_Click" Classes="toolbar" />
+                        <Button x:Name="HoneycombRulesButton" Content="Rules" Click="HoneycombRules_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
                         <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
                                   SelectionChanged="PokerVariantBox_SelectionChanged">
@@ -77,6 +81,11 @@
                                         <MenuItem Header="Loss" Click="DebugBanner_Click" Tag="Honeycomb:Loss" />
                                         <MenuItem Header="Draw" Click="DebugBanner_Click" Tag="Honeycomb:Draw" />
                                         <MenuItem Header="Sudden Death" Click="DebugBanner_Click" Tag="Honeycomb:SuddenDeath" />
+                                        <Separator />
+                                        <MenuItem Header="Popup: Same" Click="DebugBanner_Click" Tag="Honeycomb:Same" />
+                                        <MenuItem Header="Popup: Plus" Click="DebugBanner_Click" Tag="Honeycomb:Plus" />
+                                        <MenuItem Header="Popup: Fallen Ace" Click="DebugBanner_Click" Tag="Honeycomb:FallenAce" />
+                                        <MenuItem Header="Popup: Combo" Click="DebugBanner_Click" Tag="Honeycomb:Combo" />
                                     </MenuItem>
                                 </MenuFlyout>
                             </Button.Flyout>
@@ -99,6 +108,16 @@
                         <StackPanel x:Name="TimeStatPanel" Spacing="2" HorizontalAlignment="Center">
                             <TextBlock Text="TIME" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <!-- HONEYCOMB SCORE: YOU -->
+                        <StackPanel x:Name="HoneycombYouStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
+                            <TextBlock Text="YOU" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding State.PlayerScore}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <!-- HONEYCOMB SCORE: OPPONENT -->
+                        <StackPanel x:Name="HoneycombOpponentStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
+                            <TextBlock Text="OPPONENT" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding State.OpponentScore}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>
                 </DockPanel>
@@ -162,6 +181,23 @@
                                         Width="80" HorizontalContentAlignment="Center" Margin="0,0,8,0" />
                                 <Button Classes="light-primary" Content="OK" Click="ClosePreferences_Click" Grid.Column="2"
                                         Width="80" HorizontalContentAlignment="Center" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Manage Decks Overlay -->
+            <Grid x:Name="ManageDecksOverlay" Background="Transparent" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="95">
+                <Grid x:Name="ManageDecksInset" Margin="20">
+                    <Border x:Name="ManageDecksPanel" Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="{Binding #ManageDecksInset.Bounds.Height}" MaxWidth="{Binding #ManageDecksInset.Bounds.Width}" BoxShadow="0 4 20 0 #A0000000">
+                        <Grid RowDefinitions="Auto,*,Auto">
+                            <TextBlock Grid.Row="0" Text="Manage Decks" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" Margin="0,0,0,15" />
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <ContentControl x:Name="ManageDecksContent" />
+                            </ScrollViewer>
+                            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,15,0,0">
+                                <Button Classes="light-primary" Content="Done" Click="CloseManageDecks_Click" Grid.Column="1" Width="100" HorizontalContentAlignment="Center" />
                             </Grid>
                         </Grid>
                     </Border>
