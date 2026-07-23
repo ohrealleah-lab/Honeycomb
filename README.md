@@ -1,4 +1,4 @@
-# 🐝  Card Suite
+# Honeycomb Card Suite :honeybee: :honey_pot:
 
 **Honeycomb Card Suite** is a designed to recreate the gameplay dynamics of classic card games with modern flourishes and deep customization.  Change the card decks and card art to your pictures. Match the felt and card color, save it as a full custom theme. Make your own dark mode. **Make the game yours.** 
 
@@ -47,7 +47,7 @@
 <img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/22b6e2df-fa43-46a3-b7c9-251584fca22a" />
 
 
-### 6.  (Triple Triad Style Card Battle)
+### 6. Honeycomb (Triple Triad Style Card Battle)
 * **Modes**: Battle an AI opponent on a 3x3 grid with up to two optional match rules from a pool of 11 (including Same, Plus, Ascension, Reverse, Swap, Order, and Chaos).
 * **Card Economy**: Build 5-card hands drawn from a 552-card database across 4 suits and 5 rarity tiers.
 * **Progression System**: Steal captured cards into your persistent Card Bank, build custom decks, and track comprehensive stats.
