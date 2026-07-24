@@ -767,8 +767,8 @@ public struct HoneycombView: View {
         if isStealingCard {
             VStack(spacing: 16) {
                 Text(stealBoardIndex == nil
-                     ? "Drag and drop a captured opponent's card on the board to steal it."
-                     : "Now tap one of your own cards to replace with the stolen card.")
+                     ? "Drag and drop a captured opponent's card\non the board to steal it."
+                     : "Now tap one of your own cards\nto replace with the stolen card.")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
