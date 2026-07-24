@@ -6,6 +6,7 @@ struct SoliBeeApp: App {
     @State private var coordinator = AppCoordinator()
 
     init() {
+        UISound.backend = MacUISoundBackend()
         for name in ["Parisienne-Regular", "LilyScriptOne-Regular"] {
             if let url = Bundle.main.url(forResource: name, withExtension: "ttf") {
                 CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)

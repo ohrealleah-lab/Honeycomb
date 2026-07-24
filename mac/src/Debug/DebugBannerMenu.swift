@@ -1,10 +1,5 @@
 import SwiftUI
 
-public enum DebugBannerKind {
-    case win, loss, stuck, autocomplete
-    case same, plus, suddenDeath
-}
-
 struct DebugBannerCommands: View {
     let coordinator: AppCoordinator
 

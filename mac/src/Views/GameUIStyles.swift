@@ -61,29 +61,18 @@ struct HoverToolbarButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - UI Sound
+// MARK: - UI Sound (macOS backend)
 
-enum UISound {
-    static var isEnabled: Bool = true
-    static var isHeadlessMode: Bool = false
-
-    static func click() {
-        guard isEnabled, !isHeadlessMode else { return }
-        NSSound(named: "Tink")?.play()
-    }
-    static func tick() {
-        guard isEnabled, !isHeadlessMode else { return }
-        let sound = NSSound(named: "Pop")
-        sound?.volume = 0.25
+/// NSSound-based implementation of the shared `UISoundBackend` protocol. The platform-neutral
+/// `UISound` facade lives in Models/UISound.swift; this backend is assigned in SoliBeeApp.init().
+struct MacUISoundBackend: UISoundBackend {
+    func playSystemSound(named name: String, volume: Float) {
+        let sound = NSSound(named: NSSound.Name(name))
+        sound?.volume = volume
         sound?.play()
     }
 
-    // Shared game-effect player (shuffle/snap/victory/etc.) used by every game's ViewModel.
-    // `respectHeadlessMode` defaults to false to preserve each game's pre-existing behavior —
-    // only BlackjackViewModel checked isHeadlessMode before this was consolidated.
-    static func play(named name: String, enabled: Bool, respectHeadlessMode: Bool = false) {
-        guard enabled, !(respectHeadlessMode && isHeadlessMode) else { return }
-
+    func playEffect(named name: String) {
         if let soundURL = Bundle.main.url(forResource: name, withExtension: "aiff"),
            let sound = NSSound(contentsOf: soundURL, byReference: true) {
             sound.play()

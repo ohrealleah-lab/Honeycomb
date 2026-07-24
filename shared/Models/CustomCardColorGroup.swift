@@ -1,5 +1,23 @@
 import Foundation
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#elseif canImport(UIKit)
+import UIKit
+#endif
+
+// Decomposes a SwiftUI Color into device-RGB components via the native color type of
+// whichever platform this compiles on. Returns nil for colors with no RGB representation.
+private func rgbaComponents(of color: Color) -> (red: Double, green: Double, blue: Double, alpha: Double)? {
+    #if canImport(AppKit)
+    guard let rgb = NSColor(color).usingColorSpace(.deviceRGB) else { return nil }
+    return (Double(rgb.redComponent), Double(rgb.greenComponent), Double(rgb.blueComponent), Double(rgb.alphaComponent))
+    #else
+    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+    guard UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
+    return (Double(r), Double(g), Double(b), Double(a))
+    #endif
+}
 
 public struct CustomCardColorGroup: Codable, Equatable {
     public var isEnabled: Bool = false
@@ -50,12 +68,11 @@ extension CustomCardColorGroup {
     public var backgroundColor: Color {
         get { Color(red: bgRed, green: bgGreen, blue: bgBlue, opacity: bgAlpha) }
         set {
-            let nsColor = NSColor(newValue)
-            if let rgb = nsColor.usingColorSpace(.deviceRGB) {
-                bgRed = Double(rgb.redComponent)
-                bgGreen = Double(rgb.greenComponent)
-                bgBlue = Double(rgb.blueComponent)
-                bgAlpha = Double(rgb.alphaComponent)
+            if let rgb = rgbaComponents(of: newValue) {
+                bgRed = rgb.red
+                bgGreen = rgb.green
+                bgBlue = rgb.blue
+                bgAlpha = rgb.alpha
                 isEnabled = true
             }
         }
@@ -64,12 +81,11 @@ extension CustomCardColorGroup {
     public var outlineColor: Color {
         get { Color(red: outlineRed, green: outlineGreen, blue: outlineBlue, opacity: outlineAlpha) }
         set {
-            let nsColor = NSColor(newValue)
-            if let rgb = nsColor.usingColorSpace(.deviceRGB) {
-                outlineRed = Double(rgb.redComponent)
-                outlineGreen = Double(rgb.greenComponent)
-                outlineBlue = Double(rgb.blueComponent)
-                outlineAlpha = Double(rgb.alphaComponent)
+            if let rgb = rgbaComponents(of: newValue) {
+                outlineRed = rgb.red
+                outlineGreen = rgb.green
+                outlineBlue = rgb.blue
+                outlineAlpha = rgb.alpha
                 isEnabled = true
             }
         }
@@ -78,12 +94,11 @@ extension CustomCardColorGroup {
     public var blackSuitColor: Color {
         get { Color(red: blackSuitRed, green: blackSuitGreen, blue: blackSuitBlue, opacity: blackSuitAlpha) }
         set {
-            let nsColor = NSColor(newValue)
-            if let rgb = nsColor.usingColorSpace(.deviceRGB) {
-                blackSuitRed = Double(rgb.redComponent)
-                blackSuitGreen = Double(rgb.greenComponent)
-                blackSuitBlue = Double(rgb.blueComponent)
-                blackSuitAlpha = Double(rgb.alphaComponent)
+            if let rgb = rgbaComponents(of: newValue) {
+                blackSuitRed = rgb.red
+                blackSuitGreen = rgb.green
+                blackSuitBlue = rgb.blue
+                blackSuitAlpha = rgb.alpha
                 isEnabled = true
             }
         }
@@ -92,12 +107,11 @@ extension CustomCardColorGroup {
     public var redSuitColor: Color {
         get { Color(red: redSuitRed, green: redSuitGreen, blue: redSuitBlue, opacity: redSuitAlpha) }
         set {
-            let nsColor = NSColor(newValue)
-            if let rgb = nsColor.usingColorSpace(.deviceRGB) {
-                redSuitRed = Double(rgb.redComponent)
-                redSuitGreen = Double(rgb.greenComponent)
-                redSuitBlue = Double(rgb.blueComponent)
-                redSuitAlpha = Double(rgb.alphaComponent)
+            if let rgb = rgbaComponents(of: newValue) {
+                redSuitRed = rgb.red
+                redSuitGreen = rgb.green
+                redSuitBlue = rgb.blue
+                redSuitAlpha = rgb.alpha
                 isEnabled = true
             }
         }
@@ -106,12 +120,11 @@ extension CustomCardColorGroup {
     public var shadowColor: Color {
         get { Color(red: shadowRed, green: shadowGreen, blue: shadowBlue, opacity: shadowAlpha) }
         set {
-            let nsColor = NSColor(newValue)
-            if let rgb = nsColor.usingColorSpace(.deviceRGB) {
-                shadowRed = Double(rgb.redComponent)
-                shadowGreen = Double(rgb.greenComponent)
-                shadowBlue = Double(rgb.blueComponent)
-                shadowAlpha = Double(rgb.alphaComponent)
+            if let rgb = rgbaComponents(of: newValue) {
+                shadowRed = rgb.red
+                shadowGreen = rgb.green
+                shadowBlue = rgb.blue
+                shadowAlpha = rgb.alpha
                 isEnabled = true
             }
         }

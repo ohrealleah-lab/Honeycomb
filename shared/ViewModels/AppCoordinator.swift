@@ -1,7 +1,9 @@
 import Foundation
 import Observation
 import SwiftUI
+#if canImport(AppKit)
 import AppKit
+#endif
 
 @Observable
 public final class AppCoordinator {
@@ -16,10 +18,13 @@ public final class AppCoordinator {
             case .videoPoker, .blackjack, .honeycomb: break
             }
             syncSharedOptions(from: oldValue, to: gameMode)
+            #if canImport(AppKit)
             applyWindowSizeForCurrentGameMode()
+            #endif
         }
     }
 
+    #if canImport(AppKit)
     // Updates the window's minimum size for the newly-selected game.
     // We intentionally avoid resetting the window size when switching games so that
     // the user's manual resizing is preserved across the entire app.
@@ -42,6 +47,7 @@ public final class AppCoordinator {
         }
         window.contentMinSize = minSize
     }
+    #endif
 
     public let klondikeViewModel   = GameViewModel()
     public let beecellViewModel    = BeecellViewModel()
@@ -63,6 +69,7 @@ public final class AppCoordinator {
     public var showFeltVignette: Bool {
         didSet { UserDefaults.standard.set(showFeltVignette, forKey: "showFeltVignette") }
     }
+    #if canImport(AppKit)
     // Keeps the main game window floating above other apps' windows. Applied via
     // applyWindowLevel() both here and from activeWindow's didSet, so a saved "on"
     // preference takes effect immediately on the next launch, not just on toggle.
@@ -72,6 +79,7 @@ public final class AppCoordinator {
             applyWindowLevel()
         }
     }
+    #endif
     public var customCardColors: CustomCardColorGroup {
         didSet {
             if let encoded = try? JSONEncoder().encode(customCardColors) {
@@ -100,10 +108,12 @@ public final class AppCoordinator {
         }
     }
 
+    #if canImport(AppKit)
     public var activeCustomBackground: CustomBackground? {
         guard let customBackgroundName else { return nil }
         return CustomBackgroundManager.shared.customBackgrounds.first { $0.name == customBackgroundName }
     }
+    #endif
 
     // Resolves .custom against the live customFeltRed/Green/Blue properties (rather than
     // FeltColorTheme.primaryColor's raw UserDefaults read) so SwiftUI's Observation
@@ -121,6 +131,7 @@ public final class AppCoordinator {
     // There's only ever one underlying window for the whole app (switching games swaps
     // SwiftUI content within it, not the window itself), so re-applying stayOnTop here
     // covers every game with no per-game code.
+    #if canImport(AppKit)
     @ObservationIgnored public weak var activeWindow: NSWindow? {
         didSet { applyWindowLevel() }
     }
@@ -128,6 +139,7 @@ public final class AppCoordinator {
     private func applyWindowLevel() {
         activeWindow?.level = stayOnTop ? .floating : .normal
     }
+    #endif
 
     public init() {
         let saved = UserDefaults.standard.string(forKey: "selectedGameMode") ?? GameMode.klondike.rawValue
@@ -137,8 +149,10 @@ public final class AppCoordinator {
         self.cardBackTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
         self.showFeltVignette = UserDefaults.standard.object(forKey: "showFeltVignette") != nil
             ? UserDefaults.standard.bool(forKey: "showFeltVignette") : true
+        #if canImport(AppKit)
         self.stayOnTop = UserDefaults.standard.object(forKey: "stayOnTop") != nil
             ? UserDefaults.standard.bool(forKey: "stayOnTop") : false
+        #endif
         if let data = UserDefaults.standard.data(forKey: "customCardColors"),
            let decoded = try? JSONDecoder().decode(CustomCardColorGroup.self, from: data) {
             self.customCardColors = decoded
@@ -150,6 +164,7 @@ public final class AppCoordinator {
         self.customFeltBlue  = UserDefaults.standard.double(forKey: "custom_felt_blue")
         self.customBackgroundName = UserDefaults.standard.string(forKey: "custom_background_name")
 
+        #if canImport(AppKit)
         // Synchronously warm the cache for whichever background is active so that
         // BackgroundLayerView never renders a transient Color fallback on first paint.
         // (preloadImages() is otherwise async and would cause a hit-testing race window.)
@@ -167,6 +182,7 @@ public final class AppCoordinator {
             // Active theme is a built-in — still kick off async preload for any custom backs.
             CustomCardBackManager.shared.preloadImages()
         }
+        #endif
 
         // Each view model sets UISound.isEnabled from its own persisted setting as it
         // initializes above; re-assert it from the actually-active mode here so the
@@ -326,13 +342,15 @@ public final class AppCoordinator {
             customFeltBlue  = theme.customFeltBlue
         }
         customBackgroundName = theme.customBackgroundName
-        
+
+        #if canImport(AppKit)
         if let name = customBackgroundName,
            let bg = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == name }) {
             let _ = CustomBackgroundManager.shared.image(for: bg.relativePath)
         }
 
         CustomFaceCardArtManager.shared.restore(theme.faceArts)
+        #endif
         ThemeManager.shared.activeThemeId = theme.id
     }
 
