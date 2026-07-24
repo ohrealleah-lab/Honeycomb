@@ -796,6 +796,7 @@ public partial class MainWindow : Window
     private void SetupNormalMode()
     {
         HoneycombStartMatchButton.IsVisible  = false;
+        HoneycombRematchButton.IsVisible     = false;
         HoneycombManageDecksButton.IsVisible = false;
         HoneycombQuitMatchButton.IsVisible   = false;
         HoneycombRulesButton.IsVisible       = false;
@@ -1280,19 +1281,13 @@ public partial class MainWindow : Window
         if (tag == "Honeycomb")
         {
             SetupHoneycombMode();
-            var phase = _coordinator.HoneycombViewModel.State?.Phase ?? HoneycombPhase.PreMatch;
-            if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = phase == HoneycombPhase.PreMatch;
-            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = phase == HoneycombPhase.PreMatch;
-            if (HoneycombQuitMatchButton != null) 
-            {
-                HoneycombQuitMatchButton.IsVisible = phase != HoneycombPhase.PreMatch;
-                HoneycombQuitMatchButton.Content = phase == HoneycombPhase.GameOver ? "Start Match" : "Quit Match";
-            }
+            UpdateHoneycombButtons();
         }
         else
         {
             SetupNormalMode();
             if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = false;
+            if (HoneycombRematchButton != null) HoneycombRematchButton.IsVisible = false;
             if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = false;
             if (HoneycombQuitMatchButton != null) HoneycombQuitMatchButton.IsVisible = false;
         }
@@ -1415,9 +1410,19 @@ public partial class MainWindow : Window
     {
         if (this.DataContext is HoneycombViewModel hVm && hVm.State != null)
         {
-            if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = hVm.State.Phase == HoneycombPhase.PreMatch;
-            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = hVm.State.Phase == HoneycombPhase.PreMatch;
-            HoneycombQuitMatchButton.IsVisible = hVm.State.Phase != HoneycombPhase.PreMatch;
+            var phase = hVm.State.Phase;
+            bool isResult = phase == HoneycombPhase.Result;
+            bool isPreMatch = phase == HoneycombPhase.PreMatch;
+            bool isPlaying = phase == HoneycombPhase.Playing;
+
+            if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = isPreMatch || isResult;
+            if (HoneycombRematchButton != null) HoneycombRematchButton.IsVisible = isResult;
+            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = isPreMatch;
+            if (HoneycombQuitMatchButton != null) 
+            {
+                HoneycombQuitMatchButton.IsVisible = isPlaying;
+                HoneycombQuitMatchButton.Content = "Quit Match";
+            }
         }
     }
 
@@ -1429,22 +1434,23 @@ public partial class MainWindow : Window
         }
     }
 
+    private void HoneycombRematch_Click(object? sender, RoutedEventArgs e)
+    {
+        if (this.DataContext is HoneycombViewModel hVm)
+        {
+            hVm.RestartGame();
+        }
+    }
+
     private void HoneycombQuitMatch_Click(object? sender, RoutedEventArgs e)
     {
         if (this.DataContext is HoneycombViewModel hVm)
         {
-            if (hVm.State.Phase == HoneycombPhase.GameOver)
-            {
-                hVm.StartNewMatch();
-            }
-            else
-            {
-                _pendingAction = "HoneycombQuit";
-                ConfirmActionTitle.Text = "Quit Match?";
-                ConfirmActionMessage.Text = "Are you sure you want to abandon the current match?";
-                ConfirmActionButton.Content = "Quit";
-                ConfirmActionOverlay.IsVisible = true;
-            }
+            _pendingAction = "HoneycombQuit";
+            ConfirmActionTitle.Text = "Quit Match?";
+            ConfirmActionMessage.Text = "Are you sure you want to abandon the current match?";
+            ConfirmActionButton.Content = "Quit";
+            ConfirmActionOverlay.IsVisible = true;
         }
     }
 

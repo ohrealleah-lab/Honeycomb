@@ -35,6 +35,7 @@
                         <Button x:Name="NewGameButton" Content="New Game" Click="NewGame_Click" Classes="toolbar" />
                         <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
                         <Button x:Name="HoneycombStartMatchButton" Content="Start Match" Click="HoneycombStartMatch_Click" Classes="toolbar" IsVisible="False" />
+                        <Button x:Name="HoneycombRematchButton" Content="Rematch" Click="HoneycombRematch_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="HoneycombManageDecksButton" Content="Manage Decks" Click="ManageDecks_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="HoneycombQuitMatchButton" Content="Quit Match" Click="HoneycombQuitMatch_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="OptionsButton" Content="Options" Click="Preferences_Click" Classes="toolbar" />
