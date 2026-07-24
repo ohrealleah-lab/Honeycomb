@@ -166,21 +166,17 @@ public struct HoneycombView: View {
                         ) { viewModel.gameState = .setup }
                     }
 
-                    // Disabled mid-match (.playing/.suddenDeath) — several Options fields
-                    // (active deck, rule selection, No Stress Mode) only actually take
-                    // effect on the next Start Match, so changing them mid-match is
-                    // misleading busywork rather than a real mid-game adjustment.
-                    GameToolbarButton(
-                        label: "Options", systemImage: "gearshape",
-                        isCompact: toolbarWidth < compactToolbarWidthThreshold,
-                        disabled: viewModel.gameState == .playing || viewModel.gameState == .suddenDeath
-                    ) { showingOptions = true }
+                    if viewModel.gameState != .playing && viewModel.gameState != .suddenDeath {
+                        GameToolbarButton(
+                            label: "Options", systemImage: "gearshape",
+                            isCompact: toolbarWidth < compactToolbarWidthThreshold
+                        ) { showingOptions = true }
 
-                    GameToolbarButton(
-                        label: "Rules", systemImage: "checklist",
-                        isCompact: toolbarWidth < compactToolbarWidthThreshold,
-                        disabled: viewModel.gameState == .playing || viewModel.gameState == .suddenDeath
-                    ) { showingRules = true }
+                        GameToolbarButton(
+                            label: "Rules", systemImage: "checklist",
+                            isCompact: toolbarWidth < compactToolbarWidthThreshold
+                        ) { showingRules = true }
+                    }
 
                     // Manage Decks/Save Deck are shown for .setup *and* .gameOver — the
                     // match is already over at that point (same "match in progress"

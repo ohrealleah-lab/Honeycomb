@@ -13,8 +13,8 @@
          gold-headline look as the other overlay banners (e.g. Video Poker's
          "Not today, partner!" toast), but headline-only and self-dismissing rather than
          needing a dismiss button, since the message is purely informational. -->
-    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="460">
-        <TextBlock x:Name="MessageText" FontSize="64" FontWeight="Black" Foreground="White"
+    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="24" Padding="48,36" MaxWidth="920">
+        <TextBlock x:Name="MessageText" FontSize="72" FontWeight="Black" Foreground="#FFD600"
                    HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
     </Border>
 </UserControl>

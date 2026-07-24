@@ -36,10 +36,11 @@
                         <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
                         <Button x:Name="HoneycombStartMatchButton" Content="Start Match" Click="HoneycombStartMatch_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="HoneycombRematchButton" Content="Rematch" Click="HoneycombRematch_Click" Classes="toolbar" IsVisible="False" />
-                        <Button x:Name="HoneycombManageDecksButton" Content="Manage Decks" Click="ManageDecks_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="HoneycombQuitMatchButton" Content="Quit Match" Click="HoneycombQuitMatch_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="OptionsButton" Content="Options" Click="Preferences_Click" Classes="toolbar" />
                         <Button x:Name="HoneycombRulesButton" Content="Rules" Click="HoneycombRules_Click" Classes="toolbar" IsVisible="False" />
+                        <Button x:Name="HoneycombManageDecksButton" Content="Manage Decks" Click="ManageDecks_Click" Classes="toolbar" IsVisible="False" />
+                        <Button x:Name="HoneycombSaveDeckButton" Content="Save Deck" Click="HoneycombSaveDeck_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
                         <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
                                   SelectionChanged="PokerVariantBox_SelectionChanged">
@@ -128,18 +129,18 @@
         </Grid>
 
         <!-- Main Game Area -->
-        <Grid x:Name="GameAreaGrid" Grid.Row="1">
+        <Grid x:Name="GameAreaGrid" Grid.Row="1" ClipToBounds="False" ZIndex="150">
             <!-- Starts transparent — MainWindow's Opened handler reveals it (fading in via
                  the Transitions below) only once the responsive scale-to-fit calculation
                  has settled on a stable value, so the very first launch doesn't show the
                  board briefly at the wrong size before visibly snapping to the right one. -->
-            <LayoutTransformControl x:Name="MainContentWrapper" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="30,0" Opacity="0">
+            <LayoutTransformControl x:Name="MainContentWrapper" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="30,0" Opacity="0" ClipToBounds="False">
                 <LayoutTransformControl.Transitions>
                     <Transitions>
                         <DoubleTransition Property="Opacity" Duration="0:0:0.25"/>
                     </Transitions>
                 </LayoutTransformControl.Transitions>
-                <ContentControl x:Name="MainContent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentControl x:Name="MainContent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ClipToBounds="False" />
             </LayoutTransformControl>
 
             <!-- Solitaire keyboard hint row (Klondike/Freecell/Spider — Blackjack/Video

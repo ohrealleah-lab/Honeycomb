@@ -725,11 +725,12 @@ public partial class HoneycombView : UserControl
 
     public void DebugShowResultBanner(string kind)
     {
-        if (kind == "Same" || kind == "Plus" || kind == "FallenAce" || kind == "Combo")
+        if (kind == "Same" || kind == "Plus" || kind == "FallenAce" || kind == "Combo" || kind == "SuddenDeath")
         {
             _bannerActive = true;
             if (kind == "FallenAce") RuleToast.Flash("Fallen Ace!");
             else if (kind == "Combo") RuleToast.Flash("Combo x2!");
+            else if (kind == "SuddenDeath") RuleToast.Flash("Sudden Death!");
             else RuleToast.Flash($"{kind}!");
             return;
         }
@@ -755,12 +756,6 @@ public partial class HoneycombView : UserControl
                 OverlayLoseTitle.IsVisible = false;
                 OverlayTitle.Text = "Draw";
                 OverlaySubtitle.Text = "Final Score: 7 - 7";
-                break;
-            case "SuddenDeath":
-                OverlayTitle.IsVisible = true;
-                OverlayLoseTitle.IsVisible = false;
-                OverlayTitle.Text = "Sudden Death";
-                OverlaySubtitle.Text = "Next capture wins!";
                 break;
             default:
                 OverlayTitle.IsVisible = true;

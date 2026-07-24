@@ -78,10 +78,10 @@ public partial class CardView : UserControl
     internal static readonly SolidColorBrush _brushTextBlackNormal  = new(Color.Parse("#1A1A1A"));
     internal static Color _normalShadowColor = Color.Parse("#26000000");
 
-    private const int CardBackCacheW = 256; // 128 * 2
-    private const int CardBackCacheH = 362; // 181 * 2
-    private const int FaceArtCacheW  = 140; // 70 * 2
-    private const int FaceArtCacheH  = 120; // 60 * 2
+    private const int CardBackCacheW = 512; // 128 * 4 (ultra-sharp resolution for HiDPI, 4K, and Honeycomb cards)
+    private const int CardBackCacheH = 724; // 181 * 4
+    private const int FaceArtCacheW  = 280; // 70 * 4
+    private const int FaceArtCacheH  = 240; // 60 * 4
 
     public static void ApplyThemeColors(SoliBee.Core.Models.GameOptions options)
     {
@@ -621,8 +621,8 @@ public partial class CardView : UserControl
         if (_aceBitmapCache.TryGetValue(key, out var cached))
             return cached;
 
-        const int bitmapSize = 215; // 2.5× for HiDPI; larger for crisp rendering at 1.25× card scale
-        float fontSize = _aceFontSize;
+        const int bitmapSize = 512; // 512px high resolution for razor-sharp rendering on 4K & scaled views
+        float fontSize = _aceFontSize * (512f / 215f);
 
         using var surface = SKSurface.Create(new SKImageInfo(bitmapSize, bitmapSize, SKColorType.Bgra8888, SKAlphaType.Premul));
         var skCanvas = surface.Canvas;
@@ -664,8 +664,8 @@ public partial class CardView : UserControl
         if (_pipBitmapCache.TryGetValue(key, out var cached))
             return cached;
 
-        const int bitmapSize = 90; // 2.5× resolution; larger for crisp rendering at 1.25× card scale
-        float fontSize = _pipFontSize;
+        const int bitmapSize = 256; // 256px resolution for crisp pips
+        float fontSize = _pipFontSize * (256f / 90f);
 
         using var surface = SKSurface.Create(new SKImageInfo(bitmapSize, bitmapSize, SKColorType.Bgra8888, SKAlphaType.Premul));
         var skCanvas = surface.Canvas;

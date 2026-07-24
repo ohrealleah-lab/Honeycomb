@@ -689,4 +689,19 @@ public partial class HoneycombViewModel : ObservableObject
         _sessionHandOverride = playerStartingDeck;
         OnPropertyChanged(nameof(HasUnsavedActiveDeck));
     }
+
+    public void SaveActiveDeck()
+    {
+        if (_sessionHandOverride == null || _sessionHandOverride.Count != 5) return;
+        var pm = HoneycombProfileManager.Shared;
+        int activeIdx = SettingsService.LoadOptions().HoneycombActiveDeckIndex;
+        if (activeIdx >= 0 && activeIdx < pm.SavedDecks.Count)
+        {
+            pm.SavedDecks[activeIdx].CardIds = _sessionHandOverride.Select(c => c.Id).ToList();
+            pm.SaveSavedDecks();
+        }
+        _sessionHandOverride = null;
+        OnPropertyChanged(nameof(HasUnsavedActiveDeck));
+        NotifyStateChanged();
+    }
 }

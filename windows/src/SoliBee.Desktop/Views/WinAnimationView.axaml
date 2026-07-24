@@ -36,7 +36,7 @@
                             Click="PlayAgain_Click"
                             HorizontalAlignment="Center">
                         <TextBlock Text="Play Again"
-                                   FontSize="14" FontWeight="Bold"
+                                   FontSize="16" FontWeight="Bold"
                                    FontFamily="Segoe UI"/>
                     </Button>
 

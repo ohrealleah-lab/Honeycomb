@@ -1,13 +1,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
-             x:Class="SoliBee.Desktop.Views.HoneycombView">
+             x:Class="SoliBee.Desktop.Views.HoneycombView"
+             ClipToBounds="False">
 
     <UserControl.Styles>
         <Style Selector="Button.honeycomb-action">
             <Setter Property="Background" Value="#FFD700" />
             <Setter Property="Foreground" Value="Black" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="16" />
             <Setter Property="Padding" Value="20,10" />
             <Setter Property="CornerRadius" Value="8" />
         </Style>
@@ -16,14 +19,16 @@
             <Setter Property="Foreground" Value="Black" />
         </Style>
         <Style Selector="Button.honeycomb-blue">
-            <Setter Property="Background" Value="#3B82F6" />
+            <Setter Property="Background" Value="#007AFF" />
             <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="16" />
             <Setter Property="Padding" Value="20,10" />
             <Setter Property="CornerRadius" Value="8" />
         </Style>
         <Style Selector="Button.honeycomb-blue:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#2563EB" />
+            <Setter Property="Background" Value="#0062CC" />
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style Selector="Button.manage-decks">
@@ -43,12 +48,12 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid Background="Transparent">
+    <Grid Background="Transparent" ClipToBounds="False">
         <!-- Main Layout -->
-        <Grid ColumnDefinitions="Auto, *, Auto, *, Auto" RowDefinitions="160, Auto" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="Auto, *, Auto, *, Auto" RowDefinitions="160, Auto" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
             
             <!-- Left Column: Player Hand (2-2-1 Pyramid) -->
-            <Grid Grid.Column="0" Grid.Row="1" Width="410" Height="860" Margin="20">
+            <Grid Grid.Column="0" Grid.Row="1" Width="410" Height="860" Margin="20" ClipToBounds="False">
                 <TextBlock Text="PLAYER" Foreground="White" FontWeight="ExtraBold" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-35,0,0" Opacity="0.8"/>
                 
                 <local:HoneycombCardView x:Name="PlayerHand0" HorizontalAlignment="Left" VerticalAlignment="Top" />
@@ -64,10 +69,10 @@
             </Grid>
 
             <!-- Center Column: Rules Banner or Steal Instruction -->
-            <Border x:Name="RulesBannerBar" Grid.Row="0" Grid.Column="2" Background="#BF000000" CornerRadius="12" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="24,24" Margin="0,0,0,20">
-                <StackPanel Spacing="12" HorizontalAlignment="Center">
-                    <TextBlock Text="Rules:" FontSize="28" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" />
-                    <ItemsControl x:Name="RulesList" HorizontalAlignment="Stretch">
+            <Border x:Name="RulesBannerBar" Grid.Row="0" Grid.Column="2" Background="#BF000000" CornerRadius="12" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="24,18" Margin="0,0,0,20">
+                <StackPanel Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="Rules:" FontSize="28" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" />
+                    <ItemsControl x:Name="RulesList" HorizontalAlignment="Center">
                         <ItemsControl.Styles>
                             <Style Selector="ContentPresenter">
                                 <Setter Property="HorizontalAlignment" Value="Center" />
@@ -75,7 +80,7 @@
                         </ItemsControl.Styles>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="22" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding}" FontSize="22" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -83,20 +88,22 @@
             </Border>
 
             <!-- Steal Instruction Bar (Replacing Rules Banner during Steal Mode) -->
-            <Border x:Name="StealInstructionBar" Grid.Row="0" Grid.Column="2" Background="#BF000000" CornerRadius="12" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="24,24" Margin="0,0,0,20">
+            <Border x:Name="StealInstructionBar" Classes="banner-glow" Grid.Row="0" Grid.Column="2" Background="#BF000000" CornerRadius="12" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="24,18" Margin="0,0,0,20">
                 <StackPanel Spacing="12" HorizontalAlignment="Center">
                     <TextBlock x:Name="StealInstructionText" Text="Tap an opponent's card on the board to steal it." FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                    <Button Content="Cancel" Classes="honeycomb-blue" Click="CancelSteal_Click" HorizontalAlignment="Center" />
+                    <Button Classes="honeycomb-blue" Click="CancelSteal_Click" HorizontalAlignment="Center">
+                        <TextBlock Text="Cancel" FontSize="16" FontWeight="Bold" FontFamily="Segoe UI"/>
+                    </Button>
                 </StackPanel>
             </Border>
 
             <!-- Board (3x3 Grid) -->
-            <Grid x:Name="BoardGrid" Grid.Row="1" Grid.Column="2" Width="600" Height="860" ColumnDefinitions="*,*,*" RowDefinitions="*,*,*" Margin="20">
+            <Grid x:Name="BoardGrid" Grid.Row="1" Grid.Column="2" Width="600" Height="860" ColumnDefinitions="*,*,*" RowDefinitions="*,*,*" Margin="20" ClipToBounds="False">
                 <!-- Placeholders and CardViews populated in code-behind -->
             </Grid>
 
             <!-- Right Column: Opponent Hand (2-2-1 Pyramid) -->
-            <Grid Grid.Column="4" Grid.Row="1" Width="410" Height="860" Margin="20">
+            <Grid Grid.Column="4" Grid.Row="1" Width="410" Height="860" Margin="20" ClipToBounds="False">
                 <TextBlock Text="DEALER" Foreground="White" FontWeight="ExtraBold" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-35,0,0" Opacity="0.8"/>
                 <local:HoneycombCardView x:Name="OpponentHand0" HorizontalAlignment="Left" VerticalAlignment="Top" />
                 <local:HoneycombCardView x:Name="OpponentHand1" HorizontalAlignment="Right" VerticalAlignment="Top" />
@@ -112,24 +119,30 @@
         </Grid>
 
         <!-- Overlay: Post-match panels -->
-        <Border x:Name="OverlayPanel" Background="#E61A1A1A" CornerRadius="16" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Width="450" Padding="30" ZIndex="100">
+        <Border x:Name="OverlayPanel" Classes="banner-glow" Background="#BF000000" CornerRadius="12" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,24" MaxWidth="460" ZIndex="100">
             <Grid>
                 <!-- Close Button -->
-                <Button Content="✕" Click="CloseOverlay_Click" Classes="manage-decks" Background="#66000000" BorderThickness="0" Foreground="#999999" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-15,-15,0" Padding="12,8" CornerRadius="20"/>
+                <Button Content="✕" Click="CloseOverlay_Click" Classes="banner-close" Margin="0,-12,-12,0"/>
                 
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" Margin="0,30,0,0">
-                    <TextBlock x:Name="OverlayTitle" Text="You Win!" FontSize="64" FontWeight="Black" Foreground="#FFD700" HorizontalAlignment="Center" FontFamily="Segoe UI" />
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" Margin="0,10,0,0">
+                    <TextBlock x:Name="OverlayTitle" Text="You Win!" FontSize="40" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI" />
                     <!-- Subtitle hidden/removed as requested to match mockup -->
-                    <TextBlock x:Name="OverlayLoseTitle" Text="Not today, partner!" FontSize="36" FontWeight="Black" Foreground="#FFD700" HorizontalAlignment="Center" FontFamily="Segoe UI" IsVisible="False" />
-                    <TextBlock x:Name="OverlaySubtitle" Text="" FontSize="24" Foreground="#CCCCCC" HorizontalAlignment="Center" IsVisible="False" />
+                    <TextBlock x:Name="OverlayLoseTitle" Text="Not today, partner!" FontSize="36" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI" IsVisible="False" />
+                    <TextBlock x:Name="OverlaySubtitle" Text="" FontSize="18" Foreground="#CCCCCC" HorizontalAlignment="Center" IsVisible="False" />
                     
-                    <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center">
-                        <Button x:Name="NewGameButton" Content="New Game" Classes="honeycomb-blue" Click="NewGame_Click" />
-                        <Button x:Name="RematchButton" Content="Rematch" Classes="honeycomb-blue" Click="Rematch_Click" />
-                        <Button x:Name="StealCardButton" Content="Steal Card" Classes="honeycomb-action" Click="StealCard_Click" IsVisible="False" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                        <Button x:Name="NewGameButton" Classes="honeycomb-blue" Click="NewGame_Click">
+                            <TextBlock Text="New Game" FontSize="16" FontWeight="Bold" FontFamily="Segoe UI"/>
+                        </Button>
+                        <Button x:Name="RematchButton" Classes="honeycomb-blue" Click="Rematch_Click">
+                            <TextBlock Text="Rematch" FontSize="16" FontWeight="Bold" FontFamily="Segoe UI"/>
+                        </Button>
+                        <Button x:Name="StealCardButton" Classes="honeycomb-action" Click="StealCard_Click" IsVisible="False">
+                            <TextBlock Text="Steal Card" FontSize="16" FontWeight="Bold" FontFamily="Segoe UI"/>
+                        </Button>
                     </StackPanel>
                     
-                    <TextBlock x:Name="BankFullWarningText" Text="Your card bank is full. Start over in manage decks to steal again." IsVisible="False" FontSize="16" Foreground="#FF9999" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                    <TextBlock x:Name="BankFullWarningText" Text="Your card bank is full. Start over in manage decks to steal again." IsVisible="False" FontSize="14" Foreground="#FF9999" HorizontalAlignment="Center" TextWrapping="Wrap" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -154,17 +167,20 @@
 
         <!-- Post-Steal Rematch Prompt -->
         <Border x:Name="RematchPromptPanel" Background="Transparent" IsVisible="False" ZIndex="110">
-            <Border Background="#2C2C2E" CornerRadius="24" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="40" BoxShadow="0 8 32 0 #99000000">
+            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,24" MaxWidth="460">
                 <Grid>
-                    <!-- Close button in top-right corner of the rounded box -->
-                    <Button Content="✕" Click="CloseRematchPrompt_Click" HorizontalAlignment="Right" VerticalAlignment="Top" 
-                            Margin="0,-24,-24,0" FontSize="16" FontWeight="Bold" Foreground="#1A1A1A" Background="#D1D1D6" CornerRadius="16" Width="32" Height="32" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0" />
+                    <!-- Close button in top-right corner -->
+                    <Button Content="✕" Click="CloseRematchPrompt_Click" Classes="banner-close" Margin="0,-12,-12,0"/>
                     
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20" Margin="0,16,0,0">
-                        <TextBlock Text="New Game?" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-                        <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center">
-                            <Button Content="Rematch" Classes="honeycomb-blue" Click="RematchPrompt_Rematch_Click"/>
-                            <Button Content="New Game" Classes="honeycomb-blue" Click="RematchPrompt_NewGame_Click"/>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" Margin="0,10,0,0">
+                        <TextBlock Text="New Game?" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
+                        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                            <Button Classes="honeycomb-blue" Click="RematchPrompt_Rematch_Click">
+                                <TextBlock Text="Rematch" FontSize="16" FontWeight="Bold" FontFamily="Segoe UI"/>
+                            </Button>
+                            <Button Classes="honeycomb-blue" Click="RematchPrompt_NewGame_Click">
+                                <TextBlock Text="New Game" FontSize="16" FontWeight="Bold" FontFamily="Segoe UI"/>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
                 </Grid>
@@ -173,7 +189,7 @@
 
         <!-- Score display removed, moved to title bar -->
 
-        <Canvas x:Name="HoneycombDragCanvas" IsHitTestVisible="False">
+        <Canvas x:Name="HoneycombDragCanvas" IsHitTestVisible="False" ZIndex="200" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ClipToBounds="False">
             <Border x:Name="CursorHighlightBorder" IsVisible="False" IsHitTestVisible="False"
                     BorderBrush="#00E5FF" BorderThickness="4" CornerRadius="8" Background="Transparent" />
         </Canvas>

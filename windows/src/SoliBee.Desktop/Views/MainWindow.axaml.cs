@@ -1289,7 +1289,9 @@ public partial class MainWindow : Window
             if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = false;
             if (HoneycombRematchButton != null) HoneycombRematchButton.IsVisible = false;
             if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = false;
+            if (HoneycombSaveDeckButton != null) HoneycombSaveDeckButton.IsVisible = false;
             if (HoneycombQuitMatchButton != null) HoneycombQuitMatchButton.IsVisible = false;
+            if (HoneycombRulesButton != null) HoneycombRulesButton.IsVisible = false;
         }
         var options = SettingsService.LoadOptions();
         string baseTag = GetBaseGameTag(tag);
@@ -1399,7 +1401,9 @@ public partial class MainWindow : Window
             
         if (this.DataContext is HoneycombViewModel hVm)
         {
-            if (e.PropertyName == nameof(HoneycombViewModel.State) || e.PropertyName == nameof(HoneycombViewModel.IsPlaying))
+            if (e.PropertyName == nameof(HoneycombViewModel.State) || 
+                e.PropertyName == nameof(HoneycombViewModel.IsPlaying) || 
+                e.PropertyName == nameof(HoneycombViewModel.HasUnsavedActiveDeck))
             {
                 UpdateHoneycombButtons();
             }
@@ -1417,12 +1421,26 @@ public partial class MainWindow : Window
 
             if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = isPreMatch || isResult;
             if (HoneycombRematchButton != null) HoneycombRematchButton.IsVisible = isResult;
-            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = isPreMatch;
+            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = isPreMatch || isResult;
+            if (HoneycombSaveDeckButton != null) HoneycombSaveDeckButton.IsVisible = (isPreMatch || isResult) && hVm.HasUnsavedActiveDeck;
+            if (HoneycombRulesButton != null) HoneycombRulesButton.IsVisible = isPreMatch || isResult;
+            if (OptionsButton != null) OptionsButton.IsVisible = isPreMatch || isResult;
+            if (HintButton != null) HintButton.IsVisible = isPlaying;
+            if (UndoButton != null) UndoButton.IsVisible = isPlaying;
             if (HoneycombQuitMatchButton != null) 
             {
                 HoneycombQuitMatchButton.IsVisible = isPlaying;
                 HoneycombQuitMatchButton.Content = "Quit Match";
             }
+        }
+    }
+
+    private void HoneycombSaveDeck_Click(object? sender, RoutedEventArgs e)
+    {
+        if (this.DataContext is HoneycombViewModel hVm)
+        {
+            hVm.SaveActiveDeck();
+            UpdateHoneycombButtons();
         }
     }
 
