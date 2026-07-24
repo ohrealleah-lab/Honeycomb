@@ -68,6 +68,11 @@
                 <StackPanel Spacing="12" HorizontalAlignment="Center">
                     <TextBlock Text="Rules:" FontSize="28" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" />
                     <ItemsControl x:Name="RulesList" HorizontalAlignment="Stretch">
+                        <ItemsControl.Styles>
+                            <Style Selector="ContentPresenter">
+                                <Setter Property="HorizontalAlignment" Value="Center" />
+                            </Style>
+                        </ItemsControl.Styles>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" FontSize="22" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap"/>
