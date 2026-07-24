@@ -7,6 +7,9 @@ public final class HoneycombViewModel {
     public struct Options: Codable, Equatable {
         public var isSoundEnabled: Bool = true
         public var noStressMode: Bool = false
+        // When on, the opponent's deck biases toward cards the player doesn't yet own,
+        // so there's always something new to steal. Mutually exclusive with noStressMode.
+        public var favorNewCards: Bool = false
         public var difficulty: HoneycombDifficulty = .medium
         public var activeDeckIndex: Int = 0 // 0-4
         public var selectedRules: Set<HoneycombRule> = []
@@ -26,7 +29,7 @@ public final class HoneycombViewModel {
         // (the caller only ever uses `try?`, so any decode error silently resets every
         // field to its default, not just the missing one).
         private enum CodingKeys: String, CodingKey {
-            case isSoundEnabled, noStressMode, difficulty, activeDeckIndex, selectedRules, forceNormalMode, showPointHighlights
+            case isSoundEnabled, noStressMode, favorNewCards, difficulty, activeDeckIndex, selectedRules, forceNormalMode, showPointHighlights
             case hideHintButton, bannedRules
         }
 
@@ -34,6 +37,7 @@ public final class HoneycombViewModel {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             isSoundEnabled = try container.decodeIfPresent(Bool.self, forKey: .isSoundEnabled) ?? true
             noStressMode = try container.decodeIfPresent(Bool.self, forKey: .noStressMode) ?? false
+            favorNewCards = try container.decodeIfPresent(Bool.self, forKey: .favorNewCards) ?? false
             difficulty = try container.decodeIfPresent(HoneycombDifficulty.self, forKey: .difficulty) ?? .medium
             activeDeckIndex = try container.decodeIfPresent(Int.self, forKey: .activeDeckIndex) ?? 0
             // Reverse is no longer manually selectable (it stays roulette-only, since
@@ -50,6 +54,7 @@ public final class HoneycombViewModel {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(isSoundEnabled, forKey: .isSoundEnabled)
             try container.encode(noStressMode, forKey: .noStressMode)
+            try container.encode(favorNewCards, forKey: .favorNewCards)
             try container.encode(difficulty, forKey: .difficulty)
             try container.encode(activeDeckIndex, forKey: .activeDeckIndex)
             try container.encode(selectedRules, forKey: .selectedRules)
@@ -62,6 +67,7 @@ public final class HoneycombViewModel {
         public static func == (lhs: Options, rhs: Options) -> Bool {
             lhs.isSoundEnabled == rhs.isSoundEnabled
                 && lhs.noStressMode == rhs.noStressMode
+                && lhs.favorNewCards == rhs.favorNewCards
                 && lhs.difficulty == rhs.difficulty
                 && lhs.activeDeckIndex == rhs.activeDeckIndex
                 && lhs.selectedRules == rhs.selectedRules
@@ -650,6 +656,27 @@ public final class HoneycombViewModel {
         for (stars, count) in composition {
             deck += db.rulesAwareCards(stars: stars, count: count, preferLowStats: preferLowStats)
         }
+
+        // Favor New Cards: if every card in the assembled deck is already owned by the
+        // player, swap the first owned card for an unowned card from the same star tier
+        // (if one exists). This guarantees at least one stealable card per match without
+        // touching deck quality, AI strength, or the rarity composition — one slot is
+        // swapped at most, and only when all 5 slots would otherwise be owned already.
+        if options.favorNewCards && !options.noStressMode {
+            let owned = HoneycombProfileManager.shared.unlockedCardIds
+            let allOwned = deck.allSatisfy { owned.contains($0.id) }
+            if allOwned {
+                for i in deck.indices {
+                    let tier = deck[i].stars
+                    let unownedInTier = db.allCards.filter { $0.stars == tier && !owned.contains($0.id) }
+                    if let substitute = unownedInTier.randomElement() {
+                        deck[i] = substitute
+                        break
+                    }
+                }
+            }
+        }
+
         opponentHand = deck.map { HoneycombCard(data: $0, owner: .opponent) }
 
         // Computed (not yet applied — see startNewGame) before the reveal-set below,

@@ -74,7 +74,7 @@ public struct HoneycombCardView: View {
                 // The themed CardBackView (bundle images + custom card backs) is still
                 // macOS-only; iOS renders a procedural back until it's ported.
                 #if canImport(AppKit)
-                CardBackView()
+                CardBackView(size: size)
                 #else
                 HoneycombSimpleCardBack()
                 #endif
@@ -189,9 +189,10 @@ public struct HoneycombCardView: View {
                 }
             }
         }
-        // White backing — applied to both the face-up card and CardBackView alike (like
-        // CardView's own `.background(Color.white)`), so a card-back image with
-        // transparent edges doesn't let the felt show through underneath it.
+        // White backing — behind both face-up cards and the card back image alike,
+        // so transparent card-back images (e.g. Vulpera sticker) don't show the
+        // felt through transparent areas. The card back image now fills to the full
+        // card size so this no longer creates a visible border rim.
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         // Thin standard border (matches CardView's outlineColor) — applied to both the

@@ -312,6 +312,9 @@ struct CardCenterSuitView: View {
 
 struct CardBackView: View {
     var isAnimated: Bool = false
+    var size: CGSize = CGSize(width: 128, height: 181)
+
+    private var cornerRadius: CGFloat { size.width * (10.0 / 128.0) }
 
     static let bundleBackgroundNames: Set<String> = ["Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset"]
 
@@ -351,38 +354,37 @@ struct CardBackView: View {
             if theme == "Moogle", let nsImage = Self.bundleImageCache["Moogle"] {
                 Image(nsImage: nsImage)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 120, height: 173)
-                    .scaleEffect(1.25)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size.width, height: size.height)
             } else if theme == "Dingwall", let nsImage = Self.bundleImageCache["Dingwall"] {
                 Image(nsImage: nsImage)
                     .resizable()
-                    .frame(width: 128, height: 181)
+                    .frame(width: size.width, height: size.height)
             } else if Self.bundleBackgroundNames.contains(theme), let nsImage = Self.bundleImageCache[theme] {
                 Image(nsImage: nsImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 128, height: 181)
+                    .frame(width: size.width, height: size.height)
             } else if let customBack = manager.customCardBack(named: theme) {
                 if isAnimated && manager.isGIF(for: customBack.relativePath),
                    let gifURL = manager.gifURL(for: customBack.relativePath) {
                     ZStack {
                         AnimatedGIFView(url: gifURL)
-                            .frame(width: 120, height: 173)
+                            .frame(width: size.width, height: size.height)
                             .scaleEffect(CGFloat(customBack.scale))
                             .offset(x: CGFloat(customBack.offsetX), y: CGFloat(customBack.offsetY))
                     }
-                    .frame(width: 128, height: 181)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .frame(width: size.width, height: size.height)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                 } else if let nsImage = manager.image(for: customBack.relativePath) {
                     ZStack {
                         StaticCardBackImageView(image: nsImage)
-                            .frame(width: 120, height: 173)
+                            .frame(width: size.width, height: size.height)
                             .scaleEffect(CGFloat(customBack.scale))
                             .offset(x: CGFloat(customBack.offsetX), y: CGFloat(customBack.offsetY))
                     }
-                    .frame(width: 128, height: 181)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .frame(width: size.width, height: size.height)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                 } else {
                     Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
                 }
@@ -390,13 +392,13 @@ struct CardBackView: View {
                 Image(nsImage: nsImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 120, height: 173)
+                    .frame(width: size.width, height: size.height)
             } else {
                 Circle().fill(Color(red: 0.1, green: 0.3, blue: 0.6).opacity(0.3)).frame(width: 10, height: 10)
             }
         }
-        .frame(width: 128, height: 181)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .frame(width: size.width, height: size.height)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 }
 

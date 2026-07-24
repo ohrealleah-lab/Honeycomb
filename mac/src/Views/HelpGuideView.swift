@@ -270,6 +270,9 @@ struct HoneycombHelpView: View {
 
             RuleSection(title: "No Stress Mode",
                         text: "Deals a fixed, strong deck every match (one 5★, one 4★, three 3★) instead of your chosen active deck, and hides Steal Card — a relaxed way to play without managing a collection. This is a shared setting — enabling it here also enables it across the other games.")
+
+            RuleSection(title: "Favor New Cards",
+                        text: "When enabled, the opponent's deck is assembled with a preference for cards you don't yet own in your Card Bank — so there's always something new to steal after a win. The opponent still uses cards appropriate for their difficulty: fighting Ultra Hard won't produce 1★ or 2★ cards. If you already own every card available at that difficulty's tiers, the deck is chosen normally. Mutually exclusive with No Stress Mode.")
         }
     }
 }

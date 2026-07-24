@@ -939,6 +939,7 @@ struct HoneycombOptionsView: View {
 
     @State private var isSoundEnabled: Bool
     @State private var noStressMode: Bool
+    @State private var favorNewCards: Bool
     @State private var showPointHighlights: Bool
     @State private var hideHintButton: Bool
     let availableWidth: CGFloat
@@ -953,6 +954,7 @@ struct HoneycombOptionsView: View {
         self.availableHeight = availableHeight
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
+        _favorNewCards = State(initialValue: viewModel.options.favorNewCards)
         _showPointHighlights = State(initialValue: viewModel.options.showPointHighlights)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
     }
@@ -968,6 +970,7 @@ struct HoneycombOptionsView: View {
                 var updatedOpts = viewModel.options
                 updatedOpts.isSoundEnabled = isSoundEnabled
                 updatedOpts.noStressMode = noStressMode
+                updatedOpts.favorNewCards = favorNewCards
                 updatedOpts.showPointHighlights = showPointHighlights
                 updatedOpts.hideHintButton = hideHintButton
                 viewModel.options = updatedOpts
@@ -978,6 +981,15 @@ struct HoneycombOptionsView: View {
 
             Toggle("No Stress Mode", isOn: $noStressMode)
                 .font(.system(.body))
+                .onChange(of: noStressMode) { _, isOn in
+                    if isOn { favorNewCards = false }
+                }
+
+            Toggle("Favor New Cards", isOn: $favorNewCards)
+                .font(.system(.body))
+                .onChange(of: favorNewCards) { _, isOn in
+                    if isOn { noStressMode = false }
+                }
 
             Toggle("Point Highlights", isOn: $showPointHighlights)
                 .font(.system(.body))
