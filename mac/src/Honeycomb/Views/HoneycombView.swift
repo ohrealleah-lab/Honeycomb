@@ -1029,6 +1029,8 @@ struct HoneycombRulesView: View {
             coordinator: coordinator,
             availableWidth: availableWidth,
             availableHeight: availableHeight,
+            title: "Rules",
+            showThemes: false,
             onViewStats: {},
             onOK: {
                 var updatedOpts = viewModel.options
@@ -1047,6 +1049,7 @@ struct HoneycombRulesView: View {
                 }
                 .pickerStyle(MenuPickerStyle())
                 .frame(minWidth: 120)
+                .padding(.top, 16)
                 
                 Divider()
                 

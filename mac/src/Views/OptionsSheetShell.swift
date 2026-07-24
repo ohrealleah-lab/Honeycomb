@@ -12,6 +12,8 @@ struct OptionsSheetShell<Content: View>: View {
     var useScrollView: Bool
     var maxContentHeight: CGFloat
     var fixedSizeHorizontal: Bool
+    var title: String
+    var showThemes: Bool
     var onViewStats: () -> Void
     var onOK: () -> Void
     @ViewBuilder var content: () -> Content
@@ -36,6 +38,8 @@ struct OptionsSheetShell<Content: View>: View {
         useScrollView: Bool = true,
         maxContentHeight: CGFloat = 680,
         fixedSizeHorizontal: Bool = true,
+        title: String = "Preferences",
+        showThemes: Bool = true,
         onViewStats: @escaping () -> Void,
         onOK: @escaping () -> Void,
         @ViewBuilder content: @escaping () -> Content
@@ -47,6 +51,8 @@ struct OptionsSheetShell<Content: View>: View {
         self.useScrollView = useScrollView
         self.maxContentHeight = maxContentHeight
         self.fixedSizeHorizontal = fixedSizeHorizontal
+        self.title = title
+        self.showThemes = showThemes
         self.onViewStats = onViewStats
         self.onOK = onOK
         self.content = content
@@ -75,7 +81,7 @@ struct OptionsSheetShell<Content: View>: View {
     var body: some View {
         ZStack {
             VStack(spacing: 20) {
-                Text("Preferences")
+                Text(title)
                     .font(.system(size: 16, weight: .bold))
                     .padding(.top, 12)
 
@@ -85,7 +91,9 @@ struct OptionsSheetShell<Content: View>: View {
                     ScrollView(.vertical, showsIndicators: true) {
                         VStack(alignment: .leading, spacing: 12) {
                             content()
-                            visualThemesSection
+                            if showThemes {
+                                visualThemesSection
+                            }
                         }
                         .padding(.horizontal, 24)
                     }
@@ -93,7 +101,9 @@ struct OptionsSheetShell<Content: View>: View {
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
                         content()
-                        visualThemesSection
+                        if showThemes {
+                            visualThemesSection
+                        }
                     }
                     .padding(.horizontal, 24)
                 }
