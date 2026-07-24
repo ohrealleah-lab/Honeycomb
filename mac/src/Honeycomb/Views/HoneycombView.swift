@@ -765,27 +765,26 @@ public struct HoneycombView: View {
     @ViewBuilder
     private var rulesBanner: some View {
         if isStealingCard {
-            VStack {
+            VStack(spacing: 16) {
                 Text(stealBoardIndex == nil
                      ? "Drag and drop a captured opponent's card on the board to steal it."
                      : "Now tap one of your own cards to replace with the stolen card.")
-                    .font(.headline)
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.8))
-                    .cornerRadius(10)
-                    .shadow(radius: 10)
+                    .multilineTextAlignment(.center)
 
                 Button("Cancel") {
                     isStealingCard = false
                     stealBoardIndex = nil
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.white)
-                .foregroundColor(.black)
-                .padding(.top, 6)
+                .tint(.blue)
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .background(Color.black.opacity(0.8))
+            .cornerRadius(16)
+            .shadow(radius: 20)
             .frame(height: Self.rulesBannerHeight, alignment: .bottom)
         } else {
             VStack(spacing: 6) {
