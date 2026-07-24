@@ -22,7 +22,7 @@ struct IOSRouterView: View {
             case .blackjack:
                 GamePlaceholderView(title: "Blackjack")
             case .honeycomb:
-                GamePlaceholderView(title: "Honeycomb")
+                HoneycombTouchView(viewModel: coordinator.honeycombViewModel)
             }
         }
         .animation(.easeInOut(duration: 0.25), value: coordinator.gameMode)

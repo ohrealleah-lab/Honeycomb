@@ -21,6 +21,14 @@ let package = Package(
             dependencies: [],
             path: ".",
             exclude: [
+                // Non-source trees under the package root ("."), kept out of the scan
+                // so SPM never warns about (or slows down on) their contents.
+                "ios",
+                "windows",
+                "README.md",
+                "count_cards.ps1",
+                "parse_cards.ps1",
+                // Resource files living inside the compiled source dirs.
                 "mac/src/Info.plist",
                 "mac/src/AppIcon.icns",
                 "mac/src/priest.png",

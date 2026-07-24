@@ -71,7 +71,13 @@ public struct HoneycombCardView: View {
     public var body: some View {
         ZStack {
             if isFlipped || card.isFaceDown {
+                // The themed CardBackView (bundle images + custom card backs) is still
+                // macOS-only; iOS renders a procedural back until it's ported.
+                #if canImport(AppKit)
                 CardBackView()
+                #else
+                HoneycombSimpleCardBack()
+                #endif
             } else {
                 // Large Center Suit (Like an Ace) — dead center of the card.
                 Image(systemName: suitIcon(card.data.suit))

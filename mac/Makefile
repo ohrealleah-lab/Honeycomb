@@ -4,7 +4,7 @@ MACOS_BIN=$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)
 
 # Platform-agnostic game logic lives in ../shared (compiled by both the macOS and iOS
 # apps); mac-only code stays under src/. Both lists feed the flat swiftc compiles below.
-SHARED_SRCS=../shared/Models/*.swift ../shared/ViewModels/*.swift ../shared/Beecell/Models/*.swift ../shared/Beecell/ViewModels/*.swift ../shared/Spider/Models/*.swift ../shared/Spider/ViewModels/*.swift ../shared/Blackjack/Models/*.swift ../shared/Blackjack/ViewModels/*.swift ../shared/VideoPoker/Models/*.swift ../shared/VideoPoker/ViewModels/*.swift ../shared/Honeycomb/Models/*.swift ../shared/Honeycomb/ViewModels/*.swift
+SHARED_SRCS=../shared/Models/*.swift ../shared/Views/*.swift ../shared/Honeycomb/Views/*.swift ../shared/ViewModels/*.swift ../shared/Beecell/Models/*.swift ../shared/Beecell/ViewModels/*.swift ../shared/Spider/Models/*.swift ../shared/Spider/ViewModels/*.swift ../shared/Blackjack/Models/*.swift ../shared/Blackjack/ViewModels/*.swift ../shared/VideoPoker/Models/*.swift ../shared/VideoPoker/ViewModels/*.swift ../shared/Honeycomb/Models/*.swift ../shared/Honeycomb/ViewModels/*.swift
 MAC_SRCS=src/Models/*.swift src/Views/*.swift src/Beecell/Views/*.swift src/Spider/Views/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Views/*.swift src/Honeycomb/Views/*.swift src/Debug/*.swift
 
 .PHONY: all build clean test run bridge
