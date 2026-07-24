@@ -11,7 +11,7 @@ struct FlashBannerView: View {
             Spacer(minLength: 8)
             Text(message)
                 .font(.system(size: 60, weight: .black))
-                .foregroundColor(message.hasPrefix("First Move:") ? .yellow : .white)
+                .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))
                 .multilineTextAlignment(.center)
                 .shadow(radius: 3)
                 .padding(.horizontal, 24)
