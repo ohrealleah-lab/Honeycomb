@@ -142,7 +142,7 @@ public struct HoneycombView: View {
                     // a way to reach Start Match, and dismissing the post-game banner's
                     // "x" (which only clears showPostGamePrompt, not gameState) would
                     // otherwise leave no obvious way to start a new one.
-                    if viewModel.gameState != .playing {
+                    if viewModel.gameState != .playing && viewModel.gameState != .suddenDeath {
                         GameToolbarButton(
                             label: "Start Match", systemImage: "play.fill",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold

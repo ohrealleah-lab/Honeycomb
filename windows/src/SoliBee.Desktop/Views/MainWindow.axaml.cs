@@ -1283,7 +1283,11 @@ public partial class MainWindow : Window
             var phase = _coordinator.HoneycombViewModel.State?.Phase ?? HoneycombPhase.PreMatch;
             if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = phase == HoneycombPhase.PreMatch;
             if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = phase == HoneycombPhase.PreMatch;
-            if (HoneycombQuitMatchButton != null) HoneycombQuitMatchButton.IsVisible = phase != HoneycombPhase.PreMatch;
+            if (HoneycombQuitMatchButton != null) 
+            {
+                HoneycombQuitMatchButton.IsVisible = phase != HoneycombPhase.PreMatch;
+                HoneycombQuitMatchButton.Content = phase == HoneycombPhase.GameOver ? "Start Match" : "Quit Match";
+            }
         }
         else
         {
@@ -1429,11 +1433,18 @@ public partial class MainWindow : Window
     {
         if (this.DataContext is HoneycombViewModel hVm)
         {
-            _pendingAction = "HoneycombQuit";
-            ConfirmActionTitle.Text = "Quit Match?";
-            ConfirmActionMessage.Text = "Are you sure you want to abandon the current match?";
-            ConfirmActionButton.Content = "Quit";
-            ConfirmActionOverlay.IsVisible = true;
+            if (hVm.State.Phase == HoneycombPhase.GameOver)
+            {
+                hVm.StartNewMatch();
+            }
+            else
+            {
+                _pendingAction = "HoneycombQuit";
+                ConfirmActionTitle.Text = "Quit Match?";
+                ConfirmActionMessage.Text = "Are you sure you want to abandon the current match?";
+                ConfirmActionButton.Content = "Quit";
+                ConfirmActionOverlay.IsVisible = true;
+            }
         }
     }
 
