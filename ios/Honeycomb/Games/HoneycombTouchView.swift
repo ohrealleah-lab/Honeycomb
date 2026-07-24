@@ -31,9 +31,18 @@ struct HoneycombTouchView: View {
 
     // MARK: Interaction state
 
+    // Custom drag (Klondike pattern — the drag feel the user picked over system onDrag).
+    // All coordinates live in the pre-scale "board space" declared inside scaleEffect,
+    // so gesture locations and tracked frames stay consistent in intrinsic units.
+    private static let dragSpace = "honeycombDragSpace"
+    @State private var cellFrames: [Int: CGRect] = [:]
+    @State private var handFrames: [String: CGRect] = [:]
+    @State private var dragHandCard: HoneycombCard? = nil
+    @State private var dragStealBoardIndex: Int? = nil
+    @State private var dragLocation: CGPoint = .zero
+    @State private var dragOffset: CGSize = .zero
+
     @State private var selectedHandCardId: String? = nil
-    @State private var draggingHandCardId: String? = nil
-    @State private var draggingOpponentCardIndex: Int? = nil
     @State private var isStealingCard = false
     @State private var stealBoardIndex: Int? = nil
     @State private var showRematchPrompt = false
@@ -69,10 +78,14 @@ struct HoneycombTouchView: View {
                     let scale = min(2.0, max(0.2, min(geo.size.width / intrinsic.width,
                                                       geo.size.height / intrinsic.height)))
 
-                    gameContent(landscape: isLandscape)
-                        .frame(width: intrinsic.width, height: intrinsic.height)
-                        .scaleEffect(scale)
-                        .frame(width: geo.size.width, height: geo.size.height)
+                    ZStack(alignment: .topLeading) {
+                        gameContent(landscape: isLandscape)
+                        dragGhost
+                    }
+                    .frame(width: intrinsic.width, height: intrinsic.height)
+                    .coordinateSpace(name: Self.dragSpace)
+                    .scaleEffect(scale)
+                    .frame(width: geo.size.width, height: geo.size.height)
                 }
             }
 
@@ -378,16 +391,13 @@ struct HoneycombTouchView: View {
                 let highlightIndices: Set<Int> = viewModel.pointHighlight?.cardId == card.id
                     ? viewModel.pointHighlight!.statIndices
                     : []
+                let stealDraggable = viewModel.showPostGamePrompt
+                    && card.originalOwner == .opponent && card.owner == .player
+                    && !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id)
                 HoneycombCardView(card: card, size: Self.boardCardSize, isFlipped: false,
                                   stealHighlight: stealEligible, highlightedStatIndices: highlightIndices)
-                    .onDrag {
-                        if viewModel.showPostGamePrompt, card.originalOwner == .opponent, card.owner == .player,
-                           !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id) {
-                            draggingOpponentCardIndex = index
-                            return NSItemProvider(object: "\(index)" as NSString)
-                        }
-                        return NSItemProvider()
-                    }
+                    .opacity(dragStealBoardIndex == index ? 0 : 1)
+                    .gesture(stealDraggable ? stealDragGesture(index: index) : nil)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.white, lineWidth: stealBoardIndex == index ? 4 : 0)
@@ -396,18 +406,15 @@ struct HoneycombTouchView: View {
         }
         .modifier(TouchHintHighlight(isHighlighted: viewModel.activeHint?.boardIndex == index))
         .onTapGesture { handleBoardTap(index: index, cell: cell) }
-        .onDrop(of: [.plainText], isTargeted: nil) { _ in
-            if viewModel.gameState == .playing && viewModel.isPlayerTurn,
-               let cardId = draggingHandCardId,
-               let handIdx = viewModel.playerHand.firstIndex(where: { $0.id == cardId }) {
-                guard viewModel.playerPlayCard(handIndex: handIdx, boardIndex: index) else { return false }
-                draggingHandCardId = nil
-                selectedHandCardId = nil
-                placementHaptic.impactOccurred()
-                return true
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { cellFrames[index] = geo.frame(in: .named(Self.dragSpace)) }
+                    .onChange(of: geo.frame(in: .named(Self.dragSpace))) { _, newFrame in
+                        cellFrames[index] = newFrame
+                    }
             }
-            return false
-        }
+        )
     }
 
     private func handleBoardTap(index: Int, cell: HoneycombCell) {
@@ -449,13 +456,11 @@ struct HoneycombTouchView: View {
                         viewModel.requestSwap(boardIndex: boardIdx, replaceHandIndex: replaceIdx)
                     }
                 }
-                .onDrag {
-                    if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
-                        draggingHandCardId = card.id
-                        return NSItemProvider(object: card.id as NSString)
-                    }
-                    return NSItemProvider()
-                }
+                .opacity(dragHandCard?.id == card.id ? 0 : 1)
+                .gesture(
+                    (viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay)
+                        ? handDragGesture(card: card) : nil
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.blue, lineWidth: selectedHandCardId == card.id ? 4 : 0)
@@ -472,14 +477,99 @@ struct HoneycombTouchView: View {
                 // Lift the selected card slightly so the two-tap flow reads clearly.
                 .offset(y: selectedHandCardId == card.id ? -10 : 0)
                 .animation(.spring(response: 0.25, dampingFraction: 0.7), value: selectedHandCardId)
-                .onDrop(of: [.plainText], isTargeted: nil) { _ in
-                    guard viewModel.showPostGamePrompt, viewModel.gameState == .gameOver else { return false }
-                    guard let opponentIdx = draggingOpponentCardIndex,
-                          let replaceIdx = viewModel.playerStartingDeck.firstIndex(where: { $0.id == card.id }) else { return false }
-                    viewModel.requestSwap(boardIndex: opponentIdx, replaceHandIndex: replaceIdx)
-                    draggingOpponentCardIndex = nil
-                    return true
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear { handFrames[card.id] = geo.frame(in: .named(Self.dragSpace)) }
+                            .onChange(of: geo.frame(in: .named(Self.dragSpace))) { _, newFrame in
+                                handFrames[card.id] = newFrame
+                            }
+                    }
+                )
+        }
+    }
+
+    // MARK: Custom drag gestures (Klondike pattern, in pre-scale board space)
+
+    private func handDragGesture(card: HoneycombCard) -> some Gesture {
+        DragGesture(minimumDistance: 5, coordinateSpace: .named(Self.dragSpace))
+            .onChanged { val in
+                if dragHandCard == nil {
+                    dragHandCard = card
+                    dragLocation = val.startLocation
+                    selectionHaptic.impactOccurred()
                 }
+                dragOffset = val.translation
+            }
+            .onEnded { _ in
+                defer { clearDrag() }
+                guard let card = dragHandCard,
+                      viewModel.gameState == .playing, viewModel.isPlayerTurn,
+                      let handIdx = viewModel.playerHand.firstIndex(where: { $0.id == card.id }),
+                      let target = dropCellIndex() else { return }
+                if viewModel.playerPlayCard(handIndex: handIdx, boardIndex: target) {
+                    selectedHandCardId = nil
+                    placementHaptic.impactOccurred()
+                }
+            }
+    }
+
+    private func stealDragGesture(index: Int) -> some Gesture {
+        DragGesture(minimumDistance: 5, coordinateSpace: .named(Self.dragSpace))
+            .onChanged { val in
+                if dragStealBoardIndex == nil {
+                    dragStealBoardIndex = index
+                    dragLocation = val.startLocation
+                    selectionHaptic.impactOccurred()
+                }
+                dragOffset = val.translation
+            }
+            .onEnded { _ in
+                defer { clearDrag() }
+                guard let boardIdx = dragStealBoardIndex,
+                      viewModel.showPostGamePrompt, viewModel.gameState == .gameOver else { return }
+                let release = CGPoint(x: dragLocation.x + dragOffset.width,
+                                      y: dragLocation.y + dragOffset.height)
+                guard let (cardId, _) = handFrames.first(where: { $0.value.insetBy(dx: -10, dy: -10).contains(release) }),
+                      let replaceIdx = viewModel.playerStartingDeck.firstIndex(where: { $0.id == cardId }) else { return }
+                viewModel.requestSwap(boardIndex: boardIdx, replaceHandIndex: replaceIdx)
+                placementHaptic.impactOccurred()
+            }
+    }
+
+    private func dropCellIndex() -> Int? {
+        let release = CGPoint(x: dragLocation.x + dragOffset.width,
+                              y: dragLocation.y + dragOffset.height)
+        return cellFrames
+            .filter { $0.value.insetBy(dx: -10, dy: -10).contains(release) }
+            .min(by: { lhs, rhs in
+                let l = CGPoint(x: lhs.value.midX - release.x, y: lhs.value.midY - release.y)
+                let r = CGPoint(x: rhs.value.midX - release.x, y: rhs.value.midY - release.y)
+                return (l.x * l.x + l.y * l.y) < (r.x * r.x + r.y * r.y)
+            })?
+            .key
+    }
+
+    private func clearDrag() {
+        dragHandCard = nil
+        dragStealBoardIndex = nil
+        dragOffset = .zero
+    }
+
+    @ViewBuilder
+    private var dragGhost: some View {
+        if let card = dragHandCard {
+            HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: false)
+                .position(x: dragLocation.x + dragOffset.width,
+                          y: dragLocation.y + dragOffset.height - Self.playerCardSize.height * 0.25)
+                .shadow(radius: 10, y: 5)
+                .allowsHitTesting(false)
+        } else if let index = dragStealBoardIndex, let card = viewModel.board.cells[index].card {
+            HoneycombCardView(card: card, size: Self.boardCardSize, isFlipped: false)
+                .position(x: dragLocation.x + dragOffset.width,
+                          y: dragLocation.y + dragOffset.height - Self.boardCardSize.height * 0.25)
+                .shadow(radius: 10, y: 5)
+                .allowsHitTesting(false)
         }
     }
 
