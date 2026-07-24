@@ -1,0 +1,37 @@
+# iOS app project definition — regenerate Honeycomb.xcodeproj with `xcodegen generate`
+# (run from this directory) after adding/removing files or changing settings.
+name: Honeycomb
+options:
+  bundleIdPrefix: com.leah
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+targets:
+  Honeycomb:
+    type: application
+    platform: iOS
+    sources:
+      - path: Honeycomb
+      # Platform-agnostic game logic shared with the macOS app (../mac).
+      - path: ../shared
+        name: Shared
+      # Game-effect sounds shared with the mac app bundle.
+      - path: ../mac/src/shuffle.aiff
+        buildPhase: resources
+      - path: ../mac/src/snap.aiff
+        buildPhase: resources
+      - path: ../mac/src/victory.aiff
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.leah.Honeycomb
+        PRODUCT_NAME: Honeycomb
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_CFBundleDisplayName: Honeycomb
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGNING_ALLOWED: "NO"

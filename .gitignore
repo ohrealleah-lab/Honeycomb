@@ -2,3 +2,7 @@
 .DS_Store
 .build/
 .swiftpm/
+
+# iOS: Honeycomb.xcodeproj is generated from ios/project.yml — run `xcodegen generate` in ios/
+ios/Honeycomb.xcodeproj/
+ios/build/
