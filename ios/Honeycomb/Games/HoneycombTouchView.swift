@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Touch-first Honeycomb board for iPhone/iPad. Reuses the shared HoneycombViewModel and
 /// HoneycombCardView; layout is a fixed intrinsic design scaled to fit the screen (the
@@ -47,6 +48,11 @@ struct HoneycombTouchView: View {
     private var isMidMatch: Bool {
         viewModel.gameState == .playing || viewModel.gameState == .suddenDeath
     }
+
+    // MARK: Haptics — light tick on selection, solid thump on placement.
+
+    private let selectionHaptic = UIImpactFeedbackGenerator(style: .light)
+    private let placementHaptic = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
         ZStack {
@@ -397,6 +403,7 @@ struct HoneycombTouchView: View {
                 guard viewModel.playerPlayCard(handIndex: handIdx, boardIndex: index) else { return false }
                 draggingHandCardId = nil
                 selectedHandCardId = nil
+                placementHaptic.impactOccurred()
                 return true
             }
             return false
@@ -409,6 +416,7 @@ struct HoneycombTouchView: View {
            let handIdx = viewModel.playerHand.firstIndex(where: { $0.id == cardId }) {
             if viewModel.playerPlayCard(handIndex: handIdx, boardIndex: index) {
                 selectedHandCardId = nil
+                placementHaptic.impactOccurred()
             }
         } else if isStealingCard, viewModel.showPostGamePrompt, viewModel.gameState == .gameOver,
                   cell.card?.originalOwner == .opponent, cell.card?.owner == .player,
@@ -434,6 +442,7 @@ struct HoneycombTouchView: View {
                 .onTapGesture {
                     if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
                         selectedHandCardId = selectedHandCardId == card.id ? nil : card.id
+                        selectionHaptic.impactOccurred()
                     } else if isStealingCard, viewModel.showPostGamePrompt, viewModel.gameState == .gameOver,
                               let boardIdx = stealBoardIndex,
                               let replaceIdx = viewModel.playerStartingDeck.firstIndex(where: { $0.id == card.id }) {
@@ -556,7 +565,7 @@ struct HoneycombTouchView: View {
     }
 
     private var postGameOverlay: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
 
             VStack(spacing: 16) {
@@ -615,19 +624,23 @@ struct HoneycombTouchView: View {
                 .frame(maxWidth: 280)
             }
             .padding(28)
+            .padding(.top, 8)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            // Dismiss lives on the overlay card itself (not the screen corner) so it
+            // never stacks on top of the top bar's Start/Quit button.
+            .overlay(alignment: .topTrailing) {
+                Button {
+                    viewModel.showPostGamePrompt = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(10)
+                .accessibilityLabel("Dismiss")
+            }
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // Dismiss to inspect the finished board; Start/Rematch stay in the top bar.
-            Button {
-                viewModel.showPostGamePrompt = false
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title)
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-            .padding(20)
         }
     }
 
