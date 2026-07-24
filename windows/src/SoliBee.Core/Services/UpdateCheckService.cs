@@ -20,8 +20,8 @@ public static class UpdateCheckService
     public static string CurrentVersion =>
         Assembly.GetExecutingAssembly()
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-        ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)
-        ?? "0.0.0";
+        ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+        ?? "0.0.0.0";
 
     private static UpdateManager GetUpdateManager()
     {
