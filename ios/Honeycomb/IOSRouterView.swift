@@ -14,7 +14,7 @@ struct IOSRouterView: View {
             case .klondike:
                 KlondikeTouchView(viewModel: coordinator.klondikeViewModel)
             case .beecell:
-                GamePlaceholderView(title: "BeeCell")
+                BeecellTouchView(viewModel: coordinator.beecellViewModel)
             case .spider:
                 SpiderTouchView(viewModel: coordinator.spiderViewModel)
             case .videoPoker:
