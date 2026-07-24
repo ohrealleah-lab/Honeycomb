@@ -18,6 +18,10 @@
             <Setter Property="Padding" Value="20,10" />
             <Setter Property="CornerRadius" Value="8" />
         </Style>
+        <Style Selector="Button.honeycomb-blue:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2563EB" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
         <Style Selector="Button.manage-decks">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="White" />
