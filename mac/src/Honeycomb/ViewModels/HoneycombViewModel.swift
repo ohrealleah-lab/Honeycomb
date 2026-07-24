@@ -217,7 +217,14 @@ public final class HoneycombViewModel {
     // Post-game state
     public var showPostGamePrompt: Bool = false
     public var matchResult: String = "" // "You Win!", "You Lose", "Draw"
-    public var flashRuleBanner: String? = nil
+    public var flashRuleBanner: String? = nil {
+        didSet {
+            if flashRuleBanner != nil {
+                flashRuleBannerTrigger += 1
+            }
+        }
+    }
+    public var flashRuleBannerTrigger: Int = 0
     public var sessionCardsCaptured: Int = 0
 
     // Which of the attacker's N/E/S/W stats (0=Top,1=Right,2=Bottom,3=Left) are

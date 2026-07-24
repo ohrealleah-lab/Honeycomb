@@ -585,9 +585,8 @@ public struct HoneycombView: View {
                 showRematchPrompt = false
             }
         }
-        .onChange(of: viewModel.flashRuleBanner) { _, newVal in
-            guard let text = newVal else { return }
-            viewModel.flashRuleBanner = nil // clear it
+        .onChange(of: viewModel.flashRuleBannerTrigger) { _, _ in
+            guard let text = viewModel.flashRuleBanner else { return }
             bannerTask?.cancel()
             bannerText = text
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
