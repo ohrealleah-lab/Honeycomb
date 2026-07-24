@@ -12,7 +12,7 @@ struct IOSRouterView: View {
 
             switch coordinator.gameMode {
             case .klondike:
-                GamePlaceholderView(title: "Klondike")
+                KlondikeTouchView(viewModel: coordinator.klondikeViewModel)
             case .beecell:
                 GamePlaceholderView(title: "BeeCell")
             case .spider:

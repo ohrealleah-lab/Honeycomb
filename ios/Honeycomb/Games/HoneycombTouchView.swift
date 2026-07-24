@@ -676,22 +676,6 @@ struct HoneycombTouchView: View {
     }
 }
 
-// MARK: - Hint highlight (iOS twin of the mac HintHighlightModifier)
-
-private struct TouchHintHighlight: ViewModifier {
-    let isHighlighted: Bool
-    func body(content: Content) -> some View {
-        content
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isHighlighted ? Color.yellow : Color.clear, lineWidth: 4)
-                    .shadow(color: isHighlighted ? .yellow : .clear, radius: 4)
-            )
-            .animation(isHighlighted ? .easeInOut(duration: 0.5).repeatCount(4, autoreverses: true) : nil,
-                       value: isHighlighted)
-    }
-}
-
 // MARK: - Settings section shown inside the slide-down menu
 
 struct HoneycombSettingsSection: View {
