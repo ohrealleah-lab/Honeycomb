@@ -41,7 +41,7 @@ struct AppCoordinatorTests {
 
         // Verify defaults — theme lives on the coordinator itself now, not per-game options.
         assert(coordinator.feltColor == .feltGreen, "Default felt color should be feltGreen")
-        assert(coordinator.cardBackTheme == "Moogle", "Default card back theme should be Moogle")
+        assert(coordinator.cardBackTheme == "Solibee", "Default card back theme should be Solibee")
 
         // 2. Theme is a single live-shared value — every game reads the same coordinator
         // property, so there's no per-VM propagation to assert; just confirm all 5 view
