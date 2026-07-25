@@ -46,6 +46,7 @@ struct HoneycombTouchView: View {
     @State private var isStealingCard = false
     @State private var isMenuOpen = false
     @State private var showingStats = false
+    @State private var showingDecks = false
     @State private var showNoHintsBanner = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
     @State private var showingRuleBanner = false
@@ -100,9 +101,13 @@ struct HoneycombTouchView: View {
             SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator) {
                 showingStats = true
             } gameSettings: {
-                HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch)
+                HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch) {
+                    isMenuOpen = false
+                    showingDecks = true
+                }
             }
         }
+        .sheet(isPresented: $showingDecks) { HoneycombDecksSheet(viewModel: viewModel) }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .sheet(isPresented: $showingStats) { HoneycombStatsSheet(stats: viewModel.stats) }
         // Headless-testing hook: `simctl launch ... -honeycombAutostart 1` starts a match
@@ -710,12 +715,19 @@ struct HoneycombTouchView: View {
 struct HoneycombSettingsSection: View {
     @Bindable var viewModel: HoneycombViewModel
     let isMidMatch: Bool
+    var onManageDecks: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("HONEYCOMB")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
+
+            Button(action: onManageDecks) {
+                Label("Manage Decks", systemImage: "square.grid.2x2")
+            }
+            .buttonStyle(.bordered)
+            .disabled(isMidMatch)
 
             Group {
                 Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
