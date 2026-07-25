@@ -38,7 +38,7 @@
                                Width="70" Height="60"
                                Stretch="Uniform"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                               RenderOptions.BitmapInterpolationMode="MediumQuality" />
                     </Grid>
 
                     <!-- Bottom-right rank/suit (rotated 180°) -->

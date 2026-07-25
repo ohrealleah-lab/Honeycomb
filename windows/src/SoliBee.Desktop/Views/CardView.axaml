@@ -32,10 +32,10 @@
                                TextAlignment="Center" IsVisible="False" />
 
                     <!-- Image for custom face art (J/Q/K/A slots) -->
-                    <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="MediumQuality" />
 
                     <!-- SkiaSharp-rendered pip for Ace (ink-bounds centered) -->
-                    <Image x:Name="AcePipImage" Width="86" Height="86" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <Image x:Name="AcePipImage" Width="86" Height="86" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="MediumQuality" />
                 </Grid>
 
                 <!-- Bottom-Right Value & Suit Display (Horizontal, Rotated 180 degrees) -->
@@ -114,7 +114,7 @@
                  the border always stays visible on top. -->
             <Border x:Name="InnerCardBack" Margin="0" CornerRadius="9" ClipToBounds="True">
                 <Grid x:Name="CardBackGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
                 </Grid>
             </Border>
         </Border>

@@ -11,7 +11,7 @@
             <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="1.5" Background="#F0F0F0" CornerRadius="8" ClipToBounds="True">
                 <Grid>
                     <!-- Center Suit Glyph -->
-                    <Image x:Name="SuitImage" Width="150" Height="150" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <Image x:Name="SuitImage" Width="150" Height="150" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
                     
                     <!-- Star Rating Layout -->
                     <StackPanel x:Name="StarsPanel" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="1" />

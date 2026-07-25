@@ -329,7 +329,7 @@ public partial class CardView : UserControl
             canvas.Scale(uniformScale, uniformScale);
             canvas.Translate(-src.Width / 2f, -src.Height / 2f);
 
-            using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+            using var paint = new SKPaint { FilterQuality = SKFilterQuality.Medium, IsAntialias = true };
             canvas.DrawImage(SKImage.FromBitmap(src), 0, 0, paint);
 
             using var snap = surface.Snapshot();
