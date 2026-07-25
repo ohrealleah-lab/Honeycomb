@@ -30,7 +30,16 @@ struct KlondikeTouchView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let cardW = min((geo.size.width - 16 - 6 * Self.columnSpacing) / 7, 110)
+            // Width-fit first (unchanged from the original, always exactly fills the
+            // available width, spacing/padding included). Then, if the deepest tableau
+            // column at that size would run past the available height — landscape's
+            // extra width alone doesn't buy any extra height, and there's no scroll view
+            // here — shrink further so nothing overflows. Never grows past the width fit.
+            let widthCardW = min((geo.size.width - 16 - 6 * Self.columnSpacing) / 7, 110)
+            let widthCardH = widthCardW * 181.0 / 128.0
+            let neededHeight = 54 + widthCardH + 10 + deepestColumnHeight(cardH: widthCardH) + 20
+            let heightShrink = neededHeight > geo.size.height ? geo.size.height / neededHeight : 1.0
+            let cardW = widthCardW * heightShrink
             let cardH = cardW * 181.0 / 128.0
 
             ZStack {
@@ -227,6 +236,22 @@ struct KlondikeTouchView: View {
                 tableauColumn(pile: pile, cardW: cardW, cardH: cardH)
             }
         }
+    }
+
+    /// The deepest tableau column's actual stacked height at the given card height —
+    /// the same per-card offsets tableauColumn uses to render, so the fit-to-screen
+    /// scale computed from this always matches what's actually drawn.
+    private func deepestColumnHeight(cardH: CGFloat) -> CGFloat {
+        let upStep = cardH * 0.24
+        let downStep = cardH * 0.12
+        return viewModel.state.tableau.map { pile -> CGFloat in
+            guard !pile.cards.isEmpty else { return cardH }
+            var running: CGFloat = 0
+            for card in pile.cards.dropLast() {
+                running += card.faceUp ? upStep : downStep
+            }
+            return running + cardH
+        }.max() ?? cardH
     }
 
     private func tableauColumn(pile: Pile, cardW: CGFloat, cardH: CGFloat) -> some View {

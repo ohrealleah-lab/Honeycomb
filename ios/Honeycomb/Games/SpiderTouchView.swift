@@ -29,7 +29,14 @@ struct SpiderTouchView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let cardW = min((geo.size.width - 16 - 9 * Self.columnSpacing) / 10, 90)
+            // Width-fit first (always exactly fills available width, spacing/padding
+            // included), then shrink further only if the deepest column would overflow
+            // the available height — see KlondikeTouchView for the full rationale.
+            let widthCardW = min((geo.size.width - 16 - 9 * Self.columnSpacing) / 10, 90)
+            let widthCardH = widthCardW * 181.0 / 128.0
+            let neededHeight = 54 + widthCardH + 10 + deepestColumnHeight(cardH: widthCardH) + 20
+            let heightShrink = neededHeight > geo.size.height ? geo.size.height / neededHeight : 1.0
+            let cardW = widthCardW * heightShrink
             let cardH = cardW * 181.0 / 128.0
 
             ZStack {
@@ -201,6 +208,22 @@ struct SpiderTouchView: View {
                 tableauColumn(pile: pile, cardW: cardW, cardH: cardH)
             }
         }
+    }
+
+    /// The deepest tableau column's actual stacked height at the given card height —
+    /// same per-card offsets tableauColumn renders with, so the fit-to-screen scale
+    /// computed from this always matches what's actually drawn.
+    private func deepestColumnHeight(cardH: CGFloat) -> CGFloat {
+        let upStep = cardH * 0.24
+        let downStep = cardH * 0.12
+        return viewModel.state.tableau.map { pile -> CGFloat in
+            guard !pile.cards.isEmpty else { return cardH }
+            var running: CGFloat = 0
+            for card in pile.cards.dropLast() {
+                running += card.faceUp ? upStep : downStep
+            }
+            return running + cardH
+        }.max() ?? cardH
     }
 
     private func tableauColumn(pile: Pile, cardW: CGFloat, cardH: CGFloat) -> some View {
