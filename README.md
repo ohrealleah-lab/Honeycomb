@@ -2,7 +2,7 @@
 
 **Honeycomb Card Suite** is a designed to recreate the gameplay dynamics of classic card games with modern flourishes and deep customization.  Change the card decks and card art to your pictures. Match the felt and card color, save it as a full custom theme. Make your own dark mode. **Make the game yours.** 
 
-**Honeycomb** was built using spec-driven development with SpecKit, Claude Code, and Gemini. The  macOS version is written in Swift 6 & SwiftUI, the Windows version is C# & Avalonia. 
+**Honeycomb** was built using spec-driven development with SpecKit, Claude Code, and Gemini. The  macOS version is written in Swift 6 & SwiftUI, the Windows version is C# & Avalonia. Zero AI art assets are used. All art used with permission, special thanks to the friends who contributed, that wish to remain uncredited.
 
 ---
 
