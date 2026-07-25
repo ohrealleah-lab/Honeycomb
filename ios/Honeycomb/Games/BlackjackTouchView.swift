@@ -25,24 +25,32 @@ struct BlackjackTouchView: View {
             ZStack {
                 coordinator.currentFeltColor.ignoresSafeArea()
 
-                VStack(spacing: 16) {
-                    topBar
-                        .padding(.horizontal, 12)
-                        .frame(height: 44)
+                // ScrollView fallback rather than a computed shrink factor — a split
+                // stacks a second hand below the first, and landscape's shorter height
+                // can't always fit dealer + two hands + controls. Scrolling beats
+                // clipping the action buttons off the bottom; portrait already fits
+                // without scrolling in the common case.
+                ScrollView {
+                    VStack(spacing: 16) {
+                        topBar
+                            .padding(.horizontal, 12)
+                            .frame(height: 44)
 
-                    dealerArea(cardW: cardW)
+                        dealerArea(cardW: cardW)
 
-                    resultBanner
+                        resultBanner
 
-                    Spacer(minLength: 4)
+                        Spacer(minLength: 4)
 
-                    playerHandsArea(cardW: cardW)
+                        playerHandsArea(cardW: cardW)
 
-                    Spacer(minLength: 4)
+                        Spacer(minLength: 4)
 
-                    controls
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
+                        controls
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+                    }
+                    .frame(minHeight: geo.size.height)
                 }
 
                 SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator) {

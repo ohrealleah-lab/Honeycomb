@@ -26,26 +26,34 @@ struct VideoPokerTouchView: View {
             ZStack {
                 coordinator.currentFeltColor.ignoresSafeArea()
 
-                VStack(spacing: 12) {
-                    topBar
-                        .padding(.horizontal, 12)
-                        .frame(height: 44)
+                // ScrollView fallback rather than a computed shrink factor: unlike the
+                // tableau games, most of this view's height is fixed-size text (the pay
+                // table) that doesn't have a natural "shrink" — landscape's shorter
+                // height can still exceed it, so let it scroll instead of clipping the
+                // Deal button off the bottom. Portrait already fits without scrolling.
+                ScrollView {
+                    VStack(spacing: 12) {
+                        topBar
+                            .padding(.horizontal, 12)
+                            .frame(height: 44)
 
-                    payTableView
-                        .padding(.horizontal, 16)
+                        payTableView
+                            .padding(.horizontal, 16)
 
-                    Spacer(minLength: 4)
+                        Spacer(minLength: 4)
 
-                    resultBanner
+                        resultBanner
 
-                    handRow(cardW: cardW)
-                        .padding(.horizontal, 12)
+                        handRow(cardW: cardW)
+                            .padding(.horizontal, 12)
 
-                    Spacer(minLength: 4)
+                        Spacer(minLength: 4)
 
-                    controls
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
+                        controls
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+                    }
+                    .frame(minHeight: geo.size.height)
                 }
 
                 SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator) {
