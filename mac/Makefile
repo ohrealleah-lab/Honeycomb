@@ -31,6 +31,7 @@ build:
 	cp "images/backgrounds/Pareidolic 2.png" "$(APP_BUNDLE)/Contents/Resources/Pareidolic 2.png"
 	cp "images/backgrounds/Red Sky.png" "$(APP_BUNDLE)/Contents/Resources/Red Sky.png"
 	cp "images/backgrounds/Sunset.png" "$(APP_BUNDLE)/Contents/Resources/Sunset.png"
+	cp "images/backgrounds/Solibee.png" "$(APP_BUNDLE)/Contents/Resources/Solibee.png"
 	cp src/shuffle.aiff $(APP_BUNDLE)/Contents/Resources/shuffle.aiff
 	cp src/snap.aiff $(APP_BUNDLE)/Contents/Resources/snap.aiff
 	cp src/victory.aiff $(APP_BUNDLE)/Contents/Resources/victory.aiff

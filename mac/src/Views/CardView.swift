@@ -316,7 +316,7 @@ struct CardBackView: View {
 
     private var cornerRadius: CGFloat { size.width * (10.0 / 128.0) }
 
-    static let bundleBackgroundNames: Set<String> = ["Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset"]
+    static let bundleBackgroundNames: Set<String> = ["Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset", "Solibee"]
 
     private static let bundleImageCache: [String: NSImage] = {
         var cache: [String: NSImage] = [:]
@@ -329,6 +329,7 @@ struct CardBackView: View {
             ("Pareidolic 2",  [("Pareidolic 2", "png")]),
             ("Red Sky",       [("Red Sky", "png")]),
             ("Sunset",        [("Sunset", "png")]),
+            ("Solibee",       [("Solibee", "png")]),
             ("Vulpera",       [("priest", "png"), ("priest", "jpg")]),
         ]
         for (key, candidates) in entries {

@@ -39,7 +39,7 @@ public final class CustomCardBackManager {
     public static let shared = CustomCardBackManager()
 
     public var defaultThemes: [String] {
-        var list = ["Vulpera", "Moogle", "Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset"]
+        var list = ["Vulpera", "Moogle", "Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset", "Solibee"]
         if UserDefaults.standard.bool(forKey: "solibee_keep_dingwall") {
             list.insert("Dingwall", at: 2)
         }

@@ -54,7 +54,7 @@ public partial class MainWindow : Window
 
         _coordinator = new AppCoordinator();
 
-        // First launch: apply the "Default" theme (Moogle + Felt Green) as the default visual theme
+        // First launch: apply the "Default" theme (Solibee + Felt Green) as the default visual theme
         if (ThemeService.ApplyDefaultThemeIfNeeded(_coordinator.GameViewModel.Options))
             SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
 

@@ -42,6 +42,8 @@ targets:
         buildPhase: resources
       - path: ../mac/images/backgrounds/Sunset.png
         buildPhase: resources
+      - path: ../mac/images/backgrounds/Solibee.png
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.leah.Honeycomb

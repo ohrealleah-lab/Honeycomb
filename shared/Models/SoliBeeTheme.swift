@@ -82,7 +82,7 @@ public final class ThemeManager {
     // `activeThemeId` (or any other stored reference) that pointed at last launch's id.
     private static let defaultThemes: [SoliBeeTheme] = [
         SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000001")!,
-                     name: "Default",      cardBackTheme: "Moogle",       feltColor: .feltGreen,
+                     name: "Default",      cardBackTheme: "Solibee",      feltColor: .feltGreen,
                      customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
                      faceArts: [], customCardColors: CustomCardColorGroup()),
         SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000002")!,

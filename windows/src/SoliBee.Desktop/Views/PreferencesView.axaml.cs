@@ -807,7 +807,7 @@ public partial class PreferencesView : UserControl
     private static readonly string[] _builtInCardBackNames =
     {
         "Vulpera", "Moogle", "Forest", "On the Water",
-        "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset",
+        "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset", "Solibee",
     };
 
     private static bool IsBuiltInCardBack(string name) => _builtInCardBackNames.Contains(name);
@@ -827,6 +827,7 @@ public partial class PreferencesView : UserControl
             ["Pareidolic 2"] = "pareidolic2.png",
             ["Red Sky"]      = "redsky.png",
             ["Sunset"]       = "sunset.png",
+            ["Solibee"]      = "solibee.png",
         };
 
     private void UpdateCardBackPreview(GameOptions options)

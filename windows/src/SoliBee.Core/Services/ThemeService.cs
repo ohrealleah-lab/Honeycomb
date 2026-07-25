@@ -34,7 +34,7 @@ public static class ThemeService
         {
             Id             = new Guid("b0001111-0000-0000-0000-000000000006"),
             Name           = "Default",
-            CardBackTheme  = "Moogle",
+            CardBackTheme  = "Solibee",
             FeltColor      = FeltColorTheme.FeltGreen,
         },
         new SoliBeeTheme

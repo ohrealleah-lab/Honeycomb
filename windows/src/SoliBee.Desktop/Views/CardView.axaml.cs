@@ -68,6 +68,7 @@ public partial class CardView : UserControl
             ["Pareidolic 2"] = "pareidolic2.png",
             ["Red Sky"]      = "redsky.png",
             ["Sunset"]       = "sunset.png",
+            ["Solibee"]      = "solibee.png",
         };
 
     // Pre-allocated brushes — only ~5 combinations exist, no need to allocate per render

@@ -9,7 +9,7 @@ private struct FeltColorKey: EnvironmentKey {
 }
 
 private struct ActiveCardBackThemeKey: EnvironmentKey {
-    static let defaultValue: String = "Moogle"
+    static let defaultValue: String = "Solibee"
 }
 
 private struct ActiveCustomCardColorsKey: EnvironmentKey {

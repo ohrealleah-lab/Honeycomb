@@ -154,7 +154,7 @@ public final class AppCoordinator {
         self.gameMode = GameMode(rawValue: saved) ?? .klondike
 
         self.feltColor = FeltColorTheme(rawValue: UserDefaults.standard.string(forKey: "global_felt_color") ?? "") ?? .feltGreen
-        self.cardBackTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Moogle"
+        self.cardBackTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Solibee"
         self.showFeltVignette = UserDefaults.standard.object(forKey: "showFeltVignette") != nil
             ? UserDefaults.standard.bool(forKey: "showFeltVignette") : true
         #if canImport(AppKit)
