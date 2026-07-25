@@ -4,11 +4,11 @@ import UIKit
 #endif
 
 /// Card back view for platforms where the mac's full CardBackView (bundle art + custom
-/// user-imported decks, GIF support) hasn't been ported. Renders the same bundled theme
-/// art the mac app ships (Moogle, Dingwall, Forest, etc. — see BundledCardBackImage)
-/// when the active theme matches one of those bundled names; falls back to a procedural
-/// honeycomb design for anything else (custom decks aren't supported here yet, so an
-/// unrecognized theme name means the mac-side custom deck manager hasn't been ported).
+/// user-imported decks, GIF support) hasn't been ported. Tries the bundled theme art
+/// first (Moogle, Dingwall, Forest, etc.), then a user-imported custom card back
+/// (IOSCustomCardBackManager), falling back to a procedural honeycomb design if neither
+/// matches. GIF-animated custom backs aren't supported yet — imports are flattened to a
+/// static image.
 struct HoneycombSimpleCardBack: View {
     @Environment(\.activeCardBackTheme) private var theme: String
 
@@ -24,6 +24,14 @@ struct HoneycombSimpleCardBack: View {
                         RoundedRectangle(cornerRadius: 6)
                             .stroke(Color.white.opacity(0.25), lineWidth: 1)
                     )
+            } else if let entry = IOSCustomCardBackManager.shared.entry(named: theme),
+                      let image = IOSCustomCardBackManager.shared.image(for: entry) {
+                CroppedCardBackImage(image: image, entry: entry)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                    )
             } else {
                 ProceduralHoneycombCardBack()
             }
@@ -33,6 +41,30 @@ struct HoneycombSimpleCardBack: View {
         }
     }
 }
+
+#if os(iOS)
+/// Renders a custom card-back image at its saved crop (scale + position), sized to
+/// whatever frame the caller gives it. Offset is stored as a fraction of card width/
+/// height rather than raw points, so the same crop looks identical whether it's drawn
+/// as a 44pt menu thumbnail or a 150pt board card.
+struct CroppedCardBackImage: View {
+    let image: UIImage
+    let entry: IOSCustomCardBackManager.Entry
+
+    var body: some View {
+        GeometryReader { geo in
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .scaleEffect(entry.scale)
+                .offset(x: entry.offsetXFraction * geo.size.width,
+                        y: entry.offsetYFraction * geo.size.height)
+                .frame(width: geo.size.width, height: geo.size.height)
+                .clipped()
+        }
+    }
+}
+#endif
 
 #if os(iOS)
 /// Lazily loads and caches the mac app's bundled card-back art (copied into the iOS
@@ -51,9 +83,10 @@ enum BundledCardBackImage {
         "Pareidolic 2": ("Pareidolic 2", "png"),
         "Red Sky": ("Red Sky", "png"),
         "Sunset": ("Sunset", "png"),
+        "Solibee": ("Solibee", "png"),
     ]
 
-    static let allThemeNames: [String] = ["Moogle", "Vulpera", "Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset"]
+    static let allThemeNames: [String] = ["Moogle", "Vulpera", "Forest", "On The Water", "Pareidolic", "Pareidolic 2", "Red Sky", "Sunset", "Solibee"]
 
     private static var cache: [String: UIImage] = [:]
 
@@ -64,6 +97,117 @@ enum BundledCardBackImage {
               let image = UIImage(contentsOfFile: path) else { return nil }
         cache[theme] = image
         return image
+    }
+}
+
+/// User-imported custom card backs on iOS. A deliberately smaller counterpart to mac's
+/// CustomCardBackManager: static images only (no GIF animation), stored as flat PNGs
+/// under Application Support/Honeycomb/CardBacks, with an in-memory cache. Names must
+/// be unique and can't collide with a bundled theme name.
+@Observable
+public final class IOSCustomCardBackManager {
+    public static let shared = IOSCustomCardBackManager()
+
+    public struct Entry: Codable, Identifiable, Equatable {
+        public var id: UUID
+        public var name: String
+        public var relativePath: String
+        // Crop, matching mac's CustomCardBack model but with offsets stored as
+        // fractions of card width/height (see CroppedCardBackImage) rather than raw
+        // points, since iOS renders card backs at far more different sizes than mac does.
+        public var scale: Double = 1.0
+        public var offsetXFraction: Double = 0.0
+        public var offsetYFraction: Double = 0.0
+    }
+
+    public private(set) var customCardBacks: [Entry] = []
+
+    @ObservationIgnored private var imageCache: [String: UIImage] = [:]
+    private let defaultsKey = "ios_custom_card_backs"
+
+    private var storageDirectory: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let dir = base.appendingPathComponent("Honeycomb").appendingPathComponent("CardBacks")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    private init() {
+        if let data = UserDefaults.standard.data(forKey: defaultsKey),
+           let decoded = try? JSONDecoder().decode([Entry].self, from: data) {
+            customCardBacks = decoded
+        }
+        // Drop any entry whose backing file has gone missing rather than let it linger
+        // as a theme name that silently falls back to the procedural design forever.
+        let dir = storageDirectory
+        let before = customCardBacks.count
+        customCardBacks = customCardBacks.filter { FileManager.default.fileExists(atPath: dir.appendingPathComponent($0.relativePath).path) }
+        if customCardBacks.count != before { persist() }
+    }
+
+    private func persist() {
+        if let encoded = try? JSONEncoder().encode(customCardBacks) {
+            UserDefaults.standard.set(encoded, forKey: defaultsKey)
+        }
+    }
+
+    /// - Returns: whether the import succeeded (fails on a blank/duplicate/reserved name).
+    @discardableResult
+    public func addCustomCardBack(name: String, image: UIImage, scale: Double = 1.0,
+                                   offsetXFraction: Double = 0.0, offsetYFraction: Double = 0.0) -> Bool {
+        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty,
+              !BundledCardBackImage.allThemeNames.contains(cleaned),
+              !customCardBacks.contains(where: { $0.name == cleaned }),
+              let data = image.pngData() else { return false }
+
+        let id = UUID()
+        let filename = "\(id.uuidString).png"
+        let url = storageDirectory.appendingPathComponent(filename)
+        do {
+            try data.write(to: url)
+        } catch {
+            return false
+        }
+        customCardBacks.append(Entry(id: id, name: cleaned, relativePath: filename,
+                                     scale: scale, offsetXFraction: offsetXFraction, offsetYFraction: offsetYFraction))
+        persist()
+        return true
+    }
+
+    /// Updates an existing entry's crop in place (re-editing after import) without
+    /// touching the stored image file.
+    public func updateCrop(id: UUID, scale: Double, offsetXFraction: Double, offsetYFraction: Double) {
+        guard let index = customCardBacks.firstIndex(where: { $0.id == id }) else { return }
+        customCardBacks[index].scale = scale
+        customCardBacks[index].offsetXFraction = offsetXFraction
+        customCardBacks[index].offsetYFraction = offsetYFraction
+        persist()
+    }
+
+    public func removeCustomCardBack(_ entry: Entry) {
+        let url = storageDirectory.appendingPathComponent(entry.relativePath)
+        try? FileManager.default.removeItem(at: url)
+        imageCache.removeValue(forKey: entry.relativePath)
+        customCardBacks.removeAll { $0.id == entry.id }
+        persist()
+    }
+
+    public func entry(named name: String) -> Entry? {
+        customCardBacks.first { $0.name == name }
+    }
+
+    public func image(for entry: Entry) -> UIImage? {
+        if let cached = imageCache[entry.relativePath] { return cached }
+        guard let image = UIImage(contentsOfFile: storageDirectory.appendingPathComponent(entry.relativePath).path) else { return nil }
+        imageCache[entry.relativePath] = image
+        return image
+    }
+
+    public func image(named name: String) -> UIImage? {
+        guard let entry = entry(named: name) else { return nil }
+        return image(for: entry)
     }
 }
 #endif
