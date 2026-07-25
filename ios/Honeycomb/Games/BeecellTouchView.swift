@@ -28,8 +28,16 @@ struct BeecellTouchView: View {
     var body: some View {
         GeometryReader { geo in
             let columns = CGFloat(max(viewModel.state.tableau.count, 8))
-            let cardW = min((geo.size.width - 16 - (columns - 1) * Self.columnSpacing) / columns, 100)
-            let cardH = cardW * 181.0 / 128.0
+            // Fit to both width and height (see KlondikeTouchView for why: landscape's
+            // extra width alone would hand out cards too tall for the deepest column to
+            // actually fit, with no scroll view to fall back on).
+            let widthCardW = (geo.size.width - 16 - (columns - 1) * Self.columnSpacing) / columns
+            let designCardW = min(widthCardW, 100)
+            let designCardH = designCardW * 181.0 / 128.0
+            let intrinsicHeight = 54 + designCardH + 10 + deepestColumnHeight(cardH: designCardH) + 20
+            let heightScale = min(1.0, geo.size.height / intrinsicHeight)
+            let cardW = designCardW * heightScale
+            let cardH = designCardW * heightScale * 181.0 / 128.0
             let topSlots = CGFloat(viewModel.state.freeCells.count + viewModel.state.foundations.count)
             // Free cells + foundations share the top row with a control gap; shrink the
             // slot size when double-deck doubles the slot count.
@@ -75,6 +83,7 @@ struct BeecellTouchView: View {
             }
             .coordinateSpace(name: Self.boardSpace)
         }
+        .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .sheet(isPresented: $showingStats) { BeecellStatsSheet(viewModel: viewModel) }
         .onAppear { viewModel.startTimerIfNeeded() }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
@@ -192,6 +201,16 @@ struct BeecellTouchView: View {
                 tableauColumn(pile: pile, cardW: cardW, cardH: cardH)
             }
         }
+    }
+
+    /// The deepest tableau column's actual stacked height at the given card height —
+    /// same per-card offset tableauColumn renders with, so the fit-to-screen scale
+    /// computed from this always matches what's actually drawn.
+    private func deepestColumnHeight(cardH: CGFloat) -> CGFloat {
+        let upStep = cardH * 0.24
+        return viewModel.state.tableau.map { pile -> CGFloat in
+            pile.cards.isEmpty ? cardH : CGFloat(pile.cards.count - 1) * upStep + cardH
+        }.max() ?? cardH
     }
 
     private func tableauColumn(pile: Pile, cardW: CGFloat, cardH: CGFloat) -> some View {

@@ -112,6 +112,43 @@ struct SlideDownMenu<GameSettings: View>: View {
                 }
             }
             Toggle("Felt Vignette", isOn: $coordinator.showFeltVignette)
+
+            sectionTitle("Card Back").padding(.top, 4)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(BundledCardBackImage.allThemeNames, id: \.self) { name in
+                        Button {
+                            coordinator.cardBackTheme = name
+                        } label: {
+                            VStack(spacing: 4) {
+                                cardBackThumbnail(name)
+                                    .frame(width: 44, height: 44 * 181.0 / 128.0)
+                                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 5)
+                                            .stroke(Color.accentColor,
+                                                    lineWidth: coordinator.cardBackTheme == name ? 3 : 0)
+                                    )
+                                Text(name)
+                                    .font(.caption2)
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func cardBackThumbnail(_ name: String) -> some View {
+        if let image = BundledCardBackImage.uiImage(for: name) {
+            Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+        } else {
+            Color.gray.opacity(0.3)
         }
     }
 

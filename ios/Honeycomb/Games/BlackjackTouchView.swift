@@ -61,6 +61,7 @@ struct BlackjackTouchView: View {
                 }
             }
         }
+        .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .sheet(isPresented: $showingStats) { BlackjackStatsSheet(viewModel: viewModel) }
     }
 

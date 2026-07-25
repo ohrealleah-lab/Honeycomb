@@ -64,6 +64,7 @@ struct VideoPokerTouchView: View {
                 }
             }
         }
+        .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .sheet(isPresented: $showingStats) { VideoPokerStatsSheet(viewModel: viewModel) }
     }
 

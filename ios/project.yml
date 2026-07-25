@@ -22,6 +22,26 @@ targets:
         buildPhase: resources
       - path: ../mac/src/victory.aiff
         buildPhase: resources
+      # Bundled card-back art shared with the mac app bundle (see BundledCardBackImage
+      # in shared/Views/HoneycombSimpleCardBack.swift for the theme-name -> file map).
+      - path: ../mac/src/moogle.jpg
+        buildPhase: resources
+      - path: ../mac/src/dingwall.jpg
+        buildPhase: resources
+      - path: ../mac/src/priest.png
+        buildPhase: resources
+      - path: ../mac/images/backgrounds/Forest.png
+        buildPhase: resources
+      - path: ../mac/images/backgrounds/On The Water.png
+        buildPhase: resources
+      - path: ../mac/images/backgrounds/Pareidolic.png
+        buildPhase: resources
+      - path: ../mac/images/backgrounds/Pareidolic 2.png
+        buildPhase: resources
+      - path: ../mac/images/backgrounds/Red Sky.png
+        buildPhase: resources
+      - path: ../mac/images/backgrounds/Sunset.png
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.leah.Honeycomb

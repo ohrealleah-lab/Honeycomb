@@ -78,6 +78,7 @@ struct SpiderTouchView: View {
             }
             .coordinateSpace(name: Self.boardSpace)
         }
+        .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .sheet(isPresented: $showingStats) { SpiderStatsSheet(viewModel: viewModel) }
         .onAppear { viewModel.startTimerIfNeeded() }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }

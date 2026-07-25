@@ -103,6 +103,7 @@ struct HoneycombTouchView: View {
                 HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch)
             }
         }
+        .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .sheet(isPresented: $showingStats) { HoneycombStatsSheet(stats: viewModel.stats) }
         // Headless-testing hook: `simctl launch ... -honeycombAutostart 1` starts a match
         // immediately, so match-state rendering can be screenshotted without tap input.

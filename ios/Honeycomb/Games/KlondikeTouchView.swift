@@ -81,6 +81,7 @@ struct KlondikeTouchView: View {
             }
             .coordinateSpace(name: Self.boardSpace)
         }
+        .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .sheet(isPresented: $showingStats) { KlondikeStatsSheet(stats: viewModel.statistics) }
         .onAppear { viewModel.startTimerIfNeeded() }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
