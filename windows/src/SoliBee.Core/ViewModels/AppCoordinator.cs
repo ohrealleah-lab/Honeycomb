@@ -96,6 +96,10 @@ public partial class AppCoordinator : ObservableObject
     public void SwitchToVideoPoker()
     {
         PauseTimer(ActiveViewModel);
+        // A finished hand still sitting in Result phase (e.g. left mid-banner on a
+        // previous visit) resets the board instead of showing — and replaying the
+        // banner for — a round that's already over.
+        VideoPokerViewModel.ResetIfRoundOver();
         ActiveViewModel = VideoPokerViewModel;
         SaveLastMode("VideoPoker");
         OnPropertyChanged(nameof(CanUndo));

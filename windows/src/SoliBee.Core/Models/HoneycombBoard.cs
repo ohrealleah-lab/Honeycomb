@@ -49,7 +49,10 @@ public class HoneycombBoard
                 clone.Cells[i].Card = new HoneycombCard(c.Data, c.Owner)
                 {
                     Modifier = c.Modifier,
-                    OriginalOwner = c.OriginalOwner
+                    OriginalOwner = c.OriginalOwner,
+                    UniqueInstanceId = c.UniqueInstanceId,
+                    IsFaceDown = c.IsFaceDown,
+                    BombShelterTurnsRemaining = c.BombShelterTurnsRemaining
                 };
             }
         }
@@ -96,6 +99,19 @@ public class HoneycombBoard
         return ResolveCaptures(index, ruleClone, isCombo: false);
     }
 
+    // AscensionDescensionSuits is stored as full suit names ("Spades", "Hearts", ...)
+    // for display in the rules banner, but HoneycombCardData.Suit uses single-letter
+    // codes ("S", "H", "D", "C") — normalize both to the same form before comparing,
+    // otherwise the two never match and Ascension/Descension never trigger.
+    private static string NormalizeSuit(string suit) => suit switch
+    {
+        "S" => "Spades",
+        "H" => "Hearts",
+        "D" => "Diamonds",
+        "C" => "Clubs",
+        _ => suit
+    };
+
     private void UpdateModifiers(HashSet<HoneycombRule> rules)
     {
         bool ascension = rules.Contains(HoneycombRule.Ascension);
@@ -109,15 +125,19 @@ public class HoneycombBoard
             return;
         }
 
+        var targetSuits = new HashSet<string>(AscensionDescensionSuits.Select(NormalizeSuit));
+
         var suitCounts = new Dictionary<string, int>();
-        foreach (var suit in AscensionDescensionSuits)
+        foreach (var suit in targetSuits)
             suitCounts[suit] = 0;
 
         foreach (var cell in Cells)
         {
-            if (!cell.IsEmpty && AscensionDescensionSuits.Contains(cell.Card!.Data.Suit))
+            if (!cell.IsEmpty)
             {
-                suitCounts[cell.Card.Data.Suit]++;
+                var suit = NormalizeSuit(cell.Card!.Data.Suit);
+                if (targetSuits.Contains(suit))
+                    suitCounts[suit]++;
             }
         }
 
@@ -125,9 +145,10 @@ public class HoneycombBoard
         {
             if (cell.IsEmpty) continue;
 
-            if (AscensionDescensionSuits.Contains(cell.Card!.Data.Suit))
+            var suit = NormalizeSuit(cell.Card!.Data.Suit);
+            if (targetSuits.Contains(suit))
             {
-                int count = suitCounts[cell.Card.Data.Suit];
+                int count = suitCounts[suit];
                 if (ascension)
                     cell.Card.Modifier = count;
                 else if (descension)

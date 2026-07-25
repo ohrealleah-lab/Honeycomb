@@ -36,16 +36,14 @@ struct HoneycombTouchView: View {
     // so gesture locations and tracked frames stay consistent in intrinsic units.
     private static let dragSpace = "honeycombDragSpace"
     @State private var cellFrames: [Int: CGRect] = [:]
-    @State private var handFrames: [String: CGRect] = [:]
     @State private var dragHandCard: HoneycombCard? = nil
-    @State private var dragStealBoardIndex: Int? = nil
     @State private var dragLocation: CGPoint = .zero
     @State private var dragOffset: CGSize = .zero
 
     @State private var selectedHandCardId: String? = nil
+    // "Steal Card" mode: double-tap an eligible captured opponent card on the board
+    // to steal it straight into the card bank.
     @State private var isStealingCard = false
-    @State private var stealBoardIndex: Int? = nil
-    @State private var showRematchPrompt = false
     @State private var isMenuOpen = false
     @State private var showingStats = false
     @State private var showNoHintsBanner = false
@@ -91,12 +89,12 @@ struct HoneycombTouchView: View {
 
             flashBanners
 
-            if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner && !showRematchPrompt {
-                postGameOverlay
+            if isStealingCard {
+                stealInstructionBar
             }
 
-            if showRematchPrompt {
-                rematchPrompt
+            if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner {
+                postGameOverlay
             }
 
             SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator) {
@@ -118,28 +116,18 @@ struct HoneycombTouchView: View {
             guard let text = viewModel.flashRuleBanner else { return }
             flashRuleBanner(text)
         }
-        .alert("Swap Not Allowed", isPresented: .init(
-            get: { viewModel.swapValidationError != nil },
-            set: { if !$0 { viewModel.swapValidationError = nil } }
+        .alert("Are you sure you want to steal this card?", isPresented: .init(
+            get: { viewModel.pendingSteal != nil },
+            set: { if !$0 { viewModel.cancelPendingSteal() } }
         )) {
-            Button("OK", role: .cancel) { viewModel.swapValidationError = nil }
-        } message: {
-            Text(viewModel.swapValidationError ?? "")
-        }
-        .alert("Take This Card?", isPresented: .init(
-            get: { viewModel.pendingSwap != nil },
-            set: { if !$0 { viewModel.cancelPendingSwap() } }
-        )) {
-            Button("Take \(viewModel.pendingSwap?.incomingCardName ?? "Card")") {
-                viewModel.confirmPendingSwap()
+            Button("Cancel", role: .cancel) { viewModel.cancelPendingSteal() }
+            Button("OK") {
+                viewModel.confirmPendingSteal()
                 isStealingCard = false
-                stealBoardIndex = nil
-                showRematchPrompt = true
-            }
-            Button("Cancel", role: .cancel) { viewModel.cancelPendingSwap() }
-        } message: {
-            if let swap = viewModel.pendingSwap {
-                Text("Trade \(swap.outgoingCardName) for \(swap.incomingCardName)?")
+                // Falls straight back to the win overlay (still gameOver/
+                // showPostGamePrompt, nothing else hides it) rather than a separate
+                // Rematch/New Game prompt — its title switches to the steal
+                // confirmation since Take a Card is now gone.
             }
         }
     }
@@ -391,21 +379,16 @@ struct HoneycombTouchView: View {
                 let highlightIndices: Set<Int> = viewModel.pointHighlight?.cardId == card.id
                     ? viewModel.pointHighlight!.statIndices
                     : []
-                let stealDraggable = viewModel.showPostGamePrompt
-                    && card.originalOwner == .opponent && card.owner == .player
-                    && !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id)
                 HoneycombCardView(card: card, size: Self.boardCardSize, isFlipped: false,
                                   stealHighlight: stealEligible, highlightedStatIndices: highlightIndices)
-                    .opacity(dragStealBoardIndex == index ? 0 : 1)
-                    .gesture(stealDraggable ? stealDragGesture(index: index) : nil)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.white, lineWidth: stealBoardIndex == index ? 4 : 0)
-                    )
             }
         }
         .modifier(TouchHintHighlight(isHighlighted: viewModel.activeHint?.boardIndex == index))
         .onTapGesture { handleBoardTap(index: index, cell: cell) }
+        // Steal mode: double-tap an eligible captured opponent card to steal it
+        // straight into the card bank — a single step to the confirmation alert, no
+        // hand-slot target needed.
+        .onTapGesture(count: 2) { handleBoardDoubleTap(index: index, cell: cell) }
         .background(
             GeometryReader { geo in
                 Color.clear
@@ -425,11 +408,14 @@ struct HoneycombTouchView: View {
                 selectedHandCardId = nil
                 placementHaptic.impactOccurred()
             }
-        } else if isStealingCard, viewModel.showPostGamePrompt, viewModel.gameState == .gameOver,
-                  cell.card?.originalOwner == .opponent, cell.card?.owner == .player,
-                  let cardId = cell.card?.data.id, !HoneycombProfileManager.shared.unlockedCardIds.contains(cardId) {
-            stealBoardIndex = index
         }
+    }
+
+    private func handleBoardDoubleTap(index: Int, cell: HoneycombCell) {
+        guard isStealingCard, viewModel.showPostGamePrompt, viewModel.gameState == .gameOver,
+              cell.card?.originalOwner == .opponent, cell.card?.owner == .player,
+              let cardId = cell.card?.data.id, !HoneycombProfileManager.shared.unlockedCardIds.contains(cardId) else { return }
+        viewModel.requestSteal(boardIndex: index)
     }
 
     // MARK: Hand cards
@@ -450,10 +436,6 @@ struct HoneycombTouchView: View {
                     if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
                         selectedHandCardId = selectedHandCardId == card.id ? nil : card.id
                         selectionHaptic.impactOccurred()
-                    } else if isStealingCard, viewModel.showPostGamePrompt, viewModel.gameState == .gameOver,
-                              let boardIdx = stealBoardIndex,
-                              let replaceIdx = viewModel.playerStartingDeck.firstIndex(where: { $0.id == card.id }) {
-                        viewModel.requestSwap(boardIndex: boardIdx, replaceHandIndex: replaceIdx)
                     }
                 }
                 .opacity(dragHandCard?.id == card.id ? 0 : 1)
@@ -477,15 +459,6 @@ struct HoneycombTouchView: View {
                 // Lift the selected card slightly so the two-tap flow reads clearly.
                 .offset(y: selectedHandCardId == card.id ? -10 : 0)
                 .animation(.spring(response: 0.25, dampingFraction: 0.7), value: selectedHandCardId)
-                .background(
-                    GeometryReader { geo in
-                        Color.clear
-                            .onAppear { handFrames[card.id] = geo.frame(in: .named(Self.dragSpace)) }
-                            .onChange(of: geo.frame(in: .named(Self.dragSpace))) { _, newFrame in
-                                handFrames[card.id] = newFrame
-                            }
-                    }
-                )
         }
     }
 
@@ -514,29 +487,6 @@ struct HoneycombTouchView: View {
             }
     }
 
-    private func stealDragGesture(index: Int) -> some Gesture {
-        DragGesture(minimumDistance: 5, coordinateSpace: .named(Self.dragSpace))
-            .onChanged { val in
-                if dragStealBoardIndex == nil {
-                    dragStealBoardIndex = index
-                    dragLocation = val.startLocation
-                    selectionHaptic.impactOccurred()
-                }
-                dragOffset = val.translation
-            }
-            .onEnded { _ in
-                defer { clearDrag() }
-                guard let boardIdx = dragStealBoardIndex,
-                      viewModel.showPostGamePrompt, viewModel.gameState == .gameOver else { return }
-                let release = CGPoint(x: dragLocation.x + dragOffset.width,
-                                      y: dragLocation.y + dragOffset.height)
-                guard let (cardId, _) = handFrames.first(where: { $0.value.insetBy(dx: -10, dy: -10).contains(release) }),
-                      let replaceIdx = viewModel.playerStartingDeck.firstIndex(where: { $0.id == cardId }) else { return }
-                viewModel.requestSwap(boardIndex: boardIdx, replaceHandIndex: replaceIdx)
-                placementHaptic.impactOccurred()
-            }
-    }
-
     private func dropCellIndex() -> Int? {
         let release = CGPoint(x: dragLocation.x + dragOffset.width,
                               y: dragLocation.y + dragOffset.height)
@@ -552,7 +502,6 @@ struct HoneycombTouchView: View {
 
     private func clearDrag() {
         dragHandCard = nil
-        dragStealBoardIndex = nil
         dragOffset = .zero
     }
 
@@ -562,12 +511,6 @@ struct HoneycombTouchView: View {
             HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: false)
                 .position(x: dragLocation.x + dragOffset.width,
                           y: dragLocation.y + dragOffset.height - Self.playerCardSize.height * 0.25)
-                .shadow(radius: 10, y: 5)
-                .allowsHitTesting(false)
-        } else if let index = dragStealBoardIndex, let card = viewModel.board.cells[index].card {
-            HoneycombCardView(card: card, size: Self.boardCardSize, isFlipped: false)
-                .position(x: dragLocation.x + dragOffset.width,
-                          y: dragLocation.y + dragOffset.height - Self.boardCardSize.height * 0.25)
                 .shadow(radius: 10, y: 5)
                 .allowsHitTesting(false)
         }
@@ -664,7 +607,13 @@ struct HoneycombTouchView: View {
                         .font(.system(size: 30, weight: .black))
                         .foregroundColor(.yellow)
                 } else {
-                    Text(viewModel.matchResult)
+                    // The win overlay reappears after a steal is confirmed (Take a
+                    // Card is now gone, since hasStolenThisMatch is true) — a repeat
+                    // "You Win!" would read as stale, so it confirms what just
+                    // happened instead.
+                    let title = (viewModel.matchResult == "You Win!" && viewModel.hasStolenThisMatch)
+                        ? "Card Added to Card Bank." : viewModel.matchResult
+                    Text(title)
                         .font(.system(size: 44, weight: .bold))
                         .foregroundColor(viewModel.matchResult == "You Win!" ? .yellow : .white)
                 }
@@ -734,36 +683,25 @@ struct HoneycombTouchView: View {
         }
     }
 
-    private var rematchPrompt: some View {
-        ZStack {
-            Color.black.opacity(0.45).ignoresSafeArea()
-            VStack(spacing: 16) {
-                Text("Card taken!")
-                    .font(.title.bold())
-                    .foregroundStyle(.yellow)
-                Button {
-                    showRematchPrompt = false
-                    viewModel.rematch()
-                } label: {
-                    Label("Rematch", systemImage: "arrow.counterclockwise")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                Button {
-                    showRematchPrompt = false
-                    viewModel.startNewGame()
-                } label: {
-                    Label("New Match", systemImage: "play.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .tint(.white)
+    private var stealInstructionBar: some View {
+        VStack(spacing: 12) {
+            Text("Double-tap a captured opponent's card\non the board to steal it.")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+            Button("Cancel") {
+                isStealingCard = false
             }
-            .frame(maxWidth: 260)
-            .padding(28)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
         }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
+        .background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
+        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(.top, 60)
     }
+
 }
 
 // MARK: - Settings section shown inside the slide-down menu

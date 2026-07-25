@@ -17,6 +17,14 @@ public final class AppCoordinator {
             case .spider:     spiderViewModel.stopTimer()
             case .videoPoker, .blackjack, .honeycomb: break
             }
+            // Entering Poker/Blackjack with a finished round still sitting in .result
+            // (e.g. left mid-banner on a previous visit) resets the board instead of
+            // showing — and replaying the banner for — a round that's already over.
+            switch gameMode {
+            case .videoPoker: videoPokerViewModel.resetIfRoundOver()
+            case .blackjack:  blackjackViewModel.resetIfRoundOver()
+            default: break
+            }
             syncSharedOptions(from: oldValue, to: gameMode)
             #if canImport(AppKit)
             applyWindowSizeForCurrentGameMode()

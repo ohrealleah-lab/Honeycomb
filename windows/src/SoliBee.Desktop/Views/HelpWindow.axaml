@@ -428,7 +428,7 @@
                         <StackPanel Spacing="4">
                             <TextBlock Text="Bomb Shelter" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="The first card a player plays remains face down, unknown to the opponent. At the end of game, the face down cards get flipped. The starting player’s card gets exposed first. Cannot trigger combos."/>
+                                       Text="The first card a player plays remains face down, unknown to the opponent — a timed landmine rather than a permanent secret. It flips automatically 3 turns after it's played (any card played by either side counts toward that), or immediately once the board fills if it hasn't already. Cannot trigger combos. Never appears alongside All Open/Three Open, since a hidden card is meaningless once every card is already revealed."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Text="Sudden Death" Classes="help-heading"/>
@@ -448,7 +448,7 @@
                         <StackPanel Spacing="4">
                             <TextBlock Text="Card Bank &amp; Decks" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Winning a card isn't automatic — after a win, you may drag one card the dealer played that round onto one of your 5 active deck slots, permanently unlocking it into your Card Bank. This steal is capped at one per match; Rematch (or start a new match) to steal again. Build named decks from Manage Decks, subject to rarity caps: at most one 5★ card, and at most one 4★ if a 5★ is already in the deck (otherwise up to two 4★)."/>
+                                       Text="Winning a card isn't automatic — after a win, double-click one eligible card the dealer played that round to steal it straight into your Card Bank (your active deck is untouched). This steal is capped at one per match; Rematch (or start a new match) to steal again. Build named decks from Manage Decks, subject to rarity caps: at most one 5★ card, and at most one 4★ if a 5★ is already in the deck (otherwise up to two 4★)."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Text="No Stress Mode" Classes="help-heading"/>

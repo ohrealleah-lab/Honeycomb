@@ -40,7 +40,6 @@
                         <Button x:Name="OptionsButton" Content="Options" Click="Preferences_Click" Classes="toolbar" />
                         <Button x:Name="HoneycombRulesButton" Content="Rules" Click="HoneycombRules_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="HoneycombManageDecksButton" Content="Manage Decks" Click="ManageDecks_Click" Classes="toolbar" IsVisible="False" />
-                        <Button x:Name="HoneycombSaveDeckButton" Content="Save Deck" Click="HoneycombSaveDeck_Click" Classes="toolbar" IsVisible="False" />
                         <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
                         <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
                                   SelectionChanged="PokerVariantBox_SelectionChanged">
@@ -216,7 +215,11 @@
                 <Grid x:Name="ManageDecksInset" Margin="20">
                     <Border x:Name="ManageDecksPanel" Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="{Binding #ManageDecksInset.Bounds.Height}" MaxWidth="{Binding #ManageDecksInset.Bounds.Width}" BoxShadow="0 4 20 0 #A0000000">
                         <Grid RowDefinitions="Auto,*,Auto">
-                            <TextBlock Grid.Row="0" Text="Manage Decks" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" Margin="0,0,0,15" />
+                            <Grid Grid.Row="0" Margin="0,0,0,15">
+                                <TextBlock Text="Manage Decks" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
+                                <Button Content="Honeycomb Help" Classes="light-secondary" Click="HoneycombHelp_Click"
+                                        HorizontalAlignment="Right" FontSize="12" Padding="10,4" />
+                            </Grid>
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                 <ContentControl x:Name="ManageDecksContent" />
                             </ScrollViewer>

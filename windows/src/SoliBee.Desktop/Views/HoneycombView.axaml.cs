@@ -27,9 +27,7 @@ public partial class HoneycombView : UserControl
     private bool _isKeyboardCursorActive = false;
 
     private bool _isStealingCard = false;
-    private int? _stealBoardIndex_Legacy = null;
     private bool _overlayDismissed = false;
-    private bool _showRematchPrompt = false;
     private bool _bannerActive = false;
 
     private int _lastEmptyCells = 9;
@@ -40,7 +38,6 @@ public partial class HoneycombView : UserControl
     private Point? _dragStartPoint;
     private bool _isDragging;
     private int _dragHandIndex = -1;        // which hand card is being dragged
-    private int _dragBoardIndex = -1;       // which board card is being dragged (steal mode)
     private Border? _dragGhost;             // floating ghost card shown during drag
     private Canvas? _dragCanvas;            // top-level overlay canvas
 
@@ -112,7 +109,8 @@ public partial class HoneycombView : UserControl
     {
         Dispatcher.UIThread.Post(() => {
             _bannerActive = true;
-            RuleToast.Flash(message);
+            var duration = message.StartsWith("First Move:") ? TimeSpan.FromSeconds(2) : (TimeSpan?)null;
+            RuleToast.Flash(message, duration);
         });
     }
 
@@ -146,7 +144,10 @@ public partial class HoneycombView : UserControl
             OverlayLoseTitle.IsVisible = false;
             
             if (state.PlayerScore > state.OpponentScore) {
-                OverlayTitle.Text = "You Win!";
+                // The win overlay reappears after a steal is confirmed (Steal Card is
+                // now gone, since HasStolenThisMatch is true) — a repeat "You Win!" would
+                // read as stale, so it confirms what just happened instead.
+                OverlayTitle.Text = state.HasStolenThisMatch ? "Card Added to Card Bank." : "You Win!";
             } else if (state.PlayerScore < state.OpponentScore) {
                 OverlayTitle.IsVisible = false;
                 OverlayLoseTitle.IsVisible = true;
@@ -187,27 +188,10 @@ public partial class HoneycombView : UserControl
         
         StealInstructionBar.IsVisible = _isStealingCard;
         RulesBannerBar.IsVisible = !_isStealingCard;
-        if (_isStealingCard)
-        {
-            StealInstructionText.Text = _stealBoardIndex_Legacy.HasValue
-                ? "Now tap one of your hand cards to replace it with the stolen card."
-                : "Drag and drop a captured opponent’s card on the board to steal it.";
-        }
-        
-        RematchPromptPanel.IsVisible = _showRematchPrompt;
-        
-        SwapConfirmationPanel.IsVisible = vm.PendingSwap != null || vm.SwapValidationError != null;
-        if (vm.SwapValidationError != null)
-        {
-            SwapErrorText.Text = vm.SwapValidationError;
-            SwapErrorText.IsVisible = true;
-        }
-        else
-        {
-            SwapErrorText.IsVisible = false;
-        }
-        
-        OverlayPanel.IsVisible = !vm.IsPlaying && state.Phase == HoneycombPhase.Result && !_isStealingCard && !_overlayDismissed && !_showRematchPrompt && !_bannerActive;
+
+        StealConfirmationPanel.IsVisible = vm.PendingSteal != null;
+
+        OverlayPanel.IsVisible = !vm.IsPlaying && state.Phase == HoneycombPhase.Result && !_isStealingCard && !_overlayDismissed && !_bannerActive;
         
         List<string> ruleNames;
         if (vm.IsPlaying)
@@ -327,30 +311,11 @@ public partial class HoneycombView : UserControl
             {
                 await _boardCards[i].RenderCard(cell.Card, faceDown: cell.Card!.IsFaceDown, hIdx: -1, cIdx: i);
                 
-                // Highlight if selected for Stealing
-                if (_isStealingCard)
-                {
-                    if (_stealBoardIndex_Legacy == i)
-                    {
-                        _boardCells[i].Background = new SolidColorBrush(Color.Parse("#80FFFFFF"));
-                        _boardCards[i].StealHighlight = false;
-                    }
-                    else if (cell.Card != null && cell.Card.OriginalOwner == -1 && cell.Card.Owner == 1 && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(cell.Card.Data.Id))
-                    {
-                        _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));
-                        _boardCards[i].StealHighlight = true;
-                    }
-                    else
-                    {
-                        _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));
-                        _boardCards[i].StealHighlight = false;
-                    }
-                }
-                else
-                {
-                    _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));
-                    _boardCards[i].StealHighlight = false;
-                }
+                // Highlight cards eligible to be double-clicked and stolen
+                _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));
+                _boardCards[i].StealHighlight = _isStealingCard
+                    && cell.Card != null && cell.Card.OriginalOwner == -1 && cell.Card.Owner == 1
+                    && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(cell.Card.Data.Id);
             }
         }
         
@@ -391,23 +356,12 @@ public partial class HoneycombView : UserControl
                 }
             }
         }
-        else if (_isStealingCard && _vm.State.Phase == HoneycombPhase.Result)
-        {
-            if (args.handIndex >= 0 && args.cellIndex == -1 && _playerHandViews.Contains(sender))
-            {
-                if (_stealBoardIndex_Legacy.HasValue)
-                {
-                    _vm.RequestSwap(_stealBoardIndex_Legacy.Value, args.handIndex);
-                    Refresh(_vm);
-                }
-            }
-        }
     }
 
     private void Cell_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_vm == null) return;
-        
+
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && sender is Border b && b.Tag is int cellIndex)
         {
             if (_vm.IsPlaying && _vm.State.CurrentTurn == 1)
@@ -421,66 +375,58 @@ public partial class HoneycombView : UserControl
         }
     }
 
+    // Steal mode: double-click an eligible captured opponent card on the board to
+    // steal it — a single step straight to the confirmation dialog, since stealing no
+    // longer targets a hand slot to replace.
     private void BoardCard_Clicked(object? sender, PointerPressedEventArgs e)
     {
         if (_vm == null) return;
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && sender is HoneycombCardView cardView)
+        var point = e.GetCurrentPoint(this);
+        if (point.Properties.IsLeftButtonPressed && e.ClickCount == 2 && sender is HoneycombCardView cardView)
         {
             int cellIndex = Array.IndexOf(_boardCards, cardView);
-            if (cellIndex >= 0)
+            if (cellIndex >= 0 && _isStealingCard && _vm.State.Phase == HoneycombPhase.Result)
             {
-                if (_isStealingCard && _vm.State.Phase == HoneycombPhase.Result)
-                {
-                    var card = _vm.State.Board.Cells[cellIndex].Card;
-                    if (card != null && card.OriginalOwner == -1 && card.Owner == 1 && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Data.Id))
-                    {
-                        _stealBoardIndex_Legacy = cellIndex;
-                        Refresh(_vm);
-                    }
-                }
+                _vm.RequestSteal(cellIndex);
+                Refresh(_vm);
             }
         }
     }
 
-
-    
     private void StealCard_Click(object? sender, RoutedEventArgs e)
     {
         _isStealingCard = true;
-        _stealBoardIndex_Legacy = null;
         if (_vm != null) Refresh(_vm);
     }
-    
+
     private void CancelSteal_Click(object? sender, RoutedEventArgs e)
     {
         _isStealingCard = false;
-        _stealBoardIndex_Legacy = null;
         if (_vm != null) Refresh(_vm);
     }
-    
-    private void ConfirmSwap_Click(object? sender, RoutedEventArgs e)
+
+    private void ConfirmStealDialog_Click(object? sender, RoutedEventArgs e)
     {
         if (_vm != null) {
-            _vm.ConfirmPendingSwap();
+            _vm.ConfirmPendingSteal();
             _isStealingCard = false;
-            _stealBoardIndex_Legacy = null;
-            _showRematchPrompt = true;
+            // Falls straight back to the win overlay (still Result phase, nothing else
+            // hides it) rather than the separate Rematch/New Game prompt — its title
+            // switches to the steal confirmation below since Steal Card is now gone.
             Refresh(_vm);
         }
     }
-    
-    private void CancelSwap_Click(object? sender, RoutedEventArgs e)
+
+    private void CancelStealDialog_Click(object? sender, RoutedEventArgs e)
     {
-        _vm?.CancelPendingSwap();
+        _vm?.CancelPendingSteal();
         if (_vm != null) Refresh(_vm);
     }
 
     private void NewGame_Click(object? sender, RoutedEventArgs e)
     {
         _overlayDismissed = false;
-        _showRematchPrompt = false;
         _isStealingCard = false;
-        _stealBoardIndex_Legacy = null;
         if (_vm != null) {
             _vm.InitializeGame();
             SoundService.PlayShuffle();
@@ -490,9 +436,7 @@ public partial class HoneycombView : UserControl
     private void Rematch_Click(object? sender, RoutedEventArgs e)
     {
         _overlayDismissed = false;
-        _showRematchPrompt = false;
         _isStealingCard = false;
-        _stealBoardIndex_Legacy = null;
         if (_vm != null) {
             _vm.RestartGame();
             SoundService.PlayShuffle();
@@ -503,31 +447,6 @@ public partial class HoneycombView : UserControl
     {
         _overlayDismissed = true;
         OverlayPanel.IsVisible = false;
-    }
-    
-    private void CloseRematchPrompt_Click(object? sender, RoutedEventArgs e)
-    {
-        _showRematchPrompt = false;
-        _overlayDismissed = true;
-        if (_vm != null) Refresh(_vm);
-    }
-
-    private void RematchPrompt_Rematch_Click(object? sender, RoutedEventArgs e)
-    {
-        _showRematchPrompt = false;
-        if (_vm != null) {
-            _vm.RestartGame();
-            SoundService.PlayShuffle();
-        }
-    }
-
-    private void RematchPrompt_NewGame_Click(object? sender, RoutedEventArgs e)
-    {
-        _showRematchPrompt = false;
-        if (_vm != null) {
-            _vm.InitializeGame();
-            SoundService.PlayShuffle();
-        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -559,9 +478,6 @@ public partial class HoneycombView : UserControl
         // Board cards: pointer-capture drag to hand slots (steal mode) + click
         foreach (var bc in _boardCards)
         {
-            bc.PointerPressed  += Drag_PointerPressed;
-            bc.PointerMoved    += Drag_PointerMoved;
-            bc.PointerReleased += Drag_PointerReleased;
             bc.PointerPressed  += BoardCard_Clicked;
         }
     }
@@ -579,25 +495,8 @@ public partial class HoneycombView : UserControl
             {
                 _dragStartPoint = e.GetPosition(this);
                 _dragHandIndex  = handIdx;
-                _dragBoardIndex = -1;
                 _isDragging     = false; // becomes true once we exceed threshold in Moved
                 e.Pointer.Capture(hv);
-            }
-        }
-        else if (sender is HoneycombCardView bc && _boardCards.Contains(bc))
-        {
-            int cellIdx = Array.IndexOf(_boardCards, bc);
-            if (cellIdx >= 0 && _isStealingCard && _vm.State.Phase == HoneycombPhase.Result
-                && !_vm.State.Board.Cells[cellIdx].IsEmpty
-                && _vm.State.Board.Cells[cellIdx].Card?.Owner == 1
-                && _vm.State.Board.Cells[cellIdx].Card?.OriginalOwner == -1
-                && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(_vm.State.Board.Cells[cellIdx].Card!.Data.Id))
-            {
-                _dragStartPoint = e.GetPosition(this);
-                _dragBoardIndex = cellIdx;
-                _dragHandIndex  = -1;
-                _isDragging     = false;
-                e.Pointer.Capture(bc);
             }
         }
     }
@@ -648,17 +547,6 @@ public partial class HoneycombView : UserControl
             }
             _dragHandIndex = -1;
         }
-        else if (_dragBoardIndex >= 0)
-        {
-            // Steal mode: dropped on a player hand slot?
-            int dropHand = HitTestPlayerHandSlot(dropPos);
-            if (dropHand >= 0 && _isStealingCard && _vm.State.Phase == HoneycombPhase.Result)
-            {
-                _vm.RequestSwap(_dragBoardIndex, dropHand);
-                if (_vm != null) Refresh(_vm);
-            }
-            _dragBoardIndex = -1;
-        }
     }
 
     // Returns the board cell index (0–8) that contains the point, or -1.
@@ -669,19 +557,6 @@ public partial class HoneycombView : UserControl
             var origin = _boardCells[i].TranslatePoint(new Point(0, 0), this);
             if (!origin.HasValue) continue;
             var r = new Rect(origin.Value, _boardCells[i].Bounds.Size);
-            if (r.Contains(p)) return i;
-        }
-        return -1;
-    }
-
-    // Returns the player hand slot index (0–4) that contains the point, or -1.
-    private int HitTestPlayerHandSlot(Point p)
-    {
-        for (int i = 0; i < _playerHandViews.Length; i++)
-        {
-            var origin = _playerHandViews[i].TranslatePoint(new Point(0, 0), this);
-            if (!origin.HasValue) continue;
-            var r = new Rect(origin.Value, _playerHandViews[i].Bounds.Size);
             if (r.Contains(p)) return i;
         }
         return -1;
@@ -710,10 +585,6 @@ public partial class HoneycombView : UserControl
         if (_dragHandIndex >= 0 && _dragHandIndex < _vm.State.PlayerHand.Count)
         {
             cardToRender = _vm.State.PlayerHand[_dragHandIndex];
-        }
-        else if (_dragBoardIndex >= 0 && !_vm.State.Board.Cells[_dragBoardIndex].IsEmpty)
-        {
-            cardToRender = _vm.State.Board.Cells[_dragBoardIndex].Card;
         }
 
         if (cardToRender != null)
@@ -795,7 +666,7 @@ public partial class HoneycombView : UserControl
         {
             case Key.Escape:
                 if (_isStealingCard) CancelSteal_Click(null, new RoutedEventArgs());
-                else if (_selectedHandIndex != -1) CancelSwap_Click(null, new RoutedEventArgs());
+                else if (_selectedHandIndex != -1) { _selectedHandIndex = -1; Refresh(vm); }
                 e.Handled = true;
                 break;
             case Key.Up:    MoveCursor(-1, 0); e.Handled = true; break;
@@ -857,15 +728,9 @@ public partial class HoneycombView : UserControl
         
         if (_cursorZone == CursorZone.PlayerHand)
         {
-            if (_cursorIndex < _vm.State.PlayerHand.Count && _stealBoardIndex_Legacy == null && !_isStealingCard)
+            if (_cursorIndex < _vm.State.PlayerHand.Count && !_isStealingCard)
             {
                 _selectedHandIndex = _cursorIndex;
-                Refresh(_vm);
-            }
-            else if (_stealBoardIndex_Legacy != null)
-            {
-                // Resolve swap
-                _vm.RequestSwap(_stealBoardIndex_Legacy.Value, _cursorIndex);
                 Refresh(_vm);
             }
         }
@@ -877,12 +742,12 @@ public partial class HoneycombView : UserControl
                 _selectedHandIndex = -1;
                 Refresh(_vm);
             }
-            else if (_isStealingCard && _stealBoardIndex_Legacy == null)
+            else if (_isStealingCard && _vm.State.Phase == HoneycombPhase.Result)
             {
                 var card = _vm.State.Board.Cells[_cursorIndex].Card;
                 if (card != null && card.OriginalOwner == -1 && card.Owner == 1 && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Data.Id))
                 {
-                    _stealBoardIndex_Legacy = _cursorIndex;
+                    _vm.RequestSteal(_cursorIndex);
                     Refresh(_vm);
                 }
             }

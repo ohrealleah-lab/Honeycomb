@@ -31,6 +31,11 @@ public struct HoneycombCard: Codable, Identifiable, Equatable {
     public var modifier: Int = 0
     public var isFaceDown: Bool = false
 
+    // Bomb Shelter: turns left until this face-down card flips automatically. Set to 3
+    // when placed face-down, decremented once per subsequent play (either side), and
+    // cleared (nil) once revealed — nil means "not a timed Bomb Shelter card".
+    public var bombShelterTurnsRemaining: Int? = nil
+
     // originalOwner defaults to owner (the normal case), but the "Swap" rule needs to
     // construct a card whose current holder (owner, for battle purposes) differs from
     // its true owner (originalOwner) — it's played by whoever it was swapped to, but

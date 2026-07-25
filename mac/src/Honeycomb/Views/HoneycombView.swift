@@ -50,21 +50,18 @@ public struct HoneycombView: View {
     // Mid-match (.playing/.suddenDeath) the toolbar only ever shows Quit Match/
     // Options/Undo — no more buttons than Klondike's — so it uses that same shared
     // 830pt threshold. Outside a match, the button count varies (Start Match, Options,
-    // Manage Decks, plus Rematch and/or Save Deck when those are actually available),
-    // so only bump up to the wider 1100pt threshold when one of those extra buttons is
-    // actually showing — otherwise it's no busier than the in-match toolbar and 830 is
-    // just as accurate, instead of staying needlessly compact at widths that fit fine.
+    // Manage Decks, plus Rematch when available), so only bump up to the wider 1100pt
+    // threshold when that extra button is actually showing — otherwise it's no busier
+    // than the in-match toolbar and 830 is just as accurate, instead of staying
+    // needlessly compact at widths that fit fine.
     private var compactToolbarWidthThreshold: CGFloat {
         switch viewModel.gameState {
         case .playing, .suddenDeath:
             return 830
         case .gameOver:
-            let showsRematch = viewModel.canRematch
-            let showsSaveDeck = viewModel.hasUnsavedActiveDeck && !viewModel.options.noStressMode
-            return (showsRematch || showsSaveDeck) ? 1100 : 830
+            return viewModel.canRematch ? 1100 : 830
         default: // .setup
-            let showsSaveDeck = viewModel.hasUnsavedActiveDeck && !viewModel.options.noStressMode
-            return showsSaveDeck ? 1100 : 830
+            return 830
         }
     }
 
@@ -75,8 +72,6 @@ public struct HoneycombView: View {
     @State private var showingStats = false
     @State private var showingOptions = false
     @State private var showingRules = false
-
-    @State private var draggingOpponentCardIndex: Int? = nil
 
     // Custom drag state for playing cards — keyed by the card's own stable id
     // (not array position), since playerHand/opponentHand shrink as cards are
@@ -92,7 +87,6 @@ public struct HoneycombView: View {
     @State private var showNoHintsBanner = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
 
-    @State private var isShowingSaveDeckConfirm = false
     @State private var isShowingNewGameConfirm = false
     @State private var isShowingRematchConfirm = false
 
@@ -101,16 +95,9 @@ public struct HoneycombView: View {
     // view's frame across any parent within the same namespace.
     @Namespace private var swapAnimationNamespace
 
-    // "Steal Card" click-to-select flow: pick an opponent card on the board, then
-    // one of your own hand cards to replace with it.
+    // "Steal Card" mode: double-click an eligible captured opponent card on the board
+    // to steal it straight into the card bank.
     @State private var isStealingCard = false
-    @State private var stealBoardIndex: Int? = nil
-
-    // Shown right after a steal is confirmed, instead of auto-starting a new match —
-    // forces the player to explicitly choose Rematch (same opponent, another steal
-    // attempt) or New Game (fresh opponent), rather than looping straight back into
-    // another free steal off the same board.
-    @State private var showRematchPrompt = false
 
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
@@ -178,11 +165,11 @@ public struct HoneycombView: View {
                         ) { showingRules = true }
                     }
 
-                    // Manage Decks/Save Deck are shown for .setup *and* .gameOver — the
-                    // match is already over at that point (same "match in progress"
-                    // boundary Options' disabled state above uses), so there's no more
-                    // Undo to offer and these become relevant again rather than staying
-                    // hidden until the player explicitly quits back to .setup.
+                    // Manage Decks is shown for .setup *and* .gameOver — the match is
+                    // already over at that point (same "match in progress" boundary
+                    // Options' disabled state above uses), so there's no more Undo to
+                    // offer and it becomes relevant again rather than staying hidden
+                    // until the player explicitly quits back to .setup.
                     if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
                         // Never shown on Ultra Hard — that difficulty is meant to stay
                         // fully self-directed, no optimal-move assistance.
@@ -212,13 +199,6 @@ public struct HoneycombView: View {
                             label: "Manage Decks", systemImage: "square.grid.2x2",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold
                         ) { showingDecks = true }
-
-                        if viewModel.hasUnsavedActiveDeck && !viewModel.options.noStressMode {
-                            GameToolbarButton(
-                                label: "Save Deck", systemImage: "tray.and.arrow.down",
-                                isCompact: toolbarWidth < compactToolbarWidthThreshold
-                            ) { isShowingSaveDeckConfirm = true }
-                        }
                     }
                     
                     Spacer()
@@ -302,19 +282,6 @@ public struct HoneycombView: View {
                                                     ? viewModel.pointHighlight!.statIndices
                                                     : []
                                                 HoneycombCardView(card: card, size: Self.boardCardSize, isFlipped: false, stealHighlight: stealEligible, highlightedStatIndices: highlightIndices)
-                                                    // Post-game Swap Drag Source
-                                                    .onDrag {
-                                                        if viewModel.showPostGamePrompt, card.originalOwner == .opponent, card.owner == .player,
-                                                           !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id) {
-                                                            draggingOpponentCardIndex = index
-                                                            return NSItemProvider(object: "\(index)" as NSString)
-                                                        }
-                                                        return NSItemProvider()
-                                                    }
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: 10)
-                                                            .stroke(Color.white, lineWidth: stealBoardIndex == index ? 4 : 0)
-                                                    )
                                             }
                                         }
                                         .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.boardIndex == index))
@@ -329,10 +296,16 @@ public struct HoneycombView: View {
                                                 if viewModel.playerPlayCard(handIndex: handIdx, boardIndex: index) {
                                                     selectedHandCardId = nil
                                                 }
-                                            } else if isStealingCard, viewModel.showPostGamePrompt, viewModel.gameState == .gameOver,
-                                                      cell.card?.originalOwner == .opponent, cell.card?.owner == .player,
-                                                      let cardId = cell.card?.data.id, !HoneycombProfileManager.shared.unlockedCardIds.contains(cardId) {
-                                                stealBoardIndex = index
+                                            }
+                                        }
+                                        // Steal mode: double-click an eligible captured opponent card to
+                                        // steal it straight into the card bank — a single step to the
+                                        // confirmation alert, no hand-slot target needed.
+                                        .onTapGesture(count: 2) {
+                                            if isStealingCard, viewModel.showPostGamePrompt, viewModel.gameState == .gameOver,
+                                               cell.card?.originalOwner == .opponent, cell.card?.owner == .player,
+                                               let cardId = cell.card?.data.id, !HoneycombProfileManager.shared.unlockedCardIds.contains(cardId) {
+                                                viewModel.requestSteal(boardIndex: index)
                                             }
                                         }
                                         .onDrop(of: [.plainText], isTargeted: nil) { providers in
@@ -406,7 +379,7 @@ public struct HoneycombView: View {
             // shown") catches that case that a same-move-only check would miss. Once
             // showingRuleBanner flips back to false, this condition re-evaluates on its
             // own and the overlay appears — no extra plumbing needed.
-            if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner && !showRematchPrompt {
+            if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner {
                 ZStack(alignment: .topTrailing) {
                     VStack {
                         if viewModel.matchResult == "You Lose" {
@@ -415,7 +388,12 @@ public struct HoneycombView: View {
                                 .font(.system(size: 36, weight: .black))
                                 .foregroundColor(.yellow)
                         } else if viewModel.matchResult == "You Win!" {
-                            Text(viewModel.matchResult).font(.system(size: 60, weight: .bold)).foregroundColor(.yellow)
+                            // The win overlay reappears after a steal is confirmed (Steal
+                            // Card is now gone, since hasStolenThisMatch is true) — a
+                            // repeat "You Win!" would read as stale, so it confirms what
+                            // just happened instead.
+                            Text(viewModel.hasStolenThisMatch ? "Card Added to Card Bank." : viewModel.matchResult)
+                                .font(.system(size: 60, weight: .bold)).foregroundColor(.yellow)
                         } else {
                             Text(viewModel.matchResult).font(.system(size: 60, weight: .bold)).foregroundColor(.white)
                         }
@@ -482,52 +460,6 @@ public struct HoneycombView: View {
                 .shadow(radius: 20)
             }
 
-            // Shown right after a steal is confirmed instead of the full post-game
-            // overlay reappearing — forces an explicit Rematch/New Game choice rather
-            // than letting the player loop straight into stealing another card off the
-            // same finished board. Dismissing (the "x") clears showPostGamePrompt too,
-            // so the player lands on the plain finished board — not back on the "You
-            // Win!" overlay they already acted on by stealing a card. Rematch/New Game
-            // both stay reachable from the toolbar if they want them.
-            if showRematchPrompt {
-                ZStack(alignment: .topTrailing) {
-                    VStack(spacing: 16) {
-                        Text("New Game?")
-                            .font(.system(size: 36, weight: .bold))
-                            .foregroundColor(.white)
-
-                        HStack {
-                            Button("Rematch") {
-                                showRematchPrompt = false
-                                viewModel.rematch()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.blue)
-
-                            Button("New Game") {
-                                showRematchPrompt = false
-                                viewModel.startNewGame()
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    }
-                    .padding(40)
-
-                    Button {
-                        showRematchPrompt = false
-                        viewModel.showPostGamePrompt = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(12)
-                }
-                .background(Color.black.opacity(0.8))
-                .cornerRadius(16)
-                .shadow(radius: 20)
-            }
 
             // Steal Card mode instruction bar has been moved to rulesBanner
             
@@ -577,8 +509,6 @@ public struct HoneycombView: View {
             // button, surrender, etc.), don't leave steal-card mode stuck active.
             if newState != .gameOver {
                 isStealingCard = false
-                stealBoardIndex = nil
-                showRematchPrompt = false
             }
         }
         .onChange(of: viewModel.flashRuleBannerTrigger) { _, _ in
@@ -593,42 +523,25 @@ public struct HoneycombView: View {
                     showingRuleBanner = false
                 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: task)
+            let duration = text.hasPrefix("First Move:") ? 2.0 : 1.2
+            DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: task)
             bannerTask = task
         }
         .alert(
-            "Swap Cards?",
+            "Are you sure you want to steal this card?",
             isPresented: Binding(
-                get: { viewModel.pendingSwap != nil },
-                set: { if !$0 { viewModel.cancelPendingSwap(); stealBoardIndex = nil } }
+                get: { viewModel.pendingSteal != nil },
+                set: { if !$0 { viewModel.cancelPendingSteal() } }
             )
         ) {
-            Button("Cancel", role: .cancel) { viewModel.cancelPendingSwap(); stealBoardIndex = nil }
-            Button("Swap") {
-                viewModel.confirmPendingSwap()
+            Button("Cancel", role: .cancel) { viewModel.cancelPendingSteal() }
+            Button("OK") {
+                viewModel.confirmPendingSteal()
                 isStealingCard = false
-                stealBoardIndex = nil
-                showRematchPrompt = true
+                // Falls straight back to the win overlay (still gameOver/showPostGamePrompt,
+                // nothing else hides it) rather than a separate Rematch/New Game prompt —
+                // its title switches to the steal confirmation since Steal Card is now gone.
             }
-        } message: {
-            Text("You will replace one card in your active deck with the stolen card. Your other cards are unaffected.")
-        }
-        .alert(
-            "Can't Steal That Card!",
-            isPresented: Binding(
-                get: { viewModel.swapValidationError != nil },
-                set: { if !$0 { viewModel.swapValidationError = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) { viewModel.swapValidationError = nil }
-        } message: {
-            Text(viewModel.swapValidationError ?? "")
-        }
-        .alert("Save Active Deck?", isPresented: $isShowingSaveDeckConfirm) {
-            Button("Cancel", role: .cancel) { }
-            Button("Save") { viewModel.persistActiveDeckToSlot(index: viewModel.options.activeDeckIndex) }
-        } message: {
-            Text("This will overwrite your active saved deck slot with the cards you currently have, including any swaps from post-match rewards.")
         }
         .confirmationDialog("Start a new match? Your current match will end.", isPresented: $isShowingNewGameConfirm) {
             Button("Cancel", role: .cancel) { }
@@ -762,16 +675,13 @@ public struct HoneycombView: View {
     private var rulesBanner: some View {
         if isStealingCard {
             VStack(spacing: 16) {
-                Text(stealBoardIndex == nil
-                     ? "Drag and drop a captured opponent's card\non the board to steal it."
-                     : "Now tap one of your own cards\nto replace with the stolen card.")
+                Text("Double-click a captured opponent's card\non the board to steal it.")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
 
                 Button("Cancel") {
                     isStealingCard = false
-                    stealBoardIndex = nil
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.blue)
@@ -854,10 +764,6 @@ public struct HoneycombView: View {
             .onTapGesture {
                 if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
                     selectedHandCardId = card.id
-                } else if isStealingCard, viewModel.showPostGamePrompt, viewModel.gameState == .gameOver,
-                          let boardIdx = stealBoardIndex,
-                          let replaceIdx = viewModel.playerStartingDeck.firstIndex(where: { $0.id == card.id }) {
-                    viewModel.requestSwap(boardIndex: boardIdx, replaceHandIndex: replaceIdx)
                 }
             }
             .onDrag {
@@ -885,15 +791,6 @@ public struct HoneycombView: View {
             // since activeHint is also nil post-game and `nil == nil` would otherwise
             // highlight every card in the hand instead of none of them.
             .modifier(HintHighlightModifier(isHighlighted: handIndex != nil && viewModel.activeHint?.handIndex == handIndex))
-            // Post-game Swap Drop Target
-            .onDrop(of: [.plainText], isTargeted: nil) { providers in
-                guard viewModel.showPostGamePrompt, viewModel.gameState == .gameOver else { return false }
-                guard let opponentIdx = draggingOpponentCardIndex,
-                      let replaceIdx = viewModel.playerStartingDeck.firstIndex(where: { $0.id == card.id }) else { return false }
-                viewModel.requestSwap(boardIndex: opponentIdx, replaceHandIndex: replaceIdx)
-                draggingOpponentCardIndex = nil
-                return true
-            }
     }
 
     @ViewBuilder
@@ -939,7 +836,6 @@ struct HoneycombOptionsView: View {
 
     @State private var isSoundEnabled: Bool
     @State private var noStressMode: Bool
-    @State private var favorNewCards: Bool
     @State private var showPointHighlights: Bool
     @State private var hideHintButton: Bool
     let availableWidth: CGFloat
@@ -954,7 +850,6 @@ struct HoneycombOptionsView: View {
         self.availableHeight = availableHeight
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
-        _favorNewCards = State(initialValue: viewModel.options.favorNewCards)
         _showPointHighlights = State(initialValue: viewModel.options.showPointHighlights)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
     }
@@ -970,7 +865,6 @@ struct HoneycombOptionsView: View {
                 var updatedOpts = viewModel.options
                 updatedOpts.isSoundEnabled = isSoundEnabled
                 updatedOpts.noStressMode = noStressMode
-                updatedOpts.favorNewCards = favorNewCards
                 updatedOpts.showPointHighlights = showPointHighlights
                 updatedOpts.hideHintButton = hideHintButton
                 viewModel.options = updatedOpts
@@ -981,15 +875,6 @@ struct HoneycombOptionsView: View {
 
             Toggle("No Stress Mode", isOn: $noStressMode)
                 .font(.system(.body))
-                .onChange(of: noStressMode) { _, isOn in
-                    if isOn { favorNewCards = false }
-                }
-
-            Toggle("Favor New Cards", isOn: $favorNewCards)
-                .font(.system(.body))
-                .onChange(of: favorNewCards) { _, isOn in
-                    if isOn { noStressMode = false }
-                }
 
             Toggle("Point Highlights", isOn: $showPointHighlights)
                 .font(.system(.body))
@@ -1093,6 +978,10 @@ struct HoneycombRulesView: View {
                                         if rule == .chaos { selectedRules.remove(.order) }
                                         if rule == .allOpen { selectedRules.remove(.threeOpen) }
                                         if rule == .threeOpen { selectedRules.remove(.allOpen) }
+                                        // Bomb Shelter's hidden card doesn't work when
+                                        // All Open/Three Open reveals every card anyway.
+                                        if rule == .allOpen || rule == .threeOpen { selectedRules.remove(.bombShelter) }
+                                        if rule == .bombShelter { selectedRules.remove(.allOpen); selectedRules.remove(.threeOpen) }
                                         forceNormalMode = false
                                     }
                                 } else {

@@ -254,7 +254,7 @@ struct HoneycombHelpView: View {
                         text: "Order restricts your legal play each turn to strictly the next card in your original deck order — no choosing. Chaos instead re-rolls one random legal card the instant a side's turn begins, highlighted with a thick yellow border; you'll see the dealer's mandated card highlighted at least 2 seconds before its AI actually plays it.")
 
             RuleSection(title: "Bomb Shelter",
-                        text: "The first card a player plays remains face down, unknown to the opponent. At the end of game, the face down cards get flipped. The starting player’s card gets exposed first. Cannot trigger combos.")
+                        text: "The first card a player plays remains face down, unknown to the opponent — a timed landmine rather than a permanent secret. It flips automatically 3 turns after it's played (any card played by either side counts toward that), or immediately once the board fills if it hasn't already. Cannot trigger combos. Never appears alongside All Open/Three Open, since a hidden card is meaningless once every card is already revealed.")
 
             RuleSection(title: "Sudden Death",
                         text: "A 5-5 tie sends the match into Sudden Death: the board clears and immediately replays with each side's exact end-of-round cards, alternating who starts, until someone wins outright.")
@@ -266,13 +266,10 @@ struct HoneycombHelpView: View {
                         text: "On any difficulty below Killer Bee, the Hint button suggests the strongest card-and-cell placement — found with the same search Killer Bee's own AI uses — highlighting it for 2 seconds. It only ever considers dealer cards you've actually been shown, never one still hidden from you.")
 
             RuleSection(title: "Card Bank & Decks",
-                        text: "Winning a card isn't automatic — after a win, you may drag one card the dealer played that round onto one of your 5 active deck slots, permanently unlocking it into your Card Bank. This steal is capped at one per match; Rematch (or start a new match) to steal again. Build named decks from Manage Decks, subject to rarity caps: at most one 5★ card, and at most one 4★ if a 5★ is already in the deck (otherwise up to two 4★).")
+                        text: "Winning a card isn't automatic — after a win, double-click one eligible card the dealer played that round to steal it straight into your Card Bank (your active deck is untouched). This steal is capped at one per match; Rematch (or start a new match) to steal again. Build named decks from Manage Decks, subject to rarity caps: at most one 5★ card, and at most one 4★ if a 5★ is already in the deck (otherwise up to two 4★). The opponent's deck is always assembled with a preference for cards you don't yet own, so there's usually something new to steal after a win — if you already own every card available at that difficulty's tiers, the deck is chosen normally.")
 
             RuleSection(title: "No Stress Mode",
                         text: "Deals a fixed, strong deck every match (one 5★, one 4★, three 3★) instead of your chosen active deck, and hides Steal Card — a relaxed way to play without managing a collection. This is a shared setting — enabling it here also enables it across the other games.")
-
-            RuleSection(title: "Favor New Cards",
-                        text: "When enabled, the opponent's deck is assembled with a preference for cards you don't yet own in your Card Bank — so there's always something new to steal after a win. The opponent still uses cards appropriate for their difficulty: fighting Ultra Hard won't produce 1★ or 2★ cards. If you already own every card available at that difficulty's tiers, the deck is chosen normally. Mutually exclusive with No Stress Mode.")
         }
     }
 }

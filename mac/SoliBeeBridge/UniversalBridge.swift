@@ -246,9 +246,8 @@ struct UniversalBridge {
                         vm.playerPlayCard(handIndex: handIdx, boardIndex: boardIdx)
                     }
                 case "takeCard":
-                    if let boardIdx = json["boardIndex"] as? Int,
-                       let replaceHandIdx = json["replaceHandIndex"] as? Int {
-                        vm.takeCard(boardIndex: boardIdx, replaceHandIndex: replaceHandIdx)
+                    if let boardIdx = json["boardIndex"] as? Int {
+                        vm.takeCard(boardIndex: boardIdx)
                     }
                 default: break
                 }

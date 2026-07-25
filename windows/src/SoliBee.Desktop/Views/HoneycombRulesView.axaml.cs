@@ -124,6 +124,10 @@ public partial class HoneycombRulesView : UserControl
                         if (rule == HoneycombRule.Chaos) _localOpts.ManualRules.Remove(HoneycombRule.Order);
                         if (rule == HoneycombRule.AllOpen) _localOpts.ManualRules.Remove(HoneycombRule.ThreeOpen);
                         if (rule == HoneycombRule.ThreeOpen) _localOpts.ManualRules.Remove(HoneycombRule.AllOpen);
+                        // Bomb Shelter's hidden card doesn't work when All Open/Three Open
+                        // reveals every card anyway.
+                        if (rule == HoneycombRule.AllOpen || rule == HoneycombRule.ThreeOpen) _localOpts.ManualRules.Remove(HoneycombRule.BombShelter);
+                        if (rule == HoneycombRule.BombShelter) { _localOpts.ManualRules.Remove(HoneycombRule.AllOpen); _localOpts.ManualRules.Remove(HoneycombRule.ThreeOpen); }
                         
                         if (_localOpts.ManualRules.Count > 2)
                         {

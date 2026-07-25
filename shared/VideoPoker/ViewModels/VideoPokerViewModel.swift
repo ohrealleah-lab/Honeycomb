@@ -441,6 +441,15 @@ public final class VideoPokerViewModel {
         state.triplePlayPayouts = []
     }
 
+    // Clears a finished hand's win/no-win display before the game becomes visible
+    // again, so switching away while its result banner is still up and back doesn't
+    // replay it — AppRouterView recreates the view on every mode switch (`.id()`), so
+    // it has no memory of already having shown the banner.
+    public func resetIfRoundOver() {
+        guard state.phase == .result else { return }
+        resetHandDisplay()
+    }
+
     // MARK: - AppCoordinator compatibility stubs
 
     public func startNewGame() {

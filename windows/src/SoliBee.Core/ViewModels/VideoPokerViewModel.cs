@@ -291,6 +291,24 @@ public partial class VideoPokerViewModel : ObservableObject
         StartNewGame();
     }
 
+    // Clears a finished hand's win/no-win display before the game becomes visible
+    // again, so switching away while its result banner is still up and back doesn't
+    // replay it — MainWindow recreates VideoPokerView on every game switch, so it has
+    // no memory of already having shown the banner. Credits/bet are untouched.
+    public void ResetIfRoundOver()
+    {
+        if (State.Phase != VideoPokerPhase.Result) return;
+
+        State.Phase           = VideoPokerPhase.Deal;
+        State.Hand             = new List<Card>();
+        State.HeldSlots         = new bool[5];
+        State.WinningCardMask   = new bool[5];
+        State.LastPayout        = 0;
+        State.LastHandName      = "";
+        State.ResultBannerShown = false;
+        NotifyStateChanged();
+    }
+
     public void StartNewGame()
     {
         _sessionHandsPlayed = 0;

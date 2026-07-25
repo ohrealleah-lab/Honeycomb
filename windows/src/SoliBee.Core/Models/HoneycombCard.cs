@@ -20,6 +20,11 @@ public class HoneycombCard
     public Guid UniqueInstanceId { get; set; } = Guid.NewGuid();
     public bool IsFaceDown { get; set; } = false;
 
+    // Bomb Shelter: turns left until this face-down card flips automatically. Set to 3
+    // when placed face-down, decremented once per subsequent play (either side), and
+    // cleared (null) once revealed — null means "not a timed Bomb Shelter card".
+    public int? BombShelterTurnsRemaining { get; set; }
+
     public HoneycombCard(HoneycombCardData data, int owner)
     {
         Data = data;
@@ -40,7 +45,8 @@ public class HoneycombCard
             Modifier = Modifier,
             OriginalOwner = OriginalOwner,
             UniqueInstanceId = UniqueInstanceId,
-            IsFaceDown = IsFaceDown
+            IsFaceDown = IsFaceDown,
+            BombShelterTurnsRemaining = BombShelterTurnsRemaining
         };
     }
 }

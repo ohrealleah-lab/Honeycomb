@@ -952,6 +952,18 @@ public partial class MainWindow : Window
         _helpWindow.Show(this);
     }
 
+    // Second, more direct entry point to the Honeycomb help section — reachable
+    // straight from Manage Decks/Card Bank instead of only via Options → Help Guide
+    // → scroll, since deck composition (rarity caps, stealing) is easy to get lost in
+    // for a game this complex.
+    private void HoneycombHelp_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_helpWindow != null) { _helpWindow.Activate(); _helpWindow.ScrollToHoneycomb(); return; }
+        _helpWindow = new HelpWindow(startAtHoneycomb: true);
+        _helpWindow.Closed += (_, _) => _helpWindow = null;
+        _helpWindow.Show(this);
+    }
+
     private void Exit_Click(object? sender, RoutedEventArgs e)
     {
         Close();
@@ -1289,7 +1301,6 @@ public partial class MainWindow : Window
             if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = false;
             if (HoneycombRematchButton != null) HoneycombRematchButton.IsVisible = false;
             if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = false;
-            if (HoneycombSaveDeckButton != null) HoneycombSaveDeckButton.IsVisible = false;
             if (HoneycombQuitMatchButton != null) HoneycombQuitMatchButton.IsVisible = false;
             if (HoneycombRulesButton != null) HoneycombRulesButton.IsVisible = false;
         }
@@ -1401,9 +1412,8 @@ public partial class MainWindow : Window
             
         if (this.DataContext is HoneycombViewModel hVm)
         {
-            if (e.PropertyName == nameof(HoneycombViewModel.State) || 
-                e.PropertyName == nameof(HoneycombViewModel.IsPlaying) || 
-                e.PropertyName == nameof(HoneycombViewModel.HasUnsavedActiveDeck))
+            if (e.PropertyName == nameof(HoneycombViewModel.State) ||
+                e.PropertyName == nameof(HoneycombViewModel.IsPlaying))
             {
                 UpdateHoneycombButtons();
             }
@@ -1422,7 +1432,6 @@ public partial class MainWindow : Window
             if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = isPreMatch || isResult;
             if (HoneycombRematchButton != null) HoneycombRematchButton.IsVisible = isResult;
             if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = isPreMatch || isResult;
-            if (HoneycombSaveDeckButton != null) HoneycombSaveDeckButton.IsVisible = (isPreMatch || isResult) && hVm.HasUnsavedActiveDeck;
             if (HoneycombRulesButton != null) HoneycombRulesButton.IsVisible = isPreMatch || isResult;
             if (OptionsButton != null) OptionsButton.IsVisible = isPreMatch || isResult;
             if (HintButton != null) HintButton.IsVisible = isPlaying;
@@ -1432,15 +1441,6 @@ public partial class MainWindow : Window
                 HoneycombQuitMatchButton.IsVisible = isPlaying;
                 HoneycombQuitMatchButton.Content = "Quit Match";
             }
-        }
-    }
-
-    private void HoneycombSaveDeck_Click(object? sender, RoutedEventArgs e)
-    {
-        if (this.DataContext is HoneycombViewModel hVm)
-        {
-            hVm.SaveActiveDeck();
-            UpdateHoneycombButtons();
         }
     }
 

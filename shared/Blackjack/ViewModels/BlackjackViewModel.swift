@@ -384,6 +384,22 @@ public final class BlackjackViewModel {
         UISound.play(named: name, enabled: options.isSoundEnabled, respectHeadlessMode: true)
     }
 
+    // Clears a finished round's cards/result before the game becomes visible again,
+    // so switching away while its win/lose banner is still up and back doesn't replay
+    // it — AppRouterView recreates the view on every mode switch (`.id()`), so it has
+    // no memory of already having shown the banner. Credits/bet are untouched; only
+    // deal() (.betting/.result) can reach here, so there's never a hand in progress
+    // to lose.
+    public func resetIfRoundOver() {
+        guard state.phase == .result else { return }
+        state.playerHands = []
+        state.activeHandIndex = 0
+        state.dealerCards = []
+        state.lastResultSummary = ""
+        state.lastNetResult = 0
+        state.phase = .betting
+    }
+
     // MARK: - Statistics / AppCoordinator stubs
 
     public func resetStatistics() {

@@ -5,10 +5,16 @@ namespace SoliBee.Desktop.Views;
 
 public partial class HelpWindow : Window
 {
-    public HelpWindow()
+    public HelpWindow(bool startAtHoneycomb = false)
     {
         InitializeComponent();
+        if (startAtHoneycomb)
+        {
+            Opened += (_, _) => ScrollToHoneycomb();
+        }
     }
+
+    public void ScrollToHoneycomb() => HoneycombAnchor.BringIntoView();
 
     private void GoTo_Klondike(object? sender, RoutedEventArgs e) =>
         KlondikeAnchor.BringIntoView();

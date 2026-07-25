@@ -65,6 +65,7 @@
         <Grid Grid.Row="3" RowDefinitions="Auto, *">
             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
                 <TextBlock Text="Card Bank — Tap to Add" FontSize="14" FontWeight="Bold" Foreground="#1A1A1A"/>
+                <TextBlock Text="Maximum one 5★ and one 4★ card per deck. Two 4★ cards can be used without a 5★." FontSize="11.5" Foreground="#555555" TextWrapping="Wrap"/>
                 <WrapPanel Orientation="Horizontal">
                     <ComboBox x:Name="StarsFilter" Width="110" Margin="0,0,8,4"
                               SelectionChanged="FilterCombo_SelectionChanged" SelectedIndex="0">

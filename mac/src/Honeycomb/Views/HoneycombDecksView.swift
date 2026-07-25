@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct HoneycombDecksView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openWindow) private var openWindow
     @Binding var activeDeckIndex: Int
     var viewModel: HoneycombViewModel
 
@@ -48,6 +49,12 @@ public struct HoneycombDecksView: View {
                     Text("Saved Decks & Card Bank")
                         .font(.system(size: 22, weight: .bold))
                     Spacer()
+                    // A second, more direct entry point to the Honeycomb help window —
+                    // reachable straight from here instead of only via the app's Help
+                    // menu, since deck composition (rarity caps, stealing) is easy to
+                    // get lost in for a game this complex.
+                    Button("Honeycomb Help") { openWindow(id: "honeycomb-help") }
+                        .buttonStyle(.bordered)
                     Button("Done") { dismiss() }
                         .buttonStyle(.borderedProminent)
                 }
@@ -315,6 +322,9 @@ public struct HoneycombDecksView: View {
             // Card Bank for Selection — shares the same suit/star filter as the main view.
             VStack(alignment: .leading, spacing: 8) {
                 Text("Card Bank - Tap to Add").font(.headline)
+                Text("Maximum one 5★ and one 4★ card per deck. Two 4★ cards can be used without a 5★.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 cardBankFilterBar
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 10) {

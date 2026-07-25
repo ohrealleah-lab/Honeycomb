@@ -11,7 +11,7 @@ using SoliBee.Core.Services;
 
 namespace SoliBee.Core.ViewModels;
 
-public record HoneycombPendingSwap(int BoardIndex, int ReplaceHandIndex, string IncomingCardName, string OutgoingCardName);
+public record HoneycombPendingSteal(int BoardIndex, string CardName);
 
 public partial class HoneycombViewModel : ObservableObject
 {
@@ -26,11 +26,7 @@ public partial class HoneycombViewModel : ObservableObject
     private bool _isHeadless = false;
     private int _matchGeneration = 0;
 
-    private List<HoneycombCardData>? _sessionHandOverride = null;
-    public bool HasUnsavedActiveDeck => _sessionHandOverride != null;
-    
-    [ObservableProperty] private HoneycombPendingSwap? _pendingSwap;
-    [ObservableProperty] private string? _swapValidationError;
+    [ObservableProperty] private HoneycombPendingSteal? _pendingSteal;
 
     public (int handIndex, int cellIndex)? ActiveHint { get; private set; }
 
@@ -47,15 +43,7 @@ public partial class HoneycombViewModel : ObservableObject
         
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
-            var oldOpts = SettingsService.LoadOptions();
             Options = SettingsService.LoadHoneycombOptions();
-            var newOpts = SettingsService.LoadOptions();
-            if (oldOpts.HoneycombActiveDeckIndex != newOpts.HoneycombActiveDeckIndex || 
-                oldOpts.IsNoStressMode != newOpts.IsNoStressMode)
-            {
-                _sessionHandOverride = null;
-                OnPropertyChanged(nameof(HasUnsavedActiveDeck));
-            }
             NotifyStateChanged();
         });
     }
@@ -86,29 +74,38 @@ public partial class HoneycombViewModel : ObservableObject
         }
 
         // If Normal Mode is banned, force at least 1 rule
-        int minRules = (Options.BannedRules != null && Options.BannedRules.Contains("Normal Mode")) ? 1 : 0;
-        int maxRules = Math.Min(2, pool.Count);
-        
-        if (maxRules < minRules) return new List<HoneycombRule>();
-        
-        int count = Random.Shared.Next(minRules, maxRules + 1);
-        if (count == 0) return new List<HoneycombRule>();
+        bool normalBanned = Options.BannedRules != null && Options.BannedRules.Contains("Normal Mode");
 
+        // Each of up to 2 draws gives "stop here" the same odds as any single specific
+        // rule in the current pool, rather than first rolling a flat 1-in-3 chance of
+        // 0/1/2 rules and only then picking within that bucket. The old scheme gave
+        // Normal (0 rules) a flat 33% regardless of how many rules exist to compete
+        // with it — so Normal showed up ~4x more often than any individual named rule
+        // ever did, which read as "roulette keeps landing on Normal" even though every
+        // single rule was, individually, equally likely to be picked.
         var selected = new List<HoneycombRule>();
-        for (int i = 0; i < count; i++)
+        for (int slot = 0; slot < 2; slot++)
         {
             if (pool.Count == 0) break;
-            int idx = Random.Shared.Next(pool.Count);
-            var r = pool[idx];
+
+            bool mustPick = slot == 0 && normalBanned;
+            int stopWeight = mustPick ? 0 : 1;
+            int roll = Random.Shared.Next(pool.Count + stopWeight);
+            if (roll == pool.Count) break; // rolled the "stop" slot
+
+            var r = pool[roll];
             selected.Add(r);
-            pool.RemoveAt(idx);
+            pool.RemoveAt(roll);
 
             if (r == HoneycombRule.Ascension) pool.Remove(HoneycombRule.Descension);
             else if (r == HoneycombRule.Descension) pool.Remove(HoneycombRule.Ascension);
             else if (r == HoneycombRule.Order) pool.Remove(HoneycombRule.Chaos);
             else if (r == HoneycombRule.Chaos) pool.Remove(HoneycombRule.Order);
-            else if (r == HoneycombRule.AllOpen) pool.Remove(HoneycombRule.ThreeOpen);
-            else if (r == HoneycombRule.ThreeOpen) pool.Remove(HoneycombRule.AllOpen);
+            // Bomb Shelter's hidden card doesn't work when All Open/Three Open reveals
+            // every card anyway, so they're mutually exclusive in both directions.
+            else if (r == HoneycombRule.AllOpen) { pool.Remove(HoneycombRule.ThreeOpen); pool.Remove(HoneycombRule.BombShelter); }
+            else if (r == HoneycombRule.ThreeOpen) { pool.Remove(HoneycombRule.AllOpen); pool.Remove(HoneycombRule.BombShelter); }
+            else if (r == HoneycombRule.BombShelter) { pool.Remove(HoneycombRule.AllOpen); pool.Remove(HoneycombRule.ThreeOpen); }
         }
         return selected;
     }
@@ -142,15 +139,10 @@ public partial class HoneycombViewModel : ObservableObject
         List<int> playerIds;
         if (globalOpts.IsNoStressMode)
         {
-            _sessionHandOverride = null;
             playerIds = new List<int>();
             playerIds.AddRange(HoneycombDatabase.Shared.RandomCards(5, 1).Select(c => c.Id));
             playerIds.AddRange(HoneycombDatabase.Shared.RandomCards(4, 1).Select(c => c.Id));
             playerIds.AddRange(HoneycombDatabase.Shared.RandomCards(3, 3).Select(c => c.Id));
-        }
-        else if (_sessionHandOverride != null && _sessionHandOverride.Count == 5)
-        {
-            playerIds = _sessionHandOverride.Select(c => c.Id).ToList();
         }
         else
         {
@@ -169,14 +161,26 @@ public partial class HoneycombViewModel : ObservableObject
         if (!reverse)
         {
             if (Options.Difficulty == "Easy") { comp.Add((1, 4)); comp.Add((2, 1)); }
-            else if (Options.Difficulty == "Medium") { comp.Add((2, 4)); comp.Add((3, 1)); }
+            else if (Options.Difficulty == "Medium")
+            {
+                comp.Add((2, 4));
+                // Honey Bee: a 20% chance of a 4★ card instead of the usual 3★, so its
+                // deck isn't entirely predictable at this difficulty.
+                comp.Add(Random.Shared.NextDouble() < 0.2 ? (4, 1) : (3, 1));
+            }
             else if (Options.Difficulty == "Hard") { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
             else { comp.Add((3, 2)); comp.Add((4, 1)); comp.Add((5, 2)); }
         }
         else
         {
             if (Options.Difficulty == "Easy") { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
-            else if (Options.Difficulty == "Medium") { comp.Add((2, 4)); comp.Add((3, 1)); }
+            else if (Options.Difficulty == "Medium")
+            {
+                comp.Add((2, 4));
+                // Honey Bee: a 20% chance of a 4★ card instead of the usual 3★, so its
+                // deck isn't entirely predictable at this difficulty.
+                comp.Add(Random.Shared.NextDouble() < 0.2 ? (4, 1) : (3, 1));
+            }
             else if (Options.Difficulty == "Hard") { comp.Add((1, 2)); comp.Add((2, 3)); }
             else { comp.Add((1, 5)); }
         }
@@ -191,19 +195,11 @@ public partial class HoneycombViewModel : ObservableObject
         State.PlayerRevealedIds.Clear();
         State.OpponentRevealedIds.Clear();
 
-        if (State.ActiveRules.Contains(HoneycombRule.AllOpen))
-        {
-            foreach (var c in State.PlayerHand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
-            foreach (var c in State.OpponentHand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
-        }
-        else if (State.ActiveRules.Contains(HoneycombRule.ThreeOpen))
-        {
-            var pRand = State.PlayerHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
-            var oRand = State.OpponentHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
-            foreach (var c in pRand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
-            foreach (var c in oRand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
-        }
-        
+        // Swap is resolved before the All Open/Three Open reveal below, so that reveal
+        // picks from the hands as they'll actually look once the trade lands — not from
+        // the pre-swap hands, which could pick a card that's about to be traded away and
+        // leave the card that trades in undiscovered (and, with Three Open, silently
+        // short a hand to 2 visible cards instead of 3).
         Guid? swapPlayerCardId = null;
         Guid? swapOpponentCardId = null;
         if (State.ActiveRules.Contains(HoneycombRule.Swap))
@@ -227,6 +223,26 @@ public partial class HoneycombViewModel : ObservableObject
             swapPlayerCardId = pCard.UniqueInstanceId;
         }
 
+        if (State.ActiveRules.Contains(HoneycombRule.AllOpen))
+        {
+            foreach (var c in State.PlayerHand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
+            foreach (var c in State.OpponentHand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
+        }
+        else if (State.ActiveRules.Contains(HoneycombRule.ThreeOpen))
+        {
+            var pRand = State.PlayerHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
+            var oRand = State.OpponentHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
+            foreach (var c in pRand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
+            foreach (var c in oRand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
+        }
+
+        // The swapped card always stays visible in its new hand, regardless of whether
+        // Three Open's random pick landed on it — the player already knows exactly what
+        // it is (it just came from their own hand a moment ago), so there's nothing left
+        // to hide, and the AI is in the same position for the card it received.
+        if (swapPlayerCardId.HasValue) State.OpponentRevealedIds.Add(swapPlayerCardId.Value);
+        if (swapOpponentCardId.HasValue) State.PlayerRevealedIds.Add(swapOpponentCardId.Value);
+
         State.PlayerChaosIndex = null;
         State.OpponentChaosIndex = null;
 
@@ -246,30 +262,28 @@ public partial class HoneycombViewModel : ObservableObject
         State.CurrentTurn = starter;
         
         string starterName = starter == 1 ? "Player" : "Opponent";
-        OnFlashBanner?.Invoke($"First Move: {starterName}!");
+        string startBanner = $"First Move: {starterName}!";
+        bool didSwap = swapPlayerCardId.HasValue && swapOpponentCardId.HasValue;
+        // A single combined banner instead of two separate flashes at match start —
+        // Swap rides as the second line rather than replacing "First Move" a beat later.
+        if (didSwap) startBanner += "\nSwap!";
+        OnFlashBanner?.Invoke(startBanner);
 
         int generation = ++_matchGeneration;
-        if (swapPlayerCardId.HasValue && swapOpponentCardId.HasValue)
+        if (didSwap)
         {
-            AnimateSwapReveal(swapPlayerCardId.Value, swapOpponentCardId.Value, generation);
+            State.SwapHighlightIds = new HashSet<Guid> { swapPlayerCardId!.Value, swapOpponentCardId!.Value };
+            ClearSwapHighlightAfterBanner(generation);
         }
 
         StartTurn();
     }
 
-    // Highlights the two traded cards and flashes "Swap!" a beat after the match
-    // starts, so the trade reads as an event rather than the hands silently already
-    // having swapped by the very first frame.
-    private async void AnimateSwapReveal(Guid playerCardId, Guid opponentCardId, int generation)
+    // Clears the traded-card highlight once the (now single, 2s) start-of-match banner
+    // has finished, rather than leaving it up indefinitely or timing it independently.
+    private async void ClearSwapHighlightAfterBanner(int generation)
     {
-        if (!_isHeadless) await Task.Delay(500);
-        if (generation != _matchGeneration || !IsPlaying) return;
-
-        OnFlashBanner?.Invoke("Swap!");
-        State.SwapHighlightIds = new HashSet<Guid> { playerCardId, opponentCardId };
-        NotifyStateChanged();
-
-        if (!_isHeadless) await Task.Delay(1800);
+        if (!_isHeadless) await Task.Delay(2000);
         if (generation != _matchGeneration || !IsPlaying) return;
 
         State.SwapHighlightIds.Clear();
@@ -404,11 +418,31 @@ public partial class HoneycombViewModel : ObservableObject
         }
 
         bool isBombShelterFirstCard = State.ActiveRules.Contains(HoneycombRule.BombShelter) && hand.Count == 5;
-        if (isBombShelterFirstCard) card.IsFaceDown = true;
+        if (isBombShelterFirstCard)
+        {
+            card.IsFaceDown = true;
+            card.BombShelterTurnsRemaining = 3;
+        }
 
         var flipped = State.Board.PlaceCard(card, cellIndex, new HashSet<HoneycombRule>(State.ActiveRules), skipCaptures: isBombShelterFirstCard);
         hand.RemoveAt(handIndex);
-        
+
+        // Ticks down any other still-hidden Bomb Shelter card(s) already on the board —
+        // this play counts as one of their 3 turns, whether or not this play was itself
+        // a Bomb Shelter placement.
+        AdvanceBombShelterTimers(justPlacedCellIndex: cellIndex);
+
+        // Chaos's locked-card index is only re-rolled in StartTurn when it becomes this
+        // side's turn again — left stale here, it would keep pointing at whatever index
+        // the just-played card's removal shifted into, highlighting the wrong card (and
+        // rejecting plays against it) for the rest of the opponent's turn instead of
+        // clearing until StartTurn recomputes it fresh.
+        if (State.ActiveRules.Contains(HoneycombRule.Chaos))
+        {
+            if (State.CurrentTurn == 1) State.PlayerChaosIndex = null;
+            else State.OpponentChaosIndex = null;
+        }
+
         if (State.Board.LastSameTriggered && State.Board.LastPlusTriggered)
             OnFlashBanner?.Invoke("SAME & PLUS!");
         else if (State.Board.LastSameTriggered)
@@ -443,6 +477,28 @@ public partial class HoneycombViewModel : ObservableObject
             State.CurrentTurn = State.CurrentTurn == 1 ? -1 : 1;
             _isAnimating = false;
             StartTurn();
+        }
+    }
+
+    // Bomb Shelter: the hidden card flips on its own 3 turns after it was played,
+    // rather than waiting for the match to end — a timed landmine the opponent has to
+    // play around, instead of a secret that's only relevant at the final score.
+    private void AdvanceBombShelterTimers(int justPlacedCellIndex)
+    {
+        for (int i = 0; i < 9; i++)
+        {
+            if (i == justPlacedCellIndex) continue;
+
+            var cell = State.Board.Cells[i];
+            if (cell.IsEmpty || !cell.Card!.IsFaceDown || !cell.Card.BombShelterTurnsRemaining.HasValue) continue;
+
+            cell.Card.BombShelterTurnsRemaining--;
+            if (cell.Card.BombShelterTurnsRemaining <= 0)
+            {
+                cell.Card.BombShelterTurnsRemaining = null;
+                State.Board.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
+                OnFlashBanner?.Invoke("Bomb Shelter Revealed!");
+            }
         }
     }
 
@@ -674,70 +730,38 @@ public partial class HoneycombViewModel : ObservableObject
         SaveStats();
     }
 
-    public void RequestSwap(int boardIndex, int replaceHandIndex)
+    // Steal no longer touches the active deck/hand at all — the stolen card unlocks
+    // straight into the card bank, so there's nothing left to validate against deck
+    // composition (the old 5★/4★ caps only ever existed to keep a 5-card deck legal).
+    public void RequestSteal(int boardIndex)
     {
         if (State.HasStolenThisMatch) return;
         if (State.PlayerScore <= State.OpponentScore) return; // Must win to steal
         var incoming = State.Board.Cells[boardIndex].Card;
         if (incoming == null || incoming.OriginalOwner != -1 || incoming.Owner != 1) return;
         if (HoneycombProfileManager.Shared.UnlockedCardIds.Contains(incoming.Data.Id)) return;
-        
-        var playerStartingDeck = _sessionHandOverride != null ? _sessionHandOverride : State.PlayerStartingDeck.Select(c => c.Data).ToList();
-        if (replaceHandIndex < 0 || replaceHandIndex >= playerStartingDeck.Count) return;
 
-        var hypotheticalDeck = new List<HoneycombCardData>(playerStartingDeck);
-        hypotheticalDeck[replaceHandIndex] = incoming.Data;
-
-        int fiveStars = hypotheticalDeck.Count(c => c.Stars == 5);
-        int fourStars = hypotheticalDeck.Count(c => c.Stars == 4);
-        
-        if (fiveStars > 1) { SwapValidationError = "Max 1 card of 5★ allowed."; return; }
-        if (fiveStars == 1 && fourStars > 1) { SwapValidationError = "Max 1 card of 4★ when a 5★ is present."; return; }
-        if (fiveStars == 0 && fourStars > 2) { SwapValidationError = "Max 2 cards of 4★ allowed."; return; }
-
-        var outgoing = playerStartingDeck[replaceHandIndex];
-        SwapValidationError = null;
-        PendingSwap = new HoneycombPendingSwap(boardIndex, replaceHandIndex, incoming.Data.Name, outgoing.Name);
+        PendingSteal = new HoneycombPendingSteal(boardIndex, incoming.Data.Name);
     }
 
-    public void CancelPendingSwap()
+    public void CancelPendingSteal()
     {
-        PendingSwap = null;
-        SwapValidationError = null;
+        PendingSteal = null;
     }
 
-    public void ConfirmPendingSwap()
+    public void ConfirmPendingSteal()
     {
-        if (PendingSwap == null) return;
-        var swap = PendingSwap;
-        PendingSwap = null;
-        
-        var incoming = State.Board.Cells[swap.BoardIndex].Card;
+        if (PendingSteal == null) return;
+        var steal = PendingSteal;
+        PendingSteal = null;
+
+        var incoming = State.Board.Cells[steal.BoardIndex].Card;
         if (incoming == null || incoming.OriginalOwner != -1) return;
 
         HoneycombProfileManager.Shared.UnlockCard(incoming.Data.Id);
         Stats.CardsStolen++;
         SaveStats();
         State.HasStolenThisMatch = true;
-
-        var playerStartingDeck = _sessionHandOverride != null ? new List<HoneycombCardData>(_sessionHandOverride) : State.PlayerStartingDeck.Select(c => c.Data).ToList();
-        playerStartingDeck[swap.ReplaceHandIndex] = incoming.Data;
-        _sessionHandOverride = playerStartingDeck;
-        OnPropertyChanged(nameof(HasUnsavedActiveDeck));
-    }
-
-    public void SaveActiveDeck()
-    {
-        if (_sessionHandOverride == null || _sessionHandOverride.Count != 5) return;
-        var pm = HoneycombProfileManager.Shared;
-        int activeIdx = SettingsService.LoadOptions().HoneycombActiveDeckIndex;
-        if (activeIdx >= 0 && activeIdx < pm.SavedDecks.Count)
-        {
-            pm.SavedDecks[activeIdx].CardIds = _sessionHandOverride.Select(c => c.Id).ToList();
-            pm.SaveSavedDecks();
-        }
-        _sessionHandOverride = null;
-        OnPropertyChanged(nameof(HasUnsavedActiveDeck));
         NotifyStateChanged();
     }
 }
