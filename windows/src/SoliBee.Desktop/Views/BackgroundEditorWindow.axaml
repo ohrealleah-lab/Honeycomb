@@ -22,7 +22,7 @@
                 BorderBrush="#D9000000" BorderThickness="0.75"
                 HorizontalAlignment="Center" Background="#008000" Margin="0,0,0,12">
             <Grid Width="280" Height="160" ClipToBounds="True">
-                <Image x:Name="PreviewImage" Width="280" Height="160" Stretch="UniformToFill" />
+                <Image x:Name="PreviewImage" Width="280" Height="160" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="MediumQuality" />
                 <Rectangle x:Name="PreviewVignette" Width="280" Height="160" IsHitTestVisible="False" IsVisible="False">
                     <Rectangle.Fill>
                         <RadialGradientBrush Center="50%,50%" Radius="0.8">

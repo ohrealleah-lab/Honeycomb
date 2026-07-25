@@ -27,8 +27,6 @@ public partial class HoneycombCardView : UserControl
     public HoneycombCardView()
     {
         InitializeComponent();
-        BackCardView.Card = new SoliBee.Core.Models.Card("dummy", SoliBee.Core.Models.CardSuit.Spades, 1, false);
-        BackCardView.DisableBorderAndShadowsForStretch();
     }
 
     public async Task RenderCard(HoneycombCard? card, bool faceDown = false, int hIdx = -1, int cIdx = -1)
@@ -49,6 +47,7 @@ public partial class HoneycombCardView : UserControl
             _card = card;
             CardFace.IsVisible = false;
             CardBack.IsVisible = true;
+            CardBackImage.Source = CardView.ResolveCardBackBitmap(null);
             return;
         }
 

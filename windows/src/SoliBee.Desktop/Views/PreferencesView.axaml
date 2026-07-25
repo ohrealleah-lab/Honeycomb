@@ -149,7 +149,7 @@
                                 Cursor="Hand" Background="White"
                                 PointerPressed="CardBackPreview_Click">
                             <Grid Width="80" Height="113" ClipToBounds="True">
-                                <Image x:Name="CardBackPreviewImage" Stretch="Uniform"/>
+                                <Image x:Name="CardBackPreviewImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
                             </Grid>
                         </Border>
                         <TextBlock Text="Tap to adjust" FontSize="9" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
@@ -203,7 +203,7 @@
                                 Cursor="Hand" Background="#008000"
                                 PointerPressed="BackgroundPreview_Click">
                             <Grid Width="80" Height="55" ClipToBounds="True">
-                                <Image x:Name="BackgroundPreviewImage" Stretch="UniformToFill"/>
+                                <Image x:Name="BackgroundPreviewImage" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
                             </Grid>
                         </Border>
                         <TextBlock x:Name="BackgroundPreviewCaption" Text="Tap to adjust" FontSize="9" Foreground="#1A1A1A" HorizontalAlignment="Center"/>

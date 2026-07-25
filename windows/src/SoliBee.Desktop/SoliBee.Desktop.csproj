@@ -13,7 +13,8 @@
     <Copyright>© 2026 Leahbee. All rights reserved.</Copyright>
     <Description>A solitaire suite featuring Klondike, Freecell, and Spider Solitaire.</Description>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
     <!-- Default Publish Settings to bundle all DLLs into a clean single EXE -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>

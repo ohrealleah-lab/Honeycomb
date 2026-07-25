@@ -852,6 +852,70 @@ public partial class CardView : UserControl
         };
     }
 
+    // Standalone bitmap lookup for the active card-back theme, mirroring
+    // ApplyCardBackTheme's own theme-selection branching below but returning just the
+    // Bitmap (GIFs as their static first frame, no animation) instead of configuring a
+    // specific CardBackImage instance's Width/Stretch/RenderTransform. Lets
+    // HoneycombCardView render its own card back directly into a single plain Image
+    // sized to its own actual card dimensions, instead of nesting a whole fixed-128×181
+    // CardView inside a Viewbox — that nesting was rendering the source art down to
+    // 128×181 first and then stretching that already-smaller result back up
+    // (Honeycomb's cards are 195×276), which blurred it regardless of window size or
+    // any interpolation-mode/filter-quality setting, since neither of those apply to a
+    // scale-up of an already-rasterized visual. Deliberately not a shared refactor of
+    // ApplyCardBackTheme itself — some duplication here is worth it to keep the
+    // existing, working solitaire card-back rendering completely untouched.
+    internal static Bitmap? ResolveCardBackBitmap(GameOptions? cachedOptions)
+    {
+        var options = cachedOptions ?? SettingsService.LoadOptions();
+        var theme = options.CardBackTheme;
+
+        string filename = "vulpera.png";
+        double scale = 1.0;
+        double offsetX = 0;
+        double offsetY = 0;
+        bool isCustom = false;
+        string? customPath = null;
+
+        if (theme == "Dingwall") filename = "dingwall.jpg";
+        else if (theme == "Moogle") filename = "moogle.jpg";
+        else if (theme == "Vulpera") filename = "vulpera.png";
+        else if (_houliAssets.TryGetValue(theme, out var houliFile)) filename = houliFile;
+        else
+        {
+            var customBack = options.CustomCardBacks.Find(c => c.Name == theme);
+            if (customBack != null && PathSafety.IsSafeFileName(customBack.FileName))
+            {
+                isCustom = true;
+                customPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SoliBee", "CardBacks", customBack.FileName);
+                scale = customBack.Scale;
+                offsetX = customBack.OffsetX;
+                offsetY = customBack.OffsetY;
+            }
+            else filename = "vulpera.png";
+        }
+
+        try
+        {
+            if (isCustom && customPath != null && File.Exists(customPath))
+            {
+                if (customPath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+                {
+                    var (frames, _) = GetCachedGifFrames(customPath);
+                    return frames.Length > 0 ? frames[0] : null;
+                }
+                return GetCachedCustomBitmap(customPath, scale, offsetX, offsetY);
+            }
+            return GetCachedBitmap($"avares://Honeycomb/Assets/{filename}");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private void ApplyCardBackTheme()
     {
         var options = _cachedOptions ?? SettingsService.LoadOptions();

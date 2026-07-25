@@ -46,11 +46,13 @@
             </Border>
         </Border>
 
-        <!-- Card Back -->
+        <!-- Card Back — a single direct Image at this control's own real card size,
+             not a fixed-128×181 CardView stretched up via Viewbox (that rendered the
+             art down to 128×181 first, then blew the result back up ~1.5x to
+             Honeycomb's actual 195×276 card, blurring it unconditionally regardless of
+             window size — see CardView.ResolveCardBackBitmap's comment). -->
         <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="8" IsVisible="False" ClipToBounds="True" Background="White">
-            <Viewbox Stretch="Fill">
-                <local:CardView x:Name="BackCardView" IsHitTestVisible="False" Width="128" Height="181" />
-            </Viewbox>
+            <Image x:Name="CardBackImage" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
         </Border>
     </Grid>
 </UserControl>
