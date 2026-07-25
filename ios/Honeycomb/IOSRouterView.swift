@@ -20,7 +20,7 @@ struct IOSRouterView: View {
             case .videoPoker:
                 VideoPokerTouchView(viewModel: coordinator.videoPokerViewModel)
             case .blackjack:
-                GamePlaceholderView(title: "Blackjack")
+                BlackjackTouchView(viewModel: coordinator.blackjackViewModel)
             case .honeycomb:
                 HoneycombTouchView(viewModel: coordinator.honeycombViewModel)
             }
