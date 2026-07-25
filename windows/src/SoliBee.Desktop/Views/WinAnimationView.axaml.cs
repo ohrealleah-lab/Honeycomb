@@ -369,6 +369,9 @@ public partial class WinAnimationView : UserControl
                 IsHitTestVisible = false,
                 Opacity = 0
             };
+            // Created in code, not XAML — set explicitly for the same reason as the
+            // other code-behind-created Image controls (see CardView.PopulateSuitCanvas).
+            RenderOptions.SetBitmapInterpolationMode(ghost, BitmapInterpolationMode.MediumQuality);
             trailViews.Add(ghost);
             AnimationCanvas.Children.Add(ghost);
         }
