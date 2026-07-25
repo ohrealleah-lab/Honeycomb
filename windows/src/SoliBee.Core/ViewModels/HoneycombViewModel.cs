@@ -24,6 +24,7 @@ public partial class HoneycombViewModel : ObservableObject
 
     private bool _isAnimating = false;
     private bool _isHeadless = false;
+    private int _matchGeneration = 0;
 
     private List<HoneycombCardData>? _sessionHandOverride = null;
     public bool HasUnsavedActiveDeck => _sessionHandOverride != null;
@@ -203,19 +204,27 @@ public partial class HoneycombViewModel : ObservableObject
             foreach (var c in oRand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
         }
         
+        Guid? swapPlayerCardId = null;
+        Guid? swapOpponentCardId = null;
         if (State.ActiveRules.Contains(HoneycombRule.Swap))
         {
             int pIdx = Random.Shared.Next(State.PlayerHand.Count);
             int oIdx = Random.Shared.Next(State.OpponentHand.Count);
-            
+
             var pCard = State.PlayerHand[pIdx];
             var oCard = State.OpponentHand[oIdx];
-            
+
             pCard.Owner = -1;
             oCard.Owner = 1;
-            
+
             State.PlayerHand[pIdx] = oCard;
             State.OpponentHand[oIdx] = pCard;
+
+            // Identity-preserving trade: oCard now sits in the player's hand and pCard
+            // in the opponent's, so these two ids are what the delayed reveal below
+            // highlights — the same two cards, just relocated.
+            swapOpponentCardId = oCard.UniqueInstanceId;
+            swapPlayerCardId = pCard.UniqueInstanceId;
         }
 
         State.PlayerChaosIndex = null;
@@ -238,8 +247,33 @@ public partial class HoneycombViewModel : ObservableObject
         
         string starterName = starter == 1 ? "Player" : "Opponent";
         OnFlashBanner?.Invoke($"First Move: {starterName}!");
-        
+
+        int generation = ++_matchGeneration;
+        if (swapPlayerCardId.HasValue && swapOpponentCardId.HasValue)
+        {
+            AnimateSwapReveal(swapPlayerCardId.Value, swapOpponentCardId.Value, generation);
+        }
+
         StartTurn();
+    }
+
+    // Highlights the two traded cards and flashes "Swap!" a beat after the match
+    // starts, so the trade reads as an event rather than the hands silently already
+    // having swapped by the very first frame.
+    private async void AnimateSwapReveal(Guid playerCardId, Guid opponentCardId, int generation)
+    {
+        if (!_isHeadless) await Task.Delay(500);
+        if (generation != _matchGeneration || !IsPlaying) return;
+
+        OnFlashBanner?.Invoke("Swap!");
+        State.SwapHighlightIds = new HashSet<Guid> { playerCardId, opponentCardId };
+        NotifyStateChanged();
+
+        if (!_isHeadless) await Task.Delay(1800);
+        if (generation != _matchGeneration || !IsPlaying) return;
+
+        State.SwapHighlightIds.Clear();
+        NotifyStateChanged();
     }
 
     private void StartTurn()
@@ -618,6 +652,8 @@ public partial class HoneycombViewModel : ObservableObject
         catch { }
         return new HoneycombStats();
     }
+
+    public void NotifyOptionsChanged() => OnPropertyChanged(nameof(Options));
 
     private void NotifyStateChanged()
     {

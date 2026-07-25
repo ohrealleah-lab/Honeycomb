@@ -72,11 +72,11 @@
             <Setter Property="Foreground" Value="#1A1A1A" />
         </Style>
         <Style Selector="Button.light-primary">
-            <Setter Property="Background" Value="#1155AA" />
+            <Setter Property="Background" Value="#007AFF" />
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style Selector="Button.light-primary:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#1155AA" />
+            <Setter Property="Background" Value="#0062CC" />
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style Selector="Button.light-danger">

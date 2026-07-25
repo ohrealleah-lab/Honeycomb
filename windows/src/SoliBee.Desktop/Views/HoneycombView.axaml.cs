@@ -209,16 +209,34 @@ public partial class HoneycombView : UserControl
         
         OverlayPanel.IsVisible = !vm.IsPlaying && state.Phase == HoneycombPhase.Result && !_isStealingCard && !_overlayDismissed && !_showRematchPrompt && !_bannerActive;
         
-        var ruleNames = state.ActiveRules.Select(r => 
+        List<string> ruleNames;
+        if (vm.IsPlaying)
         {
-            var name = System.Text.RegularExpressions.Regex.Replace(r.ToString(), "(\\B[A-Z])", " $1");
-            if ((r == HoneycombRule.Ascension || r == HoneycombRule.Descension) && state.Board.AscensionDescensionSuits.Count > 0)
+            ruleNames = state.ActiveRules.Select(r =>
             {
-                return $"{name} Suit: {string.Join(", ", state.Board.AscensionDescensionSuits)}";
-            }
-            return name;
-        }).ToList();
-        if (ruleNames.Count == 0) ruleNames.Add("Normal");
+                var name = System.Text.RegularExpressions.Regex.Replace(r.ToString(), "(\\B[A-Z])", " $1");
+                if ((r == HoneycombRule.Ascension || r == HoneycombRule.Descension) && state.Board.AscensionDescensionSuits.Count > 0)
+                {
+                    return $"{name} Suit: {string.Join(", ", state.Board.AscensionDescensionSuits)}";
+                }
+                return name;
+            }).ToList();
+            if (ruleNames.Count == 0) ruleNames.Add("Normal");
+        }
+        else if (vm.Options.ForceNormalRules)
+        {
+            ruleNames = new List<string> { "Normal" };
+        }
+        else if (vm.Options.ManualRules != null && vm.Options.ManualRules.Count > 0)
+        {
+            ruleNames = vm.Options.ManualRules
+                .Select(r => System.Text.RegularExpressions.Regex.Replace(r.ToString(), "(\\B[A-Z])", " $1"))
+                .ToList();
+        }
+        else
+        {
+            ruleNames = new List<string> { "Roulette" };
+        }
         RulesList.ItemsSource = ruleNames;
         
 
@@ -245,6 +263,7 @@ public partial class HoneycombView : UserControl
                 {
                     if (isOrder && i == 0) highlight = true;
                     else if (isChaos && state.PlayerChaosIndex.HasValue && state.PlayerChaosIndex.Value == i) highlight = true;
+                    else if (state.SwapHighlightIds.Contains(displayPlayerHand[i].UniqueInstanceId)) highlight = true;
                 }
             }
             else
@@ -278,6 +297,7 @@ public partial class HoneycombView : UserControl
                 {
                     if (isOrder && i == 0) highlight = true;
                     else if (isChaos && state.OpponentChaosIndex.HasValue && state.OpponentChaosIndex.Value == i) highlight = true;
+                    else if (state.SwapHighlightIds.Contains(state.OpponentHand[i].UniqueInstanceId)) highlight = true;
                 }
             }
             else

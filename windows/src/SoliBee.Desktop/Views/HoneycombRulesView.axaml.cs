@@ -192,7 +192,8 @@ public partial class HoneycombRulesView : UserControl
         _vm.Options.BannedRules = _localOpts.BannedRules.ToList();
         
         SettingsService.SaveHoneycombOptions(_vm.Options);
-        
+        _vm.NotifyOptionsChanged();
+
         OnCloseRequested?.Invoke(this, true);
     }
 

@@ -49,4 +49,8 @@ public class HoneycombState
     public int OpponentScore { get; set; }
     
     public bool IsSuddenDeath { get; set; }
+
+    // Ids of the two cards involved in a Swap-rule trade, while their reveal
+    // animation is playing at the start of a match. Empty the rest of the time.
+    public HashSet<Guid> SwapHighlightIds { get; set; } = new();
 }
