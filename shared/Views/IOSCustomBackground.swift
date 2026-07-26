@@ -94,26 +94,38 @@ public final class IOSCustomBackgroundManager {
 /// Drop-in replacement for `coordinator.currentFeltColor.ignoresSafeArea()` across the
 /// six game views: renders the active custom background (cropped per its saved scale/
 /// offset) if one is set, falling back to the felt color otherwise — mirroring mac's
-/// BackgroundLayerView.
+/// BackgroundLayerView. Also applies the Felt Vignette when enabled (previously exposed
+/// as a toggle in the menu with nothing behind it — the setting existed and persisted,
+/// it just never drew anything on iOS).
 public struct IOSBackgroundLayer: View {
     @Environment(AppCoordinator.self) private var coordinator
 
     public init() {}
 
     public var body: some View {
-        GeometryReader { geo in
-            if let name = coordinator.customBackgroundName,
-               let entry = IOSCustomBackgroundManager.shared.entry(named: name),
-               let image = IOSCustomBackgroundManager.shared.image(for: entry) {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .scaleEffect(entry.scale)
-                    .offset(x: entry.offsetXFraction * geo.size.width, y: entry.offsetYFraction * geo.size.height)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
-            } else {
-                coordinator.currentFeltColor
+        ZStack {
+            GeometryReader { geo in
+                if let name = coordinator.customBackgroundName,
+                   let entry = IOSCustomBackgroundManager.shared.entry(named: name),
+                   let image = IOSCustomBackgroundManager.shared.image(for: entry) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .scaleEffect(entry.scale)
+                        .offset(x: entry.offsetXFraction * geo.size.width, y: entry.offsetYFraction * geo.size.height)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                } else {
+                    coordinator.currentFeltColor
+                }
+            }
+
+            if coordinator.showFeltVignette {
+                RadialGradient(
+                    gradient: Gradient(colors: [Color.clear, Color.black.opacity(0.34)]),
+                    center: .center, startRadius: 100, endRadius: 680
+                )
+                .allowsHitTesting(false)
             }
         }
         .ignoresSafeArea()

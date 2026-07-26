@@ -45,9 +45,15 @@ struct TouchCardView: View {
 
     var body: some View {
         ZStack {
+            // White (or custom-color) backing behind BOTH faces, matching mac's
+            // CardView (`.background(... : Color.white)` applied outside its own
+            // faceUp/faceDown branch) — without this, any card back or face-art image
+            // with transparency (e.g. the Vulpera theme's priest.png) let whatever's
+            // behind the card bleed through instead of showing a solid card.
+            RoundedRectangle(cornerRadius: width * 0.07)
+                .fill(faceColor)
+
             if card.faceUp {
-                RoundedRectangle(cornerRadius: width * 0.07)
-                    .fill(faceColor)
                 RoundedRectangle(cornerRadius: width * 0.07)
                     .stroke(Color.black.opacity(0.25), lineWidth: 1)
 
