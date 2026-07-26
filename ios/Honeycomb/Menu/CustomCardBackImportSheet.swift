@@ -19,14 +19,10 @@ struct CustomCardBackImportSheet: View {
     @State private var name: String = ""
     @State private var errorMessage: String? = nil
 
-    // Committed crop state (persisted between gestures) plus the in-flight gesture
-    // deltas (@GestureState below), combined for live feedback during the gesture and
-    // saved into `scale`/`offsetXFraction`/`offsetYFraction` once it ends.
+    // Crop state, edited live by ImageCropEditor's pinch/drag gestures.
     @State private var scale: CGFloat = 1.0
     @State private var offsetXFraction: CGFloat = 0
     @State private var offsetYFraction: CGFloat = 0
-    @GestureState private var pinchDelta: CGFloat = 1.0
-    @GestureState private var dragDelta: CGSize = .zero
 
     private static let cardAspect: CGFloat = 181.0 / 128.0
 
@@ -51,7 +47,8 @@ struct CustomCardBackImportSheet: View {
 
                 if let previewImage {
                     Section("Pinch to zoom, drag to reposition") {
-                        cropPreview(previewImage)
+                        ImageCropEditor(image: previewImage, aspect: Self.cardAspect,
+                                       scale: $scale, offsetXFraction: $offsetXFraction, offsetYFraction: $offsetYFraction)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                         Button("Reset Position") {
@@ -86,39 +83,6 @@ struct CustomCardBackImportSheet: View {
                 }
             }
         }
-    }
-
-    private func cropPreview(_ image: UIImage) -> some View {
-        let width: CGFloat = 180
-        let height = width * Self.cardAspect
-        return GeometryReader { geo in
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .scaleEffect(scale * pinchDelta)
-                .offset(x: offsetXFraction * geo.size.width + dragDelta.width,
-                        y: offsetYFraction * geo.size.height + dragDelta.height)
-                .frame(width: geo.size.width, height: geo.size.height)
-                .clipped()
-        }
-        .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.4), lineWidth: 1))
-        .contentShape(Rectangle())
-        .gesture(
-            SimultaneousGesture(
-                MagnificationGesture()
-                    .updating($pinchDelta) { value, state, _ in state = value }
-                    .onEnded { value in scale = max(0.5, min(3.0, scale * value)) },
-                DragGesture()
-                    .updating($dragDelta) { value, state, _ in state = value.translation }
-                    .onEnded { value in
-                        offsetXFraction += value.translation.width / width
-                        offsetYFraction += value.translation.height / height
-                    }
-            )
-        )
-        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func save() {

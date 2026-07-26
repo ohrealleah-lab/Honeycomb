@@ -12,6 +12,7 @@ struct SlideDownMenu<GameSettings: View>: View {
     @State private var customCardBacks = IOSCustomCardBackManager.shared
     @State private var showingImportSheet = false
     @State private var entryPendingDelete: IOSCustomCardBackManager.Entry? = nil
+    @State private var showingFaceArtSheet = false
 
     var body: some View {
         GeometryReader { geo in
@@ -31,6 +32,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                                 gameSelectionSection
                                 gameSettings()
                                 themeSection
+                                faceCardArtRow
                                 statsRow
                             }
                             .padding(16)
@@ -232,6 +234,26 @@ struct SlideDownMenu<GameSettings: View>: View {
         }
         .buttonStyle(.plain)
         .padding(.vertical, 8)
+    }
+
+    // Applies to the standard-card games (Klondike/BeeCell/Spider/Video Poker/
+    // Blackjack) via TouchCardView, not to Honeycomb's own card art — but kept
+    // reachable from every game's menu since it's a persistent global customization,
+    // same as the card-back theme above.
+    private var faceCardArtRow: some View {
+        Button {
+            showingFaceArtSheet = true
+        } label: {
+            HStack {
+                Label("Face Card Art", systemImage: "person.crop.rectangle")
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 8)
+        .sheet(isPresented: $showingFaceArtSheet) { CustomFaceCardArtSheet() }
     }
 
     private func sectionTitle(_ text: String) -> some View {

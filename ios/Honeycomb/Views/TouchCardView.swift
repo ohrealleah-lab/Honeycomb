@@ -59,7 +59,12 @@ struct TouchCardView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding(width * 0.06)
 
-                if card.rank >= 11 {
+                if let slot = FaceCardSlot.slot(rank: card.rank, suit: card.suit),
+                   let entry = IOSCustomFaceArtManager.shared.enabledEntry(for: slot),
+                   let image = IOSCustomFaceArtManager.shared.image(for: entry) {
+                    ImageCropDisplay(image: image, entry: entry)
+                        .frame(width: width * 0.7, height: height * 0.7)
+                } else if card.rank >= 11 {
                     // Face cards: large letter over the suit, like the mac dark-mode letters.
                     VStack(spacing: height * 0.02) {
                         Text(rankText)
