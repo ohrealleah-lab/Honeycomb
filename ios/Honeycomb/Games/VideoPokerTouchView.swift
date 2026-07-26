@@ -22,6 +22,7 @@ struct VideoPokerTouchView: View {
     var body: some View {
         GeometryReader { geo in
             let cardW = min((geo.size.width - 24 - 4 * 8) / 5, 110)
+            let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
                 IOSBackgroundLayer()
@@ -37,8 +38,14 @@ struct VideoPokerTouchView: View {
                             .padding(.horizontal, 12)
                             .frame(height: 44)
 
-                        payTableView
-                            .padding(.horizontal, 16)
+                        // Landscape auto-hides the pay table, same idea as mac's existing
+                        // hideBetBoard/noStressMode/Triple-Play conditions — landscape's
+                        // shorter height has the least room to spare, so it always wins
+                        // regardless of the manual setting.
+                        if !isLandscape && !viewModel.options.hideBetBoard && !viewModel.options.noStressMode {
+                            payTableView
+                                .padding(.horizontal, 16)
+                        }
 
                         Spacer(minLength: 4)
 
@@ -269,6 +276,7 @@ struct VideoPokerSettingsSection: View {
 
                 Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
                 Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
+                Toggle("Hide Bet Board", isOn: $viewModel.options.hideBetBoard)
             }
             .disabled(isMidHand)
             .opacity(isMidHand ? 0.5 : 1)
