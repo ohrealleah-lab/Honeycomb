@@ -601,6 +601,7 @@ struct HoneycombTouchView: View {
             && !viewModel.options.noStressMode
             && !viewModel.hasStolenThisMatch
             && !HoneycombProfileManager.shared.isCardBankFull
+            && viewModel.hasStealableCard
     }
 
     private var postGameOverlay: some View {
@@ -753,6 +754,32 @@ struct HoneycombSettingsSection: View {
                                 else { viewModel.options.selectedRules.remove(rule) }
                             }
                         ))
+                    }
+                }
+
+                DisclosureGroup("Ban List") {
+                    let allBanItems = ["Normal Mode"] + HoneycombRule.allCases.map { $0.rawValue }
+                    ForEach(allBanItems, id: \.self) { ruleName in
+                        Toggle(ruleName, isOn: .init(
+                            get: { viewModel.options.bannedRules.contains(ruleName) },
+                            set: { on in
+                                if on {
+                                    // "Silly bee" guard — mirrors mac: never allow every
+                                    // item (including Normal Mode) to be banned at once,
+                                    // since roulette would have nothing left to pick.
+                                    if viewModel.options.bannedRules.count < allBanItems.count - 1 {
+                                        viewModel.options.bannedRules.insert(ruleName)
+                                    }
+                                } else {
+                                    viewModel.options.bannedRules.remove(ruleName)
+                                }
+                            }
+                        ))
+                    }
+                    if viewModel.options.bannedRules.count == allBanItems.count - 1 {
+                        Text("You cannot blacklist every game, silly bee.")
+                            .font(.caption2)
+                            .foregroundStyle(.red)
                     }
                 }
             }

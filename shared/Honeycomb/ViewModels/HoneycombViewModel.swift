@@ -1340,6 +1340,21 @@ public final class HoneycombViewModel {
     // startNewGame() and rematch().
     public private(set) var hasStolenThisMatch: Bool = false
 
+    // Whether at least one card on the board is actually eligible to steal right now —
+    // same predicate both mac's and iOS's board-cell rendering use to decide the yellow
+    // steal-highlight border. Without this check, "Take a Card"/"Steal Card" could show
+    // on a win where the player never captured anything of the opponent's (or already
+    // unlocked everything they did capture), leading into a steal flow with nothing on
+    // the board actually selectable.
+    public var hasStealableCard: Bool {
+        board.cells.contains { cell in
+            guard let card = cell.card else { return false }
+            return card.originalOwner == .opponent
+                && card.owner == .player
+                && !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id)
+        }
+    }
+
     // Stages a steal so the UI can show a confirmation alert before it's applied
     // ("Are you sure you want to steal this card?"). Stealing unlocks the card
     // straight into the card bank — it no longer touches the active deck/hand at

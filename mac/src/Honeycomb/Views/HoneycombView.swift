@@ -431,7 +431,8 @@ public struct HoneycombView: View {
                             // Rematch is required to steal again.
                             if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                                 && !HoneycombProfileManager.shared.isCardBankFull
-                                && !viewModel.hasStolenThisMatch {
+                                && !viewModel.hasStolenThisMatch
+                                && viewModel.hasStealableCard {
                                 Button("Steal Card") {
                                     isStealingCard = true
                                 }

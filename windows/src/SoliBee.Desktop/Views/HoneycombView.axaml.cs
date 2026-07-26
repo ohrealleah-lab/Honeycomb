@@ -175,8 +175,26 @@ public partial class HoneycombView : UserControl
                 int maxCap = 74; // Assuming 74 total cards in DB
                 if (HoneycombProfileManager.Shared.UnlockedCardIds.Count >= maxCap)
                     bankFull = true;
-                    
-                StealCardButton.IsVisible = !bankFull;
+
+                // Also require at least one card on the board that's actually stealable
+                // (originally the opponent's, currently captured by the player, and not
+                // already unlocked) — otherwise the button led into a steal flow with
+                // nothing on the board selectable.
+                bool hasStealableCard = false;
+                for (int i = 0; i < 9; i++)
+                {
+                    var cell = state.Board.Cells[i];
+                    if (cell.IsEmpty) continue;
+                    var card = cell.Card!;
+                    if (card.OriginalOwner == -1 && card.Owner == 1
+                        && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Data.Id))
+                    {
+                        hasStealableCard = true;
+                        break;
+                    }
+                }
+
+                StealCardButton.IsVisible = !bankFull && hasStealableCard;
                 BankFullWarningText.IsVisible = bankFull;
             }
             else
