@@ -9,6 +9,13 @@ struct SlideDownMenu<GameSettings: View>: View {
     var onShowStats: () -> Void
     @ViewBuilder var gameSettings: () -> GameSettings
 
+    private enum MenuTab: String, CaseIterable {
+        case games = "Game Selection"
+        case options = "Options"
+        case themes = "Themes"
+    }
+    @State private var selectedTab: MenuTab = .games
+
     @State private var customCardBacks = IOSCustomCardBackManager.shared
     @State private var showingImportSheet = false
     @State private var entryPendingDelete: IOSCustomCardBackManager.Entry? = nil
@@ -31,13 +38,28 @@ struct SlideDownMenu<GameSettings: View>: View {
                     VStack(spacing: 0) {
                         header
                         Divider().overlay(Color.white.opacity(0.2))
+
+                        Picker("", selection: $selectedTab) {
+                            ForEach(MenuTab.allCases, id: \.self) { tab in
+                                Text(tab.rawValue).tag(tab)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+
                         ScrollView {
                             VStack(alignment: .leading, spacing: 20) {
-                                gameSelectionSection
-                                gameSettings()
-                                themeSection
-                                faceCardArtRow
-                                statsRow
+                                switch selectedTab {
+                                case .games:
+                                    gameSelectionSection
+                                case .options:
+                                    gameSettings()
+                                    statsRow
+                                case .themes:
+                                    themeSection
+                                    faceCardArtRow
+                                }
                             }
                             .padding(16)
                         }
