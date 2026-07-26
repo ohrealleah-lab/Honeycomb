@@ -597,6 +597,7 @@ struct KlondikeSettingsSection: View {
             Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
             Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
             Toggle("Hide Hint Button", isOn: $viewModel.options.hideHintButton)
+            Toggle("Point Highlights", isOn: $viewModel.options.showPointHighlights)
         }
     }
 }

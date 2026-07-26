@@ -274,6 +274,20 @@ struct VideoPokerSettingsSection: View {
                 }
                 .pickerStyle(.menu)
 
+                // Play Mode (Single/Triple) intentionally left out — Triple Play's
+                // three-hand layout isn't built on iOS yet, so exposing the toggle
+                // would let the player select a mode this view can't render.
+
+                Stepper("Starting Credits: \(viewModel.options.startingCredits)",
+                        value: $viewModel.options.startingCredits, in: 100...10000, step: 100)
+
+                Picker("Default Bet", selection: $viewModel.options.betPerHand) {
+                    ForEach(1...5, id: \.self) { bet in
+                        Text("\(bet)").tag(bet)
+                    }
+                }
+                .pickerStyle(.menu)
+
                 Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
                 Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
                 Toggle("Hide Bet Board", isOn: $viewModel.options.hideBetBoard)

@@ -344,6 +344,8 @@ struct BlackjackSettingsSection: View {
                 .foregroundStyle(.secondary)
 
             Group {
+                Stepper("Starting Credits: \(viewModel.options.startingCredits)",
+                        value: $viewModel.options.startingCredits, in: 10...10000, step: 10)
                 Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
                 Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
             }
