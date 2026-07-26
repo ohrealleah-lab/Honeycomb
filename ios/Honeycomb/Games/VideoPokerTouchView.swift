@@ -24,7 +24,7 @@ struct VideoPokerTouchView: View {
             let cardW = min((geo.size.width - 24 - 4 * 8) / 5, 110)
 
             ZStack {
-                coordinator.currentFeltColor.ignoresSafeArea()
+                IOSBackgroundLayer()
 
                 // ScrollView fallback rather than a computed shrink factor: unlike the
                 // tableau games, most of this view's height is fixed-size text (the pay

@@ -23,7 +23,7 @@ struct BlackjackTouchView: View {
             let cardW = min((geo.size.width - 32) / 6, 90)
 
             ZStack {
-                coordinator.currentFeltColor.ignoresSafeArea()
+                IOSBackgroundLayer()
 
                 // ScrollView fallback rather than a computed shrink factor — a split
                 // stacks a second hand below the first, and landscape's shorter height

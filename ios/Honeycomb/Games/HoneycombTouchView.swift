@@ -64,7 +64,7 @@ struct HoneycombTouchView: View {
 
     var body: some View {
         ZStack {
-            coordinator.currentFeltColor.ignoresSafeArea()
+            IOSBackgroundLayer()
 
             VStack(spacing: 0) {
                 topBar

@@ -45,7 +45,7 @@ struct BeecellTouchView: View {
             let topCardH = topCardW * 181.0 / 128.0
 
             ZStack {
-                coordinator.currentFeltColor.ignoresSafeArea()
+                IOSBackgroundLayer()
 
                 VStack(spacing: 10) {
                     topBar

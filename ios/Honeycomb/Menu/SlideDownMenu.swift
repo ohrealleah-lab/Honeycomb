@@ -14,6 +14,10 @@ struct SlideDownMenu<GameSettings: View>: View {
     @State private var entryPendingDelete: IOSCustomCardBackManager.Entry? = nil
     @State private var showingFaceArtSheet = false
 
+    @State private var customBackgrounds = IOSCustomBackgroundManager.shared
+    @State private var showingBackgroundImportSheet = false
+    @State private var backgroundPendingDelete: IOSCustomBackgroundManager.Entry? = nil
+
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .top) {
@@ -134,10 +138,48 @@ struct SlideDownMenu<GameSettings: View>: View {
                 }
                 .padding(.vertical, 2)
             }
+
+            sectionTitle("Background").padding(.top, 4)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    addBackgroundButton
+                    // "None" clears back to the felt color — always available, not
+                    // removable, mirrors mac's default (no background) state.
+                    Button {
+                        coordinator.customBackgroundName = nil
+                    } label: {
+                        VStack(spacing: 4) {
+                            ZStack {
+                                Circle().fill(coordinator.currentFeltColor)
+                                Image(systemName: "xmark")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(.white)
+                            }
+                            .frame(width: 44, height: 44 * 181.0 / 128.0)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5)
+                                    .stroke(Color.accentColor, lineWidth: coordinator.customBackgroundName == nil ? 3 : 0)
+                            )
+                            Text("None").font(.caption2).foregroundStyle(.primary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    ForEach(customBackgrounds.backgrounds) { entry in
+                        backgroundButton(entry)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
         }
         .sheet(isPresented: $showingImportSheet) {
             CustomCardBackImportSheet { name in
                 coordinator.cardBackTheme = name
+            }
+        }
+        .sheet(isPresented: $showingBackgroundImportSheet) {
+            CustomBackgroundImportSheet { name in
+                coordinator.customBackgroundName = name
             }
         }
         .alert("Remove Card Back?", isPresented: .init(
@@ -154,6 +196,66 @@ struct SlideDownMenu<GameSettings: View>: View {
         } message: {
             Text("This removes the imported image. It can't be undone.")
         }
+        .alert("Remove Background?", isPresented: .init(
+            get: { backgroundPendingDelete != nil },
+            set: { if !$0 { backgroundPendingDelete = nil } }
+        )) {
+            Button("Cancel", role: .cancel) {}
+            Button("Remove", role: .destructive) {
+                if let entry = backgroundPendingDelete {
+                    if coordinator.customBackgroundName == entry.name { coordinator.customBackgroundName = nil }
+                    customBackgrounds.removeCustomBackground(entry)
+                }
+            }
+        } message: {
+            Text("This removes the imported image. It can't be undone.")
+        }
+    }
+
+    private func backgroundButton(_ entry: IOSCustomBackgroundManager.Entry) -> some View {
+        Button {
+            coordinator.customBackgroundName = entry.name
+        } label: {
+            VStack(spacing: 4) {
+                Group {
+                    if let image = customBackgrounds.image(for: entry) {
+                        Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Color.gray.opacity(0.3)
+                    }
+                }
+                .frame(width: 44, height: 44 * 181.0 / 128.0)
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(Color.accentColor, lineWidth: coordinator.customBackgroundName == entry.name ? 3 : 0)
+                )
+                Text(entry.name).font(.caption2).foregroundStyle(.primary).lineLimit(1)
+            }
+        }
+        .buttonStyle(.plain)
+        .onLongPressGesture {
+            backgroundPendingDelete = entry
+        }
+    }
+
+    private var addBackgroundButton: some View {
+        Button {
+            showingBackgroundImportSheet = true
+        } label: {
+            VStack(spacing: 4) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(Color.black.opacity(0.3))
+                    Image(systemName: "plus")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 44, height: 44 * 181.0 / 128.0)
+                Text("Add").font(.caption2).foregroundStyle(.primary)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private func cardBackButton(_ name: String, isCustom: Bool) -> some View {

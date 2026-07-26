@@ -40,7 +40,7 @@ struct SpiderTouchView: View {
             let cardH = cardW * 181.0 / 128.0
 
             ZStack {
-                coordinator.currentFeltColor.ignoresSafeArea()
+                IOSBackgroundLayer()
 
                 VStack(spacing: 10) {
                     topBar
