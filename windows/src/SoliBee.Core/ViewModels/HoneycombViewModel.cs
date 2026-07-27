@@ -497,11 +497,9 @@ public partial class HoneycombViewModel : ObservableObject
     {
         var hand = State.CurrentTurn == 1 ? State.PlayerHand : State.OpponentHand;
         var card = hand[handIndex];
-        
-        var boardCopy = State.Board.Clone();
-        int preScore = State.CurrentTurn == 1 ? CountPlayerCards(boardCopy, hand) : CountOpponentCards(boardCopy, hand);
-        int preCombo = boardCopy.SessionSamePlusTriggers;
-        int preFA = boardCopy.SessionFallenAceCaptures;
+
+        var preBoard = State.Board.Clone();
+        int preScore = State.CurrentTurn == 1 ? CountPlayerCards(preBoard, hand) : CountOpponentCards(preBoard, hand);
 
         if (!State.Board.Cells[cellIndex].IsEmpty)
         {
@@ -517,9 +515,56 @@ public partial class HoneycombViewModel : ObservableObject
             card.BombShelterTurnsRemaining = 3;
         }
 
-        var flipped = State.Board.PlaceCard(card, cellIndex, new HashSet<HoneycombRule>(State.ActiveRules), skipCaptures: isBombShelterFirstCard);
+        // Resolve the placement (and any captures) on a clone rather than State.Board
+        // directly, so Point Highlights can show an intermediate ("placed, not yet
+        // captured") board first without the real, fully-resolved result leaking
+        // through early.
+        var workingBoard = State.Board.Clone();
+        var flipped = workingBoard.PlaceCard(card, cellIndex, new HashSet<HoneycombRule>(State.ActiveRules), skipCaptures: isBombShelterFirstCard);
         hand.RemoveAt(handIndex);
 
+        // Only the directly-placed card's own captures get highlighted — secondary
+        // combo/chain flips (a captured card immediately flipping its own neighbors)
+        // just flip along with everything else below, no separate highlight cycle.
+        // Naturally empty for a Bomb Shelter first card, since skipCaptures leaves
+        // `flipped` empty too.
+        var directStatIndices = new HashSet<int>();
+        foreach (var n in preBoard.GetNeighbors(cellIndex))
+        {
+            if (flipped.Contains(n.Index)) directStatIndices.Add(n.AttackerEdge);
+        }
+
+        _isAnimating = true;
+        if (Options.ShowPointHighlights && directStatIndices.Count > 0 && !_isHeadless)
+        {
+            var intermediateBoard = preBoard.Clone();
+            intermediateBoard.PlaceCard(card, cellIndex, new HashSet<HoneycombRule>(State.ActiveRules), skipCaptures: true);
+            State.Board = intermediateBoard;
+            State.PointHighlightCellIndex = cellIndex;
+            State.PointHighlightStatIndices = directStatIndices;
+            NotifyStateChanged();
+
+            FinishPlacementAfterHighlight(workingBoard, cellIndex, hand, preScore);
+        }
+        else
+        {
+            State.Board = workingBoard;
+            FinishPlacementTail(cellIndex, hand, preScore);
+        }
+    }
+
+    private async void FinishPlacementAfterHighlight(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore)
+    {
+        await Task.Delay(500);
+
+        State.PointHighlightCellIndex = null;
+        State.PointHighlightStatIndices = new HashSet<int>();
+        State.Board = workingBoard;
+        FinishPlacementTail(cellIndex, hand, preScore);
+    }
+
+    private void FinishPlacementTail(int cellIndex, List<HoneycombCard> hand, int preScore)
+    {
         // Ticks down any other still-hidden Bomb Shelter card(s) already on the board —
         // this play counts as one of their 3 turns, whether or not this play was itself
         // a Bomb Shelter placement.
@@ -542,10 +587,10 @@ public partial class HoneycombViewModel : ObservableObject
             OnFlashBanner?.Invoke("SAME!");
         else if (State.Board.LastPlusTriggered)
             OnFlashBanner?.Invoke("PLUS!");
-            
+
         if (State.Board.LastComboFlipCount > 0)
-            OnFlashBanner?.Invoke($"COMBO! x{State.Board.LastComboFlipCount}");
-        
+            OnFlashBanner?.Invoke($"COMBO x{State.Board.LastComboFlipCount}!");
+
         int postScore = State.CurrentTurn == 1 ? CountPlayerCards(State.Board, hand) : CountOpponentCards(State.Board, hand);
         // Count all captures (both player and opponent moves), not just player captures
         State.CardsCapturedThisMatch += Math.Max(0, postScore - preScore); // preScore already includes the card placed from hand

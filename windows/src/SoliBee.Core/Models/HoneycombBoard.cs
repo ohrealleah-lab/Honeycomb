@@ -292,7 +292,10 @@ public class HoneycombBoard
         return attackerStat > targetStat;
     }
 
-    private List<(int Index, int AttackerEdge, int NeighborEdge)> GetNeighbors(int idx)
+    // Internal (not private): HoneycombViewModel.ExecutePlacement reuses this purely
+    // geometric lookup to determine which of a just-placed card's edges directly
+    // caused a capture, for the Point Highlights flash.
+    internal List<(int Index, int AttackerEdge, int NeighborEdge)> GetNeighbors(int idx)
     {
         var result = new List<(int, int, int)>();
         int row = idx / 3;

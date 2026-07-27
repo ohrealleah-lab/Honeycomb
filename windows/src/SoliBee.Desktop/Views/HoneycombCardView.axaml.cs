@@ -22,6 +22,16 @@ public partial class HoneycombCardView : UserControl
         set => StealHighlightBorder.IsVisible = value;
     }
 
+    // Point Highlights: flashes the winning stat edge(s) — 0=Top, 1=Right, 2=Bottom,
+    // 3=Left — for a beat before a capture visually flips. Pass null/empty to clear.
+    public void SetStatHighlight(System.Collections.Generic.HashSet<int>? statIndices)
+    {
+        TopFlash.IsVisible = statIndices?.Contains(0) ?? false;
+        RightFlash.IsVisible = statIndices?.Contains(1) ?? false;
+        BottomFlash.IsVisible = statIndices?.Contains(2) ?? false;
+        LeftFlash.IsVisible = statIndices?.Contains(3) ?? false;
+    }
+
     private int _currentOwner = 0;
 
     public HoneycombCardView()

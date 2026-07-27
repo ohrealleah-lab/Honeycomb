@@ -53,4 +53,11 @@ public class HoneycombState
     // Ids of the two cards involved in a Swap-rule trade, while their reveal
     // animation is playing at the start of a match. Empty the rest of the time.
     public HashSet<Guid> SwapHighlightIds { get; set; } = new();
+
+    // Point Highlights (Options.ShowPointHighlights): while non-null, the just-placed
+    // card at this board cell flashes its winning stat edge(s) — set 0..3 (Top/Right/
+    // Bottom/Left) — for a beat before the capture actually flips. Null the rest of the
+    // time (including when the option is off, in which case captures apply instantly).
+    public int? PointHighlightCellIndex { get; set; }
+    public HashSet<int> PointHighlightStatIndices { get; set; } = new();
 }

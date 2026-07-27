@@ -1413,7 +1413,8 @@ public partial class MainWindow : Window
         if (this.DataContext is HoneycombViewModel hVm)
         {
             if (e.PropertyName == nameof(HoneycombViewModel.State) ||
-                e.PropertyName == nameof(HoneycombViewModel.IsPlaying))
+                e.PropertyName == nameof(HoneycombViewModel.IsPlaying) ||
+                e.PropertyName == nameof(HoneycombViewModel.Options))
             {
                 UpdateHoneycombButtons();
             }
@@ -1434,7 +1435,9 @@ public partial class MainWindow : Window
             if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = isPreMatch || isResult;
             if (HoneycombRulesButton != null) HoneycombRulesButton.IsVisible = isPreMatch || isResult;
             if (OptionsButton != null) OptionsButton.IsVisible = isPreMatch || isResult;
-            if (HintButton != null) HintButton.IsVisible = isPlaying;
+            // Hidden if the player opted out, or on Ultra Hard (where a hint would trivialize
+            // the hardest difficulty) — matches Mac's HoneycombView hint-button condition.
+            if (HintButton != null) HintButton.IsVisible = isPlaying && !hVm.Options.HideHintButton && hVm.Options.Difficulty != HoneycombDifficulty.UltraHard;
             if (UndoButton != null) UndoButton.IsVisible = isPlaying;
             if (HoneycombQuitMatchButton != null) 
             {
@@ -1864,7 +1867,7 @@ public partial class MainWindow : Window
             else if (e.Key == Key.H)
             {
                 bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
-                if (isCardGame && HintButton?.IsEnabled != false)
+                if (isCardGame && HintButton?.IsEnabled != false && HintButton?.IsVisible != false)
                 {
                     e.Handled = true;
                     Hint_Click(null, new RoutedEventArgs());

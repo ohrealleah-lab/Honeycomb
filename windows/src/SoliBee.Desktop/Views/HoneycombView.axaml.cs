@@ -169,7 +169,8 @@ public partial class HoneycombView : UserControl
             
             // Show Steal Card button if they haven't stolen, and card bank isn't full, and not no-stress, and they won.
             var globalOpts = SoliBee.Core.Services.SettingsService.LoadOptions();
-            bool canSteal = !globalOpts.IsNoStressMode && !state.HasStolenThisMatch && state.PlayerScore > state.OpponentScore;
+            bool won = state.PlayerScore > state.OpponentScore;
+            bool canSteal = !globalOpts.IsNoStressMode && !state.HasStolenThisMatch && won;
             if (canSteal)
             {
                 // Check if bank full
@@ -198,11 +199,15 @@ public partial class HoneycombView : UserControl
 
                 StealCardButton.IsVisible = !bankFull && hasStealableCard;
                 BankFullWarningText.IsVisible = bankFull;
+                AlreadyStolenWarningText.IsVisible = false;
             }
             else
             {
                 StealCardButton.IsVisible = false;
                 BankFullWarningText.IsVisible = false;
+                // Only the "already stolen" scenario gets its own message — a loss/draw
+                // or No Stress Mode has nothing steal-related to explain.
+                AlreadyStolenWarningText.IsVisible = !globalOpts.IsNoStressMode && state.HasStolenThisMatch && won;
             }
         }
         
@@ -327,16 +332,21 @@ public partial class HoneycombView : UserControl
                     _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));
 
                 _boardCards[i].StealHighlight = false;
+                _boardCards[i].SetStatHighlight(null);
             }
             else
             {
                 await _boardCards[i].RenderCard(cell.Card, faceDown: cell.Card!.IsFaceDown, hIdx: -1, cIdx: i);
-                
+
                 // Highlight cards eligible to be double-clicked and stolen
                 _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));
                 _boardCards[i].StealHighlight = _isStealingCard
                     && cell.Card != null && cell.Card.OriginalOwner == -1 && cell.Card.Owner == 1
                     && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(cell.Card.Data.Id);
+
+                // Point Highlights: flash the just-placed card's winning stat edge(s)
+                // for a beat before the capture visually flips (see ExecutePlacement).
+                _boardCards[i].SetStatHighlight(state.PointHighlightCellIndex == i ? state.PointHighlightStatIndices : null);
             }
         }
         
