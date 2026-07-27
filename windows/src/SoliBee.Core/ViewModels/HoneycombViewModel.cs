@@ -723,10 +723,10 @@ public partial class HoneycombViewModel : ObservableObject
     {
         _isAnimating = true;
         NotifyStateChanged();
-        
+
         // Give enough time for the final card placement and any combo animations to fully resolve
-        await Task.Delay(2500);
-        
+        if (!_isHeadless) await Task.Delay(2500);
+
         OnFlashBanner?.Invoke("Sudden Death!");
         State.IsSuddenDeath = true;
         Stats.SuddenDeathCount++;
