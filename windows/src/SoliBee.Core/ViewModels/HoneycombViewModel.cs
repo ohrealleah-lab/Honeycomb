@@ -77,19 +77,28 @@ public partial class HoneycombViewModel : ObservableObject
         bool normalBanned = Options.BannedRules != null && Options.BannedRules.Contains("Normal Mode");
 
         // Each of up to 2 draws gives "stop here" the same odds as any single specific
-        // rule in the current pool, rather than first rolling a flat 1-in-3 chance of
+        // rule in the ORIGINAL pool, rather than first rolling a flat 1-in-3 chance of
         // 0/1/2 rules and only then picking within that bucket. The old scheme gave
         // Normal (0 rules) a flat 33% regardless of how many rules exist to compete
         // with it — so Normal showed up ~4x more often than any individual named rule
         // ever did, which read as "roulette keeps landing on Normal" even though every
         // single rule was, individually, equally likely to be picked.
+        int originalPoolSize = pool.Count;
         var selected = new List<HoneycombRule>();
         for (int slot = 0; slot < 2; slot++)
         {
             if (pool.Count == 0) break;
 
             bool mustPick = slot == 0 && normalBanned;
-            int stopWeight = mustPick ? 0 : 1;
+            // Scale stopWeight by how many rules exclusivity already pulled from the
+            // original pool, so slot 1's denominator stays originalPoolSize+1 no
+            // matter which rule slot 0 picked. Without this, picking a rule from a
+            // bigger exclusivity group (All Open/Three Open/Bomb Shelter removes 3 at
+            // once) shrinks slot 1's pool more than a no-partner rule (removes 1),
+            // making "stop" a bigger share of that smaller pool — so rules with
+            // exclusivity partners ended up as the SOLE active rule noticeably more
+            // often than standalone rules like Same or Reverse.
+            int stopWeight = mustPick ? 0 : (originalPoolSize - pool.Count + 1);
             int roll = Random.Shared.Next(pool.Count + stopWeight);
             if (roll == pool.Count) break; // rolled the "stop" slot
 

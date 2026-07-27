@@ -513,18 +513,28 @@ public final class HoneycombViewModel {
             let normalBanned = options.bannedRules.contains("Normal Mode")
 
             // Each of up to 2 draws gives "stop here" the same odds as any single
-            // specific rule in the current pool, rather than first rolling a flat
+            // specific rule in the ORIGINAL pool, rather than first rolling a flat
             // 1-in-3 chance of 0/1/2 rules and only then picking within that bucket.
             // The old scheme gave Normal (0 rules) a flat 33% regardless of how many
             // rules exist to compete with it — so Normal showed up ~4x more often than
             // any individual named rule ever did, which read as "roulette keeps
             // landing on Normal" even though every single rule was, individually,
             // equally likely to be picked.
+            let originalPoolSize = pool.count
             activeRules = []
             for slot in 0..<2 {
                 guard !pool.isEmpty else { break }
                 let mustPick = slot == 0 && normalBanned
-                let stopWeight = mustPick ? 0 : 1
+                // Scale stopWeight by how many rules exclusivity has already pulled
+                // from the original pool (not just "1"), so slot 1's denominator
+                // stays originalPoolSize+1 no matter which rule slot 0 picked. Without
+                // this, picking a rule from a bigger exclusivity group (e.g. All
+                // Open/Three Open/Bomb Shelter, which removes 3 at once) shrinks
+                // slot 1's pool more than picking a no-partner rule (removes 1) —
+                // making "stop" a bigger share of that smaller pool, so rules with
+                // exclusivity partners ended up as the SOLE active rule noticeably
+                // more often than standalone rules like Same or Reverse.
+                let stopWeight = mustPick ? 0 : (originalPoolSize - pool.count + 1)
                 let roll = Int.random(in: 0..<(pool.count + stopWeight))
                 guard roll < pool.count else { break } // rolled the "stop" slot
 
