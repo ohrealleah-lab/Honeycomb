@@ -76,33 +76,29 @@ public partial class HoneycombViewModel : ObservableObject
         // If Normal Mode is banned, force at least 1 rule
         bool normalBanned = Options.BannedRules != null && Options.BannedRules.Contains("Normal Mode");
 
-        // "Stop here" is a flat probability (1 in originalPoolSize+1) at EVERY draw,
-        // fully decoupled from how much exclusivity has shrunk the pool. The old
-        // scheme gave Normal (0 rules) a flat 33% regardless of how many rules exist
-        // to compete with it — so Normal showed up ~4x more often than any individual
-        // named rule ever did.
-        //
-        // An earlier attempt at this fix scaled stopWeight up by how many rules
-        // exclusivity had removed, reasoning that "stop" should absorb the removed
-        // rules' probability mass — but a 5000+/200000-trial simulation showed that
-        // made things WORSE, not better: it inflated "stop"'s share specifically after
-        // picking a rule with more exclusivity partners (All Open/Three Open/Bomb
-        // Shelter remove 3 at once vs. a no-partner rule's 1), nearly doubling how
-        // much more often those rules ended up as the SOLE active rule compared to
-        // standalone rules like Same or Reverse (2.4% vs 1.2% at 200k trials, vs. the
-        // original bug's milder 0.77% vs 0.64%). Keeping "stop" at a flat,
-        // pool-size-independent probability is what actually equalizes solo-rule odds
-        // across every rule regardless of its exclusivity group (confirmed via the
-        // same simulation: 0.60% / 0.58% / 0.60% across the three exclusivity-group
-        // sizes at 200k trials).
+        // "Stop here" is a flat probability at EVERY draw, fully decoupled from how
+        // much exclusivity has shrunk the pool (an earlier scaled-stopWeight attempt
+        // inflated "stop" after big exclusivity removals and made solo-rule odds
+        // WORSE, not better — see git history). Draw 1 uses 1/(originalPoolSize+1) so
+        // Normal stays roughly as rare as any single rule (~7.7% for the default
+        // 12-rule pool). Draw 2 uses a distinct, deliberately solved probability so
+        // that "exactly one rule" lands at a full 1/3 overall, rather than being
+        // capped near Normal's rate: with a single shared stop-probability p,
+        // P(exactly 1 rule) = (1-p)*p can never exceed p, so Normal necessarily
+        // out-paced single-rule matches. Solving
+        // (1 - stopProbabilityFirst) * stopProbabilitySecond = 1/3 removes that
+        // ceiling while leaving Normal's rate untouched.
         int originalPoolSize = pool.Count;
-        double stopProbability = 1.0 / (originalPoolSize + 1);
+        double stopProbabilityFirst = 1.0 / (originalPoolSize + 1);
+        double targetSingleRuleRate = 1.0 / 3.0;
+        double stopProbabilitySecond = targetSingleRuleRate / (1.0 - stopProbabilityFirst);
         var selected = new List<HoneycombRule>();
         for (int slot = 0; slot < 2; slot++)
         {
             if (pool.Count == 0) break;
 
             bool mustPick = slot == 0 && normalBanned;
+            double stopProbability = slot == 0 ? stopProbabilityFirst : stopProbabilitySecond;
             if (!mustPick && Random.Shared.NextDouble() < stopProbability) break;
 
             int idx = Random.Shared.Next(pool.Count);
