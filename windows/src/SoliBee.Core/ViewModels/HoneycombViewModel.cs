@@ -26,6 +26,11 @@ public partial class HoneycombViewModel : ObservableObject
     private bool _isHeadless = false;
     private int _matchGeneration = 0;
 
+    // Rematch snapshots: save opponent hand + rules at match end for replaying on rematch
+    private List<HoneycombCard>? _rematchOpponentHand;
+    private List<HoneycombRule> _rematchActiveRules = new();
+    private List<string> _rematchAscensionDescensionSuits = new();
+
     [ObservableProperty] private HoneycombPendingSteal? _pendingSteal;
 
     public (int handIndex, int cellIndex)? ActiveHint { get; private set; }
@@ -368,29 +373,34 @@ public partial class HoneycombViewModel : ObservableObject
 
     public void RestartGame() => StartNewMatch();
 
-    // Rematch: start a new match keeping the same rules from the just-finished match
+    // Rematch: start a new match with the same opponent hand + rules from the just-finished match
     public void RematchGame()
     {
+        // Use snapshots if available; if not, fall back to new game (shouldn't happen in normal play)
+        if (_rematchOpponentHand == null)
+        {
+            StartNewMatch();
+            return;
+        }
+
         State.Phase = HoneycombPhase.Playing;
         State.UndoStack.Clear();
-        // Keep State.ActiveRules unchanged; don't call DetermineActiveRules()
+        State.ActiveRules = new List<HoneycombRule>(_rematchActiveRules);
         State.HasStolenThisMatch = false;
         State.CardsCapturedThisMatch = 0;
         State.IsSuddenDeath = false;
 
         State.Board = new HoneycombBoard();
+        State.Board.AscensionDescensionSuits = new List<string>(_rematchAscensionDescensionSuits);
 
+        // No need to re-roll Ascension/Descension suits; they're already in the snapshot
         if (State.ActiveRules.Contains(HoneycombRule.Ascension))
         {
-            var suits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(1).Select(s => s.ToString()).ToList();
-            State.Board.AscensionDescensionSuits = suits;
-            OnFlashBanner?.Invoke($"Ascension: {string.Join(", ", suits)} +1");
+            OnFlashBanner?.Invoke($"Ascension: {string.Join(", ", State.Board.AscensionDescensionSuits)} +1");
         }
         else if (State.ActiveRules.Contains(HoneycombRule.Descension))
         {
-            var suits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(1).Select(s => s.ToString()).ToList();
-            State.Board.AscensionDescensionSuits = suits;
-            OnFlashBanner?.Invoke($"Descension: {string.Join(", ", suits)} -1");
+            OnFlashBanner?.Invoke($"Descension: {string.Join(", ", State.Board.AscensionDescensionSuits)} -1");
         }
 
         var globalOpts = SettingsService.LoadOptions();
@@ -414,76 +424,13 @@ public partial class HoneycombViewModel : ObservableObject
         State.PlayerHand = playerIds.Select(id => new HoneycombCard(HoneycombDatabase.Shared.Card(id)!, 1)).ToList();
         State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
 
-        bool reverse = State.ActiveRules.Contains(HoneycombRule.Reverse);
-        var comp = new List<(int stars, int count)>();
-        if (!reverse)
-        {
-            if (Options.Difficulty == "Easy") { comp.Add((1, 4)); comp.Add((2, 1)); }
-            else if (Options.Difficulty == "Medium")
-            {
-                comp.Add((2, 4));
-                comp.Add(Random.Shared.NextDouble() < 0.2 ? (4, 1) : (3, 1));
-            }
-            else if (Options.Difficulty == "Hard") { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
-            else { comp.Add((3, 2)); comp.Add((4, 1)); comp.Add((5, 2)); }
-        }
-        else
-        {
-            if (Options.Difficulty == "Easy") { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
-            else if (Options.Difficulty == "Medium")
-            {
-                comp.Add((2, 4));
-                comp.Add(Random.Shared.NextDouble() < 0.2 ? (4, 1) : (3, 1));
-            }
-            else if (Options.Difficulty == "Hard") { comp.Add((1, 2)); comp.Add((2, 3)); }
-            else { comp.Add((1, 5)); }
-        }
+        // Use the snapshotted opponent hand from the previous match (with same cards/positions)
+        State.OpponentHand = _rematchOpponentHand!.Select(c => c.Clone()).ToList();
 
-        State.OpponentHand = new List<HoneycombCard>();
-        foreach (var (stars, count) in comp)
-        {
-            var cards = HoneycombDatabase.Shared.RulesAwareCards(stars, count, reverse);
-            State.OpponentHand.AddRange(cards.Select(c => new HoneycombCard(c, -1)));
-        }
-
+        // On rematch: reveals were already resolved in the previous match snapshot, so don't re-roll.
+        // Just keep the empty reveal sets; players will start with no cards revealed.
         State.PlayerRevealedIds.Clear();
         State.OpponentRevealedIds.Clear();
-
-        Guid? swapPlayerCardId = null;
-        Guid? swapOpponentCardId = null;
-        if (State.ActiveRules.Contains(HoneycombRule.Swap))
-        {
-            int pIdx = Random.Shared.Next(State.PlayerHand.Count);
-            int oIdx = Random.Shared.Next(State.OpponentHand.Count);
-
-            var pCard = State.PlayerHand[pIdx];
-            var oCard = State.OpponentHand[oIdx];
-
-            pCard.Owner = -1;
-            oCard.Owner = 1;
-
-            State.PlayerHand[pIdx] = oCard;
-            State.OpponentHand[oIdx] = pCard;
-
-            swapOpponentCardId = oCard.UniqueInstanceId;
-            swapPlayerCardId = pCard.UniqueInstanceId;
-        }
-
-        if (State.ActiveRules.Contains(HoneycombRule.AllOpen))
-        {
-            foreach (var c in State.PlayerHand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
-            foreach (var c in State.OpponentHand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
-        }
-        else if (State.ActiveRules.Contains(HoneycombRule.ThreeOpen))
-        {
-            var pRand = State.PlayerHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
-            var oRand = State.OpponentHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
-            foreach (var c in pRand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
-            foreach (var c in oRand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
-        }
-
-        if (swapPlayerCardId.HasValue) State.OpponentRevealedIds.Add(swapPlayerCardId.Value);
-        if (swapOpponentCardId.HasValue) State.PlayerRevealedIds.Add(swapOpponentCardId.Value);
 
         State.PlayerChaosIndex = null;
         State.OpponentChaosIndex = null;
@@ -505,16 +452,8 @@ public partial class HoneycombViewModel : ObservableObject
 
         string starterName = starter == 1 ? "Player" : "Opponent";
         string startBanner = $"First Move: {starterName}!";
-        bool didSwap = swapPlayerCardId.HasValue && swapOpponentCardId.HasValue;
-        if (didSwap) startBanner += "\nSwap!";
+        // On rematch: no Swap re-trigger; Swap was already done in the previous match
         OnFlashBanner?.Invoke(startBanner);
-
-        int generation = ++_matchGeneration;
-        if (didSwap)
-        {
-            State.SwapHighlightIds = new HashSet<Guid> { swapPlayerCardId!.Value, swapOpponentCardId!.Value };
-            ClearSwapHighlightAfterBanner(generation);
-        }
 
         StartTurn();
     }
@@ -621,12 +560,8 @@ public partial class HoneycombViewModel : ObservableObject
             OnFlashBanner?.Invoke($"COMBO! x{State.Board.LastComboFlipCount}");
         
         int postScore = State.CurrentTurn == 1 ? CountPlayerCards(State.Board, hand) : CountOpponentCards(State.Board, hand);
-            // cards captured = net difference, but actually that counts cards we placed minus what we had before.
-            // Better to compute captures explicitly or let Stats handle it.
-            if (State.CurrentTurn == 1)
-            {
-                State.CardsCapturedThisMatch += Math.Max(0, postScore - preScore); // preScore already includes the card placed from hand
-            }
+        // Count all captures (both player and opponent moves), not just player captures
+        State.CardsCapturedThisMatch += Math.Max(0, postScore - preScore); // preScore already includes the card placed from hand
 
         if (IsBoardFull())
         {
@@ -746,6 +681,11 @@ public partial class HoneycombViewModel : ObservableObject
         
         Stats.RecordGame(won, drawn, State.CardsCapturedThisMatch, State.Board.SessionSamePlusTriggers, flawless, Options.Difficulty, State.Board.SessionFallenAceCaptures);
         SaveStats();
+
+        // Snapshot opponent hand + rules for rematch: allows farming stolen cards from same opponent
+        _rematchOpponentHand = State.OpponentHand.Select(c => c.Clone()).ToList();
+        _rematchActiveRules = new List<HoneycombRule>(State.ActiveRules);
+        _rematchAscensionDescensionSuits = new List<string>(State.Board.AscensionDescensionSuits);
 
         State.Phase = HoneycombPhase.Result;
         _isAnimating = false;
