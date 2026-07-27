@@ -212,7 +212,7 @@ public partial class HoneycombViewModel : ObservableObject
             var cards = HoneycombDatabase.Shared.RulesAwareCards(stars, count, reverse);
             State.OpponentHand.AddRange(cards.Select(c => new HoneycombCard(c, -1)));
         }
-        
+
         State.PlayerRevealedIds.Clear();
         State.OpponentRevealedIds.Clear();
 
@@ -263,6 +263,15 @@ public partial class HoneycombViewModel : ObservableObject
         // to hide, and the AI is in the same position for the card it received.
         if (swapPlayerCardId.HasValue) State.OpponentRevealedIds.Add(swapPlayerCardId.Value);
         if (swapOpponentCardId.HasValue) State.PlayerRevealedIds.Add(swapOpponentCardId.Value);
+
+        // Snapshot the fully-resolved (post-swap) opponent hand + this match's rules —
+        // this becomes the baseline every future RematchGame() replays, until the next
+        // real StartNewMatch() overwrites it. Must be taken here (post-swap, pre-play),
+        // not at match end, since by match end most/all opponent cards have already
+        // been removed from hand onto the board.
+        _rematchOpponentHand = State.OpponentHand.Select(c => c.Clone()).ToList();
+        _rematchActiveRules = new List<HoneycombRule>(State.ActiveRules);
+        _rematchAscensionDescensionSuits = new List<string>(State.Board.AscensionDescensionSuits);
 
         State.PlayerChaosIndex = null;
         State.OpponentChaosIndex = null;
@@ -427,10 +436,29 @@ public partial class HoneycombViewModel : ObservableObject
         // Use the snapshotted opponent hand from the previous match (with same cards/positions)
         State.OpponentHand = _rematchOpponentHand!.Select(c => c.Clone()).ToList();
 
-        // On rematch: reveals were already resolved in the previous match snapshot, so don't re-roll.
-        // Just keep the empty reveal sets; players will start with no cards revealed.
         State.PlayerRevealedIds.Clear();
         State.OpponentRevealedIds.Clear();
+
+        // No swap-reveal animation to stage here — the opponent's hand (including any
+        // Swap trade) is already fully resolved from the snapshot, so there's nothing
+        // left to "discover." A card whose OriginalOwner differs from its current Owner
+        // is a swapped card the player already knows, so it stays revealed the same way
+        // it would have by the end of the original match's swap animation.
+        foreach (var c in State.OpponentHand.Where(c => c.OriginalOwner != c.Owner)) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
+        foreach (var c in State.PlayerHand.Where(c => c.OriginalOwner != c.Owner)) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
+
+        if (State.ActiveRules.Contains(HoneycombRule.AllOpen))
+        {
+            foreach (var c in State.PlayerHand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
+            foreach (var c in State.OpponentHand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
+        }
+        else if (State.ActiveRules.Contains(HoneycombRule.ThreeOpen))
+        {
+            var pRand = State.PlayerHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
+            var oRand = State.OpponentHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
+            foreach (var c in pRand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
+            foreach (var c in oRand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
+        }
 
         State.PlayerChaosIndex = null;
         State.OpponentChaosIndex = null;
@@ -681,11 +709,6 @@ public partial class HoneycombViewModel : ObservableObject
         
         Stats.RecordGame(won, drawn, State.CardsCapturedThisMatch, State.Board.SessionSamePlusTriggers, flawless, Options.Difficulty, State.Board.SessionFallenAceCaptures);
         SaveStats();
-
-        // Snapshot opponent hand + rules for rematch: allows farming stolen cards from same opponent
-        _rematchOpponentHand = State.OpponentHand.Select(c => c.Clone()).ToList();
-        _rematchActiveRules = new List<HoneycombRule>(State.ActiveRules);
-        _rematchAscensionDescensionSuits = new List<string>(State.Board.AscensionDescensionSuits);
 
         State.Phase = HoneycombPhase.Result;
         _isAnimating = false;
