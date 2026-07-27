@@ -54,8 +54,12 @@ struct TouchCardView: View {
                 .fill(faceColor)
 
             if card.faceUp {
+                // Matches mac's CardView outline (`Color.black.opacity(0.85)` at
+                // lineWidth 0.75) — this was opacity 0.25 before, which nearly
+                // disappeared between overlapping tableau cards at the smaller sizes
+                // Klondike/Spider/BeeCell use on iPhone portrait.
                 RoundedRectangle(cornerRadius: width * 0.07)
-                    .stroke(Color.black.opacity(0.25), lineWidth: 1)
+                    .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
 
                 cornerIndex
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
