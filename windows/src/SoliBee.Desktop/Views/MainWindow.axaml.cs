@@ -78,7 +78,7 @@ public partial class MainWindow : Window
             ApplyBoardBackground(m.Options);
             CardView.ApplyThemeColors(m.Options);
             CardView.InvalidateAllCardViews(this);
-            bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack";
+            bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack" && _currentGameTag != "Honeycomb";
             if (TimeStatPanel != null)  TimeStatPanel.IsVisible  = isCardGame && !m.Options.IsNoStressMode;
             if (ScoreStatPanel != null) ScoreStatPanel.IsVisible = isCardGame && !m.Options.IsNoStressMode;
             if (MovesStatPanel != null) MovesStatPanel.IsVisible = isCardGame && !m.Options.IsNoStressMode;

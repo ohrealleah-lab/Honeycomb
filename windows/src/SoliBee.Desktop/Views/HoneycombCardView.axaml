@@ -8,7 +8,7 @@
         <!-- Flip Container for animation -->
         <Border x:Name="FlipContainer" RenderTransformOrigin="50%,50%">
             <!-- Card Face -->
-            <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="1.5" Background="#F0F0F0" CornerRadius="8" ClipToBounds="True">
+            <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="1.5" Background="#F0F0F0" CornerRadius="10" ClipToBounds="True">
                 <Grid>
                     <!-- Center Suit Glyph -->
                     <Image x:Name="SuitImage" Width="150" Height="150" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
@@ -35,13 +35,13 @@
                     </TextBlock>
                     
                     <!-- Flash Highlights for stats -->
-                    <Border x:Name="TopFlash" IsVisible="False" Background="#B2FFFF00" VerticalAlignment="Top" Height="28" CornerRadius="8,8,0,0" />
+                    <Border x:Name="TopFlash" IsVisible="False" Background="#B2FFFF00" VerticalAlignment="Top" Height="28" CornerRadius="10,10,0,0" />
                     <Border x:Name="RightFlash" IsVisible="False" Background="#B2FFFF00" HorizontalAlignment="Right" Width="28" />
-                    <Border x:Name="BottomFlash" IsVisible="False" Background="#B2FFFF00" VerticalAlignment="Bottom" Height="28" CornerRadius="0,0,8,8" />
+                    <Border x:Name="BottomFlash" IsVisible="False" Background="#B2FFFF00" VerticalAlignment="Bottom" Height="28" CornerRadius="0,0,10,10" />
                     <Border x:Name="LeftFlash" IsVisible="False" Background="#B2FFFF00" HorizontalAlignment="Left" Width="28" />
-                    
+
                     <!-- Steal Highlight Border -->
-                    <Border x:Name="StealHighlightBorder" IsVisible="False" BorderBrush="Yellow" BorderThickness="8" CornerRadius="8" IsHitTestVisible="False" />
+                    <Border x:Name="StealHighlightBorder" IsVisible="False" BorderBrush="Yellow" BorderThickness="8" CornerRadius="10" IsHitTestVisible="False" />
                 </Grid>
             </Border>
         </Border>
@@ -51,8 +51,8 @@
              art down to 128×181 first, then blew the result back up ~1.5x to
              Honeycomb's actual 195×276 card, blurring it unconditionally regardless of
              window size — see CardView.ResolveCardBackBitmap's comment). -->
-        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="8" IsVisible="False" ClipToBounds="True" Background="White">
-            <Image x:Name="CardBackImage" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
+        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="10" IsVisible="False" ClipToBounds="True" Background="White">
+            <Image x:Name="CardBackImage" Width="195" Height="276" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
         </Border>
     </Grid>
 </UserControl>

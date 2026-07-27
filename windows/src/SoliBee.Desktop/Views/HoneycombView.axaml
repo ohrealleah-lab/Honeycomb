@@ -125,7 +125,7 @@
                 <Button Content="✕" Click="CloseOverlay_Click" Classes="banner-close" Margin="0,-12,-12,0"/>
                 
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" Margin="0,10,0,0">
-                    <TextBlock x:Name="OverlayTitle" Text="You Win!" FontSize="40" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI" />
+                    <TextBlock x:Name="OverlayTitle" Text="You Win!" FontSize="40" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontFamily="Segoe UI" />
                     <!-- Subtitle hidden/removed as requested to match mockup -->
                     <TextBlock x:Name="OverlayLoseTitle" Text="Not today, partner!" FontSize="36" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI" IsVisible="False" />
                     <TextBlock x:Name="OverlaySubtitle" Text="" FontSize="18" Foreground="#CCCCCC" HorizontalAlignment="Center" IsVisible="False" />

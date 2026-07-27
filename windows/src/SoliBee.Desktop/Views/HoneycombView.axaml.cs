@@ -147,11 +147,13 @@ public partial class HoneycombView : UserControl
                 // The win overlay reappears after a steal is confirmed (Steal Card is
                 // now gone, since HasStolenThisMatch is true) — a repeat "You Win!" would
                 // read as stale, so it confirms what just happened instead.
+                OverlayTitle.FontSize = state.HasStolenThisMatch ? 28 : 40;
                 OverlayTitle.Text = state.HasStolenThisMatch ? "Card Added to Card Bank." : "You Win!";
             } else if (state.PlayerScore < state.OpponentScore) {
                 OverlayTitle.IsVisible = false;
                 OverlayLoseTitle.IsVisible = true;
             } else {
+                OverlayTitle.FontSize = 40;
                 OverlayTitle.Text = "Draw";
             }
             OverlaySubtitle.Text = $"Final Score: {state.PlayerScore} - {state.OpponentScore}";
@@ -652,6 +654,7 @@ public partial class HoneycombView : UserControl
             case "Win":
                 OverlayTitle.IsVisible = true;
                 OverlayLoseTitle.IsVisible = false;
+                OverlayTitle.FontSize = 40;
                 OverlayTitle.Text = "You Win!";
                 OverlaySubtitle.Text = "Final Score: 10 - 5";
                 break;
@@ -663,12 +666,14 @@ public partial class HoneycombView : UserControl
             case "Draw":
                 OverlayTitle.IsVisible = true;
                 OverlayLoseTitle.IsVisible = false;
+                OverlayTitle.FontSize = 40;
                 OverlayTitle.Text = "Draw";
                 OverlaySubtitle.Text = "Final Score: 7 - 7";
                 break;
             default:
                 OverlayTitle.IsVisible = true;
                 OverlayLoseTitle.IsVisible = false;
+                OverlayTitle.FontSize = 28;
                 OverlayTitle.Text = kind;
                 OverlaySubtitle.Text = "Debug preview";
                 break;

@@ -32,6 +32,13 @@ public partial class HoneycombViewModel : ObservableObject
 
     public bool IsPlaying => State.Phase == HoneycombPhase.Playing;
     public bool CanUndo => State.UndoStack.Count > 0 && IsPlaying && State.CurrentTurn == 1 && !_isAnimating;
+
+    // Flat properties mirroring State.PlayerScore/OpponentScore, with their own
+    // explicit OnPropertyChanged in NotifyStateChanged — the toolbar's nested
+    // "State.PlayerScore" binding wasn't refreshing on every move like the
+    // solitaire toolbar's flat ScoreDisplay/TimeDisplay properties do.
+    public int PlayerScoreDisplay => State.PlayerScore;
+    public int OpponentScoreDisplay => State.OpponentScore;
     
     public event Action<string>? OnFlashBanner;
 
@@ -731,6 +738,8 @@ public partial class HoneycombViewModel : ObservableObject
         OnPropertyChanged(nameof(IsPlaying));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(ActiveHint));
+        OnPropertyChanged(nameof(PlayerScoreDisplay));
+        OnPropertyChanged(nameof(OpponentScoreDisplay));
     }
 
     public void ResetStats()
