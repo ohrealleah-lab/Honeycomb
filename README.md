@@ -2,7 +2,7 @@
 
 **Honeycomb Card Suite** is a designed to recreate the gameplay dynamics of classic card games with modern flourishes and deep customization.  Change the card decks and card art to your pictures. Match the felt and card color, save it as a full custom theme. Make your own dark mode. **Make the game yours.** 
 
-**Honeycomb** was built using spec-driven development with SpecKit, Claude Code, and Gemini. The  macOS version is written in Swift 6 & SwiftUI, the Windows version is C# & Avalonia. 
+**Honeycomb** was built using spec-driven development with SpecKit, Claude Code, and Gemini. The  macOS version is written in Swift 6 & SwiftUI, the Windows version is C# & Avalonia. Zero AI art assets are used. All art used with permission, special thanks to the friends who contributed, that wish to remain uncredited.
 
 ---
 
@@ -15,7 +15,8 @@
 * **Rules & Scoring**: Classic scoring rules alongside an optional **Vegas Scoring Mode**.
 * **Classic Win Animation**: The cards will flow from the foundations, and you will feel alive again.
 
-<img width="593" height="476" alt="image" src="https://github.com/user-attachments/assets/f5fed961-fdb1-4fdf-b5cc-d1fb5b82f70c" />
+<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/ae9058b8-6ca7-4123-bfa8-17aa959256c4" />
+
 
 
 ### 2. Freecell Solitaire

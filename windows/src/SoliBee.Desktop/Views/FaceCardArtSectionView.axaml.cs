@@ -110,6 +110,12 @@ public partial class FaceCardArtSectionView : UserControl
         if (showArt && art != null)
         {
             var img = new Image { Stretch = Stretch.Uniform, Width = 29, Height = 25 };
+            // Created in code, not XAML — set explicitly since this control never goes
+            // through the .axaml-only interpolation-mode pass (see the matching comment
+            // in CardView.PopulateSuitCanvas). The source bitmap here is baked at 280x240
+            // (FaceArtCacheW/H), roughly a 10x downscale to this tile size, so this
+            // matters even more than most.
+            RenderOptions.SetBitmapInterpolationMode(img, BitmapInterpolationMode.MediumQuality);
             try
             {
                 img.Source = CardView.GetCachedFaceArtBitmap(FaceCardArtService.GetFullPath(art), art.Scale, art.OffsetX, art.OffsetY);

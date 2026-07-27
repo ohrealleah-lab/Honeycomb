@@ -724,6 +724,12 @@ public partial class CardView : UserControl
                 Height = 36,
                 Stretch = Stretch.Uniform,
             };
+            // Created in code, not XAML, so the earlier interpolation-mode pass (which
+            // only edited .axaml files) never reached it — a gap invisible at the old
+            // 90px pip bake resolution but glaringly jagged once that got bumped to
+            // 256px (a ~7x downscale to this 36px display size) without ever setting
+            // this.
+            RenderOptions.SetBitmapInterpolationMode(pipImage, BitmapInterpolationMode.MediumQuality);
 
             var container = new Grid
             {
