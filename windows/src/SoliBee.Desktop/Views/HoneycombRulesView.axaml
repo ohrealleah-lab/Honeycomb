@@ -4,14 +4,18 @@
 
     <Grid RowDefinitions="Auto, *, Auto">
         <!-- Difficulty at top -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,15,0,10">
-            <TextBlock Text="Difficulty:" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
-            <ComboBox x:Name="HoneycombDifficultyCombo" Width="120" SelectionChanged="HoneycombDifficultyCombo_SelectionChanged">
-                <ComboBoxItem Content="Baby Bee" Tag="Easy"/>
-                <ComboBoxItem Content="Honey Bee" Tag="Medium"/>
-                <ComboBoxItem Content="Queen Bee" Tag="Hard"/>
-                <ComboBoxItem Content="Killer Bee" Tag="UltraHard"/>
-            </ComboBox>
+        <StackPanel Grid.Row="0" Spacing="10" Margin="0,15,0,10">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Difficulty:" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
+                <ComboBox x:Name="HoneycombDifficultyCombo" Width="120" SelectionChanged="HoneycombDifficultyCombo_SelectionChanged">
+                    <ComboBoxItem Content="Baby Bee" Tag="Easy"/>
+                    <ComboBoxItem Content="Honey Bee" Tag="Medium"/>
+                    <ComboBoxItem Content="Queen Bee" Tag="Hard"/>
+                    <ComboBoxItem Content="Killer Bee" Tag="UltraHard"/>
+                </ComboBox>
+            </StackPanel>
+            <CheckBox x:Name="HideHintButtonCheckBox" Content="Hide Hint Button" Checked="HideHintButtonCheckBox_Changed" Unchecked="HideHintButtonCheckBox_Changed" Foreground="#1A1A1A"/>
+            <CheckBox x:Name="ShowPointHighlightsCheckBox" Content="Show Point Highlights" Checked="ShowPointHighlightsCheckBox_Changed" Unchecked="ShowPointHighlightsCheckBox_Changed" Foreground="#1A1A1A"/>
         </StackPanel>
 
         <!-- Scrollable lists -->
