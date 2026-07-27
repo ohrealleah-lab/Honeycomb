@@ -1456,7 +1456,7 @@ public partial class MainWindow : Window
     {
         if (this.DataContext is HoneycombViewModel hVm)
         {
-            hVm.RestartGame();
+            hVm.RematchGame();
         }
     }
 

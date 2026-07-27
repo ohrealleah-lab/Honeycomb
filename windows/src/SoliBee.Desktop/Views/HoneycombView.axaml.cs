@@ -458,7 +458,7 @@ public partial class HoneycombView : UserControl
         _overlayDismissed = false;
         _isStealingCard = false;
         if (_vm != null) {
-            _vm.RestartGame();
+            _vm.RematchGame();
             SoundService.PlayShuffle();
         }
     }
