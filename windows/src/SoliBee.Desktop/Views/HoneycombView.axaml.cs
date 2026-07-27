@@ -11,6 +11,7 @@ using SoliBee.Desktop.Services;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace SoliBee.Desktop.Views;
 
@@ -119,7 +120,44 @@ public partial class HoneycombView : UserControl
         Dispatcher.UIThread.Post(() => { if (_vm != null) Refresh(_vm); });
     }
 
+    // NotifyStateChanged() fires several PropertyChanged events per call (State,
+    // IsPlaying, CanUndo, ActiveHint, PlayerScoreDisplay, OpponentScoreDisplay), each
+    // dispatching its own Refresh() call, and this method itself awaits per-cell flip
+    // animations — so without this guard, multiple Refresh() passes can run
+    // concurrently and race on the same card views. A stale, still-in-flight pass
+    // finishing after a newer one has already rendered current state can clobber it
+    // (e.g. re-applying a Point Highlight the newer pass had already cleared, leaving
+    // it stuck on screen). Coalesce into a single pass at a time, queuing one more
+    // to run immediately after if state changed again while a pass was in flight.
+    private bool _isRefreshing = false;
+    private bool _refreshQueued = false;
+
     public async void Refresh(HoneycombViewModel vm)
+    {
+        if (_isRefreshing)
+        {
+            _refreshQueued = true;
+            return;
+        }
+
+        _isRefreshing = true;
+        try
+        {
+            await RefreshCore(vm);
+        }
+        finally
+        {
+            _isRefreshing = false;
+        }
+
+        if (_refreshQueued)
+        {
+            _refreshQueued = false;
+            Refresh(vm);
+        }
+    }
+
+    private async Task RefreshCore(HoneycombViewModel vm)
     {
         var state = vm.State;
         
