@@ -26,8 +26,12 @@ public partial class HoneycombViewModel : ObservableObject
     private bool _isHeadless = false;
     private int _matchGeneration = 0;
 
-    // Rematch snapshots: save opponent hand + rules at match end for replaying on rematch
-    private List<HoneycombCard>? _rematchOpponentHand;
+    // Rematch snapshot: freeze the opponent's card pool (pre-Swap) + this match's rules
+    // — this becomes the baseline every future RematchGame() replays, until the next
+    // real StartNewMatch() rolls a fresh one. Freezing the pool (not a resolved/swapped
+    // hand) lets each rematch roll its own independent Swap trade against the same
+    // cards — a different pairing each time, same underlying deck.
+    private List<HoneycombCardData>? _rematchOpponentDeck;
     private List<HoneycombRule> _rematchActiveRules = new();
     private List<string> _rematchAscensionDescensionSuits = new();
 
@@ -139,23 +143,40 @@ public partial class HoneycombViewModel : ObservableObject
         State.HasStolenThisMatch = false;
         State.CardsCapturedThisMatch = 0;
         State.IsSuddenDeath = false;
-        
-        State.Board = new HoneycombBoard();
+
         State.Board = new HoneycombBoard();
 
+        if (State.ActiveRules.Contains(HoneycombRule.Ascension) || State.ActiveRules.Contains(HoneycombRule.Descension))
+        {
+            State.Board.AscensionDescensionSuits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(1).Select(s => s.ToString()).ToList();
+        }
+        FlashAscensionDescensionBanner();
+
+        State.PlayerHand = BuildPlayerHand();
+        State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
+
+        var deck = RollOpponentDeck();
+        // Freeze the opponent's card pool (pre-Swap) + this match's rules — this
+        // becomes the baseline every future RematchGame() replays, until the next real
+        // StartNewMatch() rolls a fresh one.
+        _rematchOpponentDeck = deck;
+        _rematchActiveRules = new List<HoneycombRule>(State.ActiveRules);
+        _rematchAscensionDescensionSuits = new List<string>(State.Board.AscensionDescensionSuits);
+
+        var swapIds = ApplyOpponentDeck(deck);
+        FinishMatchSetup(swapIds);
+    }
+
+    private void FlashAscensionDescensionBanner()
+    {
         if (State.ActiveRules.Contains(HoneycombRule.Ascension))
-        {
-            var suits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(1).Select(s => s.ToString()).ToList();
-            State.Board.AscensionDescensionSuits = suits;
-            OnFlashBanner?.Invoke($"Ascension: {string.Join(", ", suits)} +1");
-        }
+            OnFlashBanner?.Invoke($"Ascension: {string.Join(", ", State.Board.AscensionDescensionSuits)} +1");
         else if (State.ActiveRules.Contains(HoneycombRule.Descension))
-        {
-            var suits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(1).Select(s => s.ToString()).ToList();
-            State.Board.AscensionDescensionSuits = suits;
-            OnFlashBanner?.Invoke($"Descension: {string.Join(", ", suits)} -1");
-        }
+            OnFlashBanner?.Invoke($"Descension: {string.Join(", ", State.Board.AscensionDescensionSuits)} -1");
+    }
 
+    private List<HoneycombCard> BuildPlayerHand()
+    {
         var globalOpts = SettingsService.LoadOptions();
         List<int> playerIds;
         if (globalOpts.IsNoStressMode)
@@ -174,9 +195,15 @@ public partial class HoneycombViewModel : ObservableObject
             else
                 playerIds = HoneycombProfileManager.ComputeStartOverDeck(null);
         }
-        State.PlayerHand = playerIds.Select(id => new HoneycombCard(HoneycombDatabase.Shared.Card(id)!, 1)).ToList();
-        State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
+        return playerIds.Select(id => new HoneycombCard(HoneycombDatabase.Shared.Card(id)!, 1)).ToList();
+    }
 
+    // Rolls a brand-new opponent card pool for a genuinely-new match. Only called from
+    // StartNewMatch() — RematchGame() reuses the frozen pool from _rematchOpponentDeck
+    // instead, via ApplyOpponentDeck(), so repeated rematches keep facing the same
+    // underlying 5 cards.
+    private List<HoneycombCardData> RollOpponentDeck()
+    {
         bool reverse = State.ActiveRules.Contains(HoneycombRule.Reverse);
         var comp = new List<(int stars, int count)>();
         if (!reverse)
@@ -206,12 +233,23 @@ public partial class HoneycombViewModel : ObservableObject
             else { comp.Add((1, 5)); }
         }
 
-        State.OpponentHand = new List<HoneycombCard>();
+        var deck = new List<HoneycombCardData>();
         foreach (var (stars, count) in comp)
         {
-            var cards = HoneycombDatabase.Shared.RulesAwareCards(stars, count, reverse);
-            State.OpponentHand.AddRange(cards.Select(c => new HoneycombCard(c, -1)));
+            deck.AddRange(HoneycombDatabase.Shared.RulesAwareCards(stars, count, reverse));
         }
+        return deck;
+    }
+
+    // Wires up a given opponent card pool as this match's OpponentHand: rolls a fresh
+    // Swap trade (if active) and fresh All Open/Three Open reveal picks against it.
+    // Shared by StartNewMatch() (a newly-rolled pool) and RematchGame() (the frozen
+    // pool from the last genuinely-new match) — either way, this is what makes each
+    // call a fresh roll of who trades with whom and what gets revealed. Returns the
+    // swapped card ids (player, opponent) if a Swap trade happened.
+    private (Guid PlayerCardId, Guid OpponentCardId)? ApplyOpponentDeck(List<HoneycombCardData> deck)
+    {
+        State.OpponentHand = deck.Select(d => new HoneycombCard(d, -1)).ToList();
 
         State.PlayerRevealedIds.Clear();
         State.OpponentRevealedIds.Clear();
@@ -221,8 +259,7 @@ public partial class HoneycombViewModel : ObservableObject
         // the pre-swap hands, which could pick a card that's about to be traded away and
         // leave the card that trades in undiscovered (and, with Three Open, silently
         // short a hand to 2 visible cards instead of 3).
-        Guid? swapPlayerCardId = null;
-        Guid? swapOpponentCardId = null;
+        (Guid PlayerCardId, Guid OpponentCardId)? swapIds = null;
         if (State.ActiveRules.Contains(HoneycombRule.Swap))
         {
             int pIdx = Random.Shared.Next(State.PlayerHand.Count);
@@ -238,10 +275,9 @@ public partial class HoneycombViewModel : ObservableObject
             State.OpponentHand[oIdx] = pCard;
 
             // Identity-preserving trade: oCard now sits in the player's hand and pCard
-            // in the opponent's, so these two ids are what the delayed reveal below
-            // highlights — the same two cards, just relocated.
-            swapOpponentCardId = oCard.UniqueInstanceId;
-            swapPlayerCardId = pCard.UniqueInstanceId;
+            // in the opponent's, so these two ids are what the highlight below tracks —
+            // the same two cards, just relocated.
+            swapIds = (pCard.UniqueInstanceId, oCard.UniqueInstanceId);
         }
 
         if (State.ActiveRules.Contains(HoneycombRule.AllOpen))
@@ -261,18 +297,20 @@ public partial class HoneycombViewModel : ObservableObject
         // Three Open's random pick landed on it — the player already knows exactly what
         // it is (it just came from their own hand a moment ago), so there's nothing left
         // to hide, and the AI is in the same position for the card it received.
-        if (swapPlayerCardId.HasValue) State.OpponentRevealedIds.Add(swapPlayerCardId.Value);
-        if (swapOpponentCardId.HasValue) State.PlayerRevealedIds.Add(swapOpponentCardId.Value);
+        if (swapIds.HasValue)
+        {
+            State.OpponentRevealedIds.Add(swapIds.Value.PlayerCardId);
+            State.PlayerRevealedIds.Add(swapIds.Value.OpponentCardId);
+        }
 
-        // Snapshot the fully-resolved (post-swap) opponent hand + this match's rules —
-        // this becomes the baseline every future RematchGame() replays, until the next
-        // real StartNewMatch() overwrites it. Must be taken here (post-swap, pre-play),
-        // not at match end, since by match end most/all opponent cards have already
-        // been removed from hand onto the board.
-        _rematchOpponentHand = State.OpponentHand.Select(c => c.Clone()).ToList();
-        _rematchActiveRules = new List<HoneycombRule>(State.ActiveRules);
-        _rematchAscensionDescensionSuits = new List<string>(State.Board.AscensionDescensionSuits);
+        return swapIds;
+    }
 
+    // Shared tail between StartNewMatch() and RematchGame() — decides who moves first,
+    // flashes the opening banner (folding in "Swap!" if this match opened with a
+    // trade), stages the swap highlight, and kicks off StartTurn().
+    private void FinishMatchSetup((Guid PlayerCardId, Guid OpponentCardId)? swapIds)
+    {
         State.PlayerChaosIndex = null;
         State.OpponentChaosIndex = null;
 
@@ -281,28 +319,27 @@ public partial class HoneycombViewModel : ObservableObject
         {
             starter = s_lastStarter == 1 ? -1 : 1;
         }
-        
+
         if (starter == s_lastStarter) s_consecutiveStarters++;
         else
         {
             s_lastStarter = starter;
             s_consecutiveStarters = 1;
         }
-        
+
         State.CurrentTurn = starter;
-        
+
         string starterName = starter == 1 ? "Player" : "Opponent";
         string startBanner = $"First Move: {starterName}!";
-        bool didSwap = swapPlayerCardId.HasValue && swapOpponentCardId.HasValue;
         // A single combined banner instead of two separate flashes at match start —
         // Swap rides as the second line rather than replacing "First Move" a beat later.
-        if (didSwap) startBanner += "\nSwap!";
+        if (swapIds.HasValue) startBanner += "\nSwap!";
         OnFlashBanner?.Invoke(startBanner);
 
         int generation = ++_matchGeneration;
-        if (didSwap)
+        if (swapIds.HasValue)
         {
-            State.SwapHighlightIds = new HashSet<Guid> { swapPlayerCardId!.Value, swapOpponentCardId!.Value };
+            State.SwapHighlightIds = new HashSet<Guid> { swapIds.Value.PlayerCardId, swapIds.Value.OpponentCardId };
             ClearSwapHighlightAfterBanner(generation);
         }
 
@@ -382,11 +419,16 @@ public partial class HoneycombViewModel : ObservableObject
 
     public void RestartGame() => StartNewMatch();
 
-    // Rematch: start a new match with the same opponent hand + rules from the just-finished match
+    // Rematch: start a new match reusing the same opponent card pool + rules from the
+    // just-finished match. If Swap is active, a fresh trade is rolled against this same
+    // pool each time (a different pairing, same underlying 5 cards), and All
+    // Open/Three Open reveal picks re-roll too. Repeated rematches keep drawing from
+    // the same opponent pool until StartNewMatch() rolls a fresh one, which is what
+    // lets a player steal their way through an opponent's whole card pool.
     public void RematchGame()
     {
-        // Use snapshots if available; if not, fall back to new game (shouldn't happen in normal play)
-        if (_rematchOpponentHand == null)
+        // Use the snapshot if available; if not, fall back to a new game (shouldn't happen in normal play)
+        if (_rematchOpponentDeck == null)
         {
             StartNewMatch();
             return;
@@ -401,89 +443,13 @@ public partial class HoneycombViewModel : ObservableObject
 
         State.Board = new HoneycombBoard();
         State.Board.AscensionDescensionSuits = new List<string>(_rematchAscensionDescensionSuits);
+        FlashAscensionDescensionBanner();
 
-        // No need to re-roll Ascension/Descension suits; they're already in the snapshot
-        if (State.ActiveRules.Contains(HoneycombRule.Ascension))
-        {
-            OnFlashBanner?.Invoke($"Ascension: {string.Join(", ", State.Board.AscensionDescensionSuits)} +1");
-        }
-        else if (State.ActiveRules.Contains(HoneycombRule.Descension))
-        {
-            OnFlashBanner?.Invoke($"Descension: {string.Join(", ", State.Board.AscensionDescensionSuits)} -1");
-        }
-
-        var globalOpts = SettingsService.LoadOptions();
-        List<int> playerIds;
-        if (globalOpts.IsNoStressMode)
-        {
-            playerIds = new List<int>();
-            playerIds.AddRange(HoneycombDatabase.Shared.RandomCards(5, 1).Select(c => c.Id));
-            playerIds.AddRange(HoneycombDatabase.Shared.RandomCards(4, 1).Select(c => c.Id));
-            playerIds.AddRange(HoneycombDatabase.Shared.RandomCards(3, 3).Select(c => c.Id));
-        }
-        else
-        {
-            int deckIdx = globalOpts.HoneycombActiveDeckIndex;
-            var decks = HoneycombProfileManager.Shared.SavedDecks;
-            if (deckIdx >= 0 && deckIdx < decks.Count && decks[deckIdx].CardIds.Count == 5)
-                playerIds = decks[deckIdx].CardIds.ToList();
-            else
-                playerIds = HoneycombProfileManager.ComputeStartOverDeck(null);
-        }
-        State.PlayerHand = playerIds.Select(id => new HoneycombCard(HoneycombDatabase.Shared.Card(id)!, 1)).ToList();
+        State.PlayerHand = BuildPlayerHand();
         State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
 
-        // Use the snapshotted opponent hand from the previous match (with same cards/positions)
-        State.OpponentHand = _rematchOpponentHand!.Select(c => c.Clone()).ToList();
-
-        State.PlayerRevealedIds.Clear();
-        State.OpponentRevealedIds.Clear();
-
-        // No swap-reveal animation to stage here — the opponent's hand (including any
-        // Swap trade) is already fully resolved from the snapshot, so there's nothing
-        // left to "discover." A card whose OriginalOwner differs from its current Owner
-        // is a swapped card the player already knows, so it stays revealed the same way
-        // it would have by the end of the original match's swap animation.
-        foreach (var c in State.OpponentHand.Where(c => c.OriginalOwner != c.Owner)) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
-        foreach (var c in State.PlayerHand.Where(c => c.OriginalOwner != c.Owner)) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
-
-        if (State.ActiveRules.Contains(HoneycombRule.AllOpen))
-        {
-            foreach (var c in State.PlayerHand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
-            foreach (var c in State.OpponentHand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
-        }
-        else if (State.ActiveRules.Contains(HoneycombRule.ThreeOpen))
-        {
-            var pRand = State.PlayerHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
-            var oRand = State.OpponentHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
-            foreach (var c in pRand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
-            foreach (var c in oRand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
-        }
-
-        State.PlayerChaosIndex = null;
-        State.OpponentChaosIndex = null;
-
-        int starter = Random.Shared.Next(2) == 0 ? 1 : -1;
-        if (s_consecutiveStarters >= 3)
-        {
-            starter = s_lastStarter == 1 ? -1 : 1;
-        }
-
-        if (starter == s_lastStarter) s_consecutiveStarters++;
-        else
-        {
-            s_lastStarter = starter;
-            s_consecutiveStarters = 1;
-        }
-
-        State.CurrentTurn = starter;
-
-        string starterName = starter == 1 ? "Player" : "Opponent";
-        string startBanner = $"First Move: {starterName}!";
-        // On rematch: no Swap re-trigger; Swap was already done in the previous match
-        OnFlashBanner?.Invoke(startBanner);
-
-        StartTurn();
+        var swapIds = ApplyOpponentDeck(_rematchOpponentDeck);
+        FinishMatchSetup(swapIds);
     }
 
     public void Undo()

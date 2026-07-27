@@ -294,23 +294,24 @@ public final class HoneycombViewModel {
     // from a match the player already left can't reach into the new one.
     private var handSetupGeneration: Int = 0
 
-    // Snapshot of the opponent's hand/rules as they were actually resolved (post any
-    // Swap trade) at the start of the most recent genuinely-new match — captured only
-    // by startNewGame(), never by rematch() itself, so any number of chained Rematches
-    // keep replaying the exact same opponent instead of drifting to whatever the last
-    // rematch happened to look like. This is what lets a player farm a single
-    // opponent's whole hand across repeated Rematch + Steal Card cycles.
-    private var rematchOpponentHand: [HoneycombCard] = []
+    // Snapshot of the opponent's card pool (pre-Swap) and rules from the most recent
+    // genuinely-new match — captured only by startNewGame(), never by rematch() itself,
+    // so any number of chained Rematches keep drawing from the same underlying 5 cards
+    // instead of drifting to whatever the last rematch happened to roll. Freezing the
+    // pool *before* Swap resolves (rather than the already-swapped hand) lets each
+    // rematch roll its own independent Swap trade against the same cards — a different
+    // pairing each time, same underlying deck (mirrors Triple Triad's rematch loop).
+    private var rematchOpponentDeck: [HoneycombCardData] = []
     private var rematchActiveRules: [HoneycombRule] = []
     private var rematchAscensionDescensionSuits: Set<String> = []
 
-    // Set by startNewGame() when this match opened with a Swap trade, so
-    // finishMatchSetup() can fold "Swap!" into the "First Move" banner as a second
-    // line instead of flashing it separately a beat later. Cleared by rematch(),
-    // which never re-triggers a fresh trade.
+    // Set when this match opened with a Swap trade (by startNewGame() or rematch(),
+    // since rematch() now re-rolls its own trade), so finishMatchSetup() can fold
+    // "Swap!" into the "First Move" banner as a second line instead of flashing it
+    // separately a beat later.
     private var pendingSwapBannerLine: String? = nil
 
-    public var canRematch: Bool { !rematchOpponentHand.isEmpty }
+    public var canRematch: Bool { !rematchOpponentDeck.isEmpty }
 
     public func startNewGame() {
         // Invalidates any AI move computation still in flight on a background queue from
@@ -328,66 +329,70 @@ public final class HoneycombViewModel {
         setupRules()
         board.ascensionDescensionSuits = ascensionDescensionSuits
         setupPlayerHand()
-        let swapResult = setupOpponentHand()
 
-        // Snapshot the opponent's hand as it will actually end up (post-swap) once the
-        // animation below finishes, plus this match's rules — this becomes the
-        // baseline every future rematch() call replays, until the next real
-        // startNewGame() overwrites it.
-        var resolvedOpponentHand = opponentHand
-        if let swapResult, let idx = resolvedOpponentHand.firstIndex(where: { $0.id == swapResult.preSwapOpponentCard.id }) {
-            resolvedOpponentHand[idx] = swapResult.finalOpponentCard
-        }
-        rematchOpponentHand = resolvedOpponentHand
+        let deck = rollOpponentDeck()
+        // Freeze the opponent's card pool (pre-Swap) + this match's rules — this
+        // becomes the baseline every future rematch() call replays, until the next
+        // real startNewGame() rolls a fresh one.
+        rematchOpponentDeck = deck
         rematchActiveRules = activeRules
         rematchAscensionDescensionSuits = ascensionDescensionSuits
 
-        if let swapResult {
-            // Folded into the "First Move" banner in finishMatchSetup() as a second
-            // line instead of flashing separately — see pendingSwapBannerLine.
-            pendingSwapBannerLine = "Swap!"
+        let swapResult = applyOpponentDeck(deck)
+        stageSwapAnimation(swapResult, generation: generation)
+        finishMatchSetup()
+    }
 
-            // playerStartingDeck deliberately keeps the player's real, pre-swap card
-            // here — it's what "Your Deck"/Take-a-Card and the rarity-cap check at
-            // match end are based on, so every one of the 5 slots stays normally
-            // replaceable and reflects the deck the player actually owns. If it showed
-            // the swapped-in opponent card instead, that card would occupy a
-            // permanent-looking deck slot despite never being unlocked, and — worse —
-            // its stats would corrupt the rarity-cap math (e.g. rejecting a stolen 5★
-            // as "too many 5★" because the player's own 5★ no longer looked present).
-            // If the player wants to keep the swapped-in card, they still can — by
-            // capturing/stealing it off the board like any other opponent card.
+    // Shared tail between startNewGame() and rematch(): stages a computed-but-not-yet-
+    // applied Swap trade in three beats — highlight the two real cards, a pause so the
+    // player registers which two are about to move, then animate them into their
+    // swapped homes — rather than the trade having silently already happened by the
+    // very first frame, which read as if it hadn't occurred at all.
+    private func stageSwapAnimation(_ swapResult: SwapResult?, generation: Int) {
+        guard let swapResult else { return }
 
-            // Highlight the two real, not-yet-swapped cards right away, in sync with
-            // the combined "First Move" + "Swap!" banner (no separate delayed flash —
-            // see pendingSwapBannerLine), so the player sees exactly which two are
-            // about to trade before anything moves.
-            swapHighlightCardIds = [swapResult.preSwapPlayerCard.id, swapResult.preSwapOpponentCard.id]
+        // Folded into the "First Move" banner in finishMatchSetup() as a second
+        // line instead of flashing separately — see pendingSwapBannerLine.
+        pendingSwapBannerLine = "Swap!"
 
-            // Actually animate the trade partway through the banner's now-2s run.
-            // Looked up by id (not the original array index) in case the player
-            // already played one of the two cards during the highlight pause — if so,
-            // it's skipped rather than resurrected into a slot it no longer occupies.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                guard let self, self.handSetupGeneration == generation else { return }
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    if let idx = self.playerHand.firstIndex(where: { $0.id == swapResult.preSwapPlayerCard.id }) {
-                        self.playerHand[idx] = swapResult.finalPlayerCard
-                    }
-                    if let idx = self.opponentHand.firstIndex(where: { $0.id == swapResult.preSwapOpponentCard.id }) {
-                        self.opponentHand[idx] = swapResult.finalOpponentCard
-                    }
+        // playerStartingDeck deliberately keeps the player's real, pre-swap card
+        // here — it's what "Your Deck"/Take-a-Card and the rarity-cap check at
+        // match end are based on, so every one of the 5 slots stays normally
+        // replaceable and reflects the deck the player actually owns. If it showed
+        // the swapped-in opponent card instead, that card would occupy a
+        // permanent-looking deck slot despite never being unlocked, and — worse —
+        // its stats would corrupt the rarity-cap math (e.g. rejecting a stolen 5★
+        // as "too many 5★" because the player's own 5★ no longer looked present).
+        // If the player wants to keep the swapped-in card, they still can — by
+        // capturing/stealing it off the board like any other opponent card.
+
+        // Highlight the two real, not-yet-swapped cards right away, in sync with
+        // the combined "First Move" + "Swap!" banner (no separate delayed flash —
+        // see pendingSwapBannerLine), so the player sees exactly which two are
+        // about to trade before anything moves.
+        swapHighlightCardIds = [swapResult.preSwapPlayerCard.id, swapResult.preSwapOpponentCard.id]
+
+        // Actually animate the trade partway through the banner's now-2s run.
+        // Looked up by id (not the original array index) in case the player
+        // already played one of the two cards during the highlight pause — if so,
+        // it's skipped rather than resurrected into a slot it no longer occupies.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self, self.handSetupGeneration == generation else { return }
+            withAnimation(.easeInOut(duration: 0.6)) {
+                if let idx = self.playerHand.firstIndex(where: { $0.id == swapResult.preSwapPlayerCard.id }) {
+                    self.playerHand[idx] = swapResult.finalPlayerCard
                 }
-                // Same two ids throughout (identity-preserving swap), so the
-                // highlight just keeps tracking them across the move.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    guard self.handSetupGeneration == generation else { return }
-                    self.swapHighlightCardIds.removeAll()
+                if let idx = self.opponentHand.firstIndex(where: { $0.id == swapResult.preSwapOpponentCard.id }) {
+                    self.opponentHand[idx] = swapResult.finalOpponentCard
                 }
             }
+            // Same two ids throughout (identity-preserving swap), so the
+            // highlight just keeps tracking them across the move.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                guard self.handSetupGeneration == generation else { return }
+                self.swapHighlightCardIds.removeAll()
+            }
         }
-
-        finishMatchSetup()
     }
 
     // Shared tail between startNewGame() and rematch() — decides who moves first,
@@ -441,12 +446,14 @@ public final class HoneycombViewModel {
         }
     }
 
-    // Replays the last genuinely-new match (see rematchOpponentHand) with the exact
-    // same opponent hand and rules — the board resets and the player's hand is rebuilt
-    // from their current active deck (so a card just stolen via Take a Card carries
-    // forward), but the opponent's 5 cards and the match's rules stay frozen. Repeated
-    // Rematches keep facing the same opponent hand until startNewGame() rolls a fresh
-    // one, which is what lets a player steal their way through an opponent's whole hand.
+    // Replays the last genuinely-new match's opponent card pool and rules — the board
+    // resets and the player's hand is rebuilt from their current active deck (so a card
+    // just stolen via Take a Card carries forward), and the match's rules stay frozen.
+    // If Swap is active, a fresh trade is rolled against this same pool each time (a
+    // different pairing, same underlying 5 cards — mirrors Triple Triad's rematch
+    // loop), and All Open/Three Open reveal picks re-roll too. Repeated Rematches keep
+    // drawing from the same opponent pool until startNewGame() rolls a fresh one, which
+    // is what lets a player steal their way through an opponent's whole card pool.
     public func rematch() {
         guard canRematch else {
             startNewGame()
@@ -454,8 +461,10 @@ public final class HoneycombViewModel {
         }
         aiMoveGeneration += 1
         handSetupGeneration += 1
+        let generation = handSetupGeneration
         undoStack.removeAll()
         swapHighlightCardIds.removeAll()
+        pendingSwapBannerLine = nil
         clearHint()
 
         board = HoneycombBoard()
@@ -463,23 +472,9 @@ public final class HoneycombViewModel {
         ascensionDescensionSuits = rematchAscensionDescensionSuits
         board.ascensionDescensionSuits = ascensionDescensionSuits
         setupPlayerHand()
-        opponentHand = rematchOpponentHand
 
-        // No swap-reveal animation to stage here — the opponent's hand (including any
-        // Swap trade) is already fully resolved from the snapshot, so there's nothing
-        // left to "discover." A card whose originalOwner differs from its current
-        // owner is a swapped card the player already knows, so it stays revealed the
-        // same way it would have by the end of the original match's swap animation.
-        openOpponentCardIds = Set(opponentHand.filter { $0.originalOwner != $0.owner }.map { $0.id })
-        openPlayerCardIds = Set(playerHand.filter { $0.originalOwner != $0.owner }.map { $0.id })
-        if activeRules.contains(.allOpen) {
-            openOpponentCardIds = Set(opponentHand.map { $0.id })
-            openPlayerCardIds = Set(playerHand.map { $0.id })
-        } else if activeRules.contains(.threeOpen) {
-            openOpponentCardIds.formUnion(opponentHand.map { $0.id }.shuffled().prefix(3))
-            openPlayerCardIds.formUnion(playerHand.map { $0.id }.shuffled().prefix(3))
-        }
-
+        let swapResult = applyOpponentDeck(rematchOpponentDeck)
+        stageSwapAnimation(swapResult, generation: generation)
         finishMatchSetup()
     }
 
@@ -635,8 +630,11 @@ public final class HoneycombViewModel {
         }
     }
 
-    @discardableResult
-    private func setupOpponentHand() -> SwapResult? {
+    // Rolls a brand-new opponent card pool for a genuinely-new match. Only called from
+    // startNewGame() — rematch() reuses the frozen pool from rematchOpponentDeck
+    // instead, via applyOpponentDeck(_:), so repeated rematches keep facing the same
+    // underlying 5 cards.
+    private func rollOpponentDeck() -> [HoneycombCardData] {
         let db = HoneycombDatabase.shared
         // Reverse flips capture direction (low beats high), so low-stat cards are
         // strictly better on both offense and defense (see canCapture in
@@ -682,12 +680,21 @@ public final class HoneycombViewModel {
                 }
             }
         }
+        return deck
+    }
 
+    // Wires up a given opponent card pool as this match's opponentHand: rolls a fresh
+    // Swap trade (if active) and fresh All Open/Three Open reveal picks against it.
+    // Shared by startNewGame() (a newly-rolled pool) and rematch() (the frozen pool
+    // from the last genuinely-new match) — either way, this is what makes each call a
+    // fresh roll of who trades with whom and what gets revealed.
+    @discardableResult
+    private func applyOpponentDeck(_ deck: [HoneycombCardData]) -> SwapResult? {
         opponentHand = deck.map { HoneycombCard(data: $0, owner: .opponent) }
 
-        // Computed (not yet applied — see startNewGame) before the reveal-set below,
-        // so All Open/Three Open see the hand as it will look *after* the trade rather
-        // than revealing/hiding a card that's about to be swapped away.
+        // Computed (not yet applied — see stageSwapAnimation) before the reveal-set
+        // below, so All Open/Three Open see the hand as it will look *after* the trade
+        // rather than revealing/hiding a card that's about to be swapped away.
         let swapResult = computeSwapIfNeeded()
 
         openOpponentCardIds.removeAll()
