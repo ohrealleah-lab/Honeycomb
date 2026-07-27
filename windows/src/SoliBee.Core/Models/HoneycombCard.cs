@@ -9,6 +9,15 @@ public class HoneycombCardData
     public int Stars { get; init; }
     public int[] Stats { get; init; } = new int[4];
     public string Suit { get; init; } = "";
+
+    public static string SuitDisplayName(string code) => code switch
+    {
+        "S" => "Spades",
+        "H" => "Hearts",
+        "D" => "Diamonds",
+        "C" => "Clubs",
+        _ => code
+    };
 }
 
 public class HoneycombCard

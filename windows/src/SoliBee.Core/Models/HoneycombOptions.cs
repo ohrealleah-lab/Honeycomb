@@ -5,9 +5,9 @@ namespace SoliBee.Core.Models;
 public class HoneycombOptions
 {
     public bool ForceNormalRules { get; set; } = false;
-    public List<HoneycombRule> ManualRules { get; set; } = new List<HoneycombRule>();
-    public string Difficulty { get; set; } = "Medium";
-    public List<string> BannedRules { get; set; } = new List<string>();
+    public HashSet<HoneycombRule> ManualRules { get; set; } = new HashSet<HoneycombRule>();
+    public HoneycombDifficulty Difficulty { get; set; } = HoneycombDifficulty.Medium;
+    public HashSet<string> BannedRules { get; set; } = new HashSet<string>();
 
     // Mac parity options
     public bool IsSoundEnabled { get; set; } = true;

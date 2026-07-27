@@ -99,19 +99,6 @@ public class HoneycombBoard
         return ResolveCaptures(index, ruleClone, isCombo: false);
     }
 
-    // AscensionDescensionSuits is stored as full suit names ("Spades", "Hearts", ...)
-    // for display in the rules banner, but HoneycombCardData.Suit uses single-letter
-    // codes ("S", "H", "D", "C") — normalize both to the same form before comparing,
-    // otherwise the two never match and Ascension/Descension never trigger.
-    private static string NormalizeSuit(string suit) => suit switch
-    {
-        "S" => "Spades",
-        "H" => "Hearts",
-        "D" => "Diamonds",
-        "C" => "Clubs",
-        _ => suit
-    };
-
     private void UpdateModifiers(HashSet<HoneycombRule> rules)
     {
         bool ascension = rules.Contains(HoneycombRule.Ascension);
@@ -125,7 +112,11 @@ public class HoneycombBoard
             return;
         }
 
-        var targetSuits = new HashSet<string>(AscensionDescensionSuits.Select(NormalizeSuit));
+        // AscensionDescensionSuits and HoneycombCardData.Suit both use the single-letter
+        // codes ("S", "H", "D", "C") — no normalization needed; convert to display names
+        // only at the point of building banner/rules-summary text (see HoneycombCardData
+        // suit display helpers), not here.
+        var targetSuits = new HashSet<string>(AscensionDescensionSuits);
 
         var suitCounts = new Dictionary<string, int>();
         foreach (var suit in targetSuits)
@@ -135,7 +126,7 @@ public class HoneycombBoard
         {
             if (!cell.IsEmpty)
             {
-                var suit = NormalizeSuit(cell.Card!.Data.Suit);
+                var suit = cell.Card!.Data.Suit;
                 if (targetSuits.Contains(suit))
                     suitCounts[suit]++;
             }
@@ -145,7 +136,7 @@ public class HoneycombBoard
         {
             if (cell.IsEmpty) continue;
 
-            var suit = NormalizeSuit(cell.Card!.Data.Suit);
+            var suit = cell.Card!.Data.Suit;
             if (targetSuits.Contains(suit))
             {
                 int count = suitCounts[suit];

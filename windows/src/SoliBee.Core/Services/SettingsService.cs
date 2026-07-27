@@ -368,6 +368,16 @@ public static class SettingsService
         }
     }
 
+    // Difficulty (previously a raw string) is now a HoneycombDifficulty enum — a string
+    // converter keeps its JSON shape unchanged ("Medium", not the int System.Text.Json
+    // would otherwise emit), so existing saved honeycomb_settings.json files still
+    // deserialize instead of silently resetting to defaults.
+    private static readonly JsonSerializerOptions HoneycombJsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    };
+
     public static HoneycombOptions LoadHoneycombOptions()
     {
         var options = new HoneycombOptions();
@@ -378,7 +388,7 @@ public static class SettingsService
             {
                 if (GetValue("HoneycombOptionsJson") is string jsonStr)
                 {
-                    return JsonSerializer.Deserialize<HoneycombOptions>(jsonStr) ?? options;
+                    return JsonSerializer.Deserialize<HoneycombOptions>(jsonStr, HoneycombJsonOptions) ?? options;
                 }
             }
             catch {}
@@ -390,7 +400,7 @@ public static class SettingsService
             if (File.Exists(path))
             {
                 var json = File.ReadAllText(path);
-                var loaded = JsonSerializer.Deserialize<HoneycombOptions>(json);
+                var loaded = JsonSerializer.Deserialize<HoneycombOptions>(json, HoneycombJsonOptions);
                 if (loaded != null) return loaded;
             }
         }
@@ -406,7 +416,7 @@ public static class SettingsService
         {
             try
             {
-                SetValue("HoneycombOptionsJson", JsonSerializer.Serialize(options));
+                SetValue("HoneycombOptionsJson", JsonSerializer.Serialize(options, HoneycombJsonOptions));
                 return;
             }
             catch {}
@@ -419,7 +429,7 @@ public static class SettingsService
                 Directory.CreateDirectory(FallbackDirectory);
             }
             string path = Path.Combine(FallbackDirectory, "honeycomb_settings.json");
-            var json = JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(options, HoneycombJsonOptions);
             File.WriteAllText(path, json);
         }
         catch {}

@@ -221,7 +221,8 @@ public partial class HoneycombView : UserControl
                 var name = System.Text.RegularExpressions.Regex.Replace(r.ToString(), "(\\B[A-Z])", " $1");
                 if ((r == HoneycombRule.Ascension || r == HoneycombRule.Descension) && state.Board.AscensionDescensionSuits.Count > 0)
                 {
-                    return $"{name} Suit: {string.Join(", ", state.Board.AscensionDescensionSuits)}";
+                    var suitNames = state.Board.AscensionDescensionSuits.Select(HoneycombCardData.SuitDisplayName);
+                    return $"{name} Suit: {string.Join(", ", suitNames)}";
                 }
                 return name;
             }).ToList();

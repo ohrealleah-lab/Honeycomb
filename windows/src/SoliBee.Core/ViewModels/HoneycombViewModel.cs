@@ -82,7 +82,7 @@ public partial class HoneycombViewModel : ObservableObject
         }
         
         
-        if (Options.Difficulty == "Easy")
+        if (Options.Difficulty == HoneycombDifficulty.Easy)
         {
             pool.Remove(HoneycombRule.Ascension);
             pool.Remove(HoneycombRule.Descension);
@@ -148,7 +148,7 @@ public partial class HoneycombViewModel : ObservableObject
 
         if (State.ActiveRules.Contains(HoneycombRule.Ascension) || State.ActiveRules.Contains(HoneycombRule.Descension))
         {
-            State.Board.AscensionDescensionSuits = Enum.GetValues<CardSuit>().OrderBy(x => Random.Shared.Next()).Take(1).Select(s => s.ToString()).ToList();
+            State.Board.AscensionDescensionSuits = new[] { "S", "H", "D", "C" }.OrderBy(x => Random.Shared.Next()).Take(1).ToList();
         }
         FlashAscensionDescensionBanner();
 
@@ -169,10 +169,11 @@ public partial class HoneycombViewModel : ObservableObject
 
     private void FlashAscensionDescensionBanner()
     {
+        var suitNames = State.Board.AscensionDescensionSuits.Select(HoneycombCardData.SuitDisplayName);
         if (State.ActiveRules.Contains(HoneycombRule.Ascension))
-            OnFlashBanner?.Invoke($"Ascension: {string.Join(", ", State.Board.AscensionDescensionSuits)} +1");
+            OnFlashBanner?.Invoke($"Ascension: {string.Join(", ", suitNames)} +1");
         else if (State.ActiveRules.Contains(HoneycombRule.Descension))
-            OnFlashBanner?.Invoke($"Descension: {string.Join(", ", State.Board.AscensionDescensionSuits)} -1");
+            OnFlashBanner?.Invoke($"Descension: {string.Join(", ", suitNames)} -1");
     }
 
     private List<HoneycombCard> BuildPlayerHand()
@@ -208,28 +209,28 @@ public partial class HoneycombViewModel : ObservableObject
         var comp = new List<(int stars, int count)>();
         if (!reverse)
         {
-            if (Options.Difficulty == "Easy") { comp.Add((1, 4)); comp.Add((2, 1)); }
-            else if (Options.Difficulty == "Medium")
+            if (Options.Difficulty == HoneycombDifficulty.Easy) { comp.Add((1, 4)); comp.Add((2, 1)); }
+            else if (Options.Difficulty == HoneycombDifficulty.Medium)
             {
                 comp.Add((2, 4));
                 // Honey Bee: a 20% chance of a 4★ card instead of the usual 3★, so its
                 // deck isn't entirely predictable at this difficulty.
                 comp.Add(Random.Shared.NextDouble() < 0.2 ? (4, 1) : (3, 1));
             }
-            else if (Options.Difficulty == "Hard") { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
+            else if (Options.Difficulty == HoneycombDifficulty.Hard) { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
             else { comp.Add((3, 2)); comp.Add((4, 1)); comp.Add((5, 2)); }
         }
         else
         {
-            if (Options.Difficulty == "Easy") { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
-            else if (Options.Difficulty == "Medium")
+            if (Options.Difficulty == HoneycombDifficulty.Easy) { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
+            else if (Options.Difficulty == HoneycombDifficulty.Medium)
             {
                 comp.Add((2, 4));
                 // Honey Bee: a 20% chance of a 4★ card instead of the usual 3★, so its
                 // deck isn't entirely predictable at this difficulty.
                 comp.Add(Random.Shared.NextDouble() < 0.2 ? (4, 1) : (3, 1));
             }
-            else if (Options.Difficulty == "Hard") { comp.Add((1, 2)); comp.Add((2, 3)); }
+            else if (Options.Difficulty == HoneycombDifficulty.Hard) { comp.Add((1, 2)); comp.Add((2, 3)); }
             else { comp.Add((1, 5)); }
         }
 
@@ -393,16 +394,8 @@ public partial class HoneycombViewModel : ObservableObject
             return;
         }
 
-        HoneycombDifficulty diff = Options.Difficulty switch {
-            "Easy" => HoneycombDifficulty.Easy,
-            "Medium" => HoneycombDifficulty.Medium,
-            "Hard" => HoneycombDifficulty.Hard,
-            "UltraHard" => HoneycombDifficulty.UltraHard,
-            _ => HoneycombDifficulty.Medium
-        };
-
         var knownOpponent = State.OpponentHand.Where(c => State.OpponentRevealedIds.Contains(c.UniqueInstanceId)).ToList();
-        var move = HoneycombAI.FindMove(State.Board, State.OpponentHand, State.PlayerHand, State.PlayerHand.Count > State.PlayerRevealedIds.Count, new HashSet<HoneycombRule>(State.ActiveRules), diff, -1, 1, State.OpponentChaosIndex);
+        var move = HoneycombAI.FindMove(State.Board, State.OpponentHand, State.PlayerHand, State.PlayerHand.Count > State.PlayerRevealedIds.Count, new HashSet<HoneycombRule>(State.ActiveRules), Options.Difficulty, -1, 1, State.OpponentChaosIndex);
         if (move.HandIndex >= 0)
         {
             ExecutePlacement(move.HandIndex, move.CellIndex);

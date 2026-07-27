@@ -24,7 +24,7 @@ public class HoneycombStats
     public int SuddenDeathCount { get; set; }
     public List<int> CollectedCardIds { get; set; } = new List<int> { 1, 2, 3, 4, 5 }; // default starter deck
 
-    public void RecordGame(bool won, bool drawn, int captures, int sessionCombos, bool flawless, string difficulty, int fallenAceCaptures)
+    public void RecordGame(bool won, bool drawn, int captures, int sessionCombos, bool flawless, HoneycombDifficulty difficulty, int fallenAceCaptures)
     {
         GamesPlayed++;
         CardsCaptured += captures;
@@ -49,10 +49,10 @@ public class HoneycombStats
 
             switch (difficulty)
             {
-                case "Easy": EasyWins++; break;
-                case "Medium": MediumWins++; break;
-                case "Hard": HardWins++; break;
-                case "UltraHard": UltraHardWins++; break;
+                case HoneycombDifficulty.Easy: EasyWins++; break;
+                case HoneycombDifficulty.Medium: MediumWins++; break;
+                case HoneycombDifficulty.Hard: HardWins++; break;
+                case HoneycombDifficulty.UltraHard: UltraHardWins++; break;
             }
         }
         else

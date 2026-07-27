@@ -33,8 +33,8 @@ public partial class HoneycombRulesView : UserControl
         {
             Difficulty = vm.Options.Difficulty,
             ForceNormalRules = vm.Options.ForceNormalRules,
-            ManualRules = vm.Options.ManualRules?.ToList() ?? new List<HoneycombRule>(),
-            BannedRules = vm.Options.BannedRules?.ToList() ?? new List<string>()
+            ManualRules = vm.Options.ManualRules != null ? new HashSet<HoneycombRule>(vm.Options.ManualRules) : new HashSet<HoneycombRule>(),
+            BannedRules = vm.Options.BannedRules != null ? new HashSet<string>(vm.Options.BannedRules) : new HashSet<string>()
         };
         
         SyncUI();
@@ -46,7 +46,7 @@ public partial class HoneycombRulesView : UserControl
         
         foreach (var item in HoneycombDifficultyCombo.Items.Cast<ComboBoxItem>())
         {
-            if (item.Tag?.ToString() == _localOpts.Difficulty)
+            if (item.Tag?.ToString() == _localOpts.Difficulty.ToString())
             {
                 HoneycombDifficultyCombo.SelectedItem = item;
                 break;
@@ -90,9 +90,10 @@ public partial class HoneycombRulesView : UserControl
     private void HoneycombDifficultyCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_initializing) return;
-        if (HoneycombDifficultyCombo.SelectedItem is ComboBoxItem item && item.Tag != null)
+        if (HoneycombDifficultyCombo.SelectedItem is ComboBoxItem item && item.Tag != null
+            && Enum.TryParse<HoneycombDifficulty>(item.Tag.ToString(), out var difficulty))
         {
-            _localOpts.Difficulty = item.Tag.ToString()!;
+            _localOpts.Difficulty = difficulty;
         }
     }
 
@@ -113,10 +114,13 @@ public partial class HoneycombRulesView : UserControl
             {
                 if (cb.IsChecked == true)
                 {
-                    if (!_localOpts.ManualRules.Contains(rule))
+                    // Cap at 2 manual rules by blocking a 3rd, rather than evicting the
+                    // oldest — matches Mac's selectedRules picker (a Set has no reliable
+                    // insertion order to evict by anyway).
+                    if (!_localOpts.ManualRules.Contains(rule) && _localOpts.ManualRules.Count < 2)
                     {
                         _localOpts.ManualRules.Add(rule);
-                        
+
                         // Mutually exclusive pairs
                         if (rule == HoneycombRule.Ascension) _localOpts.ManualRules.Remove(HoneycombRule.Descension);
                         if (rule == HoneycombRule.Descension) _localOpts.ManualRules.Remove(HoneycombRule.Ascension);
@@ -128,13 +132,9 @@ public partial class HoneycombRulesView : UserControl
                         // reveals every card anyway.
                         if (rule == HoneycombRule.AllOpen || rule == HoneycombRule.ThreeOpen) _localOpts.ManualRules.Remove(HoneycombRule.BombShelter);
                         if (rule == HoneycombRule.BombShelter) { _localOpts.ManualRules.Remove(HoneycombRule.AllOpen); _localOpts.ManualRules.Remove(HoneycombRule.ThreeOpen); }
-                        
-                        if (_localOpts.ManualRules.Count > 2)
-                        {
-                            _localOpts.ManualRules.RemoveAt(0);
-                        }
+
+                        _localOpts.ForceNormalRules = false;
                     }
-                    _localOpts.ForceNormalRules = false;
                 }
                 else
                 {
@@ -192,8 +192,8 @@ public partial class HoneycombRulesView : UserControl
         // Apply changes
         _vm.Options.Difficulty = _localOpts.Difficulty;
         _vm.Options.ForceNormalRules = _localOpts.ForceNormalRules;
-        _vm.Options.ManualRules = _localOpts.ManualRules.ToList();
-        _vm.Options.BannedRules = _localOpts.BannedRules.ToList();
+        _vm.Options.ManualRules = new HashSet<HoneycombRule>(_localOpts.ManualRules);
+        _vm.Options.BannedRules = new HashSet<string>(_localOpts.BannedRules);
         
         SettingsService.SaveHoneycombOptions(_vm.Options);
         _vm.NotifyOptionsChanged();
