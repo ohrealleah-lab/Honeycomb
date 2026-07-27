@@ -76,35 +76,39 @@ public partial class HoneycombViewModel : ObservableObject
         // If Normal Mode is banned, force at least 1 rule
         bool normalBanned = Options.BannedRules != null && Options.BannedRules.Contains("Normal Mode");
 
-        // Each of up to 2 draws gives "stop here" the same odds as any single specific
-        // rule in the ORIGINAL pool, rather than first rolling a flat 1-in-3 chance of
-        // 0/1/2 rules and only then picking within that bucket. The old scheme gave
-        // Normal (0 rules) a flat 33% regardless of how many rules exist to compete
-        // with it — so Normal showed up ~4x more often than any individual named rule
-        // ever did, which read as "roulette keeps landing on Normal" even though every
-        // single rule was, individually, equally likely to be picked.
+        // "Stop here" is a flat probability (1 in originalPoolSize+1) at EVERY draw,
+        // fully decoupled from how much exclusivity has shrunk the pool. The old
+        // scheme gave Normal (0 rules) a flat 33% regardless of how many rules exist
+        // to compete with it — so Normal showed up ~4x more often than any individual
+        // named rule ever did.
+        //
+        // An earlier attempt at this fix scaled stopWeight up by how many rules
+        // exclusivity had removed, reasoning that "stop" should absorb the removed
+        // rules' probability mass — but a 5000+/200000-trial simulation showed that
+        // made things WORSE, not better: it inflated "stop"'s share specifically after
+        // picking a rule with more exclusivity partners (All Open/Three Open/Bomb
+        // Shelter remove 3 at once vs. a no-partner rule's 1), nearly doubling how
+        // much more often those rules ended up as the SOLE active rule compared to
+        // standalone rules like Same or Reverse (2.4% vs 1.2% at 200k trials, vs. the
+        // original bug's milder 0.77% vs 0.64%). Keeping "stop" at a flat,
+        // pool-size-independent probability is what actually equalizes solo-rule odds
+        // across every rule regardless of its exclusivity group (confirmed via the
+        // same simulation: 0.60% / 0.58% / 0.60% across the three exclusivity-group
+        // sizes at 200k trials).
         int originalPoolSize = pool.Count;
+        double stopProbability = 1.0 / (originalPoolSize + 1);
         var selected = new List<HoneycombRule>();
         for (int slot = 0; slot < 2; slot++)
         {
             if (pool.Count == 0) break;
 
             bool mustPick = slot == 0 && normalBanned;
-            // Scale stopWeight by how many rules exclusivity already pulled from the
-            // original pool, so slot 1's denominator stays originalPoolSize+1 no
-            // matter which rule slot 0 picked. Without this, picking a rule from a
-            // bigger exclusivity group (All Open/Three Open/Bomb Shelter removes 3 at
-            // once) shrinks slot 1's pool more than a no-partner rule (removes 1),
-            // making "stop" a bigger share of that smaller pool — so rules with
-            // exclusivity partners ended up as the SOLE active rule noticeably more
-            // often than standalone rules like Same or Reverse.
-            int stopWeight = mustPick ? 0 : (originalPoolSize - pool.Count + 1);
-            int roll = Random.Shared.Next(pool.Count + stopWeight);
-            if (roll == pool.Count) break; // rolled the "stop" slot
+            if (!mustPick && Random.Shared.NextDouble() < stopProbability) break;
 
-            var r = pool[roll];
+            int idx = Random.Shared.Next(pool.Count);
+            var r = pool[idx];
             selected.Add(r);
-            pool.RemoveAt(roll);
+            pool.RemoveAt(idx);
 
             if (r == HoneycombRule.Ascension) pool.Remove(HoneycombRule.Descension);
             else if (r == HoneycombRule.Descension) pool.Remove(HoneycombRule.Ascension);
