@@ -1489,7 +1489,6 @@ public partial class CardView : UserControl
                 {
                     (cv.Parent as Canvas)?.Children.Remove(cv);
                     dragCanvas.Children.Add(cv);
-                    cv.Clip = null; // fully visible while dragged, regardless of its clip in the source pile
                     Canvas.SetLeft(cv, _dragStartPositions[cv].X);
                     Canvas.SetTop(cv, _dragStartPositions[cv].Y);
                 }
