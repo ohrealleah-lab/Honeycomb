@@ -737,9 +737,13 @@ public partial class HoneycombView : UserControl
         switch (e.Key)
         {
             case Key.Escape:
-                if (_isStealingCard) CancelSteal_Click(null, new RoutedEventArgs());
-                else if (_selectedHandIndex != -1) { _selectedHandIndex = -1; Refresh(vm); }
-                e.Handled = true;
+                // Only claim Escape when it actually did something here (cancel steal
+                // mode / clear hand selection) — marking it Handled unconditionally would
+                // swallow it even when neither applies (e.g. Preferences/Rules open on
+                // top of Honeycomb), silently blocking MainWindow's own Escape-closes-
+                // overlay handling with nothing to show for it.
+                if (_isStealingCard) { CancelSteal_Click(null, new RoutedEventArgs()); e.Handled = true; }
+                else if (_selectedHandIndex != -1) { _selectedHandIndex = -1; Refresh(vm); e.Handled = true; }
                 break;
             case Key.Up:    MoveCursor(-1, 0); e.Handled = true; break;
             case Key.Down:  MoveCursor(1, 0);  e.Handled = true; break;
