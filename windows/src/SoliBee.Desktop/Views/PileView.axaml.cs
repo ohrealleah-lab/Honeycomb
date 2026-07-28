@@ -264,7 +264,16 @@ public partial class PileView : UserControl
                 Canvas.SetTop(cardView, offset);
 
                 if (Pile.Type == PileType.Tableau)
-                    offset += card.IsFaceUp ? 32 : 20;
+                {
+                    // Every card but the last is covered by the next one down to this
+                    // gap — clipping away the rest saves rasterizing the covered card's
+                    // full BoxShadow/content, which matters once a column gets deep.
+                    double gapToNext = card.IsFaceUp ? 32 : 20;
+                    cardView.Clip = (i < cardCount - 1)
+                        ? new RectangleGeometry(new Rect(0, 0, 128, gapToNext))
+                        : null;
+                    offset += gapToNext;
+                }
             }
 
             // Remove excess reused children
