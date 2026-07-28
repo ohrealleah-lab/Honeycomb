@@ -153,23 +153,20 @@ public struct HoneycombView: View {
                         ) { viewModel.gameState = .setup }
                     }
 
-                    if viewModel.gameState != .playing && viewModel.gameState != .suddenDeath {
-                        GameToolbarButton(
-                            label: "Options", systemImage: "gearshape",
-                            isCompact: toolbarWidth < compactToolbarWidthThreshold
-                        ) { showingOptions = true }
+                    GameToolbarButton(
+                        label: "Options", systemImage: "gearshape",
+                        isCompact: toolbarWidth < compactToolbarWidthThreshold
+                    ) { showingOptions = true }
 
-                        GameToolbarButton(
-                            label: "Rules", systemImage: "checklist",
-                            isCompact: toolbarWidth < compactToolbarWidthThreshold
-                        ) { showingRules = true }
-                    }
+                    GameToolbarButton(
+                        label: "Rules", systemImage: "checklist",
+                        isCompact: toolbarWidth < compactToolbarWidthThreshold
+                    ) { showingRules = true }
 
                     // Manage Decks is shown for .setup *and* .gameOver — the match is
-                    // already over at that point (same "match in progress" boundary
-                    // Options' disabled state above uses), so there's no more Undo to
-                    // offer and it becomes relevant again rather than staying hidden
-                    // until the player explicitly quits back to .setup.
+                    // already over at that point, so there's no more Undo to offer and
+                    // it becomes relevant again rather than staying hidden until the
+                    // player explicitly quits back to .setup.
                     if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
                         // Never shown on Ultra Hard — that difficulty is meant to stay
                         // fully self-directed, no optimal-move assistance.
@@ -194,7 +191,10 @@ public struct HoneycombView: View {
                             disabled: !viewModel.canUndo
                         ) { viewModel.undoLastAction() }
                         .keyboardShortcut("z", modifiers: .command)
-                    } else {
+                    } else if !viewModel.options.noStressMode {
+                        // Manage Decks edits the player's active deck composition —
+                        // meaningless under No Stress Mode, which always deals a
+                        // fixed/random hand instead of that deck.
                         GameToolbarButton(
                             label: "Manage Decks", systemImage: "square.grid.2x2",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold
@@ -863,12 +863,19 @@ struct HoneycombOptionsView: View {
             availableHeight: availableHeight,
             onViewStats: { isShowingStats = true },
             onOK: {
+                let wasNoStressMode = viewModel.options.noStressMode
                 var updatedOpts = viewModel.options
                 updatedOpts.isSoundEnabled = isSoundEnabled
                 updatedOpts.noStressMode = noStressMode
                 updatedOpts.showPointHighlights = showPointHighlights
                 updatedOpts.hideHintButton = hideHintButton
                 viewModel.options = updatedOpts
+                // No Stress Mode's deck composition is only decided at match start, so
+                // toggling it on mid-match has no visible effect until the next deal —
+                // silently deal fresh instead of leaving a stale, unapplied setting.
+                if noStressMode && !wasNoStressMode && (viewModel.gameState == .playing || viewModel.gameState == .suddenDeath) {
+                    viewModel.startNewGame()
+                }
             }
         ) {
             Toggle("Sound Effects", isOn: $isSoundEnabled)

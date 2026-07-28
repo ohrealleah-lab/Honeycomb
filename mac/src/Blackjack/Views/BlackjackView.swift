@@ -251,7 +251,7 @@ public struct BlackjackView: View {
     private var toolbarView: some View {
         HStack(spacing: 20) {
             GameSelectionDropdown(coordinator: coordinator)
-            toolbarButton("Options", systemImage: "gearshape", disabled: !viewModel.canOpenOptions) {
+            toolbarButton("Options", systemImage: "gearshape", disabled: false) {
                 isShowingOptions = true
             }
             Spacer()
@@ -804,11 +804,18 @@ struct BlackjackOptionsView: View {
             fixedSizeHorizontal: false,
             onViewStats: { isShowingStats = true },
             onOK: {
+                let wasNoStressMode = viewModel.options.noStressMode
                 var o = viewModel.options
                 o.startingCredits = startingCredits
                 o.isSoundEnabled  = isSoundEnabled
                 o.noStressMode    = noStressMode
                 viewModel.options = o
+                // Options can now be opened mid-hand — if No Stress Mode just got turned
+                // on while one is in progress, end it and deal fresh instead of leaving a
+                // hand that was dealt/wagered under the old mode still in play.
+                if noStressMode && !wasNoStressMode && !viewModel.canOpenOptions {
+                    viewModel.startNewGame()
+                }
             }
         ) {
             Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 10...10000, step: 10)

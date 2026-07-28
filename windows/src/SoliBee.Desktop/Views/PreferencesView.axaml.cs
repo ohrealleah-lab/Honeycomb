@@ -351,6 +351,24 @@ public partial class PreferencesView : UserControl
         return false;
     }
 
+    // True if No Stress Mode was off when the panel opened and is on now — used by
+    // MainWindow's OK button to decide whether to silently end/restart Blackjack,
+    // VideoPoker, or a Honeycomb match, since those are the only games where the
+    // setting doesn't already apply live to a game in progress.
+    public bool DidEnableNoStressMode()
+    {
+        if (_originalGameOptions != null && DataContext is GameOptions options)
+            return !_originalGameOptions.IsNoStressMode && options.IsNoStressMode;
+
+        if (_originalSharedOptionsForVideoPoker != null)
+        {
+            var currentShared = SettingsService.LoadOptions();
+            return !_originalSharedOptionsForVideoPoker.IsNoStressMode && currentShared.IsNoStressMode;
+        }
+
+        return false;
+    }
+
     // Video Poker has its own separate options model — only a handful of settings
     // (sound) are VP-specific; No Stress Mode/Hide Hint are global (shared
     // GameOptions) and Visual Themes is available same as every other game.

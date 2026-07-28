@@ -809,8 +809,6 @@ public partial class MainWindow : Window
 
     private void HoneycombRules_Click(object? sender, RoutedEventArgs e)
     {
-        if (IsOptionsBlockedDuringHand()) return;
-        
         if (this.DataContext is HoneycombViewModel hVm)
         {
             this.TopBarBorder.IsEnabled = false;
@@ -831,11 +829,6 @@ public partial class MainWindow : Window
 
     private void Preferences_Click(object? sender, RoutedEventArgs e)
     {
-        // Belt-and-suspenders alongside OptionsButton.IsEnabled — blocks the F2 shortcut
-        // too, so a hand mid-deal can't be used to peek at Preferences and flip No Stress
-        // Mode on/off to only ever risk real credits on hands already known to be good.
-        if (IsOptionsBlockedDuringHand()) return;
-
         _preferencesView = new PreferencesView();
 
         if (this.DataContext is VideoPokerViewModel vpVm)
@@ -900,8 +893,6 @@ public partial class MainWindow : Window
 
     private void ManageDecks_Click(object? sender, RoutedEventArgs e)
     {
-        if (IsOptionsBlockedDuringHand()) return;
-
         _manageDecksView = new ManageDecksView();
         _manageDecksView.OnRequestDeckBuilder += (slotIndex) => {
             var deckBuilder = new DeckBuilderView(slotIndex);
@@ -1017,6 +1008,18 @@ public partial class MainWindow : Window
             }
             return;
         }
+
+        // Blackjack/VideoPoker/Honeycomb are the only games where No Stress Mode doesn't
+        // already apply live (a Blackjack/VideoPoker hand can't retroactively become free
+        // play, and Honeycomb's deck composition is only decided at match start) — so
+        // enabling it while one of those is in progress silently ends it and deals fresh,
+        // no confirmation. Klondike/Freecell/Spider apply it live with no reset needed.
+        if (_preferencesView != null && _preferencesView.DidEnableNoStressMode() && IsGameInProgress()
+            && (this.DataContext is BlackjackViewModel || this.DataContext is VideoPokerViewModel || this.DataContext is HoneycombViewModel))
+        {
+            ExecuteNewGame();
+        }
+
         SlideOutAndClosePreferences();
     }
 
@@ -1278,7 +1281,6 @@ public partial class MainWindow : Window
         _hintTrackedVm = _coordinator.ActiveViewModel as INotifyPropertyChanged;
         if (_hintTrackedVm != null) _hintTrackedVm.PropertyChanged += OnHintTrackedVmPropertyChanged;
         UpdateHintButtonEnabled();
-        UpdateOptionsButtonEnabled();
 
         bool isCardGame = tag != "VideoPoker" && tag != "Blackjack" && tag != "Honeycomb";
         UpdateSolitaireKeyHint(tag, isCardGame);
@@ -1412,9 +1414,7 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(GameViewModel.HasNoMoves))
             UpdateHintButtonEnabled();
-        else if (e.PropertyName == nameof(BlackjackViewModel.State) || e.PropertyName == nameof(VideoPokerViewModel.State))
-            UpdateOptionsButtonEnabled();
-            
+
         if (this.DataContext is HoneycombViewModel hVm)
         {
             if (e.PropertyName == nameof(HoneycombViewModel.State) ||
@@ -1437,9 +1437,10 @@ public partial class MainWindow : Window
 
             if (HoneycombStartMatchButton != null) HoneycombStartMatchButton.IsVisible = isPreMatch || isResult;
             if (HoneycombRematchButton != null) HoneycombRematchButton.IsVisible = isResult;
-            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = isPreMatch || isResult;
-            if (HoneycombRulesButton != null) HoneycombRulesButton.IsVisible = isPreMatch || isResult;
-            if (OptionsButton != null) OptionsButton.IsVisible = isPreMatch || isResult;
+            // Manage Decks edits the player's active deck composition — meaningless under
+            // No Stress Mode, which always deals a fixed/random hand instead of that deck.
+            bool noStressMode = SettingsService.LoadOptions().IsNoStressMode;
+            if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = (isPreMatch || isResult) && !noStressMode;
             // Hidden if the player opted out, or on Ultra Hard (where a hint would trivialize
             // the hardest difficulty) — matches Mac's HoneycombView hint-button condition.
             if (HintButton != null) HintButton.IsVisible = isPlaying && !hVm.Options.HideHintButton && hVm.Options.Difficulty != HoneycombDifficulty.UltraHard;
@@ -1490,21 +1491,6 @@ public partial class MainWindow : Window
             _                   => false,
         };
         if (HintButton != null) HintButton.IsEnabled = !hasNoMoves;
-    }
-
-    // A hand mid-deal in Blackjack/Video Poker shouldn't be interruptible by Preferences —
-    // otherwise a player could peek at their (bad) hand, flip No Stress Mode on, and only
-    // ever risk real credits on hands they already know are good.
-    private bool IsOptionsBlockedDuringHand() => _coordinator.ActiveViewModel switch
-    {
-        BlackjackViewModel bj  => bj.IsPlaying,
-        VideoPokerViewModel vp => vp.State != null && vp.State.Phase == VideoPokerPhase.Holding,
-        _                      => false,
-    };
-
-    private void UpdateOptionsButtonEnabled()
-    {
-        if (OptionsButton != null) OptionsButton.IsEnabled = !IsOptionsBlockedDuringHand();
     }
 
     // ── Per-game window size ──────────────────────────────────────────────────

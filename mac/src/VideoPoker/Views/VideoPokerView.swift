@@ -306,7 +306,7 @@ public struct VideoPokerView: View {
     private var toolbarView: some View {
         HStack(spacing: 20) {
             GameSelectionDropdown(coordinator: coordinator)
-            toolbarButton("Options", systemImage: "gearshape", disabled: !viewModel.canOpenOptions) {
+            toolbarButton("Options", systemImage: "gearshape", disabled: false) {
                 isShowingOptions = true
             }
             Spacer()
@@ -922,8 +922,9 @@ struct VideoPokerOptionsView: View {
             fixedSizeHorizontal: false,
             onViewStats: { isShowingStats = true },
             onOK: {
-                let variantChanged  = variant  != viewModel.options.variant
-                let playModeChanged = playMode != viewModel.options.playMode
+                let variantChanged   = variant  != viewModel.options.variant
+                let playModeChanged  = playMode != viewModel.options.playMode
+                let wasNoStressMode  = viewModel.options.noStressMode
                 var o = viewModel.options
                 o.variant         = variant
                 o.playMode        = playMode
@@ -936,6 +937,12 @@ struct VideoPokerOptionsView: View {
                 viewModel.options = o
                 if variantChanged || playModeChanged {
                     viewModel.resetHandDisplay()
+                }
+                // Options can now be opened mid-hand — if No Stress Mode just got turned
+                // on while one is in progress, end it and deal fresh instead of leaving a
+                // hand that was dealt/wagered under the old mode still in play.
+                if noStressMode && !wasNoStressMode && !viewModel.canOpenOptions {
+                    viewModel.startNewGame()
                 }
             }
         ) {
