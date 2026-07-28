@@ -572,26 +572,47 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         IsAutocompletable = FindNextAutocompleteMove() != null;
     }
 
-    // Spider doesn't merge to foundations directly — it merges whole same-suit columns onto
-    // each other, and relies on TryCompleteRuns() (called inside MoveSequence) to auto-sweep
-    // any newly-formed complete K→A run. A source column only qualifies if its entire stack
-    // (not just the topmost movable run) is already one coherent same-suit descending sequence.
-    private (Pile Source, Pile Target)? FindNextAutocompleteMove()
+    // Spider doesn't merge to foundations directly — it relocates each column's topmost
+    // movable run onto a legal target, and relies on TryCompleteRuns() (called inside
+    // MoveSequence) to auto-sweep any newly-formed complete K→A run. Non-empty targets are
+    // tried first across every column before ever falling back to an empty column, so a
+    // free column is never spent when a real target is already available — and a run is
+    // only sent to an empty column if that actually uncovers something (never just to swap
+    // which column happens to be empty).
+    private (Pile Source, List<Card> Cards, Pile Target)? FindNextAutocompleteMove()
     {
+        Pile? fallbackSource = null;
+        List<Card>? fallbackCards = null;
+        Pile? fallbackTarget = null;
+
         foreach (var src in Tableaus)
         {
-            if (src.Cards.Count == 0) continue;
-            if (GetMovableSequence(src).Count != src.Cards.Count) continue;
+            var maxSeq = GetMovableSequence(src);
+            if (maxSeq.Count == 0) continue;
 
-            var sourceHighest = src.Cards[0];
             foreach (var tgt in Tableaus)
             {
                 if (tgt.Id == src.Id || tgt.Cards.Count == 0) continue;
-                var targetTop = tgt.Cards.Last();
-                if (targetTop.Suit == sourceHighest.Suit && targetTop.Rank == sourceHighest.Rank + 1)
-                    return (src, tgt);
+                if (CanMoveSequence(maxSeq, tgt))
+                    return (src, maxSeq, tgt);
+            }
+
+            if (fallbackSource == null && maxSeq.Count < src.Cards.Count)
+            {
+                foreach (var tgt in Tableaus)
+                {
+                    if (tgt.Id == src.Id || tgt.Cards.Count != 0) continue;
+                    fallbackSource = src;
+                    fallbackCards = maxSeq;
+                    fallbackTarget = tgt;
+                    break;
+                }
             }
         }
+
+        if (fallbackSource != null)
+            return (fallbackSource, fallbackCards!, fallbackTarget!);
+
         return null;
     }
 
@@ -624,8 +645,8 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         var move = FindNextAutocompleteMove();
         if (move != null)
         {
-            var (src, tgt) = move.Value;
-            MoveSequence(src.Cards.ToList(), src, tgt);
+            var (src, cards, tgt) = move.Value;
+            MoveSequence(cards, src, tgt);
             ScheduleNextAutocompleteMove();
         }
         else
