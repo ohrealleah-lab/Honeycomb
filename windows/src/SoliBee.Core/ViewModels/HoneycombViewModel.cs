@@ -544,7 +544,7 @@ public partial class HoneycombViewModel : ObservableObject
             State.PointHighlightStatIndices = directStatIndices;
             NotifyStateChanged();
 
-            FinishPlacementAfterHighlight(workingBoard, cellIndex, hand, preScore);
+            FinishPlacementAfterHighlight(workingBoard, cellIndex, hand, preScore, _matchGeneration);
         }
         else
         {
@@ -553,9 +553,24 @@ public partial class HoneycombViewModel : ObservableObject
         }
     }
 
-    private async void FinishPlacementAfterHighlight(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore)
+    private async void FinishPlacementAfterHighlight(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation)
     {
         await Task.Delay(500);
+
+        // Quit Match resets State to a fresh pre-match HoneycombState (Phase back to
+        // PreMatch) without touching _isAnimating, and doesn't bump _matchGeneration
+        // either — so on its own, neither check alone catches every case. If a new
+        // match had already started instead, IsPlaying is true again but the
+        // generation differs; that new match manages its own _isAnimating, so leave
+        // it alone. Only clear _isAnimating here when nothing else could legitimately
+        // be relying on it (i.e. we're genuinely back at a non-Playing phase),
+        // otherwise an abandoned match's stuck _isAnimating=true would silently block
+        // PlayCard/AI turns in whatever match follows it.
+        if (generation != _matchGeneration || !IsPlaying)
+        {
+            if (!IsPlaying) _isAnimating = false;
+            return;
+        }
 
         State.PointHighlightCellIndex = null;
         State.PointHighlightStatIndices = new HashSet<int>();
