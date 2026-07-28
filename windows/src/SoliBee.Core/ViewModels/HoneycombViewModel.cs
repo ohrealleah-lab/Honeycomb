@@ -150,7 +150,6 @@ public partial class HoneycombViewModel : ObservableObject
         {
             State.Board.AscensionDescensionSuits = new[] { "S", "H", "D", "C" }.OrderBy(x => Random.Shared.Next()).Take(1).ToList();
         }
-        FlashAscensionDescensionBanner();
 
         State.PlayerHand = BuildPlayerHand();
         State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
@@ -167,13 +166,19 @@ public partial class HoneycombViewModel : ObservableObject
         FinishMatchSetup(swapIds);
     }
 
-    private void FlashAscensionDescensionBanner()
+    // Display text for one active rule in the "First Move" banner: just the (spaced)
+    // rule name, except Ascension/Descension which also name the affected suit(s) —
+    // e.g. "Swap", "Ascension: Hearts". No trailing punctuation; the banner's own "!"
+    // belongs only after "First Move: Player/Opponent".
+    private string FormatRuleForBanner(HoneycombRule rule)
     {
-        var suitNames = State.Board.AscensionDescensionSuits.Select(HoneycombCardData.SuitDisplayName);
-        if (State.ActiveRules.Contains(HoneycombRule.Ascension))
-            OnFlashBanner?.Invoke($"Ascension: {string.Join(", ", suitNames)} +1");
-        else if (State.ActiveRules.Contains(HoneycombRule.Descension))
-            OnFlashBanner?.Invoke($"Descension: {string.Join(", ", suitNames)} -1");
+        var name = System.Text.RegularExpressions.Regex.Replace(rule.ToString(), "(\\B[A-Z])", " $1");
+        if (rule == HoneycombRule.Ascension || rule == HoneycombRule.Descension)
+        {
+            var suitNames = State.Board.AscensionDescensionSuits.Select(HoneycombCardData.SuitDisplayName);
+            return $"{name}: {string.Join(", ", suitNames)}";
+        }
+        return name;
     }
 
     private List<HoneycombCard> BuildPlayerHand()
@@ -331,11 +336,16 @@ public partial class HoneycombViewModel : ObservableObject
         State.CurrentTurn = starter;
 
         string starterName = starter == 1 ? "Player" : "Opponent";
-        string startBanner = $"First Move: {starterName}!";
-        // A single combined banner instead of two separate flashes at match start —
-        // Swap rides as the second line rather than replacing "First Move" a beat later.
-        if (swapIds.HasValue) startBanner += "\nSwap!";
-        OnFlashBanner?.Invoke(startBanner);
+        // A single combined banner instead of separate flashes at match start — every
+        // active rule (up to 2) gets its own line below "First Move", in the same font,
+        // rather than only Swap riding along while Ascension/Descension/etc. got their
+        // own separate (and immediately-overwritten) flash.
+        var bannerLines = new List<string> { $"First Move: {starterName}!" };
+        foreach (var rule in State.ActiveRules)
+        {
+            bannerLines.Add(FormatRuleForBanner(rule));
+        }
+        OnFlashBanner?.Invoke(string.Join("\n", bannerLines));
 
         int generation = ++_matchGeneration;
         if (swapIds.HasValue)
@@ -436,7 +446,6 @@ public partial class HoneycombViewModel : ObservableObject
 
         State.Board = new HoneycombBoard();
         State.Board.AscensionDescensionSuits = new List<string>(_rematchAscensionDescensionSuits);
-        FlashAscensionDescensionBanner();
 
         State.PlayerHand = BuildPlayerHand();
         State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();

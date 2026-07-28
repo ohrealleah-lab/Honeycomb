@@ -305,12 +305,6 @@ public final class HoneycombViewModel {
     private var rematchActiveRules: [HoneycombRule] = []
     private var rematchAscensionDescensionSuits: Set<String> = []
 
-    // Set when this match opened with a Swap trade (by startNewGame() or rematch(),
-    // since rematch() now re-rolls its own trade), so finishMatchSetup() can fold
-    // "Swap!" into the "First Move" banner as a second line instead of flashing it
-    // separately a beat later.
-    private var pendingSwapBannerLine: String? = nil
-
     public var canRematch: Bool { !rematchOpponentDeck.isEmpty }
 
     public func startNewGame() {
@@ -322,7 +316,6 @@ public final class HoneycombViewModel {
         let generation = handSetupGeneration
         undoStack.removeAll()
         swapHighlightCardIds.removeAll()
-        pendingSwapBannerLine = nil
         clearHint()
 
         board = HoneycombBoard()
@@ -351,10 +344,6 @@ public final class HoneycombViewModel {
     private func stageSwapAnimation(_ swapResult: SwapResult?, generation: Int) {
         guard let swapResult else { return }
 
-        // Folded into the "First Move" banner in finishMatchSetup() as a second
-        // line instead of flashing separately — see pendingSwapBannerLine.
-        pendingSwapBannerLine = "Swap!"
-
         // playerStartingDeck deliberately keeps the player's real, pre-swap card
         // here — it's what "Your Deck"/Take-a-Card and the rarity-cap check at
         // match end are based on, so every one of the 5 slots stays normally
@@ -367,9 +356,10 @@ public final class HoneycombViewModel {
         // capturing/stealing it off the board like any other opponent card.
 
         // Highlight the two real, not-yet-swapped cards right away, in sync with
-        // the combined "First Move" + "Swap!" banner (no separate delayed flash —
-        // see pendingSwapBannerLine), so the player sees exactly which two are
-        // about to trade before anything moves.
+        // the combined "First Move" + rules banner (no separate delayed flash —
+        // "Swap" is just one of activeRules, listed by finishMatchSetup() like any
+        // other active rule), so the player sees exactly which two are about to
+        // trade before anything moves.
         swapHighlightCardIds = [swapResult.preSwapPlayerCard.id, swapResult.preSwapOpponentCard.id]
 
         // Actually animate the trade partway through the banner's now-2s run.
@@ -393,6 +383,18 @@ public final class HoneycombViewModel {
                 self.swapHighlightCardIds.removeAll()
             }
         }
+    }
+
+    // Display text for one active rule in the "First Move" banner: just the rule's
+    // name, except Ascension/Descension which also name the affected suit(s) — e.g.
+    // "Swap", "Ascension: Hearts". No trailing punctuation; the banner's own "!"
+    // belongs only after "First Move: Player/Opponent".
+    private func formatRuleForBanner(_ rule: HoneycombRule) -> String {
+        if rule == .ascension || rule == .descension {
+            let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }
+            return "\(rule.rawValue): \(suitNames.joined(separator: ", "))"
+        }
+        return rule.rawValue
     }
 
     // Shared tail between startNewGame() and rematch() — decides who moves first,
@@ -420,16 +422,13 @@ public final class HoneycombViewModel {
         lastMatchStarterWasPlayer = playerStarts
         isPlayerTurn = playerStarts
         rerollChaosIndexIfNeeded(forPlayerSide: isPlayerTurn)
-        // Second line reuses the same Text/font as the headline above (FlashBannerView
-        // just renders whatever's after the "\n") — used to fold in "Swap!" instead of
-        // flashing it as its own separate banner a beat later.
+        // Every active rule (up to 2) gets its own line below "First Move", in the
+        // same font (FlashBannerView just renders whatever's after each "\n") —
+        // rather than only Swap riding along while Ascension/Descension/etc. never
+        // got shown here at all.
         let firstMoveLine = isPlayerTurn ? "First Move: Player!" : "First Move: Opponent!"
-        if let swapLine = pendingSwapBannerLine {
-            flashRuleBanner = "\(firstMoveLine)\n\(swapLine)"
-            pendingSwapBannerLine = nil
-        } else {
-            flashRuleBanner = firstMoveLine
-        }
+        let ruleLines = activeRules.map { formatRuleForBanner($0) }
+        flashRuleBanner = ([firstMoveLine] + ruleLines).joined(separator: "\n")
 
         if options.isSoundEnabled {
             UISound.play(named: "shuffle", enabled: true)
@@ -464,7 +463,6 @@ public final class HoneycombViewModel {
         let generation = handSetupGeneration
         undoStack.removeAll()
         swapHighlightCardIds.removeAll()
-        pendingSwapBannerLine = nil
         clearHint()
 
         board = HoneycombBoard()
