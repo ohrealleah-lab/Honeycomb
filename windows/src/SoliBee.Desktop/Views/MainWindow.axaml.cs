@@ -101,7 +101,12 @@ public partial class MainWindow : Window
         // Apply any saved theme color overrides before first render
         CardView.ApplyThemeColors(_coordinator.GameViewModel.Options);
 
-        this.KeyDown += OnWindowKeyDown;
+        // Tunnel (not the default Bubble) so Escape/Ctrl+Z/Ctrl+H/F1 are seen here first,
+        // before a focused child control gets a chance to consume them — a ComboBox
+        // (e.g. the difficulty/felt-color/card-back pickers in Preferences) handles
+        // Escape internally, which silently swallowed it before it could bubble up to
+        // close the Preferences/Rules panel.
+        this.AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel);
         this.Closing += (_, _) => SaveCurrentWindowSize();
         // Re-scale the background image's offset transform to stay proportionally correct
         // as the window is resized (offsets are stored in fixed reference-width units).
