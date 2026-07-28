@@ -22,14 +22,37 @@ public partial class HoneycombCardView : UserControl
         set => StealHighlightBorder.IsVisible = value;
     }
 
-    // Point Highlights: flashes the winning stat edge(s) — 0=Top, 1=Right, 2=Bottom,
-    // 3=Left — for a beat before a capture visually flips. Pass null/empty to clear.
+    private static readonly SolidColorBrush _brushPointHighlight = new(Color.Parse("#FFD600"));
+
+    // Point Highlights: recolors the winning stat number(s) — 0=Top, 1=Right,
+    // 2=Bottom, 3=Left — gold and briefly pulses their scale for a beat before a
+    // capture visually flips, matching Mac's HoneycombCardView (the number itself
+    // highlights, not a border/edge). Pass null/empty to clear. When not highlighted,
+    // this deliberately leaves Foreground alone — UpdateVisuals already set the
+    // correct owner color for this render pass, and always runs before this is called.
     public void SetStatHighlight(System.Collections.Generic.HashSet<int>? statIndices)
     {
-        TopFlash.IsVisible = statIndices?.Contains(0) ?? false;
-        RightFlash.IsVisible = statIndices?.Contains(1) ?? false;
-        BottomFlash.IsVisible = statIndices?.Contains(2) ?? false;
-        LeftFlash.IsVisible = statIndices?.Contains(3) ?? false;
+        ApplyStatHighlight(TopStat, 0, statIndices);
+        ApplyStatHighlight(RightStat, 1, statIndices);
+        ApplyStatHighlight(BottomStat, 2, statIndices);
+        ApplyStatHighlight(LeftStat, 3, statIndices);
+    }
+
+    private void ApplyStatHighlight(TextBlock statText, int index, System.Collections.Generic.HashSet<int>? statIndices)
+    {
+        if (statIndices?.Contains(index) != true) return;
+
+        statText.Foreground = _brushPointHighlight;
+        if (statText.RenderTransform is ScaleTransform scale) PulseScale(scale);
+    }
+
+    private async void PulseScale(ScaleTransform scale)
+    {
+        scale.ScaleX = 1.4;
+        scale.ScaleY = 1.4;
+        await Task.Delay(150);
+        scale.ScaleX = 1.0;
+        scale.ScaleY = 1.0;
     }
 
     private int _currentOwner = 0;

@@ -155,25 +155,50 @@ public partial class PreferencesView : UserControl
         }
     }
 
-    // Point Highlights is genuinely per-game (unlike No Stress Mode/Hide Hint/Always on
-    // Top above, which are single fields shared across every game) — these two map the
-    // one checkbox to whichever of the three GameOptions fields ActiveGameFamily
-    // currently points at.
+    // Point Highlights is genuinely per-game (unlike No Stress Mode/Always on Top
+    // above, which are single fields shared across every game) — these two map the
+    // one checkbox to whichever backing field ActiveGameFamily currently points at.
+    // Honeycomb has its own HoneycombOptions.ShowPointHighlights (like Mac, which
+    // keeps it independent of the solitaire games' shared field) rather than a
+    // fourth GameOptions field.
     private bool GetPointHighlights(GameOptions options) => ActiveGameFamily switch
     {
-        "Klondike" => options.KlondikeShowPointHighlights,
-        "Freecell" => options.FreecellShowPointHighlights,
-        "Spider"   => options.SpiderShowPointHighlights,
-        _          => true,
+        "Klondike"  => options.KlondikeShowPointHighlights,
+        "Freecell"  => options.FreecellShowPointHighlights,
+        "Spider"    => options.SpiderShowPointHighlights,
+        "Honeycomb" => HoneycombOptions?.ShowPointHighlights ?? true,
+        _           => true,
     };
 
     private void SetPointHighlights(GameOptions options, bool value)
     {
         switch (ActiveGameFamily)
         {
-            case "Klondike": options.KlondikeShowPointHighlights = value; break;
-            case "Freecell": options.FreecellShowPointHighlights = value; break;
-            case "Spider":   options.SpiderShowPointHighlights   = value; break;
+            case "Klondike":  options.KlondikeShowPointHighlights = value; break;
+            case "Freecell":  options.FreecellShowPointHighlights = value; break;
+            case "Spider":    options.SpiderShowPointHighlights   = value; break;
+            case "Honeycomb": if (HoneycombOptions != null) HoneycombOptions.ShowPointHighlights = value; break;
+        }
+    }
+
+    // Hide Hint Button: a single shared GameOptions field for every solitaire/casino
+    // game, but Honeycomb keeps its own HoneycombOptions.HideHintButton (matching
+    // Mac, where Honeycomb's hideHintButton is independent of the other games'
+    // shared field) — same one-checkbox-many-backing-fields split as Point
+    // Highlights above.
+    private bool GetHideHintButton(GameOptions options) => ActiveGameFamily == "Honeycomb"
+        ? (HoneycombOptions?.HideHintButton ?? false)
+        : options.HideHintButton;
+
+    private void SetHideHintButton(GameOptions options, bool value)
+    {
+        if (ActiveGameFamily == "Honeycomb")
+        {
+            if (HoneycombOptions != null) HoneycombOptions.HideHintButton = value;
+        }
+        else
+        {
+            options.HideHintButton = value;
         }
     }
 
@@ -184,7 +209,7 @@ public partial class PreferencesView : UserControl
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
         VegasCheckBox.IsChecked        = options.IsVegasScoring;
         VignetteCheckBox.IsChecked     = options.IsVignetteEnabled;
-        HideHintCheckBox.IsChecked     = options.HideHintButton;
+        HideHintCheckBox.IsChecked     = GetHideHintButton(options);
         AlwaysOnTopCheckBox.IsChecked  = options.IsAlwaysOnTop;
 
         foreach (var item in FeltColorComboBox.Items.OfType<ComboBoxItem>())
@@ -233,9 +258,9 @@ public partial class PreferencesView : UserControl
         CardTextBlackColorPicker.Color = Color.Parse(options.ThemeTextBlackNormal ?? "#1A1A1A");
         CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
 
-        // Point Highlights — per-game (Klondike/Freecell/Spider only; not Video
+        // Point Highlights — per-game (Klondike/Freecell/Spider/Honeycomb; not Video
         // Poker/Blackjack, which don't have this feature).
-        PointHighlightsCheckBox.IsVisible = ActiveGameFamily is "Klondike" or "Freecell" or "Spider";
+        PointHighlightsCheckBox.IsVisible = ActiveGameFamily is "Klondike" or "Freecell" or "Spider" or "Honeycomb";
         PointHighlightsCheckBox.IsChecked = GetPointHighlights(options);
 
         // Game Mode section
@@ -744,12 +769,13 @@ public partial class PreferencesView : UserControl
             options.IsSoundEnabled     = SoundCheckBox.IsChecked        ?? false;
             options.IsVegasScoring     = VegasCheckBox.IsChecked        ?? false;
             options.IsVignetteEnabled  = VignetteCheckBox.IsChecked     ?? true;
-            options.HideHintButton     = HideHintCheckBox.IsChecked     ?? false;
+            SetHideHintButton(options, HideHintCheckBox.IsChecked ?? false);
             options.IsAlwaysOnTop      = AlwaysOnTopCheckBox.IsChecked  ?? false;
             if (PointHighlightsCheckBox.IsVisible)
                 SetPointHighlights(options, PointHighlightsCheckBox.IsChecked ?? true);
 
             NotifySettingsChanged(options);
+            if (ActiveGameFamily == "Honeycomb") SaveHoneycombOptionsAndNotify();
         }
         else if (DataContext is VideoPokerOptions vpOptions)
         {
@@ -1588,6 +1614,12 @@ public partial class PreferencesView : UserControl
             if (desktop.MainWindow is MainWindow mw && mw.DataContext is HoneycombViewModel hVm)
             {
                 hVm.Options = HoneycombOptions;
+                // HoneycombOptions here is already the same live reference as hVm.Options
+                // (see Preferences_Click), so the assignment above is a no-op under
+                // ObservableProperty's reference-equality check and won't raise
+                // PropertyChanged(Options) — explicitly notify so live listeners (e.g.
+                // MainWindow's Hint-button-visibility update) still pick up the change.
+                hVm.NotifyOptionsChanged();
             }
         }
     }

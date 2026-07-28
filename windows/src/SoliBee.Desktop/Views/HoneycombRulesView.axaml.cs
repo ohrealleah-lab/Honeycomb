@@ -34,9 +34,7 @@ public partial class HoneycombRulesView : UserControl
             Difficulty = vm.Options.Difficulty,
             ForceNormalRules = vm.Options.ForceNormalRules,
             ManualRules = vm.Options.ManualRules != null ? new HashSet<HoneycombRule>(vm.Options.ManualRules) : new HashSet<HoneycombRule>(),
-            BannedRules = vm.Options.BannedRules != null ? new HashSet<string>(vm.Options.BannedRules) : new HashSet<string>(),
-            HideHintButton = vm.Options.HideHintButton,
-            ShowPointHighlights = vm.Options.ShowPointHighlights
+            BannedRules = vm.Options.BannedRules != null ? new HashSet<string>(vm.Options.BannedRules) : new HashSet<string>()
         };
         
         SyncUI();
@@ -54,9 +52,6 @@ public partial class HoneycombRulesView : UserControl
                 break;
             }
         }
-
-        HideHintButtonCheckBox.IsChecked = _localOpts.HideHintButton;
-        ShowPointHighlightsCheckBox.IsChecked = _localOpts.ShowPointHighlights;
 
         // Game Choice
         HoneycombRule_ForceNormal.IsChecked = _localOpts.ForceNormalRules;
@@ -100,18 +95,6 @@ public partial class HoneycombRulesView : UserControl
         {
             _localOpts.Difficulty = difficulty;
         }
-    }
-
-    private void HideHintButtonCheckBox_Changed(object? sender, RoutedEventArgs e)
-    {
-        if (_initializing) return;
-        _localOpts.HideHintButton = HideHintButtonCheckBox.IsChecked ?? false;
-    }
-
-    private void ShowPointHighlightsCheckBox_Changed(object? sender, RoutedEventArgs e)
-    {
-        if (_initializing) return;
-        _localOpts.ShowPointHighlights = ShowPointHighlightsCheckBox.IsChecked ?? false;
     }
 
     private void HoneycombRule_Changed(object? sender, RoutedEventArgs e)
@@ -211,9 +194,7 @@ public partial class HoneycombRulesView : UserControl
         _vm.Options.ForceNormalRules = _localOpts.ForceNormalRules;
         _vm.Options.ManualRules = new HashSet<HoneycombRule>(_localOpts.ManualRules);
         _vm.Options.BannedRules = new HashSet<string>(_localOpts.BannedRules);
-        _vm.Options.HideHintButton = _localOpts.HideHintButton;
-        _vm.Options.ShowPointHighlights = _localOpts.ShowPointHighlights;
-        
+
         SettingsService.SaveHoneycombOptions(_vm.Options);
         _vm.NotifyOptionsChanged();
 

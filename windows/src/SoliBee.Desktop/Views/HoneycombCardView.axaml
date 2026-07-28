@@ -16,11 +16,57 @@
                     <!-- Star Rating Layout -->
                     <StackPanel x:Name="StarsPanel" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="1" />
                     
-                    <!-- The 4 Stats -->
-                    <TextBlock x:Name="TopStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,15,0,0" />
-                    <TextBlock x:Name="RightStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
-                    <TextBlock x:Name="BottomStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,15" />
-                    <TextBlock x:Name="LeftStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <!-- The 4 Stats. Point Highlights (see SetStatHighlight) recolors the
+                         number itself gold and briefly pulses its scale — matching Mac's
+                         HoneycombCardView — rather than any border/edge flash. -->
+                    <TextBlock x:Name="TopStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,15,0,0" RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
+                            <ScaleTransform ScaleX="1" ScaleY="1">
+                                <ScaleTransform.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="ScaleX" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                        <DoubleTransition Property="ScaleY" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                    </Transitions>
+                                </ScaleTransform.Transitions>
+                            </ScaleTransform>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                    <TextBlock x:Name="RightStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
+                            <ScaleTransform ScaleX="1" ScaleY="1">
+                                <ScaleTransform.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="ScaleX" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                        <DoubleTransition Property="ScaleY" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                    </Transitions>
+                                </ScaleTransform.Transitions>
+                            </ScaleTransform>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                    <TextBlock x:Name="BottomStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,15" RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
+                            <ScaleTransform ScaleX="1" ScaleY="1">
+                                <ScaleTransform.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="ScaleX" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                        <DoubleTransition Property="ScaleY" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                    </Transitions>
+                                </ScaleTransform.Transitions>
+                            </ScaleTransform>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                    <TextBlock x:Name="LeftStat" FontSize="32" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
+                            <ScaleTransform ScaleX="1" ScaleY="1">
+                                <ScaleTransform.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="ScaleX" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                        <DoubleTransition Property="ScaleY" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                    </Transitions>
+                                </ScaleTransform.Transitions>
+                            </ScaleTransform>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
                     
                     <!-- Modifier Badge (+N / -N) in top-left corner -->
                     <Border x:Name="ModifierBadge" IsVisible="False" Background="#404040" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,4,0,0" Padding="3,1">
@@ -34,12 +80,6 @@
                         </TextBlock.Effect>
                     </TextBlock>
                     
-                    <!-- Flash Highlights for stats -->
-                    <Border x:Name="TopFlash" IsVisible="False" Background="#B2FFFF00" VerticalAlignment="Top" Height="28" CornerRadius="10,10,0,0" />
-                    <Border x:Name="RightFlash" IsVisible="False" Background="#B2FFFF00" HorizontalAlignment="Right" Width="28" />
-                    <Border x:Name="BottomFlash" IsVisible="False" Background="#B2FFFF00" VerticalAlignment="Bottom" Height="28" CornerRadius="0,0,10,10" />
-                    <Border x:Name="LeftFlash" IsVisible="False" Background="#B2FFFF00" HorizontalAlignment="Left" Width="28" />
-
                     <!-- Steal Highlight Border -->
                     <Border x:Name="StealHighlightBorder" IsVisible="False" BorderBrush="Yellow" BorderThickness="8" CornerRadius="10" IsHitTestVisible="False" />
                 </Grid>
