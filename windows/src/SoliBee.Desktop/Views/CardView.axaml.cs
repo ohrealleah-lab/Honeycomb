@@ -79,8 +79,8 @@ public partial class CardView : UserControl
     internal static readonly SolidColorBrush _brushTextBlackNormal  = new(Color.Parse("#1A1A1A"));
     internal static Color _normalShadowColor = Color.Parse("#26000000");
 
-    private const int CardBackCacheW = 512; // 128 * 4 (ultra-sharp resolution for HiDPI, 4K, and Honeycomb cards)
-    private const int CardBackCacheH = 724; // 181 * 4
+    private const int CardBackCacheW = 780;  // 195 * 4 (anchored to Honeycomb's larger card; solitaire's 128x181 gets even more headroom for free)
+    private const int CardBackCacheH = 1104; // 276 * 4
     private const int FaceArtCacheW  = 280; // 70 * 4
     private const int FaceArtCacheH  = 240; // 60 * 4
 
