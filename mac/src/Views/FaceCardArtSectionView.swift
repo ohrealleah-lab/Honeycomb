@@ -106,7 +106,7 @@ struct FaceCardArtEditorView: View {
 
                 // Card preview
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10).fill(Color.white).frame(width: 128, height: 181).shadow(radius: 4)
+                    RoundedRectangle(cornerRadius: 10).fill(Color.white).frame(width: CardDimensions.width, height: CardDimensions.height).shadow(radius: 4)
 
                     // Corner indices
                     HStack(alignment: .center, spacing: 1) {
@@ -115,7 +115,7 @@ struct FaceCardArtEditorView: View {
                     }
                     .foregroundColor(cardColor)
                     .padding(.leading, 8).padding(.top, 8)
-                    .frame(width: 128, height: 181, alignment: .topLeading)
+                    .frame(width: CardDimensions.width, height: CardDimensions.height, alignment: .topLeading)
 
                     HStack(alignment: .center, spacing: 1) {
                         Text(slot.rankLabel).font(.system(size: 17, weight: .bold))
@@ -124,7 +124,7 @@ struct FaceCardArtEditorView: View {
                     .foregroundColor(cardColor)
                     .rotationEffect(.degrees(180))
                     .padding(.trailing, 8).padding(.bottom, 8)
-                    .frame(width: 128, height: 181, alignment: .bottomTrailing)
+                    .frame(width: CardDimensions.width, height: CardDimensions.height, alignment: .bottomTrailing)
 
                     // Custom art in center area
                     ZStack {

@@ -108,7 +108,7 @@ struct CustomCardBackEditorView: View {
                 // Background card shape
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.white)
-                    .frame(width: 128, height: 181)
+                    .frame(width: CardDimensions.width, height: CardDimensions.height)
                     .shadow(radius: 4)
                 
                 // Programmatic content clip shape
@@ -126,7 +126,7 @@ struct CustomCardBackEditorView: View {
                 // Border
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
-                    .frame(width: 128, height: 181)
+                    .frame(width: CardDimensions.width, height: CardDimensions.height)
             }
             .frame(width: 150, height: 200)
             

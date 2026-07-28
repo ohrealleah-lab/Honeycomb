@@ -143,7 +143,7 @@ struct VideoPokerTouchView: View {
             if viewModel.state.hand.isEmpty {
                 ForEach(0..<5, id: \.self) { _ in
                     HoneycombSimpleCardBack()
-                        .frame(width: cardW, height: cardW * 181.0 / 128.0)
+                        .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
                 }
             } else {
                 ForEach(Array(viewModel.state.hand.enumerated()), id: \.element.id) { i, card in
@@ -292,8 +292,7 @@ struct VideoPokerSettingsSection: View {
                 Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
                 Toggle("Hide Bet Board", isOn: $viewModel.options.hideBetBoard)
             }
-            .disabled(isMidHand)
-            .opacity(isMidHand ? 0.5 : 1)
+            .disabledDuringGameplay(isMidHand)
 
             if isMidHand {
                 Text("Settings unlock when the hand ends.")

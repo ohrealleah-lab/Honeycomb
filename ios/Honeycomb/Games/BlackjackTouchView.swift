@@ -110,7 +110,7 @@ struct BlackjackTouchView: View {
             HStack(spacing: 6) {
                 if viewModel.state.dealerCards.isEmpty {
                     ForEach(0..<2, id: \.self) { _ in
-                        HoneycombSimpleCardBack().frame(width: cardW, height: cardW * 181.0 / 128.0)
+                        HoneycombSimpleCardBack().frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
                     }
                 } else {
                     ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { _, card in
@@ -349,8 +349,7 @@ struct BlackjackSettingsSection: View {
                 Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
                 Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
             }
-            .disabled(!canOpenOptions)
-            .opacity(canOpenOptions ? 1 : 0.5)
+            .disabledDuringGameplay(!canOpenOptions)
 
             if !canOpenOptions {
                 Text("Settings unlock between hands.")

@@ -18,3 +18,15 @@ public struct BlackjackOptions: Codable, Equatable {
         noStressMode    = try c.decodeIfPresent(Bool.self,  forKey: .noStressMode)    ?? false
     }
 }
+
+extension BlackjackOptions: HasCommonGameOptions {
+    public var commonOptions: CommonGameOptions {
+        get {
+            CommonGameOptions(isSoundEnabled: isSoundEnabled, noStressMode: noStressMode)
+        }
+        set {
+            isSoundEnabled = newValue.isSoundEnabled
+            noStressMode = newValue.noStressMode
+        }
+    }
+}

@@ -196,7 +196,7 @@ public struct GameView: View {
                                 .foregroundColor(.white)
                         }
                     }
-                    .frame(width: 128, height: 181)
+                    .frame(width: CardDimensions.width, height: CardDimensions.height)
                     .contentShape(Rectangle())
                     .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.stock.id || viewModel.activeHint?.targetPileId == viewModel.state.stock.id || showIdleStockHint))
                     .background(GeometryReader { geo in
@@ -1175,33 +1175,10 @@ struct StatsView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Games Played:")
-                    Spacer()
-                    Text("\(stats.gamesPlayed)")
-                }
-                .font(.system(.body))
-
-                HStack {
-                    Text("Games Won:")
-                    Spacer()
-                    Text("\(stats.gamesWon)")
-                }
-                .font(.system(.body))
-
-                HStack {
-                    Text("High Score:")
-                    Spacer()
-                    Text(viewModel.highScoreString)
-                }
-                .font(.system(.body))
-
-                HStack {
-                    Text("Win Percentage:")
-                    Spacer()
-                    Text(String(format: "%.1f%%", stats.winPercentage))
-                }
-                .font(.system(.body))
+                StatRowView(label: "Games Played:", value: "\(stats.gamesPlayed)")
+                StatRowView(label: "Games Won:", value: "\(stats.gamesWon)")
+                StatRowView(label: "High Score:", value: viewModel.highScoreString)
+                StatRowView(label: "Win Percentage:", value: String(format: "%.1f%%", stats.winPercentage))
 
                 if viewModel.options.isVegasScoring {
                     HStack {
@@ -1213,33 +1190,10 @@ struct StatsView: View {
                     .font(.system(.body))
                 }
 
-                HStack {
-                    Text("Current Streak:")
-                    Spacer()
-                    Text("\(stats.currentStreak)")
-                }
-                .font(.system(.body))
-
-                HStack {
-                    Text("Longest Streak:")
-                    Spacer()
-                    Text("\(stats.longestStreak)")
-                }
-                .font(.system(.body))
-
-                HStack {
-                    Text("Avg Winning Time:")
-                    Spacer()
-                    Text(stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
-                }
-                .font(.system(.body))
-
-                HStack {
-                    Text("Fastest Win:")
-                    Spacer()
-                    Text(stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
-                }
-                .font(.system(.body))
+                StatRowView(label: "Current Streak:", value: "\(stats.currentStreak)")
+                StatRowView(label: "Longest Streak:", value: "\(stats.longestStreak)")
+                StatRowView(label: "Avg Winning Time:", value: stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
+                StatRowView(label: "Fastest Win:", value: stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
             }
             .padding(.horizontal, 36)
 

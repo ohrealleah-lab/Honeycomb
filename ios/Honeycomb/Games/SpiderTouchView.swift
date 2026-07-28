@@ -33,11 +33,11 @@ struct SpiderTouchView: View {
             // included), then shrink further only if the deepest column would overflow
             // the available height — see KlondikeTouchView for the full rationale.
             let widthCardW = min((geo.size.width - 16 - 9 * Self.columnSpacing) / 10, 90)
-            let widthCardH = widthCardW * 181.0 / 128.0
+            let widthCardH = widthCardW * CardDimensions.aspectRatio
             let neededHeight = 54 + widthCardH + 10 + deepestColumnHeight(cardH: widthCardH) + 20
             let heightShrink = neededHeight > geo.size.height ? geo.size.height / neededHeight : 1.0
             let cardW = widthCardW * heightShrink
-            let cardH = cardW * 181.0 / 128.0
+            let cardH = cardW * CardDimensions.aspectRatio
 
             ZStack {
                 IOSBackgroundLayer()

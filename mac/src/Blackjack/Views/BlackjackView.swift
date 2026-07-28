@@ -845,19 +845,19 @@ struct BlackjackStatsView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                statRow("Hands Played",  "\(viewModel.statistics.handsPlayed)")
-                statRow("Hands Won",     "\(viewModel.statistics.handsWon)")
-                statRow("Hands Lost",    "\(viewModel.statistics.handsLost)")
-                statRow("Pushes",        "\(viewModel.statistics.pushes)")
-                statRow("Blackjacks",    "\(viewModel.statistics.blackjacks)")
-                statRow("Win Rate",       String(format: "%.1f%%", viewModel.statistics.winRate * 100))
-                statRow("Cur. Streak",   "\(viewModel.statistics.currentStreak)")
-                statRow("Best Streak",   "\(viewModel.statistics.longestStreak)")
-                statRow("Total Wagered", "\(viewModel.statistics.totalWagered)")
-                statRow("Total Paid",    "\(viewModel.statistics.totalPaidOut)")
-                statRow("Biggest Pay",   "\(viewModel.statistics.biggestPayout)")
-                statRow("RTP",           String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100))
-                statRow("Rebuys",        "\(viewModel.statistics.rebuyCount)")
+                StatRowView(label: "Hands Played",  value: "\(viewModel.statistics.handsPlayed)", valueBold: true)
+                StatRowView(label: "Hands Won",     value: "\(viewModel.statistics.handsWon)", valueBold: true)
+                StatRowView(label: "Hands Lost",    value: "\(viewModel.statistics.handsLost)", valueBold: true)
+                StatRowView(label: "Pushes",        value: "\(viewModel.statistics.pushes)", valueBold: true)
+                StatRowView(label: "Blackjacks",    value: "\(viewModel.statistics.blackjacks)", valueBold: true)
+                StatRowView(label: "Win Rate",      value: String(format: "%.1f%%", viewModel.statistics.winRate * 100), valueBold: true)
+                StatRowView(label: "Cur. Streak",   value: "\(viewModel.statistics.currentStreak)", valueBold: true)
+                StatRowView(label: "Best Streak",   value: "\(viewModel.statistics.longestStreak)", valueBold: true)
+                StatRowView(label: "Total Wagered", value: "\(viewModel.statistics.totalWagered)", valueBold: true)
+                StatRowView(label: "Total Paid",    value: "\(viewModel.statistics.totalPaidOut)", valueBold: true)
+                StatRowView(label: "Biggest Pay",   value: "\(viewModel.statistics.biggestPayout)", valueBold: true)
+                StatRowView(label: "RTP",           value: String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100), valueBold: true)
+                StatRowView(label: "Rebuys",        value: "\(viewModel.statistics.rebuyCount)", valueBold: true)
             }
             .padding(.horizontal, 24)
 
@@ -883,13 +883,5 @@ struct BlackjackStatsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 340)
-    }
-
-    private func statRow(_ label: String, _ value: String) -> some View {
-        HStack {
-            Text(label).font(.system(.body))
-            Spacer()
-            Text(value).font(.system(.body)).fontWeight(.bold)
-        }
     }
 }

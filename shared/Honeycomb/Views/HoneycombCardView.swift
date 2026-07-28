@@ -55,7 +55,7 @@ public struct HoneycombCardView: View {
     // standard 128pt-wide card. Honeycomb cards render at several different sizes
     // (board/hand vs. deck-manager thumbnails), so this scales proportionally to size
     // while landing exactly on 17pt at the standard width.
-    private var numberFontSize: CGFloat { size.width * (17.0 / 128.0) }
+    private var numberFontSize: CGFloat { size.width * (17.0 / CardDimensions.width) }
     // Approximate half-width/height of a single monospaced-digit glyph at that font
     // size, used to keep the fixed 3pt gap measured from the glyph's visible edge
     // rather than its baseline position.
