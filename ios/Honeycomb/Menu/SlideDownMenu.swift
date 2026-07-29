@@ -25,6 +25,8 @@ struct SlideDownMenu<GameSettings: View>: View {
     @State private var showingBackgroundImportSheet = false
     @State private var backgroundPendingDelete: IOSCustomBackgroundManager.Entry? = nil
 
+    @State private var showingHelp = false
+
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .top) {
@@ -56,6 +58,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                                 case .options:
                                     gameSettings()
                                     statsRow
+                                    helpRow
                                 case .themes:
                                     themeSection
                                     faceCardArtRow
@@ -358,6 +361,37 @@ struct SlideDownMenu<GameSettings: View>: View {
         }
         .buttonStyle(.plain)
         .padding(.vertical, 8)
+    }
+
+    private var helpRow: some View {
+        Button {
+            showingHelp = true
+        } label: {
+            HStack {
+                Label("How to Play", systemImage: "questionmark.circle")
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 8)
+        .sheet(isPresented: $showingHelp) {
+            switch coordinator.gameMode {
+            case .klondike:
+                KlondikeHelpView()
+            case .beecell:
+                BeecellHelpView()
+            case .spider:
+                SpiderHelpView()
+            case .videoPoker:
+                VideoPokerHelpView()
+            case .blackjack:
+                BlackjackHelpView()
+            case .honeycomb:
+                HoneycombHelpView()
+            }
+        }
     }
 
     // Applies to the standard-card games (Klondike/BeeCell/Spider/Video Poker/

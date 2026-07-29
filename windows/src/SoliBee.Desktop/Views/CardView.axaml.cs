@@ -1301,10 +1301,10 @@ public partial class CardView : UserControl
 
     public void ShowHint()
     {
-        if (CardFace == null || Card == null || !Card.IsFaceUp) return;
-        _hintPulseBrush = new SolidColorBrush(Color.Parse("#FFD700"));
-        CardFace.BorderBrush     = _hintPulseBrush;
-        CardFace.BorderThickness = new Thickness(4);
+        if (CardFace == null || Card == null || !Card.IsFaceUp || HintHighlightBorder == null) return;
+        HintHighlightBorder.IsVisible = true;
+        _hintPulseBrush = new SolidColorBrush(Color.Parse("#00FFD700"));
+        HintHighlightBorder.BorderBrush = _hintPulseBrush;
         _hintPulse.Start(alpha =>
         {
             byte a = (byte)(255 * alpha);
@@ -1314,7 +1314,7 @@ public partial class CardView : UserControl
                 OffsetX = 0, OffsetY = 0, Blur = 6, Spread = 1,
                 Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00)
             };
-            CardFace.BoxShadow = new BoxShadows(shadow);
+            HintHighlightBorder.BoxShadow = new BoxShadows(shadow);
         });
     }
 
@@ -1322,10 +1322,11 @@ public partial class CardView : UserControl
     {
         _hintPulse.Stop();
         _hintPulseBrush = null;
-        if (CardFace == null || Card == null || !Card.IsFaceUp) return;
-        CardFace.BorderBrush     = _brushFaceBorderNormal;
-        CardFace.BorderThickness = new Thickness(0.75);
-        CardFace.BoxShadow       = new BoxShadows(new BoxShadow { OffsetX = 0, OffsetY = 1.5, Blur = 1.5, Spread = 0, Color = _normalShadowColor });
+        if (HintHighlightBorder != null)
+        {
+            HintHighlightBorder.IsVisible = false;
+            HintHighlightBorder.BoxShadow = new BoxShadows();
+        }
     }
 
     public void ClearSelection()

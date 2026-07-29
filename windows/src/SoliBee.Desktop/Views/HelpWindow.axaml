@@ -9,6 +9,30 @@
         Background="White"
         ShowInTaskbar="False">
 
+    <Window.Styles>
+        <Style Selector="TextBlock.help-heading">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+        </Style>
+        <Style Selector="TextBlock.help-body">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#444444"/>
+            <Setter Property="LineHeight" Value="20"/>
+        </Style>
+        <Style Selector="Button.help-link">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#1155AA"/>
+            <Setter Property="Padding" Value="0,4"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.help-link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
+        </Style>
+    </Window.Styles>
+
     <Grid RowDefinitions="Auto,*,Auto">
 
         <!-- Title bar -->
@@ -34,13 +58,13 @@
                                    Foreground="#1155AA"/>
                         <StackPanel Spacing="2">
                             <Button x:Name="IdxKlondike"  Content="Klondike Solitaire"  Click="GoTo_Klondike"    Classes="help-link"/>
-                            <Button x:Name="IdxFreecell"   Content="Freecell"              Click="GoTo_Freecell"     Classes="help-link"/>
+                            <Button x:Name="IdxFreecell"   Content="Freecell (Beecell)"              Click="GoTo_Freecell"     Classes="help-link"/>
                             <Button x:Name="IdxSpider"    Content="Spider Solitaire"     Click="GoTo_Spider"      Classes="help-link"/>
                             <Button x:Name="IdxVP"        Content="Video Poker"          Click="GoTo_VideoPoker"  Classes="help-link"/>
                             <Button x:Name="IdxBJ"        Content="Video Blackjack"      Click="GoTo_Blackjack"   Classes="help-link"/>
                             <Button x:Name="IdxHoneycomb" Content="Honeycomb"            Click="GoTo_Honeycomb"   Classes="help-link"/>
                             <Button x:Name="IdxNoStress"  Content="No Stress Mode"       Click="GoTo_NoStress"   Classes="help-link"/>
-                            <Button x:Name="IdxThemes"    Content="Custom Themes &amp; Art" Click="GoTo_Themes"    Classes="help-link"/>
+                            <Button x:Name="IdxThemes"    Content="Themes &amp; Settings" Click="GoTo_Themes"    Classes="help-link"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -54,96 +78,65 @@
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Text="📌 Overview &amp; Objective" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Move all 52 cards to the four foundation piles, built up by suit from Ace to King."/>
+                                       Text="Move all 52 cards to the four Foundation piles, organized by suit from Ace (lowest) to King (highest)."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Setup" Classes="help-heading"/>
+                            <TextBlock Text="🃏 Setup &amp; Layout" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Seven tableau columns are dealt: column 1 has 1 card, column 2 has 2, up to column 7 with 7 cards. Only the top card of each column is face-up. The remaining 24 cards form the Stock in the top-left corner."/>
+                                       Text="• Tableau (7 Columns): Dealt from left to right with 1 to 7 cards respectively. Only the top card in each column is face-up.&#x0a;• Stock Pile (Top-Left): Contains the remaining 24 face-down cards.&#x0a;• Waste Pile (Next to Stock): Holds cards drawn from the stock.&#x0a;• Foundations (Top-Right): Four empty slots reserved for completing each suit."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="How to Play" Classes="help-heading"/>
-                            <StackPanel Spacing="8">
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Tableau: "/>
-                                    <Run Text="Stack cards in descending rank with alternating colours (red on black, black on red). You can move any face-up card — or an entire face-up sequence — onto a column whose top card is exactly one rank higher and the opposite colour. Flipping a face-down card earns 5 points."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Foundations: "/>
-                                    <Run Text="Start each pile with an Ace, then build up in the same suit (Ace → 2 → … → King). Only a single top card can move to a foundation at a time."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Stock &amp; Waste: "/>
-                                    <Run Text="Click the Stock to deal cards face-up to the Waste pile. Only the top Waste card is playable. In Draw 1 mode one card is dealt per click. In Draw 3 mode three cards are dealt; you can only play cards from the current batch — once the batch is exhausted the waste shows an empty slot and you must draw again."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Empty columns: "/>
-                                    <Run Text="Only a King (or a sequence headed by a King) may be placed in an empty tableau column."/>
-                                </TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Scoring" Classes="help-heading"/>
-                            <StackPanel Spacing="4">
-                                <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                           Text="Standard — Waste→Tableau: +5 · Waste→Foundation: +10 · Tableau→Foundation: +10 · Flip a card: +5 · Foundation→Tableau: −15"/>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                           Text="Vegas — Starts at −$52. Each card moved to a foundation earns +$5; moving it back costs −$5. Draw 1 gets a single pass through the deck (no recycles); Draw 3 gets 2 recycles (3 total passes). The score display shows your running dollar balance."/>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Text="🎮 Rules &amp; How to Play" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Uncover face-down cards as early as possible — they are your biggest source of new moves. Avoid sending cards to the foundations too quickly; you may need them as stepping stones on the tableau. Use the Hint button to see the best available move, and press it again to cycle through alternatives."/>
+                                       Text="• Tableau Building: Stack cards in descending rank with alternating colors (e.g., a red 6 on a black 7). You may move a single card or an entire face-up sequence to another column.&#x0a;• Empty Columns: Only a King (or a sequence starting with a King) may be placed in an empty tableau column.&#x0a;• Stock &amp; Waste:&#x0a;  – Draw 1 Mode: Clicking the stock reveals 1 card to the waste.&#x0a;  – Draw 3 Mode: Reveals 3 cards; only the top card of the waste is playable. Once played, the next card in the 3-card batch becomes available.&#x0a;• Scoring Modes:&#x0a;  – Standard: Flip face-down card (+5 pts) · Waste to Tableau (+5 pts) · Waste/Tableau to Foundation (+10 pts) · Foundation back to Tableau (−15 pts).&#x0a;  – Vegas: Start with a debt of −$52. Earn +$5 for every card moved to a foundation. Draw 1 permits only 1 pass through the stock; Draw 3 allows 3 passes (2 redeals)."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="⌨️ Controls &amp; Shortcuts" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="• Navigate Board Cursor: Arrow Keys&#x0a;• Select / Place Card: Space / Enter&#x0a;• Clear Selection: Escape&#x0a;• Draw Card(s): D&#x0a;• Auto-Move to Foundation: F&#x0a;• Autocomplete Game: A&#x0a;• New Game / Restart Deal: Ctrl+N / Ctrl+R&#x0a;• Undo Move: Ctrl+Z&#x0a;• Toggle Draw 1 / Draw 3: Alt+1 / Alt+3&#x0a;• Cycle Available Hints: Hint button"/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="💡 Strategy &amp; Pro Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="1. Prioritize Face-Down Cards: Always prioritize moves that reveal hidden cards in the longest tableau columns.&#x0a;2. Keep Columns Open: Don't clear a tableau column unless you already have a King ready to occupy it.&#x0a;3. Delay Foundation Moves: Avoid rushing cards into the foundation early if those cards might be needed to build lower sequences in the tableau."/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- ── Freecell ───────────────────────────────────────────── -->
+                <!-- ── Freecell ────────────────────────────────────────────── -->
                 <Border x:Name="FreecellAnchor" Margin="0,0,0,6">
-                    <TextBlock Text="FREECELL"
+                    <TextBlock Text="FREECELL (BEECELL)"
                                FontSize="15" FontWeight="Black" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Text="📌 Overview &amp; Objective" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Move all 52 cards to the four foundation piles, built up by suit from Ace to King."/>
+                                       Text="Move all 52 cards to the four Foundation piles, built up by suit from Ace to King."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Setup" Classes="help-heading"/>
+                            <TextBlock Text="🃏 Setup &amp; Layout" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="All 52 cards are dealt face-up across 8 tableau columns (the first 4 columns get 7 cards, the last 4 get 6). There is no Stock. Four free cells at the top-left start empty."/>
+                                       Text="• Tableau (8 Columns): All 52 cards are dealt face-up at the start (4 columns of 7 cards, 4 columns of 6 cards).&#x0a;• Free Cells (Top-Left): Four temporary storage slots.&#x0a;• Foundations (Top-Right): Four suit build-up piles."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="How to Play" Classes="help-heading"/>
-                            <StackPanel Spacing="8">
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Tableau: "/>
-                                    <Run Text="Build columns in descending rank with alternating colours, just like Klondike. The top card of any column is always available to move."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Free cells: "/>
-                                    <Run Text="Each of the four free cells holds exactly one card. Use them to temporarily park cards that are in the way. A card in a free cell can be moved to any tableau column where it fits, or directly to a foundation."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Moving sequences: "/>
-                                    <Run Text="You can move a face-up sequence in one action, but only if you have enough spare capacity. The maximum sequence length you can move equals (free cells available + 1), multiplied by 2 for each empty tableau column. Plan ahead — filling your free cells too early leaves you unable to manoeuvre."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Foundations: "/>
-                                    <Run Text="Build up by suit from Ace. Any eligible card can go to a foundation at any time."/>
-                                </TextBlock>
-                            </StackPanel>
+                            <TextBlock Text="🎮 Rules &amp; How to Play" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="• Tableau Building: Stack cards in descending rank and alternating colors.&#x0a;• Free Cell Storage: Each free cell can hold exactly 1 card at a time.&#x0a;• Multi-Card Movement Capacity: You can move a face-up card sequence in a single action. The maximum number of cards you can move at once is calculated as: (Free Cells Available + 1) × 2^(Empty Tableau Columns).&#x0a;• Empty Columns: Any single card or valid sequence can be moved into an empty tableau column."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Text="⌨️ Controls &amp; Shortcuts" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Not every deal is solvable — if no legal moves remain, the game is over. Keep at least one or two free cells empty at all times. Clearing an entire tableau column is extremely powerful; treat empty columns as your most valuable resource. Expose Aces and 2s early to start building the foundations."/>
+                                       Text="• Navigate / Select: Arrow Keys + Space / Enter&#x0a;• Auto-Park to Free Cell: C&#x0a;• Auto-Move to Foundation: F&#x0a;• Autocomplete Game: A&#x0a;• New Game / Restart Deal: Ctrl+N / Ctrl+R&#x0a;• Undo Move: Ctrl+Z&#x0a;• Hint: Hint button"/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="💡 Strategy &amp; Pro Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="1. Protect Your Free Cells: Treat free cells as temporary maneuvering space. Avoid filling all four free cells simultaneously, as it drastically reduces your sequence-moving capacity.&#x0a;2. Uncover Low Cards Early: Focus on freeing up Aces and 2s buried at the bottom of columns.&#x0a;3. Empty Columns are Gold: An empty column doubles your movement capacity and acts as an unrestricted free cell."/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -157,57 +150,29 @@
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Text="📌 Overview &amp; Objective" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Build eight complete same-suit runs from King down to Ace on the tableau. Each completed run is automatically removed and scores +100 points. Remove all eight runs to win."/>
+                                       Text="Assemble eight complete same-suit sequences from King down to Ace within the tableau. Each completed 13-card sequence is automatically removed to the foundation."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Setup" Classes="help-heading"/>
+                            <TextBlock Text="🃏 Setup &amp; Layout" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Two standard 52-card decks (104 cards total) are used. 54 cards are dealt to 10 tableau columns: the first 4 get 6 cards, the last 6 get 5. Only the top card of each column is face-up. The remaining 50 cards sit in 5 groups of 10 as the Stock."/>
+                                       Text="• Tableau (10 Columns): 54 cards dealt across 10 columns (first 4 get 6 cards; last 6 get 5 cards). Only the top card of each column is face-up.&#x0a;• Stock (Bottom/Top): 50 remaining cards arranged in 5 extra deals of 10 cards each."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="How to Play" Classes="help-heading"/>
-                            <StackPanel Spacing="8">
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Building sequences: "/>
-                                    <Run Text="You can place any card (or sequence) on top of a column whose top card is exactly one rank higher. Suit does not need to match — you can stack a red 7 on a black 8 or a black 8. However, only a sequence where every card shares the same suit can be moved as a group. Mixed-suit stacks must be broken apart one card at a time."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Dealing from Stock: "/>
-                                    <Run Text="Click the Stock to deal one card face-up onto each of the 10 columns. All columns must have at least one card before you can deal. You have 5 deals available — use them wisely, as each deal buries your existing cards deeper."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Empty columns: "/>
-                                    <Run Text="Any card or valid sequence can fill an empty column. Empty columns are your most powerful tool — use them to stage cards while reorganising sequences."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Completed runs: "/>
-                                    <Run Text="When the bottom 13 cards of any column form a complete King-to-Ace run all of the same suit, those cards are automatically removed and you earn +100 points."/>
-                                </TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Difficulty Modes" Classes="help-heading"/>
-                            <StackPanel Spacing="6">
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="1 Suit (Easy): "/>
-                                    <Run Text="All 104 cards are Spades. Every sequence you build can be moved as a group, making the game much more manageable."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="2 Suits (Medium): "/>
-                                    <Run Text="Spades and Hearts only. You must decide which suit to commit to when building each run."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="4 Suits (Hard): "/>
-                                    <Run Text="All four suits in play. Mixed sequences are unavoidable early on; careful one-card-at-a-time moves are required to untangle them."/>
-                                </TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Text="🎮 Rules &amp; How to Play" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Prioritise building same-suit sequences over mixed ones — only same-suit sequences can move as a group. Try to clear columns early; empty space is your most valuable resource. Avoid dealing from the Stock until you have truly exhausted all possible tableau moves."/>
+                                       Text="• Difficulty Modes:&#x0a;  – 1-Suit (Easy): All 104 cards are Spades.&#x0a;  – 2-Suits (Medium): 52 Spades and 52 Hearts.&#x0a;  – 4-Suits (Hard): All four standard suits are used.&#x0a;• Tableau Building: Stack cards in descending rank regardless of suit (e.g., a 7 of Hearts can sit on an 8 of Spades). Crucial Exception: You may only move a multi-card sequence if all cards in that sequence share the same suit.&#x0a;• Stock Deals: Click the stock to deal 1 card onto every tableau column. Requirement: Every column must contain at least 1 card before you can deal from the stock."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="⌨️ Controls &amp; Shortcuts" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="• Deal 10 Cards from Stock: D&#x0a;• Select / Place Sequence: Space / Enter&#x0a;• 1-Suit / 2-Suit Mode: Alt+1 / Alt+2&#x0a;• Autocomplete: A&#x0a;• Undo Move: Ctrl+Z"/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="💡 Strategy &amp; Pro Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="1. Same-Suit Over Mixed-Suit: Always prefer building same-suit runs. Mixed-suit stacks lock up your cards and cannot be moved together.&#x0a;2. Empty Columns First: Empty columns allow you to isolate mixed-suit stacks and re-organize them into clean same-suit runs.&#x0a;3. Delay Dealing: Exhaust every possible move on the board before clicking the stock."/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -221,62 +186,24 @@
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Text="📌 Overview &amp; Objective" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Build the strongest possible 5-card poker hand. Winning hands are paid out as a multiple of your bet according to the pay table at the top of the screen."/>
+                                       Text="Draw a 5-card hand that matches a qualifying entry on the pay table to earn credit multipliers."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="How to Play" Classes="help-heading"/>
-                            <StackPanel Spacing="8">
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="1. Set your bet. "/>
-                                    <Run Text="Use + Bet or − Bet to choose 1–5 credits per hand. Press Bet Max to immediately bet 5 credits and deal. Betting 5 unlocks the Royal Flush bonus (800× instead of 250×)."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="2. Deal. "/>
-                                    <Run Text="Press Deal. Five cards are dealt face-up from a freshly shuffled 52-card deck."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="3. Choose cards to hold. "/>
-                                    <Run Text="Click any card to hold it (it rises up). Press keys 1–5 to toggle individual cards by position. Press H to hold all five cards, or Q to clear all holds."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="4. Draw. "/>
-                                    <Run Text="Press Draw. All unheld cards are replaced from the same deck. Your final 5-card hand is evaluated, the winning hand name appears highlighted on the pay table, and any payout is added to your credits."/>
-                                </TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Winning Hands (Jacks or Better)" Classes="help-heading"/>
-                            <StackPanel Spacing="3">
-                                <TextBlock Classes="help-body" Text="Royal Flush     — A K Q J 10, same suit           250× (800× at max bet)"/>
-                                <TextBlock Classes="help-body" Text="Straight Flush  — 5 in a row, same suit           50×"/>
-                                <TextBlock Classes="help-body" Text="Four of a Kind  — Four cards of the same rank     25×"/>
-                                <TextBlock Classes="help-body" Text="Full House      — Three of a kind + a pair        9×"/>
-                                <TextBlock Classes="help-body" Text="Flush           — Any 5 cards, same suit          6×"/>
-                                <TextBlock Classes="help-body" Text="Straight        — 5 consecutive ranks             4×"/>
-                                <TextBlock Classes="help-body" Text="Three of a Kind — Three of the same rank          3×"/>
-                                <TextBlock Classes="help-body" Text="Two Pair        — Two different pairs             2×"/>
-                                <TextBlock Classes="help-body" Text="Jacks or Better — Pair of Jacks, Queens, Kings, or Aces  1×"/>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Variants" Classes="help-heading"/>
-                            <StackPanel Spacing="6">
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Deuces Wild: "/>
-                                    <Run Text="All four 2s are wild and can substitute for any card. The minimum winning hand is Three of a Kind. Adds Wild Royal Flush and Five of a Kind to the pay table."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Bonus Poker: "/>
-                                    <Run Text="Plays like Jacks or Better with premium payouts for four Aces (80×) and four 2s, 3s, or 4s (40×). Other quads pay the standard 25×."/>
-                                </TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Text="🎮 How to Play &amp; Variants" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Always keep a paying hand unless you are one card away from a Royal Flush. Never break up a Full House or Four of a Kind. In Deuces Wild, always hold every deuce — they are worth more than anything else. Check the highlighted column on the pay table to see your current bet's payouts at a glance."/>
+                                       Text="1. Betting: Select 1 to 5 coins. Press Bet Max (M) to bet 5 coins and immediately deal. (Note: The 800× Royal Flush jackpot is only awarded on a 5-coin bet).&#x0a;2. Deal &amp; Hold: Press Deal (Space). Click cards or press 1–5 to toggle HOLD on cards you wish to keep.&#x0a;3. Draw: Press Draw (Space). Unheld cards are replaced. Winnings are paid according to the pay table.&#x0a;&#x0a;Game Variants:&#x0a;• Jacks or Better: Standard pay table. Minimum qualifying hand is a pair of Jacks, Queens, Kings, or Aces (1×).&#x0a;• Deuces Wild: All four 2s are wild cards. Minimum winning hand is Three of a Kind. Special payouts for Four Deuces (200×) and Wild Royal Flush (25×).&#x0a;• Bonus Poker: Enhanced payouts for Four of a Kind (Four Aces pays 80×; Four 2s/3s/4s pays 40×)."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="⌨️ Controls &amp; Shortcuts" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="• Deal / Draw: Space / Enter&#x0a;• Hold Card 1, 2, 3, 4, 5: 1, 2, 3, 4, 5&#x0a;• Hold All Cards: H&#x0a;• Clear All Holds: C / Q&#x0a;• Bet Max &amp; Deal: M"/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="💡 Strategy &amp; Pro Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="1. Always Bet Max (5 Coins): The Royal Flush payout jumps from 250× to 800× only at 5 coins.&#x0a;2. Never Break a Made Hand (Except for 4-to-a-Royal): Only break a Straight or Flush if you are 1 card away from a Royal Flush.&#x0a;3. In Deuces Wild, Never Discard a 2: Deuces are wild—always hold every 2 dealt to you!"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -287,178 +214,68 @@
                                FontSize="15" FontWeight="Black" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
-                <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,8">
+                <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Text="📌 Overview &amp; Objective" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Beat the dealer by having a hand value closer to 21 without going over. Face cards (J, Q, K) are worth 10. Aces count as 1 or 11, whichever is better for your hand."/>
+                                       Text="Outscore the dealer's hand total without exceeding 21. Face cards = 10, Aces = 1 or 11, Number cards = face value."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="How to Play" Classes="help-heading"/>
-                            <StackPanel Spacing="8">
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="1. Place your bet. "/>
-                                    <Run Text="Click a chip (1, 5, 10, or 25) to add it to your bet — the first click on a chip other than 1, while the bet is still at its default of 1, replaces the bet instead of adding to it. 2X doubles your current bet, and Clear Bet resets it to 1. Click Buy In (or press Space) to deal."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="2. Deal. "/>
-                                    <Run Text="You receive two cards face-up. The dealer receives one card face-up and one face-down (the hole card)."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="3. Play your hand. "/>
-                                    <Run Text="Choose Hit, Stand, Double Down, or Split (see below). The game automatically stands when your total reaches 21."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="4. Dealer plays. "/>
-                                    <Run Text="The dealer reveals the hole card and must draw until reaching 17 or higher, then stands — on hard 17 and soft 17 alike."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="5. Result. "/>
-                                    <Run Text="The higher hand wins. A tie (push) returns your bet. A natural blackjack (Ace + 10-value card on the first two cards) pays 3:1 and wins immediately unless the dealer also has blackjack."/>
-                                </TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Hand Options" Classes="help-heading"/>
-                            <StackPanel Spacing="6">
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Hit: "/>
-                                    <Run Text="Take another card. You may hit as many times as you like until you stand, reach 21 (auto-stand), or bust (exceed 21 and lose immediately)."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Stand: "/>
-                                    <Run Text="Finish your turn with your current hand and let the dealer play."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Double Down: "/>
-                                    <Run Text="Double your bet and receive exactly one more card, then stand automatically. Only available on your first two cards, when your total is 9, 10, or 11, and when you have enough credits to cover the extra bet."/>
-                                </TextBlock>
-                                <TextBlock Classes="help-body" TextWrapping="Wrap">
-                                    <Run FontWeight="SemiBold" Foreground="#1A1A1A" Text="Split: "/>
-                                    <Run Text="When your first two cards have the same rank (e.g. two Jacks, but not a Jack and a King), split them into two separate hands, each receiving one more card. Each hand is then played independently. Costs a second bet equal to your original wager. Split Aces each receive exactly one additional card and then stand automatically."/>
-                                </TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Payouts" Classes="help-heading"/>
-                            <StackPanel Spacing="3">
-                                <TextBlock Classes="help-body" Text="Win               — 1:1 (you get your bet back plus the same amount)"/>
-                                <TextBlock Classes="help-body" Text="Natural Blackjack — 3:1 (e.g. bet 2 → win 6; bet 1 → win 3)"/>
-                                <TextBlock Classes="help-body" Text="Push (tie)        — Bet returned, no gain or loss"/>
-                                <TextBlock Classes="help-body" Text="Bust / Loss       — Bet forfeited"/>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Tips" Classes="help-heading"/>
+                            <TextBlock Text="🎮 Rules &amp; Options" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Always double down on 11 when the dealer shows 2–10. Stand on any hard 17 or higher. Never split 10-value cards — a 20 is already a strong hand. Always split Aces and 8s. If the dealer shows 2–6, they are likely to bust, so stand on hard 12 or higher and let them come to you."/>
+                                       Text="1. Place Bet &amp; Deal: Select your chip wager (1, 5, 10, 25) or press Bet Max (M), then press Deal (Space).&#x0a;2. Your Turn:&#x0a;  – Hit (H): Take another card.&#x0a;  – Stand (S): Keep your current hand.&#x0a;  – Double Down (D): Double your wager, receive exactly 1 card, and automatically stand. (Available on initial 2 cards with totals of 9, 10, or 11).&#x0a;  – Split (P): If dealt two matching ranks, split them into two separate hands (requires an equal second wager).&#x0a;3. Dealer's Turn: Dealer reveals their hidden card and must hit until reaching 17 or higher (stands on all 17s).&#x0a;&#x0a;Payout Schedule:&#x0a;• Standard Win: 1:1 payout.&#x0a;• Natural Blackjack (Ace + 10-value card): 3:1 payout.&#x0a;• Push (Tie): Bet is returned."/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="⌨️ Controls &amp; Shortcuts" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="• Deal / Buy In: Space / Enter&#x0a;• Hit: H&#x0a;• Stand: S&#x0a;• Double Down: D&#x0a;• Split Pairs: P&#x0a;• Bet Max &amp; Deal: M"/>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="💡 Strategy &amp; Pro Tips" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="1. Always Split Aces and 8s: Never split 10s or 5s.&#x0a;2. Double Down on 11: Always Double Down when your starting hand totals 11 against a dealer 2 through 10.&#x0a;3. Watch the Dealer's Upcard: If the dealer shows a 2 through 6, they have a high chance of busting—stand on hard 12 or higher and let the dealer draw."/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- ── Honeycomb ───────────────────────────────────────────── -->
+                <!-- ── Honeycomb ─────────────────────────────────────────── -->
                 <Border x:Name="HoneycombAnchor" Margin="0,0,0,6">
                     <TextBlock Text="HONEYCOMB"
                                FontSize="15" FontWeight="Black" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
-                <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,8">
+                <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Objective" Classes="help-heading"/>
+                            <TextBlock Text="📌 Overview &amp; Objective" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Battle an AI opponent on a 3×3 grid. Place your 5 cards one at a time; when a placement's facing stat beats an adjacent enemy card's opposite facing stat, you capture it. Whoever controls more of the 9 cells once the board fills wins the match."/>
+                                       Text="Battle an AI opponent on a 3×3 grid using a 5-card deck. Each card features 4 directional stats (Top, Right, Bottom, Left). Place cards strategically to flip enemy cards to your color. Whoever controls the majority of the 9 grid cells at the end wins!"/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="How to Play" Classes="help-heading"/>
+                            <TextBlock Text="🎮 Core Gameplay &amp; Mechanics" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Drag a card from your hand onto any empty board cell, or tap a hand card to select it and then tap an empty cell. You and the dealer alternate turns until the board is full."/>
+                                       Text="• Capturing: When you place a card adjacent to an opponent's card, your facing stat is compared against their opposite facing stat. If your stat is higher, the enemy card is captured (flipped to your color). Stat 10 is rendered as &quot;A&quot;.&#x0a;• Combos: A card captured during a turn immediately checks its own adjacent neighbors, triggering a chain-reaction capture sequence!"/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Capturing &amp; Combos" Classes="help-heading"/>
+                            <TextBlock Text="🎲 Match Modifiers &amp; Special Rules" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Each card shows 4 stats — Top, Right, Bottom, Left. Placing a card next to an enemy card compares your facing stat to their opposite facing stat; the higher value flips the loser to your side (10 is shown as &quot;A&quot;). A card captured this way can immediately capture its own neighbors in a chain reaction, called a Combo."/>
+                                       Text="• Same: If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously.&#x0a;• Plus: If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured.&#x0a;• Fallen Ace: A card with a stat of 1 attacking a 10 (&quot;A&quot;) always captures it!&#x0a;• Reverse: Inverts all comparisons—lower stats beat higher stats. (Reverse appears via Roulette only).&#x0a;• Ascension / Descension: Grants +1 (or −1) to stats for all cards matching randomly selected suits as more of that suit enter the board.&#x0a;• Order / Chaos: Order forces you to play cards in exact deck sequence. Chaos randomly mandates which card must be played each turn.&#x0a;• Bomb Shelter: First card played remains face-down for 3 turns before flipping automatically."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Match Rules Overview" Classes="help-heading"/>
+                            <TextBlock Text="🏆 Card Bank &amp; Stealing" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Up to 2 rules can be active per match, chosen in Options before you Start Match. Ascension and Descension can't both be picked (they're opposites), and neither can Order and Chaos. Leave rule selection empty (and Normal Mode off) and Roulette randomly rolls 0–2 rules for you every match instead — Roulette is also the only way Reverse can appear, since it's too easily exploited to pick on purpose."/>
+                                       Text="• Steal Mechanics: After winning a match, double-click an eligible dealer card to permanently steal it into your Card Bank!&#x0a;• Deck Rarity Caps: Custom decks are limited to: at most one 5★ card, and at most one 4★ card if a 5★ is present (or up to two 4★ cards without a 5★).&#x0a;• Smart Opponent Decks: The AI automatically selects decks containing cards you don't yet own to maximize steal rewards."/>
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Ascension / Descension" Classes="help-heading"/>
+                            <TextBlock Text="⌨️ Controls &amp; Shortcuts" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="At the start of the match, 2 of the 4 suits are randomly chosen to be affected. Under Ascension, every card of an affected suit gains +1 to all four of its stats for each card of that suit currently on the board — recalculated before every placement's captures resolve, so the bonus grows as more of that suit hits the table. Descension is the same idea in reverse: −1 per card of that suit on the board. A card of an unaffected suit plays completely normally."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Same" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="If 2 or more of a placed card's touching neighbors have a facing stat exactly equal to the attacker's matching facing stat, every one of those matching neighbors is captured at once — not just the strongest one. Your own adjacent cards count toward the trigger too, not only the dealer's, so a placement boxed in by 2 of your own matching cards can still fire Same (this is intentional, not a bug)."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Plus" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="If 2 or more touching neighbor pairs each sum (attacker's facing stat + that neighbor's facing stat) to the same total as each other, every card in that matching group is captured — even if the shared sum isn't the attacker's own stat. Like Same, your own adjacent cards count toward the trigger."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Fallen Ace" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="A card showing a 1 that attacks a card showing a 10 (&quot;A&quot;) always captures it, overriding the normal higher-beats-lower comparison — a 1 is the one value that can topple an Ace. Under Reverse, this flips too: an attacking 10 always captures a defending 1."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Reverse" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Capture direction is fully inverted: the attacker wins when its facing stat is lower than the defender's, not higher. Reverse only ever appears via Roulette, never by manual selection — the AI's own deck (and, under Fallen Ace, its capture math) is specially adjusted per difficulty so a nominally &quot;Baby Bee&quot; opponent doesn't become trivial under the inversion."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="All Open / Three Open" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="All Open reveals the dealer's entire hand face-up for the whole match; Three Open reveals exactly 3 random cards from it, staying revealed by that specific card's identity as the hand shrinks. Either way the reveal is symmetric — the dealer's AI gets the same look at your hand it's giving you, so nobody's playing with hidden information the other side lacks."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Swap" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Before the first turn, one random card from your hand trades places with one random card from the dealer's hand. The swapped card plays for whoever now holds it, but for Card Bank unlock and post-win steal eligibility it still belongs to its original owner if you don't recapture it during the match."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Order / Chaos" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Order restricts your legal play each turn to strictly the next card in your original deck order — no choosing. Chaos instead re-rolls one random legal card the instant a side's turn begins, highlighted with a thick yellow border; you'll see the dealer's mandated card highlighted at least 2 seconds before its AI actually plays it."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Bomb Shelter" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="The first card a player plays remains face down, unknown to the opponent — a timed landmine rather than a permanent secret. It flips automatically 3 turns after it's played (any card played by either side counts toward that), or immediately once the board fills if it hasn't already. Cannot trigger combos. Never appears alongside All Open/Three Open, since a hidden card is meaningless once every card is already revealed."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Sudden Death" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="A 5-5 tie sends the match into Sudden Death: the board clears and immediately replays with each side's exact end-of-round cards, alternating who starts, until someone wins outright."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Difficulty" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Baby Bee plays randomly. Honey Bee greedily maximizes its own captures each turn. Queen Bee and Killer Bee search several moves ahead using a full positional evaluation, with Killer Bee also fielding the strongest overall deck."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Hint" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="On any difficulty below Killer Bee, the Hint button suggests the strongest card-and-cell placement — found with the same search Killer Bee's own AI uses — highlighting it for 2 seconds. It only ever considers dealer cards you've actually been shown, never one still hidden from you."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Card Bank &amp; Decks" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Winning a card isn't automatic — after a win, double-click one eligible card the dealer played that round to steal it straight into your Card Bank (your active deck is untouched). This steal is capped at one per match; Rematch (or start a new match) to steal again. Build named decks from Manage Decks, subject to rarity caps: at most one 5★ card, and at most one 4★ if a 5★ is already in the deck (otherwise up to two 4★)."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="No Stress Mode" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Deals a fixed, strong deck every match (one 5★, one 4★, three 3★) instead of your chosen active deck, and hides Steal Card — a relaxed way to play without managing a collection. This is a shared setting — enabling it here also enables it across the other games."/>
+                                       Text="• Select / Place Card: Click &amp; Drag or Tap Card → Tap Cell&#x0a;• Show Best AI Move: Hint button"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- ── No Stress Mode ───────────────────────────────────────── -->
+                <!-- ── No Stress Mode ────────────────────────────────────── -->
                 <Border x:Name="NoStressAnchor" Margin="0,0,0,6">
                     <TextBlock Text="NO STRESS MODE"
                                FontSize="15" FontWeight="Black" LetterSpacing="1.5"
@@ -467,65 +284,25 @@
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Overview" Classes="help-heading"/>
+                            <TextBlock Text="🧘 No Stress Mode" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="A single Options-page toggle that strips away every source of pressure — the clock, the pay table, and the bet itself — so you can just play. It applies across every game."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Klondike, Freecell &amp; Spider" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Turns the timer off, same as unchecking the old Timed Game option (which No Stress Mode now fully replaces). No time is tracked or shown for the game."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Video Poker &amp; Video Blackjack — Free Play" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="The pay table, credits/bet/hands board, and every betting control (− Bet, Bet Max, + Bet, Clear Bet, and the Blackjack chip buttons) are hidden. Hands are dealt free of charge — no credits are ever wagered, earned, or lost. Double Down and Split remain fully available, behaving as if you always have credits to cover them."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="What still shows" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Win/loss banners, the winning hand name, and your current win streak still appear exactly as normal — only the dollar amount is left out, since no credits change hands in free play."/>
+                                       Text="• Universal Toggle: Enabling No Stress Mode in Options turns off all pressure across every game.&#x0a;• Solitaire Games: Disables timers completely.&#x0a;• Video Poker &amp; Blackjack: Switches into Free Play—hides bets, credits, and pay tables so you can play risk-free without wagers.&#x0a;• Honeycomb: Supplies a fixed strong deck every match and hides Card Steal."/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- ── Custom Themes ───────────────────────────────────────── -->
+                <!-- ── Themes ────────────────────────────────────────────── -->
                 <Border x:Name="ThemesAnchor" Margin="0,0,0,6">
-                    <TextBlock Text="CUSTOM THEMES &amp; ART"
+                    <TextBlock Text="THEMES &amp; SETTINGS"
                                FontSize="15" FontWeight="Black" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
-                <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,8">
+                <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Overview" Classes="help-heading"/>
+                            <TextBlock Text="🎨 Themes &amp; Customization" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="SoliBee features a visual theme editor where you can personalize the felt table, card backs, and face card art, and save your designs as custom themes."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Felt Backgrounds &amp; Vignette" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Toggle the Felt Vignette checkbox to add a subtle gradient shadow around the screen edges. Choose a standard table felt color (Green, Crimson, Blue, Charcoal, Desert) from the dropdown list, or choose Custom to display a color picker and select any shade you like."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Card Back Customization" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Select a built-in card back design (Vulpera, Dingwall, Moogle) or press Add… to upload your own custom image. Click the card preview tile to adjust the scale and position (offsets) of the custom card back image. If you no longer need a custom card back, select it and press Delete."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Custom Face Card Art" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Personalize the face cards (Aces, Jacks, Queens, Kings) for Spades, Hearts, Diamonds, and Clubs. Click any tile in the grid to upload an image or animated GIF for that card. Click the tile again to open the editor window where you can adjust the scale and offset. Use the On/Off toggle below each card tile to enable or disable that art, or click the X button to delete it."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Custom Card Colors" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Below the card art grid, you can select custom colors for the Card Background, Card Outline, and Card Text (separately for Black Suits and Red Suits). Press the Reset Card Colors button to revert all card colors to their standard system defaults."/>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Saving &amp; Managing Themes" Classes="help-heading"/>
-                            <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="Press Save Theme… to name and save your current configuration (including custom felt, card backs, face card art, and card colors). All saved themes are listed under SAVED THEMES. Click any saved theme button to apply it instantly, or click its corresponding Delete button to remove it."/>
+                                       Text="• Felt Table: Choose from 5 preset felt colors (Green, Crimson, Royal Blue, Charcoal, Desert) or set a Custom Color via picker. Toggle edge vignette on/off.&#x0a;• Card Backs: Select built-in designs or upload custom .jpg/.png/.gif files.&#x0a;• Face Card Art: Upload custom image/GIF artwork individually for Aces, Jacks, Queens, and Kings.&#x0a;• Saved Themes: Snapshot your custom felt, card backs, and face art into named custom themes to apply anytime in one click!"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -533,43 +310,6 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Footer -->
-        <Border Grid.Row="2" Background="#F5F5F5" Padding="16,10">
-            <Button Content="Close"
-                    Click="Close_Click"
-                    HorizontalAlignment="Right"
-                    Width="80"
-                    HorizontalContentAlignment="Center"
-                    Classes="light-secondary"/>
-        </Border>
-
     </Grid>
-
-    <Window.Styles>
-        <Style Selector="Button.help-link">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#1155AA"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0,3"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style Selector="Button.help-link:pointerover /template/ ContentPresenter">
-            <Setter Property="Foreground" Value="#0D3D80"/>
-            <Setter Property="Background" Value="Transparent"/>
-        </Style>
-        <Style Selector="TextBlock.help-heading">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#1A1A1A"/>
-            <Setter Property="LetterSpacing" Value="0.5"/>
-        </Style>
-        <Style Selector="TextBlock.help-body">
-            <Setter Property="FontSize" Value="12.5"/>
-            <Setter Property="Foreground" Value="#444444"/>
-            <Setter Property="LineHeight" Value="20"/>
-        </Style>
-    </Window.Styles>
 
 </Window>

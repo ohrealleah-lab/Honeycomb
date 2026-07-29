@@ -52,7 +52,7 @@ public partial class PileView : UserControl
             HintHighlightBorder.Height = CardsCanvas.Height;
         }
         HintHighlightBorder.IsVisible = true;
-        _hintPulseBrush = new SolidColorBrush(Color.Parse("#FFD700"));
+        _hintPulseBrush = new SolidColorBrush(Color.Parse("#00FFD700"));
         HintHighlightBorder.BorderBrush = _hintPulseBrush;
         _hintPulse.Start(alpha =>
         {

@@ -62,6 +62,10 @@
         <Border x:Name="CursorHighlightBorder" IsVisible="False" IsHitTestVisible="False"
                 BorderBrush="#00E5FF" BorderThickness="3" CornerRadius="10" Background="Transparent" />
 
+        <!-- Hint pulse highlight -->
+        <Border x:Name="HintHighlightBorder" IsVisible="False" IsHitTestVisible="False"
+                BorderBrush="#00FFD700" BorderThickness="4" CornerRadius="10" Background="Transparent" />
+
         <!-- Point Highlights: transient "+N"/"-N" popup flashed over the top-right
              corner of the specific card responsible for a score change — that corner is
              otherwise empty on every card face. Kept "always visible" at Opacity=0 by
