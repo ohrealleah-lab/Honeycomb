@@ -177,7 +177,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                                     .font(.caption.weight(.bold))
                                     .foregroundStyle(.white)
                             }
-                            .frame(width: 44, height: 44 * 181.0 / 128.0)
+                            .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 5)
@@ -246,7 +246,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                         Color.gray.opacity(0.3)
                     }
                 }
-                .frame(width: 44, height: 44 * 181.0 / 128.0)
+                .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)
@@ -273,7 +273,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                         .font(.title3.weight(.bold))
                         .foregroundStyle(.white)
                 }
-                .frame(width: 44, height: 44 * 181.0 / 128.0)
+                .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
                 Text("Add").font(.caption2).foregroundStyle(.primary)
             }
         }
@@ -286,7 +286,7 @@ struct SlideDownMenu<GameSettings: View>: View {
         } label: {
             VStack(spacing: 4) {
                 cardBackThumbnail(name)
-                    .frame(width: 44, height: 44 * 181.0 / 128.0)
+                    .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                     .overlay(
                         RoundedRectangle(cornerRadius: 5)
@@ -323,7 +323,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                         .font(.title3.weight(.bold))
                         .foregroundStyle(.white)
                 }
-                .frame(width: 44, height: 44 * 181.0 / 128.0)
+                .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
                 Text("Add")
                     .font(.caption2)
                     .foregroundStyle(.primary)

@@ -9,7 +9,7 @@ public struct HoneycombView: View {
     // Hands sit on either side of the board, each arranged as a 2-2-1 pyramid, so a
     // hand column is only ever 2 cards wide. Sized up to use more of the side margin
     // between the board and the window edge.
-    private static let handCardSize = CGSize(width: 195, height: 195 * 181.0 / 128.0)
+    private static let handCardSize = CGSize(width: 195, height: 195 * CardDimensions.aspectRatio)
     private static let boardCardSize = handCardSize
     private static let handGridSpacing: CGFloat = 4
     private static let boardGridSpacing: CGFloat = 10

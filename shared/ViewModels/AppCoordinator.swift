@@ -208,81 +208,31 @@ public final class AppCoordinator {
     // MARK: - Shared option sync (genuinely per-game gameplay prefs only — theme fields
     // above are a single live-shared store and need no propagation on mode switch)
 
+    // Each game's Options struct conforms to HasCommonGameOptions (see
+    // CommonGameOptions.swift), exposing just the fields that are conceptually shared
+    // across games (sound, no-stress, hint visibility, point highlights, timer) as
+    // Optionals where that game doesn't have the concept. Reading `commonOptions` off
+    // the outgoing game and assigning it to every other game's `commonOptions` handles
+    // the propagation generically — a `nil` field is left untouched by the setter, so
+    // e.g. Video Poker's lack of `isTimed` naturally doesn't clobber the solitaire
+    // games' timer preference.
     private func syncSharedOptions(from old: GameMode, to new: GameMode) {
-        let isSoundEnabled:   Bool
-        // hideHintButton is only read from games that actually have a Hint button —
-        // Blackjack doesn't, so it's Optional like isTimed rather than a hardcoded
-        // placeholder that would otherwise get force-propagated to the other games.
-        let hideHintButton:   Bool?
-        let noStressMode:     Bool
-        // isTimed is only read from solitaire games — VP/BJ don't have a real timer preference
-        let isTimed:          Bool?
-
+        let common: CommonGameOptions
         switch old {
-        case .klondike:
-            isSoundEnabled    = klondikeViewModel.options.isSoundEnabled
-            hideHintButton    = klondikeViewModel.options.hideHintButton
-            noStressMode      = klondikeViewModel.options.noStressMode
-            isTimed           = klondikeViewModel.options.isTimed
-        case .beecell:
-            isSoundEnabled    = beecellViewModel.options.isSoundEnabled
-            hideHintButton    = beecellViewModel.options.hideHintButton
-            noStressMode      = beecellViewModel.options.noStressMode
-            isTimed           = beecellViewModel.options.isTimed
-        case .spider:
-            isSoundEnabled    = spiderViewModel.options.isSoundEnabled
-            hideHintButton    = spiderViewModel.options.hideHintButton
-            noStressMode      = spiderViewModel.options.noStressMode
-            isTimed           = spiderViewModel.options.isTimed
-        case .videoPoker:
-            isSoundEnabled    = videoPokerViewModel.options.isSoundEnabled
-            hideHintButton    = videoPokerViewModel.options.hideHintButton
-            noStressMode      = videoPokerViewModel.options.noStressMode
-            isTimed           = nil  // don't propagate VP's timer concept to solitaire games
-        case .blackjack:
-            isSoundEnabled    = blackjackViewModel.options.isSoundEnabled
-            hideHintButton    = nil  // Blackjack has no Hint button/preference to propagate
-            noStressMode      = blackjackViewModel.options.noStressMode
-            isTimed           = nil  // don't propagate BJ's timer concept to solitaire games
-        case .honeycomb:
-            isSoundEnabled    = honeycombViewModel.options.isSoundEnabled
-            hideHintButton    = honeycombViewModel.options.hideHintButton
-            noStressMode      = honeycombViewModel.options.noStressMode
-            isTimed           = nil
+        case .klondike:   common = klondikeViewModel.options.commonOptions
+        case .beecell:    common = beecellViewModel.options.commonOptions
+        case .spider:     common = spiderViewModel.options.commonOptions
+        case .videoPoker: common = videoPokerViewModel.options.commonOptions
+        case .blackjack:  common = blackjackViewModel.options.commonOptions
+        case .honeycomb:  common = honeycombViewModel.options.commonOptions
         }
 
-        if old != .klondike {
-            klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
-            klondikeViewModel.options.noStressMode     = noStressMode
-            if let hideHintButton { klondikeViewModel.options.hideHintButton = hideHintButton }
-            if let isTimed { klondikeViewModel.options.isTimed = isTimed }
-        }
-        if old != .beecell {
-            beecellViewModel.options.isSoundEnabled   = isSoundEnabled
-            beecellViewModel.options.noStressMode     = noStressMode
-            if let hideHintButton { beecellViewModel.options.hideHintButton = hideHintButton }
-            if let isTimed { beecellViewModel.options.isTimed = isTimed }
-        }
-        if old != .spider {
-            spiderViewModel.options.isSoundEnabled   = isSoundEnabled
-            spiderViewModel.options.noStressMode     = noStressMode
-            if let hideHintButton { spiderViewModel.options.hideHintButton = hideHintButton }
-            if let isTimed { spiderViewModel.options.isTimed = isTimed }
-        }
-        if old != .videoPoker {
-            videoPokerViewModel.options.isSoundEnabled   = isSoundEnabled
-            videoPokerViewModel.options.noStressMode     = noStressMode
-            if let hideHintButton { videoPokerViewModel.options.hideHintButton = hideHintButton }
-        }
-        if old != .blackjack {
-            blackjackViewModel.options.isSoundEnabled   = isSoundEnabled
-            blackjackViewModel.options.noStressMode     = noStressMode
-        }
-        if old != .honeycomb {
-            honeycombViewModel.options.isSoundEnabled   = isSoundEnabled
-            honeycombViewModel.options.noStressMode     = noStressMode
-            if let hideHintButton { honeycombViewModel.options.hideHintButton = hideHintButton }
-        }
+        if old != .klondike   { klondikeViewModel.options.commonOptions = common }
+        if old != .beecell    { beecellViewModel.options.commonOptions = common }
+        if old != .spider     { spiderViewModel.options.commonOptions = common }
+        if old != .videoPoker { videoPokerViewModel.options.commonOptions = common }
+        if old != .blackjack  { blackjackViewModel.options.commonOptions = common }
+        if old != .honeycomb  { honeycombViewModel.options.commonOptions = common }
     }
 
     // MARK: - Game actions

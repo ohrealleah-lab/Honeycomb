@@ -24,7 +24,7 @@ struct CustomCardBackImportSheet: View {
     @State private var offsetXFraction: CGFloat = 0
     @State private var offsetYFraction: CGFloat = 0
 
-    private static let cardAspect: CGFloat = 181.0 / 128.0
+    private static let cardAspect: CGFloat = CardDimensions.aspectRatio
 
     var body: some View {
         NavigationStack {

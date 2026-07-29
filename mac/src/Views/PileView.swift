@@ -17,7 +17,7 @@ public struct EmptyPileView: View {
     public var body: some View {
         RoundedRectangle(cornerRadius: 10)
             .fill(Color.black.opacity(0.04))
-            .frame(width: 128, height: 181)
+            .frame(width: CardDimensions.width, height: CardDimensions.height)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.white.opacity(0.35), lineWidth: 1.5)

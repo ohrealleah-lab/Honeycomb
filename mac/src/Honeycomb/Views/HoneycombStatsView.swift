@@ -41,45 +41,45 @@ public struct HoneycombStatsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    StatRow(label: "Games Played", value: "\(stats.gamesPlayed)")
-                    StatRow(label: "Matches Won", value: "\(stats.matchesWon)")
-                    StatRow(label: "Matches Lost", value: "\(stats.matchesLost)")
-                    StatRow(label: "Matches Drawn", value: "\(stats.matchesDrawn)")
-                    StatRow(label: "Most Sudden Deaths", value: "\(stats.suddenDeathCount)")
-                    StatRow(label: "Win Rate", value: String(format: "%.1f%%", winRate))
+                    StatRowView(label: "Games Played", value: "\(stats.gamesPlayed)")
+                    StatRowView(label: "Matches Won", value: "\(stats.matchesWon)")
+                    StatRowView(label: "Matches Lost", value: "\(stats.matchesLost)")
+                    StatRowView(label: "Matches Drawn", value: "\(stats.matchesDrawn)")
+                    StatRowView(label: "Most Sudden Deaths", value: "\(stats.suddenDeathCount)")
+                    StatRowView(label: "Win Rate", value: String(format: "%.1f%%", winRate))
 
                     Divider()
 
-                    StatRow(label: "Current Win Streak", value: "\(stats.currentWinStreak)")
-                    StatRow(label: "Longest Win Streak", value: "\(stats.longestWinStreak)")
-                    StatRow(label: "Flawless Victories (10-0 Sweep)", value: "\(stats.flawlessVictories)")
-                    StatRow(label: "Baby Bee Wins", value: "\(stats.easyWins)")
-                    StatRow(label: "Honey Bee Wins", value: "\(stats.mediumWins)")
-                    StatRow(label: "Queen Bee Wins", value: "\(stats.hardWins)")
-                    StatRow(label: "Killer Bee Wins", value: "\(stats.ultraHardWins)")
+                    StatRowView(label: "Current Win Streak", value: "\(stats.currentWinStreak)")
+                    StatRowView(label: "Longest Win Streak", value: "\(stats.longestWinStreak)")
+                    StatRowView(label: "Flawless Victories (10-0 Sweep)", value: "\(stats.flawlessVictories)")
+                    StatRowView(label: "Baby Bee Wins", value: "\(stats.easyWins)")
+                    StatRowView(label: "Honey Bee Wins", value: "\(stats.mediumWins)")
+                    StatRowView(label: "Queen Bee Wins", value: "\(stats.hardWins)")
+                    StatRowView(label: "Killer Bee Wins", value: "\(stats.ultraHardWins)")
 
                     Divider()
 
-                    StatRow(label: "Total Cards Flipped", value: "\(stats.cardsCaptured)")
-                    StatRow(label: "Fallen Aces", value: "\(stats.fallenAces)")
-                    StatRow(label: "Same/Plus Combos Triggered", value: "\(stats.samePlusTriggers)")
-                    StatRow(label: "Cards Stolen", value: "\(stats.cardsStolen)")
-                    StatRow(label: "Times Started Over", value: "\(stats.timesStartedOver)")
+                    StatRowView(label: "Total Cards Flipped", value: "\(stats.cardsCaptured)")
+                    StatRowView(label: "Fallen Aces", value: "\(stats.fallenAces)")
+                    StatRowView(label: "Same/Plus Combos Triggered", value: "\(stats.samePlusTriggers)")
+                    StatRowView(label: "Cards Stolen", value: "\(stats.cardsStolen)")
+                    StatRowView(label: "Times Started Over", value: "\(stats.timesStartedOver)")
 
                     Divider()
 
-                    StatRow(label: "Cards Unlocked", value: "\(totalUnlocked)/\(totalCards) (\(String(format: "%.0f%%", unlockedPercent)))")
+                    StatRowView(label: "Cards Unlocked", value: "\(totalUnlocked)/\(totalCards) (\(String(format: "%.0f%%", unlockedPercent)))")
 
                     ForEach(suitOrder, id: \.code) { entry in
                         let progress = suitProgress(entry.code)
-                        StatRow(label: "\(entry.label) Unlocked", value: "\(progress.unlocked)/\(progress.total)")
+                        StatRowView(label: "\(entry.label) Unlocked", value: "\(progress.unlocked)/\(progress.total)")
                     }
 
                     Divider()
 
                     ForEach(1...5, id: \.self) { star in
                         let progress = starProgress(star)
-                        StatRow(label: "\(star)\u{2605} Unlocked", value: "\(progress.unlocked)/\(progress.total)")
+                        StatRowView(label: "\(star)\u{2605} Unlocked", value: "\(progress.unlocked)/\(progress.total)")
                     }
                 }
                 .padding(.horizontal, 36)
@@ -116,19 +116,5 @@ public struct HoneycombStatsView: View {
             Color(NSColor.windowBackgroundColor)
                 .overlay(Color.primary.opacity(0.04))
         )
-    }
-}
-
-fileprivate struct StatRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(label)
-            Spacer()
-            Text(value)
-        }
-        .font(.system(.body))
     }
 }

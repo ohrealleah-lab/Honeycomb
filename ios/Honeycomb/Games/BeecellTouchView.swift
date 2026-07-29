@@ -33,16 +33,16 @@ struct BeecellTouchView: View {
             // actually fit, with no scroll view to fall back on).
             let widthCardW = (geo.size.width - 16 - (columns - 1) * Self.columnSpacing) / columns
             let designCardW = min(widthCardW, 100)
-            let designCardH = designCardW * 181.0 / 128.0
+            let designCardH = designCardW * CardDimensions.aspectRatio
             let intrinsicHeight = 54 + designCardH + 10 + deepestColumnHeight(cardH: designCardH) + 20
             let heightScale = min(1.0, geo.size.height / intrinsicHeight)
             let cardW = designCardW * heightScale
-            let cardH = designCardW * heightScale * 181.0 / 128.0
+            let cardH = designCardW * heightScale * CardDimensions.aspectRatio
             let topSlots = CGFloat(viewModel.state.freeCells.count + viewModel.state.foundations.count)
             // Free cells + foundations share the top row with a control gap; shrink the
             // slot size when double-deck doubles the slot count.
             let topCardW = min(cardW, (geo.size.width - 16 - 52 - (topSlots - 1) * Self.columnSpacing) / topSlots)
-            let topCardH = topCardW * 181.0 / 128.0
+            let topCardH = topCardW * CardDimensions.aspectRatio
 
             ZStack {
                 IOSBackgroundLayer()

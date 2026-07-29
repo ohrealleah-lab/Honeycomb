@@ -797,26 +797,18 @@ public final class SpiderViewModel {
 
     public func findHint() {
         hintClearTask?.cancel()
-
-        if !hintQueue.isEmpty && activeHint != nil {
-            hintQueueIndex = (hintQueueIndex + 1) % hintQueue.count
-            activeHint = labeled(hintQueue[hintQueueIndex], index: hintQueueIndex, total: hintQueue.count)
-            scheduleHintClear()
-            return
-        }
-
-        hintQueue = collectHints()
-        hintQueueIndex = 0
-
-        guard !hintQueue.isEmpty else {
-            activeHint = SpiderHintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
-                sourcePileId: "", targetPileId: "", description: "No moves available. Replay or deal a new game!")
-            scheduleHintClear()
-            return
-        }
-
-        activeHint = labeled(hintQueue[0], index: 0, total: hintQueue.count)
-        scheduleHintClear()
+        HintCycling.findHint(
+            activeHint: &activeHint,
+            hintQueue: &hintQueue,
+            hintQueueIndex: &hintQueueIndex,
+            collectHints: collectHints,
+            label: { labeled($0, index: $1, total: $2) },
+            noHintFallback: {
+                SpiderHintMove(card: Card(suit: .spades, rank: 1, faceUp: false),
+                    sourcePileId: "", targetPileId: "", description: "No moves available. Replay or deal a new game!")
+            },
+            scheduleClear: scheduleHintClear
+        )
     }
 
     private func labeled(_ hint: SpiderHintMove, index: Int, total: Int) -> SpiderHintMove {

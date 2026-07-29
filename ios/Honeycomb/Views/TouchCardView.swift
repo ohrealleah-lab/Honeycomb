@@ -7,7 +7,7 @@ struct TouchCardView: View {
     let card: Card
     let width: CGFloat
 
-    var height: CGFloat { width * 181.0 / 128.0 }
+    var height: CGFloat { width * CardDimensions.aspectRatio }
 
     @Environment(\.activeCustomCardColors) private var customColors: CustomCardColorGroup
 

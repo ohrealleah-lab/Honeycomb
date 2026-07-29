@@ -36,11 +36,11 @@ struct KlondikeTouchView: View {
             // extra width alone doesn't buy any extra height, and there's no scroll view
             // here — shrink further so nothing overflows. Never grows past the width fit.
             let widthCardW = min((geo.size.width - 16 - 6 * Self.columnSpacing) / 7, 110)
-            let widthCardH = widthCardW * 181.0 / 128.0
+            let widthCardH = widthCardW * CardDimensions.aspectRatio
             let neededHeight = 54 + widthCardH + 10 + deepestColumnHeight(cardH: widthCardH) + 20
             let heightShrink = neededHeight > geo.size.height ? geo.size.height / neededHeight : 1.0
             let cardW = widthCardW * heightShrink
-            let cardH = cardW * 181.0 / 128.0
+            let cardH = cardW * CardDimensions.aspectRatio
 
             ZStack {
                 IOSBackgroundLayer()

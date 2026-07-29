@@ -39,7 +39,7 @@ public struct CardView: View {
                 CardBackView(isAnimated: isAnimated)
             }
         }
-        .frame(width: 128, height: 181)
+        .frame(width: CardDimensions.width, height: CardDimensions.height)
         .background(customCardColors.isEnabled ? customCardColors.backgroundColor : Color.white)
         .cornerRadius(10)
         .overlay(

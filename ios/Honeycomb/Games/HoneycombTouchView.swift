@@ -12,7 +12,7 @@ struct HoneycombTouchView: View {
 
     // MARK: Intrinsic layout constants (pre-scale units)
 
-    private static let cardAspect: CGFloat = 181.0 / 128.0
+    private static let cardAspect: CGFloat = CardDimensions.aspectRatio
     private static let boardCardSize = CGSize(width: 150, height: 150 * cardAspect)
     private static let playerCardSize = CGSize(width: 116, height: 116 * cardAspect)
     private static let opponentCardSize = CGSize(width: 96, height: 96 * cardAspect)

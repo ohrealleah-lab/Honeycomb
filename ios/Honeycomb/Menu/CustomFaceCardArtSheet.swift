@@ -44,10 +44,10 @@ struct CustomFaceCardArtSheet: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
                         .fill(Color.white)
-                        .aspectRatio(128.0 / 181.0, contentMode: .fit)
+                        .aspectRatio((1.0 / CardDimensions.aspectRatio), contentMode: .fit)
                     if let entry, let image = manager.image(for: entry) {
                         ImageCropDisplay(image: image, entry: entry)
-                            .aspectRatio(128.0 / 181.0, contentMode: .fit)
+                            .aspectRatio((1.0 / CardDimensions.aspectRatio), contentMode: .fit)
                             .opacity(entry.isEnabled ? 1 : 0.3)
                     } else {
                         VStack(spacing: 2) {
@@ -99,7 +99,7 @@ private struct FaceArtImportSheet: View {
 
                 if let previewImage {
                     Section("Pinch to zoom, drag to reposition") {
-                        ImageCropEditor(image: previewImage, aspect: 181.0 / 128.0,
+                        ImageCropEditor(image: previewImage, aspect: CardDimensions.aspectRatio,
                                        scale: $scale, offsetXFraction: $offsetXFraction, offsetYFraction: $offsetYFraction)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
