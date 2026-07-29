@@ -102,9 +102,7 @@ public struct SpiderView: View {
                             isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
                             disabled: viewModel.state.hasWon
                         ) {
-                            if viewModel.hasHintsAvailable {
-                                viewModel.findHint()
-                            } else {
+                            if !viewModel.findHint() {
                                 flashNoHintsBanner()
                             }
                         }

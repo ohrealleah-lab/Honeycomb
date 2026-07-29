@@ -63,6 +63,14 @@ public final class SpiderViewModel {
         }
     }
     
+    public var averageWinningTime: Double {
+        currentModeStats.averageWinningTime
+    }
+    
+    public var shortestWinTime: Int {
+        currentModeStats.shortestWinTime
+    }
+    
     public var highScoreString: String {
         return String(highScore)
     }
@@ -749,15 +757,34 @@ public final class SpiderViewModel {
     }
 
     private func findNextAutocompleteMove() -> (cards: [Card], source: Pile, target: Pile)? {
-        for source in state.tableau where !source.cards.isEmpty {
+        var fallbackSource: Pile? = nil
+        var fallbackCards: [Card]? = nil
+        var fallbackTarget: Pile? = nil
+
+        for source in state.tableau {
             let seq = getLongestValidSequence(in: source)
-            guard let firstCard = seq.first else { continue }
+            if seq.isEmpty { continue }
             
-            for target in state.tableau where target.id != source.id {
-                if let topCard = target.topCard, topCard.suit == firstCard.suit, topCard.rank == firstCard.rank + 1 {
+            for target in state.tableau {
+                if target.id == source.id || target.cards.isEmpty { continue }
+                if isValidMove(cards: seq, to: target) {
                     return (seq, source, target)
                 }
             }
+            
+            if fallbackSource == nil && seq.count < source.cards.count {
+                for target in state.tableau {
+                    if target.id == source.id || !target.cards.isEmpty { continue }
+                    fallbackSource = source
+                    fallbackCards = seq
+                    fallbackTarget = target
+                    break
+                }
+            }
+        }
+        
+        if let fs = fallbackSource, let fc = fallbackCards, let ft = fallbackTarget {
+            return (fc, fs, ft)
         }
         return nil
     }
@@ -795,9 +822,10 @@ public final class SpiderViewModel {
     private var lastMoveSourceId: String? = nil
     private var lastMoveTargetId: String? = nil
 
-    public func findHint() {
+    @discardableResult
+    public func findHint() -> Bool {
         hintClearTask?.cancel()
-        HintCycling.findHint(
+        return HintCycling.findHint(
             activeHint: &activeHint,
             hintQueue: &hintQueue,
             hintQueueIndex: &hintQueueIndex,
@@ -817,11 +845,9 @@ public final class SpiderViewModel {
             targetPileId: hint.targetPileId, description: prefix + hint.description)
     }
 
-    public var hasHintsAvailable: Bool { !collectHints().isEmpty }
-
     public var debugBannerRequest: DebugBannerKind? = nil
 
-    private func collectHints() -> [SpiderHintMove] {
+    private func evaluateImmediateMoves(depth: Int = 0) -> [(SpiderHintMove, Int)] {
         var scored: [(SpiderHintMove, Int)] = []
 
         for colIdx in 0..<state.tableau.count {
@@ -862,11 +888,13 @@ public final class SpiderViewModel {
                             let label = faceDownBelow == 1 ? "Reveal 1 face-down card." : "Reveal \(faceDownBelow) face-down cards."
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                                 description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to empty column — \(label)"),
-                                350 + faceDownBelow * 50))
+                                350 + faceDownBelow * 150))
                             break
                         } else if !freesColumn {
+                            let breaksCrossSuit = k > 0 && col.cards[k-1].faceUp && col.cards[k-1].suit != dragStack.first!.suit
+                            let score = breaksCrossSuit ? 150 : 50
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
-                                description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to empty column."), 200))
+                                description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to empty column."), score))
                             break
                         }
                     } else if let topCard = targetCol.topCard, topCard.rank == dragStack.first!.rank + 1 {
@@ -876,16 +904,30 @@ public final class SpiderViewModel {
                         }
                         
                         let sameSuit = topCard.suit == dragStack.first!.suit
-                        let faceDownBonus = faceDownBelow * 100
+                        let faceDownBonus = faceDownBelow * 150
+                        let vacateBonus = freesColumn ? 250 : 0
+                        
+                        var targetIsClean = true
+                        let faceUpTargetCards = targetCol.cards.filter { $0.faceUp }
+                        if faceUpTargetCards.count > 1 {
+                            for i in 0..<faceUpTargetCards.count - 1 {
+                                if faceUpTargetCards[i].suit != faceUpTargetCards[i+1].suit {
+                                    targetIsClean = false
+                                    break
+                                }
+                            }
+                        }
+                        let cleanStackPenalty = (!sameSuit && targetIsClean) ? -100 : 0
+
                         if sameSuit {
                             // Best: extends a same-suit run
-                            let score = faceDownBelow > 0 ? 1000 + faceDownBonus : 900
+                            let score = faceDownBelow > 0 ? 1000 + faceDownBonus + vacateBonus : 900 + vacateBonus
                             let label = faceDownBelow > 0 ? " — Reveal \(faceDownBelow) face-down card\(faceDownBelow > 1 ? "s" : "")." : "."
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                                 description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) onto \(topCard.rankString)\(topCard.suit.symbol)\(label)"), score))
                         } else {
                             // Cross-suit build
-                            let score = faceDownBelow > 0 ? 600 + faceDownBonus : 400
+                            let score = faceDownBelow > 0 ? 600 + faceDownBonus + vacateBonus + cleanStackPenalty : 400 + vacateBonus + cleanStackPenalty
                             let label = faceDownBelow > 0 ? " — Reveal \(faceDownBelow) face-down card\(faceDownBelow > 1 ? "s" : "")." : "."
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                                 description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(topCard.rankString)\(topCard.suit.symbol)\(label)"), score))
@@ -907,6 +949,55 @@ public final class SpiderViewModel {
             }
         }
 
+        if depth == 0 {
+            var enhancedScores: [(SpiderHintMove, Int)] = []
+            let originalState = self.state
+            
+            for (move, baseScore) in scored {
+                if move.sourcePileId.isEmpty || move.sourcePileId == state.stock.id {
+                    enhancedScores.append((move, baseScore))
+                    continue
+                }
+                
+                guard let srcIdx = self.state.tableau.firstIndex(where: { $0.id == move.sourcePileId }) else {
+                    enhancedScores.append((move, baseScore))
+                    continue
+                }
+                guard let tgtIdx = self.state.tableau.firstIndex(where: { $0.id == move.targetPileId }) else {
+                    enhancedScores.append((move, baseScore))
+                    continue
+                }
+                
+                if let cardIdx = self.state.tableau[srcIdx].cards.firstIndex(where: { $0.id == move.card.id }) {
+                    let dragStack = Array(self.state.tableau[srcIdx].cards[cardIdx...])
+                    self.state.tableau[srcIdx].cards.removeSubrange(cardIdx...)
+                    if let last = self.state.tableau[srcIdx].cards.last, !last.faceUp {
+                        self.state.tableau[srcIdx].cards[self.state.tableau[srcIdx].cards.count - 1].faceUp = true
+                    }
+                    self.state.tableau[tgtIdx].cards.append(contentsOf: dragStack)
+                    
+                    let nextLevel = evaluateImmediateMoves(depth: 1)
+                    if let bestNext = nextLevel.max(by: { $0.1 < $1.1 }) {
+                        let futureScore = Int(Double(bestNext.1) * 0.8)
+                        enhancedScores.append((move, baseScore + futureScore))
+                    } else {
+                        enhancedScores.append((move, baseScore))
+                    }
+                    
+                    self.state = originalState
+                } else {
+                    enhancedScores.append((move, baseScore))
+                }
+            }
+            scored = enhancedScores
+        }
+
+        return scored
+    }
+
+    private func collectHints() -> [SpiderHintMove] {
+        let scored = evaluateImmediateMoves(depth: 0)
+
         let filtered = scored.filter { (hint, _) in
             guard let src = lastMoveSourceId, let tgt = lastMoveTargetId else { return true }
             return !(hint.sourcePileId == tgt && hint.targetPileId == src)
@@ -916,13 +1007,15 @@ public final class SpiderViewModel {
     }
 
     private func scheduleHintClear() {
-        let task = DispatchWorkItem { [weak self] in
+        hintClearTask?.cancel()
+
+        let clearTask = DispatchWorkItem { [weak self] in
             self?.activeHint = nil
             self?.hintQueue = []
             self?.hintQueueIndex = 0
         }
-        hintClearTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
+        hintClearTask = clearTask
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: clearTask)
     }
 
     public func clearHint() {

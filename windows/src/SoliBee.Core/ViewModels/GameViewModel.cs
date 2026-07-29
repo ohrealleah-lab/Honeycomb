@@ -1129,7 +1129,61 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         ActiveHint      = null;
     }
 
-    private List<HintMove> CollectAllHints()
+    private bool IsSafeFoundationMove(Card card)
+    {
+        if (card.Rank <= 2) return true;
+        bool isRed = card.Suit == CardSuit.Hearts || card.Suit == CardSuit.Diamonds;
+        int reqRank = card.Rank - 1;
+        int safeCount = 0;
+        foreach (var foundation in Foundations)
+        {
+            if (foundation.Cards.Count > 0)
+            {
+                var top = foundation.Cards.Last();
+                bool topIsRed = top.Suit == CardSuit.Hearts || top.Suit == CardSuit.Diamonds;
+                if (topIsRed != isRed && top.Rank >= reqRank)
+                {
+                    safeCount++;
+                }
+            }
+        }
+        return safeCount == 2;
+    }
+
+    private GameStateSnapshot CreateVirtualSnapshot()
+    {
+        var snapshot = new GameStateSnapshot();
+        snapshot.PileCards.Add(Stock.Cards.ToList());
+        snapshot.PileCards.Add(Waste.Cards.ToList());
+        foreach (var f in Foundations) snapshot.PileCards.Add(f.Cards.ToList());
+        foreach (var t in Tableaus) snapshot.PileCards.Add(t.Cards.ToList());
+        return snapshot;
+    }
+
+    private void RestoreVirtualSnapshot(GameStateSnapshot snapshot)
+    {
+        Stock.Cards.Clear();
+        foreach (var c in snapshot.PileCards[0]) Stock.Cards.Add(c);
+        
+        Waste.Cards.Clear();
+        foreach (var c in snapshot.PileCards[1]) Waste.Cards.Add(c);
+        
+        int index = 2;
+        for (int i = 0; i < Foundations.Count; i++)
+        {
+            Foundations[i].Cards.Clear();
+            foreach (var c in snapshot.PileCards[index]) Foundations[i].Cards.Add(c);
+            index++;
+        }
+        for (int i = 0; i < Tableaus.Count; i++)
+        {
+            Tableaus[i].Cards.Clear();
+            foreach (var c in snapshot.PileCards[index]) Tableaus[i].Cards.Add(c);
+            index++;
+        }
+    }
+
+    private List<(int Score, HintMove Hint)> EvaluateImmediateMoves(int depth = 0)
     {
         var scored   = new List<(int Score, HintMove Hint)>();
         var wasteTop = Waste.Cards.Count > 0 ? Waste.Cards.Last() : null;
@@ -1138,8 +1192,11 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         if (wasteTop != null)
             foreach (var f in Foundations)
                 if (CanMoveCard(wasteTop, f))
-                    scored.Add((1000, new HintMove(wasteTop, Waste.Id, f.Id,
+                {
+                    int score = IsSafeFoundationMove(wasteTop) ? 1000 : 200;
+                    scored.Add((score, new HintMove(wasteTop, Waste.Id, f.Id,
                         $"Move {RankStr(wasteTop.Rank)}{SuitStr(wasteTop.Suit)} to Foundation.")));
+                }
 
         foreach (var src in Tableaus)
         {
@@ -1147,8 +1204,11 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             var card = src.Cards.Last();
             foreach (var f in Foundations)
                 if (CanMoveCard(card, f))
-                    scored.Add((1000, new HintMove(card, src.Id, f.Id,
+                {
+                    int score = IsSafeFoundationMove(card) ? 1000 : 200;
+                    scored.Add((score, new HintMove(card, src.Id, f.Id,
                         $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} to Foundation.")));
+                }
         }
 
         // Priority 2 (500 + hidden×100) / Priority 4 (150): tableau → tableau. Checks
@@ -1178,14 +1238,23 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
                     if (!CanMoveCard(card, tgt)) continue;
                     if (!IsProgressiveTableauMove(src, i, tgt, firstFaceUp)) continue;
 
+                    bool emptiesColumn = (i == 0);
+                    int vacateBonus = emptiesColumn ? 250 : 0;
+
                     if (revealsHidden)
                     {
-                        scored.Add((500 + firstFaceUp * 100, new HintMove(card, src.Id, tgt.Id,
+                        scored.Add((500 + firstFaceUp * 150 + vacateBonus, new HintMove(card, src.Id, tgt.Id,
+                            $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} sequence.")));
+                    }
+                    else if (tgt.Cards.Count > 0)
+                    {
+                        scored.Add((150 + vacateBonus, new HintMove(card, src.Id, tgt.Id,
                             $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} sequence.")));
                     }
                     else
                     {
-                        scored.Add((150, new HintMove(card, src.Id, tgt.Id,
+                        int score = emptiesColumn ? 50 : 150;
+                        scored.Add((score, new HintMove(card, src.Id, tgt.Id,
                             $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} sequence.")));
                     }
                 }
@@ -1222,6 +1291,94 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
                     "Recycle waste back to stock.")));
         }
 
+        if (depth == 0)
+        {
+            var enhancedScores = new List<(int Score, HintMove Hint)>();
+            var originalState = CreateVirtualSnapshot();
+            
+            foreach (var (baseScore, move) in scored)
+            {
+                if (string.IsNullOrEmpty(move.SourcePileId) || move.SourcePileId == Stock.Id || (move.SourcePileId == Waste.Id && move.TargetPileId == Stock.Id))
+                {
+                    enhancedScores.Add((baseScore, move));
+                    continue;
+                }
+                
+                bool validSource = false;
+                List<Card> dragStack = new();
+                
+                if (move.SourcePileId == Waste.Id)
+                {
+                    if (Waste.Cards.Count > 0 && Waste.Cards.Last().Id == move.Card.Id)
+                    {
+                        dragStack.Add(Waste.Cards.Last());
+                        Waste.Cards.RemoveAt(Waste.Cards.Count - 1);
+                        validSource = true;
+                    }
+                }
+                else
+                {
+                    var srcCol = Tableaus.FirstOrDefault(t => t.Id == move.SourcePileId);
+                    if (srcCol != null)
+                    {
+                        int cardIdx = srcCol.Cards.FindIndex(c => c.Id == move.Card.Id);
+                        if (cardIdx >= 0)
+                        {
+                            dragStack = srcCol.Cards.GetRange(cardIdx, srcCol.Cards.Count - cardIdx);
+                            srcCol.Cards.RemoveRange(cardIdx, dragStack.Count);
+                            if (srcCol.Cards.Count > 0 && !srcCol.Cards.Last().IsFaceUp)
+                            {
+                                srcCol.Cards[^1] = srcCol.Cards[^1] with { IsFaceUp = true };
+                            }
+                            validSource = true;
+                        }
+                    }
+                }
+                
+                if (!validSource)
+                {
+                    enhancedScores.Add((baseScore, move));
+                    RestoreVirtualSnapshot(originalState);
+                    continue;
+                }
+                
+                var tgtCol = Tableaus.FirstOrDefault(t => t.Id == move.TargetPileId);
+                if (tgtCol != null)
+                {
+                    tgtCol.Cards.AddRange(dragStack);
+                }
+                else
+                {
+                    var tgtFnd = Foundations.FirstOrDefault(f => f.Id == move.TargetPileId);
+                    if (tgtFnd != null)
+                    {
+                        tgtFnd.Cards.AddRange(dragStack);
+                    }
+                }
+                
+                var nextLevel = EvaluateImmediateMoves(1);
+                if (nextLevel.Count > 0)
+                {
+                    int bestNextScore = nextLevel.Max(x => x.Score);
+                    int futureScore = (int)(bestNextScore * 0.8);
+                    enhancedScores.Add((baseScore + futureScore, move));
+                }
+                else
+                {
+                    enhancedScores.Add((baseScore, move));
+                }
+                
+                RestoreVirtualSnapshot(originalState);
+            }
+            scored = enhancedScores;
+        }
+
+        return scored;
+    }
+
+    private List<HintMove> CollectAllHints()
+    {
+        var scored = EvaluateImmediateMoves(0);
         var hints = scored.OrderByDescending(s => s.Score).Select(s => s.Hint).ToList();
 
         // Deliberately no "King to empty column" last-resort fallback here: that move is

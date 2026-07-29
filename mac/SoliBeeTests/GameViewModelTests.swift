@@ -72,10 +72,17 @@ struct GameViewModelTests {
         
         assert(viewModel.state.stock.cards.count == 0, "Stock should be empty")
         assert(viewModel.state.waste.cards.count == 24, "Waste should have 24 cards")
-        
-        // Next draw should trigger recycling and immediately draw the first card
+
+        // Recycling and drawing are two separate clicks (matching the Windows port) —
+        // the first click only recycles the waste back into the stock.
         viewModel.drawCard()
-        
+
+        assert(viewModel.state.stock.cards.count == 24, "Stock should have 24 cards after recycling")
+        assert(viewModel.state.waste.cards.count == 0, "Waste should be empty after recycling")
+
+        // The second click actually draws.
+        viewModel.drawCard()
+
         assert(viewModel.state.stock.cards.count == 23, "Stock should have 23 cards after recycling & drawing")
         assert(viewModel.state.waste.cards.count == 1, "Waste should have 1 card after recycling & drawing")
     }

@@ -117,9 +117,7 @@ public struct GameView: View {
                             isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
                             disabled: viewModel.state.hasWon
                         ) {
-                            if viewModel.hasHintsAvailable {
-                                viewModel.findHint()
-                            } else {
+                            if !viewModel.findHint() {
                                 flashNoHintsBanner()
                             }
                         }
@@ -288,7 +286,6 @@ public struct GameView: View {
                                 handleDragEnded()
                             }
                         )
-                        .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == pile.id || viewModel.activeHint?.targetPileId == pile.id))
                         .background(GeometryReader { geo in
                             Color.clear
                                 .onAppear {
@@ -1058,20 +1055,57 @@ struct StatusItemView: View {
                 .fixedSize(horizontal: true, vertical: false)
                 .foregroundColor(.white)
         }
+
     }
 }
 
 struct HintHighlightModifier: ViewModifier {
-    let isHighlighted: Bool
+    var isHighlighted: Bool
+    @State private var phase: Double = 0.0
     
     func body(content: Content) -> some View {
         content
+            .modifier(HintHighlightAnimatable(isHighlighted: isHighlighted, phase: phase))
+            .onChange(of: isHighlighted) {
+                if isHighlighted {
+                    phase = 0.0
+                    withAnimation(.linear(duration: 1.8)) {
+                        phase = 1.0
+                    }
+                } else {
+                    withAnimation(.easeOut(duration: 0.1)) {
+                        phase = 0.0
+                    }
+                }
+            }
+    }
+}
+
+struct HintHighlightAnimatable: AnimatableModifier {
+    var isHighlighted: Bool
+    var phase: Double
+    
+    var animatableData: Double {
+        get { phase }
+        set { phase = newValue }
+    }
+    
+    func body(content: Content) -> some View {
+        // 2 full flashes requires 2 full cycles (4 * pi).
+        let opacity = isHighlighted ? (1 - cos(phase * .pi * 4)) / 2 : 0.0
+        
+        return content
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isHighlighted ? Color.yellow : Color.clear, lineWidth: 3.5)
-                    .shadow(color: isHighlighted ? .yellow : .clear, radius: 4)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.yellow, lineWidth: 4)
+                        .shadow(color: .yellow, radius: 4)
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.yellow, lineWidth: 4)
+                        .shadow(color: .yellow, radius: 4)
+                }
+                .opacity(opacity)
             )
-            .animation(isHighlighted ? Animation.easeInOut(duration: 0.5).repeatCount(4, autoreverses: true) : nil, value: isHighlighted)
     }
 }
 

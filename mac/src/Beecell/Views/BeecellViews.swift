@@ -166,7 +166,7 @@ public struct BeecellTableauView: View {
     public var body: some View {
         let isSource = activeHint?.sourcePileId == pile.id
         let isTarget = activeHint?.targetPileId == pile.id
-        let hintStartIndex = isSource ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
+        let hintStartIndex = (activeHint?.sourcePileId == pile.id) ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
         
         ZStack(alignment: .top) {
             EmptyPileView(isFocused: isFocused && pile.isEmpty, isSelected: isSelected && pile.isEmpty)

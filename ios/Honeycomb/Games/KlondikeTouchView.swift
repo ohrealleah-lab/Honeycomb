@@ -25,6 +25,8 @@ struct KlondikeTouchView: View {
     @State private var showingStats = false
     @State private var dismissedStuckBanner = false
     @State private var isDrawInFlight = false
+    @State private var showNoHintsBanner = false
+    @State private var noHintsBannerTask: DispatchWorkItem? = nil
 
     private let placementHaptic = UIImpactFeedbackGenerator(style: .medium)
 
@@ -71,6 +73,10 @@ struct KlondikeTouchView: View {
 
                 if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
                     stuckOverlay
+                }
+
+                if showNoHintsBanner {
+                    noHintsBanner
                 }
 
                 SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator) {
@@ -155,7 +161,9 @@ struct KlondikeTouchView: View {
                 if !viewModel.options.hideHintButton {
                     controlCircle(systemImage: "lightbulb", label: "Hint",
                                   diameter: min(40, cardW * 0.8)) {
-                        viewModel.findHint()
+                        if !viewModel.findHint() {
+                            flashNoHintsBanner()
+                        }
                     }
                 }
             }
@@ -273,7 +281,7 @@ struct KlondikeTouchView: View {
                 TouchCardView(card: card, width: cardW)
                     .offset(y: offsets[i])
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
-                    .modifier(TouchHintHighlight(isHighlighted: viewModel.activeHint?.card.id == card.id))
+                    .modifier(TouchHintHighlight(isHighlighted: hintTouches(pile.id) && viewModel.activeHint?.card.id == card.id))
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMoveToFoundation(card: card, from: pile)
                     }
@@ -335,7 +343,8 @@ struct KlondikeTouchView: View {
     }
 
     private func hintTouches(_ pileId: String) -> Bool {
-        viewModel.activeHint?.sourcePileId == pileId || viewModel.activeHint?.targetPileId == pileId
+        (viewModel.activeHint?.sourcePileId == pileId) || 
+        (viewModel.activeHint?.targetPileId == pileId)
     }
 
     // MARK: Drag handling (ported from the mac GameView)
@@ -531,6 +540,31 @@ struct KlondikeTouchView: View {
         }
     }
 
+    private var noHintsBanner: some View {
+        VStack {
+            Text("Sorry! No hints available.")
+                .font(.title3.weight(.black))
+                .foregroundStyle(Color.yellow)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(.black.opacity(0.75), in: Capsule())
+                .transition(.scale.combined(with: .opacity))
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(.top, 60)
+        .allowsHitTesting(false)
+    }
+
+    private func flashNoHintsBanner() {
+        noHintsBannerTask?.cancel()
+        withAnimation(.easeIn(duration: 0.15)) { showNoHintsBanner = true }
+        let task = DispatchWorkItem {
+            withAnimation(.easeOut(duration: 0.3)) { showNoHintsBanner = false }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
+        noHintsBannerTask = task
+    }
+
     private var stuckOverlay: some View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
@@ -596,6 +630,7 @@ struct KlondikeSettingsSection: View {
             Toggle("Timed", isOn: $viewModel.options.isTimed)
             Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
             Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
+                .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
             Toggle("Hide Hint Button", isOn: $viewModel.options.hideHintButton)
             Toggle("Point Highlights", isOn: $viewModel.options.showPointHighlights)
         }

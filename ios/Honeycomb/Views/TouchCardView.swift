@@ -112,15 +112,50 @@ struct TouchCardView: View {
 
 /// Pulsing yellow hint outline shared by the iOS game views.
 struct TouchHintHighlight: ViewModifier {
-    let isHighlighted: Bool
+    var isHighlighted: Bool
+    @State private var phase: Double = 0.0
+    
     func body(content: Content) -> some View {
         content
+            .modifier(TouchHintAnimatable(isHighlighted: isHighlighted, phase: phase))
+            .onChange(of: isHighlighted) {
+                if isHighlighted {
+                    phase = 0.0
+                    withAnimation(.linear(duration: 1.8)) {
+                        phase = 1.0
+                    }
+                } else {
+                    withAnimation(.easeOut(duration: 0.1)) {
+                        phase = 0.0
+                    }
+                }
+            }
+    }
+}
+
+struct TouchHintAnimatable: AnimatableModifier {
+    var isHighlighted: Bool
+    var phase: Double
+    
+    var animatableData: Double {
+        get { phase }
+        set { phase = newValue }
+    }
+    
+    func body(content: Content) -> some View {
+        let opacity = isHighlighted ? (1 - cos(phase * .pi * 4)) / 2 : 0.0
+        
+        return content
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isHighlighted ? Color.yellow : Color.clear, lineWidth: 4)
-                    .shadow(color: isHighlighted ? .yellow : .clear, radius: 4)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.yellow, lineWidth: 4)
+                        .shadow(color: .yellow, radius: 4)
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.yellow, lineWidth: 4)
+                        .shadow(color: .yellow, radius: 4)
+                }
+                .opacity(opacity)
             )
-            .animation(isHighlighted ? .easeInOut(duration: 0.5).repeatCount(4, autoreverses: true) : nil,
-                       value: isHighlighted)
     }
 }

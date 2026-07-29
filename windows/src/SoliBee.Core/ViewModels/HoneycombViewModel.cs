@@ -38,7 +38,7 @@ public partial class HoneycombViewModel : ObservableObject
     [ObservableProperty] private HoneycombPendingSteal? _pendingSteal;
 
     public (int handIndex, int cellIndex)? ActiveHint { get; private set; }
-
+    
     public bool IsPlaying => State.Phase == HoneycombPhase.Playing;
     public bool CanUndo => State.UndoStack.Count > 0 && IsPlaying && State.CurrentTurn == 1 && !_isAnimating;
 

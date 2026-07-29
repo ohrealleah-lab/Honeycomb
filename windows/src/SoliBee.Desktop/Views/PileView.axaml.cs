@@ -56,13 +56,14 @@ public partial class PileView : UserControl
         HintHighlightBorder.BorderBrush = _hintPulseBrush;
         _hintPulse.Start(alpha =>
         {
-            byte a = (byte)(160 + (int)(95 * alpha));
+            byte a = (byte)(255 * alpha);
             _hintPulseBrush!.Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00);
-            HintHighlightBorder.BoxShadow = new BoxShadows(new BoxShadow
+            var shadow = new BoxShadow
             {
-                OffsetX = 0, OffsetY = 0, Blur = 4, Spread = 0,
-                Color = Color.FromArgb((byte)(a * 0.8), 0xFF, 0xD7, 0x00)
-            });
+                OffsetX = 0, OffsetY = 0, Blur = 6, Spread = 1,
+                Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00)
+            };
+            HintHighlightBorder.BoxShadow = new BoxShadows(shadow);
         });
     }
 

@@ -871,11 +871,13 @@ public final class HoneycombViewModel {
     }
 
     private func scheduleHintClear() {
-        let task = DispatchWorkItem { [weak self] in
+        hintClearTask?.cancel()
+
+        let clearTask = DispatchWorkItem { [weak self] in
             self?.activeHint = nil
         }
-        hintClearTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
+        hintClearTask = clearTask
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: clearTask)
     }
 
     public func clearHint() {

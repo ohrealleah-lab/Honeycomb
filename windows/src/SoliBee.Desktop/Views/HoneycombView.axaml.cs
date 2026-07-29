@@ -313,6 +313,8 @@ public partial class HoneycombView : UserControl
                     else if (isChaos && state.PlayerChaosIndex.HasValue && state.PlayerChaosIndex.Value == i) highlight = true;
                     else if (state.SwapHighlightIds.Contains(displayPlayerHand[i].UniqueInstanceId)) highlight = true;
                 }
+                
+                if (vm.ActiveHint.HasValue && vm.ActiveHint.Value.handIndex == i) highlight = true;
             }
             else
             {

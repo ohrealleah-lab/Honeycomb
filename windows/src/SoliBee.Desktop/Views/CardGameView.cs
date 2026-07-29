@@ -279,7 +279,7 @@ public abstract class CardGameView : UserControl
                     HighlightWholePile(targetPv);
             }
         }
-
+        
         StartDismissTimer();
     }
 

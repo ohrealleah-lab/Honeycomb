@@ -106,9 +106,7 @@ public struct BeecellView: View {
                             isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
                             disabled: viewModel.state.hasWon
                         ) {
-                            if viewModel.hasHintsAvailable {
-                                viewModel.findHint()
-                            } else {
+                            if !viewModel.findHint() {
                                 flashNoHintsBanner()
                             }
                         }
@@ -186,7 +184,6 @@ public struct BeecellView: View {
                                                 viewModel.doubleClickMove(card: card, from: cell)
                                             }
                                         )
-                                        .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == cell.id || viewModel.activeHint?.targetPileId == cell.id))
                                         .background(GeometryReader { geo in
                                             Color.clear
                                                 .onAppear { pileFrames[cell.id] = geo.frame(in: .global) }
@@ -222,7 +219,6 @@ public struct BeecellView: View {
                                                 handleDragEnded()
                                             }
                                         )
-                                        .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == foundation.id || viewModel.activeHint?.targetPileId == foundation.id))
                                         .background(GeometryReader { geo in
                                             Color.clear
                                                 .onAppear { pileFrames[foundation.id] = geo.frame(in: .global) }
@@ -256,7 +252,6 @@ public struct BeecellView: View {
                                             onDragEnded: { handleDragEnded() },
                                             onDoubleClick: { card in viewModel.doubleClickMove(card: card, from: cell) }
                                         )
-                                        .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == cell.id || viewModel.activeHint?.targetPileId == cell.id))
                                         .background(GeometryReader { geo in
                                             Color.clear
                                                 .onAppear { pileFrames[cell.id] = geo.frame(in: .global) }
@@ -286,7 +281,6 @@ public struct BeecellView: View {
                                             onDragChanged: { trans in dragOffset = trans },
                                             onDragEnded: { handleDragEnded() }
                                         )
-                                        .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == foundation.id || viewModel.activeHint?.targetPileId == foundation.id))
                                         .background(GeometryReader { geo in
                                             Color.clear
                                                 .onAppear { pileFrames[foundation.id] = geo.frame(in: .global) }
@@ -316,7 +310,6 @@ public struct BeecellView: View {
                                             onDragEnded: { handleDragEnded() },
                                             onDoubleClick: { card in viewModel.doubleClickMove(card: card, from: cell) }
                                         )
-                                        .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == cell.id || viewModel.activeHint?.targetPileId == cell.id))
                                         .background(GeometryReader { geo in
                                             Color.clear
                                                 .onAppear { pileFrames[cell.id] = geo.frame(in: .global) }
@@ -346,7 +339,6 @@ public struct BeecellView: View {
                                             onDragChanged: { trans in dragOffset = trans },
                                             onDragEnded: { handleDragEnded() }
                                         )
-                                        .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.sourcePileId == foundation.id || viewModel.activeHint?.targetPileId == foundation.id))
                                         .background(GeometryReader { geo in
                                             Color.clear
                                                 .onAppear { pileFrames[foundation.id] = geo.frame(in: .global) }

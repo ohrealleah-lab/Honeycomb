@@ -8,8 +8,8 @@ namespace SoliBee.Desktop.Views;
 // highlight) and PileView (whole-pile highlight) so the two stay in sync.
 internal sealed class HintPulseAnimation
 {
-    private const double TotalMs = 2000;
-    private const int Pulses = 4;
+    private const double TotalMs = 1800;
+    private const int Pulses = 2;
 
     private DispatcherTimer? _timer;
     private double _elapsedMs;

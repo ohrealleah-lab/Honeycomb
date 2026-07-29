@@ -1304,16 +1304,17 @@ public partial class CardView : UserControl
         if (CardFace == null || Card == null || !Card.IsFaceUp) return;
         _hintPulseBrush = new SolidColorBrush(Color.Parse("#FFD700"));
         CardFace.BorderBrush     = _hintPulseBrush;
-        CardFace.BorderThickness = new Thickness(3.5);
+        CardFace.BorderThickness = new Thickness(4);
         _hintPulse.Start(alpha =>
         {
-            byte a = (byte)(160 + (int)(95 * alpha));
+            byte a = (byte)(255 * alpha);
             _hintPulseBrush!.Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00);
-            CardFace.BoxShadow = new BoxShadows(new BoxShadow
+            var shadow = new BoxShadow
             {
-                OffsetX = 0, OffsetY = 0, Blur = 4, Spread = 0,
-                Color = Color.FromArgb((byte)(a * 0.8), 0xFF, 0xD7, 0x00)
-            });
+                OffsetX = 0, OffsetY = 0, Blur = 6, Spread = 1,
+                Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00)
+            };
+            CardFace.BoxShadow = new BoxShadows(shadow);
         });
     }
 

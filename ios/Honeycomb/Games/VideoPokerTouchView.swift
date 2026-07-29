@@ -290,6 +290,7 @@ struct VideoPokerSettingsSection: View {
 
                 Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
                 Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
+                    .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
                 Toggle("Hide Bet Board", isOn: $viewModel.options.hideBetBoard)
             }
             .disabledDuringGameplay(isMidHand)
@@ -316,6 +317,11 @@ struct VideoPokerStatsSheet: View {
                     Text("Hands Dealt")
                     Spacer()
                     Text("\(viewModel.state.handsDealt)").foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("Royal Flushes")
+                    Spacer()
+                    Text("\(viewModel.statistics.royalFlushCount)").foregroundStyle(.secondary)
                 }
                 HStack {
                     Text("Session Credits")

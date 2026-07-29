@@ -149,11 +149,15 @@ public final class BlackjackViewModel {
         // Dealer blackjack ends the hand immediately — checked here by raw rank
         // (ignoring the hole card's face-down state) rather than waiting for it to be
         // revealed, so the player can never act (Hit/Stand/Double/Split) against a
-        // hidden dealer natural. Matches the Windows port's peek timing.
+        // hidden dealer natural. Matches the Windows port's peek timing. Still delayed
+        // a beat before resolving (unlike a bare synchronous call) so the player sees
+        // their own cards land before the hand auto-completes out from under them.
         let dealerRanks = state.dealerCards.map { $0.rank }
         let dealerHasBlackjack = dealerRanks.count == 2 && dealerRanks.contains(1) && dealerRanks.contains { $0 >= 10 }
         if dealerHasBlackjack {
-            executeDealerTurn()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.executeDealerTurn()
+            }
             return
         }
 

@@ -693,9 +693,10 @@ public final class BeecellViewModel {
     private var lastMoveSourceId: String? = nil
     private var lastMoveTargetId: String? = nil
 
-    public func findHint() {
+    @discardableResult
+    public func findHint() -> Bool {
         hintClearTask?.cancel()
-        HintCycling.findHint(
+        return HintCycling.findHint(
             activeHint: &activeHint,
             hintQueue: &hintQueue,
             hintQueueIndex: &hintQueueIndex,
@@ -715,48 +716,67 @@ public final class BeecellViewModel {
             targetPileId: hint.targetPileId, description: prefix + hint.description)
     }
 
-    public var hasHintsAvailable: Bool { !collectHints().isEmpty }
-
     public var debugBannerRequest: DebugBannerKind? = nil
 
-    private func collectHints() -> [HintMove] {
+    private func isSafeFoundationMove(card: Card) -> Bool {
+        if card.rank <= 2 { return true }
+        let isRed = card.suit == .hearts || card.suit == .diamonds
+        let reqRank = card.rank - 1
+        var safeCount = 0
+        for foundation in state.foundations {
+            if let top = foundation.topCard {
+                let topIsRed = top.suit == .hearts || top.suit == .diamonds
+                if topIsRed != isRed && top.rank >= reqRank {
+                    safeCount += 1
+                }
+            }
+        }
+        return safeCount == 2
+    }
+
+    private func evaluateImmediateMoves(depth: Int = 0) -> [(HintMove, Int)] {
         var scored: [(HintMove, Int)] = []
 
-        // Foundation moves (highest value)
+        // Foundation moves
         for cell in state.freeCells {
             guard let top = cell.topCard else { continue }
             for foundation in state.foundations where isValidMove(cards: [top], to: foundation) {
+                let score = isSafeFoundationMove(card: top) ? 1000 : 200
                 scored.append((HintMove(card: top, sourcePileId: cell.id, targetPileId: foundation.id,
-                    description: "Move \(top.rankString)\(top.suit.symbol) from Free Cell to Foundation."), 1000))
+                    description: "Move \(top.rankString)\(top.suit.symbol) from Free Cell to Foundation."), score))
             }
         }
         for col in state.tableau {
             guard let top = col.topCard else { continue }
             for foundation in state.foundations where isValidMove(cards: [top], to: foundation) {
+                let score = isSafeFoundationMove(card: top) ? 1000 : 200
                 scored.append((HintMove(card: top, sourcePileId: col.id, targetPileId: foundation.id,
-                    description: "Move \(top.rankString)\(top.suit.symbol) to Foundation."), 1000))
+                    description: "Move \(top.rankString)\(top.suit.symbol) to Foundation."), score))
             }
         }
 
-        // Tableau-to-tableau: score higher if it frees a column or moves a longer sequence.
-        // Tries each target's suffix lengths longest-first and stops at the first legal
-        // one — against an empty target, isValidMove passes unconditionally for every
-        // length up to the supermove cap, so without the longest-first + break here, a
-        // single long run would generate one near-duplicate hint per suffix length.
+        // Tableau to tableau
         for sourceCol in state.tableau {
-            guard !sourceCol.isEmpty else { continue }
-            var seqStart = sourceCol.cards.count - 1
-            while seqStart > 0 {
-                let upper = sourceCol.cards[seqStart - 1], lower = sourceCol.cards[seqStart]
-                if upper.rank == lower.rank + 1 && upper.isRed != lower.isRed { seqStart -= 1 } else { break }
+            if sourceCol.isEmpty { continue }
+
+            var maxDraggable = 1
+            for i in (1..<sourceCol.cards.count).reversed() {
+                if sourceCol.cards[i].rank == sourceCol.cards[i-1].rank - 1 &&
+                   sourceCol.cards[i].isRed != sourceCol.cards[i-1].isRed {
+                    maxDraggable += 1
+                } else {
+                    break
+                }
             }
+
             for targetCol in state.tableau where targetCol.id != sourceCol.id {
-                for idx in seqStart..<sourceCol.cards.count {
-                    let dragStack = Array(sourceCol.cards[idx...])
+                for len in (1...maxDraggable).reversed() {
+                    let dragStack = Array(sourceCol.cards[(sourceCol.cards.count - len)...])
                     guard isValidMove(cards: dragStack, to: targetCol) else { continue }
-                    if targetCol.isEmpty && dragStack.count == 1 && idx == 0 { continue }
+                    if targetCol.isEmpty && dragStack.count == 1 && len == maxDraggable { continue }
                     let freesColumn = dragStack.count == sourceCol.cards.count
-                    let score = freesColumn ? 700 : 400 + dragStack.count * 20
+                    let isPointlessEmptyToEmpty = freesColumn && targetCol.isEmpty
+                    let score = isPointlessEmptyToEmpty ? 50 : (freesColumn ? 700 : 400 + dragStack.count * 20)
                     scored.append((HintMove(card: dragStack.first!, sourcePileId: sourceCol.id, targetPileId: targetCol.id,
                         description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to Tableau."), score))
                     break
@@ -769,7 +789,7 @@ public final class BeecellViewModel {
             guard let top = cell.topCard else { continue }
             for targetCol in state.tableau where isValidMove(cards: [top], to: targetCol) {
                 scored.append((HintMove(card: top, sourcePileId: cell.id, targetPileId: targetCol.id,
-                    description: "Move \(top.rankString)\(top.suit.symbol) from Free Cell to Tableau."), 400))
+                    description: "Move \(top.rankString)\(top.suit.symbol) from Free Cell to Tableau."), 500))
             }
         }
 
@@ -783,6 +803,61 @@ public final class BeecellViewModel {
             }
         }
 
+        if depth == 0 {
+            var enhancedScores: [(HintMove, Int)] = []
+            let originalState = self.state
+            
+            for (move, baseScore) in scored {
+                var validSource = false
+                var dragStack: [Card] = []
+                
+                if let cellIdx = self.state.freeCells.firstIndex(where: { $0.id == move.sourcePileId }) {
+                    if let cellTop = self.state.freeCells[cellIdx].cards.last, cellTop.id == move.card.id {
+                        dragStack = [cellTop]
+                        self.state.freeCells[cellIdx].cards.removeLast()
+                        validSource = true
+                    }
+                } else if let srcIdx = self.state.tableau.firstIndex(where: { $0.id == move.sourcePileId }) {
+                    if let cardIdx = self.state.tableau[srcIdx].cards.firstIndex(where: { $0.id == move.card.id }) {
+                        dragStack = Array(self.state.tableau[srcIdx].cards[cardIdx...])
+                        self.state.tableau[srcIdx].cards.removeSubrange(cardIdx...)
+                        validSource = true
+                    }
+                }
+                
+                guard validSource else {
+                    enhancedScores.append((move, baseScore))
+                    self.state = originalState
+                    continue
+                }
+                
+                if let tgtIdx = self.state.tableau.firstIndex(where: { $0.id == move.targetPileId }) {
+                    self.state.tableau[tgtIdx].cards.append(contentsOf: dragStack)
+                } else if let tgtIdx = self.state.foundations.firstIndex(where: { $0.id == move.targetPileId }) {
+                    self.state.foundations[tgtIdx].cards.append(contentsOf: dragStack)
+                } else if let cellIdx = self.state.freeCells.firstIndex(where: { $0.id == move.targetPileId }) {
+                    self.state.freeCells[cellIdx].cards.append(contentsOf: dragStack)
+                }
+                
+                let nextLevel = evaluateImmediateMoves(depth: 1)
+                if let bestNext = nextLevel.max(by: { $0.1 < $1.1 }) {
+                    let futureScore = Int(Double(bestNext.1) * 0.8)
+                    enhancedScores.append((move, baseScore + futureScore))
+                } else {
+                    enhancedScores.append((move, baseScore))
+                }
+                
+                self.state = originalState
+            }
+            scored = enhancedScores
+        }
+
+        return scored
+    }
+
+    private func collectHints() -> [HintMove] {
+        let scored = evaluateImmediateMoves(depth: 0)
+
         let filtered = scored.filter { (hint, _) in
             guard let src = lastMoveSourceId, let tgt = lastMoveTargetId else { return true }
             return !(hint.sourcePileId == tgt && hint.targetPileId == src)
@@ -792,13 +867,15 @@ public final class BeecellViewModel {
     }
 
     private func scheduleHintClear() {
-        let task = DispatchWorkItem { [weak self] in
+        hintClearTask?.cancel()
+
+        let clearTask = DispatchWorkItem { [weak self] in
             self?.activeHint = nil
             self?.hintQueue = []
             self?.hintQueueIndex = 0
         }
-        hintClearTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
+        hintClearTask = clearTask
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: clearTask)
     }
 
     public func clearHint() {

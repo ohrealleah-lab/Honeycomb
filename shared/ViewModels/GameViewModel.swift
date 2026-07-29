@@ -851,9 +851,10 @@ public final class GameViewModel {
     private var lastMoveSourceId: String? = nil
     private var lastMoveTargetId: String? = nil
 
-    public func findHint() {
+    @discardableResult
+    public func findHint() -> Bool {
         hintClearTask?.cancel()
-        HintCycling.findHint(
+        return HintCycling.findHint(
             activeHint: &activeHint,
             hintQueue: &hintQueue,
             hintQueueIndex: &hintQueueIndex,
@@ -873,25 +874,41 @@ public final class GameViewModel {
             targetPileId: hint.targetPileId, description: prefix + hint.description)
     }
 
-    public var hasHintsAvailable: Bool { !collectHints().isEmpty }
-
     public var debugBannerRequest: DebugBannerKind? = nil
 
-    private func collectHints() -> [HintMove] {
+    private func isSafeFoundationMove(card: Card) -> Bool {
+        if card.rank <= 2 { return true }
+        let isRed = card.suit == .hearts || card.suit == .diamonds
+        let reqRank = card.rank - 1
+        var safeCount = 0
+        for foundation in state.foundations {
+            if let top = foundation.topCard {
+                let topIsRed = top.suit == .hearts || top.suit == .diamonds
+                if topIsRed != isRed && top.rank >= reqRank {
+                    safeCount += 1
+                }
+            }
+        }
+        return safeCount == 2
+    }
+
+    private func evaluateImmediateMoves(depth: Int = 0) -> [(HintMove, Int)] {
         var scored: [(HintMove, Int)] = []
 
         // Foundation moves
         if let topWaste = state.waste.topCard {
             for foundation in state.foundations where isValidMove(cards: [topWaste], to: foundation) {
+                let score = isSafeFoundationMove(card: topWaste) ? 1000 : 200
                 scored.append((HintMove(card: topWaste, sourcePileId: state.waste.id, targetPileId: foundation.id,
-                    description: "Move \(topWaste.rankString)\(topWaste.suit.symbol) from Waste to Foundation."), 1000))
+                    description: "Move \(topWaste.rankString)\(topWaste.suit.symbol) from Waste to Foundation."), score))
             }
         }
         for col in state.tableau {
             guard let top = col.topCard else { continue }
             for foundation in state.foundations where isValidMove(cards: [top], to: foundation) {
+                let score = isSafeFoundationMove(card: top) ? 1000 : 200
                 scored.append((HintMove(card: top, sourcePileId: col.id, targetPileId: foundation.id,
-                    description: "Move \(top.rankString)\(top.suit.symbol) to Foundation."), 1000))
+                    description: "Move \(top.rankString)\(top.suit.symbol) to Foundation."), score))
             }
         }
 
@@ -922,17 +939,22 @@ public final class GameViewModel {
                 for targetCol in state.tableau where targetCol.id != col.id && isValidMove(cards: dragStack, to: targetCol) {
                     guard isProgressiveMove(cards: dragStack, source: col, target: targetCol) else { continue }
 
-                    if startIdx == firstFaceUpIdx && firstFaceUpIdx > 0 {
+                    let emptiesColumn = (startIdx == 0)
+                    let revealsHidden = (startIdx == firstFaceUpIdx && firstFaceUpIdx > 0)
+                    let vacateBonus = emptiesColumn ? 250 : 0
+                    
+                    if revealsHidden {
                         let faceDownCount = firstFaceUpIdx
                         let label = faceDownCount == 1 ? "Reveal 1 face-down card." : "Reveal \(faceDownCount) face-down cards."
                         scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
-                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) — \(label)"), 500 + faceDownCount * 100))
+                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) — \(label)"), 500 + faceDownCount * 150 + vacateBonus))
                     } else if !targetCol.isEmpty {
                         scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
-                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(targetCol.topCard!.rankString)\(targetCol.topCard!.suit.symbol)."), 150))
+                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(targetCol.topCard!.rankString)\(targetCol.topCard!.suit.symbol)."), 150 + vacateBonus))
                     } else {
+                        let score = emptiesColumn ? 50 : 150
                         scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
-                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to an empty column."), 150))
+                            description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to an empty column."), score))
                     }
                 }
             }
@@ -949,7 +971,67 @@ public final class GameViewModel {
                 sourcePileId: state.waste.id, targetPileId: state.stock.id, description: "Recycle Waste pile to Stock."), 20))
         }
 
-        // Filter reversal of the last move made, then sort best-first
+        if depth == 0 {
+            var enhancedScores: [(HintMove, Int)] = []
+            let originalState = self.state
+            
+            for (move, baseScore) in scored {
+                if move.sourcePileId.isEmpty || move.sourcePileId == state.stock.id || (move.sourcePileId == state.waste.id && move.targetPileId == state.stock.id) {
+                    enhancedScores.append((move, baseScore))
+                    continue
+                }
+                
+                var validSource = false
+                var dragStack: [Card] = []
+                
+                if move.sourcePileId == self.state.waste.id {
+                    if let wasteTop = self.state.waste.cards.last, wasteTop.id == move.card.id {
+                        dragStack = [wasteTop]
+                        self.state.waste.cards.removeLast()
+                        validSource = true
+                    }
+                } else if let srcIdx = self.state.tableau.firstIndex(where: { $0.id == move.sourcePileId }) {
+                    if let cardIdx = self.state.tableau[srcIdx].cards.firstIndex(where: { $0.id == move.card.id }) {
+                        dragStack = Array(self.state.tableau[srcIdx].cards[cardIdx...])
+                        self.state.tableau[srcIdx].cards.removeSubrange(cardIdx...)
+                        if let last = self.state.tableau[srcIdx].cards.last, !last.faceUp {
+                            self.state.tableau[srcIdx].cards[self.state.tableau[srcIdx].cards.count - 1].faceUp = true
+                        }
+                        validSource = true
+                    }
+                }
+                
+                guard validSource else {
+                    enhancedScores.append((move, baseScore))
+                    self.state = originalState
+                    continue
+                }
+                
+                if let tgtIdx = self.state.tableau.firstIndex(where: { $0.id == move.targetPileId }) {
+                    self.state.tableau[tgtIdx].cards.append(contentsOf: dragStack)
+                } else if let tgtIdx = self.state.foundations.firstIndex(where: { $0.id == move.targetPileId }) {
+                    self.state.foundations[tgtIdx].cards.append(contentsOf: dragStack)
+                }
+                
+                let nextLevel = evaluateImmediateMoves(depth: 1)
+                if let bestNext = nextLevel.max(by: { $0.1 < $1.1 }) {
+                    let futureScore = Int(Double(bestNext.1) * 0.8)
+                    enhancedScores.append((move, baseScore + futureScore))
+                } else {
+                    enhancedScores.append((move, baseScore))
+                }
+                
+                self.state = originalState
+            }
+            scored = enhancedScores
+        }
+
+        return scored
+    }
+
+    private func collectHints() -> [HintMove] {
+        let scored = evaluateImmediateMoves(depth: 0)
+
         let filtered = scored.filter { (hint, _) in
             guard let src = lastMoveSourceId, let tgt = lastMoveTargetId else { return true }
             return !(hint.sourcePileId == tgt && hint.targetPileId == src)
@@ -959,13 +1041,15 @@ public final class GameViewModel {
     }
 
     private func scheduleHintClear() {
-        let task = DispatchWorkItem { [weak self] in
+        hintClearTask?.cancel()
+
+        let clearTask = DispatchWorkItem { [weak self] in
             self?.activeHint = nil
             self?.hintQueue = []
             self?.hintQueueIndex = 0
         }
-        hintClearTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
+        hintClearTask = clearTask
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: clearTask)
     }
 
     public func clearHint() {

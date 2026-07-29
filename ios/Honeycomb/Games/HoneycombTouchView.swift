@@ -733,6 +733,7 @@ struct HoneycombSettingsSection: View {
             Group {
                 Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
                 Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
+                    .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
                 Toggle("Point Highlights", isOn: $viewModel.options.showPointHighlights)
                 Toggle("Hide Hint Button", isOn: $viewModel.options.hideHintButton)
 

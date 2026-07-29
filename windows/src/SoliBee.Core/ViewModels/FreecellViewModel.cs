@@ -754,7 +754,60 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         ActiveHint      = hint with { Index = shownIndex + 1, Total = _hintCycleList.Count };
     }
 
-    private List<HintMove> CollectAllHints()
+    private bool IsSafeFoundationMove(Card card)
+    {
+        if (card.Rank <= 2) return true;
+        bool isRed = card.Suit == CardSuit.Hearts || card.Suit == CardSuit.Diamonds;
+        int reqRank = card.Rank - 1;
+        int safeCount = 0;
+        foreach (var foundation in Foundations)
+        {
+            if (foundation.Cards.Count > 0)
+            {
+                var top = foundation.Cards.Last();
+                bool topIsRed = top.Suit == CardSuit.Hearts || top.Suit == CardSuit.Diamonds;
+                if (topIsRed != isRed && top.Rank >= reqRank)
+                {
+                    safeCount++;
+                }
+            }
+        }
+        return safeCount == 2;
+    }
+
+    private GameStateSnapshot CreateVirtualSnapshot()
+    {
+        var snapshot = new GameStateSnapshot();
+        foreach (var f in Foundations) snapshot.PileCards.Add(f.Cards.ToList());
+        foreach (var t in Tableaus) snapshot.PileCards.Add(t.Cards.ToList());
+        foreach (var c in FreeCells) snapshot.PileCards.Add(c.Cards.ToList());
+        return snapshot;
+    }
+
+    private void RestoreVirtualSnapshot(GameStateSnapshot snapshot)
+    {
+        int index = 0;
+        for (int i = 0; i < Foundations.Count; i++)
+        {
+            Foundations[i].Cards.Clear();
+            foreach (var c in snapshot.PileCards[index]) Foundations[i].Cards.Add(c);
+            index++;
+        }
+        for (int i = 0; i < Tableaus.Count; i++)
+        {
+            Tableaus[i].Cards.Clear();
+            foreach (var c in snapshot.PileCards[index]) Tableaus[i].Cards.Add(c);
+            index++;
+        }
+        for (int i = 0; i < FreeCells.Count; i++)
+        {
+            FreeCells[i].Cards.Clear();
+            foreach (var c in snapshot.PileCards[index]) FreeCells[i].Cards.Add(c);
+            index++;
+        }
+    }
+
+    private List<(int Score, HintMove Hint)> EvaluateImmediateMoves(int depth = 0)
     {
         var scored = new List<(int Score, HintMove Hint)>();
 
@@ -765,8 +818,11 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
             var card = cell.Cards.Last();
             foreach (var f in Foundations)
                 if (CanMoveCards(new List<Card> { card }, f))
-                    scored.Add((1000, new HintMove(card, cell.Id, f.Id,
+                {
+                    int score = IsSafeFoundationMove(card) ? 1000 : 200;
+                    scored.Add((score, new HintMove(card, cell.Id, f.Id,
                         $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} from Free Cell to Foundation.")));
+                }
         }
 
         foreach (var tab in Tableaus)
@@ -775,8 +831,11 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
             var card = tab.Cards.Last();
             foreach (var f in Foundations)
                 if (CanMoveCards(new List<Card> { card }, f))
-                    scored.Add((1000, new HintMove(card, tab.Id, f.Id,
+                {
+                    int score = IsSafeFoundationMove(card) ? 1000 : 200;
+                    scored.Add((score, new HintMove(card, tab.Id, f.Id,
                         $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} to Foundation.")));
+                }
         }
 
         // Priority 2 (700, empties source) / Priority 3 (400 + length×20): tableau → tableau
@@ -789,8 +848,6 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
             {
                 if (tgt.Id == src.Id) continue;
 
-                // Try the longest legal sub-sequence of the movable run (dragging fewer cards
-                // from further down the run is still a legal move if the full run is too long).
                 for (int len = maxSeq.Count; len >= 1; len--)
                 {
                     var subSeq = maxSeq.GetRange(maxSeq.Count - len, len);
@@ -798,28 +855,29 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
 
                     bool emptiesSource = len == src.Cards.Count;
                     bool aloneToEmpty  = len == 1 && src.Cards.Count == 1 && tgt.Cards.Count == 0;
-                    if (aloneToEmpty) break; // suppressed: would just re-create the same state
+                    if (aloneToEmpty) break;
 
-                    int score = emptiesSource ? 700 : 400 + len * 20;
+                    bool isPointlessEmptyToEmpty = emptiesSource && tgt.Cards.Count == 0;
+                    int score = isPointlessEmptyToEmpty ? 50 : (emptiesSource ? 700 : 400 + len * 20);
                     scored.Add((score, new HintMove(subSeq[0], src.Id, tgt.Id,
                         $"Move {RankStr(subSeq[0].Rank)}{SuitStr(subSeq[0].Suit)} sequence.")));
-                    break; // longest legal length for this (src, tgt) pair wins
+                    break;
                 }
             }
         }
 
-        // Priority 4 (400): free cell → tableau
+        // Priority 4 (500): free cell → tableau
         foreach (var cell in FreeCells)
         {
             if (cell.Cards.Count == 0) continue;
             var card = cell.Cards.Last();
             foreach (var tgt in Tableaus)
                 if (CanMoveCards(new List<Card> { card }, tgt))
-                    scored.Add((400, new HintMove(card, cell.Id, tgt.Id,
+                    scored.Add((500, new HintMove(card, cell.Id, tgt.Id,
                         $"Move {RankStr(card.Rank)}{SuitStr(card.Suit)} from Free Cell to Tableau.")));
         }
 
-        // Priority 5 (100): tableau top → free cell — last resort, one suggestion per source card
+        // Priority 5 (100): tableau top → free cell
         foreach (var src in Tableaus)
         {
             if (src.Cards.Count == 0) continue;
@@ -835,6 +893,93 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
             }
         }
 
+        if (depth == 0)
+        {
+            var enhancedScores = new List<(int Score, HintMove Hint)>();
+            var originalState = CreateVirtualSnapshot();
+            
+            foreach (var (baseScore, move) in scored)
+            {
+                bool validSource = false;
+                List<Card> dragStack = new();
+                
+                var srcCell = FreeCells.FirstOrDefault(c => c.Id == move.SourcePileId);
+                if (srcCell != null)
+                {
+                    if (srcCell.Cards.Count > 0 && srcCell.Cards.Last().Id == move.Card.Id)
+                    {
+                        dragStack.Add(srcCell.Cards.Last());
+                        srcCell.Cards.RemoveAt(srcCell.Cards.Count - 1);
+                        validSource = true;
+                    }
+                }
+                else
+                {
+                    var srcCol = Tableaus.FirstOrDefault(t => t.Id == move.SourcePileId);
+                    if (srcCol != null)
+                    {
+                        int cardIdx = srcCol.Cards.FindIndex(c => c.Id == move.Card.Id);
+                        if (cardIdx >= 0)
+                        {
+                            dragStack = srcCol.Cards.GetRange(cardIdx, srcCol.Cards.Count - cardIdx);
+                            srcCol.Cards.RemoveRange(cardIdx, dragStack.Count);
+                            validSource = true;
+                        }
+                    }
+                }
+                
+                if (!validSource)
+                {
+                    enhancedScores.Add((baseScore, move));
+                    RestoreVirtualSnapshot(originalState);
+                    continue;
+                }
+                
+                var tgtCol = Tableaus.FirstOrDefault(t => t.Id == move.TargetPileId);
+                if (tgtCol != null)
+                {
+                    tgtCol.Cards.AddRange(dragStack);
+                }
+                else
+                {
+                    var tgtFnd = Foundations.FirstOrDefault(f => f.Id == move.TargetPileId);
+                    if (tgtFnd != null)
+                    {
+                        tgtFnd.Cards.AddRange(dragStack);
+                    }
+                    else
+                    {
+                        var tgtCell = FreeCells.FirstOrDefault(c => c.Id == move.TargetPileId);
+                        if (tgtCell != null)
+                        {
+                            tgtCell.Cards.AddRange(dragStack);
+                        }
+                    }
+                }
+                
+                var nextLevel = EvaluateImmediateMoves(1);
+                if (nextLevel.Count > 0)
+                {
+                    int bestNextScore = nextLevel.Max(x => x.Score);
+                    int futureScore = (int)(bestNextScore * 0.8);
+                    enhancedScores.Add((baseScore + futureScore, move));
+                }
+                else
+                {
+                    enhancedScores.Add((baseScore, move));
+                }
+                
+                RestoreVirtualSnapshot(originalState);
+            }
+            scored = enhancedScores;
+        }
+
+        return scored;
+    }
+
+    private List<HintMove> CollectAllHints()
+    {
+        var scored = EvaluateImmediateMoves(0);
         var hints = scored.OrderByDescending(s => s.Score).Select(s => s.Hint).ToList();
 
         // Last-move filter: drop the exact reversal of the last move (source/target swapped).

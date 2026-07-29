@@ -713,7 +713,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         ActiveHint      = hint with { Index = shownIndex + 1, Total = _hintCycleList.Count };
     }
 
-    private List<HintMove> CollectAllHints()
+    private List<(int Score, HintMove Hint)> EvaluateImmediateMoves(int depth = 0)
     {
         var scored = new List<(int Score, HintMove Hint)>();
 
@@ -742,12 +742,15 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
 
                         if (revealsHidden)
                         {
-                            scored.Add((350 + firstFaceUpIdx * 50, new HintMove(subSeq[0], src.Id, tgt.Id,
+                            scored.Add((350 + firstFaceUpIdx * 150, new HintMove(subSeq[0], src.Id, tgt.Id,
                                 $"Move {RankStr(subSeq[0].Rank)}{SuitStr(subSeq[0].Suit)} sequence.")));
                             break;
                         }
                         if (emptiesColumn) continue; // suppressed — try a shorter, partial sequence instead
-                        scored.Add((200, new HintMove(subSeq[0], src.Id, tgt.Id,
+                        
+                        bool breaksCrossSuit = startIdx > 0 && src.Cards[startIdx - 1].IsFaceUp && src.Cards[startIdx - 1].Suit != subSeq[0].Suit;
+                        int score = breaksCrossSuit ? 150 : 50;
+                        scored.Add((score, new HintMove(subSeq[0], src.Id, tgt.Id,
                             $"Move {RankStr(subSeq[0].Rank)}{SuitStr(subSeq[0].Suit)} sequence.")));
                         break;
                     }
@@ -762,6 +765,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
 
                         int startIdx = src.Cards.Count - len;
                         bool revealsHidden   = startIdx == firstFaceUpIdx && firstFaceUpIdx > 0;
+                        bool emptiesColumn   = src.Cards.Count - len == 0;
 
                         // Check for lateral move: if the card we are breaking from is identical to the target
                         if (startIdx > 0 && src.Cards[startIdx - 1].IsFaceUp && 
@@ -772,12 +776,27 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
                         }
 
                         bool sameSuit        = subSeq[0].Suit == tgt.Cards.Last().Suit;
+                        int faceDownBonus    = revealsHidden ? firstFaceUpIdx * 150 : 0;
+                        int vacateBonus      = emptiesColumn ? 250 : 0;
+                        
+                        bool targetIsClean = true;
+                        var faceUpTargetCards = tgt.Cards.Where(c => c.IsFaceUp).ToList();
+                        if (faceUpTargetCards.Count > 1) {
+                            for (int i = 0; i < faceUpTargetCards.Count - 1; i++) {
+                                if (faceUpTargetCards[i].Suit != faceUpTargetCards[i+1].Suit) {
+                                    targetIsClean = false;
+                                    break;
+                                }
+                            }
+                        }
+                        int cleanStackPenalty = (!sameSuit && targetIsClean) ? -100 : 0;
+
                         int score = (sameSuit, revealsHidden) switch
                         {
-                            (true,  true)  => 1000 + firstFaceUpIdx * 100,
-                            (true,  false) => 900,
-                            (false, true)  => 600 + firstFaceUpIdx * 100,
-                            (false, false) => 400,
+                            (true,  true)  => 1000 + faceDownBonus + vacateBonus,
+                            (true,  false) => 900 + vacateBonus,
+                            (false, true)  => 600 + faceDownBonus + vacateBonus + cleanStackPenalty,
+                            (false, false) => 400 + vacateBonus + cleanStackPenalty,
                         };
                         scored.Add((score, new HintMove(subSeq[0], src.Id, tgt.Id,
                             $"Move {RankStr(subSeq[0].Rank)}{SuitStr(subSeq[0].Suit)} sequence.")));
@@ -797,6 +816,74 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
                 scored.Add((25, new HintMove(dealCard, "", "", "Fill all empty columns before dealing cards.")));
         }
 
+        if (depth == 0)
+        {
+            var enhancedScores = new List<(int Score, HintMove Hint)>();
+            
+            foreach (var (baseScore, move) in scored)
+            {
+                if (string.IsNullOrEmpty(move.SourcePileId) || move.Card.Id == "deal")
+                {
+                    enhancedScores.Add((baseScore, move));
+                    continue;
+                }
+                
+                var srcCol = Tableaus.FirstOrDefault(t => t.Id == move.SourcePileId);
+                var tgtCol = Tableaus.FirstOrDefault(t => t.Id == move.TargetPileId);
+                
+                if (srcCol == null || tgtCol == null)
+                {
+                    enhancedScores.Add((baseScore, move));
+                    continue;
+                }
+                
+                int cardIdx = srcCol.Cards.FindIndex(c => c.Id == move.Card.Id);
+                if (cardIdx >= 0)
+                {
+                    var dragStack = srcCol.Cards.GetRange(cardIdx, srcCol.Cards.Count - cardIdx);
+                    srcCol.Cards.RemoveRange(cardIdx, dragStack.Count);
+                    bool wasFlipped = false;
+                    if (srcCol.Cards.Count > 0 && !srcCol.Cards.Last().IsFaceUp)
+                    {
+                        srcCol.Cards[^1] = srcCol.Cards[^1] with { IsFaceUp = true };
+                        wasFlipped = true;
+                    }
+                    tgtCol.Cards.AddRange(dragStack);
+                    
+                    var nextLevel = EvaluateImmediateMoves(1);
+                    if (nextLevel.Count > 0)
+                    {
+                        int bestNextScore = nextLevel.Max(x => x.Score);
+                        int futureScore = (int)(bestNextScore * 0.8);
+                        enhancedScores.Add((baseScore + futureScore, move));
+                    }
+                    else
+                    {
+                        enhancedScores.Add((baseScore, move));
+                    }
+                    
+                    // Undo move
+                    tgtCol.Cards.RemoveRange(tgtCol.Cards.Count - dragStack.Count, dragStack.Count);
+                    if (wasFlipped)
+                    {
+                        srcCol.Cards[^1] = srcCol.Cards[^1] with { IsFaceUp = false };
+                    }
+                    srcCol.Cards.AddRange(dragStack);
+                }
+                else
+                {
+                    enhancedScores.Add((baseScore, move));
+                }
+            }
+            scored = enhancedScores;
+        }
+
+        return scored;
+    }
+
+    private List<HintMove> CollectAllHints()
+    {
+        var scored = EvaluateImmediateMoves(0);
         var hints = scored.OrderByDescending(s => s.Score).Select(s => s.Hint).ToList();
 
         // Last-move filter: drop the exact reversal of the last move (source/target swapped).
