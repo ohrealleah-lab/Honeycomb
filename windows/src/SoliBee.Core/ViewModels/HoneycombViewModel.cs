@@ -168,6 +168,9 @@ public partial class HoneycombViewModel : ObservableObject
 
     public void StartNewMatch()
     {
+        _isAnimating = false;
+        ActiveHint = null;
+        PendingSteal = null;
         State.Phase = HoneycombPhase.Playing;
         State.UndoStack.Clear();
         State.ActiveRules = DetermineActiveRules();
@@ -459,6 +462,16 @@ public partial class HoneycombViewModel : ObservableObject
     public void InitializeGame() => StartNewMatch();
 
     public void RestartGame() => StartNewMatch();
+
+    public void QuitMatch()
+    {
+        _matchGeneration++;
+        _isAnimating = false;
+        ActiveHint = null;
+        PendingSteal = null;
+        State = new HoneycombState();
+        NotifyStateChanged();
+    }
 
     // Rematch: start a new match reusing the same opponent card pool + rules from the
     // just-finished match. If Swap is active, a fresh trade is rolled against this same

@@ -166,6 +166,12 @@ public partial class HoneycombView : UserControl
             _overlayDismissed = false;
             _resultSoundPlayed = false;
         }
+        else if (state.Phase == HoneycombPhase.PreMatch)
+        {
+            _isStealingCard = false;
+            _bannerActive = false;
+            _selectedHandIndex = -1;
+        }
 
         int currentEmptyCells = state.Board.Cells.Count(c => c.IsEmpty);
         if (currentEmptyCells < _lastEmptyCells)

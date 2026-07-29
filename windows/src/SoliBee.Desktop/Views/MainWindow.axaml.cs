@@ -517,7 +517,7 @@ public partial class MainWindow : Window
         {
             if (this.DataContext is HoneycombViewModel hVm)
             {
-                hVm.State = new HoneycombState(); // Reset back to pre-match
+                hVm.QuitMatch();
             }
         }
         _pendingAction = "";
