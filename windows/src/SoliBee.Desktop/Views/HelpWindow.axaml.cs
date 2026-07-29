@@ -34,8 +34,6 @@ public partial class HelpWindow : Window
     private void GoTo_Honeycomb(object? sender, RoutedEventArgs e) =>
         HoneycombAnchor.BringIntoView();
 
-    private void GoTo_NoStress(object? sender, RoutedEventArgs e) =>
-        NoStressAnchor.BringIntoView();
 
     private void GoTo_Themes(object? sender, RoutedEventArgs e) =>
         ThemesAnchor.BringIntoView();

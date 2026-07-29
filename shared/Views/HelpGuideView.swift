@@ -103,6 +103,9 @@ struct KlondikeHelpView: View {
             
             RuleSection(title: "💡 Strategy & Pro Tips",
                         text: "1. Prioritize Face-Down Cards: Always prioritize moves that reveal hidden cards in the longest tableau columns.\n2. Keep Columns Open: Don't clear a tableau column unless you already have a King ready to occupy it.\n3. Delay Foundation Moves: Avoid rushing cards into the foundation early if those cards might be needed to build lower sequences in the tableau.")
+
+            RuleSection(title: "🧘 No Stress Mode",
+                        text: "Enabling No Stress Mode in Options disables the game timer completely.")
         }
     }
 }
@@ -137,6 +140,9 @@ struct BeecellHelpView: View {
 
             RuleSection(title: "💡 Strategy & Pro Tips",
                         text: "1. Protect Your Free Cells: Treat free cells as temporary maneuvering space. Avoid filling all four free cells simultaneously, as it drastically reduces your sequence-moving capacity.\n2. Uncover Low Cards Early: Focus on freeing up Aces and 2s buried at the bottom of columns.\n3. Empty Columns are Gold: An empty column doubles your movement capacity and acts as an unrestricted free cell.")
+
+            RuleSection(title: "🧘 No Stress Mode",
+                        text: "Enabling No Stress Mode in Options disables the game timer completely.")
         }
     }
 }
@@ -169,6 +175,9 @@ struct SpiderHelpView: View {
 
             RuleSection(title: "💡 Strategy & Pro Tips",
                         text: "1. Same-Suit Over Mixed-Suit: Always prefer building same-suit runs. Mixed-suit stacks lock up your cards and cannot be moved together.\n2. Empty Columns First: Empty columns allow you to isolate mixed-suit stacks and re-organize them into clean same-suit runs.\n3. Delay Dealing: Exhaust every possible move on the board before clicking the stock.")
+
+            RuleSection(title: "🧘 No Stress Mode",
+                        text: "Enabling No Stress Mode in Options disables the game timer completely.")
         }
     }
 }
@@ -198,6 +207,9 @@ struct VideoPokerHelpView: View {
 
             RuleSection(title: "💡 Strategy & Pro Tips",
                         text: "1. Always Bet Max (5 Coins): The Royal Flush payout jumps from 250× to 800× only at 5 coins.\n2. Never Break a Made Hand (Except for 4-to-a-Royal): Only break a Straight or Flush if you are 1 card away from a Royal Flush.\n3. In Deuces Wild, Never Discard a 2: Deuces are wild—always hold every 2 dealt to you!")
+
+            RuleSection(title: "🧘 No Stress Mode",
+                        text: "Enabling No Stress Mode in Options switches the game into Free Play—hiding bets, credits, and pay tables so you can play risk-free without wagers.")
         }
     }
 }
@@ -228,6 +240,9 @@ struct BlackjackHelpView: View {
 
             RuleSection(title: "💡 Strategy & Pro Tips",
                         text: "1. Always Split Aces and 8s: Never split 10s or 5s.\n2. Double Down on 11: Always Double Down when your starting hand totals 11 against a dealer 2 through 10.\n3. Watch the Dealer's Upcard: If the dealer shows a 2 through 6, they have a high chance of busting—stand on hard 12 or higher and let the dealer draw.")
+
+            RuleSection(title: "🧘 No Stress Mode",
+                        text: "Enabling No Stress Mode in Options switches the game into Free Play—hiding bets and credits so you can play risk-free without wagers.")
         }
     }
 }
@@ -257,6 +272,9 @@ struct HoneycombHelpView: View {
                     ShortcutRow(action: "Show Best AI Move", shortcut: "Hint button")
                 }
             }
+
+            RuleSection(title: "🧘 No Stress Mode",
+                        text: "Enabling No Stress Mode in Options supplies you with a fixed strong deck every match and hides the Card Steal mechanics.")
         }
     }
 }
@@ -266,9 +284,6 @@ struct HoneycombHelpView: View {
 struct ThemesHelpView: View {
     var body: some View {
         HelpShell(title: "Themes & Global Settings", subtitle: "Customize the look of every game and adjust global modes.") {
-            RuleSection(title: "🧘 No Stress Mode",
-                        text: "• Universal Toggle: Enabling No Stress Mode in Options turns off all pressure across every game.\n• Solitaire Games: Disables timers completely.\n• Video Poker & Blackjack: Switches into Free Play—hides bets, credits, and pay tables so you can play risk-free without wagers.\n• Honeycomb: Supplies a fixed strong deck every match and hides Card Steal.")
-
             RuleSection(title: "🎨 Themes & Customization",
                         text: "• Felt Table: Choose from 5 preset felt colors (Green, Crimson, Royal Blue, Charcoal, Desert) or set a Custom Color via picker. Toggle edge vignette on/off.\n• Card Backs: Select built-in designs or upload custom .jpg/.png/.gif files.\n• Face Card Art: Upload custom image/GIF artwork individually for Aces, Jacks, Queens, and Kings.\n• Saved Themes: Snapshot your custom felt, card backs, and face art into named custom themes to apply anytime in one click!")
         }
