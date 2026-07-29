@@ -108,12 +108,43 @@ public partial class HoneycombViewModel : ObservableObject
         double stopProbabilityFirst = 1.0 / (originalPoolSize + 1);
         double targetSingleRuleRate = 1.0 / 3.0;
         double stopProbabilitySecond = targetSingleRuleRate / (1.0 - stopProbabilityFirst);
+        
+        int maxSlots = 2;
+        bool forceMustPickAll = false;
+        
+        if (Options.Difficulty == HoneycombDifficulty.UltraHard)
+        {
+            double roll = Random.Shared.NextDouble();
+            if (roll < 0.25) maxSlots = 4;
+            else if (roll < 0.70) maxSlots = 3;
+            else if (roll < 0.95) maxSlots = 2;
+            else if (roll < 0.99) maxSlots = 1;
+            else maxSlots = 0;
+            
+            if (maxSlots == 0 && normalBanned) maxSlots = 1;
+            forceMustPickAll = true;
+        }
+        else if (Options.Difficulty == HoneycombDifficulty.Hard)
+        {
+            double hardRoll = Random.Shared.NextDouble();
+            if (hardRoll < 0.01)
+            {
+                maxSlots = 4;
+                forceMustPickAll = true;
+            }
+            else if (hardRoll < 0.26)
+            {
+                maxSlots = 3;
+                forceMustPickAll = true;
+            }
+        }
+        
         var selected = new List<HoneycombRule>();
-        for (int slot = 0; slot < 2; slot++)
+        for (int slot = 0; slot < maxSlots; slot++)
         {
             if (pool.Count == 0) break;
 
-            bool mustPick = slot == 0 && normalBanned;
+            bool mustPick = (slot == 0 && normalBanned) || forceMustPickAll;
             double stopProbability = slot == 0 ? stopProbabilityFirst : stopProbabilitySecond;
             if (!mustPick && Random.Shared.NextDouble() < stopProbability) break;
 

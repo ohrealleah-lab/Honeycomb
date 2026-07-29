@@ -521,10 +521,35 @@ public final class HoneycombViewModel {
             let stopProbabilityFirst = 1.0 / Double(originalPoolSize + 1)
             let targetSingleRuleRate = 1.0 / 3.0
             let stopProbabilitySecond = targetSingleRuleRate / (1.0 - stopProbabilityFirst)
+            
+            var maxSlots = 2
+            var forceMustPickAll = false
+            
+            if options.difficulty == .ultraHard {
+                let roll = Double.random(in: 0..<1)
+                if roll < 0.25 { maxSlots = 4 }
+                else if roll < 0.70 { maxSlots = 3 }
+                else if roll < 0.95 { maxSlots = 2 }
+                else if roll < 0.99 { maxSlots = 1 }
+                else { maxSlots = 0 }
+                
+                if maxSlots == 0 && normalBanned { maxSlots = 1 }
+                forceMustPickAll = true
+            } else if options.difficulty == .hard {
+                let hardRoll = Double.random(in: 0..<1)
+                if hardRoll < 0.01 {
+                    maxSlots = 4
+                    forceMustPickAll = true
+                } else if hardRoll < 0.26 {
+                    maxSlots = 3
+                    forceMustPickAll = true
+                }
+            }
+            
             activeRules = []
-            for slot in 0..<2 {
+            for slot in 0..<maxSlots {
                 guard !pool.isEmpty else { break }
-                let mustPick = slot == 0 && normalBanned
+                let mustPick = (slot == 0 && normalBanned) || forceMustPickAll
                 let stopProbability = slot == 0 ? stopProbabilityFirst : stopProbabilitySecond
                 if !mustPick && Double.random(in: 0..<1) < stopProbability { break }
 

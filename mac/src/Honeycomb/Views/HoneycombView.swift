@@ -694,14 +694,19 @@ public struct HoneycombView: View {
             .shadow(radius: 20)
             .frame(height: Self.rulesBannerHeight, alignment: .bottom)
         } else {
-            VStack(spacing: 6) {
+            let isDense = rulesBannerLines.count > 2
+            let titleSize: CGFloat = isDense ? 20 : 28
+            let textSize: CGFloat = isDense ? 16 : 22
+            let lineSpacing: CGFloat = isDense ? 2 : 6
+            
+            VStack(spacing: lineSpacing) {
                 Text("Rules:")
-                    .font(.system(size: 28, weight: .black))
+                    .font(.system(size: titleSize, weight: .black))
                     .foregroundColor(.yellow)
                     .fixedSize()
                 ForEach(rulesBannerLines, id: \.self) { line in
                     Text(line)
-                        .font(.system(size: 22, weight: .black))
+                        .font(.system(size: textSize, weight: .black))
                         .foregroundColor(.yellow)
                         .fixedSize()
                 }

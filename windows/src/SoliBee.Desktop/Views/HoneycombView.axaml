@@ -70,21 +70,23 @@
 
             <!-- Center Column: Rules Banner or Steal Instruction -->
             <Border x:Name="RulesBannerBar" Grid.Row="0" Grid.Column="2" Background="#BF000000" CornerRadius="12" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="24,18" Margin="0,0,0,20">
-                <StackPanel Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="Rules:" FontSize="28" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" />
-                    <ItemsControl x:Name="RulesList" HorizontalAlignment="Center">
-                        <ItemsControl.Styles>
-                            <Style Selector="ContentPresenter">
-                                <Setter Property="HorizontalAlignment" Value="Center" />
-                            </Style>
-                        </ItemsControl.Styles>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="22" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,2,0,0" TextWrapping="Wrap"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
+                <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="100">
+                    <StackPanel x:Name="RulesBannerStack" Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock x:Name="RulesTitle" Text="Rules:" FontSize="28" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" />
+                        <ItemsControl x:Name="RulesList" HorizontalAlignment="Center">
+                            <ItemsControl.Styles>
+                                <Style Selector="ContentPresenter">
+                                    <Setter Property="HorizontalAlignment" Value="Center" />
+                                </Style>
+                            </ItemsControl.Styles>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" FontSize="22" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Viewbox>
             </Border>
 
             <!-- Steal Instruction Bar (Replacing Rules Banner during Steal Mode) -->
