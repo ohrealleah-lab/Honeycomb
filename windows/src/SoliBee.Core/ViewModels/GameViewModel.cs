@@ -111,13 +111,23 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         {
             bool vegasChanged = m.Options.IsVegasScoring != Options.IsVegasScoring;
             // No Stress Mode's whole point is "no timer" — if it's switched on mid-game,
-            // stop the timer immediately instead of leaving it ticking until the next deal.
-            bool noStressJustEnabled = m.Options.IsNoStressMode && !Options.IsNoStressMode;
+            // stop the timer immediately and zero the elapsed time; if switched back off,
+            // resume immediately instead of leaving it frozen until the next move. Only
+            // zero on the "stop" branch if the timer was actually running here — a
+            // shared-option change reaching a backgrounded game (this one isn't the active
+            // tab) shouldn't wipe elapsed time it already had paused.
+            bool noStressJustEnabled  = m.Options.IsNoStressMode && !Options.IsNoStressMode;
+            bool noStressJustDisabled = !m.Options.IsNoStressMode && Options.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             if (vegasChanged) InitializeGame(countAsNewGame: false);
             else if (noStressJustEnabled && State.IsTimerActive)
+            {
                 State.IsTimerActive = false;
+                State.TimerSeconds = 0;
+            }
+            else if (noStressJustDisabled && State.MovesCount > 0 && !State.HasWon)
+                State.IsTimerActive = true;
         });
 
         for (int i = 0; i < 4; i++)
@@ -633,7 +643,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             // wrong card" even though it's technically correct (see the reveal-bonus
             // comment on UpdateScoreForMove — the +5 still scores, it just doesn't get
             // its own popup here).
-            if (target == PileType.Foundation)
+            if (target == PileType.Foundation && source != PileType.Foundation)
                 popup = new CardPointPopup(anchorCard.Id, "+10");
             else if (source == PileType.Waste && target == PileType.Tableau)
                 popup = new CardPointPopup(anchorCard.Id, "+5");

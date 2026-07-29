@@ -58,9 +58,6 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     private string? _lastMoveTargetPileId;
 
     private System.Threading.Timer? _autocompleteTimer;
-    // Windows-fork deviation: once autocomplete has ever run this game, Undo stays
-    // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
-    private bool _autocompleteLocked;
 
     private System.Threading.Timer? _pointPopupTimer;
     private int _pointPopupGeneration;
@@ -78,7 +75,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     // Klondike, but Spider always uses standard scoring regardless of it.
     public string ScoreDisplay => State.Score.ToString();
 
-    public bool CanUndo => _undoStack.Count > 0 && !_autocompleteLocked && !State.HasWon;
+    public bool CanUndo => _undoStack.Count > 0 && !State.HasWon;
 
     private string SuitKey => Options.SpiderSuitCount.ToString();
     private const int TotalFoundations = 8;
@@ -119,7 +116,6 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         _autocompleteTimer?.Dispose();
         _autocompleteTimer = null;
         IsAutoplayRunning = false;
-        _autocompleteLocked = false;
 
         _gameTimer?.Dispose();
         StockPiles.Clear();
@@ -232,7 +228,6 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         _autocompleteTimer?.Dispose();
         _autocompleteTimer = null;
         IsAutoplayRunning = false;
-        _autocompleteLocked = false;
 
         _gameTimer = new System.Threading.Timer(_ =>
         {
@@ -541,12 +536,14 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
             // State.IsTimerActive gating on every move above) — otherwise it stays 0
             // for the whole game. Recording that 0 here would permanently pin "Fastest
             // Win" to a bogus 0s and silently deflate "Avg Winning Time", so skip both
-            // when untimed.
+            // when untimed, and track timed wins separately from GamesWon so the display
+            // can divide/gate on the right count (matches Mac's winningGamesCount).
             if (!Options.IsNoStressMode)
             {
                 if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
                     ms.ShortestWinSeconds = State.TimerSeconds;
                 ms.TotalWinSeconds += State.TimerSeconds;
+                ms.TimedGamesWon++;
             }
             stats.SpiderStatsBySuit[SuitKey] = ms;
             StatsService.SaveStats(stats);
@@ -569,6 +566,12 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     private void CheckAutocomplete()
     {
         if (StockPiles.Count != 0 || _foundationCardCount >= WinCards) { IsAutocompletable = false; return; }
+        // Every card must already be revealed before autoplay starts moving things around —
+        // matches GameViewModel's equivalent guard for Klondike.
+        foreach (var t in Tableaus)
+        {
+            if (t.Cards.Any(c => !c.IsFaceUp)) { IsAutocompletable = false; return; }
+        }
         IsAutocompletable = FindNextAutocompleteMove() != null;
     }
 
@@ -622,10 +625,10 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         if (!IsAutocompletable || IsAutoplayRunning) return;
 
         // One bundled undo snapshot for the whole sequence — SaveStateForUndo() no-ops
-        // for every move made once IsAutoplayRunning is true. Once autocomplete has
-        // started, Undo stays disabled for the rest of the game (see CanUndo).
+        // for every move made once IsAutoplayRunning is true, so a single Undo right
+        // after Autocomplete cancels the whole run in one step (matches Mac, which has
+        // no autocomplete-triggered lock on Undo either).
         SaveStateForUndo();
-        _autocompleteLocked = true;
         OnPropertyChanged(nameof(CanUndo));
         IsAutoplayRunning = true;
         ScheduleNextAutocompleteMove();

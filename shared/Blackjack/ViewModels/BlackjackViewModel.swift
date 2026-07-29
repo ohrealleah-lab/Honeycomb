@@ -146,6 +146,17 @@ public final class BlackjackViewModel {
         state.lastResultSummary = ""
         state.phase = .playing
 
+        // Dealer blackjack ends the hand immediately — checked here by raw rank
+        // (ignoring the hole card's face-down state) rather than waiting for it to be
+        // revealed, so the player can never act (Hit/Stand/Double/Split) against a
+        // hidden dealer natural. Matches the Windows port's peek timing.
+        let dealerRanks = state.dealerCards.map { $0.rank }
+        let dealerHasBlackjack = dealerRanks.count == 2 && dealerRanks.contains(1) && dealerRanks.contains { $0 >= 10 }
+        if dealerHasBlackjack {
+            executeDealerTurn()
+            return
+        }
+
         // Check for player blackjack — delay so the player can see their cards first
         if state.playerHands[0].isBlackjack {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
@@ -164,7 +175,10 @@ public final class BlackjackViewModel {
         playSound(named: "snap")
         state.playerHands[state.activeHandIndex].cards.append(card)
 
-        if state.playerHands[state.activeHandIndex].isBust {
+        // Auto-advance on any multi-card 21, not just a bust — matches the Windows port,
+        // which doesn't make the player manually Stand once no further Hit could help.
+        let hand = state.playerHands[state.activeHandIndex]
+        if hand.isBust || hand.value == 21 {
             advanceHand()
         }
     }
@@ -232,6 +246,10 @@ public final class BlackjackViewModel {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                 self?.executeDealerTurn()
             }
+        } else if state.playerHands[state.activeHandIndex].value == 21 {
+            // The freshly dealt second card already completes this hand — matches the
+            // Windows port, which doesn't wait for a manual Stand once no Hit could help.
+            advanceHand()
         }
     }
 
@@ -350,7 +368,11 @@ public final class BlackjackViewModel {
             if !isFreePlay {
                 state.sessionCredits += payout
                 statistics.totalPaidOut += payout
-                statistics.biggestPayout = max(statistics.biggestPayout, payout)
+                // Excludes pushes — a push is a returned stake, not a winning payout, so
+                // it shouldn't count toward "Biggest Pay".
+                if result != .push {
+                    statistics.biggestPayout = max(statistics.biggestPayout, payout)
+                }
             }
 
             let label: String

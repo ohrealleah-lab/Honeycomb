@@ -80,7 +80,10 @@ public partial class VideoPokerView : UserControl
     private void UpdateDealDrawButton()
     {
         if (DataContext is VideoPokerViewModel vm)
-            DealDrawButton.Content = vm.DealDrawLabel;
+        {
+            DealDrawButton.Content   = vm.DealDrawLabel;
+            DealDrawButton.IsEnabled = vm.CanDeal;
+        }
     }
 
     private void VideoPokerView_Loaded(object? sender, RoutedEventArgs e)

@@ -100,6 +100,10 @@ public partial class VideoPokerViewModel : ObservableObject
     public bool   CanUndo         => false;
     public bool   IsDealing       => State.Phase == VideoPokerPhase.Deal || State.Phase == VideoPokerPhase.Result;
     public bool   IsHolding       => State.Phase == VideoPokerPhase.Holding;
+
+    // Matches Mac: Draw never costs new credits (the bet was already taken at Deal), but
+    // starting a fresh Deal requires covering the current bet unless in free play.
+    public bool   CanDeal         => IsHolding || Options.IsNoStressMode || State.SessionCredits >= State.CurrentBet;
     // Early low-credits warning (10, not "can't afford the current bet") — Deal/Draw
     // stays visible alongside it (RebuyButton doesn't hide it in the XAML), so this
     // isn't a hard block, just a heads-up before the player actually runs out.
@@ -152,13 +156,13 @@ public partial class VideoPokerViewModel : ObservableObject
         {
             // Credits have recovered (rebuy, or carried winnings) enough to cover what
             // the player actually wants to bet — restore it instead of leaving CurrentBet
-            // stuck at whatever it got clamped down to on a previous low-credit hand.
+            // stuck at whatever a previous low-credit hand left it at.
             if (State.SessionCredits >= _preferredBet) State.CurrentBet = _preferredBet;
-            if (State.SessionCredits < State.CurrentBet)
-            {
-                if (State.SessionCredits == 0) return;
-                State.CurrentBet = State.SessionCredits;
-            }
+            // Matches Mac: refuse to deal (no auto-clamp, no partial-bet hand) when
+            // credits can't cover the current bet — the player must lower the bet or
+            // rebuy first, rather than a hand silently getting dealt for less than the
+            // bet shown on screen.
+            if (State.SessionCredits < State.CurrentBet) return;
         }
         if (!freePlay) State.SessionCredits -= State.CurrentBet;
         State.HeldSlots        = new bool[5];
@@ -214,6 +218,7 @@ public partial class VideoPokerViewModel : ObservableObject
             }
             var key = entry!.HandName;
             Stats.HandCounts[key] = Stats.HandCounts.GetValueOrDefault(key) + 1;
+            if (entry.Rank == PokerHandRank.RoyalFlush) Stats.RoyalFlushCount++;
         }
         else
         {
@@ -288,7 +293,24 @@ public partial class VideoPokerViewModel : ObservableObject
     {
         Options.Variant = variant;
         SaveOptions();
-        StartNewGame();
+        // Only clears the current hand's on-screen display — matches Mac's
+        // resetHandDisplay(), which deliberately never touches sessionCredits. A variant
+        // switch shouldn't reset the player's balance back to the starting amount.
+        ResetHandDisplay();
+    }
+
+    // Clears the current hand's on-screen state (cards, holds, payout, banner) without
+    // touching credits, bet, or hands-played.
+    private void ResetHandDisplay()
+    {
+        State.Phase           = VideoPokerPhase.Deal;
+        State.Hand             = new List<Card>();
+        State.HeldSlots         = new bool[5];
+        State.WinningCardMask   = new bool[5];
+        State.LastPayout        = 0;
+        State.LastHandName      = "";
+        State.ResultBannerShown = false;
+        NotifyStateChanged();
     }
 
     // Clears a finished hand's win/no-win display before the game becomes visible
@@ -298,15 +320,7 @@ public partial class VideoPokerViewModel : ObservableObject
     public void ResetIfRoundOver()
     {
         if (State.Phase != VideoPokerPhase.Result) return;
-
-        State.Phase           = VideoPokerPhase.Deal;
-        State.Hand             = new List<Card>();
-        State.HeldSlots         = new bool[5];
-        State.WinningCardMask   = new bool[5];
-        State.LastPayout        = 0;
-        State.LastHandName      = "";
-        State.ResultBannerShown = false;
-        NotifyStateChanged();
+        ResetHandDisplay();
     }
 
     public void StartNewGame()
@@ -588,6 +602,7 @@ public partial class VideoPokerViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowNoWin));
         OnPropertyChanged(nameof(IsDealing));
         OnPropertyChanged(nameof(IsHolding));
+        OnPropertyChanged(nameof(CanDeal));
         OnPropertyChanged(nameof(NeedsRebuy));
         OnPropertyChanged(nameof(DealDrawLabel));
         OnPropertyChanged(nameof(WinningHandName));

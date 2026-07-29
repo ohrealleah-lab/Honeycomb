@@ -236,19 +236,24 @@ public class HoneycombBoard
 
             if (CanCapture(attackerStat, targetStat, rules))
             {
-                if (baseAttackerStat == 1 && baseTargetStat == 10)
+                // Fallen Ace stat: printed/base 1-vs-10 on the capturing edge, OR the
+                // capture actually went through via the Fallen Ace rule exception (which
+                // compares effective, modifier-adjusted stats) — either way counts, even
+                // if Ascension/Descension moved the effective stats away from 1/10 (or
+                // into it) relative to the printed values.
+                bool reverse = rules.Contains(HoneycombRule.Reverse);
+                bool viaFallenAceRule = rules.Contains(HoneycombRule.FallenAce) &&
+                    ((!reverse && attackerStat == 1 && targetStat == 10) ||
+                     (reverse && attackerStat == 10 && targetStat == 1));
+
+                if ((baseAttackerStat == 1 && baseTargetStat == 10) || viaFallenAceRule)
                 {
                     SessionFallenAceCaptures++;
                 }
 
-                if (rules.Contains(HoneycombRule.FallenAce))
+                if (viaFallenAceRule)
                 {
-                    bool reverse = rules.Contains(HoneycombRule.Reverse);
-                    if ((!reverse && attackerStat == 1 && targetStat == 10) ||
-                        (reverse && attackerStat == 10 && targetStat == 1))
-                    {
-                        LastFallenAceTriggered = true;
-                    }
+                    LastFallenAceTriggered = true;
                 }
 
                 targetCard.Owner = attacker.Owner;

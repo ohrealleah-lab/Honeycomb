@@ -11,6 +11,11 @@ public class VideoPokerStatistics
     public int BiggestPay { get; set; }
     public int Rebuys { get; set; }
     public Dictionary<string, int> HandCounts { get; set; } = new();
+
+    // Keyed by rank rather than HandCounts' by-name lookup, since the Deuces Wild
+    // paytable's two royal-flush entries are named "Natural Royal"/"Wild Royal" instead
+    // of "Royal Flush" — matches Mac's rank-based royalFlushCount.
+    public int RoyalFlushCount { get; set; }
     public int CurrentStreak { get; set; }
     public int LongestStreak { get; set; }
 

@@ -104,14 +104,24 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         {
             var old = Options;
             // No Stress Mode's whole point is "no timer" — if it's switched on mid-game,
-            // stop the timer immediately instead of leaving it ticking until the next deal.
-            bool noStressJustEnabled = m.Options.IsNoStressMode && !old.IsNoStressMode;
+            // stop the timer immediately and zero the elapsed time; if switched back off,
+            // resume immediately instead of leaving it frozen until the next move. Only
+            // zero on the "stop" branch if the timer was actually running here — a
+            // shared-option change reaching a backgrounded game (this one isn't the active
+            // tab) shouldn't wipe elapsed time it already had paused.
+            bool noStressJustEnabled  = m.Options.IsNoStressMode && !old.IsNoStressMode;
+            bool noStressJustDisabled = !m.Options.IsNoStressMode && old.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             if (Options.FreecellDeckCount != old.FreecellDeckCount)
                 InitializeGame(countAsNewGame: false);
             else if (noStressJustEnabled && State.IsTimerActive)
+            {
                 State.IsTimerActive = false;
+                State.TimerSeconds = 0;
+            }
+            else if (noStressJustDisabled && State.MovesCount > 0 && !State.HasWon)
+                State.IsTimerActive = true;
         });
 
         InitializeGame();
@@ -931,7 +941,9 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     {
         State.Score = snapshot.Score;
         State.MovesCount = snapshot.MovesCount;
-        State.TimerSeconds = snapshot.TimerSeconds;
+        // TimerSeconds deliberately NOT restored — the timer must keep running forward
+        // through an undo, not rewind to whatever it read when the undone move's
+        // snapshot was saved (matches Mac's BeecellViewModel.undoLastAction()).
         State.HasWon = false;
 
         for (int i = 0; i < FreeCells.Count && i < snapshot.FreeCells.Count; i++)

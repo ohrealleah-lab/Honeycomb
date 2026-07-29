@@ -25,10 +25,11 @@ public struct HoneycombBoard: Codable, Equatable {
     public let rows = 3
     public let cols = 3
     public var sessionSamePlusTriggers: Int = 0
-    // Running total, for the whole match, of captures where a "1" edge topples a "10"
-    // (Ace) edge — tracked independent of whether the Fallen Ace house rule is what
-    // authorized the capture (it can also happen as a plain Reverse-rule win), since
-    // the stat is about the raw 1-vs-10 outcome, not which rule enabled it.
+    // Running total, for the whole match, of captures where a printed "1" edge topples
+    // a printed "10" (Ace) edge, OR the capture was specifically authorized by the
+    // Fallen Ace house rule exception (which compares effective, modifier-adjusted
+    // stats) — either counts, since Ascension/Descension can move the effective stats
+    // away from (or into) 1/10 relative to what's actually printed on the cards.
     public var sessionFallenAceCaptures: Int = 0
     // Whether the Same/Plus rule actually fired on the most recent placeCard call —
     // unlike Ascension/Descension (an always-on modifier each turn), Same/Plus only
@@ -252,10 +253,18 @@ public struct HoneycombBoard: Codable, Equatable {
         for n in neighbors {
             if n.enemy && !flippedIndices.contains(n.idx) {
                 if canCapture(aStat: n.aStat, tStat: n.tStat) {
-                    if isFallenAceWin(aStat: n.aStat, tStat: n.tStat) {
+                    let viaFallenAceRule = isFallenAceWin(aStat: n.aStat, tStat: n.tStat)
+                    if viaFallenAceRule {
                         lastFallenAceTriggered = true
                     }
-                    if n.aStat == 1 && n.tStat == 10 {
+                    // Fallen Ace stat: printed/base 1-vs-10 on the capturing edge, OR the
+                    // capture actually went through via the Fallen Ace rule exception
+                    // (effective stats) — either way counts, even if Ascension/Descension
+                    // moved the effective stats away from (or into) 1/10 relative to the
+                    // printed values.
+                    let baseAStat = attacker.data.stats[n.dir]
+                    let baseTStat = cells[n.idx].card!.data.stats[(n.dir + 2) % 4]
+                    if (baseAStat == 1 && baseTStat == 10) || viaFallenAceRule {
                         sessionFallenAceCaptures += 1
                     }
                     cells[n.idx].card?.owner = attacker.owner

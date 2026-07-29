@@ -686,7 +686,7 @@ public partial class MainWindow : Window
         var s = vm.Stats;
         double winRate      = s.TotalHands > 0 ? 100.0 * s.WinningHands / s.TotalHands : 0.0;
         double rtp          = s.TotalCreditsWagered > 0 ? 100.0 * s.TotalCreditsWon / s.TotalCreditsWagered : 0.0;
-        int    royalFlushes = s.HandCounts.GetValueOrDefault("Royal Flush");
+        int    royalFlushes = s.RoyalFlushCount;
 
         StatsDynamicRows.Children.Clear();
         StatsDynamicRows.Children.Add(BuildStatRow("Hands Played",   s.TotalHands.ToString()));
@@ -725,7 +725,7 @@ public partial class MainWindow : Window
         StatsDynamicRows.IsVisible = false;
 
         string title;
-        int gamesPlayed, gamesWon, currentStreak, longestStreak, fastestWinSec, totalWinSec;
+        int gamesPlayed, gamesWon, timedGamesWon, currentStreak, longestStreak, fastestWinSec, totalWinSec;
         string highScoreText;
 
         if (this.DataContext is GameViewModel klondikeVm)
@@ -734,6 +734,7 @@ public partial class MainWindow : Window
             var s = klondikeVm.Stats;
             gamesPlayed   = s.GamesPlayed;
             gamesWon      = s.GamesWon;
+            timedGamesWon = gamesWon;
             currentStreak = s.CurrentStreak;
             longestStreak = s.LongestStreak;
             fastestWinSec = s.ShortestWinSeconds;
@@ -751,6 +752,7 @@ public partial class MainWindow : Window
             var ms = freecellVm.Stats.FreecellStatsByMode.TryGetValue(modeKey, out var m) ? m : new ModeStats();
             gamesPlayed   = ms.GamesPlayed;
             gamesWon      = ms.GamesWon;
+            timedGamesWon = gamesWon;
             currentStreak = ms.CurrentStreak;
             longestStreak = ms.LongestStreak;
             fastestWinSec = ms.ShortestWinSeconds;
@@ -765,6 +767,7 @@ public partial class MainWindow : Window
             var ms = spiderVm.Stats.SpiderStatsBySuit.TryGetValue(suitKey, out var m) ? m : new ModeStats();
             gamesPlayed   = ms.GamesPlayed;
             gamesWon      = ms.GamesWon;
+            timedGamesWon = ms.TimedGamesWon;
             currentStreak = ms.CurrentStreak;
             longestStreak = ms.LongestStreak;
             fastestWinSec = ms.ShortestWinSeconds;
@@ -786,8 +789,8 @@ public partial class MainWindow : Window
         StatsWinPctText.Text       = $"{winPct:0.0}%";
         StatsCurrentStreakText.Text = currentStreak.ToString();
         StatsLongestStreakText.Text = longestStreak.ToString();
-        StatsAvgWinTimeText.Text   = gamesWon > 0 ? $"{totalWinSec / gamesWon}s" : "--";
-        StatsFastestWinText.Text  = gamesWon > 0 ? $"{fastestWinSec}s" : "--";
+        StatsAvgWinTimeText.Text   = timedGamesWon > 0 ? $"{totalWinSec / timedGamesWon}s" : "--";
+        StatsFastestWinText.Text  = timedGamesWon > 0 ? $"{fastestWinSec}s" : "--";
     }
 
     private void SetupHoneycombMode()

@@ -323,10 +323,8 @@ public final class GameViewModel {
         // 6. Set State
         let initialScore = options.isVegasScoring ? -5200 : 0
         if options.isVegasScoring {
-            // Refund the previous start cost if the game was abandoned without making a single move
-            if state.movesCount == 0 && gameGeneration > 0 {
-                vegasBankroll -= -5200
-            }
+            // Every New Game charges the full buy-in, even back-to-back re-rolls with no
+            // moves made — matches the Windows port, which never refunds an abandoned deal.
             vegasBankroll += initialScore
             vegasBankrollAtGameStart = vegasBankroll
         }
@@ -380,13 +378,15 @@ public final class GameViewModel {
     
     public func drawCard() {
         if state.stock.isEmpty {
+            // Recycling and drawing are two separate clicks — matching the Windows port
+            // and this same view model's own keyboard Space-bar path just below, neither
+            // of which draws through immediately after a recycle.
             guard canRecycleStock else { return }
             recycleStock()
-        } else {
-            saveStateForUndo()
+            return
         }
 
-        guard !state.stock.isEmpty else { return }
+        saveStateForUndo()
         hasDrawnFromStockThisGame = true
 
         startTimerIfNeeded()
@@ -542,7 +542,11 @@ public final class GameViewModel {
     
     private func adjustScore(from source: Pile.PileType, to target: Pile.PileType, revealedFaceDownCard: Bool = false) {
         if options.isVegasScoring {
-            if target == .foundation {
+            // Excludes source == .foundation so relocating a card between foundations (e.g.
+            // reorganizing which foundation slot holds which suit's Ace) nets zero score
+            // either way — otherwise a lone Ace shuffled between two empty foundations
+            // would earn +500 every single move, forever, for free.
+            if target == .foundation && source != .foundation {
                 state.score += 500
                 vegasBankroll += 500
             } else if source == .foundation && target == .tableau {
@@ -550,7 +554,7 @@ public final class GameViewModel {
                 vegasBankroll -= 500
             }
         } else {
-            if target == .foundation {
+            if target == .foundation && source != .foundation {
                 state.score += 10
             } else if (source == .stock || source == .waste) && target == .tableau {
                 state.score += 5
@@ -572,7 +576,7 @@ public final class GameViewModel {
         guard options.showPointHighlights, !isAutoplayRunning else { return }
         let popup: CardPointPopup?
         if options.isVegasScoring {
-            if target == .foundation, let anchorCard {
+            if target == .foundation, source != .foundation, let anchorCard {
                 popup = CardPointPopup(cardId: anchorCard.id, displayText: Self.currencyString(cents: 500), isPositive: true)
             } else if source == .foundation && target == .tableau, let anchorCard {
                 popup = CardPointPopup(cardId: anchorCard.id, displayText: Self.currencyString(cents: -500), isPositive: false)
@@ -580,7 +584,7 @@ public final class GameViewModel {
                 popup = nil
             }
         } else {
-            if target == .foundation, let anchorCard {
+            if target == .foundation, source != .foundation, let anchorCard {
                 popup = CardPointPopup(cardId: anchorCard.id, displayText: "+10", isPositive: true)
             } else if (source == .stock || source == .waste) && target == .tableau, let anchorCard {
                 popup = CardPointPopup(cardId: anchorCard.id, displayText: "+5", isPositive: true)
@@ -644,8 +648,9 @@ public final class GameViewModel {
             playSound(named: "victory")
             if !options.isVegasScoring && state.timerSeconds > 0 {
                 // Standard-mode time scoring (Microsoft Solitaire rules), applied once on win:
-                // deduct 2 points for every 10 seconds elapsed, then add the 700,000 / seconds bonus.
-                state.score -= 2 * (state.timerSeconds / 10)
+                // deduct 2 points for every 10 seconds elapsed (floored at 0, matching the
+                // Windows port), then add the 700,000 / seconds bonus.
+                state.score = max(0, state.score - 2 * (state.timerSeconds / 10))
                 state.score += 700000 / state.timerSeconds
             }
             if state.score > highScore {

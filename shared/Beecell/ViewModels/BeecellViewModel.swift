@@ -417,9 +417,13 @@ public final class BeecellViewModel {
     }
     
     private func adjustScore(from source: Pile.PileType, to target: Pile.PileType) {
-        if target == .foundation {
+        // Excludes source == .foundation from the bonus so relocating a card between
+        // foundations (reorganizing which slot holds which suit) nets zero score either
+        // way — otherwise a lone Ace shuffled between two empty foundations would earn
+        // +10 every single move, forever, for free.
+        if target == .foundation && source != .foundation {
             state.score += 10
-        } else if source == .foundation {
+        } else if source == .foundation && target != .foundation {
             // Penalize leaving a foundation regardless of destination (tableau or free
             // cell) — otherwise cycling a card foundation -> free cell -> foundation
             // nets a free +10 every round trip since only the tableau case was covered.
@@ -431,9 +435,9 @@ public final class BeecellViewModel {
     private func updatePointPopup(anchorCard: Card?, source: Pile.PileType, target: Pile.PileType) {
         guard options.showPointHighlights, !isAutoplayRunning, let anchorCard else { return }
         let popup: CardPointPopup?
-        if target == .foundation {
+        if target == .foundation && source != .foundation {
             popup = CardPointPopup(cardId: anchorCard.id, displayText: "+10", isPositive: true)
-        } else if source == .foundation {
+        } else if source == .foundation && target != .foundation {
             popup = CardPointPopup(cardId: anchorCard.id, displayText: "-15", isPositive: false)
         } else {
             popup = nil

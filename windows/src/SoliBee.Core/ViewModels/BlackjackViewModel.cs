@@ -439,7 +439,14 @@ public partial class BlackjackViewModel : ObservableObject
                 }
                 break;
             case BlackjackHandResult.Push:
-                if (!freePlay) State.Credits += hand.Bet;
+                if (!freePlay)
+                {
+                    State.Credits += hand.Bet;
+                    // Counts toward Total Paid (a push returns the stake, which is a real
+                    // credit movement worth reflecting in RTP), but deliberately not toward
+                    // BiggestPay — a push is a returned stake, not a winning payout.
+                    Stats.TotalCreditsWon += hand.Bet;
+                }
                 Stats.HandsPushed++;
                 break;
             case BlackjackHandResult.Lost:

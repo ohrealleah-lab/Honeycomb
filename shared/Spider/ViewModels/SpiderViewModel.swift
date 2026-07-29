@@ -330,8 +330,12 @@ public final class SpiderViewModel {
         state.movesCount += 1
 
         checkCompletedRuns()
-        checkStuckState()
+        // Autocomplete-availability must be recomputed before stuck-detection, since
+        // checkStuckState's guard reads isAutocompleteAvailable — checking in the other
+        // order tests the *previous* move's flag instead of the one for the board state
+        // that was just produced (matches the Windows port's call order).
         checkAutocompleteState()
+        checkStuckState()
     }
 
     // MARK: - Move Validation & Execution
@@ -396,8 +400,10 @@ public final class SpiderViewModel {
         }
 
         checkCompletedRuns()
-        checkStuckState()
+        // See the matching comment in drawFromStock — autocomplete-availability must be
+        // recomputed before stuck-detection reads it.
         checkAutocompleteState()
+        checkStuckState()
     }
 
     public func doubleClickMove(card: Card, from sourcePile: Pile) {
@@ -574,8 +580,10 @@ public final class SpiderViewModel {
         clearHint()
         clearKeyboardCursor()
         checkWinState()
-        checkStuckState()
+        // See the matching comment in drawFromStock — autocomplete-availability must be
+        // recomputed before stuck-detection reads it.
         checkAutocompleteState()
+        checkStuckState()
     }
 
     // MARK: - Stuck Detection

@@ -65,6 +65,30 @@ public partial class FreecellView : CardGameView
         return false;
     }
 
+    // Mac's doubleClickMove tries a third fallback tier after Foundation and empty Free
+    // Cell — any legal tableau column. TryAutoMoveToFoundation (above) is also reused by
+    // the F hotkey, so the tableau fallback is added here instead, to only extend
+    // double-click and leave F's behavior unchanged.
+    public override bool TryHandleDoubleClick(Card card, Pile sourcePile)
+    {
+        if (TryAutoMoveToFoundation(card, sourcePile)) return true;
+
+        if (DataContext is not FreecellViewModel vm) return false;
+        if (sourcePile.Cards.Count == 0 || sourcePile.Cards[^1].Id != card.Id) return false;
+
+        var single = new List<Card> { card };
+        foreach (var t in vm.Tableaus)
+        {
+            if (vm.CanMoveCards(single, t))
+            {
+                vm.MoveCards(single, sourcePile, t);
+                SoundService.PlaySnap();
+                return true;
+            }
+        }
+        return false;
+    }
+
     // C hotkey: auto-move the focused card to an empty free cell (CanMoveCards already
     // requires target.Cards.Count == 0 and a single card for FreeCell targets).
     private bool TryAutoMoveToFreeCell(Card card, Pile sourcePile)

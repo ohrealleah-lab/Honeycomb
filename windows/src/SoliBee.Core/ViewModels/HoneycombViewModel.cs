@@ -404,8 +404,15 @@ public partial class HoneycombViewModel : ObservableObject
             return;
         }
 
-        var knownOpponent = State.OpponentHand.Where(c => State.OpponentRevealedIds.Contains(c.UniqueInstanceId)).ToList();
-        var move = HoneycombAI.FindMove(State.Board, State.OpponentHand, State.PlayerHand, State.PlayerHand.Count > State.PlayerRevealedIds.Count, new HashSet<HoneycombRule>(State.ActiveRules), Options.Difficulty, -1, 1, State.OpponentChaosIndex);
+        // Identity-based, not a count comparison — PlayerRevealedIds only grows (it never
+        // drops an id once a card's been revealed, even after that card is played), so
+        // comparing counts against the player's current (shrinking) hand size can go
+        // stale and read false once enough revealed cards have been played, even while a
+        // never-revealed card is still sitting in hand. That would let the search below
+        // use that card's real stats once !isMaximizing hits it (see Minimax's
+        // playerHasHiddenCards cutoff) — an unintended AI advantage.
+        bool playerHasHiddenCards = State.PlayerHand.Any(c => !State.PlayerRevealedIds.Contains(c.UniqueInstanceId));
+        var move = HoneycombAI.FindMove(State.Board, State.OpponentHand, State.PlayerHand, playerHasHiddenCards, new HashSet<HoneycombRule>(State.ActiveRules), Options.Difficulty, -1, 1, State.OpponentChaosIndex);
         if (move.HandIndex >= 0)
         {
             ExecutePlacement(move.HandIndex, move.CellIndex);
@@ -789,8 +796,13 @@ public partial class HoneycombViewModel : ObservableObject
         if (!IsPlaying || State.CurrentTurn != 1 || _isAnimating || State.PlayerHand.Count == 0) return;
         
         var knownOpponent = State.OpponentHand.Where(c => State.OpponentRevealedIds.Contains(c.UniqueInstanceId)).ToList();
-        
-        var move = HoneycombAI.FindMove(State.Board, State.PlayerHand, knownOpponent, false, new HashSet<HoneycombRule>(State.ActiveRules), HoneycombDifficulty.UltraHard, 1, -1, null);
+        // Whether any of the opponent's real cards remain unrevealed — knownOpponent above
+        // is only the subset the player has actually seen, so treating that subset as the
+        // opponent's whole hand (via a hardcoded false here) let the search look ahead
+        // several plies as if it knew the opponent could only ever play those few cards.
+        bool opponentHasHiddenCards = State.OpponentHand.Any(c => !State.OpponentRevealedIds.Contains(c.UniqueInstanceId));
+
+        var move = HoneycombAI.FindMove(State.Board, State.PlayerHand, knownOpponent, opponentHasHiddenCards, new HashSet<HoneycombRule>(State.ActiveRules), HoneycombDifficulty.UltraHard, 1, -1, null);
         
         if (move.HandIndex < 0)
         {
