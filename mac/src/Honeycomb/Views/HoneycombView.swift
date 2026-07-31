@@ -73,11 +73,15 @@ public struct HoneycombView: View {
     @State private var showingOptions = false
     @State private var showingRules = false
 
-    // Custom drag state for playing cards — keyed by the card's own stable id
-    // (not array position), since playerHand/opponentHand shrink as cards are
-    // played, and a stale positional index can point past the end of the
-    // array mid-removal-animation (crash).
-    @State private var draggingHandCardId: String? = nil
+    // Drag-and-drop for playing a hand card onto the board uses a custom DragGesture
+    // (matching every other mac game — see PileView/GameView) rather than SwiftUI's
+    // system .onDrag/.onDrop. System drag-and-drop hands the drag off to AppKit, which
+    // is free to let it leave the window into other apps or the desktop; a DragGesture
+    // is just view state, so the dragged card can never render outside this view.
+    @State private var draggedHandCard: HoneycombCard? = nil
+    @State private var dragLocation: CGPoint = .zero
+    @State private var dragOffset: CGSize = .zero
+    @State private var boardCellFrames: [Int: CGRect] = [:]
 
     // Banner state
     @State private var showingRuleBanner = false
@@ -308,17 +312,14 @@ public struct HoneycombView: View {
                                                 viewModel.requestSteal(boardIndex: index)
                                             }
                                         }
-                                        .onDrop(of: [.plainText], isTargeted: nil) { providers in
-                                            if viewModel.gameState == .playing && viewModel.isPlayerTurn,
-                                               let cardId = draggingHandCardId,
-                                               let handIdx = viewModel.playerHand.firstIndex(where: { $0.id == cardId }) {
-                                                guard viewModel.playerPlayCard(handIndex: handIdx, boardIndex: index) else { return false }
-                                                draggingHandCardId = nil
-                                                selectedHandCardId = nil
-                                                return true
-                                            }
-                                            return false
-                                        }
+                                        .background(GeometryReader { geo in
+                                            let frame = geo.frame(in: .global)
+                                            Color.clear
+                                                .onAppear { boardCellFrames[index] = frame }
+                                                .onChange(of: frame) { _, newFrame in
+                                                    boardCellFrames[index] = newFrame
+                                                }
+                                        })
                                     }
                                 }
                             }
@@ -462,8 +463,19 @@ public struct HoneycombView: View {
             }
 
 
+            // Floating drag overlay for a hand card being dragged onto the board — a plain
+            // SwiftUI view positioned within this ZStack (not a system drag session), so
+            // it's structurally confined to the window and can never render into another
+            // app or the desktop.
+            if let draggedHandCard {
+                HoneycombCardView(card: draggedHandCard, size: Self.boardCardSize, isFlipped: false)
+                    .position(x: dragLocation.x + dragOffset.width, y: dragLocation.y + dragOffset.height)
+                    .allowsHitTesting(false)
+                    .zIndex(200)
+            }
+
             // Steal Card mode instruction bar has been moved to rulesBanner
-            
+
             // Banner Overlay — shared by Ascension/Descension/Same/Plus/Sudden Death.
             if showingRuleBanner {
                 FlashBannerView(message: bannerText)
@@ -767,18 +779,36 @@ public struct HoneycombView: View {
 
         HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: false)
             .matchedGeometryEffect(id: card.id, in: swapAnimationNamespace)
+            .opacity(draggedHandCard?.id == card.id ? 0.0 : 1.0)
             .onTapGesture {
                 if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
                     selectedHandCardId = card.id
                 }
             }
-            .onDrag {
-                if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
-                    draggingHandCardId = card.id
-                    return NSItemProvider(object: card.id as NSString)
-                }
-                return NSItemProvider()
-            }
+            .gesture(
+                DragGesture(minimumDistance: 5, coordinateSpace: .global)
+                    .onChanged { val in
+                        guard viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay else { return }
+                        if draggedHandCard?.id != card.id {
+                            draggedHandCard = card
+                            dragLocation = val.startLocation
+                        }
+                        dragOffset = val.translation
+                    }
+                    .onEnded { val in
+                        defer {
+                            draggedHandCard = nil
+                            dragOffset = .zero
+                        }
+                        guard viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay,
+                              let handIdx = viewModel.playerHand.firstIndex(where: { $0.id == card.id }) else { return }
+                        let dropPoint = val.location
+                        if let boardIndex = boardCellFrames.first(where: { $0.value.contains(dropPoint) })?.key,
+                           viewModel.playerPlayCard(handIndex: handIdx, boardIndex: boardIndex) {
+                            selectedHandCardId = nil
+                        }
+                    }
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.blue, lineWidth: selectedHandCardId == card.id ? 4 : 0)
