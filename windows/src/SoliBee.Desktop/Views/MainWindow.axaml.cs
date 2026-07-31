@@ -210,13 +210,39 @@ public partial class MainWindow : Window
             {
                 VignetteOverlay.IsVisible = options.IsVignetteEnabled;
                 VignetteOverlay.ZIndex = -5;
-                if (VignetteOverlay.Fill is Avalonia.Media.RadialGradientBrush rgb)
-                    rgb.Radius = options.VignetteScale * 0.8;
+                UpdateVignetteSizeAndIntensity(options);
             }
         }
         catch
         {
             this.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Colors.DarkGreen);
+        }
+    }
+
+    private void UpdateVignetteSizeAndIntensity(GameOptions options)
+    {
+        if (VignetteOverlay == null || !VignetteOverlay.IsVisible) return;
+
+        double w = this.Bounds.Width > 0 ? this.Bounds.Width : 1000;
+        double h = this.Bounds.Height > 0 ? this.Bounds.Height : 700;
+        double diagonal = Math.Sqrt(w * w + h * h);
+        
+        VignetteOverlay.Width = diagonal;
+        VignetteOverlay.Height = diagonal;
+
+        if (VignetteOverlay.Fill is Avalonia.Media.RadialGradientBrush rgb)
+        {
+            double targetRadius = 680.0 * options.VignetteScale;
+            rgb.Radius = targetRadius / diagonal;
+
+            bool isCasino = _currentGameTag == "Blackjack" || _currentGameTag == "VideoPoker";
+            double intensity = isCasino ? 0.45 : 0.34;
+            byte alpha = (byte)(intensity * 255);
+
+            if (rgb.GradientStops.Count > 1)
+            {
+                rgb.GradientStops[1].Color = Avalonia.Media.Color.FromArgb(alpha, 0, 0, 0);
+            }
         }
     }
 
@@ -1681,6 +1707,9 @@ public partial class MainWindow : Window
     {
         if (BoardBackgroundImage.IsVisible && _lastBoardBackgroundOptions != null)
             ApplyBoardBackground(_lastBoardBackgroundOptions);
+
+        if (_coordinator?.GameViewModel?.Options != null)
+            UpdateVignetteSizeAndIntensity(_coordinator.GameViewModel.Options);
 
         UpdateResponsiveLayout();
     }

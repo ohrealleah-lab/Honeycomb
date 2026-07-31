@@ -25,9 +25,9 @@
                 <Image x:Name="PreviewImage" Width="280" Height="160" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="MediumQuality" />
                 <Rectangle x:Name="PreviewVignette" Width="280" Height="160" IsHitTestVisible="False" IsVisible="False">
                     <Rectangle.Fill>
-                        <RadialGradientBrush Center="50%,50%" Radius="0.8">
-                            <GradientStop Color="#00000000" Offset="0.2"/>
-                            <GradientStop Color="#60000000" Offset="1.0"/>
+                        <RadialGradientBrush Center="50%,50%" Radius="0.85">
+                            <GradientStop Color="#00000000" Offset="0.15"/>
+                            <GradientStop Color="#57000000" Offset="1.0"/>
                         </RadialGradientBrush>
                     </Rectangle.Fill>
                 </Rectangle>

@@ -313,11 +313,12 @@
                RenderOptions.BitmapInterpolationMode="MediumQuality" />
 
         <!-- App-wide Vignette depth overlay (covers both top bar and game board) -->
-        <Rectangle x:Name="VignetteOverlay" Grid.Row="0" Grid.RowSpan="2" IsHitTestVisible="False" IsVisible="False" ZIndex="90">
+        <Rectangle x:Name="VignetteOverlay" Grid.Row="0" Grid.RowSpan="2" IsHitTestVisible="False" IsVisible="False" ZIndex="90"
+                   HorizontalAlignment="Center" VerticalAlignment="Center">
             <Rectangle.Fill>
-                <RadialGradientBrush Center="50%,50%" Radius="0.8">
-                    <GradientStop Color="#00000000" Offset="0.2"/>
-                    <GradientStop Color="#60000000" Offset="1.0"/>
+                <RadialGradientBrush Center="50%,50%">
+                    <GradientStop Color="#00000000" Offset="0.15"/>
+                    <GradientStop Color="#57000000" Offset="1.0"/>
                 </RadialGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
