@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Avalonia build task cache
+.avalonia-build-tasks/
+
 # Claude Code local (personal, machine-specific) settings — settings.json is shared/committed
 .claude/settings.local.json
 
