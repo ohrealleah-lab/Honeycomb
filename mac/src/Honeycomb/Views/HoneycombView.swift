@@ -78,6 +78,11 @@ public struct HoneycombView: View {
     // system .onDrag/.onDrop. System drag-and-drop hands the drag off to AppKit, which
     // is free to let it leave the window into other apps or the desktop; a DragGesture
     // is just view state, so the dragged card can never render outside this view.
+    //
+    // dragLocation/dragOffset are captured in .global coordinate space (see the
+    // DragGesture below) and boardCellFrames is populated from GeometryReader's
+    // .global frame too — both must stay in the same space, since drop hit-testing
+    // and the floating overlay's .position(...) both mix values from each.
     @State private var draggedHandCard: HoneycombCard? = nil
     @State private var dragLocation: CGPoint = .zero
     @State private var dragOffset: CGSize = .zero
@@ -803,6 +808,10 @@ public struct HoneycombView: View {
                         guard viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay,
                               let handIdx = viewModel.playerHand.firstIndex(where: { $0.id == card.id }) else { return }
                         let dropPoint = val.location
+                        // .first(where:) is safe despite Dictionary's undefined iteration
+                        // order only because the 9 board cell frames never overlap — if
+                        // that ever changes (e.g. a cell grows to cover a neighbor), this
+                        // needs a defined priority instead of picking whichever comes first.
                         if let boardIndex = boardCellFrames.first(where: { $0.value.contains(dropPoint) })?.key,
                            viewModel.playerPlayCard(handIndex: handIdx, boardIndex: boardIndex) {
                             selectedHandCardId = nil

@@ -87,6 +87,9 @@ struct BeecellTouchView: View {
                     BeecellSettingsSection(viewModel: viewModel)
                 }
             }
+            // Anchors boardSpace — every pileFrames GeometryReader and DragGesture
+            // .named(Self.boardSpace) reference below depends on this exact container.
+            // Moving this modifier to a different view breaks drop hit-testing silently.
             .coordinateSpace(name: Self.boardSpace)
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)

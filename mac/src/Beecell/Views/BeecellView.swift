@@ -37,6 +37,12 @@ public struct BeecellView: View {
     @State private var dragSourcePile: Pile? = nil
     @State private var dragOffset: CGSize = .zero
     @State private var dragLocation: CGPoint = .zero
+    // pileFrames and dragLocation/dragOffset must both use .global coordinate space —
+    // pileFrames is populated from GeometryReader's geo.frame(in: .global), and every
+    // DragGesture feeding dragLocation/dragOffset must use coordinateSpace: .global to
+    // match. Mismatched spaces silently break drop hit-testing and the dragged-card
+    // overlay's positioning (same pattern as Klondike's GameView.swift and Honeycomb's
+    // boardCellFrames in HoneycombView.swift).
     @State private var pileFrames: [String: CGRect] = [:]
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
@@ -843,6 +849,8 @@ public struct BeecellView: View {
         }
 
         var tableauCandidates: [CandidateTableau] = []
+        // Iterate the ordered tableau array, not pileFrames, so candidate order is
+        // deterministic regardless of Dictionary iteration order (see GameView.swift).
         for tab in viewModel.state.tableau {
             if let frame = pileFrames[tab.id] {
                 let margin: CGFloat = 16

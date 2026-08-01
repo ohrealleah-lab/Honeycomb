@@ -29,6 +29,12 @@ public struct CommonGameOptions: Equatable {
 /// `AppCoordinator.syncSharedOptions`) can read/write the common fields without
 /// switching on the concrete Options type. Each conformance only fills in the fields
 /// that struct actually has; the setter ignores any field that arrives `nil`.
+///
+/// Nothing enforces getter/setter symmetry within one conformance: if a struct's getter
+/// reports a field (e.g. `isTimed`) but its setter forgets to assign it back, sync would
+/// silently no-op that field for that game instead of failing loudly. When adding or
+/// copy-pasting a conformance, double-check every field the getter returns is also
+/// written by the setter.
 public protocol HasCommonGameOptions {
     var commonOptions: CommonGameOptions { get set }
 }

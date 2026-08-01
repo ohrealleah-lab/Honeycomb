@@ -38,6 +38,12 @@ public struct GameView: View {
     @State private var dragSourcePile: Pile? = nil
     @State private var dragOffset: CGSize = .zero
     @State private var dragLocation: CGPoint = .zero
+    // pileFrames and dragLocation/dragOffset must both use .global coordinate space —
+    // pileFrames is populated from GeometryReader's geo.frame(in: .global) below, and
+    // every DragGesture feeding dragLocation/dragOffset is declared with
+    // coordinateSpace: .global to match. Mismatched spaces silently break drop
+    // hit-testing and the dragged-card overlay's positioning (same pattern as
+    // Honeycomb's boardCellFrames — see HoneycombView.swift).
     @State private var pileFrames: [String: CGRect] = [:]
     @State private var isShuffling: Bool = false
     @State private var isDrawInFlight: Bool = false
@@ -925,6 +931,10 @@ public struct GameView: View {
         }
 
         var tableauCandidates: [CandidateTableau] = []
+        // Iterate the ordered tableau array, not pileFrames, so candidate order is
+        // deterministic regardless of Dictionary iteration order — the sort below still
+        // picks a winner by accepts/distanceX, but building the candidate list itself
+        // from pileFrames directly would make ties depend on undefined dict ordering.
         for tab in viewModel.state.tableau {
             if let frame = pileFrames[tab.id] {
                 let margin: CGFloat = 16

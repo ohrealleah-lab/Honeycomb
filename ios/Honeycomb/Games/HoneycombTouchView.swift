@@ -82,6 +82,10 @@ struct HoneycombTouchView: View {
                         dragGhost
                     }
                     .frame(width: intrinsic.width, height: intrinsic.height)
+                    // Anchors dragSpace — every cellFrames GeometryReader and DragGesture
+                    // .named(Self.dragSpace) reference (see dropCellIndex() below) depends
+                    // on this exact container. Moving this modifier elsewhere, or applying
+                    // it after .scaleEffect, breaks drop hit-testing silently.
                     .coordinateSpace(name: Self.dragSpace)
                     .scaleEffect(scale)
                     .frame(width: geo.size.width, height: geo.size.height)
@@ -496,6 +500,12 @@ struct HoneycombTouchView: View {
     private func dropCellIndex() -> Int? {
         let release = CGPoint(x: dragLocation.x + dragOffset.width,
                               y: dragLocation.y + dragOffset.height)
+        // insetBy(-10, -10) intentionally makes neighboring cell frames overlap in the
+        // ~20pt gutter between them, so a release near a shared edge still counts as a
+        // drop rather than falling into the gap. min(by: distance) below breaks the
+        // resulting ties by nearest cell center — this assumes no two cells can ever be
+        // exactly equidistant from a release point given the fixed board layout; if the
+        // grid spacing/geometry changes, that assumption needs re-checking.
         return cellFrames
             .filter { $0.value.insetBy(dx: -10, dy: -10).contains(release) }
             .min(by: { lhs, rhs in
