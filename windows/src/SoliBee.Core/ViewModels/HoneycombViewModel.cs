@@ -64,6 +64,23 @@ public partial class HoneycombViewModel : ObservableObject
         });
     }
 
+    // Bad-luck protection for Roulette: a plain independent roll can land on the exact
+    // same result (same rule set AND same Ascension/Descension suit) several matches in
+    // a row, which reads as "broken" even though it's just an unlucky draw. Re-rolling
+    // whenever a draw exactly repeats the previous match's result — up to a small retry
+    // cap, so a heavily-restricted pool (few unbanned rules) can't loop forever — makes
+    // back-to-back identical rolls impossible without meaningfully changing each rule's
+    // long-run odds.
+    private string? _lastRouletteSignature;
+    private const int MaxRouletteRerolls = 5;
+
+    private static string RouletteSignature(List<HoneycombRule> rules, List<string> suits)
+    {
+        var ruleNames = string.Join(",", rules.Select(r => r.ToString()).OrderBy(s => s));
+        var suitNames = string.Join(",", suits.OrderBy(s => s));
+        return $"{ruleNames}|{suitNames}";
+    }
+
     private List<HoneycombRule> DetermineActiveRules()
     {
         if (Options.ForceNormalRules) return new List<HoneycombRule>();
@@ -148,10 +165,9 @@ public partial class HoneycombViewModel : ObservableObject
             double stopProbability = slot == 0 ? stopProbabilityFirst : stopProbabilitySecond;
             if (!mustPick && Random.Shared.NextDouble() < stopProbability) break;
 
-            int idx = Random.Shared.Next(pool.Count);
-            var r = pool[idx];
+            var r = WeightedRandomRule(pool);
             selected.Add(r);
-            pool.RemoveAt(idx);
+            pool.Remove(r);
 
             if (r == HoneycombRule.Ascension) pool.Remove(HoneycombRule.Descension);
             else if (r == HoneycombRule.Descension) pool.Remove(HoneycombRule.Ascension);
@@ -166,6 +182,23 @@ public partial class HoneycombViewModel : ObservableObject
         return selected;
     }
 
+    // Weighted draw from `pool` using each rule's HoneycombRuleWeights.Weight() — every
+    // weight is a positive int and callers only invoke this on a non-empty pool
+    // (guarded above), so totalWeight is always > 0 and Random.Shared.Next(totalWeight)
+    // can't throw. The trailing fallback is unreachable (the loop always finds a rule
+    // before randomValue can go negative past the last element) but keeps this total.
+    private static HoneycombRule WeightedRandomRule(List<HoneycombRule> pool)
+    {
+        int totalWeight = pool.Sum(r => r.Weight());
+        int randomValue = Random.Shared.Next(totalWeight);
+        foreach (var rule in pool)
+        {
+            randomValue -= rule.Weight();
+            if (randomValue < 0) return rule;
+        }
+        return pool[^1];
+    }
+
     public void StartNewMatch()
     {
         _isAnimating = false;
@@ -173,17 +206,34 @@ public partial class HoneycombViewModel : ObservableObject
         PendingSteal = null;
         State.Phase = HoneycombPhase.Playing;
         State.UndoStack.Clear();
-        State.ActiveRules = DetermineActiveRules();
         State.HasStolenThisMatch = false;
         State.CardsCapturedThisMatch = 0;
         State.IsSuddenDeath = false;
 
-        State.Board = new HoneycombBoard();
+        // Roulette (no forced/manual rules) gets bad-luck protection against repeating
+        // the exact same rule set + suit as last match; forced/manual rules are
+        // deterministic already, so there's nothing to protect against.
+        bool isRoulette = !Options.ForceNormalRules && (Options.ManualRules == null || Options.ManualRules.Count == 0);
 
-        if (State.ActiveRules.Contains(HoneycombRule.Ascension) || State.ActiveRules.Contains(HoneycombRule.Descension))
+        List<HoneycombRule> rules = new();
+        List<string> suits = new();
+        for (int attempt = 0; attempt < MaxRouletteRerolls; attempt++)
         {
-            State.Board.AscensionDescensionSuits = new[] { "S", "H", "D", "C" }.OrderBy(x => Random.Shared.Next()).Take(1).ToList();
+            rules = DetermineActiveRules();
+            suits = (rules.Contains(HoneycombRule.Ascension) || rules.Contains(HoneycombRule.Descension))
+                ? new[] { "S", "H", "D", "C" }.OrderBy(x => Random.Shared.Next()).Take(1).ToList()
+                : new List<string>();
+
+            if (!isRoulette || RouletteSignature(rules, suits) != _lastRouletteSignature) break;
+            // Otherwise keep re-rolling; the loop's final attempt is accepted
+            // unconditionally rather than looping forever.
         }
+
+        State.ActiveRules = rules;
+        if (isRoulette) _lastRouletteSignature = RouletteSignature(rules, suits);
+
+        State.Board = new HoneycombBoard();
+        State.Board.AscensionDescensionSuits = suits;
 
         State.PlayerHand = BuildPlayerHand();
         State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
@@ -348,14 +398,18 @@ public partial class HoneycombViewModel : ObservableObject
 
     // Shared tail between StartNewMatch() and RematchGame() — decides who moves first,
     // flashes the opening banner (folding in "Swap!" if this match opened with a
-    // trade), stages the swap highlight, and kicks off StartTurn().
-    private void FinishMatchSetup((Guid PlayerCardId, Guid OpponentCardId)? swapIds)
+    // trade), stages the swap highlight, and kicks off StartTurn(). `forceAlternateStarter`
+    // is passed by RematchGame(): unlike a genuinely new match (a fresh coin toss, just
+    // with bad-luck protection against a long same-side streak), a rematch of the same
+    // match should always hand the opening move to whoever didn't have it last time, so
+    // replaying repeatedly can't keep favoring one side.
+    private void FinishMatchSetup((Guid PlayerCardId, Guid OpponentCardId)? swapIds, bool forceAlternateStarter = false)
     {
         State.PlayerChaosIndex = null;
         State.OpponentChaosIndex = null;
 
         int starter = Random.Shared.Next(2) == 0 ? 1 : -1;
-        if (s_consecutiveStarters >= 3)
+        if (forceAlternateStarter || s_consecutiveStarters >= 3)
         {
             starter = s_lastStarter == 1 ? -1 : 1;
         }
@@ -502,7 +556,7 @@ public partial class HoneycombViewModel : ObservableObject
         State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
 
         var swapIds = ApplyOpponentDeck(_rematchOpponentDeck);
-        FinishMatchSetup(swapIds);
+        FinishMatchSetup(swapIds, forceAlternateStarter: true);
     }
 
     public void Undo()
@@ -689,6 +743,22 @@ public partial class HoneycombViewModel : ObservableObject
         }
     }
 
+    // Same/Plus/Fallen Ace/Combo only ever describe what the board's last capture
+    // resolution actually did, independent of whether that resolution came from a normal
+    // placement (FinishPlacementTail) or a Bomb Shelter reveal flipping a hidden card on
+    // its own (AdvanceBombShelterTimers/RevealBombSheltersAndSettleAsync) — both paths run
+    // the same capture-resolution logic, so both need to surface it the same way.
+    private static string? ComboBannerText(HoneycombBoard board)
+    {
+        var parts = new List<string>();
+        if (board.LastSameTriggered && board.LastPlusTriggered) parts.Add("SAME & PLUS!");
+        else if (board.LastSameTriggered) parts.Add("SAME!");
+        else if (board.LastPlusTriggered) parts.Add("PLUS!");
+        if (board.LastFallenAceTriggered) parts.Add("Fallen Ace!");
+        if (board.LastComboFlipCount > 0) parts.Add($"COMBO x{board.LastComboFlipCount}!");
+        return parts.Count == 0 ? null : string.Join(" ", parts);
+    }
+
     // Bomb Shelter: the hidden card flips on its own 3 turns after it was played,
     // rather than waiting for the match to end — a timed landmine the opponent has to
     // play around, instead of a secret that's only relevant at the final score.
@@ -706,7 +776,8 @@ public partial class HoneycombViewModel : ObservableObject
             {
                 cell.Card.BombShelterTurnsRemaining = null;
                 State.Board.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
-                OnFlashBanner?.Invoke("Bomb Shelter Revealed!");
+                var comboText = ComboBannerText(State.Board);
+                OnFlashBanner?.Invoke(comboText == null ? "Bomb Shelter Revealed!" : $"Bomb Shelter Revealed! {comboText}");
             }
         }
     }
@@ -735,6 +806,8 @@ public partial class HoneycombViewModel : ObservableObject
         if (starterCell != -1)
         {
             State.Board.RevealFaceDownCard(starterCell, new HashSet<HoneycombRule>(State.ActiveRules));
+            var comboText = ComboBannerText(State.Board);
+            if (comboText != null) OnFlashBanner?.Invoke(comboText);
             NotifyStateChanged();
             await Task.Delay(1000);
         }
@@ -742,6 +815,8 @@ public partial class HoneycombViewModel : ObservableObject
         if (secondCell != -1)
         {
             State.Board.RevealFaceDownCard(secondCell, new HashSet<HoneycombRule>(State.ActiveRules));
+            var comboText = ComboBannerText(State.Board);
+            if (comboText != null) OnFlashBanner?.Invoke(comboText);
             NotifyStateChanged();
             await Task.Delay(1000);
         }
@@ -776,16 +851,20 @@ public partial class HoneycombViewModel : ObservableObject
         State.PlayerScore = CountPlayerCards(State.Board, State.PlayerHand);
         State.OpponentScore = CountOpponentCards(State.Board, State.OpponentHand);
 
-        if (State.PlayerScore == State.OpponentScore)
+        if (State.PlayerScore == State.OpponentScore && State.ActiveRules.Contains(HoneycombRule.SuddenDeath))
         {
             TriggerSuddenDeathAsync();
             return;
         }
 
         bool won = State.PlayerScore > State.OpponentScore;
-        bool drawn = false;
+        // Sudden Death is now an opt-in Rule (Triple Triad-style) rather than automatic
+        // on every tie — when it isn't active, a tie is a final result like a win/loss,
+        // not a continuation, so it's recorded as a draw here instead of looping into
+        // TriggerSuddenDeathAsync above.
+        bool drawn = State.PlayerScore == State.OpponentScore;
         bool flawless = State.OpponentScore == 0;
-        
+
         Stats.RecordGame(won, drawn, State.CardsCapturedThisMatch, State.Board.SessionSamePlusTriggers, flawless, Options.Difficulty, State.Board.SessionFallenAceCaptures);
         SaveStats();
 

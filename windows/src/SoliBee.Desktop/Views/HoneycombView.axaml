@@ -145,7 +145,7 @@
                     </StackPanel>
                     
                     <TextBlock x:Name="BankFullWarningText" Text="Your card bank is full. Start over in manage decks to steal again." IsVisible="False" FontSize="14" Foreground="#FF9999" HorizontalAlignment="Center" TextWrapping="Wrap" />
-                    <TextBlock x:Name="AlreadyStolenWarningText" Text="You've already taken a card this match. Rematch to take another." IsVisible="False" FontSize="14" Foreground="#FF9999" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                    <TextBlock x:Name="AlreadyStolenWarningText" Text="Rematch to take another." IsVisible="False" FontSize="14" Foreground="#FF9999" HorizontalAlignment="Center" TextWrapping="Wrap" />
                 </StackPanel>
             </Grid>
         </Border>

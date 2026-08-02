@@ -39,6 +39,7 @@
                             <CheckBox x:Name="HoneycombRule_Order" Content="Order" Tag="Order" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="HoneycombRule_Chaos" Content="Chaos" Tag="Chaos" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="HoneycombRule_BombShelter" Content="Bomb Shelter" Tag="BombShelter" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_SuddenDeath" Content="Sudden Death" Tag="SuddenDeath" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -62,6 +63,7 @@
                             <CheckBox x:Name="Ban_Chaos" Content="Chaos" Tag="Chaos" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="Ban_BombShelter" Content="Bomb Shelter" Tag="BombShelter" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="Ban_Reverse" Content="Reverse" Tag="Reverse" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_SuddenDeath" Content="Sudden Death" Tag="SuddenDeath" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
                         </StackPanel>
                         
                         <TextBlock x:Name="SillyBeeWarning" Text="You cannot blacklist every game, silly bee." FontSize="11" FontWeight="SemiBold" Foreground="#E53935" IsVisible="False" Margin="0,4,0,0"/>

@@ -192,13 +192,17 @@ public partial class HoneycombView : UserControl
                 // now gone, since HasStolenThisMatch is true) — a repeat "You Win!" would
                 // read as stale, so it confirms what just happened instead.
                 OverlayTitle.FontSize = state.HasStolenThisMatch ? 28 : 40;
-                OverlayTitle.Text = state.HasStolenThisMatch ? "Card Added to Card Bank." : "You Win!";
+                OverlayTitle.Text = state.HasStolenThisMatch ? "Card added to card bank." : "You Win!";
             } else if (state.PlayerScore < state.OpponentScore) {
                 OverlayTitle.IsVisible = false;
                 OverlayLoseTitle.IsVisible = true;
             } else {
+                // Sudden Death is now opt-in, so a tie with it off is a final result
+                // (matches mac's "Tie!" wording) rather than the old always-continues
+                // "Draw" that used to be unreachable here (SettleMatch used to route
+                // every tie into TriggerSuddenDeathAsync before this could show).
                 OverlayTitle.FontSize = 40;
-                OverlayTitle.Text = "Draw";
+                OverlayTitle.Text = "Tie!";
             }
             OverlaySubtitle.Text = $"Final Score: {state.PlayerScore} - {state.OpponentScore}";
 

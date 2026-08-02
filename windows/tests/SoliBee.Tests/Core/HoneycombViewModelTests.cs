@@ -20,19 +20,21 @@ public class HoneycombViewModelTests
     {
         var vm = new HoneycombViewModel(isHeadless: true);
         vm.State.Phase = HoneycombPhase.Playing;
-        vm.State.ActiveRules = new List<HoneycombRule>();
+        // Sudden Death is now an opt-in Rule (Triple Triad-style), not automatic on
+        // every tie — it must be active for this match for the tie to continue.
+        vm.State.ActiveRules = new List<HoneycombRule> { HoneycombRule.SuddenDeath };
         vm.Stats = new HoneycombStats();
-        
+
         vm.State.Board = new HoneycombBoard();
         vm.State.PlayerHand.Clear();
         vm.State.OpponentHand.Clear();
-        
+
         var pCard = new HoneycombCard(new HoneycombCardData { Id = 1, Stats = new[] { 1, 1, 1, 1 } }, 1);
         var oCard = new HoneycombCard(new HoneycombCardData { Id = 2, Stats = new[] { 1, 1, 1, 1 } }, -1);
-        
+
         for (int i=0; i<4; i++) vm.State.Board.PlaceCard(pCard, i, new HashSet<HoneycombRule>());
         for (int i=4; i<8; i++) vm.State.Board.PlaceCard(oCard, i, new HashSet<HoneycombRule>());
-        
+
         vm.State.PlayerHand.Add(pCard);
         vm.State.OpponentHand.Add(oCard);
 
@@ -44,13 +46,52 @@ public class HoneycombViewModelTests
         // Or we can just play the last card.
         vm.State.Board.Cells[8].Card = null;
         vm.State.OpponentHand.Add(oCard);
-        
+
         vm.State.CurrentTurn = 1;
         vm.PlayCard(0, 8); // Player places 5th card on board. Now P=5 on board, O=4 on board + 1 in hand = 5.
-        
+
         Assert.True(vm.State.IsSuddenDeath);
         Assert.Equal(1, vm.Stats.SuddenDeathCount);
         Assert.Equal(9, vm.State.PlayerHand.Count + vm.State.OpponentHand.Count); // 10 total cards, but AI played 1, so 9 in hands
+    }
+
+    [Fact]
+    public void Tie_Without_SuddenDeathRule_Settles_As_Draw()
+    {
+        var vm = new HoneycombViewModel(isHeadless: true);
+        vm.State.Phase = HoneycombPhase.Playing;
+        // No Sudden Death rule active — a tie should be a final result now, not a
+        // continuation into another round.
+        vm.State.ActiveRules = new List<HoneycombRule>();
+        vm.Stats = new HoneycombStats();
+
+        vm.State.Board = new HoneycombBoard();
+        vm.State.PlayerHand.Clear();
+        vm.State.OpponentHand.Clear();
+
+        var pCard = new HoneycombCard(new HoneycombCardData { Id = 1, Stats = new[] { 1, 1, 1, 1 } }, 1);
+        var oCard = new HoneycombCard(new HoneycombCardData { Id = 2, Stats = new[] { 1, 1, 1, 1 } }, -1);
+
+        for (int i=0; i<4; i++) vm.State.Board.PlaceCard(pCard, i, new HashSet<HoneycombRule>());
+        for (int i=4; i<8; i++) vm.State.Board.PlaceCard(oCard, i, new HashSet<HoneycombRule>());
+
+        vm.State.PlayerHand.Add(pCard);
+        vm.State.OpponentHand.Add(oCard);
+
+        vm.State.Board.PlaceCard(oCard, 8, new HashSet<HoneycombRule>());
+        vm.State.OpponentHand.RemoveAt(0);
+        vm.State.Board.Cells[8].Card = null;
+        vm.State.OpponentHand.Add(oCard);
+
+        vm.State.CurrentTurn = 1;
+        vm.PlayCard(0, 8); // Same tied-score setup as the Sudden Death test above.
+
+        Assert.False(vm.State.IsSuddenDeath);
+        Assert.Equal(0, vm.Stats.SuddenDeathCount);
+        Assert.Equal(HoneycombPhase.Result, vm.State.Phase);
+        Assert.Equal(vm.State.PlayerScore, vm.State.OpponentScore);
+        Assert.Equal(1, vm.Stats.MatchesDrawn);
+        Assert.Equal(0, vm.Stats.CurrentWinStreak);
     }
 
     [Fact]
