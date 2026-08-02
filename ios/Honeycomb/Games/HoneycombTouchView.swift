@@ -281,12 +281,21 @@ struct HoneycombTouchView: View {
     // MARK: Banner row (rules text + undo/hint in the free space beside it)
 
     private var bannerRow: some View {
-        HStack(spacing: 10) {
+        // Mirrors mac's HoneycombView dense-mode banner scaling: with 3+ active rules
+        // (now reachable since Hard/UltraHard roulette scaling lives in shared/ and
+        // already applies here), the joined rules string is long enough to clip against
+        // this row's fixed 38pt height at the normal font size — shrink it instead of
+        // letting it truncate. minimumScaleFactor is a safety net on top, not a
+        // substitute, since it only shrinks as a last resort and can't be relied on
+        // alone to keep 3-4 rule names legible within 2 lines.
+        let isDense = rulesBannerLines.count > 2
+        return HStack(spacing: 10) {
             hintButton
             Text(rulesBannerLines.joined(separator: "  •  "))
-                .font(.footnote.weight(.semibold))
+                .font((isDense ? Font.caption2 : Font.footnote).weight(.semibold))
                 .foregroundStyle(.white.opacity(0.85))
                 .lineLimit(2)
+                .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
             undoButton
@@ -629,7 +638,7 @@ struct HoneycombTouchView: View {
                     // "You Win!" would read as stale, so it confirms what just
                     // happened instead.
                     let title = (viewModel.matchResult == "You Win!" && viewModel.hasStolenThisMatch)
-                        ? "Card Added to Card Bank." : viewModel.matchResult
+                        ? "Card added to card bank." : viewModel.matchResult
                     Text(title)
                         .font(.system(size: 44, weight: .bold))
                         .foregroundColor(viewModel.matchResult == "You Win!" ? .yellow : .white)
@@ -641,7 +650,7 @@ struct HoneycombTouchView: View {
                             .font(.footnote).foregroundColor(.white)
                             .multilineTextAlignment(.center)
                     } else if viewModel.hasStolenThisMatch {
-                        Text("You've already taken a card this match. Rematch to take another.")
+                        Text("Rematch to take another.")
                             .font(.footnote).foregroundColor(.white)
                             .multilineTextAlignment(.center)
                     }

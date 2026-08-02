@@ -236,9 +236,7 @@ public struct HoneycombView: View {
                 Rectangle()
                     .fill(Color.white.opacity(0.15))
                     .frame(height: 1)
-                
-                Spacer()
-                
+
                 // Game Area — hands sit on either side of the board, each arranged as a
                 // 2-2-1 pyramid (2 top, 2 middle, 1 bottom centered).
                 HStack(alignment: .top, spacing: Self.boardRowSpacing) {
@@ -375,7 +373,8 @@ public struct HoneycombView: View {
 
                 Spacer()
             }
-            
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
             // Post Game Overlay — hidden while actively picking cards to steal, so the
             // board and hands underneath are clickable. Also held back while a rule
             // banner (Combo/Same/Plus/Ascension/Descension) is still visibly on screen,
@@ -398,7 +397,15 @@ public struct HoneycombView: View {
                             // Card is now gone, since hasStolenThisMatch is true) — a
                             // repeat "You Win!" would read as stale, so it confirms what
                             // just happened instead.
-                            Text(viewModel.hasStolenThisMatch ? "Card Added to Card Bank." : viewModel.matchResult)
+                            Text(viewModel.hasStolenThisMatch ? "Card added to card bank." : viewModel.matchResult)
+                                .font(.system(size: 60, weight: .bold)).foregroundColor(.yellow)
+                        } else if viewModel.matchResult == "Tie!" {
+                            // Same styling as "You Win!" — Sudden Death is now opt-in, so an
+                            // unresolved tie is a final result like a win/loss, not a lesser
+                            // outcome. No Steal Card here: every steal conditional below is
+                            // already scoped to "You Win!" specifically, so it's excluded for
+                            // free.
+                            Text(viewModel.matchResult)
                                 .font(.system(size: 60, weight: .bold)).foregroundColor(.yellow)
                         } else {
                             Text(viewModel.matchResult).font(.system(size: 60, weight: .bold)).foregroundColor(.white)
@@ -410,7 +417,7 @@ public struct HoneycombView: View {
                                 .foregroundColor(.white).padding()
                         } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && viewModel.hasStolenThisMatch {
-                            Text("You've already taken a card this match. Rematch to take another.")
+                            Text("Rematch to take another.")
                                 .foregroundColor(.white).padding()
                         }
 
@@ -715,7 +722,7 @@ public struct HoneycombView: View {
             let titleSize: CGFloat = isDense ? 20 : 28
             let textSize: CGFloat = isDense ? 16 : 22
             let lineSpacing: CGFloat = isDense ? 2 : 6
-            
+
             VStack(spacing: lineSpacing) {
                 Text("Rules:")
                     .font(.system(size: titleSize, weight: .black))

@@ -13,6 +13,28 @@ public enum HoneycombRule: String, Codable, CaseIterable {
     case order = "Order"
     case chaos = "Chaos"
     case bombShelter = "Bomb Shelter"
+    case suddenDeath = "Sudden Death"
+
+    // Roulette draw weight — approximates real Triple Triad (FFXIV) NPC rule
+    // frequencies so combo-enabling rules (Same/Plus) come up often and
+    // restrictive ones (Reverse/Order/Descension) stay rare, instead of every
+    // rule having an equal ~8.3% shot. Bomb Shelter has no FFXIV equivalent —
+    // tiered as Medium alongside the other moderate-impact rules. Sudden Death
+    // is FFXIV's rarest rule (2.2%) but is deliberately weighted High here — a
+    // product decision, not a data-fidelity call, now that it's opt-in rather
+    // than automatic.
+    public var weight: Int {
+        switch self {
+        case .plus, .same, .suddenDeath:
+            return 30
+        case .swap, .chaos, .threeOpen, .bombShelter:
+            return 15
+        case .ascension, .allOpen, .fallenAce:
+            return 8
+        case .descension, .reverse, .order:
+            return 3
+        }
+    }
 }
 
 public struct HoneycombCell: Codable, Identifiable, Equatable {

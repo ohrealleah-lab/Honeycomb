@@ -401,7 +401,11 @@ public final class HoneycombViewModel {
     // flashes the opening banner, and (if the opponent starts) kicks off their move.
     // Everything before this point differs between the two (rule/hand setup); once
     // board/activeRules/playerHand/opponentHand are all in place, the rest is identical.
-    private func finishMatchSetup() {
+    // `forceAlternateStarter` is set by rematch(): unlike a genuinely new match (a fresh
+    // coin toss, just with bad-luck protection against a long same-side streak), a
+    // rematch of the same match should always hand the opening move to whoever didn't
+    // have it last time, so replaying repeatedly can't keep favoring one side.
+    private func finishMatchSetup(forceAlternateStarter: Bool = false) {
         gameState = .playing
         showPostGamePrompt = false
         sessionCardsCaptured = 0
@@ -409,7 +413,9 @@ public final class HoneycombViewModel {
         board.sessionFallenAceCaptures = 0
         hasStolenThisMatch = false
         let playerStarts: Bool
-        if starterStreak >= 3, let lastMatchStarterWasPlayer {
+        if forceAlternateStarter, let lastMatchStarterWasPlayer {
+            playerStarts = !lastMatchStarterWasPlayer
+        } else if starterStreak >= 3, let lastMatchStarterWasPlayer {
             playerStarts = !lastMatchStarterWasPlayer
         } else {
             playerStarts = Bool.random()
@@ -473,7 +479,7 @@ public final class HoneycombViewModel {
 
         let swapResult = applyOpponentDeck(rematchOpponentDeck)
         stageSwapAnimation(swapResult, generation: generation)
-        finishMatchSetup()
+        finishMatchSetup(forceAlternateStarter: true)
     }
 
     // A deliberate pause before the opponent's move actually lands — long enough to
@@ -483,97 +489,35 @@ public final class HoneycombViewModel {
     // How long a capture's winning stat(s) flash before the flip actually happens.
     private static let pointHighlightDelay: TimeInterval = 0.5
 
+    // Bad-luck protection for Roulette: a plain independent roll can land on the exact
+    // same result (same rule set AND same Ascension/Descension suit) several matches in
+    // a row, which reads as "broken" even though it's just an unlucky draw. Re-rolling
+    // whenever a draw exactly repeats the previous match's result — up to a small retry
+    // cap, so a heavily-restricted pool (few unbanned rules) can't loop forever — makes
+    // back-to-back identical rolls impossible without meaningfully changing each rule's
+    // long-run odds.
+    private var lastRouletteSignature: String? = nil
+    private static let maxRouletteRerolls = 5
+
     private func setupRules() {
         if options.forceNormalMode {
             // Explicitly locked to zero rules — a real "Normal" match, as opposed to
             // an empty selectedRules (which means "let roulette decide" below).
             activeRules = []
+            ascensionDescensionSuits = []
         } else if options.selectedRules.isEmpty {
-            // Roulette mode — can now occasionally roll 0 rules too, for a genuine
-            // Normal match, instead of always forcing at least one.
-            var pool = HoneycombRule.allCases
-            // Remove banned rules from pool
-            pool.removeAll { options.bannedRules.contains($0.rawValue) }
-            
-            if options.difficulty == .easy {
-                // Ascension/Descension and Fallen Ace punish misreads of the board in
-                // ways that are especially brutal for a new player — keep Easy's
-                // roulette pool to rules that don't compound an opponent-favoring swing.
-                pool.removeAll { $0 == .ascension || $0 == .descension || $0 == .fallenAce }
+            var rolledRules: [HoneycombRule] = []
+            var rolledSuits: Set<String> = []
+            for _ in 0..<Self.maxRouletteRerolls {
+                (rolledRules, rolledSuits) = rollRouletteOnce()
+                if rouletteSignature(rules: rolledRules, suits: rolledSuits) != lastRouletteSignature { break }
+                // Otherwise keep re-rolling; the loop's final attempt is accepted
+                // unconditionally rather than looping forever.
             }
-            
-            // If Normal Mode is banned, force at least 1 rule
-            let normalBanned = options.bannedRules.contains("Normal Mode")
-
-            // "Stop here" is a flat probability at EVERY draw, fully decoupled from
-            // how much exclusivity has shrunk the pool (an earlier scaled-stopWeight
-            // attempt inflated "stop" after big exclusivity removals and made
-            // solo-rule odds WORSE, not better — see git history). Draw 1 uses
-            // 1/(originalPoolSize+1) so Normal stays roughly as rare as any single
-            // rule (~7.7% for the default 12-rule pool). Draw 2 uses a distinct,
-            // deliberately solved probability so that "exactly one rule" lands at a
-            // full 1/3 overall, rather than being capped near Normal's rate: with a
-            // single shared stop-probability p, P(exactly 1 rule) = (1-p)*p can never
-            // exceed p, so Normal necessarily out-paced single-rule matches. Solving
-            // (1 - stopProbabilityFirst) * stopProbabilitySecond = 1/3 removes that
-            // ceiling while leaving Normal's rate untouched.
-            let originalPoolSize = pool.count
-            let stopProbabilityFirst = 1.0 / Double(originalPoolSize + 1)
-            let targetSingleRuleRate = 1.0 / 3.0
-            let stopProbabilitySecond = targetSingleRuleRate / (1.0 - stopProbabilityFirst)
-            
-            var maxSlots = 2
-            var forceMustPickAll = false
-            
-            if options.difficulty == .ultraHard {
-                let roll = Double.random(in: 0..<1)
-                if roll < 0.25 { maxSlots = 4 }
-                else if roll < 0.70 { maxSlots = 3 }
-                else if roll < 0.95 { maxSlots = 2 }
-                else if roll < 0.99 { maxSlots = 1 }
-                else { maxSlots = 0 }
-                
-                if maxSlots == 0 && normalBanned { maxSlots = 1 }
-                forceMustPickAll = true
-            } else if options.difficulty == .hard {
-                let hardRoll = Double.random(in: 0..<1)
-                if hardRoll < 0.01 {
-                    maxSlots = 4
-                    forceMustPickAll = true
-                } else if hardRoll < 0.26 {
-                    maxSlots = 3
-                    forceMustPickAll = true
-                }
-            }
-            
-            activeRules = []
-            for slot in 0..<maxSlots {
-                guard !pool.isEmpty else { break }
-                let mustPick = (slot == 0 && normalBanned) || forceMustPickAll
-                let stopProbability = slot == 0 ? stopProbabilityFirst : stopProbabilitySecond
-                if !mustPick && Double.random(in: 0..<1) < stopProbability { break }
-
-                let randomRule = pool.randomElement()!
-                activeRules.append(randomRule)
-                pool.removeAll { $0 == randomRule }
-                // Exclusivity
-                if randomRule == .ascension { pool.removeAll { $0 == .descension } }
-                if randomRule == .descension { pool.removeAll { $0 == .ascension } }
-                // Order (always play index 0) and Chaos (a random forced card each
-                // turn) are contradictory ways of constraining the same "which card
-                // must you play" slot.
-                if randomRule == .order { pool.removeAll { $0 == .chaos } }
-                if randomRule == .chaos { pool.removeAll { $0 == .order } }
-                // All Open (whole hand revealed) and Three Open (partial reveal) are
-                // contradictory ways of constraining the same "how much of the
-                // opponent's hand is visible" setting.
-                if randomRule == .allOpen { pool.removeAll { $0 == .threeOpen } }
-                if randomRule == .threeOpen { pool.removeAll { $0 == .allOpen } }
-                // Bomb Shelter's hidden card doesn't work when All Open/Three Open
-                // reveals every card anyway.
-                if randomRule == .allOpen || randomRule == .threeOpen { pool.removeAll { $0 == .bombShelter } }
-                if randomRule == .bombShelter { pool.removeAll { $0 == .allOpen || $0 == .threeOpen } }
-            }
+            activeRules = rolledRules
+            ascensionDescensionSuits = rolledSuits
+            lastRouletteSignature = rouletteSignature(rules: rolledRules, suits: rolledSuits)
+            return
         } else {
             activeRules = Array(options.selectedRules)
         }
@@ -584,7 +528,127 @@ public final class HoneycombViewModel {
             ascensionDescensionSuits = []
         }
     }
-    
+
+    // A stable, order-independent string identifying one roulette outcome, so two rolls
+    // that only differ in the order rules happened to be drawn still compare equal.
+    private func rouletteSignature(rules: [HoneycombRule], suits: Set<String>) -> String {
+        let ruleNames = rules.map(\.rawValue).sorted().joined(separator: ",")
+        let suitNames = suits.sorted().joined(separator: ",")
+        return "\(ruleNames)|\(suitNames)"
+    }
+
+    // One independent roulette draw — rule set plus (if applicable) Ascension/Descension
+    // suit. Can occasionally roll 0 rules, for a genuine Normal match, instead of always
+    // forcing at least one.
+    private func rollRouletteOnce() -> (rules: [HoneycombRule], suits: Set<String>) {
+        var pool = HoneycombRule.allCases
+        // Remove banned rules from pool
+        pool.removeAll { options.bannedRules.contains($0.rawValue) }
+
+        if options.difficulty == .easy {
+            // Ascension/Descension and Fallen Ace punish misreads of the board in
+            // ways that are especially brutal for a new player — keep Easy's
+            // roulette pool to rules that don't compound an opponent-favoring swing.
+            pool.removeAll { $0 == .ascension || $0 == .descension || $0 == .fallenAce }
+        }
+
+        // If Normal Mode is banned, force at least 1 rule
+        let normalBanned = options.bannedRules.contains("Normal Mode")
+
+        // "Stop here" is a flat probability at EVERY draw, fully decoupled from
+        // how much exclusivity has shrunk the pool (an earlier scaled-stopWeight
+        // attempt inflated "stop" after big exclusivity removals and made
+        // solo-rule odds WORSE, not better — see git history). Draw 1 uses
+        // 1/(originalPoolSize+1) so Normal stays roughly as rare as any single
+        // rule (~7.7% for the default 12-rule pool). Draw 2 uses a distinct,
+        // deliberately solved probability so that "exactly one rule" lands at a
+        // full 1/3 overall, rather than being capped near Normal's rate: with a
+        // single shared stop-probability p, P(exactly 1 rule) = (1-p)*p can never
+        // exceed p, so Normal necessarily out-paced single-rule matches. Solving
+        // (1 - stopProbabilityFirst) * stopProbabilitySecond = 1/3 removes that
+        // ceiling while leaving Normal's rate untouched.
+        let originalPoolSize = pool.count
+        let stopProbabilityFirst = 1.0 / Double(originalPoolSize + 1)
+        let targetSingleRuleRate = 1.0 / 3.0
+        let stopProbabilitySecond = targetSingleRuleRate / (1.0 - stopProbabilityFirst)
+
+        var maxSlots = 2
+        var forceMustPickAll = false
+
+        if options.difficulty == .ultraHard {
+            let roll = Double.random(in: 0..<1)
+            if roll < 0.25 { maxSlots = 4 }
+            else if roll < 0.70 { maxSlots = 3 }
+            else if roll < 0.95 { maxSlots = 2 }
+            else if roll < 0.99 { maxSlots = 1 }
+            else { maxSlots = 0 }
+
+            if maxSlots == 0 && normalBanned { maxSlots = 1 }
+            forceMustPickAll = true
+        } else if options.difficulty == .hard {
+            let hardRoll = Double.random(in: 0..<1)
+            if hardRoll < 0.01 {
+                maxSlots = 4
+                forceMustPickAll = true
+            } else if hardRoll < 0.26 {
+                maxSlots = 3
+                forceMustPickAll = true
+            }
+        }
+
+        var rules: [HoneycombRule] = []
+        for slot in 0..<maxSlots {
+            guard !pool.isEmpty else { break }
+            let mustPick = (slot == 0 && normalBanned) || forceMustPickAll
+            let stopProbability = slot == 0 ? stopProbabilityFirst : stopProbabilitySecond
+            if !mustPick && Double.random(in: 0..<1) < stopProbability { break }
+
+            let randomRule = Self.weightedRandomRule(from: pool)
+            rules.append(randomRule)
+            pool.removeAll { $0 == randomRule }
+            // Exclusivity
+            if randomRule == .ascension { pool.removeAll { $0 == .descension } }
+            if randomRule == .descension { pool.removeAll { $0 == .ascension } }
+            // Order (always play index 0) and Chaos (a random forced card each
+            // turn) are contradictory ways of constraining the same "which card
+            // must you play" slot.
+            if randomRule == .order { pool.removeAll { $0 == .chaos } }
+            if randomRule == .chaos { pool.removeAll { $0 == .order } }
+            // All Open (whole hand revealed) and Three Open (partial reveal) are
+            // contradictory ways of constraining the same "how much of the
+            // opponent's hand is visible" setting.
+            if randomRule == .allOpen { pool.removeAll { $0 == .threeOpen } }
+            if randomRule == .threeOpen { pool.removeAll { $0 == .allOpen } }
+            // Bomb Shelter's hidden card doesn't work when All Open/Three Open
+            // reveals every card anyway.
+            if randomRule == .allOpen || randomRule == .threeOpen { pool.removeAll { $0 == .bombShelter } }
+            if randomRule == .bombShelter { pool.removeAll { $0 == .allOpen || $0 == .threeOpen } }
+        }
+
+        let suits: Set<String>
+        if rules.contains(.ascension) || rules.contains(.descension) {
+            suits = Set(["S", "H", "D", "C"].shuffled().prefix(1))
+        } else {
+            suits = []
+        }
+        return (rules, suits)
+    }
+
+    // Weighted draw from `pool` using each rule's `HoneycombRule.weight` — every weight
+    // is a positive Int, and `pool` is guaranteed non-empty by rollRouletteOnce's caller
+    // (guard !pool.isEmpty), so totalWeight is always > 0 here and Int.random(in:) can't
+    // trap. The trailing `pool.last!` is unreachable (the loop above always finds a rule
+    // before randomValue can go negative past the last element) but keeps this total.
+    private static func weightedRandomRule(from pool: [HoneycombRule]) -> HoneycombRule {
+        let totalWeight = pool.reduce(0) { $0 + $1.weight }
+        var randomValue = Int.random(in: 0..<totalWeight)
+        for rule in pool {
+            randomValue -= rule.weight
+            if randomValue < 0 { return rule }
+        }
+        return pool.last!
+    }
+
     private func setupPlayerHand() {
         if options.noStressMode {
             // Overpowered deck: one 5*, one 4*, three 3* — the strongest composition
@@ -946,6 +1010,21 @@ public final class HoneycombViewModel {
                 parts.append("Descension!")
             }
         }
+        if let combo = Self.comboBannerText(for: board) { parts.append(combo) }
+        if !parts.isEmpty {
+            flashRuleBanner = parts.joined(separator: " ")
+        }
+    }
+
+    // Same/Plus/Fallen Ace/Combo only ever describe what the board's last capture
+    // resolution actually did, independent of whether that resolution came from a normal
+    // placement (flashRuleBannerIfNeeded) or a Bomb Shelter reveal flipping a hidden card
+    // on its own (advanceBombShelterTimers/revealBombSheltersAndSettle) — both paths run
+    // the same resolveCaptures logic, so both need to surface it the same way. Takes the
+    // board explicitly (rather than reading `self.board`) since advanceBombShelterTimers
+    // operates on a local `inout` board that hasn't been assigned to self.board yet.
+    private static func comboBannerText(for board: HoneycombBoard) -> String? {
+        var parts: [String] = []
         if board.lastSameTriggered { parts.append("Same!") }
         if board.lastPlusTriggered { parts.append("Plus!") }
         if board.lastFallenAceTriggered { parts.append("Fallen Ace!") }
@@ -954,9 +1033,7 @@ public final class HoneycombViewModel {
         if board.lastComboFlipCount > 0 {
             parts.append("COMBO x\(board.lastComboFlipCount)!")
         }
-        if !parts.isEmpty {
-            flashRuleBanner = parts.joined(separator: " ")
-        }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
 
@@ -1227,7 +1304,7 @@ public final class HoneycombViewModel {
                 card.bombShelterTurnsRemaining = nil
                 board.cells[i].card = card
                 _ = board.revealFaceDownCard(at: i, rules: activeRules)
-                flashRuleBanner = "Bomb Shelter Revealed!"
+                flashRuleBanner = ["Bomb Shelter Revealed!", Self.comboBannerText(for: board)].compactMap { $0 }.joined(separator: " ")
             } else {
                 card.bombShelterTurnsRemaining = newRemaining
                 board.cells[i].card = card
@@ -1268,6 +1345,9 @@ public final class HoneycombViewModel {
                 if !flips.isEmpty && self.options.isSoundEnabled {
                     UISound.play(named: "snap", enabled: true)
                 }
+                if let combo = Self.comboBannerText(for: self.board) {
+                    self.flashRuleBanner = combo
+                }
             }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
@@ -1277,6 +1357,9 @@ public final class HoneycombViewModel {
                     let flips = self.board.revealFaceDownCard(at: secondCell, rules: self.activeRules)
                     if !flips.isEmpty && self.options.isSoundEnabled {
                         UISound.play(named: "snap", enabled: true)
+                    }
+                    if let combo = Self.comboBannerText(for: self.board) {
+                        self.flashRuleBanner = combo
                     }
                 }
 
@@ -1307,17 +1390,24 @@ public final class HoneycombViewModel {
                 matchResult = "You Lose"
                 gameState = .gameOver
                 stats.recordGame(won: false, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
-            } else {
+            } else if activeRules.contains(.suddenDeath) {
                 matchResult = "Draw - Sudden Death!"
                 gameState = .suddenDeath
                 stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
-                
+
                 // Give enough time for the final card placement and any combo animations to fully resolve
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
                     self?.flashRuleBanner = "Sudden Death!"
                     self?.triggerSuddenDeath()
                 }
                 return
+            } else {
+                // Sudden Death isn't active for this match (Triple Triad-style: it's now
+                // an opt-in Rule, not automatic on every tie) — a tie is a final result
+                // like a win/loss, not a continuation.
+                matchResult = "Tie!"
+                gameState = .gameOver
+                stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
             }
             saveStats()
             // HoneycombView holds the win/lose overlay back on its own (gated on its
