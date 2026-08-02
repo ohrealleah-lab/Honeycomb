@@ -256,10 +256,6 @@ struct GameToolbarButton: View {
 struct GameSelectionDropdown: View {
     @Bindable var coordinator: AppCoordinator
 
-    // Solitaire games deal a fresh hand on entry; Video Poker/Blackjack have no
-    // equivalent "start a new game" action to fire when switching to them.
-    private static let gamesThatStartNewGame: Set<GameMode> = [.klondike, .beecell, .spider]
-
     @State private var isShowingMenu = false
 
     var body: some View {
@@ -297,7 +293,6 @@ struct GameSelectionDropdown: View {
             isShowingMenu = false
             guard coordinator.gameMode != mode else { return }
             coordinator.gameMode = mode
-            if Self.gamesThatStartNewGame.contains(mode) { coordinator.startNewGame() }
         }) {
             HStack(spacing: 8) {
                 Text(mode.displayName)
