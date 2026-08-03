@@ -123,7 +123,10 @@ public partial class DeckBuilderView : UserControl
 
         if (suitsFilter > 0)
         {
-            var suit = ((CardSuit)(suitsFilter - 1)).ToString();
+            // HoneycombCardData.Suit stores single-letter codes ("S"/"H"/"D"/"C"), not
+            // CardSuit's full-word ToString() — comparing against the raw enum name
+            // never matched anything, silently emptying the bank for every suit filter.
+            var suit = ((CardSuit)(suitsFilter - 1)).ToString()[..1];
             filtered = filtered.Where(c => c.Suit == suit);
         }
 
