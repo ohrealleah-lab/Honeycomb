@@ -61,7 +61,11 @@ public static class HoneycombAI
 
         var simulatedPlayerHand = BuildSimulatedHand(playerHand, unknownPlayerCardCount, playerOwner);
 
-        int depth = difficulty == HoneycombDifficulty.Hard ? 2 : 6;
+        // Hard: 5 plies (was 2) — mirrors the Swift port's computeMove lookaheadPlies.
+        // Only safe now that unknown cards are simulated above rather than truncating
+        // the player's ply outright, so the deeper search doesn't "cheat" by exhausting
+        // hidden hand slots the AI was never shown.
+        int depth = difficulty == HoneycombDifficulty.Hard ? 5 : 6;
         bool useFallenAceWeight = difficulty == HoneycombDifficulty.UltraHard;
 
         return FindMinimaxMove(board, aiHand, simulatedPlayerHand, rules, depth, useFallenAceWeight, aiOwner, playerOwner, mandatedHandIndex);
