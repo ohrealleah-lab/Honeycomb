@@ -292,7 +292,7 @@ public static class HoneycombAI
 
         if (depth == 0 || (isMaximizing && aiHand.Count == 0) || (!isMaximizing && playerHand.Count == 0))
         {
-            return EvaluateBoard(board, rules, useFallenAceWeight, aiOwner, playerOwner);
+            return EvaluateBoard(board, rules, useFallenAceWeight, aiOwner, playerOwner, aiHand, playerHand);
         }
 
         var activeHand = isMaximizing ? aiHand : playerHand;
@@ -364,7 +364,7 @@ public static class HoneycombAI
         return best;
     }
 
-    private static int EvaluateBoard(HoneycombBoard board, HashSet<HoneycombRule> rules, bool useFallenAceWeight, int aiOwner, int playerOwner)
+    private static int EvaluateBoard(HoneycombBoard board, HashSet<HoneycombRule> rules, bool useFallenAceWeight, int aiOwner, int playerOwner, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand)
     {
         int score = 0;
         bool reverse = rules.Contains(HoneycombRule.Reverse);
@@ -397,7 +397,7 @@ public static class HoneycombAI
                 score -= cardScore;
         }
 
-        score += ComboPotential(board, rules, aiOwner, playerOwner);
+        score += ComboPotential(board, rules, aiOwner, playerOwner, aiHand, playerHand);
         return score;
     }
 
@@ -411,54 +411,89 @@ public static class HoneycombAI
         return value;
     }
 
-    private static int ComboPotential(HoneycombBoard board, HashSet<HoneycombRule> rules, int aiOwner, int playerOwner)
+    // Estimates Same/Plus chain-capture potential sitting on the board right now, by
+    // actually checking whether some card still in the attacking side's hand could
+    // trigger it (Ascension/Descension modifier included) rather than just counting
+    // matching neighbor pairs — mirrors the rewritten Swift comboPotential
+    // (shared/Honeycomb/Models/HoneycombAI.swift). `direction` on each target is the
+    // direction from the empty cell TO that neighbor (0=Top,1=Right,2=Bottom,3=Left) —
+    // an attacker card hypothetically placed at the empty cell would face that neighbor
+    // with its own stat at that same index.
+    private static int ComboPotential(HoneycombBoard board, HashSet<HoneycombRule> rules, int aiOwner, int playerOwner, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand)
     {
         if (!rules.Contains(HoneycombRule.Same) && !rules.Contains(HoneycombRule.Plus))
             return 0;
+
+        bool ascension = rules.Contains(HoneycombRule.Ascension);
+        bool descension = rules.Contains(HoneycombRule.Descension);
+        bool checkSame = rules.Contains(HoneycombRule.Same);
+        bool checkPlus = rules.Contains(HoneycombRule.Plus);
 
         int score = 0;
         for (int i = 0; i < 9; i++)
         {
             if (!board.Cells[i].IsEmpty) continue;
 
-            var neighbors = new List<(int Owner, int FacingStat)>();
+            var neighbors = new List<(int Direction, int Owner, int FacingStat)>();
             int row = i / 3;
             int col = i % 3;
 
-            if (row > 0 && !board.Cells[i - 3].IsEmpty && !board.Cells[i - 3].Card!.IsFaceDown) 
-                neighbors.Add((board.Cells[i - 3].Card!.Owner, board.Cells[i - 3].Card!.Stat(2)));
-            if (col < 2 && !board.Cells[i + 1].IsEmpty && !board.Cells[i + 1].Card!.IsFaceDown) 
-                neighbors.Add((board.Cells[i + 1].Card!.Owner, board.Cells[i + 1].Card!.Stat(3)));
-            if (row < 2 && !board.Cells[i + 3].IsEmpty && !board.Cells[i + 3].Card!.IsFaceDown) 
-                neighbors.Add((board.Cells[i + 3].Card!.Owner, board.Cells[i + 3].Card!.Stat(0)));
-            if (col > 0 && !board.Cells[i - 1].IsEmpty && !board.Cells[i - 1].Card!.IsFaceDown) 
-                neighbors.Add((board.Cells[i - 1].Card!.Owner, board.Cells[i - 1].Card!.Stat(1)));
+            if (row > 0 && !board.Cells[i - 3].IsEmpty && !board.Cells[i - 3].Card!.IsFaceDown)
+                neighbors.Add((0, board.Cells[i - 3].Card!.Owner, board.Cells[i - 3].Card!.Stat(2)));
+            if (col < 2 && !board.Cells[i + 1].IsEmpty && !board.Cells[i + 1].Card!.IsFaceDown)
+                neighbors.Add((1, board.Cells[i + 1].Card!.Owner, board.Cells[i + 1].Card!.Stat(3)));
+            if (row < 2 && !board.Cells[i + 3].IsEmpty && !board.Cells[i + 3].Card!.IsFaceDown)
+                neighbors.Add((2, board.Cells[i + 3].Card!.Owner, board.Cells[i + 3].Card!.Stat(0)));
+            if (col > 0 && !board.Cells[i - 1].IsEmpty && !board.Cells[i - 1].Card!.IsFaceDown)
+                neighbors.Add((3, board.Cells[i - 1].Card!.Owner, board.Cells[i - 1].Card!.Stat(1)));
 
-            foreach (var owner in new[] { aiOwner, playerOwner })
+            foreach (var targetOwner in new[] { aiOwner, playerOwner })
             {
-                var ownerStats = neighbors.Where(n => n.Owner == owner).Select(n => n.FacingStat).ToList();
-                if (ownerStats.Count >= 2)
+                var targets = neighbors.Where(n => n.Owner == targetOwner).ToList();
+                if (targets.Count < 2) continue;
+
+                var attackerHand = targetOwner == playerOwner ? aiHand : playerHand;
+                bool hasSame = false;
+                bool hasPlus = false;
+
+                foreach (var attacker in attackerHand)
                 {
-                    int sameMatches = 0;
-                    if (rules.Contains(HoneycombRule.Same))
+                    int modifier = 0;
+                    if (board.AscensionDescensionSuits.Contains(attacker.Data.Suit))
                     {
-                        for (int a = 0; a < ownerStats.Count; a++)
-                        for (int b = a + 1; b < ownerStats.Count; b++)
-                            if (ownerStats[a] == ownerStats[b])
-                                sameMatches++;
-                    }
-                    
-                    int plusMatches = 0;
-                    if (rules.Contains(HoneycombRule.Plus))
-                    {
-                        plusMatches = (ownerStats.Count * (ownerStats.Count - 1)) / 2;
+                        int count = board.Cells.Count(c => !c.IsEmpty && c.Card!.Data.Suit == attacker.Data.Suit) + 1;
+                        if (ascension) modifier = count;
+                        else if (descension) modifier = -count;
                     }
 
-                    int weight = 6 * sameMatches + 3 * plusMatches;
-                    if (owner == playerOwner) // AI can exploit player's cards
-                        score += weight;
-                    else
-                        score -= weight;
+                    int AttackerStat(int direction) => Math.Min(10, Math.Max(1, attacker.Data.Stats[direction] + modifier));
+
+                    if (checkSame)
+                    {
+                        int matches = targets.Count(t => AttackerStat(t.Direction) == t.FacingStat);
+                        if (matches >= 2) hasSame = true;
+                    }
+
+                    if (checkPlus)
+                    {
+                        var sumCounts = new Dictionary<int, int>();
+                        foreach (var t in targets)
+                        {
+                            int sum = AttackerStat(t.Direction) + t.FacingStat;
+                            sumCounts[sum] = sumCounts.GetValueOrDefault(sum) + 1;
+                        }
+                        if (sumCounts.Values.Any(v => v >= 2)) hasPlus = true;
+                    }
+
+                    if (hasSame && hasPlus) break; // already max potential
+                }
+
+                if (hasSame || hasPlus)
+                {
+                    int weight = (hasSame ? 6 : 0) + (hasPlus ? 3 : 0);
+                    // If the AI has a card to combo the player's cards, that's good (+);
+                    // if the player has a card to combo the AI's cards, that's bad (-).
+                    score += targetOwner == playerOwner ? weight : -weight;
                 }
             }
         }
