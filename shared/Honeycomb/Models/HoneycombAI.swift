@@ -48,6 +48,15 @@ enum HoneycombAI {
         }
         let cells: [CardState?]
         let maximizingOpponent: Bool
+        // Remaining search depth and each side's still-unplayed hand (order doesn't
+        // affect which moves are available, so sorted for a stable key) — without these,
+        // two different searches that merely reach the same board layout would collide
+        // in the table even though one may have less depth left to search, or an
+        // entirely different set of cards left to play, making the cached score wrong
+        // for the other's context.
+        let depth: Int
+        let opponentDeckIds: [Int]
+        let playerDeckIds: [Int]
     }
 
     static func emptyBoardIndices(board: HoneycombBoard) -> [Int] {
@@ -256,7 +265,10 @@ enum HoneycombAI {
                 guard let card = cell.card else { return nil }
                 return TTKey.CardState(dataId: card.data.id, owner: card.owner, isFaceDown: card.isFaceDown)
             },
-            maximizingOpponent: maximizingOpponent
+            maximizingOpponent: maximizingOpponent,
+            depth: depth,
+            opponentDeckIds: opponentDeck.map(\.id).sorted(),
+            playerDeckIds: playerDeck.map(\.id).sorted()
         )
         if let entry = tt[ttKey] {
             if entry.flag == .exact { return entry.value }
