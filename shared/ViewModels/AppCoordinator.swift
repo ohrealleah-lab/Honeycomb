@@ -26,6 +26,13 @@ public final class AppCoordinator {
             default: break
             }
             syncSharedOptions(from: oldValue, to: gameMode)
+            // Reassert the real Sound/No Stress Mode values on every switch — mainly
+            // defensive, since nothing besides applySharedCommonOptionsToAllGames itself
+            // should ever change these per-game fields, but this guarantees switching
+            // games can never be the thing that changes what they're set to (the exact
+            // bug this replaced: syncSharedOptions used to broadcast whichever game you
+            // just left onto every other game, including these two fields).
+            applySharedCommonOptionsToAllGames()
             #if canImport(AppKit)
             applyWindowSizeForCurrentGameMode()
             #endif
@@ -116,6 +123,43 @@ public final class AppCoordinator {
         }
     }
 
+    // MARK: - App-wide Sound/No Stress Mode (single source of truth, same pattern as the
+    // theme fields above). These used to live only per-game and get silently overwritten
+    // on every mode switch by syncSharedOptions (whichever game you'd most recently left
+    // "won"), so switching games alone could flip Sound/No Stress Mode in five games you
+    // never touched. Each game's Options struct still carries its own isSoundEnabled/
+    // noStressMode fields (for Codable/backward-compat reasons and because some game
+    // logic reads options.noStressMode directly), but those are now always kept in sync
+    // *from* these coordinator properties via applySharedCommonOptionsToAllGames() —
+    // never the other way around — so there's one real value, not six.
+    public var isSoundEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isSoundEnabled, forKey: "global_sound_enabled")
+            applySharedCommonOptionsToAllGames()
+        }
+    }
+    public var noStressMode: Bool {
+        didSet {
+            UserDefaults.standard.set(noStressMode, forKey: "global_no_stress_mode")
+            applySharedCommonOptionsToAllGames()
+        }
+    }
+
+    private func applySharedCommonOptionsToAllGames() {
+        klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
+        beecellViewModel.options.isSoundEnabled    = isSoundEnabled
+        spiderViewModel.options.isSoundEnabled     = isSoundEnabled
+        videoPokerViewModel.options.isSoundEnabled = isSoundEnabled
+        blackjackViewModel.options.isSoundEnabled  = isSoundEnabled
+        honeycombViewModel.options.isSoundEnabled  = isSoundEnabled
+        klondikeViewModel.options.noStressMode   = noStressMode
+        beecellViewModel.options.noStressMode    = noStressMode
+        spiderViewModel.options.noStressMode     = noStressMode
+        videoPokerViewModel.options.noStressMode = noStressMode
+        blackjackViewModel.options.noStressMode  = noStressMode
+        honeycombViewModel.options.noStressMode  = noStressMode
+    }
+
     #if canImport(AppKit)
     public var activeCustomBackground: CustomBackground? {
         guard let customBackgroundName else { return nil }
@@ -172,6 +216,16 @@ public final class AppCoordinator {
         self.customFeltBlue  = UserDefaults.standard.double(forKey: "custom_felt_blue")
         self.customBackgroundName = UserDefaults.standard.string(forKey: "custom_background_name")
 
+        // One-time migration: fall back to Klondike's already-persisted per-game value
+        // (rather than a hardcoded default) so existing users don't see a surprise reset
+        // the first time this app-wide value replaces the old six-copies scheme.
+        self.isSoundEnabled = UserDefaults.standard.object(forKey: "global_sound_enabled") != nil
+            ? UserDefaults.standard.bool(forKey: "global_sound_enabled")
+            : klondikeViewModel.options.isSoundEnabled
+        self.noStressMode = UserDefaults.standard.object(forKey: "global_no_stress_mode") != nil
+            ? UserDefaults.standard.bool(forKey: "global_no_stress_mode")
+            : klondikeViewModel.options.noStressMode
+
         #if canImport(AppKit)
         // Synchronously warm the cache for whichever background is active so that
         // BackgroundLayerView never renders a transient Color fallback on first paint.
@@ -192,17 +246,12 @@ public final class AppCoordinator {
         }
         #endif
 
-        // Each view model sets UISound.isEnabled from its own persisted setting as it
-        // initializes above; re-assert it from the actually-active mode here so the
-        // last view model to init doesn't silently win if settings ever drift out of sync.
-        switch gameMode {
-        case .klondike:   UISound.isEnabled = klondikeViewModel.options.isSoundEnabled
-        case .beecell:    UISound.isEnabled = beecellViewModel.options.isSoundEnabled
-        case .spider:     UISound.isEnabled = spiderViewModel.options.isSoundEnabled
-        case .videoPoker: UISound.isEnabled = videoPokerViewModel.options.isSoundEnabled
-        case .blackjack:  UISound.isEnabled = blackjackViewModel.options.isSoundEnabled
-        case .honeycomb:  UISound.isEnabled = honeycombViewModel.options.isSoundEnabled
-        }
+        // Each view model set UISound.isEnabled from its own (possibly stale, pre-
+        // migration) persisted setting as it initialized above; force every game's
+        // isSoundEnabled/noStressMode to the one real value now that it's been resolved,
+        // which also reasserts UISound.isEnabled from it (see options.didSet in each
+        // ViewModel) so nothing can silently win by being the last one to init.
+        applySharedCommonOptionsToAllGames()
     }
 
     // MARK: - Shared option sync (genuinely per-game gameplay prefs only — theme fields

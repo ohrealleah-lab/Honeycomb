@@ -34,6 +34,12 @@ public struct HoneycombCardView: View {
     // card is edge-on and invisible) instead of instantly at the start of the
     // animation, before the flip has even begun to turn.
     @State private var displayedOwner: CardOwner
+    // Same lag, but for Bomb Shelter's face-down -> face-up reveal: without this, the
+    // face content would swap the instant `card.isFaceDown` flips (i.e. immediately,
+    // full-frontal, before any rotation has happened), defeating the point of a reveal
+    // animation. Lagging it to the rotation's midpoint makes the card visibly turn over
+    // to show what was underneath, the same way an ownership flip already does for color.
+    @State private var displayedIsFaceDown: Bool
     // rotation3DEffect doesn't cull the back face by default, so past 90° the (already
     // new) content would render mirrored/backwards. This snaps on at the same midpoint
     // as the owner swap above and applies a horizontal flip that cancels the
@@ -49,6 +55,7 @@ public struct HoneycombCardView: View {
         self.stealHighlight = stealHighlight
         self.highlightedStatIndices = highlightedStatIndices
         _displayedOwner = State(initialValue: card.owner)
+        _displayedIsFaceDown = State(initialValue: card.isFaceDown)
     }
 
     // Matches every other game's CardView rank index: 17pt bold monospaced at the
@@ -70,7 +77,7 @@ public struct HoneycombCardView: View {
 
     public var body: some View {
         ZStack {
-            if isFlipped || card.isFaceDown {
+            if isFlipped || displayedIsFaceDown {
                 // The themed CardBackView (bundle images + custom card backs) is still
                 // macOS-only; iOS renders a procedural back until it's ported.
                 #if canImport(AppKit)
@@ -150,6 +157,18 @@ public struct HoneycombCardView: View {
             // both changes are hidden inside the moment the card can't be seen face-on.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 displayedOwner = newOwner
+                isPastFlipMidpoint.toggle()
+            }
+        }
+        .onChange(of: card.isFaceDown) { oldValue, newValue in
+            guard oldValue != newValue else { return }
+            withAnimation(.easeInOut(duration: 0.4)) {
+                flipDegrees += 180
+            }
+            // Same edge-on-midpoint trick as the ownership flip above: swap which face is
+            // showing (and the mirror correction) at the moment the card is invisible.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                displayedIsFaceDown = newValue
                 isPastFlipMidpoint.toggle()
             }
         }

@@ -1103,6 +1103,13 @@ struct BeecellOptionsView: View {
                 updatedOpts.showPointHighlights = showPointHighlights
 
                 viewModel.options = updatedOpts
+                // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
+                // edit there (rather than leaving it only on this game's own options)
+                // is what makes it actually apply everywhere instead of getting quietly
+                // reverted the next time any game switch reasserts the coordinator's
+                // value over this one.
+                coordinator.isSoundEnabled = isSoundEnabled
+                coordinator.noStressMode = noStressMode
             }
         ) {
             Picker("Game Mode:", selection: $deckCount) {

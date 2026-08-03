@@ -215,7 +215,7 @@ public struct HoneycombView: View {
                     if viewModel.gameState != .setup {
                         HStack {
                             StatusItemView(label: "YOU", value: "\(viewModel.board.playerScore + viewModel.playerHand.count)")
-                            StatusItemView(label: "OPPONENT", value: "\(viewModel.board.opponentScore + viewModel.opponentHand.count)")
+                            StatusItemView(label: viewModel.options.difficulty.displayName, value: "\(viewModel.board.opponentScore + viewModel.opponentHand.count)")
                         }
                     }
                 }
@@ -546,6 +546,13 @@ public struct HoneycombView: View {
             let task = DispatchWorkItem {
                 withAnimation(.easeOut(duration: 0.3)) {
                     showingRuleBanner = false
+                }
+                // Reveal whatever's queued behind this banner (if anything) once this
+                // one has actually finished fading out, instead of a second event
+                // silently overwriting it mid-display — see HoneycombViewModel's
+                // bannerQueue/advanceBannerQueue().
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    viewModel.advanceBannerQueue()
                 }
             }
             let duration = text.hasPrefix("First Move:") ? 2.0 : 1.2
@@ -921,6 +928,13 @@ struct HoneycombOptionsView: View {
                 updatedOpts.showPointHighlights = showPointHighlights
                 updatedOpts.hideHintButton = hideHintButton
                 viewModel.options = updatedOpts
+                // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
+                // edit there (rather than leaving it only on this game's own options)
+                // is what makes it actually apply everywhere instead of getting quietly
+                // reverted the next time any game switch reasserts the coordinator's
+                // value over this one.
+                coordinator.isSoundEnabled = isSoundEnabled
+                coordinator.noStressMode = noStressMode
                 // No Stress Mode's deck composition is only decided at match start, so
                 // toggling it on mid-match has no visible effect until the next deal —
                 // silently deal fresh instead of leaving a stale, unapplied setting.
@@ -992,7 +1006,7 @@ struct HoneycombRulesView: View {
             }
         ) {
             VStack(alignment: .leading, spacing: 20) {
-                Picker("Difficulty", selection: $difficulty) {
+                Picker("Opponent", selection: $difficulty) {
                     ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
                         Text(diff.displayName).tag(diff)
                     }
@@ -1065,7 +1079,7 @@ struct HoneycombRulesView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     
                     let allBanItems = ["Normal Mode"] + HoneycombRule.allCases.map { $0.rawValue }
-                    
+
                     ForEach(allBanItems, id: \.self) { ruleName in
                         HStack {
                             Toggle(ruleName, isOn: Binding(

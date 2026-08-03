@@ -45,7 +45,7 @@ public struct HoneycombStatsView: View {
                     StatRowView(label: "Matches Won", value: "\(stats.matchesWon)")
                     StatRowView(label: "Matches Lost", value: "\(stats.matchesLost)")
                     StatRowView(label: "Matches Drawn", value: "\(stats.matchesDrawn)")
-                    StatRowView(label: "Most Sudden Deaths", value: "\(stats.suddenDeathCount)")
+                    StatRowView(label: "Most Swarms to the Death", value: "\(stats.suddenDeathCount)")
                     StatRowView(label: "Win Rate", value: String(format: "%.1f%%", winRate))
 
                     Divider()
@@ -61,8 +61,8 @@ public struct HoneycombStatsView: View {
                     Divider()
 
                     StatRowView(label: "Total Cards Flipped", value: "\(stats.cardsCaptured)")
-                    StatRowView(label: "Fallen Aces", value: "\(stats.fallenAces)")
-                    StatRowView(label: "Same/Plus Combos Triggered", value: "\(stats.samePlusTriggers)")
+                    StatRowView(label: "Queen's Falls", value: "\(stats.fallenAces)")
+                    StatRowView(label: "Symmetry/Nectar Math Combos Triggered", value: "\(stats.samePlusTriggers)")
                     StatRowView(label: "Cards Stolen", value: "\(stats.cardsStolen)")
                     StatRowView(label: "Times Started Over", value: "\(stats.timesStartedOver)")
 

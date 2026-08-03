@@ -114,11 +114,11 @@ public final class HoneycombViewModel {
         case .autocomplete:
             break
         case .same:
-            flashRuleBanner = "SAME!"
+            enqueueBanner("\(HoneycombRule.same.rawValue.uppercased())!")
         case .plus:
-            flashRuleBanner = "PLUS!"
+            enqueueBanner("\(HoneycombRule.plus.rawValue.uppercased())!")
         case .suddenDeath:
-            flashRuleBanner = "SUDDEN DEATH!"
+            enqueueBanner("\(HoneycombRule.suddenDeath.rawValue.uppercased())!")
         }
     }
     public var zoomScale: CGFloat = 1.0
@@ -205,14 +205,40 @@ public final class HoneycombViewModel {
     // Post-game state
     public var showPostGamePrompt: Bool = false
     public var matchResult: String = "" // "You Win!", "You Lose", "Draw"
-    public var flashRuleBanner: String? = nil {
-        didSet {
-            if flashRuleBanner != nil {
-                flashRuleBannerTrigger += 1
-            }
+    // A FIFO queue of banner texts, replacing a single last-write-wins slot — that let a
+    // second event (e.g. a Bomb Shelter reveal firing moments after an ordinary
+    // placement's own capture, or two staggered end-of-match reveals) silently clobber
+    // an earlier banner before it had been on screen long enough to read, or before it
+    // rendered at all. The view shows `flashRuleBanner` (the queue's front) and calls
+    // `advanceBannerQueue()` once its own dismiss timer completes, revealing whatever's
+    // queued behind it — see enqueueBanner/advanceBannerQueue/clearBannerQueue below.
+    private var bannerQueue: [String] = []
+    public var flashRuleBanner: String? { bannerQueue.first }
+    public var flashRuleBannerTrigger: Int = 0
+
+    private func enqueueBanner(_ text: String) {
+        bannerQueue.append(text)
+        // Only bump the trigger when this becomes the front of the queue — if something
+        // is already showing, the view picks this one up on its own via
+        // advanceBannerQueue() once the current banner's dismiss timer fires, rather
+        // than interrupting it.
+        if bannerQueue.count == 1 {
+            flashRuleBannerTrigger += 1
         }
     }
-    public var flashRuleBannerTrigger: Int = 0
+
+    // Called by the view once the currently-shown banner's own dismiss timer completes.
+    public func advanceBannerQueue() {
+        guard !bannerQueue.isEmpty else { return }
+        bannerQueue.removeFirst()
+        if !bannerQueue.isEmpty {
+            flashRuleBannerTrigger += 1
+        }
+    }
+
+    private func clearBannerQueue() {
+        bannerQueue.removeAll()
+    }
     public var sessionCardsCaptured: Int = 0
 
     // Which of the attacker's N/E/S/W stats (0=Top,1=Right,2=Bottom,3=Left) are
@@ -434,7 +460,10 @@ public final class HoneycombViewModel {
         // got shown here at all.
         let firstMoveLine = isPlayerTurn ? "First Move: Player!" : "First Move: Opponent!"
         let ruleLines = activeRules.map { formatRuleForBanner($0) }
-        flashRuleBanner = ([firstMoveLine] + ruleLines).joined(separator: "\n")
+        // A brand new match starting — any banner still queued from the previous one
+        // (e.g. a match ended mid-combo-sequence) is no longer relevant.
+        clearBannerQueue()
+        enqueueBanner(([firstMoveLine] + ruleLines).joined(separator: "\n"))
 
         if options.isSoundEnabled {
             UISound.play(named: "shuffle", enabled: true)
@@ -1005,14 +1034,14 @@ public final class HoneycombViewModel {
         // since those describe what the final move itself actually did.
         if !board.isFull && board.ascensionDescensionSuits.contains(placedSuit) {
             if activeRules.contains(.ascension) {
-                parts.append("Ascension!")
+                parts.append("\(HoneycombRule.ascension.rawValue)!")
             } else if activeRules.contains(.descension) {
-                parts.append("Descension!")
+                parts.append("\(HoneycombRule.descension.rawValue)!")
             }
         }
         if let combo = Self.comboBannerText(for: board) { parts.append(combo) }
         if !parts.isEmpty {
-            flashRuleBanner = parts.joined(separator: " ")
+            enqueueBanner(parts.joined(separator: " "))
         }
     }
 
@@ -1025,9 +1054,9 @@ public final class HoneycombViewModel {
     // operates on a local `inout` board that hasn't been assigned to self.board yet.
     private static func comboBannerText(for board: HoneycombBoard) -> String? {
         var parts: [String] = []
-        if board.lastSameTriggered { parts.append("Same!") }
-        if board.lastPlusTriggered { parts.append("Plus!") }
-        if board.lastFallenAceTriggered { parts.append("Fallen Ace!") }
+        if board.lastSameTriggered { parts.append("\(HoneycombRule.same.rawValue)!") }
+        if board.lastPlusTriggered { parts.append("\(HoneycombRule.plus.rawValue)!") }
+        if board.lastFallenAceTriggered { parts.append("\(HoneycombRule.fallenAce.rawValue)!") }
         // Combo = a Same/Plus-triggered flip going on to capture its own neighbors —
         // not just any move that happens to flip 2+ ordinary neighbors at once.
         if board.lastComboFlipCount > 0 {
@@ -1097,22 +1126,21 @@ public final class HoneycombViewModel {
     // caller uses it to schedule whatever comes next (the opponent's turn, or the
     // player's), so that scheduling can't race ahead of an in-progress animation.
     private func applyPlacement(card: HoneycombCard, boardIndex: Int, isFirstCard: Bool, completion: @escaping () -> Void) {
-        var finalBoard = board
+        var capturedBoard = board
         var placedCard = card
-        
+
         let isBombShelterFirst = activeRules.contains(.bombShelter) && isFirstCard
         if isBombShelterFirst {
             placedCard.isFaceDown = true
             placedCard.bombShelterTurnsRemaining = 3
         }
 
-        let flips = finalBoard.placeCard(placedCard, at: boardIndex, rules: activeRules, skipCaptures: isBombShelterFirst)
-
-        // Ticks down any other still-hidden Bomb Shelter card(s) already on the board —
-        // this play counts as one of their 3 turns, whether or not this play was itself
-        // a Bomb Shelter placement. The card flips on its own once the timer runs out,
-        // rather than waiting for the match to end.
-        advanceBombShelterTimers(on: &finalBoard, excluding: boardIndex)
+        // Note: this only resolves the just-placed card's own capture — any *other*
+        // hidden Bomb Shelter card's timer expiring is handled separately, as its own
+        // staged step, by finishPlacement below. Bundling both into one board mutation
+        // used to mean a same-turn reveal committed in the exact same instant as this
+        // capture, with a single banner slot overwritten by whichever set it last.
+        let flips = capturedBoard.placeCard(placedCard, at: boardIndex, rules: activeRules, skipCaptures: isBombShelterFirst)
 
         // Only the directly-placed card's own captures get highlighted — secondary
         // combo/chain flips (a captured card immediately flipping its own neighbors)
@@ -1132,25 +1160,71 @@ public final class HoneycombViewModel {
                 guard let self else { return }
                 self.pointHighlight = nil
                 withAnimation {
-                    self.board = finalBoard
+                    self.board = capturedBoard
                 }
                 self.isAnimatingPlacement = false
-                self.finishPlacement(placedSuit: placedCard.data.suit, flipsCount: flips.count, completion: completion)
+                self.finishPlacement(placedSuit: placedCard.data.suit, flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
             }
         } else {
-            board = finalBoard
-            finishPlacement(placedSuit: placedCard.data.suit, flipsCount: flips.count, completion: completion)
+            board = capturedBoard
+            finishPlacement(placedSuit: placedCard.data.suit, flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
         }
     }
 
-    private func finishPlacement(placedSuit: String, flipsCount: Int, completion: @escaping () -> Void) {
+    // Stage A (above the Bomb Shelter check below): the just-placed card's own capture —
+    // its banner, sound, and (already flipped by the time this runs) board state. Stage
+    // B: any *other* hidden Bomb Shelter card's 3-turn timer expiring as a side effect of
+    // this same turn. Ticking it down here, after Stage A has fully committed, and
+    // staggering its own board commit/flip/banner behind a short pause keeps the two
+    // events visually sequential instead of landing in the same instant and stepping on
+    // each other — previously both were computed into one board mutation and committed
+    // together, so a reveal's own flip/banner could appear (or get silently overwritten)
+    // in the exact same frame as the placed card's own capture.
+    private func finishPlacement(placedSuit: String, flipsCount: Int, excludingBoardIndex: Int, completion: @escaping () -> Void) {
         sessionCardsCaptured += flipsCount
         flashRuleBannerIfNeeded(placedSuit: placedSuit)
         if options.isSoundEnabled {
             UISound.play(named: "snap", enabled: true)
         }
-        checkWinCondition()
-        completion()
+
+        // Always committed immediately — a hidden card's countdown must persist every
+        // turn (even when nothing reaches zero this time) or it could never actually
+        // count down to a reveal.
+        let pendingReveals = tickBombShelterTimers(excluding: excludingBoardIndex)
+
+        // The common case: nothing hit zero this turn — finish immediately, exactly as
+        // before this change.
+        guard !pendingReveals.isEmpty else {
+            checkWinCondition()
+            completion()
+            return
+        }
+
+        isAnimatingPlacement = true
+        let revealBombShelters = { [weak self] in
+            guard let self else { return }
+            let (revealedBoard, banners) = self.revealBombShelterCards(at: pendingReveals)
+            withAnimation {
+                self.board = revealedBoard
+            }
+            if self.options.isSoundEnabled {
+                UISound.play(named: "snap", enabled: true)
+            }
+            for banner in banners {
+                self.enqueueBanner(banner)
+            }
+            self.isAnimatingPlacement = false
+            self.checkWinCondition()
+            completion()
+        }
+        if UISound.isHeadlessMode {
+            revealBombShelters()
+        } else {
+            // Give Stage A's own flip/banner a moment to actually be seen (its flip
+            // animation alone runs ~0.4s — HoneycombCardView's onChange(of: card.owner))
+            // before Stage B's board change and banner(s) land.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: revealBombShelters)
+        }
     }
 
     // Bumped every time a new AI turn is computed (and on any hard reset, e.g.
@@ -1216,7 +1290,7 @@ public final class HoneycombViewModel {
         sessionCardsCaptured = previous.sessionCardsCaptured
         chaosPlayerIndex = previous.chaosPlayerIndex
         chaosOpponentIndex = previous.chaosOpponentIndex
-        flashRuleBanner = nil
+        clearBannerQueue()
         pointHighlight = nil
         isAnimatingPlacement = false
     }
@@ -1293,23 +1367,50 @@ public final class HoneycombViewModel {
 
     // Bomb Shelter: the hidden card flips on its own 3 turns after it was played,
     // rather than waiting for the match to end — a timed landmine the opponent has to
-    // play around, instead of a secret that's only relevant at the final score.
-    private func advanceBombShelterTimers(on board: inout HoneycombBoard, excluding justPlacedIndex: Int) {
+    // play around, instead of a secret that's only relevant at the final score. Returns
+    // one banner string per card actually revealed this call (almost always 0 or 1, but
+    // never silently drops a second simultaneous reveal's banner the way a single
+    // `flashRuleBanner` assignment used to). Only ticks the countdown — there's nothing
+    // visible to stage about a mere decrement, so this commits straight to `board`
+    // immediately rather than leaving it to the caller (a card whose timer doesn't yet
+    // reach zero must still actually persist that decrement every turn, or it can never
+    // count down to a reveal at all). Returns the indices (if any) whose timer just hit
+    // zero — resolving *those* into an actual reveal is left to revealBombShelterCards
+    // below, so the caller can stage that part's visual effects separately.
+    private func tickBombShelterTimers(excluding justPlacedIndex: Int) -> [Int] {
+        var pendingReveals: [Int] = []
+        var updated = board
         for i in 0..<9 {
             if i == justPlacedIndex { continue }
-            guard var card = board.cells[i].card, card.isFaceDown, let remaining = card.bombShelterTurnsRemaining else { continue }
+            guard var card = updated.cells[i].card, card.isFaceDown, let remaining = card.bombShelterTurnsRemaining else { continue }
 
             let newRemaining = remaining - 1
             if newRemaining <= 0 {
-                card.bombShelterTurnsRemaining = nil
-                board.cells[i].card = card
-                _ = board.revealFaceDownCard(at: i, rules: activeRules)
-                flashRuleBanner = ["Bomb Shelter Revealed!", Self.comboBannerText(for: board)].compactMap { $0 }.joined(separator: " ")
+                pendingReveals.append(i)
             } else {
                 card.bombShelterTurnsRemaining = newRemaining
-                board.cells[i].card = card
+                updated.cells[i].card = card
             }
         }
+        board = updated
+        return pendingReveals
+    }
+
+    // Resolves the actual reveal (flip + capture) for cards whose Bomb Shelter timer
+    // just hit zero (per tickBombShelterTimers above), returning the resulting board and
+    // one banner per card revealed — kept separate so the caller can commit/animate this
+    // part on its own schedule instead of in the same instant as the countdown.
+    private func revealBombShelterCards(at indices: [Int]) -> (board: HoneycombBoard, banners: [String]) {
+        var updated = board
+        var banners: [String] = []
+        for i in indices {
+            guard var card = updated.cells[i].card else { continue }
+            card.bombShelterTurnsRemaining = nil
+            updated.cells[i].card = card
+            _ = updated.revealFaceDownCard(at: i, rules: activeRules)
+            banners.append(["\(HoneycombRule.bombShelter.rawValue) Revealed!", Self.comboBannerText(for: updated)].compactMap { $0 }.joined(separator: " "))
+        }
+        return (updated, banners)
     }
 
     private func checkWinCondition() {
@@ -1346,20 +1447,20 @@ public final class HoneycombViewModel {
                     UISound.play(named: "snap", enabled: true)
                 }
                 if let combo = Self.comboBannerText(for: self.board) {
-                    self.flashRuleBanner = combo
+                    self.enqueueBanner(combo)
                 }
             }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                 guard let self = self else { return }
-                
+
                 if secondCell != -1 {
                     let flips = self.board.revealFaceDownCard(at: secondCell, rules: self.activeRules)
                     if !flips.isEmpty && self.options.isSoundEnabled {
                         UISound.play(named: "snap", enabled: true)
                     }
                     if let combo = Self.comboBannerText(for: self.board) {
-                        self.flashRuleBanner = combo
+                        self.enqueueBanner(combo)
                     }
                 }
 
@@ -1391,13 +1492,13 @@ public final class HoneycombViewModel {
                 gameState = .gameOver
                 stats.recordGame(won: false, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
             } else if activeRules.contains(.suddenDeath) {
-                matchResult = "Draw - Sudden Death!"
+                matchResult = "Draw - \(HoneycombRule.suddenDeath.rawValue)!"
                 gameState = .suddenDeath
                 stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
 
                 // Give enough time for the final card placement and any combo animations to fully resolve
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                    self?.flashRuleBanner = "Sudden Death!"
+                    self?.enqueueBanner("\(HoneycombRule.suddenDeath.rawValue)!")
                     self?.triggerSuddenDeath()
                 }
                 return

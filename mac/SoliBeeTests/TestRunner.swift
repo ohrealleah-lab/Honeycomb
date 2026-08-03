@@ -3,6 +3,7 @@ import Foundation
 @main
 struct TestRunner {
     static func main() {
+        setbuf(stdout, nil) // unbuffered — otherwise a fatalError() trap discards everything printed so far
         print("🚀 Starting SoliBee Test Suite...")
         
         print("🧪 Running GameStateTests...")
@@ -36,6 +37,14 @@ struct TestRunner {
         print("🧪 Running HoneycombCardGeneratorTests...")
         HoneycombCardGeneratorTests.run()
         print("✅ HoneycombCardGeneratorTests passed.")
+
+        print("🧪 Running HoneycombBombShelterTests...")
+        HoneycombBombShelterTests.run()
+        print("✅ HoneycombBombShelterTests passed.")
+
+        print("🧪 Running CrossGameRegressionTests...")
+        CrossGameRegressionTests.run()
+        print("✅ CrossGameRegressionTests passed.")
 
         VideoPokerAndBlackjackTests.run()
         

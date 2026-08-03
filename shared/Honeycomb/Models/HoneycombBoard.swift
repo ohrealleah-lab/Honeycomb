@@ -1,19 +1,19 @@
 import Foundation
 
 public enum HoneycombRule: String, Codable, CaseIterable {
-    case ascension = "Ascension"
-    case descension = "Descension"
-    case same = "Same"
-    case plus = "Plus"
-    case fallenAce = "Fallen Ace"
-    case reverse = "Reverse"
-    case allOpen = "All Open"
-    case threeOpen = "Three Open"
-    case swap = "Swap"
-    case order = "Order"
-    case chaos = "Chaos"
-    case bombShelter = "Bomb Shelter"
-    case suddenDeath = "Sudden Death"
+    case ascension = "Pollination"
+    case descension = "Smoked Out"
+    case same = "Symmetry"
+    case plus = "Nectar Math"
+    case fallenAce = "Queen's Fall"
+    case reverse = "Inversion"
+    case allOpen = "Clear Skies"
+    case threeOpen = "Scouting Party"
+    case swap = "Nectar Exchange"
+    case order = "Hierarchy"
+    case chaos = "Swarm Frenzy"
+    case bombShelter = "Hive Swarm"
+    case suddenDeath = "Swarm to the Death"
 
     // Roulette draw weight — approximates real Triple Triad (FFXIV) NPC rule
     // frequencies so combo-enabling rules (Same/Plus) come up often and

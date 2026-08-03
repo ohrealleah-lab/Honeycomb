@@ -598,6 +598,13 @@ struct HoneycombTouchView: View {
         withAnimation(.easeIn(duration: 0.15)) { showingRuleBanner = true }
         let task = DispatchWorkItem {
             withAnimation(.easeOut(duration: 0.3)) { showingRuleBanner = false }
+            // Reveal whatever's queued behind this banner (if anything) once this one
+            // has actually finished fading out, instead of a second event silently
+            // overwriting it mid-display — see HoneycombViewModel's
+            // bannerQueue/advanceBannerQueue().
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                viewModel.advanceBannerQueue()
+            }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: task)
         ruleBannerTask = task
@@ -756,7 +763,7 @@ struct HoneycombSettingsSection: View {
                 Toggle("Point Highlights", isOn: $viewModel.options.showPointHighlights)
                 Toggle("Hide Hint Button", isOn: $viewModel.options.hideHintButton)
 
-                Picker("Difficulty", selection: $viewModel.options.difficulty) {
+                Picker("Opponent", selection: $viewModel.options.difficulty) {
                     ForEach(HoneycombDifficulty.allCases, id: \.self) { d in
                         Text(d.displayName).tag(d)
                     }
