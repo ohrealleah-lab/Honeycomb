@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace SoliBee.Core.Models;
 
 public enum HoneycombRule
@@ -52,11 +54,11 @@ public static class HoneycombRuleWeights
     // Mirrors HoneycombRule.explanation in the Swift port.
     public static string GetExplanation(this HoneycombRule rule, System.Collections.Generic.HashSet<string>? activeSuits = null) => rule switch
     {
-        HoneycombRule.Ascension => activeSuits != null && activeSuits.Count > 0 
-            ? $"Grants +1 to stats for all {string.Join(" and ", activeSuits)} cards placed on the board." 
+        HoneycombRule.Ascension => activeSuits != null && activeSuits.Count > 0
+            ? $"Grants +1 to stats for all {string.Join(" and ", activeSuits.OrderBy(s => s).Select(HoneycombCardData.SuitDisplayName))} cards placed on the board."
             : "Grants +1 to stats for cards matching the active suits placed on the board.",
-        HoneycombRule.Descension => activeSuits != null && activeSuits.Count > 0 
-            ? $"Inflicts -1 to stats for all {string.Join(" and ", activeSuits)} cards placed on the board." 
+        HoneycombRule.Descension => activeSuits != null && activeSuits.Count > 0
+            ? $"Inflicts -1 to stats for all {string.Join(" and ", activeSuits.OrderBy(s => s).Select(HoneycombCardData.SuitDisplayName))} cards placed on the board."
             : "Inflicts -1 to stats for cards matching the active suits placed on the board.",
         HoneycombRule.Same => "If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously.",
         HoneycombRule.Plus => "If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured.",
