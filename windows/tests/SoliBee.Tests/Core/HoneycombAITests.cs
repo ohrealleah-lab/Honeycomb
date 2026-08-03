@@ -19,7 +19,7 @@ public class HoneycombAITests
         var aiHand = new List<HoneycombCard> { CreateCard(1, new[] {1,1,1,1}, 2) };
         var playerHand = new List<HoneycombCard> { CreateCard(2, new[] {1,1,1,1}, 1) };
         
-        var move = HoneycombAI.FindMove(board, aiHand, playerHand, false, new HashSet<HoneycombRule>(), HoneycombDifficulty.Easy, 2, 1, null);
+        var move = HoneycombAI.FindMove(board, aiHand, playerHand, 0, new HashSet<HoneycombRule>(), HoneycombDifficulty.Easy, 2, 1, null);
         
         Assert.Equal(0, move.HandIndex);
         Assert.InRange(move.CellIndex, 0, 8);
@@ -38,7 +38,7 @@ public class HoneycombAITests
         
         var aiHand = new List<HoneycombCard> { CreateCard(5, new[] {10,10,10,10}, 2) };
         
-        var move = HoneycombAI.FindMove(board, aiHand, new List<HoneycombCard>(), false, new HashSet<HoneycombRule>(), HoneycombDifficulty.Medium, 2, 1, null);
+        var move = HoneycombAI.FindMove(board, aiHand, new List<HoneycombCard>(), 0, new HashSet<HoneycombRule>(), HoneycombDifficulty.Medium, 2, 1, null);
         
         // Should pick pos 1 because it's between 0, 2, and 4, capturing all three.
         Assert.Equal(1, move.CellIndex);
@@ -60,7 +60,7 @@ public class HoneycombAITests
             CreateCard(4, new[] {10,10,10,10}, 1) 
         };
         
-        var move = HoneycombAI.FindMove(board, aiHand, playerHand, false, new HashSet<HoneycombRule>(), HoneycombDifficulty.Hard, 2, 1, null);
+        var move = HoneycombAI.FindMove(board, aiHand, playerHand, 0, new HashSet<HoneycombRule>(), HoneycombDifficulty.Hard, 2, 1, null);
         
         // Should pick Card 3 (HandIndex 1) because it doesn't leave its left side vulnerable to Player's 10.
         Assert.Equal(1, move.HandIndex);

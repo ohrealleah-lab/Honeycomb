@@ -6,11 +6,37 @@ namespace SoliBee.Core.Models;
 
 public static class HoneycombAI
 {
+    // Placeholder for a hand slot whose real contents haven't been revealed to the
+    // searching side (see BuildSimulatedHand) — mirrors the Swift port's genericCard
+    // in HoneycombAI.computeMove/computeHint (shared/Honeycomb/Models/HoneycombAI.swift).
+    private static HoneycombCardData UnknownCardData => new()
+    {
+        Id = -1,
+        Name = "Unknown",
+        Stars = 3,
+        Stats = new[] { 6, 6, 6, 6 },
+        Suit = "-"
+    };
+
+    // Pads `hand` with `unknownCount` generic placeholder cards owned by `owner` so the
+    // search can look ahead through slots it doesn't have real data for, without ever
+    // reading the real (hidden) card underneath. Returns `hand` unchanged when there's
+    // nothing to pad, matching the Swift port's simulatedPlayerDeck/simulatedOpponentDeck.
+    private static List<HoneycombCard> BuildSimulatedHand(List<HoneycombCard> hand, int unknownCount, int owner)
+    {
+        if (unknownCount <= 0) return hand;
+
+        var simulated = new List<HoneycombCard>(hand);
+        for (int i = 0; i < unknownCount; i++)
+            simulated.Add(new HoneycombCard(UnknownCardData, owner));
+        return simulated;
+    }
+
     public static (int HandIndex, int CellIndex) FindMove(
         HoneycombBoard board,
         List<HoneycombCard> aiHand,
         List<HoneycombCard> playerHand,
-        bool playerHasHiddenCards,
+        int unknownPlayerCardCount,
         HashSet<HoneycombRule> rules,
         HoneycombDifficulty difficulty,
         int aiOwner,
@@ -33,10 +59,12 @@ public static class HoneycombAI
             return FindGreedyMove(board, aiHand, rules, aiOwner, mandatedHandIndex);
         }
 
+        var simulatedPlayerHand = BuildSimulatedHand(playerHand, unknownPlayerCardCount, playerOwner);
+
         int depth = difficulty == HoneycombDifficulty.Hard ? 2 : 6;
         bool useFallenAceWeight = difficulty == HoneycombDifficulty.UltraHard;
 
-        return FindMinimaxMove(board, aiHand, playerHand, playerHasHiddenCards, rules, depth, useFallenAceWeight, aiOwner, playerOwner, mandatedHandIndex);
+        return FindMinimaxMove(board, aiHand, simulatedPlayerHand, rules, depth, useFallenAceWeight, aiOwner, playerOwner, mandatedHandIndex);
     }
 
     private static (int, int) FindGreedyMove(HoneycombBoard board, List<HoneycombCard> hand, HashSet<HoneycombRule> rules, int owner, int? mandatedHandIndex)
@@ -83,7 +111,7 @@ public static class HoneycombAI
         return bestMoves[Random.Shared.Next(bestMoves.Count)];
     }
 
-    private static (int, int) FindMinimaxMove(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, bool playerHasHiddenCards, HashSet<HoneycombRule> rules, int depth, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex)
+    private static (int, int) FindMinimaxMove(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, HashSet<HoneycombRule> rules, int depth, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex)
     {
         var bestMoves = new List<(int, int)>();
         int bestScore = int.MinValue;
@@ -124,7 +152,7 @@ public static class HoneycombAI
 
         foreach (var move in orderedMoves)
         {
-            int score = Minimax(move.BoardAfter, move.HandAfter, playerHand, playerHasHiddenCards, rules, depth - 1, int.MinValue, int.MaxValue, false, useFallenAceWeight, aiOwner, playerOwner, null);
+            int score = Minimax(move.BoardAfter, move.HandAfter, playerHand, rules, depth - 1, int.MinValue, int.MaxValue, false, useFallenAceWeight, aiOwner, playerOwner, null);
 
             if (score > bestScore)
             {
@@ -151,7 +179,7 @@ public static class HoneycombAI
         return bestMoves[Random.Shared.Next(bestMoves.Count)];
     }
 
-    private static int Minimax(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, bool playerHasHiddenCards, HashSet<HoneycombRule> rules, int depth, int alpha, int beta, bool isMaximizing, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex)
+    private static int Minimax(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, HashSet<HoneycombRule> rules, int depth, int alpha, int beta, bool isMaximizing, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex)
     {
         int emptyCount = 0;
         int aiCardsOnBoard = 0;
@@ -171,11 +199,6 @@ public static class HoneycombAI
             int aiTotal = aiCardsOnBoard + aiHand.Count;
             int playerTotal = playerCardsOnBoard + playerHand.Count;
             return (aiTotal - playerTotal) * 1000;
-        }
-
-        if (!isMaximizing && playerHasHiddenCards)
-        {
-            return EvaluateBoard(board, rules, useFallenAceWeight, aiOwner, playerOwner);
         }
 
         if (depth == 0 || (isMaximizing && aiHand.Count == 0) || (!isMaximizing && playerHand.Count == 0))
@@ -224,7 +247,7 @@ public static class HoneycombAI
             int maxEval = int.MinValue;
             foreach (var move in orderedMoves)
             {
-                int eval = Minimax(move.BoardAfter, move.HandAfter, playerHand, playerHasHiddenCards, rules, depth - 1, alpha, beta, false, useFallenAceWeight, aiOwner, playerOwner, null);
+                int eval = Minimax(move.BoardAfter, move.HandAfter, playerHand, rules, depth - 1, alpha, beta, false, useFallenAceWeight, aiOwner, playerOwner, null);
                 if (eval > maxEval) maxEval = eval;
                 if (eval > alpha) alpha = eval;
                 if (beta <= alpha) break;
@@ -236,7 +259,7 @@ public static class HoneycombAI
             int minEval = int.MaxValue;
             foreach (var move in orderedMoves)
             {
-                int eval = Minimax(move.BoardAfter, aiHand, move.HandAfter, playerHasHiddenCards, rules, depth - 1, alpha, beta, true, useFallenAceWeight, aiOwner, playerOwner, null);
+                int eval = Minimax(move.BoardAfter, aiHand, move.HandAfter, rules, depth - 1, alpha, beta, true, useFallenAceWeight, aiOwner, playerOwner, null);
                 if (eval < minEval) minEval = eval;
                 if (eval < beta) beta = eval;
                 if (beta <= alpha) break;
