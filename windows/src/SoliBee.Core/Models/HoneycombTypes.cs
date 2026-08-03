@@ -23,6 +23,31 @@ public static class HoneycombRuleWeights
         HoneycombRule.Descension or HoneycombRule.Reverse or HoneycombRule.Order => 3,
         _ => 1
     };
+
+    // User-facing name (bee-themed re-skin) — deliberately separate from the enum's own
+    // name/ToString(), which stays the original identifier forever since it's the
+    // persistence identity (ManualRules/BannedRules are saved by enum name) and the
+    // roulette pool's ban-list matching key. Every UI surface that shows a rule name to
+    // the player (rules picker, ban list, banners/toasts, help guide) should read
+    // DisplayName(), never the enum name directly. Mirrors HoneycombRule.displayName in
+    // the Swift port (shared/Honeycomb/Models/HoneycombBoard.swift).
+    public static string DisplayName(this HoneycombRule rule) => rule switch
+    {
+        HoneycombRule.BombShelter => "Hive Swarm",
+        HoneycombRule.Ascension => "Pollination",
+        HoneycombRule.Descension => "Smoked Out",
+        HoneycombRule.Same => "Symmetry",
+        HoneycombRule.Plus => "Nectar Math",
+        HoneycombRule.FallenAce => "Queen's Fall",
+        HoneycombRule.Reverse => "Inversion",
+        HoneycombRule.AllOpen => "Clear Skies",
+        HoneycombRule.ThreeOpen => "Scouting Party",
+        HoneycombRule.Swap => "Nectar Exchange",
+        HoneycombRule.Order => "Hierarchy",
+        HoneycombRule.Chaos => "Swarm Frenzy",
+        HoneycombRule.SuddenDeath => "Swarm to the Death",
+        _ => rule.ToString()
+    };
 }
 
 public enum HoneycombDifficulty

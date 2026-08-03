@@ -700,9 +700,11 @@ public partial class HoneycombView : UserControl
         if (kind == "Same" || kind == "Plus" || kind == "FallenAce" || kind == "Combo" || kind == "SuddenDeath")
         {
             _bannerActive = true;
-            if (kind == "FallenAce") RuleToast.Flash("Fallen Ace!");
+            if (kind == "FallenAce") RuleToast.Flash($"{HoneycombRule.FallenAce.DisplayName()}!");
             else if (kind == "Combo") RuleToast.Flash("Combo x2!");
-            else if (kind == "SuddenDeath") RuleToast.Flash("Sudden Death!");
+            else if (kind == "SuddenDeath") RuleToast.Flash($"{HoneycombRule.SuddenDeath.DisplayName()}!");
+            else if (kind == "Same") RuleToast.Flash($"{HoneycombRule.Same.DisplayName()}!");
+            else if (kind == "Plus") RuleToast.Flash($"{HoneycombRule.Plus.DisplayName()}!");
             else RuleToast.Flash($"{kind}!");
             return;
         }
@@ -728,7 +730,7 @@ public partial class HoneycombView : UserControl
                 OverlayTitle.IsVisible = true;
                 OverlayLoseTitle.IsVisible = false;
                 OverlayTitle.FontSize = 40;
-                OverlayTitle.Text = "Draw";
+                OverlayTitle.Text = "Tie!";
                 OverlaySubtitle.Text = "Final Score: 7 - 7";
                 break;
             default:

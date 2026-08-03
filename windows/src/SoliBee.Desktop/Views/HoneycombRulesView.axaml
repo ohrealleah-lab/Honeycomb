@@ -5,7 +5,7 @@
     <Grid RowDefinitions="Auto, *, Auto">
         <!-- Difficulty at top -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,15,0,10">
-            <TextBlock Text="Difficulty:" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
+            <TextBlock Text="Opponent:" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
             <ComboBox x:Name="HoneycombDifficultyCombo" Width="120" SelectionChanged="HoneycombDifficultyCombo_SelectionChanged">
                 <ComboBoxItem Content="Baby Bee" Tag="Easy"/>
                 <ComboBoxItem Content="Honey Bee" Tag="Medium"/>
@@ -28,18 +28,18 @@
 
                         <StackPanel x:Name="HoneycombRulesPanel" Spacing="2">
                             <CheckBox x:Name="HoneycombRule_ForceNormal" Content="Normal Mode (Force Zero Rules)" Tag="ForceNormal" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Ascension" Content="Ascension" Tag="Ascension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Descension" Content="Descension" Tag="Descension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Same" Content="Same" Tag="Same" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Plus" Content="Plus" Tag="Plus" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_FallenAce" Content="Fallen Ace" Tag="FallenAce" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_AllOpen" Content="All Open" Tag="AllOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_ThreeOpen" Content="Three Open" Tag="ThreeOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Swap" Content="Swap" Tag="Swap" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Order" Content="Order" Tag="Order" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Chaos" Content="Chaos" Tag="Chaos" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_BombShelter" Content="Bomb Shelter" Tag="BombShelter" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_SuddenDeath" Content="Sudden Death" Tag="SuddenDeath" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Ascension" Content="Pollination" Tag="Ascension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Descension" Content="Smoked Out" Tag="Descension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Same" Content="Symmetry" Tag="Same" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Plus" Content="Nectar Math" Tag="Plus" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_FallenAce" Content="Queen's Fall" Tag="FallenAce" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_AllOpen" Content="Clear Skies" Tag="AllOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_ThreeOpen" Content="Scouting Party" Tag="ThreeOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Swap" Content="Nectar Exchange" Tag="Swap" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Order" Content="Hierarchy" Tag="Order" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Chaos" Content="Swarm Frenzy" Tag="Chaos" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_BombShelter" Content="Hive Swarm" Tag="BombShelter" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_SuddenDeath" Content="Swarm to the Death" Tag="SuddenDeath" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -51,19 +51,19 @@
                         
                         <StackPanel Spacing="2">
                             <CheckBox x:Name="Ban_NormalMode" Content="Normal Mode" Tag="Normal Mode" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Ascension" Content="Ascension" Tag="Ascension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Descension" Content="Descension" Tag="Descension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Same" Content="Same" Tag="Same" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Plus" Content="Plus" Tag="Plus" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_FallenAce" Content="Fallen Ace" Tag="FallenAce" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_AllOpen" Content="All Open" Tag="AllOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_ThreeOpen" Content="Three Open" Tag="ThreeOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Swap" Content="Swap" Tag="Swap" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Order" Content="Order" Tag="Order" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Chaos" Content="Chaos" Tag="Chaos" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_BombShelter" Content="Bomb Shelter" Tag="BombShelter" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Reverse" Content="Reverse" Tag="Reverse" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_SuddenDeath" Content="Sudden Death" Tag="SuddenDeath" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Ascension" Content="Pollination" Tag="Ascension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Descension" Content="Smoked Out" Tag="Descension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Same" Content="Symmetry" Tag="Same" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Plus" Content="Nectar Math" Tag="Plus" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_FallenAce" Content="Queen's Fall" Tag="FallenAce" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_AllOpen" Content="Clear Skies" Tag="AllOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_ThreeOpen" Content="Scouting Party" Tag="ThreeOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Swap" Content="Nectar Exchange" Tag="Swap" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Order" Content="Hierarchy" Tag="Order" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Chaos" Content="Swarm Frenzy" Tag="Chaos" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_BombShelter" Content="Hive Swarm" Tag="BombShelter" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Reverse" Content="Inversion" Tag="Reverse" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_SuddenDeath" Content="Swarm to the Death" Tag="SuddenDeath" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
                         </StackPanel>
                         
                         <TextBlock x:Name="SillyBeeWarning" Text="You cannot blacklist every game, silly bee." FontSize="11" FontWeight="SemiBold" Foreground="#E53935" IsVisible="False" Margin="0,4,0,0"/>

@@ -31,13 +31,13 @@
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Total Cards Captured:" Foreground="White" FontSize="16" />
                     <TextBlock x:Name="CardsCapturedText" Grid.Row="0" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
                     
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Cards Steals (Plus/Same):" Foreground="White" FontSize="16" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Cards Steals (Nectar Math/Symmetry):" Foreground="White" FontSize="16" />
                     <TextBlock x:Name="CardsStolenText" Grid.Row="1" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
-                    
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Fallen Aces Triggered:" Foreground="White" FontSize="16" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Queen's Falls Triggered:" Foreground="White" FontSize="16" />
                     <TextBlock x:Name="FallenAcesText" Grid.Row="2" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
-                    
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Sudden Deaths Triggered:" Foreground="White" FontSize="16" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Swarms to the Death Triggered:" Foreground="White" FontSize="16" />
                     <TextBlock x:Name="SuddenDeathCountText" Grid.Row="3" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
                     
                     <TextBlock Grid.Row="4" Grid.Column="0" Text="Flawless Victories:" Foreground="White" FontSize="16" />

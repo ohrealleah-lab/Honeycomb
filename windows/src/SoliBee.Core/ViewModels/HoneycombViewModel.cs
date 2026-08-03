@@ -256,7 +256,7 @@ public partial class HoneycombViewModel : ObservableObject
     // belongs only after "First Move: Player/Opponent".
     private string FormatRuleForBanner(HoneycombRule rule)
     {
-        var name = System.Text.RegularExpressions.Regex.Replace(rule.ToString(), "(\\B[A-Z])", " $1");
+        var name = rule.DisplayName();
         if (rule == HoneycombRule.Ascension || rule == HoneycombRule.Descension)
         {
             var suitNames = State.Board.AscensionDescensionSuits.Select(HoneycombCardData.SuitDisplayName);
@@ -751,10 +751,12 @@ public partial class HoneycombViewModel : ObservableObject
     private static string? ComboBannerText(HoneycombBoard board)
     {
         var parts = new List<string>();
-        if (board.LastSameTriggered && board.LastPlusTriggered) parts.Add("SAME & PLUS!");
-        else if (board.LastSameTriggered) parts.Add("SAME!");
-        else if (board.LastPlusTriggered) parts.Add("PLUS!");
-        if (board.LastFallenAceTriggered) parts.Add("Fallen Ace!");
+        var sameName = HoneycombRule.Same.DisplayName().ToUpperInvariant();
+        var plusName = HoneycombRule.Plus.DisplayName().ToUpperInvariant();
+        if (board.LastSameTriggered && board.LastPlusTriggered) parts.Add($"{sameName} & {plusName}!");
+        else if (board.LastSameTriggered) parts.Add($"{sameName}!");
+        else if (board.LastPlusTriggered) parts.Add($"{plusName}!");
+        if (board.LastFallenAceTriggered) parts.Add($"{HoneycombRule.FallenAce.DisplayName()}!");
         if (board.LastComboFlipCount > 0) parts.Add($"COMBO x{board.LastComboFlipCount}!");
         return parts.Count == 0 ? null : string.Join(" ", parts);
     }
@@ -777,7 +779,8 @@ public partial class HoneycombViewModel : ObservableObject
                 cell.Card.BombShelterTurnsRemaining = null;
                 State.Board.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
                 var comboText = ComboBannerText(State.Board);
-                OnFlashBanner?.Invoke(comboText == null ? "Bomb Shelter Revealed!" : $"Bomb Shelter Revealed! {comboText}");
+                var revealedText = $"{HoneycombRule.BombShelter.DisplayName()} Revealed!";
+                OnFlashBanner?.Invoke(comboText == null ? revealedText : $"{revealedText} {comboText}");
             }
         }
     }
@@ -881,7 +884,7 @@ public partial class HoneycombViewModel : ObservableObject
         // Give enough time for the final card placement and any combo animations to fully resolve
         if (!_isHeadless) await Task.Delay(2500);
 
-        OnFlashBanner?.Invoke("Sudden Death!");
+        OnFlashBanner?.Invoke($"{HoneycombRule.SuddenDeath.DisplayName()}!");
         State.IsSuddenDeath = true;
         Stats.SuddenDeathCount++;
         SaveStats();
