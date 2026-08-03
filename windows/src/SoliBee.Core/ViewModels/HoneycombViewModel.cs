@@ -332,7 +332,56 @@ public partial class HoneycombViewModel : ObservableObject
         {
             deck.AddRange(HoneycombDatabase.Shared.RulesAwareCards(stars, count, reverse));
         }
-        return deck;
+
+        return EnsureAscensionCoverage(deck);
+    }
+
+    // Ultra Hard only: a player can stack their own deck with cards of the rolled
+    // Ascension suit(s) to farm the +1-per-suit-card-on-board bonus, while the
+    // opponent's deck is otherwise assembled with no awareness of which suits are
+    // even in play. Guarantees at least 3 of the opponent's 5 cards match an active
+    // Ascension suit so the AI can benefit from the same bonus the player is
+    // exploiting, rather than the player getting the mode's biggest lever for free.
+    // Descension is deliberately left alone — it's a penalty, so forcing more
+    // Descension-suited cards into the AI's hand would only hurt it, not balance
+    // anything. Mirrors the Swift port's ensureAscensionCoverage
+    // (shared/Honeycomb/ViewModels/HoneycombViewModel.swift).
+    private List<HoneycombCardData> EnsureAscensionCoverage(List<HoneycombCardData> deck)
+    {
+        var suits = State.Board.AscensionDescensionSuits;
+        if (Options.Difficulty != HoneycombDifficulty.UltraHard ||
+            !State.ActiveRules.Contains(HoneycombRule.Ascension) ||
+            suits.Count == 0)
+        {
+            return deck;
+        }
+
+        var result = new List<HoneycombCardData>(deck);
+        int matchingCount = result.Count(c => suits.Contains(c.Suit));
+        if (matchingCount >= 3) return result;
+
+        var db = HoneycombDatabase.Shared;
+        // Swap the deck's lowest-star non-matching cards first, so the deck's overall
+        // power level (its highest-star cards) stays intact where possible.
+        var nonMatchingIndices = Enumerable.Range(0, result.Count)
+            .Where(i => !suits.Contains(result[i].Suit))
+            .OrderBy(i => result[i].Stars)
+            .ToList();
+
+        foreach (var idx in nonMatchingIndices)
+        {
+            if (matchingCount >= 3) break;
+
+            int tier = result[idx].Stars;
+            var usedIds = new HashSet<int>(result.Select(c => c.Id));
+            var candidates = db.AllCards.Where(c => c.Stars == tier && suits.Contains(c.Suit) && !usedIds.Contains(c.Id)).ToList();
+            if (candidates.Count == 0) continue;
+
+            result[idx] = candidates[Random.Shared.Next(candidates.Count)];
+            matchingCount++;
+        }
+
+        return result;
     }
 
     // Wires up a given opponent card pool as this match's OpponentHand: rolls a fresh

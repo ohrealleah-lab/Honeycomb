@@ -796,7 +796,48 @@ public final class HoneycombViewModel {
                 }
             }
         }
+
+        deck = ensureAscensionCoverage(deck)
         return deck
+    }
+
+    // Ultra Hard only: a player can stack their own deck with cards of the rolled
+    // Ascension suit(s) to farm the +1-per-suit-card-on-board bonus, while the
+    // opponent's deck is otherwise assembled with no awareness of which suits are
+    // even in play. Guarantees at least 3 of the opponent's 5 cards match an active
+    // Ascension suit so the AI can benefit from the same bonus the player is
+    // exploiting, rather than the player getting the mode's biggest lever for free.
+    // Descension is deliberately left alone — it's a penalty, so forcing more
+    // Descension-suited cards into the AI's hand would only hurt it, not balance
+    // anything.
+    private func ensureAscensionCoverage(_ deck: [HoneycombCardData]) -> [HoneycombCardData] {
+        guard options.difficulty == .ultraHard,
+              activeRules.contains(.ascension),
+              !ascensionDescensionSuits.isEmpty else { return deck }
+
+        var result = deck
+        var matchingCount = result.filter { ascensionDescensionSuits.contains($0.suit) }.count
+        guard matchingCount < 3 else { return result }
+
+        let db = HoneycombDatabase.shared
+        // Swap the deck's lowest-star non-matching cards first, so the deck's overall
+        // power level (its highest-star cards) stays intact where possible.
+        let nonMatchingIndices = result.indices
+            .filter { !ascensionDescensionSuits.contains(result[$0].suit) }
+            .sorted { result[$0].stars < result[$1].stars }
+
+        for idx in nonMatchingIndices {
+            guard matchingCount < 3 else { break }
+            let tier = result[idx].stars
+            let usedIds = Set(result.map(\.id))
+            let candidates = db.allCards.filter {
+                $0.stars == tier && ascensionDescensionSuits.contains($0.suit) && !usedIds.contains($0.id)
+            }
+            guard let substitute = candidates.randomElement() else { continue }
+            result[idx] = substitute
+            matchingCount += 1
+        }
+        return result
     }
 
     // Wires up a given opponent card pool as this match's opponentHand: rolls a fresh
