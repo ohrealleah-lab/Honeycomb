@@ -115,8 +115,84 @@ public static class HoneycombAI
         return bestMoves[Random.Shared.Next(bestMoves.Count)];
     }
 
+    // Board-cell state used as part of a transposition-table key — mirrors Swift's
+    // TTKey.CardState (shared/Honeycomb/Models/HoneycombAI.swift).
+    private readonly struct BoardCellState : IEquatable<BoardCellState>
+    {
+        private readonly bool _isEmpty;
+        private readonly int _dataId;
+        private readonly int _owner;
+        private readonly bool _isFaceDown;
+
+        public BoardCellState(HoneycombCard? card)
+        {
+            _isEmpty = card == null;
+            _dataId = card?.Data.Id ?? 0;
+            _owner = card?.Owner ?? 0;
+            _isFaceDown = card?.IsFaceDown ?? false;
+        }
+
+        public bool Equals(BoardCellState other) =>
+            _isEmpty == other._isEmpty && _dataId == other._dataId && _owner == other._owner && _isFaceDown == other._isFaceDown;
+        public override bool Equals(object? obj) => obj is BoardCellState other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(_isEmpty, _dataId, _owner, _isFaceDown);
+    }
+
+    private enum TTFlag { Exact, LowerBound, UpperBound }
+
+    private readonly record struct TTEntry(int Value, TTFlag Flag);
+
+    // Transposition-table key. Board-cell state and whose ply it is alone are NOT
+    // enough — remaining search depth and each side's still-unplayed hand must be part
+    // of the key too, otherwise a shallower search's cached value could be reused for a
+    // deeper search of the same board layout, and two move sequences reaching an
+    // identical layout with different remaining hands would incorrectly share a cached
+    // score. Hand order doesn't affect which moves are available, so signatures are
+    // built from sorted card ids for a stable key. Mirrors the (fixed) Swift TTKey.
+    private readonly struct TTKey : IEquatable<TTKey>
+    {
+        private readonly BoardCellState[] _cells;
+        private readonly bool _isMaximizing;
+        private readonly int _depth;
+        private readonly string _aiHandSignature;
+        private readonly string _playerHandSignature;
+
+        public TTKey(HoneycombBoard board, bool isMaximizing, int depth, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand)
+        {
+            _cells = new BoardCellState[9];
+            for (int i = 0; i < 9; i++) _cells[i] = new BoardCellState(board.Cells[i].Card);
+            _isMaximizing = isMaximizing;
+            _depth = depth;
+            _aiHandSignature = string.Join(",", aiHand.Select(c => c.Data.Id).OrderBy(id => id));
+            _playerHandSignature = string.Join(",", playerHand.Select(c => c.Data.Id).OrderBy(id => id));
+        }
+
+        public bool Equals(TTKey other)
+        {
+            if (_isMaximizing != other._isMaximizing || _depth != other._depth) return false;
+            if (_aiHandSignature != other._aiHandSignature || _playerHandSignature != other._playerHandSignature) return false;
+            for (int i = 0; i < 9; i++)
+                if (!_cells[i].Equals(other._cells[i])) return false;
+            return true;
+        }
+
+        public override bool Equals(object? obj) => obj is TTKey other && Equals(other);
+
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            hash.Add(_isMaximizing);
+            hash.Add(_depth);
+            hash.Add(_aiHandSignature);
+            hash.Add(_playerHandSignature);
+            foreach (var cell in _cells) hash.Add(cell);
+            return hash.ToHashCode();
+        }
+    }
+
     private static (int, int) FindMinimaxMove(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, HashSet<HoneycombRule> rules, int depth, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex)
     {
+        var tt = new Dictionary<TTKey, TTEntry>();
         var bestMoves = new List<(int, int)>();
         int bestScore = int.MinValue;
         int maxCaptures = -1;
@@ -156,7 +232,7 @@ public static class HoneycombAI
 
         foreach (var move in orderedMoves)
         {
-            int score = Minimax(move.BoardAfter, move.HandAfter, playerHand, rules, depth - 1, int.MinValue, int.MaxValue, false, useFallenAceWeight, aiOwner, playerOwner, null);
+            int score = Minimax(move.BoardAfter, move.HandAfter, playerHand, rules, depth - 1, int.MinValue, int.MaxValue, false, useFallenAceWeight, aiOwner, playerOwner, null, tt);
 
             if (score > bestScore)
             {
@@ -183,8 +259,17 @@ public static class HoneycombAI
         return bestMoves[Random.Shared.Next(bestMoves.Count)];
     }
 
-    private static int Minimax(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, HashSet<HoneycombRule> rules, int depth, int alpha, int beta, bool isMaximizing, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex)
+    private static int Minimax(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, HashSet<HoneycombRule> rules, int depth, int alpha, int beta, bool isMaximizing, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex, Dictionary<TTKey, TTEntry> tt)
     {
+        var ttKey = new TTKey(board, isMaximizing, depth, aiHand, playerHand);
+        if (tt.TryGetValue(ttKey, out var cached))
+        {
+            if (cached.Flag == TTFlag.Exact) return cached.Value;
+            if (cached.Flag == TTFlag.LowerBound && cached.Value >= beta) return cached.Value;
+            if (cached.Flag == TTFlag.UpperBound && cached.Value <= alpha) return cached.Value;
+        }
+        int originalAlpha = alpha;
+
         int emptyCount = 0;
         int aiCardsOnBoard = 0;
         int playerCardsOnBoard = 0;
@@ -246,30 +331,37 @@ public static class HoneycombAI
 
         orderedMoves.Sort((a, b) => b.Captures.CompareTo(a.Captures));
 
+        int best;
         if (isMaximizing)
         {
-            int maxEval = int.MinValue;
+            best = int.MinValue;
             foreach (var move in orderedMoves)
             {
-                int eval = Minimax(move.BoardAfter, move.HandAfter, playerHand, rules, depth - 1, alpha, beta, false, useFallenAceWeight, aiOwner, playerOwner, null);
-                if (eval > maxEval) maxEval = eval;
+                int eval = Minimax(move.BoardAfter, move.HandAfter, playerHand, rules, depth - 1, alpha, beta, false, useFallenAceWeight, aiOwner, playerOwner, null, tt);
+                if (eval > best) best = eval;
                 if (eval > alpha) alpha = eval;
                 if (beta <= alpha) break;
             }
-            return maxEval;
         }
         else
         {
-            int minEval = int.MaxValue;
+            best = int.MaxValue;
             foreach (var move in orderedMoves)
             {
-                int eval = Minimax(move.BoardAfter, aiHand, move.HandAfter, rules, depth - 1, alpha, beta, true, useFallenAceWeight, aiOwner, playerOwner, null);
-                if (eval < minEval) minEval = eval;
+                int eval = Minimax(move.BoardAfter, aiHand, move.HandAfter, rules, depth - 1, alpha, beta, true, useFallenAceWeight, aiOwner, playerOwner, null, tt);
+                if (eval < best) best = eval;
                 if (eval < beta) beta = eval;
                 if (beta <= alpha) break;
             }
-            return minEval;
         }
+
+        TTFlag flag;
+        if (best <= originalAlpha) flag = TTFlag.UpperBound;
+        else if (best >= beta) flag = TTFlag.LowerBound;
+        else flag = TTFlag.Exact;
+        tt[ttKey] = new TTEntry(best, flag);
+
+        return best;
     }
 
     private static int EvaluateBoard(HoneycombBoard board, HashSet<HoneycombRule> rules, bool useFallenAceWeight, int aiOwner, int playerOwner)
