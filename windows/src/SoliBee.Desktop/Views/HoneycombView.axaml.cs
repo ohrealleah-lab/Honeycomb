@@ -271,7 +271,7 @@ public partial class HoneycombView : UserControl
         {
             ruleNames = state.ActiveRules.Select(r =>
             {
-                var name = System.Text.RegularExpressions.Regex.Replace(r.ToString(), "(\\B[A-Z])", " $1");
+                var name = r.DisplayName();
                 if ((r == HoneycombRule.Ascension || r == HoneycombRule.Descension) && state.Board.AscensionDescensionSuits.Count > 0)
                 {
                     var suitNames = state.Board.AscensionDescensionSuits.Select(HoneycombCardData.SuitDisplayName);
@@ -288,7 +288,7 @@ public partial class HoneycombView : UserControl
         else if (vm.Options.ManualRules != null && vm.Options.ManualRules.Count > 0)
         {
             ruleNames = vm.Options.ManualRules
-                .Select(r => System.Text.RegularExpressions.Regex.Replace(r.ToString(), "(\\B[A-Z])", " $1"))
+                .Select(r => r.DisplayName())
                 .ToList();
         }
         else
