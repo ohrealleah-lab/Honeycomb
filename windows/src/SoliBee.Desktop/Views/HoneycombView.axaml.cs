@@ -852,31 +852,16 @@ public partial class HoneycombView : UserControl
 
     private void RulesBannerBar_PointerEntered(object? sender, PointerEventArgs e)
     {
-        if (_vm == null || _vm.State.Options == null) return;
-        
-        var effectiveRules = new List<HoneycombRule>();
-        bool isRoulette = false;
+        if (_vm == null) return;
 
-        // Pre-game logic matches Swift
-        if (_vm.State.Phase == HoneycombPhase.Setup)
-        {
-            if (_vm.State.Options.GameMode == HoneycombGameMode.Roulette)
-            {
-                isRoulette = true;
-                // Don't show rules if they are hidden
-            }
-            else
-            {
-                effectiveRules = _vm.State.Options.ManualRules;
-            }
-        }
-        else
-        {
-            effectiveRules = _vm.State.ActiveRules;
-        }
+        bool isPreGame = _vm.State.Phase != HoneycombPhase.Playing;
+        bool isRoulette = isPreGame && !_vm.Options.ForceNormalRules && _vm.Options.ManualRules.Count == 0;
+        var effectiveRules = isPreGame && !isRoulette
+            ? _vm.Options.ManualRules.ToList()
+            : _vm.State.ActiveRules;
 
         var items = new List<RuleExplanationItem>();
-        
+
         if (isRoulette)
         {
             items.Add(new RuleExplanationItem
@@ -885,13 +870,14 @@ public partial class HoneycombView : UserControl
                 Explanation = "Rules are randomized at the start of the match."
             });
         }
-        
+
+        var activeSuits = new HashSet<string>(_vm.State.Board.AscensionDescensionSuits);
         foreach (var rule in effectiveRules)
         {
             items.Add(new RuleExplanationItem
             {
                 Name = rule.DisplayName(),
-                Explanation = rule.GetExplanation(_vm.State.Board.ActiveSuits)
+                Explanation = rule.GetExplanation(activeSuits)
             });
         }
         
