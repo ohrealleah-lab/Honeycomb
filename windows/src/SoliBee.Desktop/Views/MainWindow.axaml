@@ -217,8 +217,6 @@
                         <Grid RowDefinitions="Auto,*,Auto">
                             <Grid Grid.Row="0" Margin="0,0,0,15">
                                 <TextBlock Text="Manage Decks" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
-                                <Button Content="Honeycomb Help" Classes="light-secondary" Click="HoneycombHelp_Click"
-                                        HorizontalAlignment="Right" FontSize="12" Padding="10,4" />
                             </Grid>
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                 <ContentControl x:Name="ManageDecksContent" />

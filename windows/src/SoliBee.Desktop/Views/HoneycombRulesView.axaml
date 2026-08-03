@@ -4,15 +4,19 @@
 
     <Grid RowDefinitions="Auto, *, Auto">
         <!-- Difficulty at top -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,15,0,10">
-            <TextBlock Text="Opponent:" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
-            <ComboBox x:Name="HoneycombDifficultyCombo" Width="120" SelectionChanged="HoneycombDifficultyCombo_SelectionChanged">
-                <ComboBoxItem Content="Baby Bee" Tag="Easy"/>
-                <ComboBoxItem Content="Honey Bee" Tag="Medium"/>
-                <ComboBoxItem Content="Queen Bee" Tag="Hard"/>
-                <ComboBoxItem Content="Killer Bee" Tag="UltraHard"/>
-            </ComboBox>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="0,15,0,10" ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Opponent:" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
+                <ComboBox x:Name="HoneycombDifficultyCombo" Width="120" SelectionChanged="HoneycombDifficultyCombo_SelectionChanged">
+                    <ComboBoxItem Content="Baby Bee" Tag="Easy"/>
+                    <ComboBoxItem Content="Honey Bee" Tag="Medium"/>
+                    <ComboBoxItem Content="Queen Bee" Tag="Hard"/>
+                    <ComboBoxItem Content="Killer Bee" Tag="UltraHard"/>
+                </ComboBox>
+            </StackPanel>
+            <Button Grid.Column="1" Content="Honeycomb Help" Classes="light-secondary" Click="HoneycombHelp_Click"
+                    FontSize="12" Padding="10,4" VerticalAlignment="Center" />
+        </Grid>
 
         <!-- Scrollable lists -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">

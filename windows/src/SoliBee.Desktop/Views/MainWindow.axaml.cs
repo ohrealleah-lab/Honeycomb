@@ -977,18 +977,6 @@ public partial class MainWindow : Window
         _helpWindow.Show(this);
     }
 
-    // Second, more direct entry point to the Honeycomb help section — reachable
-    // straight from Manage Decks/Card Bank instead of only via Options → Help Guide
-    // → scroll, since deck composition (rarity caps, stealing) is easy to get lost in
-    // for a game this complex.
-    private void HoneycombHelp_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_helpWindow != null) { _helpWindow.Activate(); _helpWindow.ScrollToHoneycomb(); return; }
-        _helpWindow = new HelpWindow(startAtHoneycomb: true);
-        _helpWindow.Closed += (_, _) => _helpWindow = null;
-        _helpWindow.Show(this);
-    }
-
     private void Exit_Click(object? sender, RoutedEventArgs e)
     {
         Close();

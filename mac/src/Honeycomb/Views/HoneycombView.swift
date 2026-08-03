@@ -962,6 +962,7 @@ struct HoneycombOptionsView: View {
 
 // MARK: - Rules Sheet
 struct HoneycombRulesView: View {
+    @Environment(\.openWindow) private var openWindow
     @Bindable var viewModel: HoneycombViewModel
     @Binding var isPresented: Bool
     @Bindable var coordinator: AppCoordinator
@@ -1006,15 +1007,22 @@ struct HoneycombRulesView: View {
             }
         ) {
             VStack(alignment: .leading, spacing: 20) {
-                Picker("Opponent", selection: $difficulty) {
-                    ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
-                        Text(diff.displayName).tag(diff)
+                HStack {
+                    Picker("Opponent", selection: $difficulty) {
+                        ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
+                            Text(diff.displayName).tag(diff)
+                        }
                     }
+                    .pickerStyle(MenuPickerStyle())
+                    .frame(minWidth: 120)
+
+                    Spacer()
+
+                    Button("Honeycomb Help") { openWindow(id: "honeycomb-help") }
+                        .buttonStyle(.bordered)
                 }
-                .pickerStyle(MenuPickerStyle())
-                .frame(minWidth: 120)
                 .padding(.top, 16)
-                
+
                 Divider()
                 
                 HStack(alignment: .top, spacing: 40) {

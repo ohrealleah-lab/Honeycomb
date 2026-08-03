@@ -15,6 +15,7 @@ public partial class HoneycombRulesView : UserControl
     private HoneycombViewModel? _vm;
     private HoneycombOptions _localOpts;
     private bool _initializing = true;
+    private HelpWindow? _helpWindow;
 
     public event EventHandler<bool>? OnCloseRequested;
 
@@ -206,5 +207,15 @@ public partial class HoneycombRulesView : UserControl
     public void Cancel_Click(object? sender, RoutedEventArgs e)
     {
         OnCloseRequested?.Invoke(this, false);
+    }
+
+    private void HoneycombHelp_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_helpWindow != null) { _helpWindow.Activate(); _helpWindow.ScrollToHoneycomb(); return; }
+        var owner = Avalonia.Controls.TopLevel.GetTopLevel(this) as Window;
+        _helpWindow = new HelpWindow(startAtHoneycomb: true);
+        _helpWindow.Closed += (_, _) => _helpWindow = null;
+        if (owner != null) _helpWindow.Show(owner);
+        else _helpWindow.Show();
     }
 }
