@@ -109,10 +109,14 @@ public partial class HoneycombCardView : UserControl
 
         string FormatStat(int val) => val == 10 ? "A" : val.ToString();
 
-        TopStat.Text = FormatStat(card.Stat(0));
-        RightStat.Text = FormatStat(card.Stat(1));
-        BottomStat.Text = FormatStat(card.Stat(2));
-        LeftStat.Text = FormatStat(card.Stat(3));
+        // Always the card's *base* stat (Data.Stats), never card.Stat(i) — any active
+        // Ascension/Descension modifier is shown separately via AscensionModifierText
+        // below, not baked into these corner numbers (matches the Swift port's
+        // HoneycombCardView, which reads card.data.stats[i] here for the same reason).
+        TopStat.Text = FormatStat(card.Data.Stats[0]);
+        RightStat.Text = FormatStat(card.Data.Stats[1]);
+        BottomStat.Text = FormatStat(card.Data.Stats[2]);
+        LeftStat.Text = FormatStat(card.Data.Stats[3]);
 
         string suitChar = GetSuitGlyph(card.Data.Suit);
 
