@@ -214,7 +214,7 @@ public struct HoneycombView: View {
 
                     if viewModel.gameState != .setup {
                         HStack {
-                            StatusItemView(label: "YOU", value: "\(viewModel.board.playerScore + viewModel.playerHand.count)")
+                            StatusItemView(label: "You", value: "\(viewModel.board.playerScore + viewModel.playerHand.count)")
                             StatusItemView(label: viewModel.options.difficulty.displayName, value: "\(viewModel.board.opponentScore + viewModel.opponentHand.count)")
                         }
                     }

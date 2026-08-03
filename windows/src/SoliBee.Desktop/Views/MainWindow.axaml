@@ -111,14 +111,14 @@
                             <TextBlock Text="TIME" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
-                        <!-- HONEYCOMB SCORE: YOU -->
+                        <!-- HONEYCOMB SCORE: You -->
                         <StackPanel x:Name="HoneycombYouStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
-                            <TextBlock Text="YOU" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="You" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding PlayerScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
-                        <!-- HONEYCOMB SCORE: OPPONENT -->
+                        <!-- HONEYCOMB SCORE: Opponent's difficulty name (e.g. "Baby Bee") -->
                         <StackPanel x:Name="HoneycombOpponentStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
-                            <TextBlock Text="OPPONENT" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding OpponentNameDisplay}" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding OpponentScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>

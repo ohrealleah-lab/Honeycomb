@@ -11,7 +11,7 @@ public enum HoneycombRule: String, Codable, CaseIterable {
     case threeOpen = "Scouting Party"
     case swap = "Nectar Exchange"
     case order = "Hierarchy"
-    case chaos = "Swarm Frenzy"
+    case chaos = "Frenzy"
     case bombShelter = "Hive Swarm"
     case suddenDeath = "Swarm to the Death"
 

@@ -37,7 +37,7 @@
                             <CheckBox x:Name="HoneycombRule_ThreeOpen" Content="Scouting Party" Tag="ThreeOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="HoneycombRule_Swap" Content="Nectar Exchange" Tag="Swap" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="HoneycombRule_Order" Content="Hierarchy" Tag="Order" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Chaos" Content="Swarm Frenzy" Tag="Chaos" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_Chaos" Content="Frenzy" Tag="Chaos" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="HoneycombRule_BombShelter" Content="Hive Swarm" Tag="BombShelter" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="HoneycombRule_SuddenDeath" Content="Swarm to the Death" Tag="SuddenDeath" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
                         </StackPanel>
@@ -60,7 +60,7 @@
                             <CheckBox x:Name="Ban_ThreeOpen" Content="Scouting Party" Tag="ThreeOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="Ban_Swap" Content="Nectar Exchange" Tag="Swap" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="Ban_Order" Content="Hierarchy" Tag="Order" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Chaos" Content="Swarm Frenzy" Tag="Chaos" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_Chaos" Content="Frenzy" Tag="Chaos" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="Ban_BombShelter" Content="Hive Swarm" Tag="BombShelter" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="Ban_Reverse" Content="Inversion" Tag="Reverse" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
                             <CheckBox x:Name="Ban_SuddenDeath" Content="Swarm to the Death" Tag="SuddenDeath" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>

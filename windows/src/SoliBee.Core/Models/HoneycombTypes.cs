@@ -44,7 +44,7 @@ public static class HoneycombRuleWeights
         HoneycombRule.ThreeOpen => "Scouting Party",
         HoneycombRule.Swap => "Nectar Exchange",
         HoneycombRule.Order => "Hierarchy",
-        HoneycombRule.Chaos => "Swarm Frenzy",
+        HoneycombRule.Chaos => "Frenzy",
         HoneycombRule.SuddenDeath => "Swarm to the Death",
         _ => rule.ToString()
     };
@@ -53,4 +53,20 @@ public static class HoneycombRuleWeights
 public enum HoneycombDifficulty
 {
     Easy, Medium, Hard, UltraHard
+}
+
+public static class HoneycombDifficultyExtensions
+{
+    // Matches the ComboBoxItem Content values in HoneycombRulesView.axaml and the
+    // Swift port's HoneycombDifficulty.displayName — used wherever the opponent's
+    // difficulty needs to show as a name rather than the raw enum value (e.g. the
+    // toolbar's opponent score label).
+    public static string DisplayName(this HoneycombDifficulty difficulty) => difficulty switch
+    {
+        HoneycombDifficulty.Easy => "Baby Bee",
+        HoneycombDifficulty.Medium => "Honey Bee",
+        HoneycombDifficulty.Hard => "Queen Bee",
+        HoneycombDifficulty.UltraHard => "Killer Bee",
+        _ => difficulty.ToString()
+    };
 }

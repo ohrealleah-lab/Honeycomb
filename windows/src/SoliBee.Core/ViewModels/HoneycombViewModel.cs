@@ -48,6 +48,10 @@ public partial class HoneycombViewModel : ObservableObject
     // solitaire toolbar's flat ScoreDisplay/TimeDisplay properties do.
     public int PlayerScoreDisplay => State.PlayerScore;
     public int OpponentScoreDisplay => State.OpponentScore;
+
+    // The toolbar's "Opponent" label reads the opponent's actual difficulty name (e.g.
+    // "Baby Bee") instead of the literal word "Opponent" — matches the Swift port.
+    public string OpponentNameDisplay => Options.Difficulty.DisplayName();
     
     public event Action<string>? OnFlashBanner;
 
@@ -1005,7 +1009,11 @@ public partial class HoneycombViewModel : ObservableObject
         return new HoneycombStats();
     }
 
-    public void NotifyOptionsChanged() => OnPropertyChanged(nameof(Options));
+    public void NotifyOptionsChanged()
+    {
+        OnPropertyChanged(nameof(Options));
+        OnPropertyChanged(nameof(OpponentNameDisplay));
+    }
 
     private void NotifyStateChanged()
     {
