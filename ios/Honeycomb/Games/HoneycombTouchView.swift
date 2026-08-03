@@ -52,6 +52,7 @@ struct HoneycombTouchView: View {
     @State private var showingRuleBanner = false
     @State private var ruleBannerText = ""
     @State private var ruleBannerTask: DispatchWorkItem? = nil
+    @State private var isShowingRulesTooltip = false
 
     private var isMidMatch: Bool {
         viewModel.gameState == .playing || viewModel.gameState == .suddenDeath
@@ -298,6 +299,17 @@ struct HoneycombTouchView: View {
                 .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
+                .contentShape(Rectangle()) // Make the whole area tappable
+                .onTapGesture {
+                    isShowingRulesTooltip = true
+                }
+                .popover(isPresented: $isShowingRulesTooltip, attachmentAnchor: .point(.bottom), arrowEdge: .bottom) {
+                    let isPreGame = viewModel.gameState != .playing && viewModel.gameState != .suddenDeath
+                    let isRoulette = isPreGame && !viewModel.options.forceNormalMode && viewModel.options.selectedRules.isEmpty
+                    let effectiveRules: [HoneycombRule] = isPreGame && !isRoulette ? Array(viewModel.options.selectedRules) : viewModel.activeRules
+                    RuleExplanationPopover(viewModel: viewModel, isRoulette: isRoulette, effectiveRules: effectiveRules)
+                        .presentationCompactAdaptation(.popover)
+                }
             undoButton
         }
         .frame(height: 38)

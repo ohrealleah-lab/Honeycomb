@@ -37,6 +37,49 @@ public enum HoneycombRule: String, Codable, CaseIterable {
     }
 }
 
+extension HoneycombRule {
+    public func explanation(activeSuits: Set<String> = []) -> String {
+        switch self {
+        case .same:
+            return "If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously."
+        case .plus:
+            return "If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured."
+        case .fallenAce:
+            return "A card with a stat of 1 attacking a 10 (\"A\") always captures it!"
+        case .reverse:
+            return "Inverts all comparisons—lower stats beat higher stats."
+        case .ascension:
+            if activeSuits.isEmpty {
+                return "Grants +1 to stats for all cards matching randomly selected suits as more of that suit enter the board."
+            } else {
+                let suitNames = activeSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }.joined(separator: " and ")
+                return "Grants +1 to stats for all \(suitNames) cards as more of that suit enter the board."
+            }
+        case .descension:
+            if activeSuits.isEmpty {
+                return "Inflicts -1 to stats for all cards matching randomly selected suits as more of that suit enter the board."
+            } else {
+                let suitNames = activeSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }.joined(separator: " and ")
+                return "Inflicts -1 to stats for all \(suitNames) cards as more of that suit enter the board."
+            }
+        case .order:
+            return "Forces you to play cards in exact deck sequence."
+        case .chaos:
+            return "Randomly mandates which card must be played each turn."
+        case .allOpen:
+            return "Both players' hands are completely visible."
+        case .threeOpen:
+            return "Three randomly selected cards from each player's hand are visible."
+        case .bombShelter:
+            return "First card played remains face-down for 3 turns before flipping automatically."
+        case .suddenDeath:
+            return "If the match ends in a draw, a rematch begins immediately."
+        case .swap:
+            return "Before the match, one card from your hand is randomly swapped with one of the opponent's."
+        }
+    }
+}
+
 public struct HoneycombCell: Codable, Identifiable, Equatable {
     public var id = UUID()
     public var card: HoneycombCard?

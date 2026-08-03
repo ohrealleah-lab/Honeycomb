@@ -98,6 +98,7 @@ public struct HoneycombView: View {
 
     @State private var isShowingNewGameConfirm = false
     @State private var isShowingRematchConfirm = false
+    @State private var isHoveringRules = false
 
     // Shared across both hand columns so a Swap trade's two cards can visually slide
     // from one hand to the other — SwiftUI interpolates a matchedGeometryEffect'd
@@ -746,6 +747,15 @@ public struct HoneycombView: View {
             .padding(.vertical, 18)
             .background(Color.black.opacity(0.75))
             .cornerRadius(16)
+            .onHover { hovering in
+                isHoveringRules = hovering
+            }
+            .popover(isPresented: $isHoveringRules, attachmentAnchor: .point(.bottom), arrowEdge: .bottom) {
+                let isPreGame = viewModel.gameState != .playing && viewModel.gameState != .suddenDeath
+                let isRoulette = isPreGame && !viewModel.options.forceNormalMode && viewModel.options.selectedRules.isEmpty
+                let effectiveRules: [HoneycombRule] = isPreGame && !isRoulette ? Array(viewModel.options.selectedRules) : viewModel.activeRules
+                RuleExplanationPopover(viewModel: viewModel, isRoulette: isRoulette, effectiveRules: effectiveRules)
+            }
             // A second rule line makes this taller than the reserved rulesBannerHeight —
             // bottom-align it in that reserved box so the extra height grows upward into
             // the empty space above instead of pushing the board down below it.

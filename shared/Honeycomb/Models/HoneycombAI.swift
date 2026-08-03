@@ -15,16 +15,39 @@ enum HoneycombAI {
         empties: [Int],
         rules: [HoneycombRule]
     ) -> (handIndex: Int, boardIndex: Int)? {
+        var simulatedPlayerDeck = playerDeck
+        let genericCard = HoneycombCardData(id: -1, name: "Unknown", stars: 3, stats: [6, 6, 6, 6], suit: "-")
+        for _ in 0..<unknownPlayerCardCount {
+            simulatedPlayerDeck.append(genericCard)
+        }
+        
         switch difficulty {
         case .easy:
             return randomMove(eligibleHands: eligibleHands, empties: empties)
         case .medium:
             return greedyMove(board: board, opponentDeck: opponentDeck, eligibleHands: eligibleHands, empties: empties, rules: rules)
         case .hard:
-            return minimaxMove(board: board, opponentDeck: opponentDeck, playerDeck: playerDeck, unknownPlayerCardCount: unknownPlayerCardCount, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: 2, weighFallenAce: false)
+            return minimaxMove(board: board, opponentDeck: opponentDeck, playerDeck: simulatedPlayerDeck, unknownPlayerCardCount: 0, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: 5, weighFallenAce: false)
         case .ultraHard:
-            return minimaxMove(board: board, opponentDeck: opponentDeck, playerDeck: playerDeck, unknownPlayerCardCount: unknownPlayerCardCount, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: 6, weighFallenAce: true)
+            return minimaxMove(board: board, opponentDeck: opponentDeck, playerDeck: simulatedPlayerDeck, unknownPlayerCardCount: 0, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: 6, weighFallenAce: true)
         }
+    }
+
+    enum TTFlag { case exact, lowerBound, upperBound }
+    
+    struct TTEntry {
+        let value: Int
+        let flag: TTFlag
+    }
+    
+    struct TTKey: Hashable {
+        struct CardState: Hashable {
+            let dataId: Int
+            let owner: CardOwner
+            let isFaceDown: Bool
+        }
+        let cells: [CardState?]
+        let maximizingOpponent: Bool
     }
 
     static func emptyBoardIndices(board: HoneycombBoard) -> [Int] {
@@ -67,11 +90,17 @@ enum HoneycombAI {
         empties: [Int],
         rules: [HoneycombRule]
     ) -> (handIndex: Int, boardIndex: Int)? {
-        minimaxMove(
+        var simulatedOpponentDeck = opponentDeck
+        let genericCard = HoneycombCardData(id: -1, name: "Unknown", stars: 3, stats: [6, 6, 6, 6], suit: "-")
+        for _ in 0..<unknownOpponentCardCount {
+            simulatedOpponentDeck.append(genericCard)
+        }
+        
+        return minimaxMove(
             board: mirroredOwnership(board),
             opponentDeck: playerDeck,
-            playerDeck: opponentDeck,
-            unknownPlayerCardCount: unknownOpponentCardCount,
+            playerDeck: simulatedOpponentDeck,
+            unknownPlayerCardCount: 0,
             eligibleHands: eligibleHands,
             empties: empties,
             rules: rules,
@@ -139,6 +168,7 @@ enum HoneycombAI {
         // lets `alpha` tighten sooner, giving the recursive minimaxScore calls beneath
         // later candidates more pruning to work with.
         let candidates = orderedCandidates(deck: opponentDeck, handIndices: eligibleHands, empties: empties, board: board, owner: .opponent, rules: rules)
+        var tt = [TTKey: TTEntry]()
         for candidate in candidates {
             var remainingOpponentDeck = opponentDeck
             remainingOpponentDeck.remove(at: candidate.h)
@@ -153,7 +183,8 @@ enum HoneycombAI {
                 alpha: alpha,
                 beta: Int.max,
                 rules: rules,
-                weighFallenAce: weighFallenAce
+                weighFallenAce: weighFallenAce,
+                tt: &tt
             )
 
             if score > bestScore {
@@ -216,8 +247,23 @@ enum HoneycombAI {
         alpha: Int,
         beta: Int,
         rules: [HoneycombRule],
-        weighFallenAce: Bool
+        weighFallenAce: Bool,
+        tt: inout [TTKey: TTEntry]
     ) -> Int {
+        // TT Lookup
+        let ttKey = TTKey(
+            cells: board.cells.map { cell in
+                guard let card = cell.card else { return nil }
+                return TTKey.CardState(dataId: card.data.id, owner: card.owner, isFaceDown: card.isFaceDown)
+            },
+            maximizingOpponent: maximizingOpponent
+        )
+        if let entry = tt[ttKey] {
+            if entry.flag == .exact { return entry.value }
+            if entry.flag == .lowerBound && entry.value >= beta { return entry.value }
+            if entry.flag == .upperBound && entry.value <= alpha { return entry.value }
+        }
+        let originalAlpha = alpha
         // The match is genuinely decided — score by final ownership margin rather than
         // the heuristic, so a won line always outranks a line that merely "looks good"
         // mid-game. Checked ahead of the depth/hand-exhaustion guard below since a full
@@ -238,11 +284,11 @@ enum HoneycombAI {
         // `playerDeck`, this ply is treated as a leaf and scored by the heuristic —
         // reduced lookahead in exchange for not "cheating."
         if !maximizingOpponent && unknownPlayerCardCount > 0 {
-            return positionalEvaluation(board: board, rules: rules, weighFallenAce: weighFallenAce)
+            return positionalEvaluation(board: board, opponentDeck: opponentDeck, playerDeck: playerDeck, rules: rules, weighFallenAce: weighFallenAce)
         }
 
         guard depth > 0, !empties.isEmpty, !activeDeck.isEmpty else {
-            return positionalEvaluation(board: board, rules: rules, weighFallenAce: weighFallenAce)
+            return positionalEvaluation(board: board, opponentDeck: opponentDeck, playerDeck: playerDeck, rules: rules, weighFallenAce: weighFallenAce)
         }
 
         var alpha = alpha
@@ -255,31 +301,38 @@ enum HoneycombAI {
         let owner: CardOwner = maximizingOpponent ? .opponent : .player
         let candidates = orderedCandidates(deck: activeDeck, handIndices: Array(0..<activeDeck.count), empties: empties, board: board, owner: owner, rules: rules)
 
+        var best: Int
         if maximizingOpponent {
-            var best = Int.min
+            best = Int.min
             outer: for candidate in candidates {
                 var remaining = opponentDeck
                 remaining.remove(at: candidate.h)
                 let score = minimaxScore(board: candidate.board, opponentDeck: remaining, playerDeck: playerDeck, unknownPlayerCardCount: unknownPlayerCardCount,
-                                          maximizingOpponent: false, depth: depth - 1, alpha: alpha, beta: beta, rules: rules, weighFallenAce: weighFallenAce)
+                                          maximizingOpponent: false, depth: depth - 1, alpha: alpha, beta: beta, rules: rules, weighFallenAce: weighFallenAce, tt: &tt)
                 best = max(best, score)
                 alpha = max(alpha, best)
                 if beta <= alpha { break outer }
             }
-            return best
         } else {
-            var best = Int.max
+            best = Int.max
             outer: for candidate in candidates {
                 var remaining = playerDeck
                 remaining.remove(at: candidate.h)
                 let score = minimaxScore(board: candidate.board, opponentDeck: opponentDeck, playerDeck: remaining, unknownPlayerCardCount: unknownPlayerCardCount,
-                                          maximizingOpponent: true, depth: depth - 1, alpha: alpha, beta: beta, rules: rules, weighFallenAce: weighFallenAce)
+                                          maximizingOpponent: true, depth: depth - 1, alpha: alpha, beta: beta, rules: rules, weighFallenAce: weighFallenAce, tt: &tt)
                 best = min(best, score)
                 beta = min(beta, best)
                 if beta <= alpha { break outer }
             }
-            return best
         }
+        
+        let flag: TTFlag
+        if best <= originalAlpha { flag = .upperBound }
+        else if best >= beta { flag = .lowerBound }
+        else { flag = .exact }
+        tt[ttKey] = TTEntry(value: best, flag: flag)
+        
+        return best
     }
 
     // Maps a board index + direction (0=Top, 1=Right, 2=Bottom, 3=Left) to the
@@ -331,7 +384,7 @@ enum HoneycombAI {
     // `weighFallenAce` is only true for Ultra Hard (see computeMove) — Hard's shallower
     // 2-ply search is meant to stay a notch simpler/more exploitable than Ultra Hard's,
     // so this specific extra layer of caution is reserved for the top difficulty.
-    static func positionalEvaluation(board: HoneycombBoard, rules: [HoneycombRule], weighFallenAce: Bool) -> Int {
+    static func positionalEvaluation(board: HoneycombBoard, opponentDeck: [HoneycombCardData], playerDeck: [HoneycombCardData], rules: [HoneycombRule], weighFallenAce: Bool) -> Int {
         let reverse = rules.contains(.reverse)
         let fallenAce = weighFallenAce && rules.contains(.fallenAce)
         var score = 0
@@ -346,7 +399,7 @@ enum HoneycombAI {
             }
             score += card.owner == .opponent ? cardScore : -cardScore
         }
-        score += comboPotential(board: board, rules: rules)
+        score += comboPotential(board: board, opponentDeck: opponentDeck, playerDeck: playerDeck, rules: rules)
         return score
     }
 
@@ -373,38 +426,66 @@ enum HoneycombAI {
     // contents into positionalEvaluation), consistent with exposureValue's own
     // coarseness (raw stat exposure, no hand awareness either). Zero-cost when neither
     // rule is active, matching the existing weighFallenAce/fallenAce gating pattern.
-    static func comboPotential(board: HoneycombBoard, rules: [HoneycombRule]) -> Int {
+    static func comboPotential(board: HoneycombBoard, opponentDeck: [HoneycombCardData], playerDeck: [HoneycombCardData], rules: [HoneycombRule]) -> Int {
         guard rules.contains(.same) || rules.contains(.plus) else { return 0 }
         var score = 0
         let empties = board.cells.enumerated().filter { $0.element.card == nil }.map { $0.offset }
         for emptyIdx in empties {
-            var facingStats: [(owner: CardOwner, stat: Int)] = []
+            var neighbors: [(direction: Int, owner: CardOwner, stat: Int)] = []
             for direction in 0..<4 {
-                guard let neighbor = neighborIndex(from: emptyIdx, direction: direction),
-                      let card = board.cells[neighbor].card,
+                guard let neighborIdx = neighborIndex(from: emptyIdx, direction: direction),
+                      let card = board.cells[neighborIdx].card,
                       !card.isFaceDown else { continue }
                 let towardEmptyDirection = (direction + 2) % 4
-                facingStats.append((card.owner, card.stat(at: towardEmptyDirection)))
+                neighbors.append((direction: direction, owner: card.owner, stat: card.stat(at: towardEmptyDirection)))
             }
-            for owner: CardOwner in [.player, .opponent] {
-                let theirs = facingStats.filter { $0.owner == owner }.map(\.stat)
-                guard theirs.count >= 2 else { continue }
-                var sameMatches = 0
-                var plusMatches = 0
-                for i in 0..<theirs.count {
-                    for j in (i + 1)..<theirs.count {
-                        if rules.contains(.same) && theirs[i] == theirs[j] { sameMatches += 1 }
-                        if rules.contains(.plus) { plusMatches += 1 }
+            
+            for targetOwner: CardOwner in [.player, .opponent] {
+                let targets = neighbors.filter { $0.owner == targetOwner }
+                guard targets.count >= 2 else { continue }
+                
+                let attackerDeck = targetOwner == .player ? opponentDeck : playerDeck
+                var hasSame = false
+                var hasPlus = false
+                
+                for cardData in attackerDeck {
+                    var modifier = 0
+                    if board.ascensionDescensionSuits.contains(cardData.suit) {
+                        let count = board.cells.compactMap { $0.card }.filter { $0.data.suit == cardData.suit }.count + 1
+                        if rules.contains(.ascension) {
+                            modifier = count
+                        } else if rules.contains(.descension) {
+                            modifier = -count
+                        }
                     }
+                    
+                    if rules.contains(.same) {
+                        var matches = 0
+                        for t in targets {
+                            let attackerStat = min(10, max(1, cardData.stats[t.direction] + modifier))
+                            if attackerStat == t.stat { matches += 1 }
+                        }
+                        if matches >= 2 { hasSame = true }
+                    }
+                    
+                    if rules.contains(.plus) {
+                        var sumCounts: [Int: Int] = [:]
+                        for t in targets {
+                            let attackerStat = min(10, max(1, cardData.stats[t.direction] + modifier))
+                            let sum = attackerStat + t.stat
+                            sumCounts[sum, default: 0] += 1
+                        }
+                        if sumCounts.values.contains(where: { $0 >= 2 }) { hasPlus = true }
+                    }
+                    if hasSame && hasPlus { break } // already max potential
                 }
-                guard sameMatches > 0 || plusMatches > 0 else { continue }
-                // Positive when it's the PLAYER's cards exposed to a future combo (the
-                // AI could exploit this), negative when it's the AI's own cards exposed
-                // the same way. Weights are smaller than a real capture (~10-15 in
-                // cardScore terms) since this is only potential — tunable after
-                // playtesting.
-                let weight = 6 * sameMatches + 3 * plusMatches
-                score += owner == .player ? weight : -weight
+                
+                if hasSame || hasPlus {
+                    let weight = (hasSame ? 6 : 0) + (hasPlus ? 3 : 0)
+                    // If AI (opponent) has a card to combo player's cards, it's good (+)
+                    // If Player has a card to combo AI's cards, it's bad (-)
+                    score += targetOwner == .player ? weight : -weight
+                }
             }
         }
         return score
