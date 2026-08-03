@@ -5,9 +5,16 @@ namespace SoliBee.Desktop.Views;
 
 public partial class HelpWindow : Window
 {
+    public IEnumerable<string> DynamicRules { get; }
+
     public HelpWindow(bool startAtHoneycomb = false)
     {
         InitializeComponent();
+        
+        var rules = Enum.GetValues<SoliBee.Core.Models.HoneycombRule>();
+        DynamicRules = rules.Select(r => $"• {r.DisplayName()}: {r.GetExplanation()}");
+        DataContext = this;
+
         if (startAtHoneycomb)
         {
             Opened += (_, _) => ScrollToHoneycomb();

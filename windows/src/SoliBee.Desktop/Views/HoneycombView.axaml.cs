@@ -844,6 +844,69 @@ public partial class HoneycombView : UserControl
         }
     }
 
+    public class RuleExplanationItem
+    {
+        public string Name { get; set; } = "";
+        public string Explanation { get; set; } = "";
+    }
+
+    private void RulesBannerBar_PointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (_vm == null || _vm.State.Options == null) return;
+        
+        var effectiveRules = new List<HoneycombRule>();
+        bool isRoulette = false;
+
+        // Pre-game logic matches Swift
+        if (_vm.State.Phase == HoneycombPhase.Setup)
+        {
+            if (_vm.State.Options.GameMode == HoneycombGameMode.Roulette)
+            {
+                isRoulette = true;
+                // Don't show rules if they are hidden
+            }
+            else
+            {
+                effectiveRules = _vm.State.Options.ManualRules;
+            }
+        }
+        else
+        {
+            effectiveRules = _vm.State.ActiveRules;
+        }
+
+        var items = new List<RuleExplanationItem>();
+        
+        if (isRoulette)
+        {
+            items.Add(new RuleExplanationItem
+            {
+                Name = "Roulette",
+                Explanation = "Rules are randomized at the start of the match."
+            });
+        }
+        
+        foreach (var rule in effectiveRules)
+        {
+            items.Add(new RuleExplanationItem
+            {
+                Name = rule.DisplayName(),
+                Explanation = rule.GetExplanation(_vm.State.Board.ActiveSuits)
+            });
+        }
+        
+        if (items.Count > 0)
+        {
+            RulesExplanationList.ItemsSource = items;
+            RulesExplanationPopup.IsOpen = true;
+        }
+    }
+
+    private void RulesBannerBar_PointerExited(object? sender, PointerEventArgs e)
+    {
+        RulesExplanationPopup.IsOpen = false;
+    }
+
     private void UpdateCursorVisual()
     {
         if (!_isKeyboardCursorActive)
