@@ -794,19 +794,25 @@ struct HoneycombSettingsSection: View {
                             get: { viewModel.options.selectedRules.contains(rule) },
                             set: { on in
                                 if on {
-                                    guard viewModel.options.selectedRules.count < 4 else { return }
-                                    viewModel.options.selectedRules.insert(rule)
-                                    // Mutually exclusive pairs — matches mac's Rules picker.
-                                    if rule == .ascension { viewModel.options.selectedRules.remove(.descension) }
-                                    if rule == .descension { viewModel.options.selectedRules.remove(.ascension) }
-                                    if rule == .order { viewModel.options.selectedRules.remove(.chaos) }
-                                    if rule == .chaos { viewModel.options.selectedRules.remove(.order) }
-                                    if rule == .allOpen { viewModel.options.selectedRules.remove(.threeOpen) }
-                                    if rule == .threeOpen { viewModel.options.selectedRules.remove(.allOpen) }
+                                    // Remove the exclusive partner (if any) BEFORE the cap
+                                    // check — selecting a rule whose partner is already
+                                    // selected is a net-zero swap, not an addition, so it
+                                    // must never be blocked just because the cap is full.
+                                    var updated = viewModel.options.selectedRules
+                                    if rule == .ascension { updated.remove(.descension) }
+                                    if rule == .descension { updated.remove(.ascension) }
+                                    if rule == .order { updated.remove(.chaos) }
+                                    if rule == .chaos { updated.remove(.order) }
+                                    if rule == .allOpen { updated.remove(.threeOpen) }
+                                    if rule == .threeOpen { updated.remove(.allOpen) }
                                     // Bomb Shelter's hidden card doesn't work when All
                                     // Open/Three Open reveals every card anyway.
-                                    if rule == .allOpen || rule == .threeOpen { viewModel.options.selectedRules.remove(.bombShelter) }
-                                    if rule == .bombShelter { viewModel.options.selectedRules.remove(.allOpen); viewModel.options.selectedRules.remove(.threeOpen) }
+                                    if rule == .allOpen || rule == .threeOpen { updated.remove(.bombShelter) }
+                                    if rule == .bombShelter { updated.remove(.allOpen); updated.remove(.threeOpen) }
+
+                                    guard updated.count < 4 else { return }
+                                    updated.insert(rule)
+                                    viewModel.options.selectedRules = updated
                                 } else {
                                     viewModel.options.selectedRules.remove(rule)
                                 }

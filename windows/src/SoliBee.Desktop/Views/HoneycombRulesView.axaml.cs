@@ -117,25 +117,29 @@ public partial class HoneycombRulesView : UserControl
             {
                 if (cb.IsChecked == true)
                 {
+                    // Remove the exclusive partner (if any) BEFORE the cap check —
+                    // selecting a rule whose partner is already selected is a net-zero
+                    // swap, not an addition, so it must never be blocked just because
+                    // the cap is full.
+                    var updated = new HashSet<HoneycombRule>(_localOpts.ManualRules);
+                    if (rule == HoneycombRule.Ascension) updated.Remove(HoneycombRule.Descension);
+                    if (rule == HoneycombRule.Descension) updated.Remove(HoneycombRule.Ascension);
+                    if (rule == HoneycombRule.Order) updated.Remove(HoneycombRule.Chaos);
+                    if (rule == HoneycombRule.Chaos) updated.Remove(HoneycombRule.Order);
+                    if (rule == HoneycombRule.AllOpen) updated.Remove(HoneycombRule.ThreeOpen);
+                    if (rule == HoneycombRule.ThreeOpen) updated.Remove(HoneycombRule.AllOpen);
+                    // Bomb Shelter's hidden card doesn't work when All Open/Three Open
+                    // reveals every card anyway.
+                    if (rule == HoneycombRule.AllOpen || rule == HoneycombRule.ThreeOpen) updated.Remove(HoneycombRule.BombShelter);
+                    if (rule == HoneycombRule.BombShelter) { updated.Remove(HoneycombRule.AllOpen); updated.Remove(HoneycombRule.ThreeOpen); }
+
                     // Cap at 4 manual rules by blocking a 5th, rather than evicting the
                     // oldest — matches Mac's selectedRules picker (a Set has no reliable
                     // insertion order to evict by anyway).
-                    if (!_localOpts.ManualRules.Contains(rule) && _localOpts.ManualRules.Count < 4)
+                    if (updated.Count < 4)
                     {
-                        _localOpts.ManualRules.Add(rule);
-
-                        // Mutually exclusive pairs
-                        if (rule == HoneycombRule.Ascension) _localOpts.ManualRules.Remove(HoneycombRule.Descension);
-                        if (rule == HoneycombRule.Descension) _localOpts.ManualRules.Remove(HoneycombRule.Ascension);
-                        if (rule == HoneycombRule.Order) _localOpts.ManualRules.Remove(HoneycombRule.Chaos);
-                        if (rule == HoneycombRule.Chaos) _localOpts.ManualRules.Remove(HoneycombRule.Order);
-                        if (rule == HoneycombRule.AllOpen) _localOpts.ManualRules.Remove(HoneycombRule.ThreeOpen);
-                        if (rule == HoneycombRule.ThreeOpen) _localOpts.ManualRules.Remove(HoneycombRule.AllOpen);
-                        // Bomb Shelter's hidden card doesn't work when All Open/Three Open
-                        // reveals every card anyway.
-                        if (rule == HoneycombRule.AllOpen || rule == HoneycombRule.ThreeOpen) _localOpts.ManualRules.Remove(HoneycombRule.BombShelter);
-                        if (rule == HoneycombRule.BombShelter) { _localOpts.ManualRules.Remove(HoneycombRule.AllOpen); _localOpts.ManualRules.Remove(HoneycombRule.ThreeOpen); }
-
+                        updated.Add(rule);
+                        _localOpts.ManualRules = updated;
                         _localOpts.ForceNormalRules = false;
                     }
                 }

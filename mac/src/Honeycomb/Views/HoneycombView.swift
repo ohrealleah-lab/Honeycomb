@@ -1061,18 +1061,25 @@ struct HoneycombRulesView: View {
                             get: { selectedRules.contains(rule) },
                             set: { isOn in
                                 if isOn {
-                                    if selectedRules.count < 4 {
-                                        selectedRules.insert(rule)
-                                        if rule == .ascension { selectedRules.remove(.descension) }
-                                        if rule == .descension { selectedRules.remove(.ascension) }
-                                        if rule == .order { selectedRules.remove(.chaos) }
-                                        if rule == .chaos { selectedRules.remove(.order) }
-                                        if rule == .allOpen { selectedRules.remove(.threeOpen) }
-                                        if rule == .threeOpen { selectedRules.remove(.allOpen) }
-                                        // Bomb Shelter's hidden card doesn't work when
-                                        // All Open/Three Open reveals every card anyway.
-                                        if rule == .allOpen || rule == .threeOpen { selectedRules.remove(.bombShelter) }
-                                        if rule == .bombShelter { selectedRules.remove(.allOpen); selectedRules.remove(.threeOpen) }
+                                    // Remove the exclusive partner (if any) BEFORE the cap
+                                    // check — selecting a rule whose partner is already
+                                    // selected is a net-zero swap, not an addition, so it
+                                    // must never be blocked just because the cap is full.
+                                    var updated = selectedRules
+                                    if rule == .ascension { updated.remove(.descension) }
+                                    if rule == .descension { updated.remove(.ascension) }
+                                    if rule == .order { updated.remove(.chaos) }
+                                    if rule == .chaos { updated.remove(.order) }
+                                    if rule == .allOpen { updated.remove(.threeOpen) }
+                                    if rule == .threeOpen { updated.remove(.allOpen) }
+                                    // Bomb Shelter's hidden card doesn't work when
+                                    // All Open/Three Open reveals every card anyway.
+                                    if rule == .allOpen || rule == .threeOpen { updated.remove(.bombShelter) }
+                                    if rule == .bombShelter { updated.remove(.allOpen); updated.remove(.threeOpen) }
+
+                                    if updated.count < 4 {
+                                        updated.insert(rule)
+                                        selectedRules = updated
                                         forceNormalMode = false
                                     }
                                 } else {
