@@ -776,6 +776,15 @@ public final class HoneycombViewModel {
             deck += db.rulesAwareCards(stars: stars, count: count, preferLowStats: preferLowStats)
         }
 
+        // Composition always assembles in the same fixed star-tier order (e.g. Ultra
+        // Hard is always [3,3,4,5,5]), which — combined with the Order rule always
+        // mandating hand-index 0 — made the AI's entire play sequence 100% predictable
+        // every match: a player could always count on 2 weak opens followed by a
+        // guaranteed 5-star, 5-star finish. Shuffle unconditionally (not just when
+        // Order is active) so tier position never leaks information, regardless of
+        // which rules end up active this match.
+        deck.shuffle()
+
         // Favor New Cards (always on, not a toggle): if every card in the assembled
         // deck is already owned by the player, swap the first owned card for an
         // unowned card from the same star tier (if one exists). This guarantees at
