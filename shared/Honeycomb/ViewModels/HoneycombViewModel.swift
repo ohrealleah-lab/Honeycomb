@@ -1300,12 +1300,24 @@ public final class HoneycombViewModel {
             if self.options.isSoundEnabled {
                 UISound.play(named: "snap", enabled: true)
             }
-            for banner in banners {
-                self.enqueueBanner(banner)
+
+            let finishReveal = { [weak self] in
+                guard let self else { return }
+                for banner in banners {
+                    self.enqueueBanner(banner)
+                }
+                self.isAnimatingPlacement = false
+                self.checkWinCondition()
+                completion()
             }
-            self.isAnimatingPlacement = false
-            self.checkWinCondition()
-            completion()
+            if UISound.isHeadlessMode {
+                finishReveal()
+            } else {
+                // Give the reveal's own flip a moment to actually be seen (its flip
+                // animation alone runs ~0.4s — HoneycombCardView's onChange(of:
+                // card.isFaceDown)) before its own banner(s) land.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: finishReveal)
+            }
         }
         if UISound.isHeadlessMode {
             revealBombShelters()
@@ -1537,7 +1549,16 @@ public final class HoneycombViewModel {
                     UISound.play(named: "snap", enabled: true)
                 }
                 if let combo = Self.comboBannerText(for: self.board) {
-                    self.enqueueBanner(combo)
+                    // Give the reveal's own flip a moment to actually be seen
+                    // (HoneycombCardView's onChange(of: card.isFaceDown), ~0.4s) before
+                    // its banner lands.
+                    if UISound.isHeadlessMode {
+                        self.enqueueBanner(combo)
+                    } else {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                            self?.enqueueBanner(combo)
+                        }
+                    }
                 }
             }
 
@@ -1550,7 +1571,13 @@ public final class HoneycombViewModel {
                         UISound.play(named: "snap", enabled: true)
                     }
                     if let combo = Self.comboBannerText(for: self.board) {
-                        self.enqueueBanner(combo)
+                        if UISound.isHeadlessMode {
+                            self.enqueueBanner(combo)
+                        } else {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                                self?.enqueueBanner(combo)
+                            }
+                        }
                     }
                 }
 

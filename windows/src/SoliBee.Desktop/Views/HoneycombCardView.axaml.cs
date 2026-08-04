@@ -65,6 +65,12 @@ public partial class HoneycombCardView : UserControl
     }
 
     private int _currentOwner = 0;
+    // Tracks whether this slot is currently showing CardBack — separate from _card
+    // being non-null, since a hand slot rendered faceDown still has _card set (the
+    // face-down opponent card). Lets RenderCard tell a genuine reveal (was showing
+    // the back, now showing the front — e.g. a Bomb Shelter card flipping face-up)
+    // apart from an ordinary re-render.
+    private bool _isShowingFaceDown = false;
 
     public HoneycombCardView()
     {
@@ -79,6 +85,7 @@ public partial class HoneycombCardView : UserControl
         if (card == null)
         {
             _card = null;
+            _isShowingFaceDown = false;
             CardFace.IsVisible = false;
             CardBack.IsVisible = false;
             return;
@@ -87,6 +94,7 @@ public partial class HoneycombCardView : UserControl
         if (faceDown)
         {
             _card = card;
+            _isShowingFaceDown = true;
             CardFace.IsVisible = false;
             CardBack.IsVisible = true;
             CardBackImage.Source = CardView.ResolveCardBackBitmap(null);
@@ -94,11 +102,17 @@ public partial class HoneycombCardView : UserControl
         }
 
         bool ownerChanged = _card != null && _card.UniqueInstanceId == card.UniqueInstanceId && _currentOwner != 0 && _currentOwner != card.Owner;
-        
+        bool revealedFromFaceDown = _isShowingFaceDown;
+
         _card = card;
         _currentOwner = card.Owner;
+        _isShowingFaceDown = false;
 
-        if (ownerChanged)
+        if (revealedFromFaceDown)
+        {
+            await PlayRevealAnimation(card);
+        }
+        else if (ownerChanged)
         {
             await PlayOwnerChangeAnimation(card);
         }
@@ -236,6 +250,43 @@ public partial class HoneycombCardView : UserControl
             await Task.Delay(16);
         }
         st.AngleY = 0;
+    }
+
+    // Bomb Shelter reveal (and any other face-down -> face-up transition): CardBack
+    // and CardFace are separate siblings (not nested — CardBack is a plain direct
+    // Image at the control's real card size, see the XAML comment above it), so
+    // unlike PlayOwnerChangeAnimation's single FlipContainer transform, both need
+    // their own Rotate3DTransform driven in lockstep for the flip to read as one
+    // continuous card turning over rather than two independently-animated pieces.
+    // Mirrors the Swift port's card.isFaceDown onChange flip
+    // (shared/Honeycomb/Views/HoneycombCardView.swift).
+    private async Task PlayRevealAnimation(HoneycombCard card)
+    {
+        var faceTransform = new Rotate3DTransform();
+        var backTransform = new Rotate3DTransform();
+        FlipContainer.RenderTransform = faceTransform;
+        CardBack.RenderTransform = backTransform;
+
+        // 1. Rotate to 90 degrees, CardBack still showing
+        for (double a = 0; a <= 90; a += 15)
+        {
+            faceTransform.AngleY = a;
+            backTransform.AngleY = a;
+            await Task.Delay(16);
+        }
+
+        // 2. Midpoint: swap from back to face (UpdateVisuals sets both IsVisible flags)
+        UpdateVisuals(card);
+
+        // 3. Rotate from 270 to 360 (completes the flip without mirroring the text)
+        for (double a = 270; a <= 360; a += 15)
+        {
+            faceTransform.AngleY = a;
+            backTransform.AngleY = a;
+            await Task.Delay(16);
+        }
+        faceTransform.AngleY = 0;
+        backTransform.AngleY = 0;
     }
 
     private void Card_PointerPressed(object sender, PointerPressedEventArgs e)

@@ -91,7 +91,7 @@
              art down to 128×181 first, then blew the result back up ~1.5x to
              Honeycomb's actual 195×276 card, blurring it unconditionally regardless of
              window size — see CardView.ResolveCardBackBitmap's comment). -->
-        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="10" IsVisible="False" ClipToBounds="True" Background="White">
+        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="10" IsVisible="False" ClipToBounds="True" Background="White" RenderTransformOrigin="50%,50%">
             <Image x:Name="CardBackImage" Width="195" Height="276" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
         </Border>
     </Grid>

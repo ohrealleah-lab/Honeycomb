@@ -926,9 +926,26 @@ public partial class HoneycombViewModel : ObservableObject
                 State.Board.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
                 var comboText = ComboBannerText(State.Board);
                 var revealedText = $"{HoneycombRule.BombShelter.DisplayName()} Revealed!";
-                OnFlashBanner?.Invoke(comboText == null ? revealedText : $"{revealedText} {comboText}");
+                var bannerText = comboText == null ? revealedText : $"{revealedText} {comboText}";
+                // The reveal itself is committed above so the eventual NotifyStateChanged
+                // later in FinishPlacementTail's flow picks it up and plays
+                // HoneycombCardView's reveal flip — but the banner text is delayed a beat
+                // so it doesn't land before the player has had a chance to see that flip.
+                FlashBannerAfterRevealDelay(bannerText, _matchGeneration);
             }
         }
+    }
+
+    // Gives a Bomb Shelter reveal's own flip animation a moment to actually be seen
+    // (HoneycombCardView.PlayRevealAnimation) before its "Revealed!" banner lands —
+    // mirrors the Swift port's 0.5s pause for the same reason (finishPlacement's
+    // revealBombShelters). Guarded by _matchGeneration so a match that's moved on
+    // (New Game/Surrender/a fresh match) during the delay can't flash a stale banner.
+    private async void FlashBannerAfterRevealDelay(string text, int generation)
+    {
+        if (!_isHeadless) await Task.Delay(500);
+        if (generation != _matchGeneration) return;
+        OnFlashBanner?.Invoke(text);
     }
 
     private async Task RevealBombSheltersAndSettleAsync()
@@ -955,18 +972,28 @@ public partial class HoneycombViewModel : ObservableObject
         if (starterCell != -1)
         {
             State.Board.RevealFaceDownCard(starterCell, new HashSet<HoneycombRule>(State.ActiveRules));
-            var comboText = ComboBannerText(State.Board);
-            if (comboText != null) OnFlashBanner?.Invoke(comboText);
             NotifyStateChanged();
+            var comboText = ComboBannerText(State.Board);
+            // Let the reveal flip (HoneycombCardView.PlayRevealAnimation, kicked off by
+            // NotifyStateChanged above) actually be seen before its banner lands.
+            if (comboText != null)
+            {
+                if (!_isHeadless) await Task.Delay(500);
+                OnFlashBanner?.Invoke(comboText);
+            }
             await Task.Delay(1000);
         }
 
         if (secondCell != -1)
         {
             State.Board.RevealFaceDownCard(secondCell, new HashSet<HoneycombRule>(State.ActiveRules));
-            var comboText = ComboBannerText(State.Board);
-            if (comboText != null) OnFlashBanner?.Invoke(comboText);
             NotifyStateChanged();
+            var comboText = ComboBannerText(State.Board);
+            if (comboText != null)
+            {
+                if (!_isHeadless) await Task.Delay(500);
+                OnFlashBanner?.Invoke(comboText);
+            }
             await Task.Delay(1000);
         }
 
