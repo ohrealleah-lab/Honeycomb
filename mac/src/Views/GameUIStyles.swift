@@ -52,7 +52,6 @@ struct HoverToolbarButtonStyle: ButtonStyle {
             .animation(.easeInOut(duration: 0.08), value: configuration.isPressed)
             .animation(.easeInOut(duration: 0.12), value: isHovered)
             .onHover { hovering in
-                if hovering && !isHovered { UISound.tick() }
                 isHovered = hovering
             }
             .onChange(of: configuration.isPressed) { _, pressed in
