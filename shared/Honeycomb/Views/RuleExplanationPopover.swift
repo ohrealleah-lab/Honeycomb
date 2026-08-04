@@ -39,7 +39,7 @@ public struct RuleExplanationPopover: View {
         }
         .padding(16)
         .frame(width: 300)
-        .presentationBackground(Color(white: 0.15))
+        .presentationBackground(Color.black.opacity(0.75))
         .environment(\.colorScheme, .dark)
     }
 }

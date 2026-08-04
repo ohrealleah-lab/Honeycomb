@@ -92,7 +92,7 @@
 
             <!-- Rules Explanation Popup -->
             <Popup x:Name="RulesExplanationPopup" PlacementTarget="{Binding ElementName=RulesBannerBar}" Placement="Top" IsOpen="False" IsLightDismissEnabled="False">
-                <Border Background="#262626" CornerRadius="12" Padding="24" MaxWidth="500" Margin="0,0,0,10" BoxShadow="0 10 30 0 #80000000">
+                <Border Background="#BF000000" CornerRadius="12" Padding="24" MaxWidth="500" Margin="0,0,0,10" BoxShadow="0 10 30 0 #80000000">
                     <ItemsControl x:Name="RulesExplanationList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
