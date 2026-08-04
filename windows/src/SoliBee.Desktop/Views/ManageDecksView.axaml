@@ -32,8 +32,12 @@
     <!-- Outer grid: content + overlay -->
     <Grid>
 
-        <!-- Main Two-Column Layout -->
-        <Grid ColumnDefinitions="*, *" Margin="16">
+        <!-- Main Two-Column Layout — Saved Decks only ever needs to fit 5 small card
+             thumbnails + two buttons (~320px), so a 50/50 split (mac equivalent:
+             leftWidth = max(300, width * 0.32), see HoneycombDecksView.swift) left
+             Card Bank's card grid squeezed into the same width as that mostly-empty
+             column. Fixed-width left column, Card Bank takes the rest. -->
+        <Grid ColumnDefinitions="320, *" Margin="16">
 
             <!-- LEFT: Saved Decks -->
             <Grid Grid.Column="0" RowDefinitions="Auto, *, Auto" Margin="0,0,10,0">
