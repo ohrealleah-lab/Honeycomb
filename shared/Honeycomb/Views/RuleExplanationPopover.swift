@@ -39,7 +39,11 @@ public struct RuleExplanationPopover: View {
         }
         .padding(16)
         .frame(width: 300)
+        // Matches the rules banner's own box treatment (Color.black.opacity(0.75) +
+        // cornerRadius 16) so the popover reads as the same surface instead of a
+        // lighter, system-chromed popover with its own default corner radius.
         .presentationBackground(Color.black.opacity(0.75))
+        .presentationCornerRadius(16)
         .environment(\.colorScheme, .dark)
     }
 }
