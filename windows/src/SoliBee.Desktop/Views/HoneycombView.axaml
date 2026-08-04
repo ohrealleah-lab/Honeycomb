@@ -92,7 +92,11 @@
 
             <!-- Rules Explanation Popup -->
             <Popup x:Name="RulesExplanationPopup" PlacementTarget="{Binding ElementName=RulesBannerBar}" Placement="Top" IsOpen="False" IsLightDismissEnabled="False">
-                <Border Background="#BF000000" CornerRadius="12" Padding="24" MaxWidth="500" Margin="0,0,0,10" BoxShadow="0 10 30 0 #80000000">
+                <!-- Opaque, not translucent like the banner's #BF000000 — a Popup renders
+                     on its own surface, not against the green felt, so the same
+                     translucent value blends with a different (lighter) backdrop and
+                     reads grey instead of matching the banner. -->
+                <Border Background="#FF1A1A1A" CornerRadius="12" Padding="24" MaxWidth="500" Margin="0,0,0,10" BoxShadow="0 10 30 0 #80000000">
                     <ItemsControl x:Name="RulesExplanationList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
