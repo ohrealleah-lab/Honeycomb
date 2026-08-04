@@ -1041,7 +1041,7 @@ struct HoneycombRulesView: View {
                         Text("Game Choice")
                             .font(.title2).bold()
                     
-                    Text("Select up to 2 rules. Leave empty to let roulette decide each match rules.")
+                    Text("Select up to 4 rules. Leave empty to let roulette decide each match rules.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1061,7 +1061,7 @@ struct HoneycombRulesView: View {
                             get: { selectedRules.contains(rule) },
                             set: { isOn in
                                 if isOn {
-                                    if selectedRules.count < 2 {
+                                    if selectedRules.count < 4 {
                                         selectedRules.insert(rule)
                                         if rule == .ascension { selectedRules.remove(.descension) }
                                         if rule == .descension { selectedRules.remove(.ascension) }

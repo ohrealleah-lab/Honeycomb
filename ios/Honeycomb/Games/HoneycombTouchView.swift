@@ -785,12 +785,31 @@ struct HoneycombSettingsSection: View {
                 Toggle("Force Normal Rules", isOn: $viewModel.options.forceNormalMode)
 
                 DisclosureGroup("Match Rules") {
-                    ForEach(HoneycombRule.allCases, id: \.self) { rule in
+                    Text("Select up to 4 rules. Leave empty to let roulette decide each match rules.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    ForEach(HoneycombRule.allCases.filter { $0 != .reverse }, id: \.self) { rule in
                         Toggle(rule.rawValue, isOn: .init(
                             get: { viewModel.options.selectedRules.contains(rule) },
                             set: { on in
-                                if on { viewModel.options.selectedRules.insert(rule) }
-                                else { viewModel.options.selectedRules.remove(rule) }
+                                if on {
+                                    guard viewModel.options.selectedRules.count < 4 else { return }
+                                    viewModel.options.selectedRules.insert(rule)
+                                    // Mutually exclusive pairs — matches mac's Rules picker.
+                                    if rule == .ascension { viewModel.options.selectedRules.remove(.descension) }
+                                    if rule == .descension { viewModel.options.selectedRules.remove(.ascension) }
+                                    if rule == .order { viewModel.options.selectedRules.remove(.chaos) }
+                                    if rule == .chaos { viewModel.options.selectedRules.remove(.order) }
+                                    if rule == .allOpen { viewModel.options.selectedRules.remove(.threeOpen) }
+                                    if rule == .threeOpen { viewModel.options.selectedRules.remove(.allOpen) }
+                                    // Bomb Shelter's hidden card doesn't work when All
+                                    // Open/Three Open reveals every card anyway.
+                                    if rule == .allOpen || rule == .threeOpen { viewModel.options.selectedRules.remove(.bombShelter) }
+                                    if rule == .bombShelter { viewModel.options.selectedRules.remove(.allOpen); viewModel.options.selectedRules.remove(.threeOpen) }
+                                } else {
+                                    viewModel.options.selectedRules.remove(rule)
+                                }
                             }
                         ))
                     }

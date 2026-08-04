@@ -27,7 +27,7 @@
                     <StackPanel Grid.Column="0" Margin="0,0,10,0" Spacing="6">
                         <TextBlock Text="Game Choice" FontSize="16" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,0,0,2"/>
                         
-                        <TextBlock Text="Select up to 2 rules. Leave empty to let roulette decide each match rules." 
+                        <TextBlock Text="Select up to 4 rules. Leave empty to let roulette decide each match rules."
                                    FontSize="11" Foreground="#707070" TextWrapping="Wrap" Margin="0,0,0,6"/>
 
                         <StackPanel x:Name="HoneycombRulesPanel" Spacing="2">

@@ -117,10 +117,10 @@ public partial class HoneycombRulesView : UserControl
             {
                 if (cb.IsChecked == true)
                 {
-                    // Cap at 2 manual rules by blocking a 3rd, rather than evicting the
+                    // Cap at 4 manual rules by blocking a 5th, rather than evicting the
                     // oldest — matches Mac's selectedRules picker (a Set has no reliable
                     // insertion order to evict by anyway).
-                    if (!_localOpts.ManualRules.Contains(rule) && _localOpts.ManualRules.Count < 2)
+                    if (!_localOpts.ManualRules.Contains(rule) && _localOpts.ManualRules.Count < 4)
                     {
                         _localOpts.ManualRules.Add(rule);
 
