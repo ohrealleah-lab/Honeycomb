@@ -84,7 +84,7 @@ public partial class DeckBuilderView : UserControl
                 if (data != null)
                 {
                     var cardObj  = new HoneycombCard(data, 1);
-                    var cardView = new HoneycombCardView();
+                    var cardView = new HoneycombCardView { UseOwnershipColoring = false };
                     var vb = new Viewbox { Child = cardView };
                     _ = cardView.RenderCard(cardObj); // fire-and-forget
 
@@ -141,7 +141,7 @@ public partial class DeckBuilderView : UserControl
         foreach (var c in filtered)
         {
             var cardObj  = new HoneycombCard(c, 1);
-            var cardView = new HoneycombCardView();
+            var cardView = new HoneycombCardView { UseOwnershipColoring = false };
             var vb = new Viewbox
             {
                 Width  = 90,

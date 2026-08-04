@@ -75,7 +75,7 @@ public partial class ManageDecksView : UserControl
                         // Render synchronously without await – use fire-and-forget
                         // but wrap in a try/catch so a bad card never crashes the list.
                         var cardObj  = new HoneycombCard(data, 1);
-                        var cardView = new HoneycombCardView();
+                        var cardView = new HoneycombCardView { UseOwnershipColoring = false };
                         var vb = new Viewbox { Child = cardView };
                         placeholder.Child = vb;
                         // Fire-and-forget render (no await = no async-related crash)
@@ -220,7 +220,7 @@ public partial class ManageDecksView : UserControl
         foreach (var c in filtered)
         {
             var cardObj  = new HoneycombCard(c, 1);
-            var cardView = new HoneycombCardView();
+            var cardView = new HoneycombCardView { UseOwnershipColoring = false };
             _ = cardView.RenderCard(cardObj); // fire-and-forget, no await
 
             var vb = new Viewbox

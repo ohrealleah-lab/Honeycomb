@@ -16,6 +16,15 @@ public partial class HoneycombCardView : UserControl
     private int _cellIndex = -1;
     public event EventHandler<(int handIndex, int cellIndex)>? OnCardClicked;
 
+    // Board and hand cards indicate ownership by recoloring the suit icon/stats
+    // themselves (black = player, red = opponent), overriding the suit's natural
+    // color. Only the deck manager/deck builder's Card Bank sets this false — it
+    // always shows the player's own collection, where a card's natural suit color
+    // (red for hearts/diamonds) is what's meaningful for visual contrast, not
+    // ownership (which is constant there anyway). Mirrors the Swift port's
+    // useOwnershipColoring (shared/Honeycomb/Views/HoneycombCardView.swift).
+    public bool UseOwnershipColoring { get; set; } = true;
+
     public bool StealHighlight
     {
         get => StealHighlightBorder.IsVisible;
@@ -120,11 +129,13 @@ public partial class HoneycombCardView : UserControl
 
         string suitChar = GetSuitGlyph(card.Data.Suit);
 
-        var color = card.Owner == 1 ? CardView._brushTextBlackNormal : CardView._brushTextRed;
-        
+        bool isHeartOrDiamond = card.Data.Suit == "H" || card.Data.Suit == "D";
+        var color = UseOwnershipColoring
+            ? (card.Owner == 1 ? CardView._brushTextBlackNormal : CardView._brushTextRed)
+            : (isHeartOrDiamond ? CardView._brushTextRed : CardView._brushTextBlackNormal);
+
         StarsPanel.Children.Clear();
         int count = card.Data.Stars;
-        bool isHeartOrDiamond = card.Data.Suit == "H" || card.Data.Suit == "D";
 
         StackPanel CreateRow(int numStars)
         {
