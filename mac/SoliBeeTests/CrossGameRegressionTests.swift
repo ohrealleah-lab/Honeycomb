@@ -108,6 +108,21 @@ struct CrossGameRegressionTests {
             fatalError("❌ CrossGameRegressionTests: expected at least 4 Beecell tableau columns")
         }
 
+        // Exactly as reported: the very first Beecell action after the game switch is
+        // double-clicking an Ace to its foundation (not a programmatic isValidMove/
+        // moveCards call) — drives the real doubleClickMove code path a live double-
+        // click uses, in case the bug lives in that path specifically rather than in
+        // isValidMove/moveCards themselves.
+        let aceOfSpades = Card(suit: .spades, rank: 1, faceUp: true)
+        bc.state.tableau[0].cards = [aceOfSpades]
+        bc.doubleClickMove(card: aceOfSpades, from: bc.state.tableau[0])
+        guard bc.state.foundations.contains(where: { $0.topCard?.id == aceOfSpades.id }) else {
+            fatalError("❌ CrossGameRegressionTests: double-clicking the Ace didn't send it to a foundation")
+        }
+        guard bc.state.tableau[0].isEmpty else {
+            fatalError("❌ CrossGameRegressionTests: Ace didn't leave its tableau column after double-click")
+        }
+
         let blackEight = Card(suit: .spades, rank: 8, faceUp: true)
         let redSeven = Card(suit: .hearts, rank: 7, faceUp: true)
         bc.state.tableau[0].cards = [blackEight]
