@@ -615,6 +615,17 @@ public struct HoneycombView: View {
                 isOpponentCardRevealed = Array(repeating: false, count: 5)
                 handIdentityToken += 1
             } else if oldState == .setup {
+                // Opponent cards only actually flip face-up during the opening
+                // sequence when a rule (Clear Skies/Scouting Party) makes them
+                // visible — otherwise they should just quietly appear face-down with
+                // no animation, since there's nothing being "revealed." Pre-seed
+                // those hidden slots as already-revealed (bumping handIdentityToken
+                // so the flip container captures this as its *initial* state,
+                // before ever rendering false) so triggerDealFlip's later
+                // true-assignment for them is a no-op instead of a real transition
+                // — only genuinely visible slots go through the animated flip.
+                isOpponentCardRevealed = viewModel.opponentHand.map { !viewModel.isOpponentCardVisible(cardId: $0.id) }
+                handIdentityToken += 1
                 triggerDealFlip()
             }
         }
