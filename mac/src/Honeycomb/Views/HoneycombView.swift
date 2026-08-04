@@ -160,7 +160,7 @@ public struct HoneycombView: View {
                         GameToolbarButton(
                             label: "Quit Match", systemImage: "flag.fill",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold
-                        ) { viewModel.gameState = .setup }
+                        ) { viewModel.quitMatch() }
                     }
 
                     GameToolbarButton(

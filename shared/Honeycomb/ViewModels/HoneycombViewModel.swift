@@ -1683,7 +1683,16 @@ public final class HoneycombViewModel {
     public func restartCurrentGame() {
         startNewGame()
     }
-    
+
+    // Quit Match only ever flipped gameState to .setup — the board view renders
+    // viewModel.board.cells unconditionally (not gated on gameState), so the
+    // just-quit match's cards stayed visibly on screen underneath the setup UI.
+    // Reset to a fresh empty board so quitting actually clears it.
+    public func quitMatch() {
+        board = HoneycombBoard()
+        gameState = .setup
+    }
+
     public func resetStatistics() {
         stats = HoneycombStats()
         saveStats()
