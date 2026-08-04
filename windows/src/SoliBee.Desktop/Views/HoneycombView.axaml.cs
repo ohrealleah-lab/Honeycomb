@@ -116,25 +116,83 @@ public partial class HoneycombView : UserControl
         });
     }
 
-    // Nectar Exchange (Swap) trade landed — the ViewModel already applied it and
-    // notified state, but a hand slot's card *identity* changing isn't something
-    // RenderCard's ownerChanged auto-detection catches (that's for the same card
-    // being recaptured, not a different card trading in), so play the flip
-    // explicitly on the two affected hand slots.
-    private void Vm_OnSwapLanded(Guid playerCardId, Guid opponentCardId)
+    // Nectar Exchange (Swap) trade landed — the ViewModel already applied it (and
+    // NotifyStateChanged will snap the two real slots to their new content), so
+    // this plays a floating ghost of each pre-swap card sliding across to the
+    // other side's slot, matching the Swift port's matchedGeometryEffect-driven
+    // cross-position animation (mac/shared HoneycombView.swift /
+    // HoneycombViewModel.stageSwapAnimation) instead of Windows' previous in-place
+    // flip, which didn't visually cross hands at all.
+    private void Vm_OnSwapLanded(HoneycombCard preSwapPlayerCard, HoneycombCard preSwapOpponentCard, int playerIndex, int opponentIndex)
     {
-        Dispatcher.UIThread.Post(async () => {
-            if (_vm == null) return;
-            var state = _vm.State;
+        Dispatcher.UIThread.Post(async () => await PlaySwapSlideAnimation(preSwapPlayerCard, preSwapOpponentCard, playerIndex, opponentIndex));
+    }
 
-            int pIdx = state.PlayerHand.FindIndex(c => c.UniqueInstanceId == playerCardId);
-            int oIdx = state.OpponentHand.FindIndex(c => c.UniqueInstanceId == opponentCardId);
+    // Slides a floating ghost of each pre-swap card from its original hand slot to
+    // the slot it now occupies in the other player's row — 0.9s ease-in-out,
+    // matching the Swift port's withAnimation(.easeInOut(duration: 0.9)). The two
+    // real slot views are hidden for the duration so the instant data-level swap
+    // already applied by NotifyStateChanged isn't visible underneath, then revealed
+    // once the ghosts land.
+    private async Task PlaySwapSlideAnimation(HoneycombCard preSwapPlayerCard, HoneycombCard preSwapOpponentCard, int playerIndex, int opponentIndex)
+    {
+        if (_dragCanvas == null) _dragCanvas = this.FindControl<Canvas>("HoneycombDragCanvas");
+        if (_dragCanvas == null) return;
+        if (playerIndex < 0 || playerIndex >= _playerHandViews.Length) return;
+        if (opponentIndex < 0 || opponentIndex >= _opponentHandViews.Length) return;
 
-            var tasks = new List<Task>();
-            if (pIdx >= 0) tasks.Add(_playerHandViews[pIdx].PlaySwapFlipAnimation(state.PlayerHand[pIdx]));
-            if (oIdx >= 0) tasks.Add(_opponentHandViews[oIdx].PlaySwapFlipAnimation(state.OpponentHand[oIdx]));
-            if (tasks.Count > 0) await Task.WhenAll(tasks);
-        });
+        var playerSlot = _playerHandViews[playerIndex];
+        var opponentSlot = _opponentHandViews[opponentIndex];
+
+        var playerPos = playerSlot.TranslatePoint(new Point(0, 0), _dragCanvas);
+        var opponentPos = opponentSlot.TranslatePoint(new Point(0, 0), _dragCanvas);
+        if (playerPos == null || opponentPos == null) return;
+
+        var size = playerSlot.Bounds.Size;
+
+        HoneycombCardView MakeGhost(HoneycombCard card, Point start)
+        {
+            var ghost = new HoneycombCardView { Width = size.Width, Height = size.Height, IsHitTestVisible = false };
+            _ = ghost.RenderCard(card);
+            Canvas.SetLeft(ghost, start.X);
+            Canvas.SetTop(ghost, start.Y);
+            _dragCanvas.Children.Add(ghost);
+            return ghost;
+        }
+
+        var playerGhost = MakeGhost(preSwapPlayerCard, playerPos.Value);
+        var opponentGhost = MakeGhost(preSwapOpponentCard, opponentPos.Value);
+
+        playerSlot.Opacity = 0;
+        opponentSlot.Opacity = 0;
+
+        const int durationMs = 900;
+        const int stepMs = 16;
+        var startTime = Environment.TickCount64;
+        while (true)
+        {
+            double t = Math.Min(1.0, (Environment.TickCount64 - startTime) / (double)durationMs);
+            // Cubic ease-in-out, matching SwiftUI's .easeInOut curve shape.
+            double eased = t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
+
+            var pX = playerPos.Value.X + (opponentPos.Value.X - playerPos.Value.X) * eased;
+            var pY = playerPos.Value.Y + (opponentPos.Value.Y - playerPos.Value.Y) * eased;
+            Canvas.SetLeft(playerGhost, pX);
+            Canvas.SetTop(playerGhost, pY);
+
+            var oX = opponentPos.Value.X + (playerPos.Value.X - opponentPos.Value.X) * eased;
+            var oY = opponentPos.Value.Y + (playerPos.Value.Y - opponentPos.Value.Y) * eased;
+            Canvas.SetLeft(opponentGhost, oX);
+            Canvas.SetTop(opponentGhost, oY);
+
+            if (t >= 1.0) break;
+            await Task.Delay(stepMs);
+        }
+
+        _dragCanvas.Children.Remove(playerGhost);
+        _dragCanvas.Children.Remove(opponentGhost);
+        playerSlot.Opacity = 1;
+        opponentSlot.Opacity = 1;
     }
 
     private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)

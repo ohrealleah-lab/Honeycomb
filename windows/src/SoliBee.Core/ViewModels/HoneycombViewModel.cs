@@ -541,16 +541,17 @@ public partial class HoneycombViewModel : ObservableObject
     }
 
     // Swap trade's real landing time — the banner-clear delay (2.0s, matching
-    // StageSwapAnimation) plus the flip animation's own duration (~0.336s: 2×7 steps
-    // at 24ms/step, see HoneycombCardView.PlaySwapFlipAnimation). The first move —
-    // player input or the AI's opening move — waits until here instead of stepping
-    // on the trade mid-animation. StartTurn() already ran above and skipped its own
-    // AI-trigger (blocked by _isAnimating), so this explicitly resumes it once the
-    // wait is over — calling RunAITurn(skipPacingDelay: true) rather than stacking
-    // its normal 2.5s "thinking" pause on top of this wait.
+    // StageSwapAnimation) plus the slide animation's own duration (0.9s, matching
+    // the Swift port's withAnimation(.easeInOut(duration: 0.9)) — see
+    // HoneycombView.PlaySwapSlideAnimation). The first move — player input or the
+    // AI's opening move — waits until here instead of stepping on the trade
+    // mid-animation. StartTurn() already ran above and skipped its own AI-trigger
+    // (blocked by _isAnimating), so this explicitly resumes it once the wait is
+    // over — calling RunAITurn(skipPacingDelay: true) rather than stacking its
+    // normal 2.5s "thinking" pause on top of this wait.
     private async void ReleaseFirstMoveAfterSwap(int generation)
     {
-        if (!_isHeadless) await Task.Delay(2336);
+        if (!_isHeadless) await Task.Delay(2900);
         if (generation != _matchGeneration || !IsPlaying) return;
 
         _isAnimating = false;
@@ -565,13 +566,16 @@ public partial class HoneycombViewModel : ObservableObject
     }
 
     // Fires once the trade actually lands (ApplySwap runs), so the view can play a
-    // flip animation on the two affected hand slots instead of them silently
-    // appearing already-swapped.
-    public event Action<Guid, Guid>? OnSwapLanded;
+    // slide animation crossing the two affected hand slots instead of them silently
+    // appearing already-swapped. Passes the two pre-swap card objects (their Data
+    // never changes, only Owner — ApplySwap already flipped that to each card's new
+    // holder) plus the fixed slot indices each ends up occupying, so the view doesn't
+    // need to re-derive any of this by searching hand arrays after the fact.
+    public event Action<HoneycombCard, HoneycombCard, int, int>? OnSwapLanded;
 
     // Applies the trade only once the "First Move" banner (2.0s) has fully cleared —
     // it used to apply instantly at match setup, stepping on the banner's own
-    // runtime — then keeps the highlight up through the flip animation before
+    // runtime — then keeps the highlight up through the slide animation before
     // clearing it.
     private async void StageSwapAnimation(PendingSwap swap, int generation)
     {
@@ -580,7 +584,7 @@ public partial class HoneycombViewModel : ObservableObject
 
         ApplySwap(swap);
         NotifyStateChanged();
-        OnSwapLanded?.Invoke(swap.PlayerCardId, swap.OpponentCardId);
+        OnSwapLanded?.Invoke(swap.PlayerCard, swap.OpponentCard, swap.PlayerIndex, swap.OpponentIndex);
 
         // 50% slower than the original 0.8s post-swap highlight hold.
         if (!_isHeadless) await Task.Delay(1200);

@@ -203,7 +203,7 @@ public partial class HoneycombCardView : UserControl
         };
     }
 
-    private async Task PlayOwnerChangeAnimation(HoneycombCard card, int stepDelayMs = 16)
+    private async Task PlayOwnerChangeAnimation(HoneycombCard card)
     {
         var st = new Rotate3DTransform();
         FlipContainer.RenderTransform = st;
@@ -212,7 +212,7 @@ public partial class HoneycombCardView : UserControl
         for (double a = 0; a <= 90; a += 15)
         {
             st.AngleY = a;
-            await Task.Delay(stepDelayMs);
+            await Task.Delay(16);
         }
 
         // 2. Midpoint: Update visuals
@@ -222,23 +222,9 @@ public partial class HoneycombCardView : UserControl
         for (double a = 270; a <= 360; a += 15)
         {
             st.AngleY = a;
-            await Task.Delay(stepDelayMs);
+            await Task.Delay(16);
         }
         st.AngleY = 0;
-    }
-
-    // Nectar Exchange (Swap): plays the same flip used for board-capture owner
-    // changes, but for a hand slot whose card *identity* just changed (a different
-    // card traded in, not just a new owner for the same card) — RenderCard's
-    // ownerChanged auto-detection doesn't fire for that case, so the ViewModel's
-    // OnSwapLanded event calls this directly on the two affected hand slots. 50%
-    // slower (24ms/step vs 16ms) than the capture-flip default, matching the mac
-    // port's slowed Swap animation.
-    public async Task PlaySwapFlipAnimation(HoneycombCard newCard)
-    {
-        _card = newCard;
-        _currentOwner = newCard.Owner;
-        await PlayOwnerChangeAnimation(newCard, stepDelayMs: 24);
     }
 
     private void Card_PointerPressed(object sender, PointerPressedEventArgs e)
