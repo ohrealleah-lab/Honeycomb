@@ -1839,6 +1839,12 @@ public partial class MainWindow : Window
                 HoneycombRulesViewControl.Cancel_Click(sender, e);
                 return;
             }
+            if (ManageDecksOverlay != null && ManageDecksOverlay.IsVisible)
+            {
+                e.Handled = true;
+                CloseManageDecks_Click(sender, e);
+                return;
+            }
         }
 
         if (e.Key == Key.F1)
