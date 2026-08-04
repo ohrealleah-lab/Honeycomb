@@ -115,24 +115,33 @@ public class HoneycombDatabase
     public List<HoneycombCardData> RulesAwareCards(int stars, int count, bool preferLowStats)
     {
         var tierPool = AllCards.Where(c => c.Stars == stars).ToList();
-        
-        var scoredPool = tierPool.Select(c => 
+
+        var scoredPool = tierPool.Select(c =>
         {
             double mean = c.Stats.Average();
             double variance = c.Stats.Average(s => Math.Pow(s - mean, 2));
             double score = c.Stats.Sum() + variance;
             return (Card: c, Score: score);
-        });
+        }).ToList();
 
-        if (preferLowStats)
-            scoredPool = scoredPool.OrderBy(x => x.Score);
-        else
-            scoredPool = scoredPool.OrderByDescending(x => x.Score);
+        double minScore = scoredPool.Count > 0 ? scoredPool.Min(x => x.Score) : 0;
+        double maxScore = scoredPool.Count > 0 ? scoredPool.Max(x => x.Score) : 0;
+        double scoreRange = Math.Max(maxScore - minScore, 0.0001);
 
-        var sortedPool = scoredPool.Select(x => x.Card).ToList();
-        int candidateCount = Math.Max(count, (int)Math.Ceiling(sortedPool.Count * 0.4));
-        var candidates = sortedPool.Take(candidateCount).ToList();
-        
+        // Every card in the tier stays eligible (weighted, not hard-cutoff) so no
+        // card is permanently unreachable — a strict top-slice cutoff here previously
+        // meant the bottom ~60% of every tier could never appear as an opponent card.
+        // Well-suited cards are still far more likely to be drawn thanks to the floor
+        // below keeping the weight spread wide.
+        double SuitabilityWeight(double score)
+        {
+            double normalized = (score - minScore) / scoreRange;
+            double favored = preferLowStats ? (1 - normalized) : normalized;
+            return 0.2 + favored;
+        }
+
+        var candidates = scoredPool.ToList();
+
         var result = new List<HoneycombCardData>();
         int[] edgeCounts = new int[4];
 
@@ -140,7 +149,7 @@ public class HoneycombDatabase
         {
             if (candidates.Count == 0)
             {
-                var pick = sortedPool[Random.Shared.Next(candidateCount)];
+                var pick = tierPool[Random.Shared.Next(tierPool.Count)];
                 result.Add(pick);
                 continue;
             }
@@ -149,8 +158,8 @@ public class HoneycombDatabase
             double totalWeight = 0;
             for (int j = 0; j < candidates.Count; j++)
             {
-                int domEdge = DominantEdge(candidates[j]);
-                weights[j] = 1.0 / (edgeCounts[domEdge] + 1);
+                int domEdge = DominantEdge(candidates[j].Card);
+                weights[j] = SuitabilityWeight(candidates[j].Score) / (edgeCounts[domEdge] + 1);
                 totalWeight += weights[j];
             }
 
@@ -167,7 +176,7 @@ public class HoneycombDatabase
                 }
             }
 
-            var selected = candidates[pickIndex];
+            var selected = candidates[pickIndex].Card;
             result.Add(selected);
             edgeCounts[DominantEdge(selected)]++;
             candidates.RemoveAt(pickIndex);

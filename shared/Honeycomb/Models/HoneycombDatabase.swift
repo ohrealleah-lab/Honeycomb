@@ -53,10 +53,13 @@ public class HoneycombDatabase {
     // unevenly it's spread across edges (variance), so a specialized card like
     // [8,8,1,1] outranks a flat card like [5,4,5,4] with the same total — the flat
     // one is weak on every edge and gets captured easily, the specialized one
-    // dominates the two edges it's strong on. Picks from the best-suited ~40% of
-    // the tier rather than always the single best card, so decks still vary match
-    // to match, and favors covering different dominant edges across the picks so
-    // the AI doesn't end up with several cards all strong on the same side.
+    // dominates the two edges it's strong on. Every card in the tier stays eligible
+    // (weighted, not hard-cutoff) so no card is permanently unreachable — a strict
+    // top-slice cutoff here previously meant the bottom ~60% of every tier could
+    // never appear as an opponent card regardless of how much the player owned —
+    // but well-suited cards are still far more likely to be drawn, and picks favor
+    // covering different dominant edges across the hand so the AI doesn't end up
+    // with several cards all strong on the same side.
     public func rulesAwareCards(stars: Int, count: Int, preferLowStats: Bool) -> [HoneycombCardData] {
         let pool = allCards.filter { $0.stars == stars }
         guard !pool.isEmpty else { return [] }
@@ -68,13 +71,20 @@ public class HoneycombDatabase {
             return total + variance
         }
 
-        let sorted = pool.sorted { a, b in
-            let scoreA = specializationScore(a.stats)
-            let scoreB = specializationScore(b.stats)
-            return preferLowStats ? scoreA < scoreB : scoreA > scoreB
+        let scored = pool.map { ($0, specializationScore($0.stats)) }
+        let minScore = scored.map(\.1).min() ?? 0
+        let maxScore = scored.map(\.1).max() ?? 0
+        let scoreRange = max(maxScore - minScore, 0.0001)
+
+        // Normalized 0...1 "how well-suited under current rules", then a floor so
+        // even the least-suited card keeps a real (if small) chance of being drawn.
+        func suitabilityWeight(_ score: Double) -> Double {
+            let normalized = (score - minScore) / scoreRange
+            let favored = preferLowStats ? (1 - normalized) : normalized
+            return 0.2 + favored
         }
-        let candidateCount = max(count, Int(ceil(Double(sorted.count) * 0.4)))
-        var remaining = Array(sorted.prefix(candidateCount))
+
+        var remaining = scored
 
         // Greedily pick, weighting toward candidates whose dominant edge is least
         // represented among cards already picked, so the resulting hand covers
@@ -87,10 +97,10 @@ public class HoneycombDatabase {
         var result: [HoneycombCardData] = []
         for _ in 0..<count {
             guard !remaining.isEmpty else {
-                result.append(sorted.prefix(candidateCount).randomElement()!)
+                result.append(pool.randomElement()!)
                 continue
             }
-            let weights = remaining.map { 1.0 / Double(edgeCounts[dominantEdge($0)] + 1) }
+            let weights = remaining.map { suitabilityWeight($0.1) / Double(edgeCounts[dominantEdge($0.0)] + 1) }
             let totalWeight = weights.reduce(0, +)
             var r = Double.random(in: 0..<totalWeight)
             var chosenIndex = remaining.count - 1
@@ -98,7 +108,7 @@ public class HoneycombDatabase {
                 if r < weight { chosenIndex = i; break }
                 r -= weight
             }
-            let chosen = remaining.remove(at: chosenIndex)
+            let chosen = remaining.remove(at: chosenIndex).0
             edgeCounts[dominantEdge(chosen)] += 1
             result.append(chosen)
         }

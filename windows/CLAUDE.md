@@ -1,5 +1,9 @@
 # SoliBee Windows Port — CLAUDE.md
 
+## Tools
+
+Use the Context7 MCP server automatically for any question involving library or framework API usage, documentation, or version-specific behavior (e.g., Avalonia UI, .NET). Don't wait to be asked — reach for it whenever current/accurate docs would help, instead of relying on training data.
+
 ## Project overview
 Avalonia UI 11.0.10 / .NET 8 solitaire suite (Klondike, Beecell, Spider). Active branch: `004-windows-port`. Ported from a Mac-original codebase.
 

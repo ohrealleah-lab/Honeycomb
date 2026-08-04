@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Tools
+
+Use the Context7 MCP server automatically for any question involving library or framework API usage, documentation, or version-specific behavior (e.g., SwiftUI). Don't wait to be asked — reach for it whenever current/accurate docs would help, instead of relying on training data.
+
 ## Commands
 
 ```bash
