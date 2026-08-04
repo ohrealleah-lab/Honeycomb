@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Rotates a view about its vertical axis and hides it once past edge-on — used as
-// both halves of HoneycombView's cardFlipTransition (see isHandRevealed).
+// both halves of HoneycombView's cardFlipTransition (see triggerDealFlip).
 fileprivate struct CardFlipModifier: ViewModifier {
     let angle: Double
     func body(content: Content) -> some View {
@@ -38,10 +38,11 @@ public struct HoneycombView: View {
             id: "placeholder-\(i)"
         )
     }
-    // Deal-flip transition (see isHandRevealed): the placeholder hand and the real
-    // dealt hand use different card ids (fixed "placeholder-N" strings vs. each real
-    // card's own id), so SwiftUI treats the swap as a remove+insert, not a mutation of
-    // existing views — .modifier(active:identity:) drives both halves of that swap in
+    // Deal-flip transition (see triggerDealFlip/isPlayerCardRevealed/
+    // isOpponentCardRevealed): the placeholder hand and the real dealt hand use
+    // different card ids (fixed "placeholder-N" strings vs. each real card's own id),
+    // so SwiftUI treats each slot's swap as a remove+insert, not a mutation of an
+    // existing view — .modifier(active:identity:) drives both halves of that swap in
     // opposite rotation directions so they meet edge-on at the midpoint, reading as one
     // continuous flip rather than two independently-faded views.
     private static var cardFlipTransition: AnyTransition {
@@ -121,13 +122,21 @@ public struct HoneycombView: View {
     @State private var isHoveringRules = false
 
     // Deal-flip: both hand columns show face-down placeholders during .setup, then
-    // flip to reveal the freshly dealt hands once a match actually starts — mirrors
-    // the Windows port's HoneycombCardView.PlayRevealAnimation for the same
-    // match-start deal, which mac previously had no equivalent animation for (the
-    // ForEach identity swap from placeholder ids to the real per-card ids happened
-    // instantly, with no transition). Starts false to match gameState's own initial
-    // .setup value.
-    @State private var isHandRevealed = false
+    // flip to reveal the freshly dealt hands one card at a time once a match actually
+    // starts — mirrors the Windows port's sequential per-card reveal (HoneycombView's
+    // Refresh() awaits each hand slot's RenderCard/PlayRevealAnimation in turn: all 5
+    // player cards, then all 5 opponent cards), which mac previously had no equivalent
+    // animation for at all (the ForEach identity swap from placeholder ids to the real
+    // per-card ids happened instantly, with no transition, all at once). Indexed 0..4
+    // per hand; starts all-false to match gameState's own initial .setup value.
+    @State private var isPlayerCardRevealed: [Bool] = Array(repeating: false, count: 5)
+    @State private var isOpponentCardRevealed: [Bool] = Array(repeating: false, count: 5)
+    // Time between each card's flip starting (not its duration) — 10 cards total
+    // (player then opponent) finish comfortably before the Nectar Exchange trade's own
+    // 2.0s reveal delay (stageSwapAnimation in the shared ViewModel), so the swap only
+    // ever animates after every deal-flip has landed, never mid-deal.
+    private static let dealFlipStagger: Double = 0.1
+    private static let dealFlipDuration: Double = 0.4
 
     // Shared across both hand columns so a Swap trade's two cards can visually slide
     // from one hand to the other — SwiftUI interpolates a matchedGeometryEffect'd
@@ -272,25 +281,28 @@ public struct HoneycombView: View {
                 HStack(alignment: .top, spacing: Self.boardRowSpacing) {
                     // Player Hand (Left) — nudged down to align with the board's top
                     // row rather than the rules banner above it.
-                    let displayHand: [HoneycombCard] = !isHandRevealed ? Self.placeholderHand
+                    let displayHand: [HoneycombCard] = viewModel.gameState == .setup ? Self.placeholderHand
                         : (viewModel.gameState == .gameOver ? viewModel.playerStartingDeck : viewModel.playerHand)
                     VStack(spacing: 6) {
                         handSideLabel("PLAYER")
-                        handGrid(hand: displayHand) { card in
-                            if !isHandRevealed {
-                                HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
-                            } else {
-                                playerHandCardView(card: card)
+                        handGrid(hand: displayHand) { i, card in
+                            Group {
+                                if !isPlayerCardRevealed[i] {
+                                    HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
+                                } else {
+                                    playerHandCardView(card: card)
+                                }
                             }
+                            // .id forces just this one slot to swap as its own unit
+                            // exactly when its stagger delay elapses, so
+                            // cardFlipTransition applies to that single card's
+                            // placeholder <-> real-card swap — scoped outside
+                            // playerHandCardView's own matchedGeometryEffect (used by
+                            // the Nectar Exchange trade slide), which stays keyed by
+                            // card.id throughout and is unaffected by this .id().
+                            .id(isPlayerCardRevealed[i])
+                            .transition(Self.cardFlipTransition)
                         }
-                        // .id forces this whole grid to be swapped as one unit exactly
-                        // when the deal-flip fires, so cardFlipTransition below applies
-                        // to the placeholder <-> real-hand swap only — scoped outside
-                        // handGrid's own per-card ForEach so it can never interact with
-                        // playerHandCardView's matchedGeometryEffect (used by the
-                        // Nectar Exchange trade slide), which stays keyed by card.id.
-                        .id(isHandRevealed)
-                        .transition(Self.cardFlipTransition)
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
                     .frame(width: Self.handColumnWidth)
@@ -370,20 +382,23 @@ public struct HoneycombView: View {
                     Spacer()
 
                     // Opponent Hand (Right) — same top offset as the player's hand.
-                    let opponentDisplayHand = !isHandRevealed ? Self.placeholderHand : viewModel.opponentHand
+                    let opponentDisplayHand = viewModel.gameState == .setup ? Self.placeholderHand : viewModel.opponentHand
                     VStack(spacing: 6) {
                         handSideLabel("DEALER")
-                        handGrid(hand: opponentDisplayHand) { card in
-                            if !isHandRevealed {
-                                HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
-                            } else {
-                                opponentHandCardView(card: card)
+                        handGrid(hand: opponentDisplayHand) { i, card in
+                            Group {
+                                if !isOpponentCardRevealed[i] {
+                                    HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
+                                } else {
+                                    opponentHandCardView(card: card)
+                                }
                             }
+                            // See the player hand's matching .id/.transition above for
+                            // why this is scoped per-slot, outside
+                            // opponentHandCardView's own matchedGeometryEffect.
+                            .id(isOpponentCardRevealed[i])
+                            .transition(Self.cardFlipTransition)
                         }
-                        // See the player hand's matching .id/.transition above for why
-                        // this is scoped outside handGrid's own per-card ForEach.
-                        .id(isHandRevealed)
-                        .transition(Self.cardFlipTransition)
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
                     .frame(width: Self.handColumnWidth)
@@ -580,11 +595,10 @@ public struct HoneycombView: View {
             if newState == .setup {
                 // Reset with no animation so the next match's deal starts from
                 // placeholders again, ready to flip once more.
-                isHandRevealed = false
+                isPlayerCardRevealed = Array(repeating: false, count: 5)
+                isOpponentCardRevealed = Array(repeating: false, count: 5)
             } else if oldState == .setup {
-                withAnimation(.easeInOut(duration: 0.4)) {
-                    isHandRevealed = true
-                }
+                triggerDealFlip()
             }
         }
         .onChange(of: viewModel.flashRuleBannerTrigger) { _, _ in
@@ -813,6 +827,28 @@ public struct HoneycombView: View {
         }
     }
 
+    // Flips all 10 hand-slot cards one after another — every player card first, then
+    // every opponent card — matching the Windows port's own sequential order
+    // (HoneycombView.Refresh awaits each player hand slot's RenderCard in turn, then
+    // each opponent slot, rather than animating both hands in parallel).
+    private func triggerDealFlip() {
+        for i in 0..<5 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * Self.dealFlipStagger) {
+                withAnimation(.easeInOut(duration: Self.dealFlipDuration)) {
+                    isPlayerCardRevealed[i] = true
+                }
+            }
+        }
+        for i in 0..<5 {
+            let delay = Double(5 + i) * Self.dealFlipStagger
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                withAnimation(.easeInOut(duration: Self.dealFlipDuration)) {
+                    isOpponentCardRevealed[i] = true
+                }
+            }
+        }
+    }
+
     // "PLAYER"/"DEALER" label above each hand column.
     private func handSideLabel(_ text: String) -> some View {
         Text(text)
@@ -828,19 +864,19 @@ public struct HoneycombView: View {
     // ForEach can briefly hand the content closure a now-out-of-bounds index
     // mid-removal-animation.
     @ViewBuilder
-    private func handGrid<Content: View>(hand: [HoneycombCard], @ViewBuilder content: @escaping (HoneycombCard) -> Content) -> some View {
+    private func handGrid<Content: View>(hand: [HoneycombCard], @ViewBuilder content: @escaping (Int, HoneycombCard) -> Content) -> some View {
         VStack(spacing: Self.handGridSpacing) {
             HStack(spacing: Self.handGridSpacing) {
-                ForEach(Array(hand.prefix(2))) { card in content(card) }
+                ForEach(Array(hand.prefix(2).enumerated()), id: \.element.id) { i, card in content(i, card) }
             }
             if hand.count > 2 {
                 HStack(spacing: Self.handGridSpacing) {
-                    ForEach(Array(hand.dropFirst(2).prefix(2))) { card in content(card) }
+                    ForEach(Array(hand.dropFirst(2).prefix(2).enumerated()), id: \.element.id) { offset, card in content(offset + 2, card) }
                 }
             }
             if hand.count > 4 {
                 HStack(spacing: Self.handGridSpacing) {
-                    ForEach(Array(hand.dropFirst(4))) { card in content(card) }
+                    ForEach(Array(hand.dropFirst(4).enumerated()), id: \.element.id) { offset, card in content(offset + 4, card) }
                 }
             }
         }
