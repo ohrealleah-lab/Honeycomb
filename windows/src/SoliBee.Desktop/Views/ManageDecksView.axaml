@@ -4,34 +4,12 @@
              x:Class="SoliBee.Desktop.Views.ManageDecksView"
              MinHeight="500" MinWidth="400">
 
+    <!-- Deck-row and Start Over buttons use the app-wide Button.light-primary/
+         light-secondary/light-danger classes (App.axaml) — the same ones Rules
+         (HoneycombRulesView) and Options (MainWindow's Preferences panel) use,
+         instead of locally-defined btn-blue/btn-red/btn-gray styles that drifted
+         out of sync with the rest of the app's dialog buttons. -->
     <UserControl.Styles>
-        <Style Selector="Button.btn-blue">
-            <Setter Property="Background" Value="#5B8DEF"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="14,7"/>
-            <Setter Property="CornerRadius" Value="8"/>
-        </Style>
-        <Style Selector="Button.btn-blue:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#3D6DD4"/>
-        </Style>
-        <Style Selector="Button.btn-red">
-            <Setter Property="Background" Value="#E05050"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="14,7"/>
-            <Setter Property="CornerRadius" Value="8"/>
-        </Style>
-        <Style Selector="Button.btn-red:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#B03030"/>
-        </Style>
-        <Style Selector="Button.btn-gray">
-            <Setter Property="Background" Value="#D0D0D0"/>
-            <Setter Property="Foreground" Value="#333333"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="14,7"/>
-            <Setter Property="CornerRadius" Value="8"/>
-        </Style>
         <Style Selector="ToggleButton.heart-btn">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -74,7 +52,7 @@
                     <StackPanel Spacing="10">
                         <TextBlock Text="Start over clears your decks and card bank, then reseeds the game."
                                    FontSize="12" Foreground="White" TextWrapping="Wrap"/>
-                        <Button Content="Start Over" Classes="btn-red"
+                        <Button Content="Start Over" Classes="light-danger"
                                 HorizontalAlignment="Left" Click="StartOver_Click"/>
                     </StackPanel>
                 </Border>
@@ -136,8 +114,8 @@
                                FontSize="13" Foreground="#555" TextWrapping="Wrap"
                                HorizontalAlignment="Center" TextAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center" Margin="0,8,0,0">
-                        <Button Content="Cancel" Classes="btn-gray" Click="CancelStartOver_Click"/>
-                        <Button Content="Yes, Start Over" Classes="btn-red" Click="ConfirmStartOver_Click"/>
+                        <Button Content="Cancel" Classes="light-secondary" Click="CancelStartOver_Click"/>
+                        <Button Content="Yes, Start Over" Classes="light-danger" Click="ConfirmStartOver_Click"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

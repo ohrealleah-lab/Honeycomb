@@ -5,29 +5,11 @@
         MinHeight="500" MinWidth="360"
         Background="White" CornerRadius="16">
         
+    <!-- Save/Cancel use the app-wide Button.light-primary/light-secondary classes
+         (App.axaml) — the same ones Rules (HoneycombRulesView) and Options
+         (MainWindow's Preferences panel) use, instead of a locally-defined style
+         that drifted out of sync with the rest of the app's dialog buttons. -->
     <UserControl.Styles>
-        <Style Selector="Button.honeycomb-action">
-            <Setter Property="Background" Value="#007AFF" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Padding" Value="20,10" />
-            <Setter Property="CornerRadius" Value="8" />
-        </Style>
-        <!-- Darkens toward the app's established primary-blue hover (matches
-             Button.honeycomb-blue in HoneycombView.axaml) — the previous pastel
-             base (#A0C0FF) hovering to a muted slate-blue (#7090E0) read as
-             disabled/greyed-out rather than as an active hover state. -->
-        <Style Selector="Button.honeycomb-action:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#0062CC" />
-            <Setter Property="TextBlock.Foreground" Value="White" />
-        </Style>
-        <Style Selector="Button.honeycomb-cancel">
-            <Setter Property="Background" Value="#E0E0E0" />
-            <Setter Property="Foreground" Value="Black" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Padding" Value="20,10" />
-            <Setter Property="CornerRadius" Value="8" />
-        </Style>
         <Style Selector="ComboBox">
             <Setter Property="Background" Value="#F0F0F0" />
             <Setter Property="BorderThickness" Value="0" />
@@ -105,8 +87,8 @@
             <TextBlock x:Name="ErrorText" Grid.Column="0" Foreground="#FF5555"
                        FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
-                <Button Content="Cancel" Classes="honeycomb-cancel" Click="Cancel_Click" />
-                <Button x:Name="SaveButton" Content="Save Deck" Classes="honeycomb-action" Click="Save_Click" />
+                <Button Content="Cancel" Classes="light-secondary" Click="Cancel_Click" />
+                <Button x:Name="SaveButton" Content="Save Deck" Classes="light-primary" Click="Save_Click" />
             </StackPanel>
         </Grid>
         

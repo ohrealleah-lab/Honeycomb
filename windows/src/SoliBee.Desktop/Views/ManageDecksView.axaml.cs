@@ -100,7 +100,7 @@ public partial class ManageDecksView : UserControl
                 var makeActiveBtn = new Button
                 {
                     Content = "Make Active",
-                    Classes = { "btn-blue" }
+                    Classes = { "light-primary" }
                 };
                 makeActiveBtn.Click += (_, _) =>
                 {
@@ -116,7 +116,7 @@ public partial class ManageDecksView : UserControl
             var editBtn = new Button
             {
                 Content = hasDeck ? "Edit" : "Create",
-                Classes = { "btn-blue" }
+                Classes = { "light-primary" }
             };
             editBtn.Click += (_, e) =>
             {
