@@ -524,12 +524,44 @@ public partial class HoneycombViewModel : ObservableObject
         {
             // Highlight the two real, not-yet-swapped cards right away, in sync with
             // the "First Move" banner, so the player sees exactly which two are about
-            // to trade before anything moves.
+            // to trade before anything moves. _isAnimating blocks player input (see
+            // PlayCard's guard) and StartTurn's own AI-trigger check below, until
+            // ReleaseFirstMoveAfterSwap clears it once the trade has actually landed.
             State.SwapHighlightIds = new HashSet<Guid> { swap.Value.PlayerCardId, swap.Value.OpponentCardId };
+            _isAnimating = true;
             StageSwapAnimation(swap.Value, generation);
         }
 
         StartTurn();
+
+        if (swap.HasValue)
+        {
+            ReleaseFirstMoveAfterSwap(generation);
+        }
+    }
+
+    // Swap trade's real landing time — the banner-clear delay (2.0s, matching
+    // StageSwapAnimation) plus the flip animation's own duration (~0.336s: 2×7 steps
+    // at 24ms/step, see HoneycombCardView.PlaySwapFlipAnimation). The first move —
+    // player input or the AI's opening move — waits until here instead of stepping
+    // on the trade mid-animation. StartTurn() already ran above and skipped its own
+    // AI-trigger (blocked by _isAnimating), so this explicitly resumes it once the
+    // wait is over — calling RunAITurn(skipPacingDelay: true) rather than stacking
+    // its normal 2.5s "thinking" pause on top of this wait.
+    private async void ReleaseFirstMoveAfterSwap(int generation)
+    {
+        if (!_isHeadless) await Task.Delay(2336);
+        if (generation != _matchGeneration || !IsPlaying) return;
+
+        _isAnimating = false;
+        if (State.CurrentTurn == -1)
+        {
+            RunAITurn(skipPacingDelay: true);
+        }
+        else
+        {
+            NotifyStateChanged();
+        }
     }
 
     // Fires once the trade actually lands (ApplySwap runs), so the view can play a
@@ -580,12 +612,12 @@ public partial class HoneycombViewModel : ObservableObject
         }
     }
 
-    private async void RunAITurn()
+    private async void RunAITurn(bool skipPacingDelay = false)
     {
         _isAnimating = true;
         NotifyStateChanged();
-        
-        if (!_isHeadless) await Task.Delay(2500); // UI pace beat
+
+        if (!_isHeadless && !skipPacingDelay) await Task.Delay(2500); // UI pace beat
         
         if (!IsPlaying || State.CurrentTurn != -1)
         {

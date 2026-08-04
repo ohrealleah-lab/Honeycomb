@@ -474,12 +474,34 @@ public final class HoneycombViewModel {
             UISound.play(named: "shuffle", enabled: true)
         }
 
-        if !isPlayerTurn {
-            if UISound.isHeadlessMode {
+        // A Swap trade is pending iff stageSwapAnimation (called just before this, by
+        // both startNewGame and rematch) populated the highlight set. When one is
+        // pending, the first move — player input or the AI's opening move — must wait
+        // until the trade's own animation has actually landed, rather than stepping on
+        // it mid-swap.
+        let swapPending = !swapHighlightCardIds.isEmpty
+        if swapPending {
+            isAnimatingPlacement = true
+        }
+        let generation = handSetupGeneration
+
+        func startFirstMove() {
+            if swapPending {
+                isAnimatingPlacement = false
+            }
+            if !isPlayerTurn {
                 self.aiPlayTurn()
+            }
+        }
+
+        if !isPlayerTurn || swapPending {
+            let delay = swapPending ? Self.swapAnimationCompleteDelay : Self.opponentMoveDelay
+            if UISound.isHeadlessMode {
+                startFirstMove()
             } else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Self.opponentMoveDelay) {
-                    self.aiPlayTurn()
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                    guard let self, self.handSetupGeneration == generation else { return }
+                    startFirstMove()
                 }
             }
         }
@@ -520,6 +542,12 @@ public final class HoneycombViewModel {
     // read the board (and, under Order/Chaos, to see which of their cards is
     // highlighted as the one they're about to play) before it happens.
     private static let opponentMoveDelay: TimeInterval = 2.5
+    // How long after match setup the Swap trade's card-move animation (see
+    // stageSwapAnimation) actually finishes landing — banner-clear delay (2.0s) +
+    // the move's own animated duration (0.9s). The first move (player input or the
+    // AI's opening move) waits until this point when a Swap trade is pending,
+    // instead of stepping on the trade mid-animation.
+    private static let swapAnimationCompleteDelay: TimeInterval = 2.9
     // How long a capture's winning stat(s) flash before the flip actually happens.
     private static let pointHighlightDelay: TimeInterval = 0.5
 
