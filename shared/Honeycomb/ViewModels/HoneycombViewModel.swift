@@ -343,6 +343,12 @@ public final class HoneycombViewModel {
         undoStack.removeAll()
         swapHighlightCardIds.removeAll()
         clearHint()
+        // Defensive reset — a previous match quit (or otherwise interrupted) while
+        // this was true (e.g. mid-Swap-animation-wait, see quitMatch) would otherwise
+        // leave it stuck true forever, since nothing else clears it for a match that
+        // doesn't itself have a pending Swap. Bumping handSetupGeneration above
+        // already invalidates that stale closure, so this can't be raced back to true.
+        isAnimatingPlacement = false
 
         board = HoneycombBoard()
         setupRules()
@@ -526,6 +532,7 @@ public final class HoneycombViewModel {
         undoStack.removeAll()
         swapHighlightCardIds.removeAll()
         clearHint()
+        isAnimatingPlacement = false
 
         board = HoneycombBoard()
         activeRules = rematchActiveRules
@@ -1728,7 +1735,19 @@ public final class HoneycombViewModel {
     // viewModel.board.cells unconditionally (not gated on gameState), so the
     // just-quit match's cards stayed visibly on screen underneath the setup UI.
     // Reset to a fresh empty board so quitting actually clears it.
+    //
+    // Also bumps handSetupGeneration and clears isAnimatingPlacement/
+    // swapHighlightCardIds — quitting mid-match can interrupt a pending Swap
+    // animation (isAnimatingPlacement set true at match start, only ever cleared by
+    // a generation-guarded closure ~2.9s later) or an in-flight placement animation.
+    // Without this, repeatedly starting and quitting matches could catch that window
+    // and leave isAnimatingPlacement stuck true — since startNewGame() doesn't
+    // otherwise reset it on a match with no pending Swap of its own — permanently
+    // blocking playerPlayCard on every future match.
     public func quitMatch() {
+        handSetupGeneration += 1
+        isAnimatingPlacement = false
+        swapHighlightCardIds.removeAll()
         board = HoneycombBoard()
         gameState = .setup
     }

@@ -683,6 +683,10 @@ public partial class HoneycombViewModel : ObservableObject
             return;
         }
 
+        // Defensive reset, mirroring StartNewMatch() — a previous match quit (or
+        // otherwise interrupted) while this was true (e.g. mid-Swap-animation-wait)
+        // would otherwise leave it stuck true, permanently blocking PlayCard.
+        _isAnimating = false;
         State.Phase = HoneycombPhase.Playing;
         State.UndoStack.Clear();
         State.ActiveRules = new List<HoneycombRule>(_rematchActiveRules);
