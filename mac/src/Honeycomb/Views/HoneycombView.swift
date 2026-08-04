@@ -151,6 +151,17 @@ public struct HoneycombView: View {
     // per hand; starts all-false to match gameState's own initial .setup value.
     @State private var isPlayerCardRevealed: [Bool] = Array(repeating: false, count: 5)
     @State private var isOpponentCardRevealed: [Bool] = Array(repeating: false, count: 5)
+    // Bumped every time gameState returns to .setup (see the gameState onChange below)
+    // and applied as .id() on each hand grid — forces a clean teardown/recreation of
+    // every HoneycombFlipContainer at that exact boundary instead of letting one
+    // linger mid-flip. Without this, quitting/finishing a match while a container's
+    // displayedRevealed hadn't yet caught up to isPlayerCardRevealed's instant reset
+    // could render playerHandCardView/opponentHandCardView (whose
+    // matchedGeometryEffect keys off card.id) against placeholder data for one frame —
+    // and since both hands' placeholders share the same 5 fixed ids, SwiftUI would try
+    // to interpolate that id's geometry between the player's and dealer's hand
+    // columns, producing a huge, rotated, screen-filling card.
+    @State private var handIdentityToken: Int = 0
     // Time between each card's flip starting (not its duration) — 10 cards total
     // (player then opponent) finish comfortably before the Nectar Exchange trade's own
     // 2.0s reveal delay (stageSwapAnimation in the shared ViewModel), so the swap only
@@ -310,6 +321,7 @@ public struct HoneycombView: View {
                             } back: {
                                 playerHandCardView(card: card)
                             }
+                            .id(handIdentityToken)
                         }
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
@@ -399,6 +411,7 @@ public struct HoneycombView: View {
                             } back: {
                                 opponentHandCardView(card: card)
                             }
+                            .id(handIdentityToken)
                         }
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
@@ -595,9 +608,12 @@ public struct HoneycombView: View {
             }
             if newState == .setup {
                 // Reset with no animation so the next match's deal starts from
-                // placeholders again, ready to flip once more.
+                // placeholders again, ready to flip once more. Bumping
+                // handIdentityToken forces every HoneycombFlipContainer to be torn
+                // down and rebuilt fresh right here — see its declaration for why.
                 isPlayerCardRevealed = Array(repeating: false, count: 5)
                 isOpponentCardRevealed = Array(repeating: false, count: 5)
+                handIdentityToken += 1
             } else if oldState == .setup {
                 triggerDealFlip()
             }
