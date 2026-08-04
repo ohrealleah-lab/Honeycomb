@@ -50,6 +50,13 @@ public class HoneycombState
     
     public bool IsSuddenDeath { get; set; }
 
+    // Gates the win/lose/tie overlay separately from Phase — Phase flips to Result
+    // immediately once the match is decided (SettleMatch), but the overlay itself
+    // waits an extra beat (see SettleMatch's ShowPostGamePromptDelayMs) so the player
+    // sees the final board fully settle before it's covered. Mirrors the Swift port's
+    // HoneycombViewModel.showPostGamePrompt.
+    public bool ShowPostGamePrompt { get; set; }
+
     // Ids of the two cards involved in a Swap-rule trade, while their reveal
     // animation is playing at the start of a match. Empty the rest of the time.
     public HashSet<Guid> SwapHighlightIds { get; set; } = new();

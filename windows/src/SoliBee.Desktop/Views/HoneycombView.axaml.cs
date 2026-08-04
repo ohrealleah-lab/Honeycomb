@@ -261,8 +261,8 @@ public partial class HoneycombView : UserControl
         _lastEmptyCells = currentEmptyCells;
 
         
-        OverlayPanel.IsVisible = !vm.IsPlaying && state.Phase == HoneycombPhase.Result && !_isStealingCard && !_overlayDismissed;
-        if (!vm.IsPlaying && state.Phase == HoneycombPhase.Result)
+        OverlayPanel.IsVisible = !vm.IsPlaying && state.Phase == HoneycombPhase.Result && state.ShowPostGamePrompt && !_isStealingCard && !_overlayDismissed;
+        if (!vm.IsPlaying && state.Phase == HoneycombPhase.Result && state.ShowPostGamePrompt)
         {
             OverlayTitle.IsVisible = true;
             OverlayLoseTitle.IsVisible = false;
@@ -342,7 +342,7 @@ public partial class HoneycombView : UserControl
 
         StealConfirmationPanel.IsVisible = vm.PendingSteal != null;
 
-        OverlayPanel.IsVisible = !vm.IsPlaying && state.Phase == HoneycombPhase.Result && !_isStealingCard && !_overlayDismissed && !_bannerActive;
+        OverlayPanel.IsVisible = !vm.IsPlaying && state.Phase == HoneycombPhase.Result && state.ShowPostGamePrompt && !_isStealingCard && !_overlayDismissed && !_bannerActive;
         
         List<string> ruleNames;
         if (vm.IsPlaying)
@@ -423,7 +423,7 @@ public partial class HoneycombView : UserControl
             }
             else if (i < state.OpponentHand.Count)
             {
-                bool isPostWinReveal = state.Phase == HoneycombPhase.Result && state.PlayerScore > state.OpponentScore;
+                bool isPostWinReveal = state.Phase == HoneycombPhase.Result && state.ShowPostGamePrompt && state.PlayerScore > state.OpponentScore;
                 bool hidden = !isPostWinReveal 
                               && !state.ActiveRules.Contains(HoneycombRule.AllOpen) 
                               && !state.OpponentRevealedIds.Contains(state.OpponentHand[i].UniqueInstanceId);

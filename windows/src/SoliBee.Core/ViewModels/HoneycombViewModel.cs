@@ -213,6 +213,7 @@ public partial class HoneycombViewModel : ObservableObject
         State.HasStolenThisMatch = false;
         State.CardsCapturedThisMatch = 0;
         State.IsSuddenDeath = false;
+        State.ShowPostGamePrompt = false;
 
         // Roulette (no forced/manual rules) gets bad-luck protection against repeating
         // the exact same rule set + suit as last match; forced/manual rules are
@@ -688,6 +689,7 @@ public partial class HoneycombViewModel : ObservableObject
         State.HasStolenThisMatch = false;
         State.CardsCapturedThisMatch = 0;
         State.IsSuddenDeath = false;
+        State.ShowPostGamePrompt = false;
 
         State.Board = new HoneycombBoard();
         State.Board.AscensionDescensionSuits = new List<string>(_rematchAscensionDescensionSuits);
@@ -1013,6 +1015,24 @@ public partial class HoneycombViewModel : ObservableObject
 
         State.Phase = HoneycombPhase.Result;
         _isAnimating = false;
+        NotifyStateChanged();
+
+        ShowPostGamePromptAfterDelay(_matchGeneration);
+    }
+
+    // Matches Video Poker/Blackjack's own result-banner pacing (see
+    // VideoPokerView/BlackjackView's _resultShowTimer, 1.5s) — a beat between the
+    // result being decided (Phase already flipped to Result above) and the win/lose
+    // overlay actually covering the board, so the player sees the final board fully
+    // settle first. HoneycombView also holds the overlay back further on its own
+    // (gated on its own "banner still showing" state) until any Combo/Same/Plus/
+    // Ascension/Descension banner currently on screen finishes.
+    private async void ShowPostGamePromptAfterDelay(int generation)
+    {
+        if (!_isHeadless) await Task.Delay(1500);
+        if (generation != _matchGeneration) return;
+
+        State.ShowPostGamePrompt = true;
         NotifyStateChanged();
     }
 

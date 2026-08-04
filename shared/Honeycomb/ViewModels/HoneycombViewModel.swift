@@ -1594,12 +1594,24 @@ public final class HoneycombViewModel {
                 stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
             }
             saveStats()
-            // HoneycombView holds the win/lose overlay back on its own (gated on its
-            // showingRuleBanner state) until any Combo/Same/Plus/Ascension/Descension
-            // banner currently on screen finishes — that covers a banner from the move
-            // right before this one too, not just one fired on this exact placement, so
-            // showPostGamePrompt can just be set immediately here.
-            showPostGamePrompt = true
+            // HoneycombView also holds the win/lose overlay back on its own (gated on
+            // its showingRuleBanner state) until any Combo/Same/Plus/Ascension/
+            // Descension banner currently on screen finishes. On top of that, match
+            // Video Poker/Blackjack's own result-banner pacing (see
+            // VideoPokerView/BlackjackView's _resultShowTimer, 1.5s) — a beat between
+            // the result being decided and the win/lose overlay actually covering the
+            // board, so the player sees the final board fully settle first. Skipped in
+            // headless mode (automated testing bridge) — same reasoning as
+            // playerPlayCard's opponentMoveDelay bypass, tests need this synchronous.
+            if UISound.isHeadlessMode {
+                showPostGamePrompt = true
+            } else {
+                let generation = handSetupGeneration
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    guard let self, self.handSetupGeneration == generation else { return }
+                    self.showPostGamePrompt = true
+                }
+            }
         }
     }
     
