@@ -190,7 +190,7 @@ public partial class ManageDecksView : UserControl
     {
         var pm = HoneycombProfileManager.Shared;
 
-        CardBankTitle.Text = $"CARD BANK ({pm.UnlockedCardIds.Count}/552)";
+        CardBankTitle.Text = $"CARD BANK ({pm.UnlockedCardIds.Count}/{HoneycombDatabase.Shared.AllCards.Count})";
 
         BankPanel.Children.Clear();
 

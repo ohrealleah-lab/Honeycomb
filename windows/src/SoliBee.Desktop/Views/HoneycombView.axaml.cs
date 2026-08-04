@@ -221,11 +221,9 @@ public partial class HoneycombView : UserControl
             bool canSteal = !globalOpts.IsNoStressMode && !state.HasStolenThisMatch && won;
             if (canSteal)
             {
-                // Check if bank full
-                bool bankFull = false;
-                int maxCap = 74; // Assuming 74 total cards in DB
-                if (HoneycombProfileManager.Shared.UnlockedCardIds.Count >= maxCap)
-                    bankFull = true;
+                // Check if bank full — mirrors the Swift port's isCardBankFull
+                // (unlockedCardIds.count >= allCards.count), not a hardcoded guess.
+                bool bankFull = HoneycombProfileManager.Shared.UnlockedCardIds.Count >= HoneycombDatabase.Shared.AllCards.Count;
 
                 // Also require at least one card on the board that's actually stealable
                 // (originally the opponent's, currently captured by the player, and not
