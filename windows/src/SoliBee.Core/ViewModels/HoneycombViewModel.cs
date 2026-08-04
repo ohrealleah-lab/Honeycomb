@@ -393,69 +393,91 @@ public partial class HoneycombViewModel : ObservableObject
         return result;
     }
 
+    // A computed-but-not-yet-applied Swap trade. FinishMatchSetup stages this instead
+    // of applying it immediately: highlight the two real cards first, wait for the
+    // "First Move" banner to fully clear, then flip them into their swapped homes —
+    // rather than the trade having silently already happened by the very first frame.
+    private readonly record struct PendingSwap(
+        Guid PlayerCardId, Guid OpponentCardId, int PlayerIndex, int OpponentIndex,
+        HoneycombCard PlayerCard, HoneycombCard OpponentCard);
+
+    // Purely computes the trade — PlayerHand/OpponentHand aren't touched here; see
+    // ApplySwap for when it's actually applied.
+    private PendingSwap? ComputeSwapIfNeeded()
+    {
+        if (!State.ActiveRules.Contains(HoneycombRule.Swap) || State.PlayerHand.Count == 0 || State.OpponentHand.Count == 0)
+            return null;
+
+        int pIdx = Random.Shared.Next(State.PlayerHand.Count);
+        int oIdx = Random.Shared.Next(State.OpponentHand.Count);
+        var pCard = State.PlayerHand[pIdx];
+        var oCard = State.OpponentHand[oIdx];
+
+        // Identity-preserving trade: pCard/oCard keep their UniqueInstanceId wherever
+        // they end up, so the highlight (and later the flip animation) can track them
+        // as the same two cards relocating, whichever hand currently holds them.
+        return new PendingSwap(pCard.UniqueInstanceId, oCard.UniqueInstanceId, pIdx, oIdx, pCard, oCard);
+    }
+
+    // Actually performs the trade computed by ComputeSwapIfNeeded — called once the
+    // "First Move" banner has cleared (see StageSwapAnimation).
+    private void ApplySwap(PendingSwap swap)
+    {
+        swap.PlayerCard.Owner = -1;
+        swap.OpponentCard.Owner = 1;
+        State.PlayerHand[swap.PlayerIndex] = swap.OpponentCard;
+        State.OpponentHand[swap.OpponentIndex] = swap.PlayerCard;
+    }
+
     // Wires up a given opponent card pool as this match's OpponentHand: rolls a fresh
     // Swap trade (if active) and fresh All Open/Three Open reveal picks against it.
     // Shared by StartNewMatch() (a newly-rolled pool) and RematchGame() (the frozen
     // pool from the last genuinely-new match) — either way, this is what makes each
     // call a fresh roll of who trades with whom and what gets revealed. Returns the
-    // swapped card ids (player, opponent) if a Swap trade happened.
-    private (Guid PlayerCardId, Guid OpponentCardId)? ApplyOpponentDeck(List<HoneycombCardData> deck)
+    // pending swap (not yet applied) if a Swap trade would happen.
+    private PendingSwap? ApplyOpponentDeck(List<HoneycombCardData> deck)
     {
         State.OpponentHand = deck.Select(d => new HoneycombCard(d, -1)).ToList();
 
         State.PlayerRevealedIds.Clear();
         State.OpponentRevealedIds.Clear();
 
-        // Swap is resolved before the All Open/Three Open reveal below, so that reveal
-        // picks from the hands as they'll actually look once the trade lands — not from
-        // the pre-swap hands, which could pick a card that's about to be traded away and
-        // leave the card that trades in undiscovered (and, with Three Open, silently
-        // short a hand to 2 visible cards instead of 3).
-        (Guid PlayerCardId, Guid OpponentCardId)? swapIds = null;
-        if (State.ActiveRules.Contains(HoneycombRule.Swap))
-        {
-            int pIdx = Random.Shared.Next(State.PlayerHand.Count);
-            int oIdx = Random.Shared.Next(State.OpponentHand.Count);
+        // Swap is resolved (but not applied — see ApplySwap) before the All Open/Three
+        // Open reveal below, so that reveal picks from the hands as they'll actually
+        // look once the trade lands — not from the pre-swap hands, which could pick a
+        // card that's about to be traded away and leave the card that trades in
+        // undiscovered (and, with Three Open, silently short a hand to 2 visible cards
+        // instead of 3).
+        var swap = ComputeSwapIfNeeded();
 
-            var pCard = State.PlayerHand[pIdx];
-            var oCard = State.OpponentHand[oIdx];
+        var eventualOpponentIds = State.OpponentHand.Select(c => c.UniqueInstanceId).ToList();
+        if (swap.HasValue) eventualOpponentIds[swap.Value.OpponentIndex] = swap.Value.PlayerCardId;
 
-            pCard.Owner = -1;
-            oCard.Owner = 1;
-
-            State.PlayerHand[pIdx] = oCard;
-            State.OpponentHand[oIdx] = pCard;
-
-            // Identity-preserving trade: oCard now sits in the player's hand and pCard
-            // in the opponent's, so these two ids are what the highlight below tracks —
-            // the same two cards, just relocated.
-            swapIds = (pCard.UniqueInstanceId, oCard.UniqueInstanceId);
-        }
+        var eventualPlayerIds = State.PlayerHand.Select(c => c.UniqueInstanceId).ToList();
+        if (swap.HasValue) eventualPlayerIds[swap.Value.PlayerIndex] = swap.Value.OpponentCardId;
 
         if (State.ActiveRules.Contains(HoneycombRule.AllOpen))
         {
-            foreach (var c in State.PlayerHand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
-            foreach (var c in State.OpponentHand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
+            foreach (var id in eventualOpponentIds) State.OpponentRevealedIds.Add(id);
+            foreach (var id in eventualPlayerIds) State.PlayerRevealedIds.Add(id);
         }
         else if (State.ActiveRules.Contains(HoneycombRule.ThreeOpen))
         {
-            var pRand = State.PlayerHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
-            var oRand = State.OpponentHand.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
-            foreach (var c in pRand) State.PlayerRevealedIds.Add(c.UniqueInstanceId);
-            foreach (var c in oRand) State.OpponentRevealedIds.Add(c.UniqueInstanceId);
+            foreach (var id in eventualOpponentIds.OrderBy(_ => Random.Shared.Next()).Take(3)) State.OpponentRevealedIds.Add(id);
+            foreach (var id in eventualPlayerIds.OrderBy(_ => Random.Shared.Next()).Take(3)) State.PlayerRevealedIds.Add(id);
         }
 
         // The swapped card always stays visible in its new hand, regardless of whether
         // Three Open's random pick landed on it — the player already knows exactly what
         // it is (it just came from their own hand a moment ago), so there's nothing left
         // to hide, and the AI is in the same position for the card it received.
-        if (swapIds.HasValue)
+        if (swap.HasValue)
         {
-            State.OpponentRevealedIds.Add(swapIds.Value.PlayerCardId);
-            State.PlayerRevealedIds.Add(swapIds.Value.OpponentCardId);
+            State.OpponentRevealedIds.Add(swap.Value.PlayerCardId);
+            State.PlayerRevealedIds.Add(swap.Value.OpponentCardId);
         }
 
-        return swapIds;
+        return swap;
     }
 
     // Shared tail between StartNewMatch() and RematchGame() — decides who moves first,
@@ -465,7 +487,7 @@ public partial class HoneycombViewModel : ObservableObject
     // with bad-luck protection against a long same-side streak), a rematch of the same
     // match should always hand the opening move to whoever didn't have it last time, so
     // replaying repeatedly can't keep favoring one side.
-    private void FinishMatchSetup((Guid PlayerCardId, Guid OpponentCardId)? swapIds, bool forceAlternateStarter = false)
+    private void FinishMatchSetup(PendingSwap? swap, bool forceAlternateStarter = false)
     {
         State.PlayerChaosIndex = null;
         State.OpponentChaosIndex = null;
@@ -498,20 +520,38 @@ public partial class HoneycombViewModel : ObservableObject
         OnFlashBanner?.Invoke(string.Join("\n", bannerLines));
 
         int generation = ++_matchGeneration;
-        if (swapIds.HasValue)
+        if (swap.HasValue)
         {
-            State.SwapHighlightIds = new HashSet<Guid> { swapIds.Value.PlayerCardId, swapIds.Value.OpponentCardId };
-            ClearSwapHighlightAfterBanner(generation);
+            // Highlight the two real, not-yet-swapped cards right away, in sync with
+            // the "First Move" banner, so the player sees exactly which two are about
+            // to trade before anything moves.
+            State.SwapHighlightIds = new HashSet<Guid> { swap.Value.PlayerCardId, swap.Value.OpponentCardId };
+            StageSwapAnimation(swap.Value, generation);
         }
 
         StartTurn();
     }
 
-    // Clears the traded-card highlight once the (now single, 2s) start-of-match banner
-    // has finished, rather than leaving it up indefinitely or timing it independently.
-    private async void ClearSwapHighlightAfterBanner(int generation)
+    // Fires once the trade actually lands (ApplySwap runs), so the view can play a
+    // flip animation on the two affected hand slots instead of them silently
+    // appearing already-swapped.
+    public event Action<Guid, Guid>? OnSwapLanded;
+
+    // Applies the trade only once the "First Move" banner (2.0s) has fully cleared —
+    // it used to apply instantly at match setup, stepping on the banner's own
+    // runtime — then keeps the highlight up through the flip animation before
+    // clearing it.
+    private async void StageSwapAnimation(PendingSwap swap, int generation)
     {
         if (!_isHeadless) await Task.Delay(2000);
+        if (generation != _matchGeneration || !IsPlaying) return;
+
+        ApplySwap(swap);
+        NotifyStateChanged();
+        OnSwapLanded?.Invoke(swap.PlayerCardId, swap.OpponentCardId);
+
+        // 50% slower than the original 0.8s post-swap highlight hold.
+        if (!_isHeadless) await Task.Delay(1200);
         if (generation != _matchGeneration || !IsPlaying) return;
 
         State.SwapHighlightIds.Clear();

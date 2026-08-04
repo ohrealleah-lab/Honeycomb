@@ -388,13 +388,16 @@ public final class HoneycombViewModel {
         // trade before anything moves.
         swapHighlightCardIds = [swapResult.preSwapPlayerCard.id, swapResult.preSwapOpponentCard.id]
 
-        // Actually animate the trade partway through the banner's now-2s run.
-        // Looked up by id (not the original array index) in case the player
-        // already played one of the two cards during the highlight pause — if so,
-        // it's skipped rather than resurrected into a slot it no longer occupies.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+        // Actually animate the trade only after the "First Move" banner (2.0s) has
+        // fully cleared, not mid-banner — the trade used to start at +1.0s, stepping
+        // on the banner's own runtime. Looked up by id (not the original array
+        // index) in case the player already played one of the two cards during the
+        // highlight pause — if so, it's skipped rather than resurrected into a slot
+        // it no longer occupies.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             guard let self, self.handSetupGeneration == generation else { return }
-            withAnimation(.easeInOut(duration: 0.6)) {
+            // 50% slower than the original 0.6s.
+            withAnimation(.easeInOut(duration: 0.9)) {
                 if let idx = self.playerHand.firstIndex(where: { $0.id == swapResult.preSwapPlayerCard.id }) {
                     self.playerHand[idx] = swapResult.finalPlayerCard
                 }
@@ -403,8 +406,10 @@ public final class HoneycombViewModel {
                 }
             }
             // Same two ids throughout (identity-preserving swap), so the
-            // highlight just keeps tracking them across the move.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            // highlight just keeps tracking them across the move. Scaled up from
+            // 0.8s alongside the slower animation so the highlight still covers
+            // the whole move instead of clearing early.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                 guard self.handSetupGeneration == generation else { return }
                 self.swapHighlightCardIds.removeAll()
             }

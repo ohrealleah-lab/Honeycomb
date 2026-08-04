@@ -101,6 +101,7 @@ public partial class HoneycombView : UserControl
             {
                 _vm.PropertyChanged += Vm_PropertyChanged;
                 _vm.OnFlashBanner += Vm_OnFlashBanner;
+                _vm.OnSwapLanded += Vm_OnSwapLanded;
                 Refresh(_vm);
             }
         };
@@ -112,6 +113,27 @@ public partial class HoneycombView : UserControl
             _bannerActive = true;
             var duration = message.StartsWith("First Move:") ? TimeSpan.FromSeconds(2) : (TimeSpan?)null;
             RuleToast.Flash(message, duration);
+        });
+    }
+
+    // Nectar Exchange (Swap) trade landed — the ViewModel already applied it and
+    // notified state, but a hand slot's card *identity* changing isn't something
+    // RenderCard's ownerChanged auto-detection catches (that's for the same card
+    // being recaptured, not a different card trading in), so play the flip
+    // explicitly on the two affected hand slots.
+    private void Vm_OnSwapLanded(Guid playerCardId, Guid opponentCardId)
+    {
+        Dispatcher.UIThread.Post(async () => {
+            if (_vm == null) return;
+            var state = _vm.State;
+
+            int pIdx = state.PlayerHand.FindIndex(c => c.UniqueInstanceId == playerCardId);
+            int oIdx = state.OpponentHand.FindIndex(c => c.UniqueInstanceId == opponentCardId);
+
+            var tasks = new List<Task>();
+            if (pIdx >= 0) tasks.Add(_playerHandViews[pIdx].PlaySwapFlipAnimation(state.PlayerHand[pIdx]));
+            if (oIdx >= 0) tasks.Add(_opponentHandViews[oIdx].PlaySwapFlipAnimation(state.OpponentHand[oIdx]));
+            if (tasks.Count > 0) await Task.WhenAll(tasks);
         });
     }
 
