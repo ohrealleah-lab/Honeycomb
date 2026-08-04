@@ -55,6 +55,43 @@ public partial class HoneycombViewModel : ObservableObject
     
     public event Action<string>? OnFlashBanner;
 
+    // FIFO queue of banner texts — mirrors the Swift port's bannerQueue/enqueueBanner/
+    // advanceBannerQueue (shared/Honeycomb/ViewModels/HoneycombViewModel.swift).
+    // Without this, a second banner firing moments after an earlier one (e.g. a Bomb
+    // Shelter reveal a beat after an ordinary placement's own capture) would silently
+    // overwrite it via OnFlashBanner before it had been on screen long enough to read.
+    private readonly Queue<string> _bannerQueue = new();
+
+    private void EnqueueBanner(string text)
+    {
+        _bannerQueue.Enqueue(text);
+        // Only fire OnFlashBanner when this becomes the front of the queue — if
+        // something is already showing, the view picks this one up on its own via
+        // AdvanceBannerQueue once the current banner's dismiss timer fires, instead of
+        // interrupting it.
+        if (_bannerQueue.Count == 1)
+        {
+            OnFlashBanner?.Invoke(text);
+        }
+    }
+
+    // Called by the view once the currently-shown banner's own dismiss timer/fade
+    // completes, revealing whatever's queued behind it.
+    public void AdvanceBannerQueue()
+    {
+        if (_bannerQueue.Count == 0) return;
+        _bannerQueue.Dequeue();
+        if (_bannerQueue.Count > 0)
+        {
+            OnFlashBanner?.Invoke(_bannerQueue.Peek());
+        }
+    }
+
+    private void ClearBannerQueue()
+    {
+        _bannerQueue.Clear();
+    }
+
     public HoneycombViewModel(bool isHeadless = false)
     {
         _isHeadless = isHeadless;
@@ -518,7 +555,10 @@ public partial class HoneycombViewModel : ObservableObject
         {
             bannerLines.Add(FormatRuleForBanner(rule));
         }
-        OnFlashBanner?.Invoke(string.Join("\n", bannerLines));
+        // A brand new match starting — any banner still queued from the previous one
+        // (e.g. a match ended mid-combo-sequence) is no longer relevant.
+        ClearBannerQueue();
+        EnqueueBanner(string.Join("\n", bannerLines));
 
         int generation = ++_matchGeneration;
         if (swap.HasValue)
@@ -719,8 +759,9 @@ public partial class HoneycombViewModel : ObservableObject
         State.CardsCapturedThisMatch = snap.CardsCapturedThisMatch;
         State.PlayerChaosIndex = snap.PlayerChaosIndex;
         State.OpponentChaosIndex = snap.OpponentChaosIndex;
-        
+
         ActiveHint = null;
+        ClearBannerQueue();
         NotifyStateChanged();
     }
 
@@ -856,15 +897,30 @@ public partial class HoneycombViewModel : ObservableObject
             else State.OpponentChaosIndex = null;
         }
 
-        if (State.Board.LastSameTriggered && State.Board.LastPlusTriggered)
-            OnFlashBanner?.Invoke("SAME & PLUS!");
-        else if (State.Board.LastSameTriggered)
-            OnFlashBanner?.Invoke("SAME!");
-        else if (State.Board.LastPlusTriggered)
-            OnFlashBanner?.Invoke("PLUS!");
-
-        if (State.Board.LastComboFlipCount > 0)
-            OnFlashBanner?.Invoke($"COMBO x{State.Board.LastComboFlipCount}!");
+        // A single combined banner for everything this placement's own capture just
+        // did, instead of separate SAME/PLUS and COMBO flashes — two back-to-back
+        // OnFlashBanner calls used to mean the second silently overwrote the first
+        // before it had ever been seen. Also reuses ComboBannerText (already shared
+        // with the Bomb Shelter reveal paths below) instead of a second, narrower
+        // inline check, which previously dropped Fallen Ace entirely for an ordinary
+        // placement. Mirrors the Swift port's flashRuleBannerIfNeeded.
+        var bannerParts = new List<string>();
+        string placedSuit = State.Board.Cells[cellIndex].Card!.Data.Suit;
+        // Skip Ascension/Descension on the game's last move (the one that fills the
+        // board) — the win/lose overlay appears shortly after (see
+        // ShowPostGamePromptAfterDelay) and a suit banner flashing at the same moment
+        // just clutters that transition. Same/Plus/Fallen Ace/Combo still show, since
+        // those describe what the final move itself actually did.
+        if (!IsBoardFull() && State.Board.AscensionDescensionSuits.Contains(placedSuit))
+        {
+            if (State.ActiveRules.Contains(HoneycombRule.Ascension))
+                bannerParts.Add($"{HoneycombRule.Ascension.DisplayName()}!");
+            else if (State.ActiveRules.Contains(HoneycombRule.Descension))
+                bannerParts.Add($"{HoneycombRule.Descension.DisplayName()}!");
+        }
+        var placementComboText = ComboBannerText(State.Board);
+        if (placementComboText != null) bannerParts.Add(placementComboText);
+        if (bannerParts.Count > 0) EnqueueBanner(string.Join(" ", bannerParts));
 
         int postScore = State.CurrentTurn == 1 ? CountPlayerCards(State.Board, hand) : CountOpponentCards(State.Board, hand);
         // Count all captures (both player and opponent moves), not just player captures
@@ -945,7 +1001,7 @@ public partial class HoneycombViewModel : ObservableObject
     {
         if (!_isHeadless) await Task.Delay(500);
         if (generation != _matchGeneration) return;
-        OnFlashBanner?.Invoke(text);
+        EnqueueBanner(text);
     }
 
     private async Task RevealBombSheltersAndSettleAsync()
@@ -979,7 +1035,7 @@ public partial class HoneycombViewModel : ObservableObject
             if (comboText != null)
             {
                 if (!_isHeadless) await Task.Delay(500);
-                OnFlashBanner?.Invoke(comboText);
+                EnqueueBanner(comboText);
             }
             await Task.Delay(1000);
         }
@@ -992,7 +1048,7 @@ public partial class HoneycombViewModel : ObservableObject
             if (comboText != null)
             {
                 if (!_isHeadless) await Task.Delay(500);
-                OnFlashBanner?.Invoke(comboText);
+                EnqueueBanner(comboText);
             }
             await Task.Delay(1000);
         }
@@ -1075,7 +1131,7 @@ public partial class HoneycombViewModel : ObservableObject
         // Give enough time for the final card placement and any combo animations to fully resolve
         if (!_isHeadless) await Task.Delay(2500);
 
-        OnFlashBanner?.Invoke($"{HoneycombRule.SuddenDeath.DisplayName()}!");
+        EnqueueBanner($"{HoneycombRule.SuddenDeath.DisplayName()}!");
         State.IsSuddenDeath = true;
         Stats.SuddenDeathCount++;
         SaveStats();

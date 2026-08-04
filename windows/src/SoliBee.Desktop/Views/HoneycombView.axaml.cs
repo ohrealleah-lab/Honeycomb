@@ -91,6 +91,11 @@ public partial class HoneycombView : UserControl
         
         RuleToast.OnDismissed += () => {
             _bannerActive = false;
+            // Reveals whatever's queued behind the banner that just finished (if
+            // anything) — Vm_OnFlashBanner picks it up via OnFlashBanner and flips
+            // _bannerActive back to true, so the win/lose overlay (gated on
+            // !_bannerActive) stays held back until the whole queue has drained.
+            _vm?.AdvanceBannerQueue();
             if (_vm != null) Refresh(_vm);
         };
 
