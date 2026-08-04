@@ -1,13 +1,43 @@
 import SwiftUI
 
-// Rotates a view about its vertical axis and hides it once past edge-on — used as
-// both halves of HoneycombView's cardFlipTransition (see triggerDealFlip).
-fileprivate struct CardFlipModifier: ViewModifier {
-    let angle: Double
-    func body(content: Content) -> some View {
-        content
-            .rotation3DEffect(.degrees(angle), axis: (x: 0, y: 1, z: 0))
-            .opacity(angle == 0 ? 1 : 0)
+// Deal-flip: reuses the exact same 3D flip mechanism as HoneycombCardView's own
+// ownership/reveal flips (rotate 180° over HoneycombFlipTiming.duration, swap
+// content at the edge-on midpoint, un-mirror the second half) rather than a
+// separate SwiftUI transition — so every "a Honeycomb card turns over" moment in
+// the app shares one implementation. `front` is the face-down placeholder shown
+// before `isRevealed` flips true; `back` is the real, face-up interactive card.
+fileprivate struct HoneycombFlipContainer<Front: View, Back: View>: View {
+    let isRevealed: Bool
+    @ViewBuilder let front: () -> Front
+    @ViewBuilder let back: () -> Back
+
+    @State private var flipDegrees: Double = 0
+    @State private var isPastMidpoint: Bool = false
+    @State private var displayedRevealed: Bool
+
+    init(isRevealed: Bool, @ViewBuilder front: @escaping () -> Front, @ViewBuilder back: @escaping () -> Back) {
+        self.isRevealed = isRevealed
+        self.front = front
+        self.back = back
+        _displayedRevealed = State(initialValue: isRevealed)
+    }
+
+    var body: some View {
+        Group {
+            if displayedRevealed { back() } else { front() }
+        }
+        .scaleEffect(x: isPastMidpoint ? -1 : 1, y: 1)
+        .rotation3DEffect(.degrees(flipDegrees), axis: (x: 0, y: 1, z: 0))
+        .onChange(of: isRevealed) { oldValue, newValue in
+            guard oldValue != newValue else { return }
+            withAnimation(.easeInOut(duration: HoneycombFlipTiming.duration)) {
+                flipDegrees += 180
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + HoneycombFlipTiming.midpointDelay) {
+                displayedRevealed = newValue
+                isPastMidpoint.toggle()
+            }
+        }
     }
 }
 
@@ -37,16 +67,6 @@ public struct HoneycombView: View {
             owner: .player,
             id: "placeholder-\(i)"
         )
-    }
-    // Deal-flip transition (see triggerDealFlip/isPlayerCardRevealed/
-    // isOpponentCardRevealed): the placeholder hand and the real dealt hand use
-    // different card ids (fixed "placeholder-N" strings vs. each real card's own id),
-    // so SwiftUI treats each slot's swap as a remove+insert, not a mutation of an
-    // existing view — .modifier(active:identity:) drives both halves of that swap in
-    // opposite rotation directions so they meet edge-on at the midpoint, reading as one
-    // continuous flip rather than two independently-faded views.
-    private static var cardFlipTransition: AnyTransition {
-        .modifier(active: CardFlipModifier(angle: 90), identity: CardFlipModifier(angle: 0))
     }
     // Approximate rendered height of the rules banner above the board — used to nudge
     // the hand columns down so their top row lines up with the board's top row instead
@@ -136,7 +156,6 @@ public struct HoneycombView: View {
     // 2.0s reveal delay (stageSwapAnimation in the shared ViewModel), so the swap only
     // ever animates after every deal-flip has landed, never mid-deal.
     private static let dealFlipStagger: Double = 0.1
-    private static let dealFlipDuration: Double = 0.4
 
     // Shared across both hand columns so a Swap trade's two cards can visually slide
     // from one hand to the other — SwiftUI interpolates a matchedGeometryEffect'd
@@ -286,22 +305,11 @@ public struct HoneycombView: View {
                     VStack(spacing: 6) {
                         handSideLabel("PLAYER")
                         handGrid(hand: displayHand) { i, card in
-                            Group {
-                                if !isPlayerCardRevealed[i] {
-                                    HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
-                                } else {
-                                    playerHandCardView(card: card)
-                                }
+                            HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
+                                HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
+                            } back: {
+                                playerHandCardView(card: card)
                             }
-                            // .id forces just this one slot to swap as its own unit
-                            // exactly when its stagger delay elapses, so
-                            // cardFlipTransition applies to that single card's
-                            // placeholder <-> real-card swap — scoped outside
-                            // playerHandCardView's own matchedGeometryEffect (used by
-                            // the Nectar Exchange trade slide), which stays keyed by
-                            // card.id throughout and is unaffected by this .id().
-                            .id(isPlayerCardRevealed[i])
-                            .transition(Self.cardFlipTransition)
                         }
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
@@ -386,18 +394,11 @@ public struct HoneycombView: View {
                     VStack(spacing: 6) {
                         handSideLabel("DEALER")
                         handGrid(hand: opponentDisplayHand) { i, card in
-                            Group {
-                                if !isOpponentCardRevealed[i] {
-                                    HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
-                                } else {
-                                    opponentHandCardView(card: card)
-                                }
+                            HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
+                                HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
+                            } back: {
+                                opponentHandCardView(card: card)
                             }
-                            // See the player hand's matching .id/.transition above for
-                            // why this is scoped per-slot, outside
-                            // opponentHandCardView's own matchedGeometryEffect.
-                            .id(isOpponentCardRevealed[i])
-                            .transition(Self.cardFlipTransition)
                         }
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
@@ -830,21 +831,19 @@ public struct HoneycombView: View {
     // Flips all 10 hand-slot cards one after another — every player card first, then
     // every opponent card — matching the Windows port's own sequential order
     // (HoneycombView.Refresh awaits each player hand slot's RenderCard in turn, then
-    // each opponent slot, rather than animating both hands in parallel).
+    // each opponent slot, rather than animating both hands in parallel). The flip
+    // itself is driven by HoneycombFlipContainer's own onChange(of: isRevealed), so
+    // this just needs to toggle the flags — no withAnimation wrapping needed here.
     private func triggerDealFlip() {
         for i in 0..<5 {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * Self.dealFlipStagger) {
-                withAnimation(.easeInOut(duration: Self.dealFlipDuration)) {
-                    isPlayerCardRevealed[i] = true
-                }
+                isPlayerCardRevealed[i] = true
             }
         }
         for i in 0..<5 {
             let delay = Double(5 + i) * Self.dealFlipStagger
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                withAnimation(.easeInOut(duration: Self.dealFlipDuration)) {
-                    isOpponentCardRevealed[i] = true
-                }
+                isOpponentCardRevealed[i] = true
             }
         }
     }
@@ -865,18 +864,22 @@ public struct HoneycombView: View {
     // mid-removal-animation.
     @ViewBuilder
     private func handGrid<Content: View>(hand: [HoneycombCard], @ViewBuilder content: @escaping (Int, HoneycombCard) -> Content) -> some View {
+        // Keyed by slot position, not card identity — the deal-flip needs the same
+        // HoneycombFlipContainer instance (and its @State) to persist across the
+        // placeholder-hand -> real-hand swap, which a card.id-keyed ForEach would
+        // instead treat as a remove+insert, resetting the flip mid-animation.
         VStack(spacing: Self.handGridSpacing) {
             HStack(spacing: Self.handGridSpacing) {
-                ForEach(Array(hand.prefix(2).enumerated()), id: \.element.id) { i, card in content(i, card) }
+                ForEach(Array(hand.prefix(2).enumerated()), id: \.offset) { i, card in content(i, card) }
             }
             if hand.count > 2 {
                 HStack(spacing: Self.handGridSpacing) {
-                    ForEach(Array(hand.dropFirst(2).prefix(2).enumerated()), id: \.element.id) { offset, card in content(offset + 2, card) }
+                    ForEach(Array(hand.dropFirst(2).prefix(2).enumerated()), id: \.offset) { offset, card in content(offset + 2, card) }
                 }
             }
             if hand.count > 4 {
                 HStack(spacing: Self.handGridSpacing) {
-                    ForEach(Array(hand.dropFirst(4).enumerated()), id: \.element.id) { offset, card in content(offset + 4, card) }
+                    ForEach(Array(hand.dropFirst(4).enumerated()), id: \.offset) { offset, card in content(offset + 4, card) }
                 }
             }
         }

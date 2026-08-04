@@ -1,5 +1,14 @@
 import SwiftUI
 
+// Shared 3D card-flip timing — every "a Honeycomb card turns over" moment (the
+// ownership/reveal flips below, and the mac port's match-start deal-flip in
+// HoneycombView) uses these same values, so they all read as one consistent
+// animation rather than independently-tuned look-alikes.
+public enum HoneycombFlipTiming {
+    public static let duration: Double = 0.4
+    public static let midpointDelay: Double = 0.2
+}
+
 public struct HoneycombCardView: View {
     public let card: HoneycombCard
     public let size: CGSize
@@ -149,25 +158,25 @@ public struct HoneycombCardView: View {
         .rotation3DEffect(.degrees(flipDegrees), axis: (x: 0, y: 1, z: 0))
         .onChange(of: card.owner) { oldOwner, newOwner in
             guard oldOwner != newOwner else { return }
-            withAnimation(.easeInOut(duration: 0.4)) {
+            withAnimation(.easeInOut(duration: HoneycombFlipTiming.duration)) {
                 flipDegrees += 180
             }
             // The card is edge-on (invisible) right at the midpoint — swap the rendered
             // owner and snap the mirror correction on with no animation of their own, so
             // both changes are hidden inside the moment the card can't be seen face-on.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + HoneycombFlipTiming.midpointDelay) {
                 displayedOwner = newOwner
                 isPastFlipMidpoint.toggle()
             }
         }
         .onChange(of: card.isFaceDown) { oldValue, newValue in
             guard oldValue != newValue else { return }
-            withAnimation(.easeInOut(duration: 0.4)) {
+            withAnimation(.easeInOut(duration: HoneycombFlipTiming.duration)) {
                 flipDegrees += 180
             }
             // Same edge-on-midpoint trick as the ownership flip above: swap which face is
             // showing (and the mirror correction) at the moment the card is invisible.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + HoneycombFlipTiming.midpointDelay) {
                 displayedIsFaceDown = newValue
                 isPastFlipMidpoint.toggle()
             }
