@@ -72,13 +72,33 @@ public class HoneycombAITests
     {
         var db = HoneycombDatabase.Shared;
         Assert.NotEmpty(db.AllCards);
-        
-        var lowCards = db.RulesAwareCards(1, 5, preferLowStats: true);
-        var highCards = db.RulesAwareCards(1, 5, preferLowStats: false);
-        
-        double lowAvg = lowCards.Average(c => c.Stats.Sum());
-        double highAvg = highCards.Average(c => c.Stats.Sum());
-        
-        Assert.True(lowAvg < highAvg);
+
+        // RulesAwareCards draws are weighted-random, not a deterministic top/bottom
+        // slice — a single 5-card draw from the full tier is too small a sample for
+        // the preferLowStats bias to reliably show up (it can, and does, flip either
+        // way by chance). Average over many trials instead, so this asserts the real
+        // statistical bias the weighting is meant to produce rather than depending on
+        // any one draw's luck.
+        const int trials = 200;
+        double lowTotal = 0;
+        double highTotal = 0;
+        int lowCount = 0;
+        int highCount = 0;
+
+        for (int i = 0; i < trials; i++)
+        {
+            var lowCards = db.RulesAwareCards(1, 5, preferLowStats: true);
+            var highCards = db.RulesAwareCards(1, 5, preferLowStats: false);
+
+            lowTotal += lowCards.Sum(c => c.Stats.Sum());
+            lowCount += lowCards.Count;
+            highTotal += highCards.Sum(c => c.Stats.Sum());
+            highCount += highCards.Count;
+        }
+
+        double lowAvg = lowTotal / lowCount;
+        double highAvg = highTotal / highCount;
+
+        Assert.True(lowAvg < highAvg, $"Expected preferLowStats average ({lowAvg}) to be lower than preferHighStats average ({highAvg}) over {trials} trials.");
     }
 }
