@@ -7,14 +7,18 @@
         
     <UserControl.Styles>
         <Style Selector="Button.honeycomb-action">
-            <Setter Property="Background" Value="#A0C0FF" />
+            <Setter Property="Background" Value="#007AFF" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Padding" Value="20,10" />
             <Setter Property="CornerRadius" Value="8" />
         </Style>
+        <!-- Darkens toward the app's established primary-blue hover (matches
+             Button.honeycomb-blue in HoneycombView.axaml) — the previous pastel
+             base (#A0C0FF) hovering to a muted slate-blue (#7090E0) read as
+             disabled/greyed-out rather than as an active hover state. -->
         <Style Selector="Button.honeycomb-action:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#7090E0" />
+            <Setter Property="Background" Value="#0062CC" />
             <Setter Property="TextBlock.Foreground" Value="White" />
         </Style>
         <Style Selector="Button.honeycomb-cancel">
