@@ -154,30 +154,46 @@ public struct HoneycombBoard: Codable, Equatable {
         return flips
     }
     
+    // A flipped Hive Swarm card is treated exactly like a card just placed from
+    // hand: it recomputes Ascension/Descension modifiers first (so it immediately
+    // inherits whatever suit count built up while it sat hidden — its own
+    // suitCount() exclusion no longer applies now that isFaceDown is false), then
+    // runs the same full capture resolution as placeCard (Same/Plus/Fallen Ace,
+    // combo cascades included) — no special-cased rule stripping.
     public mutating func revealFaceDownCard(at index: Int, rules: [HoneycombRule]) -> [Int] {
         guard index >= 0 && index < cells.count, let card = cells[index].card, card.isFaceDown else { return [] }
 
         cells[index].card!.isFaceDown = false
-        
-        var ruleClone = rules
-        ruleClone.removeAll { $0 == .same || $0 == .plus || $0 == .fallenAce }
 
         lastSameTriggered = false
         lastPlusTriggered = false
         lastFallenAceTriggered = false
         lastComboFlipCount = 0
 
-        return resolveCaptures(at: index, rules: ruleClone, isCombo: false)
+        updateModifiers(rules: rules)
+
+        return resolveCaptures(at: index, rules: rules, isCombo: false)
     }
     
+    // Face-down Hive Swarm cards are excluded — they exist in total isolation until
+    // they flip, so they neither reveal their suit nor contribute to Pollination/
+    // Smoked Out counts for other cards while hidden.
     private func suitCount(suit: String) -> Int {
-        return cells.compactMap { $0.card }.filter { $0.data.suit == suit }.count
+        return cells.compactMap { $0.card }.filter { !$0.isFaceDown && $0.data.suit == suit }.count
     }
-    
+
     private mutating func updateModifiers(rules: [HoneycombRule]) {
         for i in 0..<cells.count {
             guard var card = cells[i].card else { continue }
             card.modifier = 0
+            // A face-down card stays untouched by suit modifiers until it flips —
+            // its modifier is never rendered while hidden, but leaving it at 0 (and
+            // never reading its own count into other cards' totals via suitCount)
+            // keeps it in true isolation rather than a merely-invisible-but-live state.
+            if card.isFaceDown {
+                cells[i].card = card
+                continue
+            }
             // Only the 2 chosen suits are affected — a card of any other suit plays as
             // normal (modifier stays 0), giving the rolled suits distinct "flavor" for
             // the match instead of a blanket effect across every card.

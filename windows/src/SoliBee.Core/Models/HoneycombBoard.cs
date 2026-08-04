@@ -79,24 +79,26 @@ public class HoneycombBoard
         return flipped;
     }
 
+    // A flipped Hive Swarm card is treated exactly like a card just placed from
+    // hand: it recomputes Ascension/Descension modifiers first (so it immediately
+    // inherits whatever suit count built up while it sat hidden — its own suit-count
+    // exclusion no longer applies now that IsFaceDown is false), then runs the same
+    // full capture resolution as PlaceCard (Same/Plus/FallenAce, combo cascades
+    // included) — no special-cased rule stripping.
     public List<int> RevealFaceDownCard(int index, HashSet<HoneycombRule> rules)
     {
         if (index < 0 || index >= 9 || Cells[index].IsEmpty || !Cells[index].Card!.IsFaceDown) return new List<int>();
 
         Cells[index].Card!.IsFaceDown = false;
-        
-        // Cannot trigger combos, so we remove Same, Plus, FallenAce temporarily for this capture
-        var ruleClone = new HashSet<HoneycombRule>(rules);
-        ruleClone.Remove(HoneycombRule.Same);
-        ruleClone.Remove(HoneycombRule.Plus);
-        ruleClone.Remove(HoneycombRule.FallenAce);
 
         LastSameTriggered = false;
         LastPlusTriggered = false;
         LastFallenAceTriggered = false;
         LastComboFlipCount = 0;
 
-        return ResolveCaptures(index, ruleClone, isCombo: false);
+        UpdateModifiers(rules);
+
+        return ResolveCaptures(index, rules, isCombo: false);
     }
 
     private void UpdateModifiers(HashSet<HoneycombRule> rules)
@@ -118,13 +120,16 @@ public class HoneycombBoard
         // suit display helpers), not here.
         var targetSuits = new HashSet<string>(AscensionDescensionSuits);
 
+        // Face-down Hive Swarm cards are excluded — they exist in total isolation
+        // until they flip, so they neither reveal their suit nor contribute to
+        // Pollination/Smoked Out counts for other cards while hidden.
         var suitCounts = new Dictionary<string, int>();
         foreach (var suit in targetSuits)
             suitCounts[suit] = 0;
 
         foreach (var cell in Cells)
         {
-            if (!cell.IsEmpty)
+            if (!cell.IsEmpty && !cell.Card!.IsFaceDown)
             {
                 var suit = cell.Card!.Data.Suit;
                 if (targetSuits.Contains(suit))
@@ -135,6 +140,15 @@ public class HoneycombBoard
         foreach (var cell in Cells)
         {
             if (cell.IsEmpty) continue;
+
+            // A face-down card stays untouched by suit modifiers until it flips —
+            // never rendered while hidden, but leaving it at 0 keeps it in true
+            // isolation rather than a merely-invisible-but-live state.
+            if (cell.Card!.IsFaceDown)
+            {
+                cell.Card.Modifier = 0;
+                continue;
+            }
 
             var suit = cell.Card!.Data.Suit;
             if (targetSuits.Contains(suit))
