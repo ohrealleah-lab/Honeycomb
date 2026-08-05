@@ -41,6 +41,11 @@ public partial class HoneycombView : UserControl
     private int _dragHandIndex = -1;        // which hand card is being dragged
     private Border? _dragGhost;             // floating ghost card shown during drag
     private Canvas? _dragCanvas;            // top-level overlay canvas
+    // Static origin the ghost's Canvas.Left/Top is set to once at creation —
+    // _dragGhostTx carries the per-mousemove delta from here instead of Canvas.Left/
+    // Top being rewritten on every move, so tracking the cursor skips layout.
+    private TranslateTransform? _dragGhostTx;
+    private Point _dragGhostOrigin;
 
     private readonly Border[] _boardCells = new Border[9];
     private readonly HoneycombCardView[] _boardCards = new HoneycombCardView[9];
@@ -136,11 +141,33 @@ public partial class HoneycombView : UserControl
         });
     }
 
-    private static void ApplyLift(Control view)
+    private static void ApplyLift(Control view, bool instant = false)
     {
-        view.RenderTransform = new ScaleTransform(1.75, 1.75);
+        var scale = new ScaleTransform(instant ? 1.5 : 1.0, instant ? 1.5 : 1.0);
+        view.RenderTransform = scale;
         view.ZIndex = 100;
-        view.Effect = new Avalonia.Media.DropShadowEffect { Color = Colors.Black, OffsetX = 0, OffsetY = 0, BlurRadius = 20, Opacity = 0.5 };
+        var effect = new Avalonia.Media.DropShadowEffect { Color = Colors.Black, OffsetX = 0, OffsetY = 0, BlurRadius = instant ? 20 : 0, Opacity = instant ? 0.5 : 0.0 };
+        view.Effect = effect;
+
+        if (!instant)
+        {
+            var liftEase = new Avalonia.Animation.Easings.CubicEaseInOut();
+            scale.Transitions = new Avalonia.Animation.Transitions
+            {
+                new Avalonia.Animation.DoubleTransition { Property = ScaleTransform.ScaleXProperty, Duration = TimeSpan.FromMilliseconds(300), Easing = liftEase },
+                new Avalonia.Animation.DoubleTransition { Property = ScaleTransform.ScaleYProperty, Duration = TimeSpan.FromMilliseconds(300), Easing = liftEase }
+            };
+            effect.Transitions = new Avalonia.Animation.Transitions
+            {
+                new Avalonia.Animation.DoubleTransition { Property = Avalonia.Media.DropShadowEffect.BlurRadiusProperty, Duration = TimeSpan.FromMilliseconds(300), Easing = liftEase },
+                new Avalonia.Animation.DoubleTransition { Property = Avalonia.Media.DropShadowEffect.OpacityProperty, Duration = TimeSpan.FromMilliseconds(300), Easing = liftEase }
+            };
+
+            scale.ScaleX = 1.5;
+            scale.ScaleY = 1.5;
+            effect.BlurRadius = 20;
+            effect.Opacity = 0.5;
+        }
     }
 
     private static void ClearLift(Control view)
@@ -159,7 +186,19 @@ public partial class HoneycombView : UserControl
     // flip, which didn't visually cross hands at all.
     private void Vm_OnSwapLanded(HoneycombCard preSwapPlayerCard, HoneycombCard preSwapOpponentCard, int playerIndex, int opponentIndex)
     {
-        Dispatcher.UIThread.Post(async () => await PlaySwapSlideAnimation(preSwapPlayerCard, preSwapOpponentCard, playerIndex, opponentIndex));
+        // Hide and un-scale the real slots synchronously before the UI thread can draw 
+        // the newly swapped cards that the ViewModel just applied! 
+        if (playerIndex >= 0 && playerIndex < _playerHandViews.Length) 
+        {
+            ClearLift(_playerHandViews[playerIndex]);
+            _playerHandViews[playerIndex].Opacity = 0;
+        }
+        if (opponentIndex >= 0 && opponentIndex < _opponentHandViews.Length) 
+        {
+            ClearLift(_opponentHandViews[opponentIndex]);
+            _opponentHandViews[opponentIndex].Opacity = 0;
+        }
+        _ = PlaySwapSlideAnimation(preSwapPlayerCard, preSwapOpponentCard, playerIndex, opponentIndex);
     }
 
     // Slides a floating ghost of each pre-swap card from its original hand slot to
@@ -178,22 +217,31 @@ public partial class HoneycombView : UserControl
         var playerSlot = _playerHandViews[playerIndex];
         var opponentSlot = _opponentHandViews[opponentIndex];
 
+        // Clear Lift FIRST so that TranslatePoint gets the true layout coordinates, 
+        // avoiding a double-scale offset jerk when the ghost scales itself up.
+        ClearLift(playerSlot);
+        ClearLift(opponentSlot);
+
         var playerPos = playerSlot.TranslatePoint(new Point(0, 0), _dragCanvas);
         var opponentPos = opponentSlot.TranslatePoint(new Point(0, 0), _dragCanvas);
         if (playerPos == null || opponentPos == null) return;
 
         var size = playerSlot.Bounds.Size;
 
-        // Lift already scaled/shadowed the real slots; the ghosts pick up right
-        // where that left off so there's no visible pop at the handoff.
-        ClearLift(playerSlot);
-        ClearLift(opponentSlot);
-
         HoneycombCardView MakeGhost(HoneycombCard card, Point start)
         {
             var ghost = new HoneycombCardView { Width = size.Width, Height = size.Height, IsHitTestVisible = false };
             _ = ghost.RenderCard(card);
-            ApplyLift(ghost);
+            
+            var scale = new ScaleTransform(1.5, 1.5);
+            var translate = new TranslateTransform(0, 0);
+            var group = new TransformGroup();
+            group.Children.Add(scale);
+            group.Children.Add(translate);
+            ghost.RenderTransform = group;
+            ghost.ZIndex = 100;
+            ghost.Effect = new Avalonia.Media.DropShadowEffect { Color = Colors.Black, OffsetX = 0, OffsetY = 0, BlurRadius = 20, Opacity = 0.5 };
+
             Canvas.SetLeft(ghost, start.X);
             Canvas.SetTop(ghost, start.Y);
             _dragCanvas.Children.Add(ghost);
@@ -206,51 +254,84 @@ public partial class HoneycombView : UserControl
         playerSlot.Opacity = 0;
         opponentSlot.Opacity = 0;
 
-        const int stepMs = 16;
+        // Force a layout/render pass so the newly-spawned ghosts' initial positions 
+        // are firmly established in the compositor before we attach Transitions and 
+        // change their destination. This prevents Avalonia from flickering or 
+        // skipping the animation if it processes creation and movement in the same frame.
+        await Task.Delay(16);
 
-        // Beat 2: Flight — ghosts glide across the board at full 1.75x lift scale.
+        // Beat 2: Flight — ghosts glide across the board at full 1.5x lift scale.
+        // We use TranslateTransform instead of Canvas.Left/Top so the transition runs
+        // on the compositor (GPU) at 60+ FPS without forcing a CPU layout pass every frame.
         const int flightMs = 800;
-        var flightStart = Environment.TickCount64;
-        while (true)
+        var flightEase = new Avalonia.Animation.Easings.CubicEaseInOut();
+
+        var playerTranslate = (TranslateTransform)((TransformGroup)playerGhost.RenderTransform!).Children[1];
+        var opponentTranslate = (TranslateTransform)((TransformGroup)opponentGhost.RenderTransform!).Children[1];
+
+        playerTranslate.Transitions = new Avalonia.Animation.Transitions
         {
-            double t = Math.Min(1.0, (Environment.TickCount64 - flightStart) / (double)flightMs);
-            // Cubic ease-in-out, matching SwiftUI's .easeInOut curve shape.
-            double eased = t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
+            new Avalonia.Animation.DoubleTransition { Property = TranslateTransform.XProperty, Duration = TimeSpan.FromMilliseconds(flightMs), Easing = flightEase },
+            new Avalonia.Animation.DoubleTransition { Property = TranslateTransform.YProperty, Duration = TimeSpan.FromMilliseconds(flightMs), Easing = flightEase }
+        };
+        opponentTranslate.Transitions = new Avalonia.Animation.Transitions
+        {
+            new Avalonia.Animation.DoubleTransition { Property = TranslateTransform.XProperty, Duration = TimeSpan.FromMilliseconds(flightMs), Easing = flightEase },
+            new Avalonia.Animation.DoubleTransition { Property = TranslateTransform.YProperty, Duration = TimeSpan.FromMilliseconds(flightMs), Easing = flightEase }
+        };
 
-            var pX = playerPos.Value.X + (opponentPos.Value.X - playerPos.Value.X) * eased;
-            var pY = playerPos.Value.Y + (opponentPos.Value.Y - playerPos.Value.Y) * eased;
-            Canvas.SetLeft(playerGhost, pX);
-            Canvas.SetTop(playerGhost, pY);
+        playerTranslate.X = opponentPos.Value.X - playerPos.Value.X;
+        playerTranslate.Y = opponentPos.Value.Y - playerPos.Value.Y;
 
-            var oX = opponentPos.Value.X + (playerPos.Value.X - opponentPos.Value.X) * eased;
-            var oY = opponentPos.Value.Y + (playerPos.Value.Y - opponentPos.Value.Y) * eased;
-            Canvas.SetLeft(opponentGhost, oX);
-            Canvas.SetTop(opponentGhost, oY);
+        opponentTranslate.X = playerPos.Value.X - opponentPos.Value.X;
+        opponentTranslate.Y = playerPos.Value.Y - opponentPos.Value.Y;
 
-            if (t >= 1.0) break;
-            await Task.Delay(stepMs);
-        }
+        await Task.Delay(flightMs);
 
         // Beat 3: Touchdown — scale/shadow ease back down to normal at the
         // destination slot, with a landing "snap".
         SoundService.PlaySnap();
         const int landMs = 400;
-        var landStart = Environment.TickCount64;
-        while (true)
+        var landEase = new Avalonia.Animation.Easings.CubicEaseInOut();
+
+        var playerScale = (ScaleTransform)((TransformGroup)playerGhost.RenderTransform!).Children[0];
+        var opponentScale = (ScaleTransform)((TransformGroup)opponentGhost.RenderTransform!).Children[0];
+        var playerEffect = (Avalonia.Media.DropShadowEffect)playerGhost.Effect!;
+        var opponentEffect = (Avalonia.Media.DropShadowEffect)opponentGhost.Effect!;
+
+        playerScale.Transitions = new Avalonia.Animation.Transitions
         {
-            double t = Math.Min(1.0, (Environment.TickCount64 - landStart) / (double)landMs);
-            double eased = t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
-            double scale = 1.75 - 0.75 * eased;
-            double shadowOpacity = 0.5 * (1 - eased);
+            new Avalonia.Animation.DoubleTransition { Property = ScaleTransform.ScaleXProperty, Duration = TimeSpan.FromMilliseconds(landMs), Easing = landEase },
+            new Avalonia.Animation.DoubleTransition { Property = ScaleTransform.ScaleYProperty, Duration = TimeSpan.FromMilliseconds(landMs), Easing = landEase }
+        };
+        opponentScale.Transitions = new Avalonia.Animation.Transitions
+        {
+            new Avalonia.Animation.DoubleTransition { Property = ScaleTransform.ScaleXProperty, Duration = TimeSpan.FromMilliseconds(landMs), Easing = landEase },
+            new Avalonia.Animation.DoubleTransition { Property = ScaleTransform.ScaleYProperty, Duration = TimeSpan.FromMilliseconds(landMs), Easing = landEase }
+        };
 
-            playerGhost.RenderTransform = new ScaleTransform(scale, scale);
-            opponentGhost.RenderTransform = new ScaleTransform(scale, scale);
-            playerGhost.Effect = new Avalonia.Media.DropShadowEffect { Color = Colors.Black, OffsetX = 0, OffsetY = 0, BlurRadius = 20 * (1 - eased), Opacity = shadowOpacity };
-            opponentGhost.Effect = new Avalonia.Media.DropShadowEffect { Color = Colors.Black, OffsetX = 0, OffsetY = 0, BlurRadius = 20 * (1 - eased), Opacity = shadowOpacity };
+        playerEffect.Transitions = new Avalonia.Animation.Transitions
+        {
+            new Avalonia.Animation.DoubleTransition { Property = Avalonia.Media.DropShadowEffect.BlurRadiusProperty, Duration = TimeSpan.FromMilliseconds(landMs), Easing = landEase },
+            new Avalonia.Animation.DoubleTransition { Property = Avalonia.Media.DropShadowEffect.OpacityProperty, Duration = TimeSpan.FromMilliseconds(landMs), Easing = landEase }
+        };
+        opponentEffect.Transitions = new Avalonia.Animation.Transitions
+        {
+            new Avalonia.Animation.DoubleTransition { Property = Avalonia.Media.DropShadowEffect.BlurRadiusProperty, Duration = TimeSpan.FromMilliseconds(landMs), Easing = landEase },
+            new Avalonia.Animation.DoubleTransition { Property = Avalonia.Media.DropShadowEffect.OpacityProperty, Duration = TimeSpan.FromMilliseconds(landMs), Easing = landEase }
+        };
 
-            if (t >= 1.0) break;
-            await Task.Delay(stepMs);
-        }
+        playerScale.ScaleX = 1.0;
+        playerScale.ScaleY = 1.0;
+        opponentScale.ScaleX = 1.0;
+        opponentScale.ScaleY = 1.0;
+
+        playerEffect.BlurRadius = 0;
+        playerEffect.Opacity = 0;
+        opponentEffect.BlurRadius = 0;
+        opponentEffect.Opacity = 0;
+
+        await Task.Delay(landMs);
 
         _dragCanvas.Children.Remove(playerGhost);
         _dragCanvas.Children.Remove(opponentGhost);
@@ -736,10 +817,10 @@ public partial class HoneycombView : UserControl
             ShowDragGhost(pos);
         }
 
-        if (_isDragging && _dragGhost != null && _dragCanvas != null)
+        if (_isDragging && _dragGhost != null && _dragCanvas != null && _dragGhostTx != null)
         {
-            Canvas.SetLeft(_dragGhost, pos.X - 98);
-            Canvas.SetTop (_dragGhost, pos.Y - 138);
+            _dragGhostTx.X = (pos.X - 98) - _dragGhostOrigin.X;
+            _dragGhostTx.Y = (pos.Y - 138) - _dragGhostOrigin.Y;
         }
 
         if (_isDragging) e.Handled = true;
@@ -812,16 +893,19 @@ public partial class HoneycombView : UserControl
             _ = ghostCard.RenderCard(cardToRender);
         }
 
+        _dragGhostTx = new TranslateTransform();
         _dragGhost = new Border
         {
             Child = ghostCard,
             IsHitTestVisible = false,
             BoxShadow = Avalonia.Media.BoxShadows.Parse("0 8 24 4 #80000000"),
-            CornerRadius = new Avalonia.CornerRadius(8)
+            CornerRadius = new Avalonia.CornerRadius(8),
+            RenderTransform = _dragGhostTx
         };
 
-        Canvas.SetLeft(_dragGhost, pos.X - 98);
-        Canvas.SetTop (_dragGhost, pos.Y - 138);
+        _dragGhostOrigin = new Point(pos.X - 98, pos.Y - 138);
+        Canvas.SetLeft(_dragGhost, _dragGhostOrigin.X);
+        Canvas.SetTop (_dragGhost, _dragGhostOrigin.Y);
         _dragCanvas.Children.Add(_dragGhost);
     }
 
@@ -832,6 +916,7 @@ public partial class HoneycombView : UserControl
             _dragCanvas.Children.Remove(_dragGhost);
             _dragGhost = null;
         }
+        _dragGhostTx = null;
     }
 
     public void DebugShowResultBanner(string kind)
