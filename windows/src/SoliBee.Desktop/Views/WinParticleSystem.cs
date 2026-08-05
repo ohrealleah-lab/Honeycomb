@@ -35,6 +35,7 @@ internal static class WinParticleSystem
         int count = rng.Next(20, 26);
 
         var els  = new Ellipse[count];
+        var tx   = new TranslateTransform[count];
         var posX = new double[count];
         var posY = new double[count];
         var velX = new double[count];
@@ -47,18 +48,25 @@ internal static class WinParticleSystem
             double radius = rng.NextDouble() * 4 + 3;
             var color     = _palette[rng.Next(_palette.Length)];
 
+            var particleTx = new TranslateTransform();
             var el = new Ellipse
             {
-                Width   = radius * 2,
-                Height  = radius * 2,
-                Fill    = new SolidColorBrush(color),
-                Opacity = 1.0,
+                Width           = radius * 2,
+                Height          = radius * 2,
+                Fill            = new SolidColorBrush(color),
+                Opacity         = 1.0,
+                RenderTransform = particleTx,
             };
+            // Left/Top are set once here (the particle's static origin, radius offset
+            // baked in) and never touched again — the tick loop below drives motion
+            // entirely through RenderTransform so it skips layout every frame instead
+            // of re-arranging the Canvas on each of the ~87 ticks in a burst.
             Canvas.SetLeft(el, px - radius);
             Canvas.SetTop(el,  py - radius);
             canvas.Children.Add(el);
 
             els[i]  = el;
+            tx[i]   = particleTx;
             posX[i] = px;
             posY[i] = py;
             velX[i] = Math.Cos(angle) * speed;
@@ -80,8 +88,8 @@ internal static class WinParticleSystem
                 velY[i] = velY[i] * 0.97 + 0.4; // drag + gravity
                 posX[i] += velX[i];
                 posY[i] += velY[i];
-                Canvas.SetLeft(els[i], posX[i] - els[i].Width  / 2);
-                Canvas.SetTop(els[i],  posY[i] - els[i].Height / 2);
+                tx[i].X = posX[i] - px;
+                tx[i].Y = posY[i] - py;
                 double life = Math.Max(0, 1.0 - elapsed / (double)totalMs);
                 els[i].Opacity = life;
                 if (life > 0) any = true;
