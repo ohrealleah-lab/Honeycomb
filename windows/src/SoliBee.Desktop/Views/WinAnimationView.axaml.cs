@@ -322,8 +322,8 @@ public partial class WinAnimationView : UserControl
                 continue;
             }
 
-            Canvas.SetLeft(card.View, card.X);
-            Canvas.SetTop(card.View,  card.Y);
+            card.ViewTx.X = card.X - card.StartX;
+            card.ViewTx.Y = card.Y - card.StartY;
 
             var history = card.TrailHistory.ToArray(); // oldest first
             for (int gi = 0; gi < TrailLength; gi++)
@@ -333,8 +333,8 @@ public partial class WinAnimationView : UserControl
                 if (historyIndex < history.Length)
                 {
                     var (hx, hy) = history[historyIndex];
-                    Canvas.SetLeft(ghost, hx);
-                    Canvas.SetTop(ghost, hy);
+                    card.TrailTx[gi].X = hx - card.StartX;
+                    card.TrailTx[gi].Y = hy - card.StartY;
                     ghost.Opacity = 1.0;
                 }
                 else
@@ -354,30 +354,9 @@ public partial class WinAnimationView : UserControl
 
     private void SpawnCard(Card card, int foundationIndex)
     {
-        var cardView = new CardView { Card = card };
-
         // Trail ghosts are created once per bouncing card as lightweight Image controls
         // with their Source assigned dynamically in the ticker once the main card is laid out.
         // This avoids the overhead of rendering hundreds of full templated CardView controls.
-        var trailViews = new List<Control>(TrailLength);
-        for (int i = 0; i < TrailLength; i++)
-        {
-            var ghost = new Image
-            {
-                Width = CardWidth,
-                Height = CardHeight,
-                IsHitTestVisible = false,
-                Opacity = 0
-            };
-            // Created in code, not XAML — set explicitly for the same reason as the
-            // other code-behind-created Image controls (see CardView.PopulateSuitCanvas).
-            RenderOptions.SetBitmapInterpolationMode(ghost, BitmapInterpolationMode.MediumQuality);
-            trailViews.Add(ghost);
-            AnimationCanvas.Children.Add(ghost);
-        }
-
-        AnimationCanvas.Children.Add(cardView);
-
         double startX;
         double startY;
         if (_foundationPoints != null && foundationIndex < _foundationPoints.Count)
@@ -395,14 +374,50 @@ public partial class WinAnimationView : UserControl
             startY = SpawnY;
         }
 
+        // Every trail ghost shares the main card's own StartX/StartY origin — they're
+        // invisible (Opacity 0) until first shown in the tick loop anyway, so their
+        // static Canvas.Left/Top can start wherever the card itself starts.
+        var cardTx = new TranslateTransform();
+        var trailViews = new List<Control>(TrailLength);
+        var trailTx = new List<TranslateTransform>(TrailLength);
+        for (int i = 0; i < TrailLength; i++)
+        {
+            var ghostTx = new TranslateTransform();
+            var ghost = new Image
+            {
+                Width = CardWidth,
+                Height = CardHeight,
+                IsHitTestVisible = false,
+                Opacity = 0,
+                RenderTransform = ghostTx
+            };
+            // Created in code, not XAML — set explicitly for the same reason as the
+            // other code-behind-created Image controls (see CardView.PopulateSuitCanvas).
+            RenderOptions.SetBitmapInterpolationMode(ghost, BitmapInterpolationMode.MediumQuality);
+            Canvas.SetLeft(ghost, startX);
+            Canvas.SetTop(ghost, startY);
+            trailViews.Add(ghost);
+            trailTx.Add(ghostTx);
+            AnimationCanvas.Children.Add(ghost);
+        }
+
+        var cardView = new CardView { Card = card, RenderTransform = cardTx };
+        Canvas.SetLeft(cardView, startX);
+        Canvas.SetTop(cardView, startY);
+        AnimationCanvas.Children.Add(cardView);
+
         var bouncingCard = new BouncingCard
         {
-            View = cardView,
-            X    = startX,
-            Y    = startY,
-            Vx   = _random.NextDouble() * 480 - 240,          // -240..240 px/s
-            Vy   = -(_random.NextDouble() * 240 + 120),       // -360..-120 px/s
+            View       = cardView,
+            X          = startX,
+            Y          = startY,
+            Vx         = _random.NextDouble() * 480 - 240,    // -240..240 px/s
+            Vy         = -(_random.NextDouble() * 240 + 120), // -360..-120 px/s
             TrailViews = trailViews,
+            StartX     = startX,
+            StartY     = startY,
+            ViewTx     = cardTx,
+            TrailTx    = trailTx,
         };
 
         _activeCards.Add(bouncingCard);
@@ -434,4 +449,13 @@ public class BouncingCard
     public double Age { get; set; }
     public List<Control> TrailViews { get; set; } = new();
     public Queue<(double X, double Y)> TrailHistory { get; } = new();
+
+    // Spawn-time origin — Canvas.Left/Top for View and every TrailViews entry are set
+    // once to this and never touched again; ViewTx/TrailTx carry the per-frame delta
+    // instead, so the physics tick loop drives motion through RenderTransform (skips
+    // layout) rather than rewriting Canvas.Left/Top on every frame.
+    public double StartX { get; set; }
+    public double StartY { get; set; }
+    public required TranslateTransform ViewTx { get; set; }
+    public List<TranslateTransform> TrailTx { get; set; } = new();
 }
