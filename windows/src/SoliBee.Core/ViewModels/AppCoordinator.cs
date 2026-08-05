@@ -108,6 +108,7 @@ public partial class AppCoordinator : ObservableObject
     public void SwitchToBlackjack()
     {
         PauseTimer(ActiveViewModel);
+        BlackjackViewModel.ResetIfRoundOver();
         ActiveViewModel = BlackjackViewModel;
         SaveLastMode("Blackjack");
         OnPropertyChanged(nameof(CanUndo));

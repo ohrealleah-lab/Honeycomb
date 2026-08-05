@@ -1506,6 +1506,13 @@ public partial class CardView : UserControl
                     cv.RenderTransform = cv._slideTx;
                 }
 
+                // If the drag empties the source pile, reveal its empty outline placeholder
+                // immediately, so it doesn't look like empty felt during the drag.
+                if (pileView != null && canvas != null && canvas.Children.Count == 0)
+                {
+                    pileView.ShowEmptyPlaceholder();
+                }
+
                 e.Pointer.Capture(this);
             }
 
@@ -1664,24 +1671,19 @@ public partial class CardView : UserControl
 
     private void ResetDraggedStack(CardGameView? gameView)
     {
+        foreach (var cv in _draggedStack)
+        {
+            if (_dragCanvas != null && _dragCanvas.Children.Contains(cv))
+                _dragCanvas.Children.Remove(cv);
+        }
+        
+        _sourcePileView?.UpdateCardsLayout();
+        
         if (gameView != null)
         {
-            var dragCanvas = gameView.FindControl<Canvas>("DragCanvas");
-            if (dragCanvas != null)
-            {
-                foreach (var cv in _draggedStack)
-                    dragCanvas.Children.Remove(cv);
-            }
+            (gameView as Control)?.UpdateLayout();
         }
-
-        // These CardView instances are discarded either way — UpdateCardsLayout below
-        // rebuilds the source pile with fresh instances — but clear RenderTransform for
-        // hygiene in case one is ever retained/reused, matching BeginSlideIn's own
-        // cleanup (RenderTransform = null once its animation finishes).
-        foreach (var cv in _draggedStack)
-            cv.RenderTransform = null;
-
-        _sourcePileView?.UpdateCardsLayout();
+        
         _draggedStack.Clear();
         _dragStartPositions.Clear();
         _sourcePileView = null;

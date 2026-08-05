@@ -491,21 +491,6 @@ public partial class MainWindow : Window
         {
             ExecuteRestartGame();
         }
-        else if (_pendingAction.StartsWith("SwitchGame:"))
-        {
-            string targetTag = _pendingAction.Substring("SwitchGame:".Length);
-            // Unlike the direct-switch path in GameSelectionBox_SelectionChanged (no game
-            // in progress, so no confirmation needed), this path was missing this call —
-            // any window resize made during that game session was silently discarded on
-            // switch, only surviving if the app happened to be closed first (Closing also
-            // calls this, saving under whatever _currentGameTag still was at that point).
-            SaveCurrentWindowSize();
-            _currentGameTag = targetTag;
-            _revertingSelection = true;
-            GameSelectionBox.SelectedIndex = GameModeToIndex(targetTag);
-            _revertingSelection = false;
-            ApplyGameSwitch(targetTag);
-        }
         else if (_pendingAction.StartsWith("GameMode:"))
         {
             string newTag = _pendingAction.Substring("GameMode:".Length);
@@ -539,13 +524,7 @@ public partial class MainWindow : Window
             else if (this.DataContext is HoneycombViewModel hVm) hVm.ResetStats();
             PopulateStatsPanel();
         }
-        else if (_pendingAction == "HoneycombQuit")
-        {
-            if (this.DataContext is HoneycombViewModel hVm)
-            {
-                hVm.QuitMatch();
-            }
-        }
+
         _pendingAction = "";
     }
 
@@ -1150,20 +1129,6 @@ public partial class MainWindow : Window
             _          => baseTag,
         };
 
-        if (GetBaseGameTag(tag) != GetBaseGameTag(_currentGameTag) && IsGameInProgress())
-        {
-            _revertingSelection = true;
-            GameSelectionBox.SelectedIndex = GameModeToIndex(_currentGameTag);
-            _revertingSelection = false;
-
-            _pendingAction = "SwitchGame:" + tag;
-            ConfirmActionTitle.Text = "Switch Game?";
-            ConfirmActionMessage.Text = "Are you sure you want to abandon the current game and switch to another?";
-            ConfirmActionButton.Content = "Switch Game";
-            ConfirmActionOverlay.IsVisible = true;
-            return;
-        }
-
         SaveCurrentWindowSize();
         _currentGameTag = tag;
 
@@ -1257,7 +1222,6 @@ public partial class MainWindow : Window
         else if (tag == "Blackjack")
         {
             _coordinator.SwitchToBlackjack();
-            _coordinator.BlackjackViewModel.PrepareForResume();
             this.MainContent.Content = new BlackjackView { DataContext = _coordinator.BlackjackViewModel };
         }
         else if (tag == "Honeycomb")
@@ -1490,11 +1454,7 @@ public partial class MainWindow : Window
     {
         if (this.DataContext is HoneycombViewModel hVm)
         {
-            _pendingAction = "HoneycombQuit";
-            ConfirmActionTitle.Text = "Quit Match?";
-            ConfirmActionMessage.Text = "Are you sure you want to abandon the current match?";
-            ConfirmActionButton.Content = "Quit";
-            ConfirmActionOverlay.IsVisible = true;
+            hVm.QuitMatch();
         }
     }
 

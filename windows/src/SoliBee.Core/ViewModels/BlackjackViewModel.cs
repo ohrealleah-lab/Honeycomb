@@ -271,29 +271,20 @@ public partial class BlackjackViewModel : ObservableObject
         NotifyStateChanged();
     }
 
-    // Called when switching back to Blackjack — clears stale cards without resetting credits.
-    public void PrepareForResume()
+    // Called when switching back to Blackjack. Like Video Poker, if a round is already
+    // over (Result phase), returning clears the board for a new hand so you don't have
+    // to dismiss the old banner. Mid-hand games (Playing phase) are preserved.
+    public void ResetIfRoundOver()
     {
-        if (State.Phase == BlackjackPhase.Betting) return;
-
-        // A hand that was dealt (bet already taken) but abandoned mid-play — by switching
-        // away before Hit/Stand resolved it — never reaches ApplyPayout, which is now the
-        // only place Stats.HandsPlayed increments. Count it here so it isn't silently
-        // dropped from the lifetime total, one increment per still-unresolved resulting
-        // hand (matching split rounds, which can abandon 2 hands from 1 round).
-        int abandonedHands = State.PlayerHands.Count(h => h.Result == BlackjackHandResult.Pending);
-        if (abandonedHands > 0)
+        if (State.Phase == BlackjackPhase.Result)
         {
-            Stats.HandsPlayed += abandonedHands;
-            SaveStatistics();
+            State = new BlackjackState
+            {
+                Credits    = State.Credits,
+                CurrentBet = State.CurrentBet,
+                Phase      = BlackjackPhase.Betting,
+            };
         }
-
-        State = new BlackjackState
-        {
-            Credits    = State.Credits,
-            CurrentBet = State.CurrentBet,
-            Phase      = BlackjackPhase.Betting,
-        };
     }
 
     public void StartNewGame()

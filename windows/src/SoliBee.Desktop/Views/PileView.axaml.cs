@@ -100,6 +100,16 @@ public partial class PileView : UserControl
         UpdateCardsLayout();
     }
 
+    public void ShowEmptyPlaceholder()
+    {
+        if (EmptyOutline != null) EmptyOutline.IsVisible = true;
+        if (EmptySymbolText != null)
+        {
+            if (Pile != null && Pile.Type == PileType.Foundation) EmptySymbolText.Text = "A";
+            else EmptySymbolText.Text = "";
+        }
+    }
+
     public void UpdateCardsLayout()
     {
         if (CardsCanvas == null || EmptyOutline == null || EmptySymbolText == null) return;
