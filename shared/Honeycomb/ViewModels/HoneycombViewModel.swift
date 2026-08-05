@@ -343,6 +343,7 @@ public final class HoneycombViewModel {
         undoStack.removeAll()
         swapHighlightCardIds.removeAll()
         clearHint()
+        lastHiveSwarmPhrase = nil
         // Defensive reset — a previous match quit (or otherwise interrupted) while
         // this was true (e.g. mid-Swap-animation-wait, see quitMatch) would otherwise
         // leave it stuck true forever, since nothing else clears it for a match that
@@ -471,7 +472,7 @@ public final class HoneycombViewModel {
         // same font (FlashBannerView just renders whatever's after each "\n") —
         // rather than only Swap riding along while Ascension/Descension/etc. never
         // got shown here at all.
-        let firstMoveLine = isPlayerTurn ? "First Move: Player!" : "First Move: Opponent!"
+        let firstMoveLine = isPlayerTurn ? "First Move: Player!" : "First Move: \(options.difficulty.displayName)!"
         let ruleLines = activeRules.map { formatRuleForBanner($0) }
         // A brand new match starting — any banner still queued from the previous one
         // (e.g. a match ended mid-combo-sequence) is no longer relevant.
@@ -535,6 +536,7 @@ public final class HoneycombViewModel {
         swapHighlightCardIds.removeAll()
         clearHint()
         isAnimatingPlacement = false
+        lastHiveSwarmPhrase = nil
 
         board = HoneycombBoard()
         activeRules = rematchActiveRules
@@ -1595,12 +1597,34 @@ public final class HoneycombViewModel {
         var banners: [String] = []
         for i in indices {
             guard var card = updated.cells[i].card else { continue }
+            let revealedOwner = card.originalOwner
             card.bombShelterTurnsRemaining = nil
             updated.cells[i].card = card
             _ = updated.revealFaceDownCard(at: i, rules: activeRules)
-            banners.append(["\(HoneycombRule.bombShelter.rawValue) Revealed!", Self.comboBannerText(for: updated)].compactMap { $0 }.joined(separator: " "))
+            banners.append([hiveSwarmRevealBanner(for: revealedOwner), Self.comboBannerText(for: updated)].compactMap { $0 }.joined(separator: " "))
         }
         return (updated, banners)
+    }
+
+    // Randomly chosen phrase set for a Hive Swarm (Bomb Shelter) reveal's own banner
+    // — kept distinct between the player's and opponent's reveal within the same
+    // match (lastHiveSwarmPhrase, reset alongside the other per-match state in
+    // startNewGame/rematch) so a match where both sides reveal a hidden card doesn't
+    // repeat the same phrase.
+    private static let hiveSwarmRevealPhrases: [String] = [
+        "Hive Stings!",
+        "Swarm is Unleashed!",
+        "Swarm Awakens!",
+        "Hive is Buzzing into Action!"
+    ]
+    private var lastHiveSwarmPhrase: String?
+
+    private func hiveSwarmRevealBanner(for owner: CardOwner) -> String {
+        let pool = Self.hiveSwarmRevealPhrases.filter { $0 != lastHiveSwarmPhrase }
+        let phrase = pool.randomElement() ?? Self.hiveSwarmRevealPhrases.randomElement()!
+        lastHiveSwarmPhrase = phrase
+        let possessive = owner == .player ? "Your" : "\(options.difficulty.displayName)'s"
+        return "\(possessive) \(phrase)"
     }
 
     private func checkWinCondition() {

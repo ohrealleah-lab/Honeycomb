@@ -251,6 +251,7 @@ public partial class HoneycombViewModel : ObservableObject
         State.CardsCapturedThisMatch = 0;
         State.IsSuddenDeath = false;
         State.ShowPostGamePrompt = false;
+        _lastHiveSwarmPhrase = null;
 
         // Roulette (no forced/manual rules) gets bad-luck protection against repeating
         // the exact same rule set + suit as last match; forced/manual rules are
@@ -559,7 +560,7 @@ public partial class HoneycombViewModel : ObservableObject
 
         State.CurrentTurn = starter;
 
-        string starterName = starter == 1 ? "Player" : "Opponent";
+        string starterName = starter == 1 ? "Player" : Options.Difficulty.DisplayName();
         // A single combined banner instead of separate flashes at match start — every
         // active rule (up to 2) gets its own line below "First Move", in the same font,
         // rather than only Swap riding along while Ascension/Descension/etc. got their
@@ -761,6 +762,7 @@ public partial class HoneycombViewModel : ObservableObject
         // otherwise interrupted) while this was true (e.g. mid-Swap-animation-wait)
         // would otherwise leave it stuck true, permanently blocking PlayCard.
         _isAnimating = false;
+        _lastHiveSwarmPhrase = null;
         State.Phase = HoneycombPhase.Playing;
         State.UndoStack.Clear();
         State.ActiveRules = new List<HoneycombRule>(_rematchActiveRules);
@@ -1055,13 +1057,38 @@ public partial class HoneycombViewModel : ObservableObject
         var banners = new List<string>();
         foreach (var i in pendingReveals)
         {
+            int revealedOwner = revealedBoard.Cells[i].Card!.OriginalOwner;
             revealedBoard.Cells[i].Card!.BombShelterTurnsRemaining = null;
             revealedBoard.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
             var comboText = ComboBannerText(revealedBoard);
-            var revealedText = $"{HoneycombRule.BombShelter.DisplayName()} Revealed!";
+            var revealedText = HiveSwarmRevealBanner(revealedOwner);
             banners.Add(comboText == null ? revealedText : $"{revealedText} {comboText}");
         }
         StageBombShelterReveal(revealedBoard, banners, _matchGeneration);
+    }
+
+    // Randomly chosen phrase set for a Hive Swarm (Bomb Shelter) reveal's own banner
+    // — kept distinct between the player's and opponent's reveal within the same
+    // match (_lastHiveSwarmPhrase, reset alongside other per-match state in
+    // StartNewMatch/RematchGame) so a match where both sides reveal a hidden card
+    // doesn't repeat the same phrase. Mirrors the Swift port's
+    // hiveSwarmRevealPhrases/hiveSwarmRevealBanner.
+    private static readonly string[] HiveSwarmRevealPhrases =
+    {
+        "Hive Stings!",
+        "Swarm is Unleashed!",
+        "Swarm Awakens!",
+        "Hive is Buzzing into Action!"
+    };
+    private string? _lastHiveSwarmPhrase;
+
+    private string HiveSwarmRevealBanner(int owner)
+    {
+        var pool = HiveSwarmRevealPhrases.Where(p => p != _lastHiveSwarmPhrase).ToArray();
+        var phrase = pool.Length > 0 ? pool[Random.Shared.Next(pool.Length)] : HiveSwarmRevealPhrases[Random.Shared.Next(HiveSwarmRevealPhrases.Length)];
+        _lastHiveSwarmPhrase = phrase;
+        string possessive = owner == 1 ? "Your" : $"{Options.Difficulty.DisplayName()}'s";
+        return $"{possessive} {phrase}";
     }
 
     // Banner(s) first, then the reveal's own flip once they've mostly faded — same
