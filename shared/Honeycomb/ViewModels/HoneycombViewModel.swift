@@ -394,13 +394,15 @@ public final class HoneycombViewModel {
         // trade before anything moves.
         swapHighlightCardIds = [swapResult.preSwapPlayerCard.id, swapResult.preSwapOpponentCard.id]
 
-        // Actually animate the trade only after the "First Move" banner (2.0s) has
-        // fully cleared, not mid-banner — the trade used to start at +1.0s, stepping
-        // on the banner's own runtime. Looked up by id (not the original array
+        // Actually animate the trade only after the deal-flip has fully finished
+        // playing out (plus a deliberate pause) — the trade used to start at a flat
+        // 2.0s matching only the "First Move" banner's own runtime, which predates
+        // the deal-flip animation and could let the trade start while the last
+        // card(s) were still flipping in. Looked up by id (not the original array
         // index) in case the player already played one of the two cards during the
         // highlight pause — if so, it's skipped rather than resurrected into a slot
         // it no longer occupies.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.swapStartDelay) { [weak self] in
             guard let self, self.handSetupGeneration == generation else { return }
             // 50% slower than the original 0.6s.
             withAnimation(.easeInOut(duration: 0.9)) {
@@ -549,12 +551,32 @@ public final class HoneycombViewModel {
     // read the board (and, under Order/Chaos, to see which of their cards is
     // highlighted as the one they're about to play) before it happens.
     private static let opponentMoveDelay: TimeInterval = 2.5
-    // How long after match setup the Swap trade's card-move animation (see
-    // stageSwapAnimation) actually finishes landing — banner-clear delay (2.0s) +
-    // the move's own animated duration (0.9s). The first move (player input or the
-    // AI's opening move) waits until this point when a Swap trade is pending,
-    // instead of stepping on the trade mid-animation.
-    private static let swapAnimationCompleteDelay: TimeInterval = 2.9
+    // Matches mac HoneycombView's deal-flip runtime: 10 hand slots (5 player, then 5
+    // opponent), staggered by dealFlipStagger (0.1s) with each flip's own
+    // HoneycombFlipTiming.duration (0.4s) — the last card (overall index 9) starts at
+    // 9*0.1=0.9s and finishes at 0.9+0.4=1.3s. Must stay in sync with those View-layer
+    // constants (mirrors the Windows port's DealFlipTotalMs). iOS doesn't have the
+    // deal-flip animation yet, so this is just a no-op pause there.
+    private static let dealFlipTotalDuration: TimeInterval = 1.3
+    // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
+    // starts, so the two animations never visually overlap — mirrors the Windows
+    // port's SwapPostDealDelayMs.
+    private static let swapPostDealDelay: TimeInterval = 0.5
+    // When the Swap trade's card-move animation actually starts (see
+    // stageSwapAnimation) — the deal-flip's own runtime plus the deliberate post-deal
+    // pause above. Previously a flat 2.0s matching only the "First Move" banner's own
+    // runtime, which predates the deal-flip animation and could let the trade start
+    // while the deal-flip was still playing, or (via swapAnimationCompleteDelay
+    // below) let the first move fire before the trade's own animation had actually
+    // landed.
+    private static let swapStartDelay: TimeInterval = dealFlipTotalDuration + swapPostDealDelay
+    // How long after match setup the Swap trade's *entire* sequence (see
+    // stageSwapAnimation) actually finishes — swapStartDelay + how long the
+    // highlight is held after the trade starts (1.2s), which itself already covers
+    // the move's own 0.9s animation with room to spare. The first move (player
+    // input or the AI's opening move) waits until this point when a Swap trade is
+    // pending, instead of stepping on the trade mid-animation.
+    private static let swapAnimationCompleteDelay: TimeInterval = swapStartDelay + 1.2
     // How long a capture's winning stat(s) flash before the flip actually happens.
     private static let pointHighlightDelay: TimeInterval = 0.5
 
