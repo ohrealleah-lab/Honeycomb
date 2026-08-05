@@ -67,8 +67,8 @@ public struct WinAnimationView: View {
 
     private func setupAnimationQueue(screenSize: CGSize) {
         var queue: [Card] = []
-        for rank in (1...13).reversed() {
-            for foundation in foundations {
+        for foundation in foundations {
+            for rank in (1...13).reversed() {
                 if let card = foundation.cards.first(where: { $0.rank == rank }) {
                     queue.append(card)
                 }

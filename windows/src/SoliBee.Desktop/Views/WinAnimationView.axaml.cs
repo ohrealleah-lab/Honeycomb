@@ -168,9 +168,9 @@ public partial class WinAnimationView : UserControl
         // Kings, then all four Queens, ...) rather than draining one whole foundation
         // before starting the next, so the cascade visibly comes out of every
         // foundation stack instead of reading as "grouped by suit".
-        for (int rank = 13; rank >= 1; rank--)
+        for (int pileIdx = 0; pileIdx < foundationList.Count; pileIdx++)
         {
-            for (int pileIdx = 0; pileIdx < foundationList.Count; pileIdx++)
+            for (int rank = 13; rank >= 1; rank--)
             {
                 var card = foundationList[pileIdx].Cards.FirstOrDefault(c => c.Rank == rank);
                 if (card != null) _spawnQueue.Enqueue((card, pileIdx));
@@ -268,14 +268,12 @@ public partial class WinAnimationView : UserControl
                     new PixelSize((int)((CardWidth + 2) * scale), (int)((CardHeight + 2) * scale)),
                     new Vector(96 * scale, 96 * scale));
 
-                // Temporarily remove the physics transform so the snapshot captures the card precisely centered
-                var oldTransform = card.View.RenderTransform;
-                card.View.RenderTransform = null;
-                
-                rtb.Render(card.View);
-                
-                // Restore physics transform
-                card.View.RenderTransform = oldTransform;
+                // We snapshot the inner CardView rather than the wrapper itself.
+                // 1) The wrapper has the physics RenderTransform applied (which shifts the snapshot out of bounds).
+                // 2) The inner CardView's local Bounds.Position is (1, 1) because of the wrapper's Padding="1".
+                // rtb.Render perfectly draws it at (1, 1) inside the RTB, capturing the borders seamlessly!
+                var visualToRender = (card.View as Border)?.Child ?? card.View;
+                rtb.Render(visualToRender);
                 
                 foreach (var ghost in card.TrailViews)
                 {
