@@ -79,9 +79,6 @@
                             <DropShadowEffect BlurRadius="4" Color="White" Opacity="0.8" />
                         </TextBlock.Effect>
                     </TextBlock>
-                    
-                    <!-- Steal Highlight Border -->
-                    <Border x:Name="StealHighlightBorder" IsVisible="False" BorderBrush="Yellow" BorderThickness="8" CornerRadius="10" IsHitTestVisible="False" />
                 </Grid>
             </Border>
         </Border>
@@ -94,5 +91,14 @@
         <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="10" IsVisible="False" ClipToBounds="True" Background="White" RenderTransformOrigin="50%,50%">
             <Image x:Name="CardBackImage" Width="195" Height="276" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
         </Border>
+
+        <!-- Steal/Order/Chaos/Swap Highlight Border — a direct CardRoot sibling of
+             FlipContainer and CardBack (not nested inside CardFace) so it renders
+             regardless of whether the card is currently showing face or back. It used
+             to live inside CardFace's Grid, which meant a highlighted-but-still-hidden
+             opponent hand card (e.g. Nectar Exchange's swap highlight, or an Order/
+             Chaos mandated-card highlight on the opponent's side) never actually showed
+             the border, since CardFace itself is invisible while CardBack is showing. -->
+        <Border x:Name="StealHighlightBorder" IsVisible="False" BorderBrush="Yellow" BorderThickness="8" CornerRadius="10" IsHitTestVisible="False" />
     </Grid>
 </UserControl>
