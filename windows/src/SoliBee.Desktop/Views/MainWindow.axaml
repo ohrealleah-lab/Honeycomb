@@ -85,7 +85,7 @@
                                         <MenuItem Header="Swarm to the Death" Click="DebugBanner_Click" Tag="Honeycomb:SuddenDeath" />
                                         <Separator />
                                         <MenuItem Header="Popup: Symmetry" Click="DebugBanner_Click" Tag="Honeycomb:Same" />
-                                        <MenuItem Header="Popup: Nectar Math" Click="DebugBanner_Click" Tag="Honeycomb:Plus" />
+                                        <MenuItem Header="Popup: Hive Math" Click="DebugBanner_Click" Tag="Honeycomb:Plus" />
                                         <MenuItem Header="Popup: Queen's Fall" Click="DebugBanner_Click" Tag="Honeycomb:FallenAce" />
                                         <MenuItem Header="Popup: Combo" Click="DebugBanner_Click" Tag="Honeycomb:Combo" />
                                     </MenuItem>

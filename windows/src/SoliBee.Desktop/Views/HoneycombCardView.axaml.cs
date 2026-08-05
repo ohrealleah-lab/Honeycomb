@@ -102,6 +102,8 @@ public partial class HoneycombCardView : UserControl
             scale.Transitions = _scaleDownTransitions;
             scale.ScaleX = 1.0;
             scale.ScaleY = 1.0;
+            await Task.Delay(200);
+            if (_ruleAnimationGeneration != generation) return;
         }
         OnRuleAnimationScaleChanged?.Invoke(false);
     }

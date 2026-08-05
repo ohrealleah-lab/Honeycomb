@@ -31,7 +31,7 @@
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Total Cards Captured:" Foreground="White" FontSize="16" />
                     <TextBlock x:Name="CardsCapturedText" Grid.Row="0" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
                     
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Cards Steals (Nectar Math/Symmetry):" Foreground="White" FontSize="16" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Cards Steals (Hive Math/Symmetry):" Foreground="White" FontSize="16" />
                     <TextBlock x:Name="CardsStolenText" Grid.Row="1" Grid.Column="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" />
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Queen's Falls Triggered:" Foreground="White" FontSize="16" />

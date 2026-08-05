@@ -4,7 +4,7 @@ public enum HoneycombRule: String, Codable, CaseIterable {
     case ascension = "Pollination"
     case descension = "Smoked Out"
     case same = "Symmetry"
-    case plus = "Nectar Math"
+    case plus = "Hive Math"
     case fallenAce = "Queen's Fall"
     case reverse = "Inversion"
     case allOpen = "Clear Skies"

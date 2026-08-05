@@ -62,7 +62,7 @@ public struct HoneycombStatsView: View {
 
                     StatRowView(label: "Total Cards Flipped", value: "\(stats.cardsCaptured)")
                     StatRowView(label: "Queen's Falls", value: "\(stats.fallenAces)")
-                    StatRowView(label: "Symmetry/Nectar Math Hive Minds Triggered", value: "\(stats.samePlusTriggers)")
+                    StatRowView(label: "Symmetry/Hive Math Hive Minds Triggered", value: "\(stats.samePlusTriggers)")
                     StatRowView(label: "Cards Stolen", value: "\(stats.cardsStolen)")
                     StatRowView(label: "Times Started Over", value: "\(stats.timesStartedOver)")
 

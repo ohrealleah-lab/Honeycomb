@@ -39,7 +39,7 @@ public static class HoneycombRuleWeights
         HoneycombRule.Ascension => "Pollination",
         HoneycombRule.Descension => "Smoked Out",
         HoneycombRule.Same => "Symmetry",
-        HoneycombRule.Plus => "Nectar Math",
+        HoneycombRule.Plus => "Hive Math",
         HoneycombRule.FallenAce => "Queen's Fall",
         HoneycombRule.Reverse => "Inversion",
         HoneycombRule.AllOpen => "Clear Skies",
