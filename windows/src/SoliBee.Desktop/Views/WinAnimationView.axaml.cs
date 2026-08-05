@@ -258,8 +258,6 @@ public partial class WinAnimationView : UserControl
             // and assign it as the Source for the trail ghosts.
             if (card.TrailViews.Count > 0 && card.TrailViews[0] is Image firstGhost && firstGhost.Source == null && card.Age >= 0.1)
             {
-                card.View.Measure(new Size(CardWidth, CardHeight));
-                card.View.Arrange(new Rect(1, 1, CardWidth, CardHeight));
 
                 // Render at the display's actual scale, or the snapshot is rasterized at a
                 // fixed 96 DPI regardless of Windows UI scaling — every ghost would then look
@@ -401,14 +399,15 @@ public partial class WinAnimationView : UserControl
             AnimationCanvas.Children.Add(ghost);
         }
 
-        var cardView = new CardView { Card = card, RenderTransform = cardTx };
-        Canvas.SetLeft(cardView, startX);
-        Canvas.SetTop(cardView, startY);
-        AnimationCanvas.Children.Add(cardView);
+        var cardView = new CardView { Card = card };
+        var wrapper = new Border { Padding = new Avalonia.Thickness(1), Child = cardView, RenderTransform = cardTx };
+        Canvas.SetLeft(wrapper, startX - 1);
+        Canvas.SetTop(wrapper, startY - 1);
+        AnimationCanvas.Children.Add(wrapper);
 
         var bouncingCard = new BouncingCard
         {
-            View       = cardView,
+            View       = wrapper,
             X          = startX,
             Y          = startY,
             Vx         = _random.NextDouble() * 480 - 240,    // -240..240 px/s
@@ -441,7 +440,7 @@ public partial class WinAnimationView : UserControl
 
 public class BouncingCard
 {
-    public required CardView View { get; set; }
+    public required Control View { get; set; }
     public double X   { get; set; }
     public double Y   { get; set; }
     public double Vx  { get; set; }
