@@ -105,10 +105,10 @@
         <Grid x:Name="DealBlockedBanner" IsVisible="False" ZIndex="5" HorizontalAlignment="Center" VerticalAlignment="Center">
             <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="360">
                 <StackPanel Spacing="12" HorizontalAlignment="Center">
-                    <TextBlock Text="Cannot Deal" FontSize="28" FontWeight="Black"
+                    <TextBlock Text="Empty Column Warning" FontSize="28" FontWeight="Black"
                                Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
                                TextAlignment="Center"/>
-                    <TextBlock Text="Every tableau column must have at least one card before dealing a new row."
+                    <TextBlock Text="All tableau columns must contain at least one card before dealing from the Stock."
                                FontSize="14" Foreground="White" HorizontalAlignment="Center"
                                FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
                 </StackPanel>
