@@ -267,7 +267,16 @@ public partial class WinAnimationView : UserControl
                 var rtb = new RenderTargetBitmap(
                     new PixelSize((int)((CardWidth + 2) * scale), (int)((CardHeight + 2) * scale)),
                     new Vector(96 * scale, 96 * scale));
+
+                // Temporarily remove the physics transform so the snapshot captures the card precisely centered
+                var oldTransform = card.View.RenderTransform;
+                card.View.RenderTransform = null;
+                
                 rtb.Render(card.View);
+                
+                // Restore physics transform
+                card.View.RenderTransform = oldTransform;
+                
                 foreach (var ghost in card.TrailViews)
                 {
                     if (ghost is Image img) img.Source = rtb;
