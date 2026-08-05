@@ -603,16 +603,21 @@ public partial class HoneycombViewModel : ObservableObject
     // Swift port's HoneycombFlipTiming.duration).
     private const int DealFlipTotalMs = 4000;
     // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
-    // starts, so the two animations never visually overlap.
-    private const int SwapPostDealDelayMs = 500;
-    // How long the Nectar Exchange slide itself takes once it starts, matching the
-    // Swift port's withAnimation(.easeInOut(duration: 0.9)) — see
-    // HoneycombView.PlaySwapSlideAnimation.
-    private const int SwapSlideDurationMs = 900;
-    // How long the highlight is held after the trade starts (see
-    // StageSwapAnimation below) — already comfortably covers SwapSlideDurationMs
-    // with a 300ms buffer. Matches the Swift port's own highlight-hold duration.
-    private const int SwapHighlightHoldMs = 1200;
+    // starts, so the two animations never visually overlap. Short on purpose — the
+    // Lift beat right after this is itself part of the animation.
+    private const int SwapPostDealDelayMs = 200;
+    // The Nectar Exchange "Lift -> Flight -> Touchdown" 3-beat sequence — matches the
+    // Swift port's swapLiftDuration/swapFlightDuration/swapLandDuration
+    // (HoneycombViewModel.swift). Lift scales the two cards up with a shadow; Flight
+    // is when the actual data swap happens and the cards glide across the board;
+    // Touchdown scales them back down.
+    private const int SwapLiftMs = 500;
+    private const int SwapFlightMs = 800;
+    private const int SwapLandMs = 400;
+    private const int SwapSlideDurationMs = SwapLiftMs + SwapFlightMs + SwapLandMs;
+    // How long the highlight is held after the trade lands (see StageSwapAnimation
+    // below) — matches the Swift port's swapHighlightHoldBuffer.
+    private const int SwapHighlightHoldMs = 300;
 
     // Swap trade's real landing time — the deal-flip's own runtime plus the
     // deliberate post-deal pause (matching StageSwapAnimation's delay below) plus how
@@ -625,7 +630,7 @@ public partial class HoneycombViewModel : ObservableObject
     // stacking its normal 2.5s "thinking" pause on top of this wait.
     private async void ReleaseFirstMoveAfterSwap(int generation)
     {
-        if (!_isHeadless) await Task.Delay(DealFlipTotalMs + SwapPostDealDelayMs + SwapHighlightHoldMs);
+        if (!_isHeadless) await Task.Delay(DealFlipTotalMs + SwapPostDealDelayMs + SwapSlideDurationMs + SwapHighlightHoldMs);
         if (generation != _matchGeneration || !IsPlaying) return;
 
         _isAnimating = false;
@@ -647,22 +652,39 @@ public partial class HoneycombViewModel : ObservableObject
     // need to re-derive any of this by searching hand arrays after the fact.
     public event Action<HoneycombCard, HoneycombCard, int, int>? OnSwapLanded;
 
+    // Fires at the very start of the 3-beat sequence, before any data changes — lets
+    // the view scale the two pre-swap cards up in place (with a shadow) for the
+    // "Lift" beat, and play the lift-off whoosh. Matches the Swift port's
+    // swapAnimationPhase == .lifting.
+    public event Action<int, int>? OnSwapLifting;
+
     // Applies the trade only once the initial deal-flip has fully finished playing out
     // *plus* a deliberate SwapPostDealDelayMs pause — it used to apply instantly at
     // match setup (stepping on the "First Move" banner), then later just matched the
     // banner's own 2.0s runtime, which itself landed mid-deal-flip once the deal-flip
     // animation was added. Keeps the highlight up through the slide animation
-    // afterward before clearing it.
+    // afterward before clearing it. Mirrors the Swift port's 3-beat
+    // Lift -> Flight -> Touchdown sequence (HoneycombViewModel.stageSwapAnimation).
     private async void StageSwapAnimation(PendingSwap swap, int generation)
     {
         if (!_isHeadless) await Task.Delay(DealFlipTotalMs + SwapPostDealDelayMs);
         if (generation != _matchGeneration || !IsPlaying) return;
 
+        // Beat 1: Lift — scale the two pre-swap cards up in place, no data change yet.
+        OnSwapLifting?.Invoke(swap.PlayerIndex, swap.OpponentIndex);
+        if (!_isHeadless) await Task.Delay(SwapLiftMs);
+        if (generation != _matchGeneration || !IsPlaying) return;
+
+        // Beat 2: Flight — the actual trade lands; the view slides ghosts across.
         ApplySwap(swap);
         NotifyStateChanged();
         OnSwapLanded?.Invoke(swap.PlayerCard, swap.OpponentCard, swap.PlayerIndex, swap.OpponentIndex);
 
-        // 50% slower than the original 0.8s post-swap highlight hold.
+        // Beats 2+3 (Flight + Touchdown) run inside the view's own animation loop —
+        // just wait out their combined duration here before continuing.
+        if (!_isHeadless) await Task.Delay(SwapFlightMs + SwapLandMs);
+        if (generation != _matchGeneration || !IsPlaying) return;
+
         if (!_isHeadless) await Task.Delay(SwapHighlightHoldMs);
         if (generation != _matchGeneration || !IsPlaying) return;
 

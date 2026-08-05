@@ -315,6 +315,14 @@ public final class HoneycombViewModel {
     // Highlighted (thick yellow border) while a Swap trade's on-screen animation is
     // playing out, so the two traded cards are visually called out.
     public var swapHighlightCardIds: Set<String> = []
+    // Nectar Exchange's 3-beat "lift, fly, land" animation (mirrors FFXIV Triple
+    // Triad's card-swap flourish) — drives the scale/shadow HoneycombView applies
+    // to the two swapHighlightCardIds cards. See stageSwapAnimation for the timing
+    // that transitions this.
+    public enum SwapAnimationPhase {
+        case idle, lifting, moving, landing
+    }
+    public private(set) var swapAnimationPhase: SwapAnimationPhase = .idle
     // Invalidates a pending deferred Swap-reveal closure the same way aiMoveGeneration
     // guards AI move computations — bumped on every new match/round so a stale timer
     // from a match the player already left can't reach into the new one.
@@ -399,28 +407,66 @@ public final class HoneycombViewModel {
         // playing out (plus a deliberate pause) — the trade used to start at a flat
         // 2.0s matching only the "First Move" banner's own runtime, which predates
         // the deal-flip animation and could let the trade start while the last
-        // card(s) were still flipping in. Looked up by id (not the original array
-        // index) in case the player already played one of the two cards during the
-        // highlight pause — if so, it's skipped rather than resurrected into a slot
-        // it no longer occupies.
+        // card(s) were still flipping in.
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.swapStartDelay) { [weak self] in
             guard let self, self.handSetupGeneration == generation else { return }
-            // 50% slower than the original 0.6s.
-            withAnimation(.easeInOut(duration: 0.9)) {
-                if let idx = self.playerHand.firstIndex(where: { $0.id == swapResult.preSwapPlayerCard.id }) {
-                    self.playerHand[idx] = swapResult.finalPlayerCard
-                }
-                if let idx = self.opponentHand.firstIndex(where: { $0.id == swapResult.preSwapOpponentCard.id }) {
-                    self.opponentHand[idx] = swapResult.finalOpponentCard
-                }
+
+            // Beat 1 — The Lift: scale up + shadow, cards not yet relocated. See
+            // HoneycombView's swap rendering (scaleEffect/shadow keyed off
+            // swapAnimationPhase, applied only to swapHighlightCardIds) for the
+            // visual side of this; the phase transition here just drives it.
+            withAnimation(.easeInOut(duration: Self.swapLiftDuration)) {
+                self.swapAnimationPhase = .lifting
             }
-            // Same two ids throughout (identity-preserving swap), so the
-            // highlight just keeps tracking them across the move. Scaled up from
-            // 0.8s alongside the slower animation so the highlight still covers
-            // the whole move instead of clearing early.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                guard self.handSetupGeneration == generation else { return }
-                self.swapHighlightCardIds.removeAll()
+            // "whoosh" doesn't exist as its own asset yet — shuffle is the closest
+            // existing sound for a lift-off flourish. Swap this out once a
+            // dedicated whoosh effect is added.
+            if self.options.isSoundEnabled {
+                UISound.play(named: "shuffle", enabled: true)
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.swapLiftDuration) { [weak self] in
+                guard let self, self.handSetupGeneration == generation else { return }
+
+                // Beat 2 — The Flight: the actual data-level trade, animated across
+                // the full flight duration so matchedGeometryEffect interpolates
+                // the cross-hand position change while scale stays elevated from
+                // Beat 1. Looked up by id (not the original array index) in case
+                // the player already played one of the two cards during the
+                // highlight pause — if so, it's skipped rather than resurrected
+                // into a slot it no longer occupies.
+                self.swapAnimationPhase = .moving
+                withAnimation(.easeInOut(duration: Self.swapFlightDuration)) {
+                    if let idx = self.playerHand.firstIndex(where: { $0.id == swapResult.preSwapPlayerCard.id }) {
+                        self.playerHand[idx] = swapResult.finalPlayerCard
+                    }
+                    if let idx = self.opponentHand.firstIndex(where: { $0.id == swapResult.preSwapOpponentCard.id }) {
+                        self.opponentHand[idx] = swapResult.finalOpponentCard
+                    }
+                }
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.swapFlightDuration) { [weak self] in
+                    guard let self, self.handSetupGeneration == generation else { return }
+
+                    // Beat 3 — The Touchdown: scale back down to normal, shadow fades.
+                    withAnimation(.easeInOut(duration: Self.swapLandDuration)) {
+                        self.swapAnimationPhase = .landing
+                    }
+                    if self.options.isSoundEnabled {
+                        UISound.play(named: "snap", enabled: true)
+                    }
+
+                    // Same two ids throughout (identity-preserving swap), so the
+                    // highlight keeps tracking them across all 3 beats. Held past
+                    // the Touchdown's own duration by swapHighlightHoldBuffer so it
+                    // doesn't clear right as the scale-down animation is still
+                    // finishing.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Self.swapLandDuration + Self.swapHighlightHoldBuffer) { [weak self] in
+                        guard let self, self.handSetupGeneration == generation else { return }
+                        self.swapAnimationPhase = .idle
+                        self.swapHighlightCardIds.removeAll()
+                    }
+                }
             }
         }
     }
@@ -562,8 +608,10 @@ public final class HoneycombViewModel {
     private static let dealFlipTotalDuration: TimeInterval = 4.0
     // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
     // starts, so the two animations never visually overlap — mirrors the Windows
-    // port's SwapPostDealDelayMs.
-    private static let swapPostDealDelay: TimeInterval = 0.5
+    // port's SwapPostDealDelayMs. Short on purpose: the Lift beat right after this
+    // is itself part of the animation (cards visibly scaling up), so this alone
+    // should read as a beat, not a stall.
+    private static let swapPostDealDelay: TimeInterval = 0.2
     // When the Swap trade's card-move animation actually starts (see
     // stageSwapAnimation) — the deal-flip's own runtime plus the deliberate post-deal
     // pause above. Previously a flat 2.0s matching only the "First Move" banner's own
@@ -572,13 +620,24 @@ public final class HoneycombViewModel {
     // below) let the first move fire before the trade's own animation had actually
     // landed.
     private static let swapStartDelay: TimeInterval = dealFlipTotalDuration + swapPostDealDelay
+    // Nectar Exchange's 3-beat "lift, fly, land" animation durations — see
+    // stageSwapAnimation, which transitions swapAnimationPhase through .lifting/
+    // .moving/.landing on exactly these timings. Total 1.7s (was a flat 0.9s
+    // single-beat slide before this).
+    private static let swapLiftDuration: TimeInterval = 0.5
+    private static let swapFlightDuration: TimeInterval = 0.8
+    private static let swapLandDuration: TimeInterval = 0.4
+    private static let swapTotalMoveDuration: TimeInterval = swapLiftDuration + swapFlightDuration + swapLandDuration
+    // Same 0.3s buffer the old single-beat design held past its own move duration,
+    // so the highlight doesn't clear right as the Touchdown scale-down is still
+    // finishing.
+    private static let swapHighlightHoldBuffer: TimeInterval = 0.3
     // How long after match setup the Swap trade's *entire* sequence (see
-    // stageSwapAnimation) actually finishes — swapStartDelay + how long the
-    // highlight is held after the trade starts (1.2s), which itself already covers
-    // the move's own 0.9s animation with room to spare. The first move (player
-    // input or the AI's opening move) waits until this point when a Swap trade is
-    // pending, instead of stepping on the trade mid-animation.
-    private static let swapAnimationCompleteDelay: TimeInterval = swapStartDelay + 1.2
+    // stageSwapAnimation) actually finishes — swapStartDelay + all 3 beats +
+    // the highlight-hold buffer. The first move (player input or the AI's
+    // opening move) waits until this point when a Swap trade is pending,
+    // instead of stepping on the trade mid-animation.
+    private static let swapAnimationCompleteDelay: TimeInterval = swapStartDelay + swapTotalMoveDuration + swapHighlightHoldBuffer
     // How long a capture's winning stat(s) flash before the flip actually happens.
     private static let pointHighlightDelay: TimeInterval = 0.5
 

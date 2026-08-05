@@ -106,6 +106,7 @@ public partial class HoneycombView : UserControl
             {
                 _vm.PropertyChanged += Vm_PropertyChanged;
                 _vm.OnFlashBanner += Vm_OnFlashBanner;
+                _vm.OnSwapLifting += Vm_OnSwapLifting;
                 _vm.OnSwapLanded += Vm_OnSwapLanded;
                 Refresh(_vm);
             }
@@ -119,6 +120,34 @@ public partial class HoneycombView : UserControl
             var duration = message.StartsWith("First Move:") ? TimeSpan.FromSeconds(2) : (TimeSpan?)null;
             RuleToast.Flash(message, duration);
         });
+    }
+
+    // Beat 1 (Lift) of the Nectar Exchange 3-beat sequence — scales the two
+    // pre-swap cards up in place with a shadow, matching the Swift port's
+    // SwapLiftEffect modifier (swapAnimationPhase == .lifting). Runs before any
+    // data change, so it operates on the real hand-slot views, not ghosts.
+    private void Vm_OnSwapLifting(int playerIndex, int opponentIndex)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            SoundService.PlayShuffle();
+            if (playerIndex >= 0 && playerIndex < _playerHandViews.Length) ApplyLift(_playerHandViews[playerIndex]);
+            if (opponentIndex >= 0 && opponentIndex < _opponentHandViews.Length) ApplyLift(_opponentHandViews[opponentIndex]);
+        });
+    }
+
+    private static void ApplyLift(Control view)
+    {
+        view.RenderTransform = new ScaleTransform(1.75, 1.75);
+        view.ZIndex = 100;
+        view.Effect = new Avalonia.Media.DropShadowEffect { Color = Colors.Black, OffsetX = 0, OffsetY = 0, BlurRadius = 20, Opacity = 0.5 };
+    }
+
+    private static void ClearLift(Control view)
+    {
+        view.RenderTransform = null;
+        view.ZIndex = 0;
+        view.Effect = null;
     }
 
     // Nectar Exchange (Swap) trade landed — the ViewModel already applied it (and
@@ -155,10 +184,16 @@ public partial class HoneycombView : UserControl
 
         var size = playerSlot.Bounds.Size;
 
+        // Lift already scaled/shadowed the real slots; the ghosts pick up right
+        // where that left off so there's no visible pop at the handoff.
+        ClearLift(playerSlot);
+        ClearLift(opponentSlot);
+
         HoneycombCardView MakeGhost(HoneycombCard card, Point start)
         {
             var ghost = new HoneycombCardView { Width = size.Width, Height = size.Height, IsHitTestVisible = false };
             _ = ghost.RenderCard(card);
+            ApplyLift(ghost);
             Canvas.SetLeft(ghost, start.X);
             Canvas.SetTop(ghost, start.Y);
             _dragCanvas.Children.Add(ghost);
@@ -171,12 +206,14 @@ public partial class HoneycombView : UserControl
         playerSlot.Opacity = 0;
         opponentSlot.Opacity = 0;
 
-        const int durationMs = 900;
         const int stepMs = 16;
-        var startTime = Environment.TickCount64;
+
+        // Beat 2: Flight — ghosts glide across the board at full 1.75x lift scale.
+        const int flightMs = 800;
+        var flightStart = Environment.TickCount64;
         while (true)
         {
-            double t = Math.Min(1.0, (Environment.TickCount64 - startTime) / (double)durationMs);
+            double t = Math.Min(1.0, (Environment.TickCount64 - flightStart) / (double)flightMs);
             // Cubic ease-in-out, matching SwiftUI's .easeInOut curve shape.
             double eased = t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
 
@@ -189,6 +226,27 @@ public partial class HoneycombView : UserControl
             var oY = opponentPos.Value.Y + (playerPos.Value.Y - opponentPos.Value.Y) * eased;
             Canvas.SetLeft(opponentGhost, oX);
             Canvas.SetTop(opponentGhost, oY);
+
+            if (t >= 1.0) break;
+            await Task.Delay(stepMs);
+        }
+
+        // Beat 3: Touchdown — scale/shadow ease back down to normal at the
+        // destination slot, with a landing "snap".
+        SoundService.PlaySnap();
+        const int landMs = 400;
+        var landStart = Environment.TickCount64;
+        while (true)
+        {
+            double t = Math.Min(1.0, (Environment.TickCount64 - landStart) / (double)landMs);
+            double eased = t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
+            double scale = 1.75 - 0.75 * eased;
+            double shadowOpacity = 0.5 * (1 - eased);
+
+            playerGhost.RenderTransform = new ScaleTransform(scale, scale);
+            opponentGhost.RenderTransform = new ScaleTransform(scale, scale);
+            playerGhost.Effect = new Avalonia.Media.DropShadowEffect { Color = Colors.Black, OffsetX = 0, OffsetY = 0, BlurRadius = 20 * (1 - eased), Opacity = shadowOpacity };
+            opponentGhost.Effect = new Avalonia.Media.DropShadowEffect { Color = Colors.Black, OffsetX = 0, OffsetY = 0, BlurRadius = 20 * (1 - eased), Opacity = shadowOpacity };
 
             if (t >= 1.0) break;
             await Task.Delay(stepMs);
@@ -404,7 +462,6 @@ public partial class HoneycombView : UserControl
                 {
                     if (isOrder && i == 0) highlight = true;
                     else if (isChaos && state.PlayerChaosIndex.HasValue && state.PlayerChaosIndex.Value == i) highlight = true;
-                    else if (state.SwapHighlightIds.Contains(displayPlayerHand[i].UniqueInstanceId)) highlight = true;
                 }
                 
                 if (vm.ActiveHint.HasValue && vm.ActiveHint.Value.handIndex == i) highlight = true;
@@ -440,7 +497,6 @@ public partial class HoneycombView : UserControl
                 {
                     if (isOrder && i == 0) highlight = true;
                     else if (isChaos && state.OpponentChaosIndex.HasValue && state.OpponentChaosIndex.Value == i) highlight = true;
-                    else if (state.SwapHighlightIds.Contains(state.OpponentHand[i].UniqueInstanceId)) highlight = true;
                 }
             }
             else

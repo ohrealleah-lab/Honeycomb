@@ -41,6 +41,27 @@ fileprivate struct HoneycombFlipContainer<Front: View, Back: View>: View {
     }
 }
 
+// Nectar Exchange's Lift/Touchdown scale+shadow — 1.75x scale and a deep shadow
+// while lifting/moving, smoothly back to 1.0x/no shadow on landing. zIndex lifts
+// the animating card above the board cells its interpolated position passes over
+// mid-flight (the hand columns sit either side of the board in the same HStack,
+// so without this the card would render underneath the board during the cross).
+fileprivate struct SwapLiftEffect: ViewModifier {
+    let isAnimating: Bool
+    let phase: HoneycombViewModel.SwapAnimationPhase
+
+    private var isElevated: Bool {
+        isAnimating && (phase == .lifting || phase == .moving)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(isElevated ? 1.75 : 1.0)
+            .shadow(color: .black.opacity(isElevated ? 0.5 : 0), radius: isElevated ? 20 : 0)
+            .zIndex(isAnimating ? 100 : 0)
+    }
+}
+
 public struct HoneycombView: View {
     @Bindable var viewModel: HoneycombViewModel
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
@@ -338,6 +359,13 @@ public struct HoneycombView: View {
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
                     .frame(width: Self.handColumnWidth)
+                    // Nectar Exchange's ballooned Lift/Flight card overflows well past
+                    // this column's own frame width toward the board — without this,
+                    // the Board VStack (a sibling in this same HStack, declared after
+                    // this column) draws on top of it and clips it visually at the
+                    // column boundary. Raised only during the animation so normal play
+                    // (drag-to-board, etc.) keeps its usual layering.
+                    .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
 
                     Spacer()
 
@@ -430,6 +458,8 @@ public struct HoneycombView: View {
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
                     .frame(width: Self.handColumnWidth)
+                    // See the matching comment on the player hand's own .zIndex above.
+                    .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
                 }
                 .padding(.horizontal, Self.boardRowHorizontalPadding)
                 .padding(.top, Self.boardRowVerticalPadding)
@@ -938,6 +968,11 @@ public struct HoneycombView: View {
 
         HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: false)
             .matchedGeometryEffect(id: card.id, in: swapAnimationNamespace)
+            // Nectar Exchange's Lift/Touchdown scale+shadow — applied *outside*
+            // matchedGeometryEffect (as a later modifier) so the card visually
+            // balloons while its tracked frame (what matchedGeometryEffect
+            // interpolates across the hand columns) stays at normal size.
+            .modifier(SwapLiftEffect(isAnimating: viewModel.swapHighlightCardIds.contains(card.id), phase: viewModel.swapAnimationPhase))
             .opacity(draggedHandCard?.id == card.id ? 0.0 : 1.0)
             .onTapGesture {
                 if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
@@ -980,10 +1015,6 @@ public struct HoneycombView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.yellow, lineWidth: isMandated ? 14 : 0)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.yellow, lineWidth: viewModel.swapHighlightCardIds.contains(card.id) ? 14 : 0)
-            )
             // handIndex is nil once the match ends (displayHand switches to
             // playerStartingDeck, whose card ids no longer appear in the now-empty
             // playerHand) — guarded explicitly rather than just comparing Optionals,
@@ -1013,13 +1044,10 @@ public struct HoneycombView: View {
 
         HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: flipped)
             .matchedGeometryEffect(id: card.id, in: swapAnimationNamespace)
+            .modifier(SwapLiftEffect(isAnimating: viewModel.swapHighlightCardIds.contains(card.id), phase: viewModel.swapAnimationPhase))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.yellow, lineWidth: isMandated ? 14 : 0)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.yellow, lineWidth: viewModel.swapHighlightCardIds.contains(card.id) ? 14 : 0)
             )
     }
 
