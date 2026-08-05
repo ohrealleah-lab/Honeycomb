@@ -581,18 +581,30 @@ public partial class HoneycombViewModel : ObservableObject
         }
     }
 
-    // Swap trade's real landing time — the banner-clear delay (2.0s, matching
-    // StageSwapAnimation) plus the slide animation's own duration (0.9s, matching
-    // the Swift port's withAnimation(.easeInOut(duration: 0.9)) — see
-    // HoneycombView.PlaySwapSlideAnimation). The first move — player input or the
-    // AI's opening move — waits until here instead of stepping on the trade
-    // mid-animation. StartTurn() already ran above and skipped its own AI-trigger
-    // (blocked by _isAnimating), so this explicitly resumes it once the wait is
-    // over — calling RunAITurn(skipPacingDelay: true) rather than stacking its
-    // normal 2.5s "thinking" pause on top of this wait.
+    // The initial deal-flip's own total runtime: 10 hand slots (5 player, then 5
+    // opponent — see HoneycombView.Refresh, which awaits each slot's RenderCard/
+    // PlayRevealAnimation in turn rather than animating them in parallel) x
+    // PlayRevealAnimation's ~224ms each (two 7-step loops at 16ms/step).
+    private const int DealFlipTotalMs = 2240;
+    // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
+    // starts, so the two animations never visually overlap.
+    private const int SwapPostDealDelayMs = 500;
+    // How long the Nectar Exchange slide itself takes once it starts, matching the
+    // Swift port's withAnimation(.easeInOut(duration: 0.9)) — see
+    // HoneycombView.PlaySwapSlideAnimation.
+    private const int SwapSlideDurationMs = 900;
+
+    // Swap trade's real landing time — the deal-flip's own runtime plus the
+    // deliberate post-deal pause (matching StageSwapAnimation's delay below) plus the
+    // slide animation's own duration. The first move — player input or the AI's
+    // opening move — waits until here instead of stepping on the trade mid-animation.
+    // StartTurn() already ran above and skipped its own AI-trigger (blocked by
+    // _isAnimating), so this explicitly resumes it once the wait is over — calling
+    // RunAITurn(skipPacingDelay: true) rather than stacking its normal 2.5s "thinking"
+    // pause on top of this wait.
     private async void ReleaseFirstMoveAfterSwap(int generation)
     {
-        if (!_isHeadless) await Task.Delay(2900);
+        if (!_isHeadless) await Task.Delay(DealFlipTotalMs + SwapPostDealDelayMs + SwapSlideDurationMs);
         if (generation != _matchGeneration || !IsPlaying) return;
 
         _isAnimating = false;
@@ -614,13 +626,15 @@ public partial class HoneycombViewModel : ObservableObject
     // need to re-derive any of this by searching hand arrays after the fact.
     public event Action<HoneycombCard, HoneycombCard, int, int>? OnSwapLanded;
 
-    // Applies the trade only once the "First Move" banner (2.0s) has fully cleared —
-    // it used to apply instantly at match setup, stepping on the banner's own
-    // runtime — then keeps the highlight up through the slide animation before
-    // clearing it.
+    // Applies the trade only once the initial deal-flip has fully finished playing out
+    // *plus* a deliberate SwapPostDealDelayMs pause — it used to apply instantly at
+    // match setup (stepping on the "First Move" banner), then later just matched the
+    // banner's own 2.0s runtime, which itself landed mid-deal-flip once the deal-flip
+    // animation was added. Keeps the highlight up through the slide animation
+    // afterward before clearing it.
     private async void StageSwapAnimation(PendingSwap swap, int generation)
     {
-        if (!_isHeadless) await Task.Delay(2000);
+        if (!_isHeadless) await Task.Delay(DealFlipTotalMs + SwapPostDealDelayMs);
         if (generation != _matchGeneration || !IsPlaying) return;
 
         ApplySwap(swap);
