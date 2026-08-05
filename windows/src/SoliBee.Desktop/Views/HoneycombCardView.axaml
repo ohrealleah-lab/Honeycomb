@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
              x:Class="SoliBee.Desktop.Views.HoneycombCardView"
+             ClipToBounds="False"
              PointerPressed="Card_PointerPressed">
 
     <Grid x:Name="CardRoot" Width="195" Height="276" RenderTransformOrigin="50%,50%">
@@ -18,7 +19,7 @@
         <!-- Flip Container for animation -->
         <Border x:Name="FlipContainer" RenderTransformOrigin="50%,50%">
             <!-- Card Face -->
-            <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="1.5" Background="#F0F0F0" CornerRadius="10" ClipToBounds="True">
+            <Border x:Name="CardFace" BorderBrush="#D9000000" BorderThickness="1.5" Background="#F0F0F0" CornerRadius="10">
                 <Grid>
                     <!-- Center Suit Glyph -->
                     <Image x:Name="SuitImage" Width="150" Height="150" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
@@ -98,7 +99,7 @@
              art down to 128×181 first, then blew the result back up ~1.5x to
              Honeycomb's actual 195×276 card, blurring it unconditionally regardless of
              window size — see CardView.ResolveCardBackBitmap's comment). -->
-        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="10" IsVisible="False" ClipToBounds="True" Background="White" RenderTransformOrigin="50%,50%">
+        <Border x:Name="CardBack" BorderBrush="#D9000000" BorderThickness="1.5" CornerRadius="10" IsVisible="False" Background="White" RenderTransformOrigin="50%,50%">
             <Image x:Name="CardBackImage" Width="195" Height="276" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
         </Border>
 

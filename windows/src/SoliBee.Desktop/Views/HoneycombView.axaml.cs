@@ -73,6 +73,8 @@ public partial class HoneycombView : UserControl
                 Background = new SolidColorBrush(Color.Parse("#59000000")),
                 CornerRadius = new Avalonia.CornerRadius(8),
                 Margin = new Avalonia.Thickness(4),
+                Width = 195,
+                Height = 276,
                 Tag = i
             };
             cellBorder.PointerPressed += Cell_PointerPressed;
@@ -930,7 +932,7 @@ public partial class HoneycombView : UserControl
         {
             _bannerActive = true;
             if (kind == "FallenAce") RuleToast.Flash($"{HoneycombRule.FallenAce.DisplayName()}!");
-            else if (kind == "Combo") RuleToast.Flash("Combo x2!");
+            else if (kind == "Combo") RuleToast.Flash("HIVE MIND x2!");
             else if (kind == "SuddenDeath") RuleToast.Flash($"{HoneycombRule.SuddenDeath.DisplayName()}!");
             else if (kind == "Same") RuleToast.Flash($"{HoneycombRule.Same.DisplayName()}!");
             else if (kind == "Plus") RuleToast.Flash($"{HoneycombRule.Plus.DisplayName()}!");

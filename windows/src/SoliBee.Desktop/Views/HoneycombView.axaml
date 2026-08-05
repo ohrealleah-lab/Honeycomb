@@ -121,7 +121,7 @@
             </Border>
 
             <!-- Board (3x3 Grid) -->
-            <Grid x:Name="BoardGrid" Grid.Row="1" Grid.Column="2" Width="600" Height="860" ColumnDefinitions="*,*,*" RowDefinitions="*,*,*" Margin="20" ClipToBounds="False">
+            <Grid x:Name="BoardGrid" Grid.Row="1" Grid.Column="2" Width="609" Height="852" ColumnDefinitions="*,*,*" RowDefinitions="*,*,*" Margin="20" ClipToBounds="False">
                 <!-- Placeholders and CardViews populated in code-behind -->
             </Grid>
 

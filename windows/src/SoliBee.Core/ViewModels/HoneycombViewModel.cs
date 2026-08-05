@@ -1109,7 +1109,7 @@ public partial class HoneycombViewModel : ObservableObject
         else if (board.LastSameTriggered) parts.Add($"{sameName}!");
         else if (board.LastPlusTriggered) parts.Add($"{plusName}!");
         if (board.LastFallenAceTriggered) parts.Add($"{HoneycombRule.FallenAce.DisplayName()}!");
-        if (board.LastComboFlipCount > 0) parts.Add($"COMBO x{board.LastComboFlipCount}!");
+        if (board.LastComboFlipCount > 0) parts.Add($"HIVE MIND x{board.LastComboFlipCount}!");
         return parts.Count == 0 ? null : string.Join(" ", parts);
     }
 

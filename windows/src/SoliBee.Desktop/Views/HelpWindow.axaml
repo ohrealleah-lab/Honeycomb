@@ -279,7 +279,7 @@
                         <StackPanel Spacing="4">
                             <TextBlock Text="🎮 Core Gameplay &amp; Mechanics" Classes="help-heading"/>
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
-                                       Text="• Capturing: When you place a card adjacent to an opponent's card, your facing stat is compared against their opposite facing stat. If your stat is higher, the enemy card is captured (flipped to your color). Stat 10 is rendered as &quot;A&quot;.&#x0a;• Combos: A card captured during a turn immediately checks its own adjacent neighbors, triggering a chain-reaction capture sequence!"/>
+                                       Text="• Capturing: When you place a card adjacent to an opponent's card, your facing stat is compared against their opposite facing stat. If your stat is higher, the enemy card is captured (flipped to your color). Stat 10 is rendered as &quot;A&quot;.&#x0a;• Hive Minds: A card captured during a turn immediately checks its own adjacent neighbors, triggering a chain-reaction capture sequence!"/>
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Text="🎲 Match Modifiers &amp; Special Rules" Classes="help-heading"/>

@@ -1298,7 +1298,7 @@ public final class HoneycombViewModel {
         // Combo = a Same/Plus-triggered flip going on to capture its own neighbors —
         // not just any move that happens to flip 2+ ordinary neighbors at once.
         if board.lastComboFlipCount > 0 {
-            parts.append("COMBO x\(board.lastComboFlipCount)!")
+            parts.append("HIVE MIND x\(board.lastComboFlipCount)!")
         }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
