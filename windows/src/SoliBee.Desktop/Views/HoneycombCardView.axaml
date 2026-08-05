@@ -4,7 +4,17 @@
              x:Class="SoliBee.Desktop.Views.HoneycombCardView"
              PointerPressed="Card_PointerPressed">
 
-    <Grid x:Name="CardRoot" Width="195" Height="276">
+    <Grid x:Name="CardRoot" Width="195" Height="276" RenderTransformOrigin="50%,50%">
+        <Grid.RenderTransform>
+            <ScaleTransform ScaleX="1" ScaleY="1">
+                <ScaleTransform.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="ScaleX" Duration="0:0:0.2" Easing="CubicEaseOut" />
+                        <DoubleTransition Property="ScaleY" Duration="0:0:0.2" Easing="CubicEaseOut" />
+                    </Transitions>
+                </ScaleTransform.Transitions>
+            </ScaleTransform>
+        </Grid.RenderTransform>
         <!-- Flip Container for animation -->
         <Border x:Name="FlipContainer" RenderTransformOrigin="50%,50%">
             <!-- Card Face -->

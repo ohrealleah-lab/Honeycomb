@@ -86,6 +86,10 @@ public partial class HoneycombView : UserControl
                 Margin = new Avalonia.Thickness(4),
                 IsHitTestVisible = true // Changed to allow pointer events on board cards for Steal flow
             };
+            cardView.OnRuleAnimationScaleChanged += (isAnimating) =>
+            {
+                cardView.ZIndex = isAnimating ? 100 : 0;
+            };
             Grid.SetRow(cardView, i / 3);
             Grid.SetColumn(cardView, i % 3);
             BoardGrid.Children.Add(cardView);
@@ -606,7 +610,8 @@ public partial class HoneycombView : UserControl
             }
             else
             {
-                await _boardCards[i].RenderCard(cell.Card, faceDown: cell.Card!.IsFaceDown, hIdx: -1, cIdx: i);
+                await _boardCards[i].RenderCard(cell.Card, faceDown: cell.Card!.IsFaceDown, hIdx: -1, cIdx: i,
+                    isCaptureAttacker: state.CaptureAttackerIds.Contains(cell.Card.UniqueInstanceId));
 
                 // Highlight cards eligible to be double-clicked and stolen
                 _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));

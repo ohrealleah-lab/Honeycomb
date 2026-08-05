@@ -67,4 +67,13 @@ public class HoneycombState
     // time (including when the option is off, in which case captures apply instantly).
     public int? PointHighlightCellIndex { get; set; }
     public HashSet<int> PointHighlightStatIndices { get; set; } = new();
+
+    // UniqueInstanceId(s) of whichever board card(s) just directly *caused* a capture
+    // (the placed card itself, or a Bomb Shelter/Hive Swarm reveal that captured a
+    // neighbor) — not the cards they captured. HoneycombCardView pops the attacker's
+    // own scale off this, so a capture reads as the attacking card lunging/growing,
+    // not the victim swelling up. Transient like PointHighlight above — set at the
+    // same moment the capture commits, cleared shortly after. Mirrors the Swift
+    // port's captureAttackerIds.
+    public HashSet<Guid> CaptureAttackerIds { get; set; } = new();
 }

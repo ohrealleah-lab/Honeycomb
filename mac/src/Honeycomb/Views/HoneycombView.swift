@@ -104,8 +104,13 @@ public struct HoneycombView: View {
     private static let boardRowVerticalPadding: CGFloat = 20
     // Space below the hand columns/board down to the window's bottom edge — kept
     // separate from boardRowVerticalPadding (which still governs the top) since the
-    // two edges don't need to match.
-    private static let boardRowBottomPadding: CGFloat = 40
+    // two edges don't need to match. Large enough to hold the bottom-row hand card's
+    // 1.75x Nectar Exchange Lift/Flight balloon (SwapLiftEffect) plus its shadow blur —
+    // that balloon overflows ~104pt below the card's own unscaled box (0.375 *
+    // handCardSize.height) — since this padding is inside intrinsicContentSize, whose
+    // scaled height is exactly what recomputeScale fits to the window, anything less
+    // left the balloon rendering past the window's bottom edge and visibly clipped.
+    private static let boardRowBottomPadding: CGFloat = 150
     // Spacing between the hand columns, board, and the Spacers separating them —
     // the HStack has 5 children (hand, Spacer, board, Spacer, hand), so 4 gaps.
     private static let boardRowSpacing: CGFloat = 16
@@ -149,6 +154,7 @@ public struct HoneycombView: View {
     @State private var dragLocation: CGPoint = .zero
     @State private var dragOffset: CGSize = .zero
     @State private var boardCellFrames: [Int: CGRect] = [:]
+    @State private var animatingBoardIndices: Set<Int> = []
 
     // Banner state
     @State private var showingRuleBanner = false
@@ -398,7 +404,7 @@ public struct HoneycombView: View {
                                                 let highlightIndices: Set<Int> = viewModel.pointHighlight?.cardId == card.id
                                                     ? viewModel.pointHighlight!.statIndices
                                                     : []
-                                                HoneycombCardView(card: card, size: Self.boardCardSize, isFlipped: false, stealHighlight: stealEligible, highlightedStatIndices: highlightIndices)
+                                                HoneycombCardView(card: card, size: Self.boardCardSize, isFlipped: false, stealHighlight: stealEligible, highlightedStatIndices: highlightIndices, isCaptureAttacker: viewModel.captureAttackerIds.contains(card.id))
                                             }
                                         }
                                         .modifier(HintHighlightModifier(isHighlighted: viewModel.activeHint?.boardIndex == index))
@@ -433,8 +439,35 @@ public struct HoneycombView: View {
                                                     boardCellFrames[index] = newFrame
                                                 }
                                         })
+                                        // zIndex bump for whichever card just did the capturing (see
+                                        // HoneycombCardView's own isCaptureAttacker/ruleTriggerScale) —
+                                        // not the card it captured, which doesn't enlarge at all
+                                        // anymore. `.onChange` catches a Hive Swarm reveal (this same
+                                        // cell was already mounted before its own capture resolves);
+                                        // `.onAppear` catches the far more common case of a freshly
+                                        // placed card that captures immediately, which mounts already
+                                        // flagged as the attacker — too late for `.onChange` to see a
+                                        // false -> true transition.
+                                        .onChange(of: viewModel.captureAttackerIds.contains(cell.card?.id ?? "")) { _, isAttacker in
+                                            if isAttacker {
+                                                animatingBoardIndices.insert(index)
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                                    animatingBoardIndices.remove(index)
+                                                }
+                                            }
+                                        }
+                                        .onAppear {
+                                            if viewModel.captureAttackerIds.contains(cell.card?.id ?? "") {
+                                                animatingBoardIndices.insert(index)
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                                    animatingBoardIndices.remove(index)
+                                                }
+                                            }
+                                        }
+                                        .zIndex(animatingBoardIndices.contains(index) ? 100 : 0)
                                     }
                                 }
+                                .zIndex(animatingBoardIndices.contains(where: { $0 / 3 == row }) ? 100 : 0)
                             }
                         }
                     }

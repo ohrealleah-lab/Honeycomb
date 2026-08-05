@@ -246,6 +246,24 @@ public final class HoneycombViewModel {
     // HoneycombSnapshot (undo doesn't need to rewind a mid-animation highlight).
     public var pointHighlight: (cardId: String, statIndices: Set<Int>)? = nil
 
+    // Id(s) of the card(s) that just directly *caused* a capture (the placed card
+    // itself, or a Hive Swarm reveal that captured a neighbor) — not the cards they
+    // captured. HoneycombCardView pops the attacker's own scale off this rather than
+    // the captured neighbors', so a capture reads as the attacking card lunging/
+    // growing, not the victim swelling up. A Set (not a single id) since a Bomb
+    // Shelter timer expiring for both sides on the same turn can hand back two
+    // reveals — and thus two attackers — at once. Transient like pointHighlight
+    // above: flashCaptureAttackers sets it, then clears shortly after.
+    public var captureAttackerIds: Set<String> = []
+
+    private func flashCaptureAttackers(_ ids: Set<String>) {
+        guard !ids.isEmpty, !UISound.isHeadlessMode else { return }
+        captureAttackerIds.formUnion(ids)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.captureAttackerIds.subtract(ids)
+        }
+    }
+
     // Maps a captured neighbor's board index to which of the attacker's 4 stats faces
     // it — same neighbor layout as HoneycombBoard.resolveCaptures (3x3 grid, row-major).
     // Returns nil if the two indices aren't actually adjacent.
@@ -1347,64 +1365,76 @@ public final class HoneycombViewModel {
         // just flip along with everything else below, no separate highlight cycle.
         let directStatIndices = Set(flips.compactMap { neighborDirection(from: boardIndex, to: $0) })
 
-        // Same/Plus/Fallen Ace/Combo describe an actual capture that's about to flip
-        // cards — those get the announcement pause (see stageCaptureCommit): the
-        // banner shows first, and the flip itself waits until the banner has mostly
-        // faded, instead of landing in the same instant. An Ascension/Descension-only
-        // banner (no capture) doesn't gate the pause, since there's no flip to give
-        // weight to.
+        // Only an actual capture (Same/Plus/Fallen Ace/Combo — an Ascension/
+        // Descension-only note never captures anything) gets the announcement pause
+        // (see stageCaptureCommit): the banner shows first, and the *captured
+        // neighbors'* flip waits until the banner has mostly faded, instead of landing
+        // in the same instant and having the toast cover it. The placed card itself
+        // never waits on this — see below.
         let banner = bannerText(placedSuit: placedCard.data.suit, for: capturedBoard)
-        let isSpecialCapture = Self.comboBannerText(for: capturedBoard) != nil
+        // Only the placed card's own DIRECT capture makes it "the card doing the
+        // flipping" — a combo chain's secondary flips are captures made by whichever
+        // neighbor they captured, not by this placement itself, so they don't add
+        // their own attacker id here.
+        let attackerIds: Set<String> = flips.isEmpty ? [] : [placedCard.id]
+
+        // Show the placed card immediately — captured cells keep their pre-capture
+        // owner for now — regardless of Point Highlights or whether there's a banner
+        // to wait for. The attacking card should never sit invisible while a capture
+        // banner plays out, and its own capture-attacker pop (flashCaptureAttackers)
+        // fires right here too: it's the placement itself popping, not the captured
+        // neighbors' flip, so there's no reason for it to wait on the banner either.
+        var intermediateBoard = board
+        intermediateBoard.cells[boardIndex].card = placedCard
+        board = intermediateBoard
+        flashCaptureAttackers(attackerIds)
+        isAnimatingPlacement = true
 
         if options.showPointHighlights, !directStatIndices.isEmpty, !UISound.isHeadlessMode {
-            // Show the new card placed but not yet flipped — captured cells keep their
-            // pre-capture owner for one beat while the attacker's winning stat(s) flash.
-            var intermediateBoard = board
-            intermediateBoard.cells[boardIndex].card = placedCard
-            board = intermediateBoard
+            // One beat with the attacker's winning stat(s) flashed before the
+            // captured neighbors actually flip.
             pointHighlight = (cardId: placedCard.id, statIndices: directStatIndices)
-            isAnimatingPlacement = true
 
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.pointHighlightDelay) { [weak self] in
                 guard let self else { return }
                 self.pointHighlight = nil
-                self.stageCaptureCommit(capturedBoard, banner: banner, isSpecial: isSpecialCapture) {
+                self.stageCaptureCommit(capturedBoard, banner: banner, hasCapture: !attackerIds.isEmpty) {
                     self.finishPlacement(flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
                 }
             }
         } else {
-            stageCaptureCommit(capturedBoard, banner: banner, isSpecial: isSpecialCapture) { [weak self] in
+            stageCaptureCommit(capturedBoard, banner: banner, hasCapture: !attackerIds.isEmpty) { [weak self] in
                 self?.finishPlacement(flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
             }
         }
     }
 
-    // How long the announcement banner (Same/Plus/Fallen Ace/Combo, and Hive Swarm's
-    // own reveal banner) stays on screen — mostly faded — before the capture's flip
-    // actually happens, so the moment reads as a beat that pauses the game instead of
-    // the flip and banner landing together. Matches the banner's own fade timeline
-    // (see HoneycombView's flashRuleBannerTrigger handler): 1.2s fully visible, then
-    // roughly 80% through its 0.3s fade-out.
+    // How long the announcement banner (Same/Plus/Fallen Ace/Combo, Ascension/
+    // Descension, and Hive Swarm's own reveal banner) stays on screen — mostly faded —
+    // before the board commit actually happens, so the moment reads as a beat that
+    // pauses the game instead of the flip/pop and banner landing together. Matches the
+    // banner's own fade timeline (see HoneycombView's flashRuleBannerTrigger handler):
+    // 1.2s fully visible, then roughly 80% through its 0.3s fade-out.
     private static let captureBannerPauseDelay: TimeInterval = 1.44
 
-    // Enqueues `banner` (if any) and, only when `isSpecial` says this is a genuine
-    // capture-worthy event, holds off committing `newBoard` (and thus the flip that
-    // commit triggers — HoneycombCardView reacts to card.owner/isFaceDown changing)
-    // until captureBannerPauseDelay has passed. A plain capture (or no capture at
-    // all) — or an Ascension/Descension-only note — commits immediately, same as
-    // before this pacing existed.
-    private func stageCaptureCommit(_ newBoard: HoneycombBoard, banner: String?, isSpecial: Bool, onCommit: @escaping () -> Void) {
-        guard isSpecial, let banner, !UISound.isHeadlessMode else {
+    // Enqueues `banner` (if any) and, only when there was an actual capture
+    // (`hasCapture`), holds off committing `newBoard` — i.e. the captured neighbors'
+    // flip — until captureBannerPauseDelay has passed, so the banner is always what
+    // the player sees first, never something landing underneath/alongside it. The
+    // placed card itself already committed and popped immediately in applyPlacement,
+    // before this ever runs — this only ever gates the *captured* side. A banner-less
+    // move, or an Ascension/Descension-only note with no capture behind it, commits
+    // `newBoard` immediately: there's nothing left to protect from the banner (for a
+    // non-capturing move, `newBoard` is identical to what's already on screen anyway).
+    private func stageCaptureCommit(_ newBoard: HoneycombBoard, banner: String?, hasCapture: Bool, onCommit: @escaping () -> Void) {
+        guard let banner, hasCapture, !UISound.isHeadlessMode else {
             if let banner { enqueueBanner(banner) }
             board = newBoard
-            // Resets whatever the point-highlight path (applyPlacement) may have set
-            // true before this ran — a no-op if it was never set (the no-point-
-            // highlight call site never touches this flag itself).
+            // Resets whatever applyPlacement set true before this ran.
             isAnimatingPlacement = false
             onCommit()
             return
         }
-        isAnimatingPlacement = true
         enqueueBanner(banner)
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.captureBannerPauseDelay) { [weak self] in
             guard let self else { return }
@@ -1447,13 +1477,14 @@ public final class HoneycombViewModel {
         isAnimatingPlacement = true
         let revealBombShelters = { [weak self] in
             guard let self else { return }
-            let (revealedBoard, banners) = self.revealBombShelterCards(at: pendingReveals)
+            let (revealedBoard, banners, attackerIds) = self.revealBombShelterCards(at: pendingReveals)
 
             let commitReveal = { [weak self] in
                 guard let self else { return }
                 withAnimation {
                     self.board = revealedBoard
                 }
+                self.flashCaptureAttackers(attackerIds)
                 if self.options.isSoundEnabled {
                     UISound.play(named: "snap", enabled: true)
                 }
@@ -1654,21 +1685,26 @@ public final class HoneycombViewModel {
     }
 
     // Resolves the actual reveal (flip + capture) for cards whose Bomb Shelter timer
-    // just hit zero (per tickBombShelterTimers above), returning the resulting board and
-    // one banner per card revealed — kept separate so the caller can commit/animate this
-    // part on its own schedule instead of in the same instant as the countdown.
-    private func revealBombShelterCards(at indices: [Int]) -> (board: HoneycombBoard, banners: [String]) {
+    // just hit zero (per tickBombShelterTimers above), returning the resulting board,
+    // one banner per card revealed, and the id(s) of whichever revealed card(s) went
+    // on to actually capture a neighbor (a reveal that captures nothing isn't "the
+    // card doing the flipping" and shouldn't pop) — kept separate so the caller can
+    // commit/animate this part on its own schedule instead of in the same instant as
+    // the countdown.
+    private func revealBombShelterCards(at indices: [Int]) -> (board: HoneycombBoard, banners: [String], attackerIds: Set<String>) {
         var updated = board
         var banners: [String] = []
+        var attackerIds: Set<String> = []
         for i in indices {
             guard var card = updated.cells[i].card else { continue }
             let revealedOwner = card.originalOwner
             card.bombShelterTurnsRemaining = nil
             updated.cells[i].card = card
-            _ = updated.revealFaceDownCard(at: i, rules: activeRules)
+            let flips = updated.revealFaceDownCard(at: i, rules: activeRules)
+            if !flips.isEmpty { attackerIds.insert(card.id) }
             banners.append([hiveSwarmRevealBanner(for: revealedOwner), Self.comboBannerText(for: updated)].compactMap { $0 }.joined(separator: " "))
         }
-        return (updated, banners)
+        return (updated, banners, attackerIds)
     }
 
     // Randomly chosen phrase set for a Hive Swarm (Bomb Shelter) reveal's own banner

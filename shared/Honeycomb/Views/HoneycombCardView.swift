@@ -26,12 +26,40 @@ public struct HoneycombCardView: View {
     // Point Highlights: which of this card's N/E/S/W stats (0=Top,1=Right,2=Bottom,
     // 3=Left) just won a capture, briefly flashed gold before the flip happens.
     public var highlightedStatIndices: Set<Int> = []
+    // True for exactly one brief window (viewModel.captureAttackerIds) when this card
+    // is the one that just directly caused a capture — the placed card itself, or a
+    // Hive Swarm reveal that captured a neighbor. Drives ruleTriggerScale below: the
+    // ATTACKING card pops, not whatever it captured.
+    public var isCaptureAttacker: Bool = false
 
     @Environment(\.activeCustomCardColors) private var customCardColors: CustomCardColorGroup
 
     @State private var flipDegrees: Double = 0.0
     @State private var statPulseScale: CGFloat = 1.0
     @State private var pointHighlightPulseScale: CGFloat = 1.0
+    // Rule-trigger pop — a capture flipping this card to its new owner, whether from
+    // an ordinary placement, a combo chain, or a Hive Swarm reveal's own capture (see
+    // the card.owner onChange below; there's deliberately no separate Hive Swarm-
+    // specific trigger, so a reveal that captures nothing doesn't pop): scales the
+    // *whole* card 1.2x for 1s. Applied as its own .scaleEffect at the very end of the
+    // modifier chain (after background/clipShape/border/shadow/badge below), not
+    // grouped in with the flip's mirror
+    // scaleEffect near the top — that one only wraps the inner content ZStack, before
+    // the white background/border/shadow are added, so combining them there scaled
+    // the numbers/suit up while the card's own background/border/shadow stayed at
+    // their original size, leaving the enlarged content overflowing past the card's
+    // edge instead of the whole card growing together. Deliberately NOT wired to
+    // Pollination/Smoked Out's modifier changes — those recompute for every
+    // matching-suit card on the board on every placement (see HoneycombBoard's
+    // updateModifiers), so the pop fired far too often and read as noise rather than
+    // a capture-specific "something just happened" beat.
+    @State private var ruleTriggerScale: CGFloat = 1.0
+    // Guards ruleTriggerScale's delayed reset-to-1.0 against a second trigger firing
+    // before the first one's 1s hold elapses (e.g. a combo chain flipping this same
+    // card again as one of its own neighbors within a beat of its first capture) —
+    // same pattern as modifierGlowGeneration below, without which the earlier
+    // trigger's stale dispatch would cut the later one's hold short.
+    @State private var ruleTriggerGeneration: Int = 0
     // Ascension/Descension badge: glows brightly for ~1s after the modifier changes,
     // then the glow (not the number itself) fades out — same hold-then-fade timing as
     // the Solitaire point popups. Guarded by a generation counter since the modifier is
@@ -56,13 +84,14 @@ public struct HoneycombCardView: View {
     // normally instead of showing backwards text.
     @State private var isPastFlipMidpoint: Bool = false
 
-    public init(card: HoneycombCard, size: CGSize, isFlipped: Bool, useOwnershipColoring: Bool = true, stealHighlight: Bool = false, highlightedStatIndices: Set<Int> = []) {
+    public init(card: HoneycombCard, size: CGSize, isFlipped: Bool, useOwnershipColoring: Bool = true, stealHighlight: Bool = false, highlightedStatIndices: Set<Int> = [], isCaptureAttacker: Bool = false) {
         self.card = card
         self.size = size
         self.isFlipped = isFlipped
         self.useOwnershipColoring = useOwnershipColoring
         self.stealHighlight = stealHighlight
         self.highlightedStatIndices = highlightedStatIndices
+        self.isCaptureAttacker = isCaptureAttacker
         _displayedOwner = State(initialValue: card.owner)
         _displayedIsFaceDown = State(initialValue: card.isFaceDown)
     }
@@ -168,6 +197,9 @@ public struct HoneycombCardView: View {
                 displayedOwner = newOwner
                 isPastFlipMidpoint.toggle()
             }
+            // No ruleTriggerScale pop here — this is the *captured* card's own flip.
+            // The pop belongs to whichever card did the capturing, driven by
+            // isCaptureAttacker below, not to the card that just got flipped.
         }
         .onChange(of: card.isFaceDown) { oldValue, newValue in
             guard oldValue != newValue else { return }
@@ -180,6 +212,18 @@ public struct HoneycombCardView: View {
                 displayedIsFaceDown = newValue
                 isPastFlipMidpoint.toggle()
             }
+        }
+        // Capture-attacker pop: `.onChange` covers a card that's already on screen when
+        // it becomes the attacker (a Hive Swarm reveal capturing a neighbor — this same
+        // view instance persists from before the reveal), while `.onAppear` covers the
+        // far more common case — a freshly-placed card that captures immediately, whose
+        // HoneycombCardView mounts for the very first time already flagged as the
+        // attacker, too late for `.onChange` to ever see a false -> true transition.
+        .onChange(of: isCaptureAttacker) { _, newValue in
+            if newValue { triggerRulePop() }
+        }
+        .onAppear {
+            if isCaptureAttacker { triggerRulePop() }
         }
         .onChange(of: card.modifier) { oldMod, newMod in
             if oldMod != newMod {
@@ -245,8 +289,35 @@ public struct HoneycombCardView: View {
                     .padding(.trailing, size.width * (10.0 / 128.0))
             }
         }
+        // Whole-card rule-trigger pop — applied last, after background/border/shadow/
+        // badge above, so the entire composed card (not just the inner suit/number
+        // content) grows together. See ruleTriggerScale's own comment for why this
+        // can't share the flip-mirror scaleEffect nearer the top of this chain.
+        .scaleEffect(ruleTriggerScale)
     }
-    
+
+    // Only ever called from the card.owner onChange above — this card just flipped to
+    // a new owner via a capture (direct, combo-chained, or a Hive Swarm reveal's own
+    // capture). Scales up immediately, holds at 1.2x for 1s, then eases back to 1.0x.
+    // ruleTriggerGeneration
+    // ensures only the most recent trigger's delayed reset actually fires, so a second
+    // trigger landing inside the first one's hold window (e.g. this card getting
+    // captured, then immediately re-captured back in a fast exchange) extends the pop
+    // instead of getting cut short by the first trigger's now-stale scale-down.
+    private func triggerRulePop() {
+        ruleTriggerGeneration += 1
+        let generation = ruleTriggerGeneration
+        withAnimation(.easeOut(duration: 0.2)) {
+            ruleTriggerScale = 1.2
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            guard ruleTriggerGeneration == generation else { return }
+            withAnimation(.easeIn(duration: 0.2)) {
+                ruleTriggerScale = 1.0
+            }
+        }
+    }
+
     private func statString(_ stat: Int) -> String {
         return stat >= 10 ? "A" : "\(stat)"
     }
