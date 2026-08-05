@@ -62,7 +62,7 @@ public static class HoneycombRuleWeights
             : "Inflicts -1 to stats for cards matching the active suits placed on the board.",
         HoneycombRule.Same => "If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously.",
         HoneycombRule.Plus => "If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured.",
-        HoneycombRule.BombShelter => "Protects cards from being captured by the Plus rule.",
+        HoneycombRule.BombShelter => "First card played remains face-down for 3 turns before flipping automatically.",
         HoneycombRule.Swap => "One card from each player's hand is randomly swapped at the start of the match.",
         HoneycombRule.AllOpen => "Both players' hands are completely visible.",
         HoneycombRule.ThreeOpen => "Three random cards in the opponent's hand are visible.",

@@ -1219,10 +1219,11 @@ struct HoneycombRulesView: View {
                         ))
                         .font(.system(.body))
                         .disabled(forceNormalMode)
+                        .help(rule.explanation())
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
+
                 // Right Column: Ban List
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Ban List")
@@ -1255,7 +1256,8 @@ struct HoneycombRulesView: View {
                                 }
                             ))
                             .font(.system(.body))
-                            
+                            .help(HoneycombRule(rawValue: ruleName)?.explanation() ?? "Forces a match with no active rules, skipping roulette.")
+
                             if bannedRules.count == allBanItems.count - 1 && !bannedRules.contains(ruleName) {
                                 Text("You cannot blacklist every game, silly bee.")
                                     .font(.caption)

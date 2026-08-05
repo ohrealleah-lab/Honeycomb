@@ -26,56 +26,59 @@
                     <!-- Left Column: Game Choice -->
                     <StackPanel Grid.Column="0" Margin="0,0,10,0" Spacing="6">
                         <TextBlock Text="Game Choice" FontSize="16" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,0,0,2"/>
-                        
+
                         <TextBlock Text="Select up to 4 rules. Leave empty to let roulette decide each match rules."
                                    FontSize="11" Foreground="#707070" TextWrapping="Wrap" Margin="0,0,0,6"/>
 
+                        <!-- ToolTip.ShowDelay (ms) makes each rule's hover explanation match
+                             the same "hold for a beat" pacing on both the Game Choice and Ban
+                             List columns, mirroring the mac port's .help() tooltips. -->
                         <StackPanel x:Name="HoneycombRulesPanel" Spacing="2">
-                            <CheckBox x:Name="HoneycombRule_ForceNormal" Content="Normal Mode (Force Zero Rules)" Tag="ForceNormal" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Ascension" Content="Pollination" Tag="Ascension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Descension" Content="Smoked Out" Tag="Descension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Same" Content="Symmetry" Tag="Same" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Plus" Content="Nectar Math" Tag="Plus" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_FallenAce" Content="Queen's Fall" Tag="FallenAce" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_AllOpen" Content="Clear Skies" Tag="AllOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_ThreeOpen" Content="Scouting Party" Tag="ThreeOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Swap" Content="Nectar Exchange" Tag="Swap" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Order" Content="Hierarchy" Tag="Order" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_Chaos" Content="Frenzy" Tag="Chaos" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_BombShelter" Content="Hive Swarm" Tag="BombShelter" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="HoneycombRule_SuddenDeath" Content="Swarm to the Death" Tag="SuddenDeath" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="HoneycombRule_ForceNormal" Content="Normal Mode (Force Zero Rules)" Tag="ForceNormal" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Forces a match with no active rules, skipping roulette."/>
+                            <CheckBox x:Name="HoneycombRule_Ascension" Content="Pollination" Tag="Ascension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Grants +1 to stats for cards matching the active suits placed on the board."/>
+                            <CheckBox x:Name="HoneycombRule_Descension" Content="Smoked Out" Tag="Descension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Inflicts -1 to stats for cards matching the active suits placed on the board."/>
+                            <CheckBox x:Name="HoneycombRule_Same" Content="Symmetry" Tag="Same" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously."/>
+                            <CheckBox x:Name="HoneycombRule_Plus" Content="Nectar Math" Tag="Plus" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured."/>
+                            <CheckBox x:Name="HoneycombRule_FallenAce" Content="Queen's Fall" Tag="FallenAce" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="A stat of A (10) can be captured by a stat of 1."/>
+                            <CheckBox x:Name="HoneycombRule_AllOpen" Content="Clear Skies" Tag="AllOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Both players' hands are completely visible."/>
+                            <CheckBox x:Name="HoneycombRule_ThreeOpen" Content="Scouting Party" Tag="ThreeOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Three random cards in the opponent's hand are visible."/>
+                            <CheckBox x:Name="HoneycombRule_Swap" Content="Nectar Exchange" Tag="Swap" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="One card from each player's hand is randomly swapped at the start of the match."/>
+                            <CheckBox x:Name="HoneycombRule_Order" Content="Hierarchy" Tag="Order" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards must be played in the exact order they were drawn."/>
+                            <CheckBox x:Name="HoneycombRule_Chaos" Content="Frenzy" Tag="Chaos" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards are randomly selected and forced to be played each turn."/>
+                            <CheckBox x:Name="HoneycombRule_BombShelter" Content="Hive Swarm" Tag="BombShelter" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="First card played remains face-down for 3 turns before flipping automatically."/>
+                            <CheckBox x:Name="HoneycombRule_SuddenDeath" Content="Swarm to the Death" Tag="SuddenDeath" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately."/>
                         </StackPanel>
                     </StackPanel>
 
                     <!-- Right Column: Ban List -->
                     <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="6">
                         <TextBlock Text="Ban List" FontSize="16" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,0,0,2"/>
-                        
+
                         <TextBlock Text="Select games to ban from roulettes." FontSize="11" Foreground="#707070" TextWrapping="Wrap" Margin="0,0,0,6"/>
-                        
+
                         <StackPanel Spacing="2">
-                            <CheckBox x:Name="Ban_NormalMode" Content="Normal Mode" Tag="Normal Mode" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Ascension" Content="Pollination" Tag="Ascension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Descension" Content="Smoked Out" Tag="Descension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Same" Content="Symmetry" Tag="Same" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Plus" Content="Nectar Math" Tag="Plus" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_FallenAce" Content="Queen's Fall" Tag="FallenAce" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_AllOpen" Content="Clear Skies" Tag="AllOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_ThreeOpen" Content="Scouting Party" Tag="ThreeOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Swap" Content="Nectar Exchange" Tag="Swap" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Order" Content="Hierarchy" Tag="Order" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Chaos" Content="Frenzy" Tag="Chaos" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_BombShelter" Content="Hive Swarm" Tag="BombShelter" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_Reverse" Content="Inversion" Tag="Reverse" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
-                            <CheckBox x:Name="Ban_SuddenDeath" Content="Swarm to the Death" Tag="SuddenDeath" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A"/>
+                            <CheckBox x:Name="Ban_NormalMode" Content="Normal Mode" Tag="Normal Mode" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Forces a match with no active rules, skipping roulette."/>
+                            <CheckBox x:Name="Ban_Ascension" Content="Pollination" Tag="Ascension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Grants +1 to stats for cards matching the active suits placed on the board."/>
+                            <CheckBox x:Name="Ban_Descension" Content="Smoked Out" Tag="Descension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Inflicts -1 to stats for cards matching the active suits placed on the board."/>
+                            <CheckBox x:Name="Ban_Same" Content="Symmetry" Tag="Same" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously."/>
+                            <CheckBox x:Name="Ban_Plus" Content="Nectar Math" Tag="Plus" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured."/>
+                            <CheckBox x:Name="Ban_FallenAce" Content="Queen's Fall" Tag="FallenAce" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="A stat of A (10) can be captured by a stat of 1."/>
+                            <CheckBox x:Name="Ban_AllOpen" Content="Clear Skies" Tag="AllOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Both players' hands are completely visible."/>
+                            <CheckBox x:Name="Ban_ThreeOpen" Content="Scouting Party" Tag="ThreeOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Three random cards in the opponent's hand are visible."/>
+                            <CheckBox x:Name="Ban_Swap" Content="Nectar Exchange" Tag="Swap" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="One card from each player's hand is randomly swapped at the start of the match."/>
+                            <CheckBox x:Name="Ban_Order" Content="Hierarchy" Tag="Order" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards must be played in the exact order they were drawn."/>
+                            <CheckBox x:Name="Ban_Chaos" Content="Frenzy" Tag="Chaos" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards are randomly selected and forced to be played each turn."/>
+                            <CheckBox x:Name="Ban_BombShelter" Content="Hive Swarm" Tag="BombShelter" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="First card played remains face-down for 3 turns before flipping automatically."/>
+                            <CheckBox x:Name="Ban_Reverse" Content="Inversion" Tag="Reverse" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="Lower stats capture higher stats."/>
+                            <CheckBox x:Name="Ban_SuddenDeath" Content="Swarm to the Death" Tag="SuddenDeath" Checked="BanRule_Changed" Unchecked="BanRule_Changed" Foreground="#1A1A1A" ToolTip.ShowDelay="1000" ToolTip.Tip="If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately."/>
                         </StackPanel>
-                        
+
                         <TextBlock x:Name="SillyBeeWarning" Text="You cannot blacklist every game, silly bee." FontSize="11" FontWeight="SemiBold" Foreground="#E53935" IsVisible="False" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Grid>
             </StackPanel>
         </ScrollViewer>
-        
+
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
             <Button Content="Cancel" Click="Cancel_Click" Width="80" HorizontalContentAlignment="Center" Classes="light-secondary" />
             <Button Content="OK" Click="OK_Click" Width="80" HorizontalContentAlignment="Center" Classes="light-primary" />
