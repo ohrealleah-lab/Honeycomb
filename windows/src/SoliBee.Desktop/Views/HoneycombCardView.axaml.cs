@@ -15,6 +15,7 @@ public partial class HoneycombCardView : UserControl
     private int _handIndex = -1;
     private int _cellIndex = -1;
     public event EventHandler<(int handIndex, int cellIndex)>? OnCardClicked;
+    public event Action<bool>? OnRuleAnimationScaleChanged;
 
     // Board and hand cards indicate ownership by recoloring the suit icon/stats
     // themselves (black = player, red = opponent), overriding the suit's natural
@@ -64,6 +65,47 @@ public partial class HoneycombCardView : UserControl
         scale.ScaleY = 1.0;
     }
 
+    // Scale-up uses the CardRoot.RenderTransform's own XAML-declared Transitions
+    // (CubicEaseOut, matching the doc). The hold-to-1.0 leg swaps in this EaseIn set
+    // instead, per the doc's "ease back down with easeIn" — Avalonia's Transitions
+    // apply the same easing regardless of which direction the value moves, so getting
+    // a different curve for the return trip means swapping the Transitions collection
+    // right before setting the value, not just relying on the one declared in XAML.
+    private static readonly Transitions _scaleDownTransitions = new()
+    {
+        new DoubleTransition { Property = ScaleTransform.ScaleXProperty, Duration = TimeSpan.FromSeconds(0.2), Easing = new Avalonia.Animation.Easings.CubicEaseIn() },
+        new DoubleTransition { Property = ScaleTransform.ScaleYProperty, Duration = TimeSpan.FromSeconds(0.2), Easing = new Avalonia.Animation.Easings.CubicEaseIn() },
+    };
+    private Transitions? _scaleUpTransitions;
+
+    // Guards the delayed scale-down against a second trigger landing on the same card
+    // before the first one's 1s hold elapses (e.g. a combo chain re-capturing this same
+    // card as one of its own neighbors within a beat of its first capture) — without
+    // this, the first trigger's stale Task.Delay would revert the scale (and fire
+    // OnRuleAnimationScaleChanged false, dropping the zIndex) out from under the second
+    // trigger's still-active pop. Mirrors the Swift port's ruleTriggerGeneration.
+    private int _ruleAnimationGeneration = 0;
+
+    private async void TriggerRuleScaleAnimation()
+    {
+        _ruleAnimationGeneration++;
+        var generation = _ruleAnimationGeneration;
+        OnRuleAnimationScaleChanged?.Invoke(true);
+        if (CardRoot.RenderTransform is ScaleTransform scale)
+        {
+            _scaleUpTransitions ??= scale.Transitions;
+            scale.Transitions = _scaleUpTransitions;
+            scale.ScaleX = 1.2;
+            scale.ScaleY = 1.2;
+            await Task.Delay(1000);
+            if (_ruleAnimationGeneration != generation) return;
+            scale.Transitions = _scaleDownTransitions;
+            scale.ScaleX = 1.0;
+            scale.ScaleY = 1.0;
+        }
+        OnRuleAnimationScaleChanged?.Invoke(false);
+    }
+
     private int _currentOwner = 0;
     // Tracks whether this slot is currently showing CardBack — separate from _card
     // being non-null, since a hand slot rendered faceDown still has _card set (the
@@ -71,13 +113,19 @@ public partial class HoneycombCardView : UserControl
     // the back, now showing the front — e.g. a Bomb Shelter card flipping face-up)
     // apart from an ordinary re-render.
     private bool _isShowingFaceDown = false;
+    // Whether this slot was already flagged as a capture attacker as of the last
+    // RenderCard call — compared against the freshly-passed isCaptureAttacker each
+    // call so the pop fires exactly once per capture event (a false -> true edge),
+    // not on every Refresh while HoneycombState.CaptureAttackerIds still contains this
+    // card's id (it stays there ~100ms, long enough to span more than one Refresh).
+    private bool _wasCaptureAttacker = false;
 
     public HoneycombCardView()
     {
         InitializeComponent();
     }
 
-    public async Task RenderCard(HoneycombCard? card, bool faceDown = false, int hIdx = -1, int cIdx = -1)
+    public async Task RenderCard(HoneycombCard? card, bool faceDown = false, int hIdx = -1, int cIdx = -1, bool isCaptureAttacker = false)
     {
         _handIndex = hIdx;
         _cellIndex = cIdx;
@@ -86,6 +134,7 @@ public partial class HoneycombCardView : UserControl
         {
             _card = null;
             _isShowingFaceDown = false;
+            _wasCaptureAttacker = false;
             CardFace.IsVisible = false;
             CardBack.IsVisible = false;
             return;
@@ -103,10 +152,33 @@ public partial class HoneycombCardView : UserControl
 
         bool ownerChanged = _card != null && _card.UniqueInstanceId == card.UniqueInstanceId && _currentOwner != 0 && _currentOwner != card.Owner;
         bool revealedFromFaceDown = _isShowingFaceDown;
+        // Captures are a board-only mechanic (see HoneycombState.CaptureAttackerIds/
+        // ViewModel.FlashCaptureAttackers) — the caller only ever passes
+        // isCaptureAttacker: true for board slots, but gating here too is just
+        // belt-and-suspenders clarity that this is a board-capture-only pop.
+        bool isBoardSlot = cIdx >= 0;
+        // Edge-triggered so a card that stays flagged across more than one Refresh
+        // call (CaptureAttackerIds is cleared ~100ms later, not instantly) only pops
+        // once, not once per Refresh.
+        bool justBecameAttacker = isCaptureAttacker && !_wasCaptureAttacker;
 
         _card = card;
         _currentOwner = card.Owner;
         _isShowingFaceDown = false;
+        _wasCaptureAttacker = isCaptureAttacker;
+
+        // The pop is capture-only, and belongs to whichever card did the capturing —
+        // the just-placed card's own direct capture, or a Bomb Shelter/Hive Swarm
+        // reveal's own capture — not the cards it captured (ownerChanged, used below
+        // only for the flip animation). Deliberately NOT wired to revealedFromFaceDown
+        // on its own (a reveal that captures nothing shouldn't pop) or to a modifier
+        // change (Pollination/Smoked Out recomputes every matching-suit card on every
+        // placement, so it fired far too often and read as noise rather than a
+        // capture-specific beat).
+        if (isBoardSlot && justBecameAttacker)
+        {
+            TriggerRuleScaleAnimation();
+        }
 
         if (revealedFromFaceDown)
         {

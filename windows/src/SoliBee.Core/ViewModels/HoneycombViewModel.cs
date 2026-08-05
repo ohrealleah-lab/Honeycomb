@@ -604,7 +604,7 @@ public partial class HoneycombViewModel : ObservableObject
     // If the opponent's cards are face-down (the default unless rules dictate otherwise),
     // they don't visually flip at all, meaning the animation appears completely finished
     // after the 5 player cards (2000ms). This dynamically skips that empty 2000ms block.
-    private int DealFlipTotalMs => State.OpponentHand.Any(c => State.OpponentRevealedIds.Contains(c.UniqueInstanceId)) ? 4000 : 2000;
+    private int DealFlipTotalMs => State.OpponentHand.Any(c => State.OpponentRevealedIds.Contains(c.UniqueInstanceId) || State.ActiveRules.Contains(HoneycombRule.AllOpen)) ? 4000 : 2000;
     // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
     // starts, so the two animations never visually overlap. Short on purpose — the
     // Lift beat right after this is itself part of the animation.
@@ -901,25 +901,41 @@ public partial class HoneycombViewModel : ObservableObject
             if (flipped.Contains(n.Index)) directStatIndices.Add(n.AttackerEdge);
         }
 
+        // Only the placed card's own DIRECT capture makes it "the card doing the
+        // flipping" — a combo chain's secondary flips are captures made by whichever
+        // neighbor they captured, not by this placement itself.
+        Guid? attackerId = flipped.Count > 0 ? card.UniqueInstanceId : null;
+
+        // Show the placed card immediately — captured cells keep their pre-capture
+        // owner for now — regardless of Point Highlights or whether there's a banner
+        // to wait for. The attacking card should never sit invisible while a capture
+        // banner plays out, and its own capture-attacker pop (FlashCaptureAttackers)
+        // fires right here too: it's the placement itself popping, not the captured
+        // neighbors' flip, so there's no reason for it to wait on the banner either.
+        var intermediateBoard = preBoard.Clone();
+        intermediateBoard.PlaceCard(card, cellIndex, new HashSet<HoneycombRule>(State.ActiveRules), skipCaptures: true);
+        State.Board = intermediateBoard;
+        FlashCaptureAttackers(attackerId);
         _isAnimating = true;
+
         if (Options.ShowPointHighlights && directStatIndices.Count > 0 && !_isHeadless)
         {
-            var intermediateBoard = preBoard.Clone();
-            intermediateBoard.PlaceCard(card, cellIndex, new HashSet<HoneycombRule>(State.ActiveRules), skipCaptures: true);
-            State.Board = intermediateBoard;
+            // One beat with the attacker's winning stat(s) flashed before the
+            // captured neighbors actually flip.
             State.PointHighlightCellIndex = cellIndex;
             State.PointHighlightStatIndices = directStatIndices;
             NotifyStateChanged();
 
-            FinishPlacementAfterHighlight(workingBoard, cellIndex, hand, preScore, _matchGeneration);
+            FinishPlacementAfterHighlight(workingBoard, cellIndex, hand, preScore, _matchGeneration, attackerId);
         }
         else
         {
-            StageCaptureCommit(workingBoard, cellIndex, hand, preScore, _matchGeneration);
+            NotifyStateChanged();
+            StageCaptureCommit(workingBoard, cellIndex, hand, preScore, _matchGeneration, attackerId);
         }
     }
 
-    private async void FinishPlacementAfterHighlight(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation)
+    private async void FinishPlacementAfterHighlight(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation, Guid? attackerId)
     {
         await Task.Delay(500);
 
@@ -940,24 +956,43 @@ public partial class HoneycombViewModel : ObservableObject
 
         State.PointHighlightCellIndex = null;
         State.PointHighlightStatIndices = new HashSet<int>();
-        StageCaptureCommit(workingBoard, cellIndex, hand, preScore, generation);
+        StageCaptureCommit(workingBoard, cellIndex, hand, preScore, generation, attackerId);
     }
 
-    // How long the announcement banner (Same/Plus/Fallen Ace/Combo, and Hive Swarm's
-    // own reveal banner) stays on screen — mostly faded — before the capture's flip
-    // actually happens, so the moment reads as a beat that pauses the game instead of
-    // the flip and banner landing together. Matches the Swift port's
-    // captureBannerPauseDelay (1.2s fully visible + ~80% through its 0.3s fade-out).
+    // How long the announcement banner (Same/Plus/Fallen Ace/Combo, Ascension/
+    // Descension, and Hive Swarm's own reveal banner) stays on screen — mostly faded —
+    // before the board commit actually happens, so the moment reads as a beat that
+    // pauses the game instead of the flip/pop and banner landing together. Matches the
+    // Swift port's captureBannerPauseDelay (1.2s fully visible + ~80% through its 0.3s
+    // fade-out).
     private const int CaptureBannerPauseMs = 1440;
 
     // Computes this placement's banner (if any) from workingBoard *before* committing
-    // it to State.Board — a Same/Plus/Fallen Ace/Combo banner (a genuine capture,
-    // about to flip cards) gets shown first, with the commit (and the flip that
-    // triggers) held off until the banner has mostly faded. A plain capture (or an
-    // Ascension/Descension-only note, which isn't itself a capture) commits
-    // immediately, same as before this pacing existed. Mirrors the Swift port's
+    // it to State.Board — this only ever gates the *captured neighbors'* flip. The
+    // placed card itself already committed and popped immediately back in
+    // ExecutePlacement, before this ever runs. Only an actual capture (attackerId
+    // non-null; an Ascension/Descension-only note never captures anything) gets the
+    // commit held off until the banner has mostly faded, so the toast never lands on
+    // top of the flip it triggers. A banner-less move, or an Ascension/Descension-only
+    // note, commits `workingBoard` immediately — for a non-capturing move it's
+    // identical to what's already on screen anyway. Mirrors the Swift port's
     // stageCaptureCommit.
-    private async void StageCaptureCommit(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation)
+    // Flashes CaptureAttackerIds for whichever card just directly caused a capture (the
+    // placed card, or a Bomb Shelter/Hive Swarm reveal that captured a neighbor) — not
+    // the cards it captured — then clears it shortly after. A no-op if this placement/
+    // reveal didn't actually capture anything (attackerId is null). Mirrors the Swift
+    // port's flashCaptureAttackers.
+    private async void FlashCaptureAttackers(Guid? attackerId)
+    {
+        if (attackerId is not Guid id || _isHeadless) return;
+        State.CaptureAttackerIds.Add(id);
+        NotifyStateChanged();
+        await Task.Delay(100);
+        State.CaptureAttackerIds.Remove(id);
+        NotifyStateChanged();
+    }
+
+    private async void StageCaptureCommit(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation, Guid? attackerId)
     {
         var bannerParts = new List<string>();
         string placedSuit = workingBoard.Cells[cellIndex].Card!.Data.Suit;
@@ -977,7 +1012,7 @@ public partial class HoneycombViewModel : ObservableObject
         if (comboText != null) bannerParts.Add(comboText);
         string? banner = bannerParts.Count > 0 ? string.Join(" ", bannerParts) : null;
 
-        if (comboText == null || _isHeadless)
+        if (banner == null || attackerId == null || _isHeadless)
         {
             if (banner != null) EnqueueBanner(banner);
             State.Board = workingBoard;
@@ -1085,16 +1120,21 @@ public partial class HoneycombViewModel : ObservableObject
         // revealBombShelterCards split.
         var revealedBoard = State.Board.Clone();
         var banners = new List<string>();
+        // Which revealed card(s) went on to actually capture a neighbor — a reveal
+        // that captures nothing isn't "the card doing the flipping" and shouldn't pop.
+        var attackerIds = new HashSet<Guid>();
         foreach (var i in pendingReveals)
         {
             int revealedOwner = revealedBoard.Cells[i].Card!.OriginalOwner;
+            Guid revealedId = revealedBoard.Cells[i].Card!.UniqueInstanceId;
             revealedBoard.Cells[i].Card!.BombShelterTurnsRemaining = null;
-            revealedBoard.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
+            var flips = revealedBoard.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
+            if (flips.Count > 0) attackerIds.Add(revealedId);
             var comboText = ComboBannerText(revealedBoard);
             var revealedText = HiveSwarmRevealBanner(revealedOwner);
             banners.Add(comboText == null ? revealedText : $"{revealedText} {comboText}");
         }
-        StageBombShelterReveal(revealedBoard, banners, _matchGeneration);
+        StageBombShelterReveal(revealedBoard, banners, _matchGeneration, attackerIds);
     }
 
     // Randomly chosen phrase set for a Hive Swarm (Bomb Shelter) reveal's own banner
@@ -1126,12 +1166,13 @@ public partial class HoneycombViewModel : ObservableObject
     // reveal is just as much a "special event" as a Same/Plus/Fallen Ace/Combo
     // capture). Guarded by _matchGeneration so a match that's moved on (New Game/
     // Surrender/a fresh match) during the delay can't commit a stale board.
-    private async void StageBombShelterReveal(HoneycombBoard revealedBoard, List<string> banners, int generation)
+    private async void StageBombShelterReveal(HoneycombBoard revealedBoard, List<string> banners, int generation, HashSet<Guid> attackerIds)
     {
         foreach (var banner in banners) EnqueueBanner(banner);
         if (!_isHeadless) await Task.Delay(CaptureBannerPauseMs);
         if (generation != _matchGeneration || !IsPlaying) return;
         State.Board = revealedBoard;
+        foreach (var id in attackerIds) FlashCaptureAttackers(id);
         NotifyStateChanged();
     }
 
