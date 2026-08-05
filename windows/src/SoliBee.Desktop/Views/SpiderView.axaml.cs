@@ -402,7 +402,7 @@ public partial class SpiderView : CardGameView
         var pts = new List<Point>(views.Length);
         foreach (var fv in views)
         {
-            var topLeft = fv.TranslatePoint(new Point(0, 0), this) ?? default;
+            var topLeft = fv.TranslatePoint(new Point(0, 0), VictoryOverlayControl) ?? default;
             pts.Add(new Point(topLeft.X + fv.Bounds.Width / 2.0, topLeft.Y));
         }
         return pts;

@@ -259,7 +259,7 @@ public partial class WinAnimationView : UserControl
             if (card.TrailViews.Count > 0 && card.TrailViews[0] is Image firstGhost && firstGhost.Source == null && card.Age >= 0.1)
             {
                 card.View.Measure(new Size(CardWidth, CardHeight));
-                card.View.Arrange(new Rect(0, 0, CardWidth, CardHeight));
+                card.View.Arrange(new Rect(1, 1, CardWidth, CardHeight));
 
                 // Render at the display's actual scale, or the snapshot is rasterized at a
                 // fixed 96 DPI regardless of Windows UI scaling — every ghost would then look
@@ -267,7 +267,7 @@ public partial class WinAnimationView : UserControl
                 // (125%/150% are common defaults).
                 double scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
                 var rtb = new RenderTargetBitmap(
-                    new PixelSize((int)(CardWidth * scale), (int)(CardHeight * scale)),
+                    new PixelSize((int)((CardWidth + 2) * scale), (int)((CardHeight + 2) * scale)),
                     new Vector(96 * scale, 96 * scale));
                 rtb.Render(card.View);
                 foreach (var ghost in card.TrailViews)
@@ -385,8 +385,8 @@ public partial class WinAnimationView : UserControl
             var ghostTx = new TranslateTransform();
             var ghost = new Image
             {
-                Width = CardWidth,
-                Height = CardHeight,
+                Width = CardWidth + 2,
+                Height = CardHeight + 2,
                 IsHitTestVisible = false,
                 Opacity = 0,
                 RenderTransform = ghostTx
@@ -394,8 +394,8 @@ public partial class WinAnimationView : UserControl
             // Created in code, not XAML — set explicitly for the same reason as the
             // other code-behind-created Image controls (see CardView.PopulateSuitCanvas).
             RenderOptions.SetBitmapInterpolationMode(ghost, BitmapInterpolationMode.MediumQuality);
-            Canvas.SetLeft(ghost, startX);
-            Canvas.SetTop(ghost, startY);
+            Canvas.SetLeft(ghost, startX - 1);
+            Canvas.SetTop(ghost, startY - 1);
             trailViews.Add(ghost);
             trailTx.Add(ghostTx);
             AnimationCanvas.Children.Add(ghost);

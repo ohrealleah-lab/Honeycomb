@@ -388,7 +388,7 @@ public partial class FreecellView : CardGameView
         var pts = new List<Point>(count);
         for (int i = 0; i < count && i < allViews.Length; i++)
         {
-            var topLeft = allViews[i].TranslatePoint(new Point(0, 0), this) ?? default;
+            var topLeft = allViews[i].TranslatePoint(new Point(0, 0), VictoryOverlayControl) ?? default;
             pts.Add(new Point(topLeft.X + allViews[i].Bounds.Width / 2.0, topLeft.Y));
         }
         return pts;
