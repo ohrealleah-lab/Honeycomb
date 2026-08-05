@@ -1157,7 +1157,11 @@ public final class HoneycombViewModel {
     // opponent's moves. Same/Plus/Fallen Ace only matter on the turns they actually
     // match/win a capture, so those flash whenever board.last{Same,Plus,FallenAce}
     // Triggered says something really fired, regardless of who placed the card.
-    private func flashRuleBannerIfNeeded(placedSuit: String) {
+    // Takes the board explicitly (rather than reading `self.board`) so it can be
+    // computed *before* a capture's resulting board is actually committed — see
+    // stageCaptureCommit, which needs the banner text up front to decide whether
+    // this placement gets the announcement pause.
+    private func bannerText(placedSuit: String, for board: HoneycombBoard) -> String? {
         var parts: [String] = []
         // Skip on the game's last move (the one that fills the board) — the win/lose
         // overlay appears immediately after, and an Ascension/Descension banner flashing
@@ -1171,9 +1175,7 @@ public final class HoneycombViewModel {
             }
         }
         if let combo = Self.comboBannerText(for: board) { parts.append(combo) }
-        if !parts.isEmpty {
-            enqueueBanner(parts.joined(separator: " "))
-        }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
     // Same/Plus/Fallen Ace/Combo only ever describe what the board's last capture
@@ -1278,6 +1280,15 @@ public final class HoneycombViewModel {
         // just flip along with everything else below, no separate highlight cycle.
         let directStatIndices = Set(flips.compactMap { neighborDirection(from: boardIndex, to: $0) })
 
+        // Same/Plus/Fallen Ace/Combo describe an actual capture that's about to flip
+        // cards — those get the announcement pause (see stageCaptureCommit): the
+        // banner shows first, and the flip itself waits until the banner has mostly
+        // faded, instead of landing in the same instant. An Ascension/Descension-only
+        // banner (no capture) doesn't gate the pause, since there's no flip to give
+        // weight to.
+        let banner = bannerText(placedSuit: placedCard.data.suit, for: capturedBoard)
+        let isSpecialCapture = Self.comboBannerText(for: capturedBoard) != nil
+
         if options.showPointHighlights, !directStatIndices.isEmpty, !UISound.isHeadlessMode {
             // Show the new card placed but not yet flipped — captured cells keep their
             // pre-capture owner for one beat while the attacker's winning stat(s) flash.
@@ -1290,15 +1301,51 @@ public final class HoneycombViewModel {
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.pointHighlightDelay) { [weak self] in
                 guard let self else { return }
                 self.pointHighlight = nil
-                withAnimation {
-                    self.board = capturedBoard
+                self.stageCaptureCommit(capturedBoard, banner: banner, isSpecial: isSpecialCapture) {
+                    self.finishPlacement(flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
                 }
-                self.isAnimatingPlacement = false
-                self.finishPlacement(placedSuit: placedCard.data.suit, flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
             }
         } else {
-            board = capturedBoard
-            finishPlacement(placedSuit: placedCard.data.suit, flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
+            stageCaptureCommit(capturedBoard, banner: banner, isSpecial: isSpecialCapture) { [weak self] in
+                self?.finishPlacement(flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
+            }
+        }
+    }
+
+    // How long the announcement banner (Same/Plus/Fallen Ace/Combo, and Hive Swarm's
+    // own reveal banner) stays on screen — mostly faded — before the capture's flip
+    // actually happens, so the moment reads as a beat that pauses the game instead of
+    // the flip and banner landing together. Matches the banner's own fade timeline
+    // (see HoneycombView's flashRuleBannerTrigger handler): 1.2s fully visible, then
+    // roughly 80% through its 0.3s fade-out.
+    private static let captureBannerPauseDelay: TimeInterval = 1.44
+
+    // Enqueues `banner` (if any) and, only when `isSpecial` says this is a genuine
+    // capture-worthy event, holds off committing `newBoard` (and thus the flip that
+    // commit triggers — HoneycombCardView reacts to card.owner/isFaceDown changing)
+    // until captureBannerPauseDelay has passed. A plain capture (or no capture at
+    // all) — or an Ascension/Descension-only note — commits immediately, same as
+    // before this pacing existed.
+    private func stageCaptureCommit(_ newBoard: HoneycombBoard, banner: String?, isSpecial: Bool, onCommit: @escaping () -> Void) {
+        guard isSpecial, let banner, !UISound.isHeadlessMode else {
+            if let banner { enqueueBanner(banner) }
+            board = newBoard
+            // Resets whatever the point-highlight path (applyPlacement) may have set
+            // true before this ran — a no-op if it was never set (the no-point-
+            // highlight call site never touches this flag itself).
+            isAnimatingPlacement = false
+            onCommit()
+            return
+        }
+        isAnimatingPlacement = true
+        enqueueBanner(banner)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.captureBannerPauseDelay) { [weak self] in
+            guard let self else { return }
+            withAnimation {
+                self.board = newBoard
+            }
+            self.isAnimatingPlacement = false
+            onCommit()
         }
     }
 
@@ -1311,9 +1358,8 @@ public final class HoneycombViewModel {
     // each other — previously both were computed into one board mutation and committed
     // together, so a reveal's own flip/banner could appear (or get silently overwritten)
     // in the exact same frame as the placed card's own capture.
-    private func finishPlacement(placedSuit: String, flipsCount: Int, excludingBoardIndex: Int, completion: @escaping () -> Void) {
+    private func finishPlacement(flipsCount: Int, excludingBoardIndex: Int, completion: @escaping () -> Void) {
         sessionCardsCaptured += flipsCount
-        flashRuleBannerIfNeeded(placedSuit: placedSuit)
         if options.isSoundEnabled {
             UISound.play(named: "snap", enabled: true)
         }
@@ -1335,30 +1381,31 @@ public final class HoneycombViewModel {
         let revealBombShelters = { [weak self] in
             guard let self else { return }
             let (revealedBoard, banners) = self.revealBombShelterCards(at: pendingReveals)
-            withAnimation {
-                self.board = revealedBoard
-            }
-            if self.options.isSoundEnabled {
-                UISound.play(named: "snap", enabled: true)
-            }
 
-            let finishReveal = { [weak self] in
+            let commitReveal = { [weak self] in
                 guard let self else { return }
-                for banner in banners {
-                    self.enqueueBanner(banner)
+                withAnimation {
+                    self.board = revealedBoard
+                }
+                if self.options.isSoundEnabled {
+                    UISound.play(named: "snap", enabled: true)
                 }
                 self.isAnimatingPlacement = false
                 self.checkWinCondition()
                 completion()
             }
-            if UISound.isHeadlessMode {
-                finishReveal()
-            } else {
-                // Give the reveal's own flip a moment to actually be seen (its flip
-                // animation alone runs ~0.4s — HoneycombCardView's onChange(of:
-                // card.isFaceDown)) before its own banner(s) land.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: finishReveal)
+
+            // Hive Swarm's own reveal gets the same announcement pause as an
+            // ordinary Same/Plus/Fallen Ace/Combo capture: banner first, then the
+            // flip once it's mostly faded — rather than the flip landing instantly
+            // and the banner following half a second later.
+            guard !banners.isEmpty, !UISound.isHeadlessMode else {
+                for banner in banners { self.enqueueBanner(banner) }
+                commitReveal()
+                return
             }
+            for banner in banners { self.enqueueBanner(banner) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.captureBannerPauseDelay, execute: commitReveal)
         }
         if UISound.isHeadlessMode {
             revealBombShelters()

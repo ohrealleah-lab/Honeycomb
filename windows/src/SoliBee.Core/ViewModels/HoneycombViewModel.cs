@@ -883,8 +883,7 @@ public partial class HoneycombViewModel : ObservableObject
         }
         else
         {
-            State.Board = workingBoard;
-            FinishPlacementTail(cellIndex, hand, preScore);
+            StageCaptureCommit(workingBoard, cellIndex, hand, preScore, _matchGeneration);
         }
     }
 
@@ -909,6 +908,59 @@ public partial class HoneycombViewModel : ObservableObject
 
         State.PointHighlightCellIndex = null;
         State.PointHighlightStatIndices = new HashSet<int>();
+        StageCaptureCommit(workingBoard, cellIndex, hand, preScore, generation);
+    }
+
+    // How long the announcement banner (Same/Plus/Fallen Ace/Combo, and Hive Swarm's
+    // own reveal banner) stays on screen — mostly faded — before the capture's flip
+    // actually happens, so the moment reads as a beat that pauses the game instead of
+    // the flip and banner landing together. Matches the Swift port's
+    // captureBannerPauseDelay (1.2s fully visible + ~80% through its 0.3s fade-out).
+    private const int CaptureBannerPauseMs = 1440;
+
+    // Computes this placement's banner (if any) from workingBoard *before* committing
+    // it to State.Board — a Same/Plus/Fallen Ace/Combo banner (a genuine capture,
+    // about to flip cards) gets shown first, with the commit (and the flip that
+    // triggers) held off until the banner has mostly faded. A plain capture (or an
+    // Ascension/Descension-only note, which isn't itself a capture) commits
+    // immediately, same as before this pacing existed. Mirrors the Swift port's
+    // stageCaptureCommit.
+    private async void StageCaptureCommit(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation)
+    {
+        var bannerParts = new List<string>();
+        string placedSuit = workingBoard.Cells[cellIndex].Card!.Data.Suit;
+        // Skip Ascension/Descension on the game's last move (the one that fills the
+        // board) — the win/lose overlay appears shortly after (see
+        // ShowPostGamePromptAfterDelay) and a suit banner flashing at the same moment
+        // just clutters that transition. Same/Plus/Fallen Ace/Combo still show, since
+        // those describe what the final move itself actually did.
+        if (!IsBoardFull(workingBoard) && workingBoard.AscensionDescensionSuits.Contains(placedSuit))
+        {
+            if (State.ActiveRules.Contains(HoneycombRule.Ascension))
+                bannerParts.Add($"{HoneycombRule.Ascension.DisplayName()}!");
+            else if (State.ActiveRules.Contains(HoneycombRule.Descension))
+                bannerParts.Add($"{HoneycombRule.Descension.DisplayName()}!");
+        }
+        var comboText = ComboBannerText(workingBoard);
+        if (comboText != null) bannerParts.Add(comboText);
+        string? banner = bannerParts.Count > 0 ? string.Join(" ", bannerParts) : null;
+
+        if (comboText == null || _isHeadless)
+        {
+            if (banner != null) EnqueueBanner(banner);
+            State.Board = workingBoard;
+            FinishPlacementTail(cellIndex, hand, preScore);
+            return;
+        }
+
+        EnqueueBanner(banner!);
+        await Task.Delay(CaptureBannerPauseMs);
+        if (generation != _matchGeneration || !IsPlaying)
+        {
+            if (!IsPlaying) _isAnimating = false;
+            return;
+        }
+
         State.Board = workingBoard;
         FinishPlacementTail(cellIndex, hand, preScore);
     }
@@ -930,31 +982,6 @@ public partial class HoneycombViewModel : ObservableObject
             if (State.CurrentTurn == 1) State.PlayerChaosIndex = null;
             else State.OpponentChaosIndex = null;
         }
-
-        // A single combined banner for everything this placement's own capture just
-        // did, instead of separate SAME/PLUS and COMBO flashes — two back-to-back
-        // OnFlashBanner calls used to mean the second silently overwrote the first
-        // before it had ever been seen. Also reuses ComboBannerText (already shared
-        // with the Bomb Shelter reveal paths below) instead of a second, narrower
-        // inline check, which previously dropped Fallen Ace entirely for an ordinary
-        // placement. Mirrors the Swift port's flashRuleBannerIfNeeded.
-        var bannerParts = new List<string>();
-        string placedSuit = State.Board.Cells[cellIndex].Card!.Data.Suit;
-        // Skip Ascension/Descension on the game's last move (the one that fills the
-        // board) — the win/lose overlay appears shortly after (see
-        // ShowPostGamePromptAfterDelay) and a suit banner flashing at the same moment
-        // just clutters that transition. Same/Plus/Fallen Ace/Combo still show, since
-        // those describe what the final move itself actually did.
-        if (!IsBoardFull() && State.Board.AscensionDescensionSuits.Contains(placedSuit))
-        {
-            if (State.ActiveRules.Contains(HoneycombRule.Ascension))
-                bannerParts.Add($"{HoneycombRule.Ascension.DisplayName()}!");
-            else if (State.ActiveRules.Contains(HoneycombRule.Descension))
-                bannerParts.Add($"{HoneycombRule.Descension.DisplayName()}!");
-        }
-        var placementComboText = ComboBannerText(State.Board);
-        if (placementComboText != null) bannerParts.Add(placementComboText);
-        if (bannerParts.Count > 0) EnqueueBanner(string.Join(" ", bannerParts));
 
         int postScore = State.CurrentTurn == 1 ? CountPlayerCards(State.Board, hand) : CountOpponentCards(State.Board, hand);
         // Count all captures (both player and opponent moves), not just player captures
@@ -999,9 +1026,13 @@ public partial class HoneycombViewModel : ObservableObject
 
     // Bomb Shelter: the hidden card flips on its own 3 turns after it was played,
     // rather than waiting for the match to end — a timed landmine the opponent has to
-    // play around, instead of a secret that's only relevant at the final score.
+    // play around, instead of a secret that's only relevant at the final score. The
+    // countdown itself is always committed immediately (a hidden card's timer must
+    // persist every turn or it could never count down to a reveal) — only the
+    // *reveal*, once a timer hits zero, gets the banner-first-then-flip pacing.
     private void AdvanceBombShelterTimers(int justPlacedCellIndex)
     {
+        var pendingReveals = new List<int>();
         for (int i = 0; i < 9; i++)
         {
             if (i == justPlacedCellIndex) continue;
@@ -1010,32 +1041,41 @@ public partial class HoneycombViewModel : ObservableObject
             if (cell.IsEmpty || !cell.Card!.IsFaceDown || !cell.Card.BombShelterTurnsRemaining.HasValue) continue;
 
             cell.Card.BombShelterTurnsRemaining--;
-            if (cell.Card.BombShelterTurnsRemaining <= 0)
-            {
-                cell.Card.BombShelterTurnsRemaining = null;
-                State.Board.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
-                var comboText = ComboBannerText(State.Board);
-                var revealedText = $"{HoneycombRule.BombShelter.DisplayName()} Revealed!";
-                var bannerText = comboText == null ? revealedText : $"{revealedText} {comboText}";
-                // The reveal itself is committed above so the eventual NotifyStateChanged
-                // later in FinishPlacementTail's flow picks it up and plays
-                // HoneycombCardView's reveal flip — but the banner text is delayed a beat
-                // so it doesn't land before the player has had a chance to see that flip.
-                FlashBannerAfterRevealDelay(bannerText, _matchGeneration);
-            }
+            if (cell.Card.BombShelterTurnsRemaining <= 0) pendingReveals.Add(i);
         }
+
+        if (pendingReveals.Count == 0) return;
+
+        // Resolve every reveal this turn onto one clone before ever committing —
+        // multiple simultaneous reveals (rare, but possible) compose onto the same
+        // board this way, instead of each one's independent commit clobbering the
+        // other's. Mirrors the Swift port's tickBombShelterTimers/
+        // revealBombShelterCards split.
+        var revealedBoard = State.Board.Clone();
+        var banners = new List<string>();
+        foreach (var i in pendingReveals)
+        {
+            revealedBoard.Cells[i].Card!.BombShelterTurnsRemaining = null;
+            revealedBoard.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
+            var comboText = ComboBannerText(revealedBoard);
+            var revealedText = $"{HoneycombRule.BombShelter.DisplayName()} Revealed!";
+            banners.Add(comboText == null ? revealedText : $"{revealedText} {comboText}");
+        }
+        StageBombShelterReveal(revealedBoard, banners, _matchGeneration);
     }
 
-    // Gives a Bomb Shelter reveal's own flip animation a moment to actually be seen
-    // (HoneycombCardView.PlayRevealAnimation) before its "Revealed!" banner lands —
-    // mirrors the Swift port's 0.5s pause for the same reason (finishPlacement's
-    // revealBombShelters). Guarded by _matchGeneration so a match that's moved on
-    // (New Game/Surrender/a fresh match) during the delay can't flash a stale banner.
-    private async void FlashBannerAfterRevealDelay(string text, int generation)
+    // Banner(s) first, then the reveal's own flip once they've mostly faded — same
+    // announcement pacing as StageCaptureCommit, for the same reason (a Hive Swarm
+    // reveal is just as much a "special event" as a Same/Plus/Fallen Ace/Combo
+    // capture). Guarded by _matchGeneration so a match that's moved on (New Game/
+    // Surrender/a fresh match) during the delay can't commit a stale board.
+    private async void StageBombShelterReveal(HoneycombBoard revealedBoard, List<string> banners, int generation)
     {
-        if (!_isHeadless) await Task.Delay(500);
-        if (generation != _matchGeneration) return;
-        EnqueueBanner(text);
+        foreach (var banner in banners) EnqueueBanner(banner);
+        if (!_isHeadless) await Task.Delay(CaptureBannerPauseMs);
+        if (generation != _matchGeneration || !IsPlaying) return;
+        State.Board = revealedBoard;
+        NotifyStateChanged();
     }
 
     private async Task RevealBombSheltersAndSettleAsync()
@@ -1061,29 +1101,35 @@ public partial class HoneycombViewModel : ObservableObject
 
         if (starterCell != -1)
         {
-            State.Board.RevealFaceDownCard(starterCell, new HashSet<HoneycombRule>(State.ActiveRules));
-            NotifyStateChanged();
-            var comboText = ComboBannerText(State.Board);
-            // Let the reveal flip (HoneycombCardView.PlayRevealAnimation, kicked off by
-            // NotifyStateChanged above) actually be seen before its banner lands.
+            // Banner first (if this reveal triggers Same/Plus/Fallen Ace/Combo), then
+            // the flip once it's mostly faded — same pacing as StageCaptureCommit/
+            // StageBombShelterReveal. No banner means nothing special happened, so
+            // the flip lands immediately, same as before.
+            var revealedBoard = State.Board.Clone();
+            revealedBoard.RevealFaceDownCard(starterCell, new HashSet<HoneycombRule>(State.ActiveRules));
+            var comboText = ComboBannerText(revealedBoard);
             if (comboText != null)
             {
-                if (!_isHeadless) await Task.Delay(500);
                 EnqueueBanner(comboText);
+                if (!_isHeadless) await Task.Delay(CaptureBannerPauseMs);
             }
+            State.Board = revealedBoard;
+            NotifyStateChanged();
             await Task.Delay(1000);
         }
 
         if (secondCell != -1)
         {
-            State.Board.RevealFaceDownCard(secondCell, new HashSet<HoneycombRule>(State.ActiveRules));
-            NotifyStateChanged();
-            var comboText = ComboBannerText(State.Board);
+            var revealedBoard = State.Board.Clone();
+            revealedBoard.RevealFaceDownCard(secondCell, new HashSet<HoneycombRule>(State.ActiveRules));
+            var comboText = ComboBannerText(revealedBoard);
             if (comboText != null)
             {
-                if (!_isHeadless) await Task.Delay(500);
                 EnqueueBanner(comboText);
+                if (!_isHeadless) await Task.Delay(CaptureBannerPauseMs);
             }
+            State.Board = revealedBoard;
+            NotifyStateChanged();
             await Task.Delay(1000);
         }
 
@@ -1091,9 +1137,10 @@ public partial class HoneycombViewModel : ObservableObject
         SettleMatch();
     }
 
-    private bool IsBoardFull()
+    private bool IsBoardFull(HoneycombBoard? board = null)
     {
-        for (int i=0; i<9; i++) if (State.Board.Cells[i].IsEmpty) return false;
+        board ??= State.Board;
+        for (int i=0; i<9; i++) if (board.Cells[i].IsEmpty) return false;
         return true;
     }
 
