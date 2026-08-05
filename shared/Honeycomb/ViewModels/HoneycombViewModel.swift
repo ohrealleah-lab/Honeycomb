@@ -935,11 +935,23 @@ public final class HoneycombViewModel {
         } else if activeRules.contains(.threeOpen) {
             openOpponentCardIds = Set(eventualOpponentIds.shuffled().prefix(3))
         }
-        // A card that came from the player's own hand via Swap stays face-up in the
-        // opponent's hand for the rest of the match — the player already knows exactly
-        // what it is, so there's nothing left to hide.
         if let swap = swapResult {
+            // Whether that slot ended up visible (All Open, or Three Open's random
+            // pick landed on it) — checked BEFORE the unconditional insert below,
+            // since that would otherwise always make this true.
+            let slotIsVisible = openOpponentCardIds.contains(swap.finalOpponentCard.id)
+            // A card that came from the player's own hand via Swap stays face-up in the
+            // opponent's hand for the rest of the match — the player already knows exactly
+            // what it is, so there's nothing left to hide.
             openOpponentCardIds.insert(swap.finalOpponentCard.id)
+            // If that slot is visible, the CURRENT pre-swap card sitting there is
+            // visible too for the whole window before the trade actually lands —
+            // only its eventual (post-swap) id was registered above, so without
+            // this the card about to be swapped away incorrectly rendered as
+            // hidden/face-down until the trade completed.
+            if slotIsVisible {
+                openOpponentCardIds.insert(opponentHand[swap.opponentIndex].id)
+            }
         }
 
         // Symmetric reveal: All Open/Three Open uncover both hands, not just the
@@ -956,11 +968,18 @@ public final class HoneycombViewModel {
         } else if activeRules.contains(.threeOpen) {
             openPlayerCardIds = Set(eventualPlayerIds.shuffled().prefix(3))
         }
-        // A card that came from the opponent's hand via Swap stays visible to the
-        // opponent for the rest of the match — the AI already knows exactly what it is,
-        // it was its own card a moment ago.
         if let swap = swapResult {
+            let slotIsVisible = openPlayerCardIds.contains(swap.finalPlayerCard.id)
+            // A card that came from the opponent's hand via Swap stays visible to the
+            // opponent for the rest of the match — the AI already knows exactly what it is,
+            // it was its own card a moment ago.
             openPlayerCardIds.insert(swap.finalPlayerCard.id)
+            // Mirrors the opponent-side fix above: if that slot is visible, the
+            // CURRENT pre-swap card sitting there is visible too for the whole
+            // window before the trade actually lands.
+            if slotIsVisible {
+                openPlayerCardIds.insert(playerHand[swap.playerIndex].id)
+            }
         }
 
         return swapResult

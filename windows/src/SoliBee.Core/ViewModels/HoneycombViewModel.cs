@@ -505,14 +505,28 @@ public partial class HoneycombViewModel : ObservableObject
             foreach (var id in eventualPlayerIds.OrderBy(_ => Random.Shared.Next()).Take(3)) State.PlayerRevealedIds.Add(id);
         }
 
-        // The swapped card always stays visible in its new hand, regardless of whether
-        // Three Open's random pick landed on it — the player already knows exactly what
-        // it is (it just came from their own hand a moment ago), so there's nothing left
-        // to hide, and the AI is in the same position for the card it received.
         if (swap.HasValue)
         {
+            // Whether each slot ended up visible (All Open, or Three Open's random
+            // pick landed on it) — checked BEFORE the unconditional adds below,
+            // since those would otherwise always make this true.
+            bool opponentSlotVisible = State.OpponentRevealedIds.Contains(swap.Value.PlayerCardId);
+            bool playerSlotVisible = State.PlayerRevealedIds.Contains(swap.Value.OpponentCardId);
+
+            // The swapped card always stays visible in its new hand, regardless of whether
+            // Three Open's random pick landed on it — the player already knows exactly what
+            // it is (it just came from their own hand a moment ago), so there's nothing left
+            // to hide, and the AI is in the same position for the card it received.
             State.OpponentRevealedIds.Add(swap.Value.PlayerCardId);
             State.PlayerRevealedIds.Add(swap.Value.OpponentCardId);
+
+            // If a slot is visible, the CURRENT pre-swap card sitting there is
+            // visible too for the whole window before the trade actually lands —
+            // only its eventual (post-swap) id was registered above, so without
+            // this the card about to be swapped away incorrectly rendered as
+            // hidden/face-down until the trade completed.
+            if (opponentSlotVisible) State.OpponentRevealedIds.Add(swap.Value.OpponentCard.UniqueInstanceId);
+            if (playerSlotVisible) State.PlayerRevealedIds.Add(swap.Value.PlayerCard.UniqueInstanceId);
         }
 
         return swap;
