@@ -53,7 +53,7 @@
         <Grid ColumnDefinitions="Auto, *, Auto, *, Auto" RowDefinitions="160, Auto" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
             
             <!-- Left Column: Player Hand (2-2-1 Pyramid) -->
-            <Grid Grid.Column="0" Grid.Row="1" Width="410" Height="860" Margin="20" ClipToBounds="False">
+            <Grid Grid.Column="0" Grid.Row="1" Width="410" Height="860" Margin="20" ClipToBounds="False" ZIndex="10">
                 <TextBlock Text="PLAYER" Foreground="White" FontWeight="ExtraBold" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-35,0,0" Opacity="0.8"/>
                 
                 <local:HoneycombCardView x:Name="PlayerHand0" HorizontalAlignment="Left" VerticalAlignment="Top" />
@@ -126,7 +126,7 @@
             </Grid>
 
             <!-- Right Column: Opponent Hand (2-2-1 Pyramid) -->
-            <Grid Grid.Column="4" Grid.Row="1" Width="410" Height="860" Margin="20" ClipToBounds="False">
+            <Grid Grid.Column="4" Grid.Row="1" Width="410" Height="860" Margin="20" ClipToBounds="False" ZIndex="10">
                 <TextBlock Text="DEALER" Foreground="White" FontWeight="ExtraBold" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-35,0,0" Opacity="0.8"/>
                 <local:HoneycombCardView x:Name="OpponentHand0" HorizontalAlignment="Left" VerticalAlignment="Top" />
                 <local:HoneycombCardView x:Name="OpponentHand1" HorizontalAlignment="Right" VerticalAlignment="Top" />

@@ -408,7 +408,7 @@ public final class HoneycombViewModel {
         // 2.0s matching only the "First Move" banner's own runtime, which predates
         // the deal-flip animation and could let the trade start while the last
         // card(s) were still flipping in.
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.swapStartDelay) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + swapStartDelay) { [weak self] in
             guard let self, self.handSetupGeneration == generation else { return }
 
             // Beat 1 — The Lift: scale up + shadow, cards not yet relocated. See
@@ -550,7 +550,7 @@ public final class HoneycombViewModel {
         }
 
         if !isPlayerTurn || swapPending {
-            let delay = swapPending ? Self.swapAnimationCompleteDelay : Self.opponentMoveDelay
+            let delay = swapPending ? swapAnimationCompleteDelay : Self.opponentMoveDelay
             if UISound.isHeadlessMode {
                 startFirstMove()
             } else {
@@ -605,7 +605,13 @@ public final class HoneycombViewModel {
     // 10*0.4=4.0s total. Must stay in sync with those View-layer constants (mirrors
     // the Windows port's DealFlipTotalMs, which plays the same way). iOS doesn't have
     // the deal-flip animation yet, so this is just a no-op pause there.
-    private static let dealFlipTotalDuration: TimeInterval = 4.0
+    // If the opponent's cards are face-down (the default unless rules dictate otherwise),
+    // they don't visually flip at all, meaning the animation appears completely finished
+    // after the 5 player cards (2.0s). This dynamically skips that empty 2.0s block.
+    private var dealFlipTotalDuration: TimeInterval {
+        let opponentCardsVisible = opponentHand.contains { isOpponentCardVisible(cardId: $0.id) }
+        return opponentCardsVisible ? 4.0 : 2.0
+    }
     // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
     // starts, so the two animations never visually overlap — mirrors the Windows
     // port's SwapPostDealDelayMs. Short on purpose: the Lift beat right after this
@@ -619,7 +625,7 @@ public final class HoneycombViewModel {
     // while the deal-flip was still playing, or (via swapAnimationCompleteDelay
     // below) let the first move fire before the trade's own animation had actually
     // landed.
-    private static let swapStartDelay: TimeInterval = dealFlipTotalDuration + swapPostDealDelay
+    private var swapStartDelay: TimeInterval { dealFlipTotalDuration + Self.swapPostDealDelay }
     // Nectar Exchange's 3-beat "lift, fly, land" animation durations — see
     // stageSwapAnimation, which transitions swapAnimationPhase through .lifting/
     // .moving/.landing on exactly these timings. Total 1.7s (was a flat 0.9s
@@ -637,7 +643,7 @@ public final class HoneycombViewModel {
     // the highlight-hold buffer. The first move (player input or the AI's
     // opening move) waits until this point when a Swap trade is pending,
     // instead of stepping on the trade mid-animation.
-    private static let swapAnimationCompleteDelay: TimeInterval = swapStartDelay + swapTotalMoveDuration + swapHighlightHoldBuffer
+    private var swapAnimationCompleteDelay: TimeInterval { swapStartDelay + Self.swapTotalMoveDuration + Self.swapHighlightHoldBuffer }
     // How long a capture's winning stat(s) flash before the flip actually happens.
     private static let pointHighlightDelay: TimeInterval = 0.5
 

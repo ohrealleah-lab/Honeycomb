@@ -601,7 +601,10 @@ public partial class HoneycombViewModel : ObservableObject
     // PlayRevealAnimation in turn rather than animating them in parallel) x
     // PlayRevealAnimation's 400ms each (HoneycombCardView.FlipTotalMs — matches the
     // Swift port's HoneycombFlipTiming.duration).
-    private const int DealFlipTotalMs = 4000;
+    // If the opponent's cards are face-down (the default unless rules dictate otherwise),
+    // they don't visually flip at all, meaning the animation appears completely finished
+    // after the 5 player cards (2000ms). This dynamically skips that empty 2000ms block.
+    private int DealFlipTotalMs => OpponentHand.Any(c => IsOpponentCardVisible(c.Id)) ? 4000 : 2000;
     // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
     // starts, so the two animations never visually overlap. Short on purpose — the
     // Lift beat right after this is itself part of the animation.
@@ -676,9 +679,14 @@ public partial class HoneycombViewModel : ObservableObject
         if (generation != _matchGeneration || !IsPlaying) return;
 
         // Beat 2: Flight — the actual trade lands; the view slides ghosts across.
+        // We clone the cards here because ApplySwap mutates the Owner property on these
+        // instances in place, and we want the sliding ghosts to retain their original
+        // owners/colors during travel until they land.
+        var preSwapPlayerCard = swap.PlayerCard.Clone();
+        var preSwapOpponentCard = swap.OpponentCard.Clone();
         ApplySwap(swap);
         NotifyStateChanged();
-        OnSwapLanded?.Invoke(swap.PlayerCard, swap.OpponentCard, swap.PlayerIndex, swap.OpponentIndex);
+        OnSwapLanded?.Invoke(preSwapPlayerCard, preSwapOpponentCard, swap.PlayerIndex, swap.OpponentIndex);
 
         // Beats 2+3 (Flight + Touchdown) run inside the view's own animation loop —
         // just wait out their combined duration here before continuing.

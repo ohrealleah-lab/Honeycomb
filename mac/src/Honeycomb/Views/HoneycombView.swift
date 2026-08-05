@@ -100,7 +100,7 @@ public struct HoneycombView: View {
     private static let handLabelBlockHeight: CGFloat = 34
     // Side padding for the hand/board row, matching Klondike's card rows
     // (GameView's `.padding(.horizontal, 20)` on its piles/tableau HStacks).
-    private static let boardRowHorizontalPadding: CGFloat = 40
+    private static let boardRowHorizontalPadding: CGFloat = 80
     private static let boardRowVerticalPadding: CGFloat = 20
     // Space below the hand columns/board down to the window's bottom edge — kept
     // separate from boardRowVerticalPadding (which still governs the top) since the
@@ -940,18 +940,34 @@ public struct HoneycombView: View {
         // placeholder-hand -> real-hand swap, which a card.id-keyed ForEach would
         // instead treat as a remove+insert, resetting the flip mid-animation.
         VStack(spacing: Self.handGridSpacing) {
+            let row0 = Array(hand.prefix(2).enumerated())
             HStack(spacing: Self.handGridSpacing) {
-                ForEach(Array(hand.prefix(2).enumerated()), id: \.offset) { i, card in content(i, card) }
-            }
-            if hand.count > 2 {
-                HStack(spacing: Self.handGridSpacing) {
-                    ForEach(Array(hand.dropFirst(2).prefix(2).enumerated()), id: \.offset) { offset, card in content(offset + 2, card) }
+                ForEach(row0, id: \.offset) { i, card in
+                    content(i, card)
+                        .zIndex(viewModel.swapHighlightCardIds.contains(card.id) ? 100 : 0)
                 }
+            }
+            .zIndex(row0.contains(where: { viewModel.swapHighlightCardIds.contains($0.element.id) }) ? 100 : 0)
+
+            if hand.count > 2 {
+                let row1 = Array(hand.dropFirst(2).prefix(2).enumerated())
+                HStack(spacing: Self.handGridSpacing) {
+                    ForEach(row1, id: \.offset) { offset, card in
+                        content(offset + 2, card)
+                            .zIndex(viewModel.swapHighlightCardIds.contains(card.id) ? 100 : 0)
+                    }
+                }
+                .zIndex(row1.contains(where: { viewModel.swapHighlightCardIds.contains($0.element.id) }) ? 100 : 0)
             }
             if hand.count > 4 {
+                let row2 = Array(hand.dropFirst(4).enumerated())
                 HStack(spacing: Self.handGridSpacing) {
-                    ForEach(Array(hand.dropFirst(4).enumerated()), id: \.offset) { offset, card in content(offset + 4, card) }
+                    ForEach(row2, id: \.offset) { offset, card in
+                        content(offset + 4, card)
+                            .zIndex(viewModel.swapHighlightCardIds.contains(card.id) ? 100 : 0)
+                    }
                 }
+                .zIndex(row2.contains(where: { viewModel.swapHighlightCardIds.contains($0.element.id) }) ? 100 : 0)
             }
         }
     }
