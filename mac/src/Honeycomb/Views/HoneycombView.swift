@@ -162,11 +162,13 @@ public struct HoneycombView: View {
     // to interpolate that id's geometry between the player's and dealer's hand
     // columns, producing a huge, rotated, screen-filling card.
     @State private var handIdentityToken: Int = 0
-    // Time between each card's flip starting (not its duration) — 10 cards total
-    // (player then opponent) finish comfortably before the Nectar Exchange trade's own
-    // 2.0s reveal delay (stageSwapAnimation in the shared ViewModel), so the swap only
-    // ever animates after every deal-flip has landed, never mid-deal.
-    private static let dealFlipStagger: Double = 0.1
+    // Time between each card's flip starting — matches HoneycombFlipTiming.duration so
+    // cards flip one after another with no overlap, like the Windows port's own
+    // sequential (awaited) deal-flip, rather than the staggered/overlapping cadence
+    // this used before. Must stay in sync with the ViewModel's dealFlipTotalDuration
+    // (shared/Honeycomb/ViewModels/HoneycombViewModel.swift), which the Nectar
+    // Exchange trade's own start delay is derived from.
+    private static let dealFlipStagger: Double = HoneycombFlipTiming.duration
 
     // Shared across both hand columns so a Swap trade's two cards can visually slide
     // from one hand to the other — SwiftUI interpolates a matchedGeometryEffect'd

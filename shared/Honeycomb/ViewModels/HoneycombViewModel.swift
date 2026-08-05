@@ -552,12 +552,12 @@ public final class HoneycombViewModel {
     // highlighted as the one they're about to play) before it happens.
     private static let opponentMoveDelay: TimeInterval = 2.5
     // Matches mac HoneycombView's deal-flip runtime: 10 hand slots (5 player, then 5
-    // opponent), staggered by dealFlipStagger (0.1s) with each flip's own
-    // HoneycombFlipTiming.duration (0.4s) — the last card (overall index 9) starts at
-    // 9*0.1=0.9s and finishes at 0.9+0.4=1.3s. Must stay in sync with those View-layer
-    // constants (mirrors the Windows port's DealFlipTotalMs). iOS doesn't have the
-    // deal-flip animation yet, so this is just a no-op pause there.
-    private static let dealFlipTotalDuration: TimeInterval = 1.3
+    // opponent) play their flip one after another with no overlap — dealFlipStagger
+    // equals each flip's own HoneycombFlipTiming.duration (0.4s), so 10 cards take
+    // 10*0.4=4.0s total. Must stay in sync with those View-layer constants (mirrors
+    // the Windows port's DealFlipTotalMs, which plays the same way). iOS doesn't have
+    // the deal-flip animation yet, so this is just a no-op pause there.
+    private static let dealFlipTotalDuration: TimeInterval = 4.0
     // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
     // starts, so the two animations never visually overlap — mirrors the Windows
     // port's SwapPostDealDelayMs.

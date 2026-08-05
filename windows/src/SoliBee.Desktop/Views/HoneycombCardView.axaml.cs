@@ -228,6 +228,12 @@ public partial class HoneycombCardView : UserControl
         };
     }
 
+    // Total flip duration (both halves combined) — matches the Swift port's
+    // HoneycombFlipTiming.duration (0.4s), used identically for capture/ownership
+    // flips and the deal-flip reveal below. 14 steps total (7 per half, 15° each).
+    private const double FlipTotalMs = 400.0;
+    private static readonly TimeSpan FlipStepDelay = TimeSpan.FromMilliseconds(FlipTotalMs / 14.0);
+
     private async Task PlayOwnerChangeAnimation(HoneycombCard card)
     {
         var st = new Rotate3DTransform();
@@ -237,7 +243,7 @@ public partial class HoneycombCardView : UserControl
         for (double a = 0; a <= 90; a += 15)
         {
             st.AngleY = a;
-            await Task.Delay(16);
+            await Task.Delay(FlipStepDelay);
         }
 
         // 2. Midpoint: Update visuals
@@ -247,7 +253,7 @@ public partial class HoneycombCardView : UserControl
         for (double a = 270; a <= 360; a += 15)
         {
             st.AngleY = a;
-            await Task.Delay(16);
+            await Task.Delay(FlipStepDelay);
         }
         st.AngleY = 0;
     }
@@ -272,7 +278,7 @@ public partial class HoneycombCardView : UserControl
         {
             faceTransform.AngleY = a;
             backTransform.AngleY = a;
-            await Task.Delay(16);
+            await Task.Delay(FlipStepDelay);
         }
 
         // 2. Midpoint: swap from back to face (UpdateVisuals sets both IsVisible flags)
@@ -283,7 +289,7 @@ public partial class HoneycombCardView : UserControl
         {
             faceTransform.AngleY = a;
             backTransform.AngleY = a;
-            await Task.Delay(16);
+            await Task.Delay(FlipStepDelay);
         }
         faceTransform.AngleY = 0;
         backTransform.AngleY = 0;

@@ -598,8 +598,9 @@ public partial class HoneycombViewModel : ObservableObject
     // The initial deal-flip's own total runtime: 10 hand slots (5 player, then 5
     // opponent — see HoneycombView.Refresh, which awaits each slot's RenderCard/
     // PlayRevealAnimation in turn rather than animating them in parallel) x
-    // PlayRevealAnimation's ~224ms each (two 7-step loops at 16ms/step).
-    private const int DealFlipTotalMs = 2240;
+    // PlayRevealAnimation's 400ms each (HoneycombCardView.FlipTotalMs — matches the
+    // Swift port's HoneycombFlipTiming.duration).
+    private const int DealFlipTotalMs = 4000;
     // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
     // starts, so the two animations never visually overlap.
     private const int SwapPostDealDelayMs = 500;
