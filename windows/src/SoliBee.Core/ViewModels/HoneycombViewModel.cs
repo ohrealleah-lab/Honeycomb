@@ -608,18 +608,23 @@ public partial class HoneycombViewModel : ObservableObject
     // Swift port's withAnimation(.easeInOut(duration: 0.9)) — see
     // HoneycombView.PlaySwapSlideAnimation.
     private const int SwapSlideDurationMs = 900;
+    // How long the highlight is held after the trade starts (see
+    // StageSwapAnimation below) — already comfortably covers SwapSlideDurationMs
+    // with a 300ms buffer. Matches the Swift port's own highlight-hold duration.
+    private const int SwapHighlightHoldMs = 1200;
 
     // Swap trade's real landing time — the deal-flip's own runtime plus the
-    // deliberate post-deal pause (matching StageSwapAnimation's delay below) plus the
-    // slide animation's own duration. The first move — player input or the AI's
-    // opening move — waits until here instead of stepping on the trade mid-animation.
-    // StartTurn() already ran above and skipped its own AI-trigger (blocked by
-    // _isAnimating), so this explicitly resumes it once the wait is over — calling
-    // RunAITurn(skipPacingDelay: true) rather than stacking its normal 2.5s "thinking"
-    // pause on top of this wait.
+    // deliberate post-deal pause (matching StageSwapAnimation's delay below) plus how
+    // long the highlight is held after the trade starts. The first move — player
+    // input or the AI's opening move — waits until here instead of stepping on the
+    // trade mid-animation, or (previously, using only SwapSlideDurationMs) on its
+    // lingering highlight-hold tail. StartTurn() already ran above and skipped its
+    // own AI-trigger (blocked by _isAnimating), so this explicitly resumes it once
+    // the wait is over — calling RunAITurn(skipPacingDelay: true) rather than
+    // stacking its normal 2.5s "thinking" pause on top of this wait.
     private async void ReleaseFirstMoveAfterSwap(int generation)
     {
-        if (!_isHeadless) await Task.Delay(DealFlipTotalMs + SwapPostDealDelayMs + SwapSlideDurationMs);
+        if (!_isHeadless) await Task.Delay(DealFlipTotalMs + SwapPostDealDelayMs + SwapHighlightHoldMs);
         if (generation != _matchGeneration || !IsPlaying) return;
 
         _isAnimating = false;
@@ -657,7 +662,7 @@ public partial class HoneycombViewModel : ObservableObject
         OnSwapLanded?.Invoke(swap.PlayerCard, swap.OpponentCard, swap.PlayerIndex, swap.OpponentIndex);
 
         // 50% slower than the original 0.8s post-swap highlight hold.
-        if (!_isHeadless) await Task.Delay(1200);
+        if (!_isHeadless) await Task.Delay(SwapHighlightHoldMs);
         if (generation != _matchGeneration || !IsPlaying) return;
 
         State.SwapHighlightIds.Clear();
