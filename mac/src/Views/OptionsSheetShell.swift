@@ -186,8 +186,6 @@ struct OptionsSheetShell<Content: View>: View {
 
     private var visualThemesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Divider()
-
             Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showingThemes = true } }) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
@@ -213,8 +211,6 @@ struct OptionsSheetShell<Content: View>: View {
                 )
             }
             .buttonStyle(.plain)
-
-            Divider()
         }
     }
 }
