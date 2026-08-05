@@ -1493,6 +1493,17 @@ public partial class CardView : UserControl
                     dragCanvas.Children.Add(cv);
                     Canvas.SetLeft(cv, _dragStartPositions[cv].X);
                     Canvas.SetTop(cv, _dragStartPositions[cv].Y);
+
+                    // Reuse _slideTx as the drag-offset transform — a card is never
+                    // mid-slide-in and being dragged at once, so this avoids a second
+                    // TranslateTransform/TransformGroup fighting over RenderTransform.
+                    // Stop any in-flight slide first so nothing else writes to
+                    // _slideTx while it's driving the drag.
+                    cv._slideAnimTimer?.Stop();
+                    cv._slideAnimTimer = null;
+                    cv._slideTx.X = 0;
+                    cv._slideTx.Y = 0;
+                    cv.RenderTransform = cv._slideTx;
                 }
 
                 e.Pointer.Capture(this);
@@ -1571,10 +1582,12 @@ public partial class CardView : UserControl
 
         foreach (var cv in _draggedStack)
         {
-            if (_dragStartPositions.TryGetValue(cv, out var startPos))
+            // _dragStartPositions[cv] (set via Canvas.Left/Top at drag start) is the
+            // static origin; the delta is carried by _slideTx so this skips layout.
+            if (_dragStartPositions.ContainsKey(cv))
             {
-                Canvas.SetLeft(cv, startPos.X + dx);
-                Canvas.SetTop(cv, startPos.Y + dy);
+                cv._slideTx.X = dx;
+                cv._slideTx.Y = dy;
             }
         }
 
@@ -1660,6 +1673,13 @@ public partial class CardView : UserControl
                     dragCanvas.Children.Remove(cv);
             }
         }
+
+        // These CardView instances are discarded either way — UpdateCardsLayout below
+        // rebuilds the source pile with fresh instances — but clear RenderTransform for
+        // hygiene in case one is ever retained/reused, matching BeginSlideIn's own
+        // cleanup (RenderTransform = null once its animation finishes).
+        foreach (var cv in _draggedStack)
+            cv.RenderTransform = null;
 
         _sourcePileView?.UpdateCardsLayout();
         _draggedStack.Clear();
