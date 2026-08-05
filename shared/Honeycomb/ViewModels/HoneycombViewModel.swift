@@ -359,6 +359,23 @@ public final class HoneycombViewModel {
 
     public var canRematch: Bool { !rematchOpponentDeck.isEmpty }
 
+    // Steal Protection: true only for a match started via rematch() (not a fresh
+    // startNewGame() roll) — settleMatch() reads this to decide whether a win with
+    // nothing new to steal should count toward consecutiveNoStealWins below. A fresh
+    // match's own opponent-deck roll (rollOpponentDeck) already guarantees at least
+    // one unlockable card, so this protection only ever needs to cover the frozen
+    // rematch pool, which doesn't get that same guarantee.
+    private var isRematchMatch: Bool = false
+    // How many rematches in a row (against the same frozen rematchOpponentDeck) the
+    // player has WON with nothing new to steal — e.g. the opponent's deck happens to
+    // include a card that's realistically never capturable (an all-Ace 5★). Reset to
+    // 0 by startNewGame() (a fresh opponent pool starts this over) and by any win that
+    // *does* yield a stealable card (the protection wasn't needed that time). At 2,
+    // settleMatch() grants a card directly (see grantStealProtectionCard) and resets
+    // this back to 0, rather than growing without bound. Losses/draws don't touch it
+    // either way — only a won rematch counts as evidence the player is stuck.
+    private var consecutiveNoStealWins: Int = 0
+
     public func startNewGame() {
         // Invalidates any AI move computation still in flight on a background queue from
         // the match/round this is resetting (e.g. Surrender calling straight into this
@@ -370,6 +387,8 @@ public final class HoneycombViewModel {
         swapHighlightCardIds.removeAll()
         clearHint()
         lastHiveSwarmPhrase = nil
+        isRematchMatch = false
+        consecutiveNoStealWins = 0
         // Defensive reset — a previous match quit (or otherwise interrupted) while
         // this was true (e.g. mid-Swap-animation-wait, see quitMatch) would otherwise
         // leave it stuck true forever, since nothing else clears it for a match that
@@ -593,6 +612,7 @@ public final class HoneycombViewModel {
             startNewGame()
             return
         }
+        isRematchMatch = true
         aiMoveGeneration += 1
         handSetupGeneration += 1
         let generation = handSetupGeneration
@@ -1817,6 +1837,7 @@ public final class HoneycombViewModel {
                 gameState = .gameOver
                 if options.isSoundEnabled { UISound.play(named: "victory", enabled: true) }
                 stats.recordGame(won: true, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: oScore == 0, difficulty: options.difficulty, fallenAceCaptures: board.sessionFallenAceCaptures)
+                applyStealProtection()
             } else if oScore > pScore {
                 matchResult = "You Lose"
                 gameState = .gameOver
@@ -1925,6 +1946,42 @@ public final class HoneycombViewModel {
                 && card.owner == .player
                 && !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id)
         }
+    }
+
+    // Steal Protection: covers the case where a rematch's frozen opponent pool
+    // happens to include a card that's realistically never capturable (e.g. a 5★
+    // with an Ace on every side) — without this, the player could keep winning
+    // against that exact opponent forever and never have a legitimate shot at
+    // unlocking it. Only wins count as evidence of being stuck (a loss/draw doesn't
+    // say anything about whether the opponent's deck is capturable), and only within
+    // a rematch chain (isRematchMatch) — a fresh startNewGame() roll already
+    // guarantees at least one unlockable card via rollOpponentDeck, so it doesn't
+    // need this safety net.
+    private func applyStealProtection() {
+        guard isRematchMatch else { return }
+        guard !hasStealableCard else {
+            consecutiveNoStealWins = 0
+            return
+        }
+        consecutiveNoStealWins += 1
+        guard consecutiveNoStealWins >= 2 else { return }
+        consecutiveNoStealWins = 0
+        grantStealProtectionCard()
+    }
+
+    // Grants the lowest-★ not-yet-unlocked card from this specific opponent's frozen
+    // rematch pool (random among ties at that tier) directly into the Card Bank — no
+    // steal confirmation, since nothing was actually captured to steal. Silently does
+    // nothing if every card in the pool is already unlocked (rare: only possible once
+    // the player has already unlocked this opponent's whole 5-card deck some other
+    // way, at which point hasStealableCard being false no longer indicates being
+    // stuck, just that there's nothing left here to give).
+    private func grantStealProtectionCard() {
+        let candidates = rematchOpponentDeck.filter { !HoneycombProfileManager.shared.unlockedCardIds.contains($0.id) }
+        guard let lowestStars = candidates.map(\.stars).min() else { return }
+        guard let granted = candidates.filter({ $0.stars == lowestStars }).randomElement() else { return }
+        HoneycombProfileManager.shared.unlockCard(id: granted.id)
+        enqueueBanner("Steal Protection: Unlocked \(granted.name)!")
     }
 
     // Stages a steal so the UI can show a confirmation alert before it's applied

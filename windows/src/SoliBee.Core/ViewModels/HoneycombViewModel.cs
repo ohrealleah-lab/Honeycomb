@@ -35,6 +35,25 @@ public partial class HoneycombViewModel : ObservableObject
     private List<HoneycombRule> _rematchActiveRules = new();
     private List<string> _rematchAscensionDescensionSuits = new();
 
+    // Steal Protection: true only for a match started via RematchGame() (not a fresh
+    // StartNewMatch() roll) — SettleMatch() reads this to decide whether a win with
+    // nothing new to steal should count toward _consecutiveNoStealWins below. A fresh
+    // match's own opponent-deck roll (RollOpponentDeck) already guarantees at least
+    // one unlockable card, so this protection only ever needs to cover the frozen
+    // rematch pool, which doesn't get that same guarantee. Mirrors the Swift port's
+    // isRematchMatch.
+    private bool _isRematchMatch = false;
+    // How many rematches in a row (against the same frozen _rematchOpponentDeck) the
+    // player has WON with nothing new to steal — e.g. the opponent's deck happens to
+    // include a card that's realistically never capturable (an all-Ace 5★). Reset to
+    // 0 by StartNewMatch() (a fresh opponent pool starts this over) and by any win
+    // that *does* yield a stealable card (the protection wasn't needed that time). At
+    // 2, SettleMatch() grants a card directly (see GrantStealProtectionCard) and
+    // resets this back to 0. Losses/draws don't touch it either way — only a won
+    // rematch counts as evidence the player is stuck. Mirrors the Swift port's
+    // consecutiveNoStealWins.
+    private int _consecutiveNoStealWins = 0;
+
     [ObservableProperty] private HoneycombPendingSteal? _pendingSteal;
 
     public (int handIndex, int cellIndex)? ActiveHint { get; private set; }
@@ -252,6 +271,8 @@ public partial class HoneycombViewModel : ObservableObject
         State.IsSuddenDeath = false;
         State.ShowPostGamePrompt = false;
         _lastHiveSwarmPhrase = null;
+        _isRematchMatch = false;
+        _consecutiveNoStealWins = 0;
 
         // Roulette (no forced/manual rules) gets bad-luck protection against repeating
         // the exact same rule set + suit as last match; forced/manual rules are
@@ -787,6 +808,7 @@ public partial class HoneycombViewModel : ObservableObject
             StartNewMatch();
             return;
         }
+        _isRematchMatch = true;
 
         // Defensive reset, mirroring StartNewMatch() — a previous match quit (or
         // otherwise interrupted) while this was true (e.g. mid-Swap-animation-wait)
@@ -1278,6 +1300,7 @@ public partial class HoneycombViewModel : ObservableObject
 
         Stats.RecordGame(won, drawn, State.CardsCapturedThisMatch, State.Board.SessionSamePlusTriggers, flawless, Options.Difficulty, State.Board.SessionFallenAceCaptures);
         SaveStats();
+        if (won) ApplyStealProtection();
 
         State.Phase = HoneycombPhase.Result;
         _isAnimating = false;
@@ -1457,6 +1480,65 @@ public partial class HoneycombViewModel : ObservableObject
     {
         Stats = new HoneycombStats();
         SaveStats();
+    }
+
+    // Whether at least one card on the board is actually eligible to steal right now —
+    // same predicate RequestSteal itself checks per-card. Mirrors the Swift port's
+    // hasStealableCard computed property (there's no standalone one here otherwise,
+    // since RequestSteal already inlines this check for its own single-card case).
+    private bool HasStealableCard()
+    {
+        for (int i = 0; i < 9; i++)
+        {
+            var card = State.Board.Cells[i].Card;
+            if (card == null) continue;
+            if (card.OriginalOwner == -1 && card.Owner == 1 && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Data.Id))
+                return true;
+        }
+        return false;
+    }
+
+    // Steal Protection: covers the case where a rematch's frozen opponent pool
+    // happens to include a card that's realistically never capturable (e.g. a 5★
+    // with an Ace on every side) — without this, the player could keep winning
+    // against that exact opponent forever and never have a legitimate shot at
+    // unlocking it. Only wins count as evidence of being stuck (a loss/draw doesn't
+    // say anything about whether the opponent's deck is capturable), and only within
+    // a rematch chain (_isRematchMatch) — a fresh StartNewMatch() roll already
+    // guarantees at least one unlockable card via RollOpponentDeck, so it doesn't
+    // need this safety net. Mirrors the Swift port's applyStealProtection.
+    private void ApplyStealProtection()
+    {
+        if (!_isRematchMatch) return;
+        if (HasStealableCard())
+        {
+            _consecutiveNoStealWins = 0;
+            return;
+        }
+        _consecutiveNoStealWins++;
+        if (_consecutiveNoStealWins < 2) return;
+        _consecutiveNoStealWins = 0;
+        GrantStealProtectionCard();
+    }
+
+    // Grants the lowest-★ not-yet-unlocked card from this specific opponent's frozen
+    // rematch pool (random among ties at that tier) directly into the Card Bank — no
+    // steal confirmation, since nothing was actually captured to steal. Silently does
+    // nothing if every card in the pool is already unlocked (rare: only possible once
+    // the player has already unlocked this opponent's whole 5-card deck some other
+    // way, at which point HasStealableCard being false no longer indicates being
+    // stuck, just that there's nothing left here to give). Mirrors the Swift port's
+    // grantStealProtectionCard.
+    private void GrantStealProtectionCard()
+    {
+        if (_rematchOpponentDeck == null) return;
+        var candidates = _rematchOpponentDeck.Where(c => !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(c.Id)).ToList();
+        if (candidates.Count == 0) return;
+        int lowestStars = candidates.Min(c => c.Stars);
+        var lowestTier = candidates.Where(c => c.Stars == lowestStars).ToList();
+        var granted = lowestTier[Random.Shared.Next(lowestTier.Count)];
+        HoneycombProfileManager.Shared.UnlockCard(granted.Id);
+        EnqueueBanner($"Steal Protection: Unlocked {granted.Name}!");
     }
 
     // Steal no longer touches the active deck/hand at all — the stolen card unlocks

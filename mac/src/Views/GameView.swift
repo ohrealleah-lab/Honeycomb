@@ -272,6 +272,7 @@ public struct GameView: View {
                         FoundationPileView(
                             pile: pile,
                             suit: suit,
+                            draggedCardIDs: Set(draggedCards.map { $0.id }),
                             isFocused: viewModel.activeCursor?.pileId == pile.id,
                             isSelected: viewModel.selectedCardsSource == pile.id,
                             pointPopup: viewModel.pointPopup,

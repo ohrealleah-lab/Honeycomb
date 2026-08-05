@@ -172,6 +172,12 @@ public struct WastePileView: View {
 public struct FoundationPileView: View {
     let pile: Pile
     let suit: Card.Suit
+    // Which card(s) are currently mid-drag (matches TableauPileView's own
+    // draggedCardIDs) — a foundation's own state doesn't change until the drag
+    // actually drops/commits, so without this the card being dragged off just sat
+    // rendered underneath the floating drag ghost for the whole gesture instead of
+    // the slot immediately reflecting what's left (the next card down, or empty).
+    let draggedCardIDs: Set<UUID>
     public var isFocused: Bool = false
     public var isSelected: Bool = false
     // Point Highlights: the "+N"/"+$0.50" popup shown when this pile's top card is the
@@ -182,23 +188,40 @@ public struct FoundationPileView: View {
     let onDragEnded: () -> Void
 
     public var body: some View {
-        if pile.isEmpty {
-            EmptyPileView(symbol: "A", isFocused: isFocused, isSelected: isSelected)
-        } else {
-            CardView(
-                card: pile.topCard!, isFocused: isFocused, isSelected: isSelected,
-                pointPopupText: pointPopup?.cardId == pile.topCard!.id ? pointPopup?.displayText : nil
-            )
-                .gesture(
-                    DragGesture(minimumDistance: 5, coordinateSpace: .global)
-                        .onChanged { val in
-                            onDragStarted(pile.topCard!, [pile.topCard!], val.startLocation)
-                            onDragChanged(val.translation)
-                        }
-                        .onEnded { _ in
-                            onDragEnded()
-                        }
+        // Background layer: what this slot looks like once the drag resolves — the
+        // card beneath the one being dragged, or empty. Never carries the drag
+        // gesture itself, and sits fully covered (invisible) behind the foreground
+        // layer whenever the top card isn't actually being dragged.
+        ZStack {
+            if pile.cards.count > 1 {
+                CardView(card: pile.cards[pile.cards.count - 2], isFocused: isFocused, isSelected: isSelected)
+            } else {
+                EmptyPileView(symbol: "A", isFocused: isFocused, isSelected: isSelected)
+            }
+
+            // Foreground layer: the actual top card, gesture attached — hidden via
+            // opacity while it's being dragged rather than swapped out for a
+            // different view (matching TableauPileView's own draggedCardIDs
+            // handling). Swapping the gestured view away mid-drag orphans the
+            // in-progress DragGesture — its .onEnded never fires, so onDragEnded()
+            // never runs and the drag gets stuck forever with no way to complete it.
+            if let top = pile.topCard {
+                CardView(
+                    card: top, isFocused: isFocused, isSelected: isSelected,
+                    pointPopupText: pointPopup?.cardId == top.id ? pointPopup?.displayText : nil
                 )
+                    .opacity(draggedCardIDs.contains(top.id) ? 0 : 1)
+                    .gesture(
+                        DragGesture(minimumDistance: 5, coordinateSpace: .global)
+                            .onChanged { val in
+                                onDragStarted(top, [top], val.startLocation)
+                                onDragChanged(val.translation)
+                            }
+                            .onEnded { _ in
+                                onDragEnded()
+                            }
+                    )
+            }
         }
     }
 }
