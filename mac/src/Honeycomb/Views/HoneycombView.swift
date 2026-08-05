@@ -319,7 +319,17 @@ public struct HoneycombView: View {
                             HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
                             } back: {
+                                // Re-keyed by card.id (unlike the container/ForEach
+                                // row, which are position-keyed for the deal-flip's
+                                // sake — see handGrid) so a Nectar Exchange trade
+                                // reads as a genuine remove-here/insert-there to
+                                // SwiftUI, which matchedGeometryEffect needs to
+                                // detect the relocation and slide it; a persisting
+                                // view whose card.id merely changes value doesn't
+                                // trigger that interpolation, and the trade "bounces
+                                // back" to its old spot instead of visibly moving.
                                 playerHandCardView(card: card)
+                                    .id(card.id)
                             }
                             .id(handIdentityToken)
                         }
@@ -409,7 +419,9 @@ public struct HoneycombView: View {
                             HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
                             } back: {
+                                // See the player hand's matching .id(card.id) above.
                                 opponentHandCardView(card: card)
+                                    .id(card.id)
                             }
                             .id(handIdentityToken)
                         }
