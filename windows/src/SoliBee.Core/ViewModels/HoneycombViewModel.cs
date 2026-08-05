@@ -604,7 +604,7 @@ public partial class HoneycombViewModel : ObservableObject
     // If the opponent's cards are face-down (the default unless rules dictate otherwise),
     // they don't visually flip at all, meaning the animation appears completely finished
     // after the 5 player cards (2000ms). This dynamically skips that empty 2000ms block.
-    private int DealFlipTotalMs => OpponentHand.Any(c => IsOpponentCardVisible(c.Id)) ? 4000 : 2000;
+    private int DealFlipTotalMs => State.OpponentHand.Any(c => State.OpponentRevealedIds.Contains(c.UniqueInstanceId)) ? 4000 : 2000;
     // Deliberate pause after the deal-flip finishes before the Nectar Exchange trade
     // starts, so the two animations never visually overlap. Short on purpose — the
     // Lift beat right after this is itself part of the animation.

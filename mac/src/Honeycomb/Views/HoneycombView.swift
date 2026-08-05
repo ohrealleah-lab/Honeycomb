@@ -41,7 +41,7 @@ fileprivate struct HoneycombFlipContainer<Front: View, Back: View>: View {
     }
 }
 
-// Nectar Exchange's Lift/Touchdown scale+shadow — 1.75x scale and a deep shadow
+// Nectar Exchange's Lift/Touchdown scale+shadow — 1.5x scale and a deep shadow
 // while lifting/moving, smoothly back to 1.0x/no shadow on landing. zIndex lifts
 // the animating card above the board cells its interpolated position passes over
 // mid-flight (the hand columns sit either side of the board in the same HStack,
@@ -56,7 +56,7 @@ fileprivate struct SwapLiftEffect: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .scaleEffect(isElevated ? 1.75 : 1.0)
+            .scaleEffect(isElevated ? 1.5 : 1.0)
             .shadow(color: .black.opacity(isElevated ? 0.5 : 0), radius: isElevated ? 20 : 0)
             .zIndex(isAnimating ? 100 : 0)
     }

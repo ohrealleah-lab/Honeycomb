@@ -104,14 +104,15 @@ public class HoneycombViewModelTests
         vm.State.CurrentTurn = 1;
         var initialHandCount = vm.State.PlayerHand.Count;
         
-        vm.PlayCard(0, 0); // Play first card
+        int cellIndex = Array.FindIndex(vm.State.Board.Cells, c => c.IsEmpty);
+        vm.PlayCard(0, cellIndex); // Play first card to an empty cell
         
         Assert.Equal(initialHandCount - 1, vm.State.PlayerHand.Count);
-        Assert.False(vm.State.Board.Cells[0].IsEmpty);
+        Assert.False(vm.State.Board.Cells[cellIndex].IsEmpty);
         
         vm.Undo();
         
         Assert.Equal(initialHandCount, vm.State.PlayerHand.Count);
-        Assert.True(vm.State.Board.Cells[0].IsEmpty);
+        Assert.True(vm.State.Board.Cells[cellIndex].IsEmpty);
     }
 }

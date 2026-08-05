@@ -50,7 +50,7 @@
 
     <Grid Background="Transparent" ClipToBounds="False">
         <!-- Main Layout -->
-        <Grid ColumnDefinitions="Auto, *, Auto, *, Auto" RowDefinitions="160, Auto" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
+        <Grid ColumnDefinitions="Auto, *, Auto, *, Auto" RowDefinitions="160, Auto" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False" Margin="40,0,40,80">
             
             <!-- Left Column: Player Hand (2-2-1 Pyramid) -->
             <Grid Grid.Column="0" Grid.Row="1" Width="410" Height="860" Margin="20" ClipToBounds="False" ZIndex="10">
