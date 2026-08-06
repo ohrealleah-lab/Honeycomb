@@ -628,16 +628,24 @@ public struct SpiderView: View {
     // The board's true current height: the top row (181) + row spacing (16) + the
     // deepest tableau column's actual stacked height, replicating SpiderTableauView's
     // own per-column compression (offset shrinks toward a 12pt floor past 10 cards —
-    // see `totalHeight(offset:)` in SpiderViews.swift). A flat worst-case constant here
-    // (previously 1120, sized for a maximally deep column) leaves most real games —
-    // which start much shallower — under-scaled, wasting available window height
-    // instead of letting cards grow into it.
+    // see `offsetForCard(at:compressionRatio:)`/`totalHeight(compressionRatio:)` in
+    // SpiderViews.swift) *and* its face-up/face-down offset split (32pt/20pt — a
+    // face-down card back needs less room than a face-up rank/suit corner). A flat
+    // worst-case constant here (previously 1120, sized for a maximally deep column)
+    // leaves most real games — which start much shallower — under-scaled, wasting
+    // available window height instead of letting cards grow into it. Summing a flat
+    // per-card offset (ignoring faceUp/faceDown, as this used to) would overestimate
+    // a real column's height now that face-down cards pack tighter, under-scaling the
+    // board for the exact same reason.
     private func currentIntrinsicBoardHeight() -> CGFloat {
         let deepestColumn = viewModel.state.tableau.map { pile -> CGFloat in
             guard !pile.cards.isEmpty else { return 181 }
             let cardCount = pile.cards.count
-            let offset: CGFloat = cardCount > 10 ? max(12.0, 32.0 - CGFloat(cardCount - 10) * 1.5) : 32.0
-            return CGFloat(cardCount - 1) * offset + 181
+            let compressionRatio: CGFloat = cardCount > 10 ? max(12.0, 32.0 - CGFloat(cardCount - 10) * 1.5) / 32.0 : 1.0
+            let stackedOffset = pile.cards.dropLast().reduce(CGFloat(0)) { total, card in
+                total + (card.faceUp ? 32.0 : 20.0) * compressionRatio
+            }
+            return stackedOffset + 181
         }.max() ?? 181
         return 20 + 181 + 16 + deepestColumn
     }

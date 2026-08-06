@@ -78,18 +78,48 @@ public struct SpiderTableauView: View {
         self.onDoubleClick = onDoubleClick
     }
     
-    private func totalHeight(offset: CGFloat) -> CGFloat {
+    // Face-down cards get tighter spacing than face-up ones (20pt vs 32pt) — same
+    // split Klondike's TableauPileView uses, since a face-down card back doesn't need
+    // room to show a rank/suit corner the way a face-up card does. Spider's own
+    // uniform-32pt offset (ignoring faceUp/faceDown) used to apply the wide face-up
+    // spacing to face-down cards too, making a face-down run look far more spread out
+    // than the equivalent run in Klondike or the Windows port (whose shared PileView
+    // already makes this same 32/20 split for Tableau piles).
+    private static let faceUpOffset: CGFloat = 32
+    private static let faceDownOffset: CGFloat = 20
+
+    // Spider tableaus can run much deeper than Klondike's (up to 19+ cards in a
+    // single column from the initial deal alone), so — matching this view's own
+    // preexisting behavior — spacing compresses once a pile gets deep, to keep it
+    // from running off the bottom of the window. Applied as a multiplier to both the
+    // face-up and face-down base offsets, rather than a flat value, so the two stay
+    // proportional to each other at any depth instead of the compression only ever
+    // having applied to the (previously single) face-up-sized offset.
+    private static func compressionRatio(cardCount: Int) -> CGFloat {
+        guard cardCount > 10 else { return 1.0 }
+        return max(12.0, faceUpOffset - CGFloat(cardCount - 10) * 1.5) / faceUpOffset
+    }
+
+    private func offsetForCard(at index: Int, compressionRatio: CGFloat) -> CGFloat {
+        var yOffset: CGFloat = 0
+        for i in 0..<index {
+            let base = pile.cards[i].faceUp ? Self.faceUpOffset : Self.faceDownOffset
+            yOffset += base * compressionRatio
+        }
+        return yOffset
+    }
+
+    private func totalHeight(compressionRatio: CGFloat) -> CGFloat {
         if pile.isEmpty {
             return 181
         }
-        return CGFloat(pile.cards.count - 1) * offset + 181
+        return offsetForCard(at: pile.cards.count - 1, compressionRatio: compressionRatio) + 181
     }
-    
+
     public var body: some View {
         let cardCount = pile.cards.count
-        // Dynamically compress card overlap offset if pile gets deep to prevent clipping
-        let offset: CGFloat = cardCount > 10 ? max(12.0, 32.0 - CGFloat(cardCount - 10) * 1.5) : 32.0
-        
+        let compressionRatio = Self.compressionRatio(cardCount: cardCount)
+
         let isSource = activeHint?.sourcePileId == pile.id
         let isTarget = activeHint?.targetPileId == pile.id
         let hintStartIndex = (activeHint?.sourcePileId == pile.id) ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
@@ -119,7 +149,7 @@ public struct SpiderTableauView: View {
                 )
                     .modifier(HintHighlightModifier(isHighlighted: isCardHighlighted))
                     .opacity(draggedCardIDs.contains(card.id) ? 0.0 : 1.0)
-                    .offset(y: CGFloat(index) * offset)
+                    .offset(y: offsetForCard(at: index, compressionRatio: compressionRatio))
                     .gesture(
                         DragGesture(minimumDistance: 5, coordinateSpace: .global)
                             .onChanged { val in
@@ -144,7 +174,7 @@ public struct SpiderTableauView: View {
                     )
             }
         }
-        .frame(width: 128, height: totalHeight(offset: offset), alignment: .top)
+        .frame(width: 128, height: totalHeight(compressionRatio: compressionRatio), alignment: .top)
     }
     
     private func isValidSequence(_ cards: [Card]) -> Bool {
