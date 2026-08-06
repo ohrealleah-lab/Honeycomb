@@ -290,12 +290,11 @@ public final class HoneycombViewModel {
                 }
             }
         } else if gameState == .gameOver && showPostGamePrompt && matchResult == "You Win!" {
-            // Matches requestSteal's real eligibility: captured this round (owner ==
-            // .player, not just originalOwner == .opponent), not already owned, and
-            // the one-steal-per-match cap not already spent.
+            // Matches requestSteal's real eligibility (see isStealEligible) and the
+            // one-steal-per-match cap not already spent.
             let opponentBoardIndices = hasStolenThisMatch ? [] : (0..<9).filter {
-                guard let card = board.cells[$0].card, card.originalOwner == .opponent, card.owner == .player else { return false }
-                return !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id)
+                guard let card = board.cells[$0].card else { return false }
+                return isStealEligible(card)
             }
             for bIdx in opponentBoardIndices {
                 moves.append(HoneycombLegalMove(action: "takeCard", handIndex: nil, boardIndex: bIdx, replaceHandIndex: nil))
@@ -371,10 +370,18 @@ public final class HoneycombViewModel {
     // include a card that's realistically never capturable (an all-Ace 5★). Reset to
     // 0 by startNewGame() (a fresh opponent pool starts this over) and by any win that
     // *does* yield a stealable card (the protection wasn't needed that time). At 2,
-    // settleMatch() grants a card directly (see grantStealProtectionCard) and resets
-    // this back to 0, rather than growing without bound. Losses/draws don't touch it
-    // either way — only a won rematch counts as evidence the player is stuck.
+    // settleMatch() flips on stealProtectionActive and resets this back to 0, rather
+    // than growing without bound. Losses/draws don't touch it either way — only a won
+    // rematch counts as evidence the player is stuck.
     private var consecutiveNoStealWins: Int = 0
+
+    // Steal Protection: once a stuck rematch chain trips this (see applyStealProtection),
+    // ANY not-yet-unlocked card left on the board becomes stealable for this win — not
+    // just one the player actually captured from the opponent this round — guaranteeing
+    // the Steal Card button has something to offer even on a win where nothing opponent-
+    // owned was captured. Reset every time settleMatch() re-evaluates protection for a
+    // new win (see applyStealProtection) and by startNewGame().
+    public private(set) var stealProtectionActive: Bool = false
 
     public func startNewGame() {
         // Invalidates any AI move computation still in flight on a background queue from
@@ -389,6 +396,7 @@ public final class HoneycombViewModel {
         lastHiveSwarmPhrase = nil
         isRematchMatch = false
         consecutiveNoStealWins = 0
+        stealProtectionActive = false
         // Defensive reset — a previous match quit (or otherwise interrupted) while
         // this was true (e.g. mid-Swap-animation-wait, see quitMatch) would otherwise
         // leave it stuck true forever, since nothing else clears it for a match that
@@ -1933,6 +1941,19 @@ public final class HoneycombViewModel {
     // startNewGame() and rematch().
     public private(set) var hasStolenThisMatch: Bool = false
 
+    // Whether a board card is eligible to steal right now. Normally that means the
+    // opponent originally played it AND the player actually captured it this round
+    // (owner == .player at match end — a card the opponent still holds was never
+    // captured) AND it isn't already unlocked. Under Steal Protection (see
+    // applyStealProtection below), that capture requirement is waived entirely — any
+    // not-yet-unlocked card left on the board qualifies, guaranteeing the player has
+    // something to take even on a win where nothing opponent-owned was captured.
+    public func isStealEligible(_ card: HoneycombCard) -> Bool {
+        guard !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id) else { return false }
+        if stealProtectionActive { return true }
+        return card.originalOwner == .opponent && card.owner == .player
+    }
+
     // Whether at least one card on the board is actually eligible to steal right now —
     // same predicate both mac's and iOS's board-cell rendering use to decide the yellow
     // steal-highlight border. Without this check, "Take a Card"/"Steal Card" could show
@@ -1942,9 +1963,7 @@ public final class HoneycombViewModel {
     public var hasStealableCard: Bool {
         board.cells.contains { cell in
             guard let card = cell.card else { return false }
-            return card.originalOwner == .opponent
-                && card.owner == .player
-                && !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id)
+            return isStealEligible(card)
         }
     }
 
@@ -1956,8 +1975,11 @@ public final class HoneycombViewModel {
     // say anything about whether the opponent's deck is capturable), and only within
     // a rematch chain (isRematchMatch) — a fresh startNewGame() roll already
     // guarantees at least one unlockable card via rollOpponentDeck, so it doesn't
-    // need this safety net.
+    // need this safety net. Once tripped, it doesn't grant a card directly — it just
+    // widens steal eligibility (see isStealEligible) so the normal Steal Card flow has
+    // something to offer.
     private func applyStealProtection() {
+        stealProtectionActive = false
         guard isRematchMatch else { return }
         guard !hasStealableCard else {
             consecutiveNoStealWins = 0
@@ -1966,22 +1988,7 @@ public final class HoneycombViewModel {
         consecutiveNoStealWins += 1
         guard consecutiveNoStealWins >= 2 else { return }
         consecutiveNoStealWins = 0
-        grantStealProtectionCard()
-    }
-
-    // Grants the lowest-★ not-yet-unlocked card from this specific opponent's frozen
-    // rematch pool (random among ties at that tier) directly into the Card Bank — no
-    // steal confirmation, since nothing was actually captured to steal. Silently does
-    // nothing if every card in the pool is already unlocked (rare: only possible once
-    // the player has already unlocked this opponent's whole 5-card deck some other
-    // way, at which point hasStealableCard being false no longer indicates being
-    // stuck, just that there's nothing left here to give).
-    private func grantStealProtectionCard() {
-        let candidates = rematchOpponentDeck.filter { !HoneycombProfileManager.shared.unlockedCardIds.contains($0.id) }
-        guard let lowestStars = candidates.map(\.stars).min() else { return }
-        guard let granted = candidates.filter({ $0.stars == lowestStars }).randomElement() else { return }
-        HoneycombProfileManager.shared.unlockCard(id: granted.id)
-        enqueueBanner("Steal Protection: Unlocked \(granted.name)!")
+        stealProtectionActive = true
     }
 
     // Stages a steal so the UI can show a confirmation alert before it's applied
@@ -1990,16 +1997,8 @@ public final class HoneycombViewModel {
     // all, so there's nothing left to validate against deck composition (the old
     // 5★/4★ caps only ever existed to keep a 5-card deck legal).
     public func requestSteal(boardIndex: Int) {
-        // Stealable requires the player to have actually captured this card this
-        // round — it must be one the opponent originally played (originalOwner) AND
-        // currently sitting under the player's control (owner) at match end. A card
-        // the opponent still holds was never captured, so it isn't eligible. Already
-        // owning the card (it's in the player's card bank) is also disqualifying —
-        // stealing it would gain nothing and just burn the one steal this match allows.
         guard !hasStolenThisMatch else { return }
-        guard let incoming = board.cells[boardIndex].card,
-              incoming.originalOwner == .opponent, incoming.owner == .player,
-              !HoneycombProfileManager.shared.unlockedCardIds.contains(incoming.data.id) else { return }
+        guard let incoming = board.cells[boardIndex].card, isStealEligible(incoming) else { return }
 
         pendingSteal = PendingSteal(boardIndex: boardIndex, cardName: incoming.data.name)
     }
@@ -2011,7 +2010,7 @@ public final class HoneycombViewModel {
     public func confirmPendingSteal() {
         guard let steal = pendingSteal else { return }
         pendingSteal = nil
-        guard let card = board.cells[steal.boardIndex].card, card.originalOwner == .opponent else { return }
+        guard let card = board.cells[steal.boardIndex].card, isStealEligible(card) else { return }
 
         HoneycombProfileManager.shared.unlockCard(id: card.data.id)
         stats.cardsStolen += 1

@@ -455,18 +455,15 @@ public partial class HoneycombView : UserControl
                 // (unlockedCardIds.count >= allCards.count), not a hardcoded guess.
                 bool bankFull = HoneycombProfileManager.Shared.UnlockedCardIds.Count >= HoneycombDatabase.Shared.AllCards.Count;
 
-                // Also require at least one card on the board that's actually stealable
-                // (originally the opponent's, currently captured by the player, and not
-                // already unlocked) — otherwise the button led into a steal flow with
-                // nothing on the board selectable.
+                // Also require at least one card on the board that's actually stealable —
+                // otherwise the button led into a steal flow with nothing on the board
+                // selectable. IsStealEligible widens this under Steal Protection.
                 bool hasStealableCard = false;
                 for (int i = 0; i < 9; i++)
                 {
                     var cell = state.Board.Cells[i];
                     if (cell.IsEmpty) continue;
-                    var card = cell.Card!;
-                    if (card.OriginalOwner == -1 && card.Owner == 1
-                        && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Data.Id))
+                    if (vm.IsStealEligible(cell.Card!))
                     {
                         hasStealableCard = true;
                         break;
@@ -475,14 +472,20 @@ public partial class HoneycombView : UserControl
 
                 StealCardButton.IsVisible = !bankFull && hasStealableCard;
                 BankFullWarningText.IsVisible = bankFull;
+                AllSecretsWarningText.IsVisible = bankFull;
                 AlreadyStolenWarningText.IsVisible = false;
+                // Shown alongside the Steal Card button while protection is active and
+                // there's still something to take (not once the bank's already full).
+                StealProtectionText.IsVisible = !bankFull && state.StealProtectionActive;
             }
             else
             {
                 StealCardButton.IsVisible = false;
                 BankFullWarningText.IsVisible = false;
-                // Only the "already stolen" scenario gets its own message — a loss/draw
-                // or No Stress Mode has nothing steal-related to explain.
+                AllSecretsWarningText.IsVisible = false;
+                StealProtectionText.IsVisible = false;
+                // Only the "already stolen" scenario gets its own message here — a
+                // loss/draw or No Stress Mode has nothing steal-related to explain.
                 AlreadyStolenWarningText.IsVisible = !globalOpts.IsNoStressMode && state.HasStolenThisMatch && won;
             }
         }
@@ -617,9 +620,7 @@ public partial class HoneycombView : UserControl
 
                 // Highlight cards eligible to be double-clicked and stolen
                 _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));
-                _boardCards[i].StealHighlight = _isStealingCard
-                    && cell.Card != null && cell.Card.OriginalOwner == -1 && cell.Card.Owner == 1
-                    && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(cell.Card.Data.Id);
+                _boardCards[i].StealHighlight = _isStealingCard && cell.Card != null && vm.IsStealEligible(cell.Card);
 
                 // Point Highlights: flash the just-placed card's winning stat edge(s)
                 // for a beat before the capture visually flips (see ExecutePlacement).
@@ -1066,7 +1067,7 @@ public partial class HoneycombView : UserControl
             else if (_isStealingCard && _vm.State.Phase == HoneycombPhase.Result)
             {
                 var card = _vm.State.Board.Cells[_cursorIndex].Card;
-                if (card != null && card.OriginalOwner == -1 && card.Owner == 1 && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Data.Id))
+                if (card != null && _vm.IsStealEligible(card))
                 {
                     _vm.RequestSteal(_cursorIndex);
                     Refresh(_vm);

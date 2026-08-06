@@ -273,6 +273,7 @@ public partial class HoneycombViewModel : ObservableObject
         _lastHiveSwarmPhrase = null;
         _isRematchMatch = false;
         _consecutiveNoStealWins = 0;
+        State.StealProtectionActive = false;
 
         // Roulette (no forced/manual rules) gets bad-luck protection against repeating
         // the exact same rule set + suit as last match; forced/manual rules are
@@ -1482,18 +1483,28 @@ public partial class HoneycombViewModel : ObservableObject
         SaveStats();
     }
 
-    // Whether at least one card on the board is actually eligible to steal right now —
-    // same predicate RequestSteal itself checks per-card. Mirrors the Swift port's
-    // hasStealableCard computed property (there's no standalone one here otherwise,
-    // since RequestSteal already inlines this check for its own single-card case).
+    // Whether a board card is eligible to steal right now. Normally that means the
+    // opponent originally played it AND the player actually captured it this round
+    // (Owner == 1 at match end) AND it isn't already unlocked. Under Steal Protection
+    // (see ApplyStealProtection below), that capture requirement is waived entirely —
+    // any not-yet-unlocked card left on the board qualifies. Mirrors the Swift port's
+    // isStealEligible.
+    public bool IsStealEligible(HoneycombCard card)
+    {
+        if (HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Data.Id)) return false;
+        if (State.StealProtectionActive) return true;
+        return card.OriginalOwner == -1 && card.Owner == 1;
+    }
+
+    // Whether at least one card on the board is actually eligible to steal right now.
+    // Mirrors the Swift port's hasStealableCard computed property.
     private bool HasStealableCard()
     {
         for (int i = 0; i < 9; i++)
         {
             var card = State.Board.Cells[i].Card;
             if (card == null) continue;
-            if (card.OriginalOwner == -1 && card.Owner == 1 && !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Data.Id))
-                return true;
+            if (IsStealEligible(card)) return true;
         }
         return false;
     }
@@ -1506,9 +1517,12 @@ public partial class HoneycombViewModel : ObservableObject
     // say anything about whether the opponent's deck is capturable), and only within
     // a rematch chain (_isRematchMatch) — a fresh StartNewMatch() roll already
     // guarantees at least one unlockable card via RollOpponentDeck, so it doesn't
-    // need this safety net. Mirrors the Swift port's applyStealProtection.
+    // need this safety net. Once tripped, it doesn't grant a card directly — it just
+    // widens steal eligibility (see IsStealEligible) so the normal Steal Card flow has
+    // something to offer. Mirrors the Swift port's applyStealProtection.
     private void ApplyStealProtection()
     {
+        State.StealProtectionActive = false;
         if (!_isRematchMatch) return;
         if (HasStealableCard())
         {
@@ -1518,27 +1532,7 @@ public partial class HoneycombViewModel : ObservableObject
         _consecutiveNoStealWins++;
         if (_consecutiveNoStealWins < 2) return;
         _consecutiveNoStealWins = 0;
-        GrantStealProtectionCard();
-    }
-
-    // Grants the lowest-★ not-yet-unlocked card from this specific opponent's frozen
-    // rematch pool (random among ties at that tier) directly into the Card Bank — no
-    // steal confirmation, since nothing was actually captured to steal. Silently does
-    // nothing if every card in the pool is already unlocked (rare: only possible once
-    // the player has already unlocked this opponent's whole 5-card deck some other
-    // way, at which point HasStealableCard being false no longer indicates being
-    // stuck, just that there's nothing left here to give). Mirrors the Swift port's
-    // grantStealProtectionCard.
-    private void GrantStealProtectionCard()
-    {
-        if (_rematchOpponentDeck == null) return;
-        var candidates = _rematchOpponentDeck.Where(c => !HoneycombProfileManager.Shared.UnlockedCardIds.Contains(c.Id)).ToList();
-        if (candidates.Count == 0) return;
-        int lowestStars = candidates.Min(c => c.Stars);
-        var lowestTier = candidates.Where(c => c.Stars == lowestStars).ToList();
-        var granted = lowestTier[Random.Shared.Next(lowestTier.Count)];
-        HoneycombProfileManager.Shared.UnlockCard(granted.Id);
-        EnqueueBanner($"Steal Protection: Unlocked {granted.Name}!");
+        State.StealProtectionActive = true;
     }
 
     // Steal no longer touches the active deck/hand at all — the stolen card unlocks
@@ -1549,8 +1543,7 @@ public partial class HoneycombViewModel : ObservableObject
         if (State.HasStolenThisMatch) return;
         if (State.PlayerScore <= State.OpponentScore) return; // Must win to steal
         var incoming = State.Board.Cells[boardIndex].Card;
-        if (incoming == null || incoming.OriginalOwner != -1 || incoming.Owner != 1) return;
-        if (HoneycombProfileManager.Shared.UnlockedCardIds.Contains(incoming.Data.Id)) return;
+        if (incoming == null || !IsStealEligible(incoming)) return;
 
         PendingSteal = new HoneycombPendingSteal(boardIndex, incoming.Data.Name);
     }
@@ -1567,7 +1560,7 @@ public partial class HoneycombViewModel : ObservableObject
         PendingSteal = null;
 
         var incoming = State.Board.Cells[steal.BoardIndex].Card;
-        if (incoming == null || incoming.OriginalOwner != -1) return;
+        if (incoming == null || !IsStealEligible(incoming)) return;
 
         HoneycombProfileManager.Shared.UnlockCard(incoming.Data.Id);
         Stats.CardsStolen++;

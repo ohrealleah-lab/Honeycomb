@@ -392,15 +392,12 @@ public struct HoneycombView: View {
                                                 .frame(width: Self.boardCardSize.width, height: Self.boardCardSize.height)
 
                                             if let card = cell.card {
-                                                // Steal-eligible = the opponent originally played this card AND
-                                                // the player actually captured it this round (owner == .player
-                                                // at match end — a card the opponent still holds was never
-                                                // captured, so it isn't stealable) AND not already in your Card
-                                                // Bank (stealing it wouldn't gain anything new).
-                                                let stealEligible = isStealingCard
-                                                    && card.originalOwner == .opponent
-                                                    && card.owner == .player
-                                                    && !HoneycombProfileManager.shared.unlockedCardIds.contains(card.data.id)
+                                                // Steal-eligible normally means the opponent originally played
+                                                // this card AND the player actually captured it this round AND
+                                                // it isn't already in your Card Bank. Under Steal Protection,
+                                                // isStealEligible waives the capture requirement — see its doc
+                                                // comment in HoneycombViewModel.
+                                                let stealEligible = isStealingCard && viewModel.isStealEligible(card)
                                                 let highlightIndices: Set<Int> = viewModel.pointHighlight?.cardId == card.id
                                                     ? viewModel.pointHighlight!.statIndices
                                                     : []
@@ -426,8 +423,7 @@ public struct HoneycombView: View {
                                         // confirmation alert, no hand-slot target needed.
                                         .onTapGesture(count: 2) {
                                             if isStealingCard, viewModel.showPostGamePrompt, viewModel.gameState == .gameOver,
-                                               cell.card?.originalOwner == .opponent, cell.card?.owner == .player,
-                                               let cardId = cell.card?.data.id, !HoneycombProfileManager.shared.unlockedCardIds.contains(cardId) {
+                                               let card = cell.card, viewModel.isStealEligible(card) {
                                                 viewModel.requestSteal(boardIndex: index)
                                             }
                                         }
@@ -561,11 +557,18 @@ public struct HoneycombView: View {
 
                         if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && HoneycombProfileManager.shared.isCardBankFull {
-                            Text("Your card bank is full. Start over in manage decks to steal again.")
-                                .foregroundColor(.white).padding()
+                            VStack {
+                                Text("Your card bank is full. Start over in manage decks to steal again.")
+                                Text("All of their secrets, yours. There's nothing left to steal.")
+                            }
+                            .foregroundColor(.white).padding()
                         } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && viewModel.hasStolenThisMatch {
                             Text("Rematch to take another.")
+                                .foregroundColor(.white).padding()
+                        } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
+                            && viewModel.stealProtectionActive {
+                            Text("The hive takes pity on you — a rare card finds its way home.")
                                 .foregroundColor(.white).padding()
                         }
 

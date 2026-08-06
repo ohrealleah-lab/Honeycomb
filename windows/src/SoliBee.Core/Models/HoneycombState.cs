@@ -39,6 +39,12 @@ public class HoneycombState
 
     public int CardsCapturedThisMatch { get; set; } = 0;
     public bool HasStolenThisMatch { get; set; } = false;
+
+    // Steal Protection: once a stuck rematch chain trips this (see
+    // HoneycombViewModel.ApplyStealProtection), ANY not-yet-unlocked card left on the
+    // board becomes stealable for this win, not just one actually captured from the
+    // opponent this round. Mirrors the Swift port's stealProtectionActive.
+    public bool StealProtectionActive { get; set; } = false;
     
     public int? PlayerChaosIndex { get; set; }
     public int? OpponentChaosIndex { get; set; }
