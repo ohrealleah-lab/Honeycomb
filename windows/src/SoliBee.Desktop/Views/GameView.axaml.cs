@@ -55,16 +55,6 @@ public partial class GameView : CardGameView
         
         this.Loaded += GameView_Loaded;
         this.Unloaded += GameView_Unloaded;
-
-        // WeakReferenceMessenger registration for options synchronization
-        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
-        {
-            ApplyFeltColor(m.Options);
-            UpdateAllPilesLayout();
-        });
-
-        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
-            Dispatcher.UIThread.InvokeAsync(UpdateAllPilesLayout));
     }
 
     private void GameView_Loaded(object? sender, RoutedEventArgs e)
@@ -79,6 +69,16 @@ public partial class GameView : CardGameView
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
         ArmDealNudgeTimer();
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+
+        // WeakReferenceMessenger registration for options synchronization
+        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
+        {
+            ApplyFeltColor(m.Options);
+            UpdateAllPilesLayout();
+        });
+
+        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
+            Dispatcher.UIThread.InvokeAsync(UpdateAllPilesLayout));
     }
 
     private void GameView_Unloaded(object? sender, RoutedEventArgs e)

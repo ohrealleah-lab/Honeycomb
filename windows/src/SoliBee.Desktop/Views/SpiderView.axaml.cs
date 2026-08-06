@@ -85,9 +85,6 @@ public partial class SpiderView : CardGameView
         InitializeComponent();
         this.Loaded += SpiderView_Loaded;
         this.Unloaded += SpiderView_Unloaded;
-
-        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
-            Dispatcher.UIThread.InvokeAsync(RefreshAllPiles));
     }
 
     private void RefreshAllPiles()
@@ -114,6 +111,8 @@ public partial class SpiderView : CardGameView
         }
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
+            Dispatcher.UIThread.InvokeAsync(RefreshAllPiles));
     }
 
     private void SpiderView_Unloaded(object? sender, RoutedEventArgs e)

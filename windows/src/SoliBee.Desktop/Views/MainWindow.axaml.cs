@@ -33,6 +33,10 @@ public partial class MainWindow : Window
     private ManageDecksView? _manageDecksView;
     private bool _closePreferencesAfterModeConfirm;
     private INotifyPropertyChanged? _hintTrackedVm;
+    // Keyed by game family ("Game"/"Freecell"/"Spider"/...), not by tag — variants like
+    // SolitaireDraw1/SolitaireDraw3 share one GameView instance since they're the same
+    // ViewModel/View with different Options, not different views.
+    private readonly Dictionary<string, Control> _cachedViews = new();
 
     public MainWindow()
     {
@@ -1171,8 +1175,11 @@ public partial class MainWindow : Window
 
     private void ApplyGameSwitch(string tag)
     {
+        string cacheKey;
+
         if (tag == "SolitaireDraw1" || tag == "SolitaireDraw3")
         {
+            cacheKey = "Game";
             bool wantDrawThree = (tag == "SolitaireDraw3");
             if (_coordinator.GameViewModel.Options.IsDrawConstraintsEnabled != wantDrawThree)
             {
@@ -1181,10 +1188,10 @@ public partial class MainWindow : Window
                 _coordinator.GameViewModel.InitializeGame();
             }
             _coordinator.SwitchToGame();
-            this.MainContent.Content = new GameView { DataContext = _coordinator.GameViewModel };
         }
         else if (tag == "Freecell1" || tag == "Freecell2")
         {
+            cacheKey = "Freecell";
             int deckCount = tag == "Freecell2" ? 2 : 1;
             var opts = _coordinator.GameViewModel.Options;
             if (opts.FreecellDeckCount != deckCount)
@@ -1194,10 +1201,10 @@ public partial class MainWindow : Window
                 _coordinator.FreecellViewModel.InitializeGame();
             }
             _coordinator.SwitchToFreecell();
-            this.MainContent.Content = new FreecellView { DataContext = _coordinator.FreecellViewModel };
         }
         else if (tag == "Spider1" || tag == "Spider2" || tag == "Spider4")
         {
+            cacheKey = "Spider";
             int suitCount = tag switch
             {
                 "Spider2" => 2,
@@ -1212,23 +1219,43 @@ public partial class MainWindow : Window
                 _coordinator.SpiderViewModel.InitializeGame();
             }
             _coordinator.SwitchToSpider();
-            this.MainContent.Content = new SpiderView { DataContext = _coordinator.SpiderViewModel };
         }
         else if (tag == "VideoPoker")
         {
+            cacheKey = "VideoPoker";
             _coordinator.SwitchToVideoPoker();
-            this.MainContent.Content = new VideoPokerView { DataContext = _coordinator.VideoPokerViewModel };
         }
         else if (tag == "Blackjack")
         {
+            cacheKey = "Blackjack";
             _coordinator.SwitchToBlackjack();
-            this.MainContent.Content = new BlackjackView { DataContext = _coordinator.BlackjackViewModel };
         }
         else if (tag == "Honeycomb")
         {
+            cacheKey = "Honeycomb";
             _coordinator.SwitchToHoneycomb();
-            this.MainContent.Content = new HoneycombView { DataContext = _coordinator.HoneycombViewModel };
         }
+        else
+        {
+            return;
+        }
+
+        bool isNewView = !_cachedViews.TryGetValue(cacheKey, out var activeView);
+        if (isNewView)
+        {
+            activeView = cacheKey switch
+            {
+                "Game" => new GameView { DataContext = _coordinator.GameViewModel },
+                "Freecell" => new FreecellView { DataContext = _coordinator.FreecellViewModel },
+                "Spider" => new SpiderView { DataContext = _coordinator.SpiderViewModel },
+                "VideoPoker" => new VideoPokerView { DataContext = _coordinator.VideoPokerViewModel },
+                "Blackjack" => new BlackjackView { DataContext = _coordinator.BlackjackViewModel },
+                "Honeycomb" => new HoneycombView { DataContext = _coordinator.HoneycombViewModel },
+                _ => throw new InvalidOperationException($"Unhandled cache key: {cacheKey}")
+            };
+            _cachedViews[cacheKey] = activeView;
+        }
+        this.MainContent.Content = activeView;
 
         // Blackjack/VideoPoker (and likely the others) populate their card visuals from
         // their own Loaded handler, not synchronously on construction — DealerCardsPanel /
@@ -1239,8 +1266,11 @@ public partial class MainWindow : Window
         // and computes too large a scale from it, which nothing then corrects since the
         // window's own size doesn't change again once the cards actually appear. Re-run the
         // calc once that view's Loaded fires so it measures the fully-populated board.
-        if (this.MainContent.Content is Control activeView)
-            activeView.Loaded += (_, _) => UpdateResponsiveLayout();
+        // Only wired up the first time a view enters the cache — Loaded fires on every
+        // reattach, so subscribing unconditionally here would stack a duplicate handler
+        // onto the same cached instance on every subsequent switch back to this game.
+        if (isNewView && activeView is Control newView)
+            newView.Loaded += (_, _) => UpdateResponsiveLayout();
 
         this.DataContext = _coordinator.ActiveViewModel;
         RestoreWindowSizeForGame(tag);

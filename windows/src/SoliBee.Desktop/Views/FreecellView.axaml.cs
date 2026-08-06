@@ -114,9 +114,6 @@ public partial class FreecellView : CardGameView
         InitializeComponent();
         this.Loaded += FreecellView_Loaded;
         this.Unloaded += FreecellView_Unloaded;
-
-        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
-            Dispatcher.UIThread.InvokeAsync(RefreshAllPiles));
     }
 
     private void RefreshAllPiles()
@@ -148,6 +145,8 @@ public partial class FreecellView : CardGameView
         }
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
+            Dispatcher.UIThread.InvokeAsync(RefreshAllPiles));
     }
 
     private void FreecellView_Unloaded(object? sender, RoutedEventArgs e)
