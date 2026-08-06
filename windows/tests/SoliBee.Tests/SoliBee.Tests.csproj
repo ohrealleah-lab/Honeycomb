@@ -24,4 +24,13 @@
     <ProjectReference Include="..\..\src\SoliBee.Core\SoliBee.Core.csproj" />
   </ItemGroup>
 
+  <!-- SoliBee.Core.Services.BannerCatalog reads Assets/HoneycombBannerCatalog.json as a
+       plain file next to the running executable (AppContext.BaseDirectory) — needed here
+       too so HoneycombBannerTriggerTests.cs can exercise real banner-catalog lookups,
+       not just banner queue plumbing. References the canonical copy in SoliBee.Desktop
+       rather than duplicating it. -->
+  <ItemGroup>
+    <Content Include="..\..\src\SoliBee.Desktop\Assets\HoneycombBannerCatalog.json" Link="Assets\HoneycombBannerCatalog.json" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
 </Project>
