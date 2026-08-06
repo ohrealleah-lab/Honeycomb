@@ -1,0 +1,720 @@
+{
+  "version": 1,
+  "generatedBy": "tools/generate_banner_catalog.py — do not hand-edit",
+  "banners": [
+    {
+      "id": "rule_specific_nectar_exchange_swaps_away_the_players_5_star_card",
+      "category": "Rule-Specific",
+      "trigger": "Nectar Exchange swaps away the player's 5-star card.",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "{OpponentName} snatched your prize honey!"
+      ]
+    },
+    {
+      "id": "rule_specific_nectar_exchange_trades_the_players_worst_card_for_the",
+      "category": "Rule-Specific",
+      "trigger": "Nectar Exchange trades the player's worst card for the opponent's best.",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "You’ve traded up!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_zero_extra_rules",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls zero extra rules.",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "A classic match — just bees and honey, no gimmicks."
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_may_20th_world_bee_day",
+      "category": "Loading",
+      "trigger": "Game loads on May 20th (World Bee Day).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Happy World Bee Day! The comb is buzzing with excitement."
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_new_years_day_jan_1",
+      "category": "Loading",
+      "trigger": "Game loads on New Year's Day (Jan 1).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Blessed bee your new year!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_halloween_oct_31",
+      "category": "Loading",
+      "trigger": "Game loads on Halloween (Oct 31).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "A spooky swarm gathers!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_valentines_day_feb_14",
+      "category": "Loading",
+      "trigger": "Game loads on Valentine's Day (Feb 14).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Every heart in the hive beats for you."
+      ]
+    },
+    {
+      "id": "loading_first_launch_after_playing_for_one_year",
+      "category": "Loading",
+      "trigger": "First launch after playing for one year.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "One year in the hive. Thank you for playing!"
+      ]
+    },
+    {
+      "id": "loading_playing_on_april_fools_day_apr_1",
+      "category": "Loading",
+      "trigger": "Playing on April Fools' Day (Apr 1).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "The bees are feeling mischievous today."
+      ]
+    },
+    {
+      "id": "loading_match_starts_between_12_00_am_and_4_00_am_local_time",
+      "category": "Loading",
+      "trigger": "Match starts between 12:00 AM and 4:00 AM local time.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "The midnight shift in the hive."
+      ]
+    },
+    {
+      "id": "loading_match_starts_between_5_00_am_and_8_00_am_local_time",
+      "category": "Loading",
+      "trigger": "Match starts between 5:00 AM and 8:00 AM local time.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "The early bee catches the nectar."
+      ]
+    },
+    {
+      "id": "loading_match_starts_between_9_00_pm_and_midnight_local_time",
+      "category": "Loading",
+      "trigger": "Match starts between 9:00 PM and midnight local time.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "One more match before the hive turns in..."
+      ]
+    },
+    {
+      "id": "loading_match_starts_within_a_minute_of_local_noon",
+      "category": "Loading",
+      "trigger": "Match starts within a minute of local noon.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "It’s Hive Noon!"
+      ]
+    },
+    {
+      "id": "loading_on_game_load",
+      "category": "Loading",
+      "trigger": "On Game Load",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Warming up flights muscles…",
+        "Pollinating the processors…",
+        "Untangling waggle-dance choreography…",
+        "Generating royal jelly…",
+        "Sealing the honeycomb…",
+        "Consulting the Queen Bee…",
+        "Calibrating stingers…",
+        "Deploying scout bees…",
+        "Counting the worker bees…",
+        "Preparing a sticky situation…",
+        "The swarm is gathering…",
+        "Sweeping the hive…",
+        "Gathering nectar from local memory…",
+        "Guarding the entrance from wasps…",
+        "Feeding the larvae bits and bytes…",
+        "Orienting new forager bees…",
+        "Cross-referencing pollen routes…",
+        "Recruiting nurse bees…",
+        "Loading nectar reserves…",
+        "Synchronizing with the hive mind…",
+        "Tuning antennae for reception…",
+        "Propolis-sealing the cracks…",
+        "Rousing drones from their nap…"
+      ]
+    },
+    {
+      "id": "idle_action_no_action_taken_for_one_minute",
+      "category": "Idle Action",
+      "trigger": "No action taken for one minute.",
+      "type": "ambiance",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "The hive hums quietly, waiting for your next move.",
+        "A stray bee drifts across the board...",
+        "It’s when you can’t hear the bees, that’s when the bees are coming.",
+        "Somewhere, honey is dripping.",
+        "The comb creaks softly under the weight of gathered honey.",
+        "A distant hum grows louder... or is that just the board?",
+        "Pollen settles on the board like fine snow.",
+        "Somewhere, a queen bee hums a low, satisfied note.",
+        "The board glows faintly gold in the afternoon light.",
+        "A single petal drifts down onto the comb.",
+        "The hive never truly sleeps.",
+        "The swarm is silently judging your strategy.",
+        "A worker bee pauses mid-flight, unsure why.",
+        "Somewhere, a bee is telling the others where you’ve been.",
+        "The hive remembers every card you’ve touched.",
+        "Nothing moves. Everything hums.",
+        "The edges of the cards are getting a little sticky.",
+        "The bees are keeping score. They always do.",
+        "A bee lands, looks around, and leaves again.",
+        "The hum has changed pitch. Did you notice?",
+        "Time moves differently inside the comb.",
+        "Somewhere, wax is being warmed by tiny bodies.",
+        "Even idle hands make honey eventually.",
+        "The bees are patient. Are you?",
+        "The hive keeps its own time."
+      ]
+    },
+    {
+      "id": "gameplay_3_hints_used_in_one_match",
+      "category": "Gameplay",
+      "trigger": "3+ Hints used in one match.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Need a little help? The scout bees are buzzing suggestions."
+      ]
+    },
+    {
+      "id": "gameplay_undo_used_immediately_after_a_placement",
+      "category": "Gameplay",
+      "trigger": "Undo used immediately after a placement.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Second thoughts? Wise bees always double-check."
+      ]
+    },
+    {
+      "id": "gameplay_player_wins_a_match_with_4_rules_active_at_once",
+      "category": "Gameplay",
+      "trigger": "Player wins a match with 4 rules active at once.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Four rules, one victory. Chaos bends to you."
+      ]
+    },
+    {
+      "id": "gameplay_opponent_is_winning_by_two_cards_and_is_about_to_place_the",
+      "category": "Gameplay",
+      "trigger": "Opponent is winning by two cards and is about to place the last card on the board.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "{OpponentName} prepares a final sting!"
+      ]
+    },
+    {
+      "id": "gameplay_player_flips_3_cards_in_a_single_turn",
+      "category": "Gameplay",
+      "trigger": "Player flips 3+ cards in a single turn.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "A massive swarm!"
+      ]
+    },
+    {
+      "id": "gameplay_opponent_flips_3_of_the_players_cards_in_a_single_turn_not_a",
+      "category": "Gameplay",
+      "trigger": "Opponent flips 3+ of the player's cards in a single turn (not a Combo).",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "{OpponentName} unleashes an angry swarm!"
+      ]
+    },
+    {
+      "id": "gameplay_combo_x4_or_higher",
+      "category": "Gameplay",
+      "trigger": "Combo x4 or higher.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "HIVE MIND x{ComboCount}!",
+      "messages": [
+        "SWARM FRENZY — the whole hive is buzzing!"
+      ]
+    },
+    {
+      "id": "gameplay_player_has_only_2_cards_on_the_board_vs_opponents_6_few",
+      "category": "Gameplay",
+      "trigger": "Player has only 2 cards on the board vs. opponent's 6, few spaces left.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "The hive is nearly overrun... is there any hope left?"
+      ]
+    },
+    {
+      "id": "gameplay_a_placed_card_captures_on_all_4_sides_at_once",
+      "category": "Gameplay",
+      "trigger": "A placed card captures on all 4 sides at once.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Four-way sting!"
+      ]
+    },
+    {
+      "id": "gameplay_3_rematch_wins_in_a_row_against_the_same_opponent",
+      "category": "Gameplay",
+      "trigger": "3+ rematch wins in a row against the same opponent.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "{OpponentName} is starting to sweat."
+      ]
+    },
+    {
+      "id": "gameplay_3_rematch_losses_in_a_row_against_the_same_opponent",
+      "category": "Gameplay",
+      "trigger": "3+ rematch losses in a row against the same opponent.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "{OpponentName} has your number. Time for a new strategy?"
+      ]
+    },
+    {
+      "id": "gameplay_a_1_star_card_captures_3_cards_in_one_move",
+      "category": "Gameplay",
+      "trigger": "A 1-star card captures 3+ cards in one move.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "The weakest bee just took down half the hive!"
+      ]
+    },
+    {
+      "id": "gameplay_a_1_star_card_captures_a_5_star_card_rarity_mismatch",
+      "category": "Gameplay",
+      "trigger": "A 1-star card captures a 5-star card (rarity mismatch).",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "A worker bee just humbled royalty."
+      ]
+    },
+    {
+      "id": "gameplay_player_uses_undo_thinks_about_it_and_then_makes_the_exact",
+      "category": "Gameplay",
+      "trigger": "Player uses Undo, thinks about it, and then makes the exact same move they just undid.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Second thoughts... wait, never mind, let's stick to the plan."
+      ]
+    },
+    {
+      "id": "gameplay_player_plays_against_the_same_ai_difficulty_5_times_in_a_row",
+      "category": "Gameplay",
+      "trigger": "Player plays against the same AI difficulty 5 times in a row.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "A true rivalry is forming in the comb."
+      ]
+    },
+    {
+      "id": "gameplay_player_wins_by_the_maximum_possible_margin",
+      "category": "Gameplay",
+      "trigger": "Player wins by the maximum possible margin.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Nothing left to sting!"
+      ]
+    },
+    {
+      "id": "milestones_first_launch_ever",
+      "category": "Milestones",
+      "trigger": "First launch ever",
+      "type": "achievement",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "A new bee joins the hive. Thank you for playing!"
+      ]
+    },
+    {
+      "id": "milestones_player_reaches_10_total_wins",
+      "category": "Milestones",
+      "trigger": "Player reaches 10 total wins.",
+      "type": "achievement",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "10 wins. The hive takes notice."
+      ]
+    },
+    {
+      "id": "milestones_player_reaches_100_total_wins",
+      "category": "Milestones",
+      "trigger": "Player reaches 100 total wins.",
+      "type": "achievement",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "100 wins. The colony sings your name."
+      ]
+    },
+    {
+      "id": "milestones_player_reaches_1000_total_wins",
+      "category": "Milestones",
+      "trigger": "Player reaches 1000 total wins.",
+      "type": "achievement",
+      "location": "toast",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "1000 wins. The hive bends to your will."
+      ]
+    },
+    {
+      "id": "rule_specific_fallen_ace_triggers_a_1_captures_a_10",
+      "category": "Rule-Specific",
+      "trigger": "Fallen Ace triggers (a '1' captures a '10').",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "Queen's Fall!",
+      "messages": [
+        "The drone takes down the Queen!",
+        "A lucky sting! The mighty have fallen."
+      ]
+    },
+    {
+      "id": "rule_specific_pollination_pushes_a_cards_modifier_to_3_or_higher",
+      "category": "Rule-Specific",
+      "trigger": "Pollination pushes a card's modifier to +3 or higher.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "Pollination!",
+      "messages": [
+        "The pollen's thick today — {AscensionSuit} is in full bloom!"
+      ]
+    },
+    {
+      "id": "rule_specific_smoked_out_drops_a_cards_effective_stat_to_1",
+      "category": "Rule-Specific",
+      "trigger": "Smoked Out drops a card's effective stat to 1.",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "Smoked Out!",
+      "messages": [
+        "Smoked out — that card can barely buzz anymore."
+      ]
+    },
+    {
+      "id": "rule_specific_a_player_triggers_a_plus_combo_the_math_matches_perfectly",
+      "category": "Rule-Specific",
+      "trigger": "A player triggers a \"Plus\" combo (the math matches perfectly).",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "Math Bee!",
+      "messages": [
+        "The math checks out!"
+      ]
+    },
+    {
+      "id": "rule_specific_player_wins_flawless_opponent_score_0",
+      "category": "Rule-Specific",
+      "trigger": "Player wins flawless (opponent score = 0).",
+      "type": "repeatableFlavor",
+      "location": "winBanner",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Flawless victory!",
+        "Hive domination!",
+        "The colony reigns supreme.."
+      ]
+    },
+    {
+      "id": "rule_specific_player_loses_flawless_0_captures",
+      "category": "Rule-Specific",
+      "trigger": "Player loses flawless (0 captures).",
+      "type": "repeatableFlavor",
+      "location": "loseBanner",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Every card fell. The hive lies in ruins.",
+        "{OpponentName} didn't leave you a single card standing.",
+        "There are no bees left in your bonnet."
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_pollination",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls Pollination.",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "Pollen is in the air!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_smoked_out",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls Smoked Out.",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "A haze covers the comb!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_math_bee",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls Math Bee",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "Addition is key!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_inversion",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls Inversion",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "Everything is upside down!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_clear_skies",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls clear skies",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "The hive is exposed!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_scouting_party",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls scouting party",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "The drones are out!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_frenzy",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls Frenzy",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "Chaos takes over!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_symmetry",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls Symmetry",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "Patterns Align!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_nectar_exchange",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls Nectar Exchange",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "A trade before the swarm!"
+      ]
+    },
+    {
+      "id": "rule_specific_roulette_rolls_hierarchy",
+      "category": "Rule-Specific",
+      "trigger": "Roulette rolls Hierarchy",
+      "type": "repeatableFlavor",
+      "location": "rulesBanner",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "$RULE_NAME",
+      "messages": [
+        "Order above all!"
+      ]
+    }
+  ]
+}

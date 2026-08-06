@@ -435,6 +435,8 @@ public partial class HoneycombView : UserControl
                 OverlayTitle.Text = "Tie!";
             }
             OverlaySubtitle.Text = $"Final Score: {state.PlayerScore} - {state.OpponentScore}";
+            OverlayFlavorText.Text = vm.MatchResultFlavorText ?? "";
+            OverlayFlavorText.IsVisible = !string.IsNullOrEmpty(vm.MatchResultFlavorText);
 
             if (!_resultSoundPlayed)
             {

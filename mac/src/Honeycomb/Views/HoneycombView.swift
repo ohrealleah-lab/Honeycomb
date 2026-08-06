@@ -555,6 +555,13 @@ public struct HoneycombView: View {
                             Text(viewModel.matchResult).font(.system(size: 60, weight: .bold)).foregroundColor(.white)
                         }
 
+                        if let flavorText = viewModel.matchResultFlavorText {
+                            Text(flavorText)
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.top, 4)
+                        }
+
                         if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && HoneycombProfileManager.shared.isCardBankFull {
                             VStack {

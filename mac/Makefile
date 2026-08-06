@@ -35,6 +35,7 @@ build:
 	cp src/shuffle.aiff $(APP_BUNDLE)/Contents/Resources/shuffle.aiff
 	cp src/snap.aiff $(APP_BUNDLE)/Contents/Resources/snap.aiff
 	cp src/victory.aiff $(APP_BUNDLE)/Contents/Resources/victory.aiff
+	cp ../shared/Honeycomb/Resources/HoneycombBannerCatalog.json $(APP_BUNDLE)/Contents/Resources/HoneycombBannerCatalog.json
 	# Copy compiled binary from SPM build path (at the repo root) to the app bundle
 	cp ../.build/release/$(APP_NAME) $(MACOS_BIN)
 	chmod +x $(MACOS_BIN)
@@ -51,10 +52,14 @@ clean:
 test:
 	# Compile test runner excluding SoliBeeApp.swift (which has the GUI @main entry)
 	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 $(SHARED_SRCS) $(MAC_SRCS) SoliBeeTests/*.swift
+	# test_runner is a bare executable, not a .app bundle, so Bundle.main looks for
+	# resources right next to it rather than in a Resources/ subfolder — copy the
+	# banner catalog there so HoneycombBannerCatalogTests can actually load it.
+	cp ../shared/Honeycomb/Resources/HoneycombBannerCatalog.json HoneycombBannerCatalog.json
 	# Run tests
 	./test_runner
-	# Cleanup test runner binary
-	rm -f test_runner
+	# Cleanup test runner binary + copied resource
+	rm -f test_runner HoneycombBannerCatalog.json
 
 bridge:
 	# Compile the Universal Agent Bridge

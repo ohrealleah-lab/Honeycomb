@@ -1,0 +1,62 @@
+// GENERATED FILE — do not hand-edit.
+// Regenerate via `python3 tools/generate_banner_catalog.py` from
+// Honeycomb_Fun_Messages.xlsx. See that script for the id/gating rules.
+
+// Stable identifier for every banner/toast catalog entry (mac + iOS).
+// The raw value is the JSON catalog's `id` field — HoneycombBannerCatalog.json
+// is keyed by this exact string, so it must never be renamed or reused once
+// shipped (an achievement/milestone's "already fired" state, if ever
+// persisted, would key off this too).
+public enum BannerID: String, CaseIterable, Codable {
+    case ruleSpecificNectarExchangeSwapsAwayThePlayers5StarCard = "rule_specific_nectar_exchange_swaps_away_the_players_5_star_card"
+    case ruleSpecificNectarExchangeTradesThePlayersWorstCardForThe = "rule_specific_nectar_exchange_trades_the_players_worst_card_for_the"
+    case ruleSpecificRouletteRollsZeroExtraRules = "rule_specific_roulette_rolls_zero_extra_rules"
+    case loadingGameLoadsOnMay20thWorldBeeDay = "loading_game_loads_on_may_20th_world_bee_day"
+    case loadingGameLoadsOnNewYearsDayJan1 = "loading_game_loads_on_new_years_day_jan_1"
+    case loadingGameLoadsOnHalloweenOct31 = "loading_game_loads_on_halloween_oct_31"
+    case loadingGameLoadsOnValentinesDayFeb14 = "loading_game_loads_on_valentines_day_feb_14"
+    case loadingFirstLaunchAfterPlayingForOneYear = "loading_first_launch_after_playing_for_one_year"
+    case loadingPlayingOnAprilFoolsDayApr1 = "loading_playing_on_april_fools_day_apr_1"
+    case loadingMatchStartsBetween1200AmAnd400AmLocalTime = "loading_match_starts_between_12_00_am_and_4_00_am_local_time"
+    case loadingMatchStartsBetween500AmAnd800AmLocalTime = "loading_match_starts_between_5_00_am_and_8_00_am_local_time"
+    case loadingMatchStartsBetween900PmAndMidnightLocalTime = "loading_match_starts_between_9_00_pm_and_midnight_local_time"
+    case loadingMatchStartsWithinAMinuteOfLocalNoon = "loading_match_starts_within_a_minute_of_local_noon"
+    case loadingOnGameLoad = "loading_on_game_load"
+    case idleActionNoActionTakenForOneMinute = "idle_action_no_action_taken_for_one_minute"
+    case gameplay3HintsUsedInOneMatch = "gameplay_3_hints_used_in_one_match"
+    case gameplayUndoUsedImmediatelyAfterAPlacement = "gameplay_undo_used_immediately_after_a_placement"
+    case gameplayPlayerWinsAMatchWith4RulesActiveAtOnce = "gameplay_player_wins_a_match_with_4_rules_active_at_once"
+    case gameplayOpponentIsWinningByTwoCardsAndIsAboutToPlaceThe = "gameplay_opponent_is_winning_by_two_cards_and_is_about_to_place_the"
+    case gameplayPlayerFlips3CardsInASingleTurn = "gameplay_player_flips_3_cards_in_a_single_turn"
+    case gameplayOpponentFlips3OfThePlayersCardsInASingleTurnNotA = "gameplay_opponent_flips_3_of_the_players_cards_in_a_single_turn_not_a"
+    case gameplayComboX4OrHigher = "gameplay_combo_x4_or_higher"
+    case gameplayPlayerHasOnly2CardsOnTheBoardVsOpponents6Few = "gameplay_player_has_only_2_cards_on_the_board_vs_opponents_6_few"
+    case gameplayAPlacedCardCapturesOnAll4SidesAtOnce = "gameplay_a_placed_card_captures_on_all_4_sides_at_once"
+    case gameplay3RematchWinsInARowAgainstTheSameOpponent = "gameplay_3_rematch_wins_in_a_row_against_the_same_opponent"
+    case gameplay3RematchLossesInARowAgainstTheSameOpponent = "gameplay_3_rematch_losses_in_a_row_against_the_same_opponent"
+    case gameplayA1StarCardCaptures3CardsInOneMove = "gameplay_a_1_star_card_captures_3_cards_in_one_move"
+    case gameplayA1StarCardCapturesA5StarCardRarityMismatch = "gameplay_a_1_star_card_captures_a_5_star_card_rarity_mismatch"
+    case gameplayPlayerUsesUndoThinksAboutItAndThenMakesTheExact = "gameplay_player_uses_undo_thinks_about_it_and_then_makes_the_exact"
+    case gameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow = "gameplay_player_plays_against_the_same_ai_difficulty_5_times_in_a_row"
+    case gameplayPlayerWinsByTheMaximumPossibleMargin = "gameplay_player_wins_by_the_maximum_possible_margin"
+    case milestonesFirstLaunchEver = "milestones_first_launch_ever"
+    case milestonesPlayerReaches10TotalWins = "milestones_player_reaches_10_total_wins"
+    case milestonesPlayerReaches100TotalWins = "milestones_player_reaches_100_total_wins"
+    case milestonesPlayerReaches1000TotalWins = "milestones_player_reaches_1000_total_wins"
+    case ruleSpecificFallenAceTriggersA1CapturesA10 = "rule_specific_fallen_ace_triggers_a_1_captures_a_10"
+    case ruleSpecificPollinationPushesACardsModifierTo3OrHigher = "rule_specific_pollination_pushes_a_cards_modifier_to_3_or_higher"
+    case ruleSpecificSmokedOutDropsACardsEffectiveStatTo1 = "rule_specific_smoked_out_drops_a_cards_effective_stat_to_1"
+    case ruleSpecificAPlayerTriggersAPlusComboTheMathMatchesPerfectly = "rule_specific_a_player_triggers_a_plus_combo_the_math_matches_perfectly"
+    case ruleSpecificPlayerWinsFlawlessOpponentScore0 = "rule_specific_player_wins_flawless_opponent_score_0"
+    case ruleSpecificPlayerLosesFlawless0Captures = "rule_specific_player_loses_flawless_0_captures"
+    case ruleSpecificRouletteRollsPollination = "rule_specific_roulette_rolls_pollination"
+    case ruleSpecificRouletteRollsSmokedOut = "rule_specific_roulette_rolls_smoked_out"
+    case ruleSpecificRouletteRollsMathBee = "rule_specific_roulette_rolls_math_bee"
+    case ruleSpecificRouletteRollsInversion = "rule_specific_roulette_rolls_inversion"
+    case ruleSpecificRouletteRollsClearSkies = "rule_specific_roulette_rolls_clear_skies"
+    case ruleSpecificRouletteRollsScoutingParty = "rule_specific_roulette_rolls_scouting_party"
+    case ruleSpecificRouletteRollsFrenzy = "rule_specific_roulette_rolls_frenzy"
+    case ruleSpecificRouletteRollsSymmetry = "rule_specific_roulette_rolls_symmetry"
+    case ruleSpecificRouletteRollsNectarExchange = "rule_specific_roulette_rolls_nectar_exchange"
+    case ruleSpecificRouletteRollsHierarchy = "rule_specific_roulette_rolls_hierarchy"
+}

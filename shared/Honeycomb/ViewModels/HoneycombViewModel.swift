@@ -205,6 +205,10 @@ public final class HoneycombViewModel {
     // Post-game state
     public var showPostGamePrompt: Bool = false
     public var matchResult: String = "" // "You Win!", "You Lose", "Draw"
+    // Optional flavor subtitle shown alongside matchResult on the post-game overlay
+    // (e.g. "Flawless victory!") — set alongside matchResult in settleMatch(), never
+    // reset independently since matchResult itself is only ever overwritten, not cleared.
+    public var matchResultFlavorText: String? = nil
     // A FIFO queue of banner texts, replacing a single last-write-wins slot — that let a
     // second event (e.g. a Bomb Shelter reveal firing moments after an ordinary
     // placement's own capture, or two staggered end-of-match reveals) silently clobber
@@ -375,6 +379,27 @@ public final class HoneycombViewModel {
     // rematch counts as evidence the player is stuck.
     private var consecutiveNoStealWins: Int = 0
 
+    // "N rematch wins/losses in a row against the same opponent" — reset by
+    // startNewGame() (a fresh opponent) but NOT by rematch(), so these persist across
+    // an entire rematch chain the same way consecutiveNoStealWins does above.
+    private var consecutiveRematchWins: Int = 0
+    private var consecutiveRematchLosses: Int = 0
+
+    // "N matches in a row at the same AI difficulty" — deliberately NOT reset by
+    // startNewGame(): unlike the rematch streaks above (which reset because the
+    // opponent itself changes), a fresh match can still be at the same difficulty as
+    // the last one, so this persists for the whole app session and is only broken by
+    // the player actually picking a different difficulty.
+    private var lastPlayedDifficulty: HoneycombDifficulty?
+    private var consecutiveSameDifficultyCount: Int = 0
+
+    // "Player uses Undo, thinks about it, and then makes the exact same move they just
+    // undid" — lastPlayerMove tracks every player placement so undoLastAction() can
+    // snapshot which move it's about to revert; pendingUndoRepeatCheck holds that move
+    // only until the player's very next placement, whether or not it matches.
+    private var lastPlayerMove: (cardDataId: Int, boardIndex: Int)?
+    private var pendingUndoRepeatCheck: (cardDataId: Int, boardIndex: Int)?
+
     // Steal Protection: once a stuck rematch chain trips this (see applyStealProtection),
     // ANY not-yet-unlocked card left on the board becomes stealable for this win — not
     // just one the player actually captured from the opponent this round — guaranteeing
@@ -391,12 +416,16 @@ public final class HoneycombViewModel {
         handSetupGeneration += 1
         let generation = handSetupGeneration
         undoStack.removeAll()
+        lastPlayerMove = nil
+        pendingUndoRepeatCheck = nil
         swapHighlightCardIds.removeAll()
         clearHint()
         lastHiveSwarmPhrase = nil
         isRematchMatch = false
         consecutiveNoStealWins = 0
         stealProtectionActive = false
+        consecutiveRematchWins = 0
+        consecutiveRematchLosses = 0
         // Defensive reset — a previous match quit (or otherwise interrupted) while
         // this was true (e.g. mid-Swap-animation-wait, see quitMatch) would otherwise
         // leave it stuck true forever, since nothing else clears it for a match that
@@ -419,7 +448,7 @@ public final class HoneycombViewModel {
 
         let swapResult = applyOpponentDeck(deck)
         stageSwapAnimation(swapResult, generation: generation)
-        finishMatchSetup()
+        finishMatchSetup(swapResult: swapResult)
     }
 
     // Shared tail between startNewGame() and rematch(): stages a computed-but-not-yet-
@@ -521,11 +550,50 @@ public final class HoneycombViewModel {
     // "Swap", "Ascension: Hearts". No trailing punctuation; the banner's own "!"
     // belongs only after "First Move: Player/Opponent".
     private func formatRuleForBanner(_ rule: HoneycombRule) -> String {
+        let defaultText: String
         if rule == .ascension || rule == .descension {
             let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }
-            return "\(rule.rawValue): \(suitNames.joined(separator: ", "))"
+            defaultText = "\(rule.rawValue): \(suitNames.joined(separator: ", "))"
+        } else {
+            defaultText = rule.rawValue
         }
-        return rule.rawValue
+        // 20% of the time, the intro banner swaps a rule's plain name for a flavor
+        // line (e.g. "Pollen is in the air!" instead of "Pollination") — same gate
+        // mechanic as the mid-match rule-trigger banners. Rules with no catalog
+        // entry (Fallen Ace, Hive Swarm, Sudden Death) just keep their plain name.
+        guard let bannerID = Self.rouletteBannerID(for: rule) else { return defaultText }
+        return Self.bannerCatalogText(for: bannerID, existingDefaultText: defaultText)
+    }
+
+    // Swap gets its own formatter (rather than routing through rouletteBannerID like
+    // every other rule) because its flavor text depends on what the trade actually
+    // did, not just that the rule is active — a 5-star card leaving the player's hand
+    // reads very differently from the player coming out ahead.
+    private static func formatSwapRuleForBanner(_ swapResult: SwapResult) -> String {
+        let defaultText = HoneycombRule.swap.rawValue
+        if swapResult.preSwapPlayerCard.data.stars == 5 {
+            return bannerCatalogText(for: .ruleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, existingDefaultText: defaultText)
+        }
+        if swapResult.preSwapOpponentCard.data.stars > swapResult.preSwapPlayerCard.data.stars {
+            return bannerCatalogText(for: .ruleSpecificNectarExchangeTradesThePlayersWorstCardForThe, existingDefaultText: defaultText)
+        }
+        return bannerCatalogText(for: .ruleSpecificRouletteRollsNectarExchange, existingDefaultText: defaultText)
+    }
+
+    private static func rouletteBannerID(for rule: HoneycombRule) -> BannerID? {
+        switch rule {
+        case .ascension: return .ruleSpecificRouletteRollsPollination
+        case .descension: return .ruleSpecificRouletteRollsSmokedOut
+        case .plus: return .ruleSpecificRouletteRollsMathBee
+        case .reverse: return .ruleSpecificRouletteRollsInversion
+        case .allOpen: return .ruleSpecificRouletteRollsClearSkies
+        case .threeOpen: return .ruleSpecificRouletteRollsScoutingParty
+        case .chaos: return .ruleSpecificRouletteRollsFrenzy
+        case .same: return .ruleSpecificRouletteRollsSymmetry
+        case .swap: return .ruleSpecificRouletteRollsNectarExchange
+        case .order: return .ruleSpecificRouletteRollsHierarchy
+        case .fallenAce, .bombShelter, .suddenDeath: return nil
+        }
     }
 
     // Shared tail between startNewGame() and rematch() — decides who moves first,
@@ -536,10 +604,11 @@ public final class HoneycombViewModel {
     // coin toss, just with bad-luck protection against a long same-side streak), a
     // rematch of the same match should always hand the opening move to whoever didn't
     // have it last time, so replaying repeatedly can't keep favoring one side.
-    private func finishMatchSetup(forceAlternateStarter: Bool = false) {
+    private func finishMatchSetup(swapResult: SwapResult? = nil, forceAlternateStarter: Bool = false) {
         gameState = .playing
         showPostGamePrompt = false
         sessionCardsCaptured = 0
+        hintUsageCountThisMatch = 0
         board.sessionSamePlusTriggers = 0
         board.sessionFallenAceCaptures = 0
         hasStolenThisMatch = false
@@ -559,16 +628,37 @@ public final class HoneycombViewModel {
         lastMatchStarterWasPlayer = playerStarts
         isPlayerTurn = playerStarts
         rerollChaosIndexIfNeeded(forPlayerSide: isPlayerTurn)
+        scheduleIdleCheck()
         // Every active rule (up to 2) gets its own line below "First Move", in the
         // same font (FlashBannerView just renders whatever's after each "\n") —
         // rather than only Swap riding along while Ascension/Descension/etc. never
         // got shown here at all.
         let firstMoveLine = isPlayerTurn ? "First Move: Player!" : "First Move: \(options.difficulty.displayName)!"
-        let ruleLines = activeRules.map { formatRuleForBanner($0) }
+        var ruleLines = activeRules.map { rule -> String in
+            if rule == .swap, let swapResult {
+                return Self.formatSwapRuleForBanner(swapResult)
+            }
+            return formatRuleForBanner(rule)
+        }
+        // A ruleless match has no per-rule line to (20% of the time) swap for flavor
+        // text the way formatRuleForBanner does above — this is that same gate,
+        // just for the "no extra rules" case, which only ever adds a line, never
+        // replaces one (there's no plain-text "Normal" line to fall back to today).
+        if activeRules.isEmpty, case .message(let text) = BannerCatalog.shared.fire(.ruleSpecificRouletteRollsZeroExtraRules) {
+            ruleLines.append(text)
+        }
         // A brand new match starting — any banner still queued from the previous one
         // (e.g. a match ended mid-combo-sequence) is no longer relevant.
         clearBannerQueue()
         enqueueBanner(([firstMoveLine] + ruleLines).joined(separator: "\n"))
+        // stats.gamesPlayed only increments in settleMatch, so it's still 0 here iff
+        // this is the very first match this player has ever started (or the first
+        // since a stats reset — achievements are meant to be re-earnable after one).
+        if stats.gamesPlayed == 0, case .message(let text) = BannerCatalog.shared.fire(.milestonesFirstLaunchEver) {
+            enqueueBanner(text)
+        }
+        checkLoadingBanner()
+        checkSameDifficultyStreak()
 
         if options.isSoundEnabled {
             UISound.play(named: "shuffle", enabled: true)
@@ -625,6 +715,8 @@ public final class HoneycombViewModel {
         handSetupGeneration += 1
         let generation = handSetupGeneration
         undoStack.removeAll()
+        lastPlayerMove = nil
+        pendingUndoRepeatCheck = nil
         swapHighlightCardIds.removeAll()
         clearHint()
         isAnimatingPlacement = false
@@ -638,7 +730,7 @@ public final class HoneycombViewModel {
 
         let swapResult = applyOpponentDeck(rematchOpponentDeck)
         stageSwapAnimation(swapResult, generation: generation)
-        finishMatchSetup(forceAlternateStarter: true)
+        finishMatchSetup(swapResult: swapResult, forceAlternateStarter: true)
     }
 
     // A deliberate pause before the opponent's move actually lands — long enough to
@@ -1173,10 +1265,19 @@ public final class HoneycombViewModel {
     // Always searches at Ultra Hard's caliber (see HoneycombAI.computeHint) regardless
     // of the match's own difficulty, and only ever sees opponent cards actually revealed
     // to the player, matching the AI's own fairness guard against reading hidden hands.
+    // Reset once per match (finishMatchSetup) — fires exactly on the 3rd hint request,
+    // not "count >= 3", which would fire on every hint after that too.
+    private var hintUsageCountThisMatch = 0
+
     public func findHint() {
         hintClearTask?.cancel()
         activeHint = nil
         guard hasHintsAvailable else { return }
+
+        hintUsageCountThisMatch += 1
+        if hintUsageCountThisMatch == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3HintsUsedInOneMatch) {
+            enqueueBanner(text)
+        }
 
         hintGeneration += 1
         let generation = hintGeneration
@@ -1274,7 +1375,8 @@ public final class HoneycombViewModel {
     // computed *before* a capture's resulting board is actually committed — see
     // stageCaptureCommit, which needs the banner text up front to decide whether
     // this placement gets the announcement pause.
-    private func bannerText(placedSuit: String, for board: HoneycombBoard) -> String? {
+    private func bannerText(placedCard: HoneycombCard, for board: HoneycombBoard, flips: [Int], directFlipsCount: Int) -> String? {
+        let placedSuit = placedCard.data.suit
         var parts: [String] = []
         // Skip on the game's last move (the one that fills the board) — the win/lose
         // overlay appears immediately after, and an Ascension/Descension banner flashing
@@ -1282,13 +1384,86 @@ public final class HoneycombViewModel {
         // since those describe what the final move itself actually did.
         if !board.isFull && board.ascensionDescensionSuits.contains(placedSuit) {
             if activeRules.contains(.ascension) {
-                parts.append("\(HoneycombRule.ascension.rawValue)!")
+                let defaultText = "\(HoneycombRule.ascension.rawValue)!"
+                // The catalog's flavor alternate only fires once the suit-wide modifier
+                // this placement just produced (every matching-suit card on the board
+                // shares the same +suitCount value) is severe enough to actually read as
+                // "in full bloom" — a bare +1/+2 doesn't. +3+ is the spreadsheet's own
+                // stated threshold for this trigger.
+                if Self.hasCard(matching: placedSuit, modifierAtLeast: 3, on: board) {
+                    parts.append(Self.bannerCatalogText(
+                        for: .ruleSpecificPollinationPushesACardsModifierTo3OrHigher,
+                        existingDefaultText: defaultText,
+                        tokens: ["AscensionSuit": HoneycombCardData.suitDisplayName(placedSuit)]
+                    ))
+                } else {
+                    parts.append(defaultText)
+                }
             } else if activeRules.contains(.descension) {
-                parts.append("\(HoneycombRule.descension.rawValue)!")
+                let defaultText = "\(HoneycombRule.descension.rawValue)!"
+                // Same idea in reverse: only fires once the (negative) suit-wide modifier
+                // has actually clamped some matching-suit card's stat down to the 1 floor
+                // (HoneycombCard.stat(at:) clamps to 1...10) — not just "Descension is
+                // technically active but hasn't bitten yet."
+                if Self.hasCard(matching: placedSuit, clampedToOneOn: board) {
+                    parts.append(Self.bannerCatalogText(
+                        for: .ruleSpecificSmokedOutDropsACardsEffectiveStatTo1,
+                        existingDefaultText: defaultText
+                    ))
+                } else {
+                    parts.append(defaultText)
+                }
             }
         }
-        if let combo = Self.comboBannerText(for: board) { parts.append(combo) }
+        if let combo = Self.comboBannerText(for: board) {
+            parts.append(combo)
+        } else if flips.count >= 3 {
+            // Generic "flipped 3+" flavor only when no Same/Plus/Combo banner already
+            // describes this same capture — this is the plain-stats case ("Row 68"),
+            // deliberately distinct from the Combo mechanic above.
+            let id: BannerID = placedCard.owner == .player
+                ? .gameplayPlayerFlips3CardsInASingleTurn
+                : .gameplayOpponentFlips3OfThePlayersCardsInASingleTurnNotA
+            if case .message(let text) = BannerCatalog.shared.fire(id) { parts.append(text) }
+        }
+        if directFlipsCount == 4, case .message(let text) = BannerCatalog.shared.fire(.gameplayAPlacedCardCapturesOnAll4SidesAtOnce) {
+            parts.append(text)
+        }
+        if placedCard.data.stars == 1, !flips.isEmpty {
+            if flips.count >= 3, case .message(let text) = BannerCatalog.shared.fire(.gameplayA1StarCardCaptures3CardsInOneMove) {
+                parts.append(text)
+            }
+            let capturedFiveStar = flips.contains { board.cells[$0].card?.data.stars == 5 }
+            if capturedFiveStar, case .message(let text) = BannerCatalog.shared.fire(.gameplayA1StarCardCapturesA5StarCardRarityMismatch) {
+                parts.append(text)
+            }
+        }
+        let playerOwnedOnBoard = board.cells.filter { $0.card?.owner == .player }.count
+        let opponentOwnedOnBoard = board.cells.filter { $0.card?.owner == .opponent }.count
+        if playerOwnedOnBoard == 2, opponentOwnedOnBoard == 6,
+           case .message(let text) = BannerCatalog.shared.fire(.gameplayPlayerHasOnly2CardsOnTheBoardVsOpponents6Few) {
+            parts.append(text)
+        }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+
+    // Face-down cards are excluded from both checks below for the same reason
+    // HoneycombBoard.suitCount excludes them from the modifier calculation itself
+    // (see its own comment) — a hidden Hive Swarm card's modifier is never actually
+    // rendered while face-down, so a banner referencing it would describe something
+    // the player can't see yet.
+    private static func hasCard(matching suit: String, modifierAtLeast threshold: Int, on board: HoneycombBoard) -> Bool {
+        board.cells.contains { cell in
+            guard let card = cell.card, !card.isFaceDown, card.data.suit == suit else { return false }
+            return card.modifier >= threshold
+        }
+    }
+
+    private static func hasCard(matching suit: String, clampedToOneOn board: HoneycombBoard) -> Bool {
+        board.cells.contains { cell in
+            guard let card = cell.card, !card.isFaceDown, card.data.suit == suit, card.modifier < 0 else { return false }
+            return (0..<4).contains { card.data.stats[$0] + card.modifier <= 1 }
+        }
     }
 
     // Same/Plus/Fallen Ace/Combo only ever describe what the board's last capture
@@ -1300,15 +1475,40 @@ public final class HoneycombViewModel {
     // operates on a local `inout` board that hasn't been assigned to self.board yet.
     private static func comboBannerText(for board: HoneycombBoard) -> String? {
         var parts: [String] = []
+        // Same has no catalog-driven flavor alternate (not in the spreadsheet), so it
+        // stays the plain existing banner text unconditionally.
         if board.lastSameTriggered { parts.append("\(HoneycombRule.same.rawValue)!") }
-        if board.lastPlusTriggered { parts.append("\(HoneycombRule.plus.rawValue)!") }
-        if board.lastFallenAceTriggered { parts.append("\(HoneycombRule.fallenAce.rawValue)!") }
+        if board.lastPlusTriggered {
+            parts.append(bannerCatalogText(for: .ruleSpecificAPlayerTriggersAPlusComboTheMathMatchesPerfectly, existingDefaultText: "\(HoneycombRule.plus.rawValue)!"))
+        }
+        if board.lastFallenAceTriggered {
+            parts.append(bannerCatalogText(for: .ruleSpecificFallenAceTriggersA1CapturesA10, existingDefaultText: "\(HoneycombRule.fallenAce.rawValue)!"))
+        }
         // Combo = a Same/Plus-triggered flip going on to capture its own neighbors —
-        // not just any move that happens to flip 2+ ordinary neighbors at once.
-        if board.lastComboFlipCount > 0 {
+        // not just any move that happens to flip 2+ ordinary neighbors at once. Only
+        // x4-or-higher has a catalog-driven flavor alternate (matches the spreadsheet's
+        // own "Combo x4 or higher" trigger) — x2/x3 stay the plain existing text.
+        if board.lastComboFlipCount >= 4 {
+            parts.append(bannerCatalogText(for: .gameplayComboX4OrHigher, existingDefaultText: "HIVE MIND x\(board.lastComboFlipCount)!", tokens: ["ComboCount": "\(board.lastComboFlipCount)"]))
+        } else if board.lastComboFlipCount > 0 {
             parts.append("HIVE MIND x\(board.lastComboFlipCount)!")
         }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+
+    // Fires `id` through the banner catalog and returns whatever it decided should
+    // show — the catalog's own flavor text (per the 20% gate), or `existingDefaultText`
+    // otherwise. Deliberately uses the caller's own default rather than the catalog
+    // entry's own `fallback` field, so this never depends on the catalog staying
+    // byte-for-byte in sync with whatever formatting quirks this platform's existing
+    // text already has (the Windows port, for instance, uppercases Same/Plus's names
+    // where this one doesn't — the catalog only stores one canonical fallback string,
+    // which can't correctly represent both at once).
+    private static func bannerCatalogText(for id: BannerID, existingDefaultText: String, tokens: [String: String] = [:]) -> String {
+        switch BannerCatalog.shared.fire(id, tokens: tokens) {
+        case .message(let text): return text
+        case .fallback, .none: return existingDefaultText
+        }
     }
 
 
@@ -1340,8 +1540,15 @@ public final class HoneycombViewModel {
 
         clearHint()
         saveStateForUndo()
+        scheduleIdleCheck()
 
         let card = playerHand.remove(at: handIndex)
+        if let pending = pendingUndoRepeatCheck, pending.cardDataId == card.data.id, pending.boardIndex == boardIndex,
+           case .message(let text) = BannerCatalog.shared.fire(.gameplayPlayerUsesUndoThinksAboutItAndThenMakesTheExact) {
+            enqueueBanner(text)
+        }
+        pendingUndoRepeatCheck = nil
+        lastPlayerMove = (card.data.id, boardIndex)
         // Chaos's mandated index is only re-rolled (below, and in applyAIMove) when it
         // becomes this side's turn again — left stale here, it would keep pointing at
         // whatever index the just-played card's removal shifted into, highlighting the
@@ -1399,7 +1606,7 @@ public final class HoneycombViewModel {
         // neighbors'* flip waits until the banner has mostly faded, instead of landing
         // in the same instant and having the toast cover it. The placed card itself
         // never waits on this — see below.
-        let banner = bannerText(placedSuit: placedCard.data.suit, for: capturedBoard)
+        let banner = bannerText(placedCard: placedCard, for: capturedBoard, flips: flips, directFlipsCount: directStatIndices.count)
         // Only the placed card's own DIRECT capture makes it "the card doing the
         // flipping" — a combo chain's secondary flips are captures made by whichever
         // neighbor they captured, not by this placement itself, so they don't add
@@ -1549,6 +1756,28 @@ public final class HoneycombViewModel {
     // corrupting the new game's state.
     private var aiMoveGeneration: Int = 0
 
+    // Idle Action toast: nudges the player if a full minute passes with no move
+    // (either side — the clock restarts whenever a placement lands, so it's really
+    // "a minute since the board last changed," not specifically "the player's own
+    // turn"). Re-armed via the same generation-token invalidation pattern as
+    // aiMoveGeneration/handSetupGeneration above: bumping the generation makes any
+    // already-scheduled check from before the last move see a mismatch and silently
+    // no-op instead of firing late (or firing twice for the same idle period).
+    private var idleCheckGeneration: Int = 0
+    private static let idleToastDelay: TimeInterval = 60
+
+    private func scheduleIdleCheck() {
+        idleCheckGeneration += 1
+        let generation = idleCheckGeneration
+        guard !UISound.isHeadlessMode else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.idleToastDelay) { [weak self] in
+            guard let self, self.idleCheckGeneration == generation, self.gameState == .playing else { return }
+            if case .message(let text) = BannerCatalog.shared.fire(.idleActionNoActionTakenForOneMinute) {
+                self.enqueueBanner(text)
+            }
+        }
+    }
+
     // MARK: - Undo
     //
     // Reuses the same UndoStack<State> every other game's ViewModel already uses
@@ -1609,6 +1838,10 @@ public final class HoneycombViewModel {
         clearBannerQueue()
         pointHighlight = nil
         isAnimatingPlacement = false
+        pendingUndoRepeatCheck = lastPlayerMove
+        if case .message(let text) = BannerCatalog.shared.fire(.gameplayUndoUsedImmediatelyAfterAPlacement) {
+            enqueueBanner(text)
+        }
     }
 
     public func aiPlayTurn() {
@@ -1636,6 +1869,16 @@ public final class HoneycombViewModel {
         let difficulty = options.difficulty
         let eligibleHands = eligibleOpponentHandIndices()
         let empties = HoneycombAI.emptyBoardIndices(board: boardSnapshot)
+
+        // Fires right before the AI's move, not after — this is meant to read as
+        // anticipation of the last card landing, not a recap of something that just
+        // happened. Pre-move score already reflects everything except this one move.
+        let preMovePScore = boardSnapshot.playerScore + playerHand.count
+        let preMoveOScore = boardSnapshot.opponentScore + opponentHand.count
+        if empties.count == 1, preMoveOScore - preMovePScore == 2,
+           case .message(let text) = BannerCatalog.shared.fire(.gameplayOpponentIsWinningByTwoCardsAndIsAboutToPlaceThe, tokens: ["OpponentName": options.difficulty.displayName]) {
+            enqueueBanner(text)
+        }
 
         func computeMove() -> (handIndex: Int, boardIndex: Int)? {
             HoneycombAI.computeMove(
@@ -1678,6 +1921,7 @@ public final class HoneycombViewModel {
             // Reroll now so the player's mandated card (under Chaos) is highlighted
             // the instant it becomes their turn, not lazily on their first tap.
             self.rerollChaosIndexIfNeeded(forPlayerSide: true)
+            self.scheduleIdleCheck()
         }
     }
 
@@ -1831,6 +2075,88 @@ public final class HoneycombViewModel {
         }
     }
 
+    // Fires once per app session, the first time a match starts — "Loading" banners
+    // don't have a dedicated loading screen to hook into, so this is the closest
+    // real moment to "the game loads." Priority: named holiday > time-of-day window
+    // > generic fallback pool, since at most one should show per launch.
+    private var hasFiredLoadingBannerThisSession = false
+
+    private func checkLoadingBanner() {
+        guard !hasFiredLoadingBannerThisSession else { return }
+        hasFiredLoadingBannerThisSession = true
+        if case .message(let text) = BannerCatalog.shared.fire(Self.loadingBannerID()) {
+            enqueueBanner(text)
+        }
+    }
+
+    private static let firstPlayedDateKey = "HoneycombFirstPlayedDate"
+    private static let hasShownOneYearBannerKey = "HoneycombHasShownOneYearBanner"
+
+    private static func loadingBannerID() -> BannerID {
+        let now = Date()
+        // Anchors this device's install date the first time it's ever read — a stats
+        // reset deliberately does NOT touch this (unlike the win-count milestones),
+        // since "a year since you started playing" isn't something a stats reset
+        // should undo. Reading it here (before the check below) means the very first
+        // call always has zero elapsed time, so it can never spuriously fire that day.
+        if UserDefaults.standard.object(forKey: firstPlayedDateKey) == nil {
+            UserDefaults.standard.set(now, forKey: firstPlayedDateKey)
+        }
+        if !UserDefaults.standard.bool(forKey: hasShownOneYearBannerKey),
+           let firstPlayed = UserDefaults.standard.object(forKey: firstPlayedDateKey) as? Date,
+           now.timeIntervalSince(firstPlayed) >= 365 * 24 * 60 * 60 {
+            UserDefaults.standard.set(true, forKey: hasShownOneYearBannerKey)
+            return .loadingFirstLaunchAfterPlayingForOneYear
+        }
+
+        let calendar = Calendar.current
+        let month = calendar.component(.month, from: now)
+        let day = calendar.component(.day, from: now)
+        if month == 5, day == 20 { return .loadingGameLoadsOnMay20thWorldBeeDay }
+        if month == 1, day == 1 { return .loadingGameLoadsOnNewYearsDayJan1 }
+        if month == 10, day == 31 { return .loadingGameLoadsOnHalloweenOct31 }
+        if month == 2, day == 14 { return .loadingGameLoadsOnValentinesDayFeb14 }
+        if month == 4, day == 1 { return .loadingPlayingOnAprilFoolsDayApr1 }
+
+        let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+        let minutesFromMidnight = hour * 60 + minute
+        if abs(minutesFromMidnight - 720) <= 1 { return .loadingMatchStartsWithinAMinuteOfLocalNoon }
+        if hour < 4 { return .loadingMatchStartsBetween1200AmAnd400AmLocalTime }
+        if hour >= 5 && hour < 8 { return .loadingMatchStartsBetween500AmAnd800AmLocalTime }
+        if hour >= 21 { return .loadingMatchStartsBetween900PmAndMidnightLocalTime }
+        return .loadingOnGameLoad
+    }
+
+    // Fires once, exactly on the 5th consecutive match at the same difficulty — not
+    // "count >= 5", which would fire on every match after that too.
+    private func checkSameDifficultyStreak() {
+        if options.difficulty == lastPlayedDifficulty {
+            consecutiveSameDifficultyCount += 1
+        } else {
+            lastPlayedDifficulty = options.difficulty
+            consecutiveSameDifficultyCount = 1
+        }
+        if consecutiveSameDifficultyCount == 5, case .message(let text) = BannerCatalog.shared.fire(.gameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow) {
+            enqueueBanner(text)
+        }
+    }
+
+    // Fires once, exactly on the turn stats.matchesWon crosses a threshold — not
+    // "matchesWon >= threshold", which would fire on every subsequent win too.
+    private func checkWinMilestones() {
+        let thresholds: [(Int, BannerID)] = [
+            (10, .milestonesPlayerReaches10TotalWins),
+            (100, .milestonesPlayerReaches100TotalWins),
+            (1000, .milestonesPlayerReaches1000TotalWins),
+        ]
+        for (threshold, id) in thresholds where stats.matchesWon == threshold {
+            if case .message(let text) = BannerCatalog.shared.fire(id) {
+                enqueueBanner(text)
+            }
+        }
+    }
+
     private func settleMatch() {
         if board.isFull {
             // The board just filled, which always ends either the match (win/lose) or
@@ -1844,15 +2170,51 @@ public final class HoneycombViewModel {
                 matchResult = "You Win!"
                 gameState = .gameOver
                 if options.isSoundEnabled { UISound.play(named: "victory", enabled: true) }
-                stats.recordGame(won: true, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: oScore == 0, difficulty: options.difficulty, fallenAceCaptures: board.sessionFallenAceCaptures)
+                let flawless = oScore == 0
+                stats.recordGame(won: true, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: flawless, difficulty: options.difficulty, fallenAceCaptures: board.sessionFallenAceCaptures)
+                checkWinMilestones()
+                var winFlavorParts: [String] = []
+                if flawless, case .message(let text) = BannerCatalog.shared.fire(.ruleSpecificPlayerWinsFlawlessOpponentScore0) {
+                    winFlavorParts.append(text)
+                }
+                // A win's margin is pScore - oScore == pScore + oScore - 2*oScore, which
+                // is maximized exactly when oScore is minimized — i.e. this is always
+                // the same condition as `flawless` above, just framed as "the biggest
+                // margin possible" rather than "opponent got nothing."
+                if flawless, case .message(let text) = BannerCatalog.shared.fire(.gameplayPlayerWinsByTheMaximumPossibleMargin) {
+                    winFlavorParts.append(text)
+                }
+                if activeRules.count >= 4, case .message(let text) = BannerCatalog.shared.fire(.gameplayPlayerWinsAMatchWith4RulesActiveAtOnce) {
+                    winFlavorParts.append(text)
+                }
+                matchResultFlavorText = winFlavorParts.isEmpty ? nil : winFlavorParts.joined(separator: " ")
                 applyStealProtection()
+                consecutiveRematchLosses = 0
+                consecutiveRematchWins += 1
+                if consecutiveRematchWins == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3RematchWinsInARowAgainstTheSameOpponent, tokens: ["OpponentName": options.difficulty.displayName]) {
+                    enqueueBanner(text)
+                }
             } else if oScore > pScore {
                 matchResult = "You Lose"
                 gameState = .gameOver
                 stats.recordGame(won: false, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
+                if pScore == 0, case .message(let text) = BannerCatalog.shared.fire(.ruleSpecificPlayerLosesFlawless0Captures, tokens: ["OpponentName": options.difficulty.displayName]) {
+                    matchResultFlavorText = text
+                } else {
+                    matchResultFlavorText = nil
+                }
+                consecutiveRematchWins = 0
+                consecutiveRematchLosses += 1
+                if consecutiveRematchLosses == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3RematchLossesInARowAgainstTheSameOpponent, tokens: ["OpponentName": options.difficulty.displayName]) {
+                    enqueueBanner(text)
+                }
             } else if activeRules.contains(.suddenDeath) {
                 matchResult = "Draw - \(HoneycombRule.suddenDeath.rawValue)!"
                 gameState = .suddenDeath
+                matchResultFlavorText = nil
+                // Not a final result — Sudden Death continues this same match into
+                // overtime, so the rematch win/loss streak stays untouched until
+                // settleMatch() actually resolves it (win/lose/tie branches above).
                 stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
 
                 // Give enough time for the final card placement and any combo animations to fully resolve
@@ -1867,6 +2229,9 @@ public final class HoneycombViewModel {
                 // like a win/loss, not a continuation.
                 matchResult = "Tie!"
                 gameState = .gameOver
+                matchResultFlavorText = nil
+                consecutiveRematchWins = 0
+                consecutiveRematchLosses = 0
                 stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
             }
             saveStats()

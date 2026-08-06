@@ -26,6 +26,27 @@ public partial class HoneycombViewModel : ObservableObject
     private bool _isHeadless = false;
     private int _matchGeneration = 0;
 
+    // Idle Action toast: nudges the player if a full minute passes with no move
+    // (either side — the clock restarts whenever StartTurn runs, so it's really "a
+    // minute since the board last changed"). Re-armed via the same generation-token
+    // invalidation pattern as _matchGeneration: bumping the generation makes any
+    // already-scheduled check from before the last move see a mismatch and silently
+    // no-op instead of firing late. Mirrors the Swift port's scheduleIdleCheck.
+    private int _idleCheckGeneration = 0;
+    private const int IdleToastDelayMs = 60000;
+
+    private async void ScheduleIdleCheck()
+    {
+        _idleCheckGeneration++;
+        var generation = _idleCheckGeneration;
+        if (_isHeadless) return;
+        await Task.Delay(IdleToastDelayMs);
+        if (_idleCheckGeneration != generation || !IsPlaying) return;
+        var result = BannerCatalog.Fire(BannerId.IdleActionNoActionTakenForOneMinute);
+        if (result.Kind == BannerFireKind.Message && result.Text != null)
+            EnqueueBanner(result.Text);
+    }
+
     // Rematch snapshot: freeze the opponent's card pool (pre-Swap) + this match's rules
     // — this becomes the baseline every future RematchGame() replays, until the next
     // real StartNewMatch() rolls a fresh one. Freezing the pool (not a resolved/swapped
@@ -54,6 +75,20 @@ public partial class HoneycombViewModel : ObservableObject
     // consecutiveNoStealWins.
     private int _consecutiveNoStealWins = 0;
 
+    // "N rematch wins/losses in a row against the same opponent" — reset by
+    // StartNewMatch() (a fresh opponent) but NOT by RematchGame(), so these persist
+    // across an entire rematch chain the same way _consecutiveNoStealWins does above.
+    private int _consecutiveRematchWins = 0;
+    private int _consecutiveRematchLosses = 0;
+
+    // "N matches in a row at the same AI difficulty" — deliberately NOT reset by
+    // StartNewMatch(): unlike the rematch streaks above (which reset because the
+    // opponent itself changes), a fresh match can still be at the same difficulty as
+    // the last one, so this persists for the whole app session and is only broken by
+    // the player actually picking a different difficulty.
+    private HoneycombDifficulty? _lastPlayedDifficulty;
+    private int _consecutiveSameDifficultyCount = 0;
+
     [ObservableProperty] private HoneycombPendingSteal? _pendingSteal;
 
     public (int handIndex, int cellIndex)? ActiveHint { get; private set; }
@@ -71,7 +106,12 @@ public partial class HoneycombViewModel : ObservableObject
     // The toolbar's "Opponent" label reads the opponent's actual difficulty name (e.g.
     // "Baby Bee") instead of the literal word "Opponent" — matches the Swift port.
     public string OpponentNameDisplay => Options.Difficulty.DisplayName();
-    
+
+    // Optional flavor subtitle shown alongside the win/lose overlay title (e.g.
+    // "Flawless victory!") — set alongside the result in SettleMatch(), never reset
+    // independently since the overlay title itself is only ever overwritten, not cleared.
+    public string? MatchResultFlavorText { get; private set; }
+
     public event Action<string>? OnFlashBanner;
 
     // FIFO queue of banner texts — mirrors the Swift port's bannerQueue/enqueueBanner/
@@ -266,6 +306,8 @@ public partial class HoneycombViewModel : ObservableObject
         PendingSteal = null;
         State.Phase = HoneycombPhase.Playing;
         State.UndoStack.Clear();
+        _lastPlayerMove = null;
+        _pendingUndoRepeatCheck = null;
         State.HasStolenThisMatch = false;
         State.CardsCapturedThisMatch = 0;
         State.IsSuddenDeath = false;
@@ -273,6 +315,8 @@ public partial class HoneycombViewModel : ObservableObject
         _lastHiveSwarmPhrase = null;
         _isRematchMatch = false;
         _consecutiveNoStealWins = 0;
+        _consecutiveRematchWins = 0;
+        _consecutiveRematchLosses = 0;
         State.StealProtectionActive = false;
 
         // Roulette (no forced/manual rules) gets bad-luck protection against repeating
@@ -322,12 +366,55 @@ public partial class HoneycombViewModel : ObservableObject
     private string FormatRuleForBanner(HoneycombRule rule)
     {
         var name = rule.DisplayName();
+        string defaultText;
         if (rule == HoneycombRule.Ascension || rule == HoneycombRule.Descension)
         {
             var suitNames = State.Board.AscensionDescensionSuits.Select(HoneycombCardData.SuitDisplayName);
-            return $"{name}: {string.Join(", ", suitNames)}";
+            defaultText = $"{name}: {string.Join(", ", suitNames)}";
         }
-        return name;
+        else
+        {
+            defaultText = name;
+        }
+        // 20% of the time, the intro banner swaps a rule's plain name for a flavor
+        // line (e.g. "Pollen is in the air!" instead of "Pollination") — same gate
+        // mechanic as the mid-match rule-trigger banners. Rules with no catalog
+        // entry (Fallen Ace, Hive Swarm, Sudden Death) just keep their plain name.
+        var bannerId = RouletteBannerId(rule);
+        return bannerId.HasValue ? BannerCatalogText(bannerId.Value, defaultText) : defaultText;
+    }
+
+    private static BannerId? RouletteBannerId(HoneycombRule rule) => rule switch
+    {
+        HoneycombRule.Ascension => BannerId.RuleSpecificRouletteRollsPollination,
+        HoneycombRule.Descension => BannerId.RuleSpecificRouletteRollsSmokedOut,
+        HoneycombRule.Plus => BannerId.RuleSpecificRouletteRollsMathBee,
+        HoneycombRule.Reverse => BannerId.RuleSpecificRouletteRollsInversion,
+        HoneycombRule.AllOpen => BannerId.RuleSpecificRouletteRollsClearSkies,
+        HoneycombRule.ThreeOpen => BannerId.RuleSpecificRouletteRollsScoutingParty,
+        HoneycombRule.Chaos => BannerId.RuleSpecificRouletteRollsFrenzy,
+        HoneycombRule.Same => BannerId.RuleSpecificRouletteRollsSymmetry,
+        HoneycombRule.Swap => BannerId.RuleSpecificRouletteRollsNectarExchange,
+        HoneycombRule.Order => BannerId.RuleSpecificRouletteRollsHierarchy,
+        _ => null,
+    };
+
+    // Swap gets its own formatter (rather than routing through RouletteBannerId like
+    // every other rule) because its flavor text depends on what the trade actually
+    // did, not just that the rule is active — a 5-star card leaving the player's hand
+    // reads very differently from the player coming out ahead.
+    private static string FormatSwapRuleForBanner(PendingSwap swap)
+    {
+        var defaultText = HoneycombRule.Swap.DisplayName();
+        if (swap.PlayerCard.Data.Stars == 5)
+        {
+            return BannerCatalogText(BannerId.RuleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, defaultText);
+        }
+        if (swap.OpponentCard.Data.Stars > swap.PlayerCard.Data.Stars)
+        {
+            return BannerCatalogText(BannerId.RuleSpecificNectarExchangeTradesThePlayersWorstCardForThe, defaultText);
+        }
+        return BannerCatalogText(BannerId.RuleSpecificRouletteRollsNectarExchange, defaultText);
     }
 
     private List<HoneycombCard> BuildPlayerHand()
@@ -566,6 +653,7 @@ public partial class HoneycombViewModel : ObservableObject
     {
         State.PlayerChaosIndex = null;
         State.OpponentChaosIndex = null;
+        _hintUsageCountThisMatch = 0;
 
         int starter = Random.Shared.Next(2) == 0 ? 1 : -1;
         if (forceAlternateStarter || s_consecutiveStarters >= 3)
@@ -590,12 +678,32 @@ public partial class HoneycombViewModel : ObservableObject
         var bannerLines = new List<string> { $"First Move: {starterName}!" };
         foreach (var rule in State.ActiveRules)
         {
-            bannerLines.Add(FormatRuleForBanner(rule));
+            bannerLines.Add(rule == HoneycombRule.Swap && swap.HasValue
+                ? FormatSwapRuleForBanner(swap.Value)
+                : FormatRuleForBanner(rule));
+        }
+        // A ruleless match has no per-rule line to (20% of the time) swap for flavor
+        // text the way FormatRuleForBanner does above — this is that same gate, just
+        // for the "no extra rules" case, which only ever adds a line, never replaces
+        // one (there's no plain-text "Normal" line to fall back to today).
+        if (State.ActiveRules.Count == 0)
+        {
+            var zeroRulesResult = BannerCatalog.Fire(BannerId.RuleSpecificRouletteRollsZeroExtraRules);
+            if (zeroRulesResult.Kind == BannerFireKind.Message) bannerLines.Add(zeroRulesResult.Text!);
         }
         // A brand new match starting — any banner still queued from the previous one
         // (e.g. a match ended mid-combo-sequence) is no longer relevant.
         ClearBannerQueue();
         EnqueueBanner(string.Join("\n", bannerLines));
+        // Stats.GamesPlayed only increments in SettleMatch, so it's still 0 here iff
+        // this is the very first match this player has ever started.
+        if (Stats.GamesPlayed == 0)
+        {
+            var firstLaunchResult = BannerCatalog.Fire(BannerId.MilestonesFirstLaunchEver);
+            if (firstLaunchResult.Kind == BannerFireKind.Message) EnqueueBanner(firstLaunchResult.Text!);
+        }
+        CheckLoadingBanner();
+        CheckSameDifficultyStreak();
 
         int generation = ++_matchGeneration;
         if (swap.HasValue)
@@ -737,6 +845,7 @@ public partial class HoneycombViewModel : ObservableObject
         }
 
         NotifyStateChanged();
+        ScheduleIdleCheck();
 
         if (State.CurrentTurn == -1 && !_isAnimating)
         {
@@ -768,6 +877,20 @@ public partial class HoneycombViewModel : ObservableObject
         // unintended AI advantage otherwise.
         var visiblePlayerCards = State.PlayerHand.Where(c => State.PlayerRevealedIds.Contains(c.UniqueInstanceId)).ToList();
         int unknownPlayerCardCount = State.PlayerHand.Count - visiblePlayerCards.Count;
+
+        // Fires right before the AI's move, not after — this is meant to read as
+        // anticipation of the last card landing, not a recap of something that just
+        // happened. Pre-move score already reflects everything except this one move.
+        int emptyCellCount = State.Board.Cells.Count(c => c.IsEmpty);
+        int preMovePScore = CountPlayerCards(State.Board, State.PlayerHand);
+        int preMoveOScore = CountOpponentCards(State.Board, State.OpponentHand);
+        if (emptyCellCount == 1 && preMoveOScore - preMovePScore == 2)
+        {
+            var warningResult = BannerCatalog.Fire(BannerId.GameplayOpponentIsWinningByTwoCardsAndIsAboutToPlaceThe,
+                new Dictionary<string, string> { ["OpponentName"] = OpponentNameDisplay });
+            if (warningResult.Kind == BannerFireKind.Message) EnqueueBanner(warningResult.Text!);
+        }
+
         var move = HoneycombAI.FindMove(State.Board, State.OpponentHand, visiblePlayerCards, unknownPlayerCardCount, new HashSet<HoneycombRule>(State.ActiveRules), Options.Difficulty, -1, 1, State.OpponentChaosIndex);
         if (move.HandIndex >= 0)
         {
@@ -818,6 +941,8 @@ public partial class HoneycombViewModel : ObservableObject
         _lastHiveSwarmPhrase = null;
         State.Phase = HoneycombPhase.Playing;
         State.UndoStack.Clear();
+        _lastPlayerMove = null;
+        _pendingUndoRepeatCheck = null;
         State.ActiveRules = new List<HoneycombRule>(_rematchActiveRules);
         State.HasStolenThisMatch = false;
         State.CardsCapturedThisMatch = 0;
@@ -851,6 +976,9 @@ public partial class HoneycombViewModel : ObservableObject
 
         ActiveHint = null;
         ClearBannerQueue();
+        _pendingUndoRepeatCheck = _lastPlayerMove;
+        var result = BannerCatalog.Fire(BannerId.GameplayUndoUsedImmediatelyAfterAPlacement);
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
         NotifyStateChanged();
     }
 
@@ -871,13 +999,29 @@ public partial class HoneycombViewModel : ObservableObject
         State.UndoStack.Push(snap);
     }
 
+    // "Player uses Undo, thinks about it, and then makes the exact same move they just
+    // undid" — _lastPlayerMove tracks every player placement so Undo() can snapshot
+    // which move it's about to revert; _pendingUndoRepeatCheck holds that move only
+    // until the player's very next placement, whether or not it matches.
+    private (int CardDataId, int CellIndex)? _lastPlayerMove;
+    private (int CardDataId, int CellIndex)? _pendingUndoRepeatCheck;
+
     public void PlayCard(int handIndex, int cellIndex)
     {
         if (!IsPlaying || State.CurrentTurn != 1 || _isAnimating) return;
         if (handIndex < 0 || handIndex >= State.PlayerHand.Count) return;
-        
+
         if (State.ActiveRules.Contains(HoneycombRule.Order) && handIndex != 0) return;
         if (State.ActiveRules.Contains(HoneycombRule.Chaos) && State.PlayerChaosIndex.HasValue && handIndex != State.PlayerChaosIndex.Value) return;
+
+        int cardDataId = State.PlayerHand[handIndex].Data.Id;
+        if (_pendingUndoRepeatCheck is { } pending && pending.CardDataId == cardDataId && pending.CellIndex == cellIndex)
+        {
+            var result = BannerCatalog.Fire(BannerId.GameplayPlayerUsesUndoThinksAboutItAndThenMakesTheExact);
+            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+        }
+        _pendingUndoRepeatCheck = null;
+        _lastPlayerMove = (cardDataId, cellIndex);
 
         PushSnapshot();
         ExecutePlacement(handIndex, cellIndex);
@@ -949,16 +1093,16 @@ public partial class HoneycombViewModel : ObservableObject
             State.PointHighlightStatIndices = directStatIndices;
             NotifyStateChanged();
 
-            FinishPlacementAfterHighlight(workingBoard, cellIndex, hand, preScore, _matchGeneration, attackerId);
+            FinishPlacementAfterHighlight(workingBoard, cellIndex, hand, preScore, _matchGeneration, attackerId, flipped, directStatIndices.Count);
         }
         else
         {
             NotifyStateChanged();
-            StageCaptureCommit(workingBoard, cellIndex, hand, preScore, _matchGeneration, attackerId);
+            StageCaptureCommit(workingBoard, cellIndex, hand, preScore, _matchGeneration, attackerId, flipped, directStatIndices.Count);
         }
     }
 
-    private async void FinishPlacementAfterHighlight(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation, Guid? attackerId)
+    private async void FinishPlacementAfterHighlight(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation, Guid? attackerId, List<int> flipped, int directFlipsCount)
     {
         await Task.Delay(500);
 
@@ -979,7 +1123,7 @@ public partial class HoneycombViewModel : ObservableObject
 
         State.PointHighlightCellIndex = null;
         State.PointHighlightStatIndices = new HashSet<int>();
-        StageCaptureCommit(workingBoard, cellIndex, hand, preScore, generation, attackerId);
+        StageCaptureCommit(workingBoard, cellIndex, hand, preScore, generation, attackerId, flipped, directFlipsCount);
     }
 
     // How long the announcement banner (Same/Plus/Fallen Ace/Combo, Ascension/
@@ -1015,10 +1159,11 @@ public partial class HoneycombViewModel : ObservableObject
         NotifyStateChanged();
     }
 
-    private async void StageCaptureCommit(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation, Guid? attackerId)
+    private async void StageCaptureCommit(HoneycombBoard workingBoard, int cellIndex, List<HoneycombCard> hand, int preScore, int generation, Guid? attackerId, List<int> flipped, int directFlipsCount)
     {
         var bannerParts = new List<string>();
-        string placedSuit = workingBoard.Cells[cellIndex].Card!.Data.Suit;
+        var placedCard = workingBoard.Cells[cellIndex].Card!;
+        string placedSuit = placedCard.Data.Suit;
         // Skip Ascension/Descension on the game's last move (the one that fills the
         // board) — the win/lose overlay appears shortly after (see
         // ShowPostGamePromptAfterDelay) and a suit banner flashing at the same moment
@@ -1027,12 +1172,76 @@ public partial class HoneycombViewModel : ObservableObject
         if (!IsBoardFull(workingBoard) && workingBoard.AscensionDescensionSuits.Contains(placedSuit))
         {
             if (State.ActiveRules.Contains(HoneycombRule.Ascension))
-                bannerParts.Add($"{HoneycombRule.Ascension.DisplayName()}!");
+            {
+                var defaultText = $"{HoneycombRule.Ascension.DisplayName()}!";
+                // The catalog's flavor alternate only fires once the suit-wide modifier
+                // this placement just produced (every matching-suit card on the board
+                // shares the same +suitCount value) is severe enough to actually read as
+                // "in full bloom" — a bare +1/+2 doesn't. +3+ is the spreadsheet's own
+                // stated threshold for this trigger.
+                if (HasCard(workingBoard, placedSuit, modifierAtLeast: 3))
+                {
+                    bannerParts.Add(BannerCatalogText(
+                        BannerId.RuleSpecificPollinationPushesACardsModifierTo3OrHigher,
+                        defaultText,
+                        new Dictionary<string, string> { ["AscensionSuit"] = HoneycombCardData.SuitDisplayName(placedSuit) }));
+                }
+                else bannerParts.Add(defaultText);
+            }
             else if (State.ActiveRules.Contains(HoneycombRule.Descension))
-                bannerParts.Add($"{HoneycombRule.Descension.DisplayName()}!");
+            {
+                var defaultText = $"{HoneycombRule.Descension.DisplayName()}!";
+                // Same idea in reverse: only fires once the (negative) suit-wide modifier
+                // has actually clamped some matching-suit card's stat down to the 1 floor
+                // (HoneycombCard.Stat(int) clamps to 1...10) — not just "Descension is
+                // technically active but hasn't bitten yet."
+                if (HasCardClampedToOne(workingBoard, placedSuit))
+                    bannerParts.Add(BannerCatalogText(BannerId.RuleSpecificSmokedOutDropsACardsEffectiveStatTo1, defaultText));
+                else bannerParts.Add(defaultText);
+            }
         }
         var comboText = ComboBannerText(workingBoard);
-        if (comboText != null) bannerParts.Add(comboText);
+        if (comboText != null)
+        {
+            bannerParts.Add(comboText);
+        }
+        else if (flipped.Count >= 3)
+        {
+            // Generic "flipped 3+" flavor only when no Same/Plus/Combo banner already
+            // describes this same capture — this is the plain-stats case ("Row 68"),
+            // deliberately distinct from the Combo mechanic above.
+            var id = placedCard.Owner == 1
+                ? BannerId.GameplayPlayerFlips3CardsInASingleTurn
+                : BannerId.GameplayOpponentFlips3OfThePlayersCardsInASingleTurnNotA;
+            var flipResult = BannerCatalog.Fire(id);
+            if (flipResult.Kind == BannerFireKind.Message) bannerParts.Add(flipResult.Text!);
+        }
+        if (directFlipsCount == 4)
+        {
+            var allSidesResult = BannerCatalog.Fire(BannerId.GameplayAPlacedCardCapturesOnAll4SidesAtOnce);
+            if (allSidesResult.Kind == BannerFireKind.Message) bannerParts.Add(allSidesResult.Text!);
+        }
+        if (placedCard.Data.Stars == 1 && flipped.Count > 0)
+        {
+            if (flipped.Count >= 3)
+            {
+                var threeResult = BannerCatalog.Fire(BannerId.GameplayA1StarCardCaptures3CardsInOneMove);
+                if (threeResult.Kind == BannerFireKind.Message) bannerParts.Add(threeResult.Text!);
+            }
+            bool capturedFiveStar = flipped.Any(i => workingBoard.Cells[i].Card?.Data.Stars == 5);
+            if (capturedFiveStar)
+            {
+                var rarityResult = BannerCatalog.Fire(BannerId.GameplayA1StarCardCapturesA5StarCardRarityMismatch);
+                if (rarityResult.Kind == BannerFireKind.Message) bannerParts.Add(rarityResult.Text!);
+            }
+        }
+        int playerOwnedOnBoard = workingBoard.Cells.Count(c => c.Card?.Owner == 1);
+        int opponentOwnedOnBoard = workingBoard.Cells.Count(c => c.Card?.Owner == -1);
+        if (playerOwnedOnBoard == 2 && opponentOwnedOnBoard == 6)
+        {
+            var imbalanceResult = BannerCatalog.Fire(BannerId.GameplayPlayerHasOnly2CardsOnTheBoardVsOpponents6Few);
+            if (imbalanceResult.Kind == BannerFireKind.Message) bannerParts.Add(imbalanceResult.Text!);
+        }
         string? banner = bannerParts.Count > 0 ? string.Join(" ", bannerParts) : null;
 
         if (banner == null || attackerId == null || _isHeadless)
@@ -1106,12 +1315,71 @@ public partial class HoneycombViewModel : ObservableObject
         var parts = new List<string>();
         var sameName = HoneycombRule.Same.DisplayName().ToUpperInvariant();
         var plusName = HoneycombRule.Plus.DisplayName().ToUpperInvariant();
+        // Same has no catalog-driven flavor alternate (not in the spreadsheet), and
+        // the combined "Same & Plus" case isn't either — both stay the plain existing
+        // banner text unconditionally.
         if (board.LastSameTriggered && board.LastPlusTriggered) parts.Add($"{sameName} & {plusName}!");
         else if (board.LastSameTriggered) parts.Add($"{sameName}!");
-        else if (board.LastPlusTriggered) parts.Add($"{plusName}!");
-        if (board.LastFallenAceTriggered) parts.Add($"{HoneycombRule.FallenAce.DisplayName()}!");
-        if (board.LastComboFlipCount > 0) parts.Add($"HIVE MIND x{board.LastComboFlipCount}!");
+        else if (board.LastPlusTriggered)
+        {
+            parts.Add(BannerCatalogText(BannerId.RuleSpecificAPlayerTriggersAPlusComboTheMathMatchesPerfectly, $"{plusName}!"));
+        }
+        if (board.LastFallenAceTriggered)
+        {
+            parts.Add(BannerCatalogText(BannerId.RuleSpecificFallenAceTriggersA1CapturesA10, $"{HoneycombRule.FallenAce.DisplayName()}!"));
+        }
+        // Only x4-or-higher has a catalog-driven flavor alternate (matches the
+        // spreadsheet's own "Combo x4 or higher" trigger) — x2/x3 stay plain.
+        if (board.LastComboFlipCount >= 4)
+        {
+            parts.Add(BannerCatalogText(BannerId.GameplayComboX4OrHigher, $"HIVE MIND x{board.LastComboFlipCount}!",
+                new Dictionary<string, string> { ["ComboCount"] = board.LastComboFlipCount.ToString() }));
+        }
+        else if (board.LastComboFlipCount > 0) parts.Add($"HIVE MIND x{board.LastComboFlipCount}!");
         return parts.Count == 0 ? null : string.Join(" ", parts);
+    }
+
+    // Fires `id` through the banner catalog and returns whatever it decided should
+    // show — the catalog's own flavor text (per the 20% gate), or `existingDefaultText`
+    // otherwise. Deliberately uses the caller's own default rather than the catalog
+    // entry's own Fallback field, so this never depends on the catalog staying
+    // byte-for-byte in sync with whatever formatting quirks this platform's existing
+    // text already has (this port uppercases Same/Plus's names via ToUpperInvariant()
+    // above, where the Swift port doesn't — the catalog only stores one canonical
+    // fallback string, which can't correctly represent both at once).
+    private static string BannerCatalogText(BannerId id, string existingDefaultText, Dictionary<string, string>? tokens = null)
+    {
+        var result = BannerCatalog.Fire(id, tokens);
+        return result.Kind == BannerFireKind.Message && result.Text != null ? result.Text : existingDefaultText;
+    }
+
+    // Face-down cards are excluded from both checks below for the same reason
+    // HoneycombBoard's own suit-count calculation excludes them — a hidden Hive
+    // Swarm card's modifier is never actually rendered while face-down, so a banner
+    // referencing it would describe something the player can't see yet.
+    private static bool HasCard(HoneycombBoard board, string suit, int modifierAtLeast)
+    {
+        for (int i = 0; i < 9; i++)
+        {
+            var card = board.Cells[i].Card;
+            if (card == null || card.IsFaceDown || card.Data.Suit != suit) continue;
+            if (card.Modifier >= modifierAtLeast) return true;
+        }
+        return false;
+    }
+
+    private static bool HasCardClampedToOne(HoneycombBoard board, string suit)
+    {
+        for (int i = 0; i < 9; i++)
+        {
+            var card = board.Cells[i].Card;
+            if (card == null || card.IsFaceDown || card.Data.Suit != suit || card.Modifier >= 0) continue;
+            for (int s = 0; s < 4; s++)
+            {
+                if (card.Data.Stats[s] + card.Modifier <= 1) return true;
+            }
+        }
+        return false;
     }
 
     // Bomb Shelter: the hidden card flips on its own 3 turns after it was played,
@@ -1280,6 +1548,77 @@ public partial class HoneycombViewModel : ObservableObject
         return total;
     }
 
+    // Fires once per app session, the first time a match starts — "Loading" banners
+    // don't have a dedicated loading screen to hook into, so this is the closest
+    // real moment to "the game loads." Priority: named holiday > time-of-day window
+    // > generic fallback pool, since at most one should show per launch.
+    private bool _hasFiredLoadingBannerThisSession;
+
+    private void CheckLoadingBanner()
+    {
+        if (_hasFiredLoadingBannerThisSession) return;
+        _hasFiredLoadingBannerThisSession = true;
+        var result = BannerCatalog.Fire(LoadingBannerId());
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
+
+    private static BannerId LoadingBannerId()
+    {
+        if (FirstPlayedTracker.ShouldShowOneYearBanner()) return BannerId.LoadingFirstLaunchAfterPlayingForOneYear;
+
+        var now = DateTime.Now;
+        if (now.Month == 5 && now.Day == 20) return BannerId.LoadingGameLoadsOnMay20thWorldBeeDay;
+        if (now.Month == 1 && now.Day == 1) return BannerId.LoadingGameLoadsOnNewYearsDayJan1;
+        if (now.Month == 10 && now.Day == 31) return BannerId.LoadingGameLoadsOnHalloweenOct31;
+        if (now.Month == 2 && now.Day == 14) return BannerId.LoadingGameLoadsOnValentinesDayFeb14;
+        if (now.Month == 4 && now.Day == 1) return BannerId.LoadingPlayingOnAprilFoolsDayApr1;
+
+        int minutesFromMidnight = now.Hour * 60 + now.Minute;
+        if (Math.Abs(minutesFromMidnight - 720) <= 1) return BannerId.LoadingMatchStartsWithinAMinuteOfLocalNoon;
+        if (now.Hour < 4) return BannerId.LoadingMatchStartsBetween1200AmAnd400AmLocalTime;
+        if (now.Hour >= 5 && now.Hour < 8) return BannerId.LoadingMatchStartsBetween500AmAnd800AmLocalTime;
+        if (now.Hour >= 21) return BannerId.LoadingMatchStartsBetween900PmAndMidnightLocalTime;
+        return BannerId.LoadingOnGameLoad;
+    }
+
+    // Fires once, exactly on the win that crosses a threshold — not "MatchesWon >=
+    // threshold", which would fire on every subsequent win too.
+    // Fires once, exactly on the 5th consecutive match at the same difficulty — not
+    // "count >= 5", which would fire on every match after that too.
+    private void CheckSameDifficultyStreak()
+    {
+        if (Options.Difficulty == _lastPlayedDifficulty)
+        {
+            _consecutiveSameDifficultyCount++;
+        }
+        else
+        {
+            _lastPlayedDifficulty = Options.Difficulty;
+            _consecutiveSameDifficultyCount = 1;
+        }
+        if (_consecutiveSameDifficultyCount == 5)
+        {
+            var result = BannerCatalog.Fire(BannerId.GameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow);
+            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+        }
+    }
+
+    private void CheckWinMilestones()
+    {
+        var thresholds = new (int Threshold, BannerId Id)[]
+        {
+            (10, BannerId.MilestonesPlayerReaches10TotalWins),
+            (100, BannerId.MilestonesPlayerReaches100TotalWins),
+            (1000, BannerId.MilestonesPlayerReaches1000TotalWins),
+        };
+        foreach (var (threshold, id) in thresholds)
+        {
+            if (Stats.MatchesWon != threshold) continue;
+            var result = BannerCatalog.Fire(id);
+            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+        }
+    }
+
     private void SettleMatch()
     {
         State.PlayerScore = CountPlayerCards(State.Board, State.PlayerHand);
@@ -1301,7 +1640,69 @@ public partial class HoneycombViewModel : ObservableObject
 
         Stats.RecordGame(won, drawn, State.CardsCapturedThisMatch, State.Board.SessionSamePlusTriggers, flawless, Options.Difficulty, State.Board.SessionFallenAceCaptures);
         SaveStats();
-        if (won) ApplyStealProtection();
+        if (won)
+        {
+            ApplyStealProtection();
+            CheckWinMilestones();
+        }
+
+        MatchResultFlavorText = null;
+        if (won)
+        {
+            var winFlavorParts = new List<string>();
+            if (flawless)
+            {
+                var result = BannerCatalog.Fire(BannerId.RuleSpecificPlayerWinsFlawlessOpponentScore0);
+                if (result.Kind == BannerFireKind.Message) winFlavorParts.Add(result.Text!);
+            }
+            // A win's margin is PlayerScore - OpponentScore, maximized exactly when
+            // OpponentScore is minimized — i.e. this is always the same condition as
+            // `flawless` above, just framed as "the biggest margin possible" rather
+            // than "opponent got nothing."
+            if (flawless)
+            {
+                var result = BannerCatalog.Fire(BannerId.GameplayPlayerWinsByTheMaximumPossibleMargin);
+                if (result.Kind == BannerFireKind.Message) winFlavorParts.Add(result.Text!);
+            }
+            if (State.ActiveRules.Count >= 4)
+            {
+                var result = BannerCatalog.Fire(BannerId.GameplayPlayerWinsAMatchWith4RulesActiveAtOnce);
+                if (result.Kind == BannerFireKind.Message) winFlavorParts.Add(result.Text!);
+            }
+            MatchResultFlavorText = winFlavorParts.Count > 0 ? string.Join(" ", winFlavorParts) : null;
+
+            _consecutiveRematchLosses = 0;
+            _consecutiveRematchWins++;
+            if (_consecutiveRematchWins == 3)
+            {
+                var streakResult = BannerCatalog.Fire(BannerId.Gameplay3RematchWinsInARowAgainstTheSameOpponent,
+                    new Dictionary<string, string> { ["OpponentName"] = OpponentNameDisplay });
+                if (streakResult.Kind == BannerFireKind.Message) EnqueueBanner(streakResult.Text!);
+            }
+        }
+        else if (!drawn)
+        {
+            if (State.PlayerScore == 0)
+            {
+                var result = BannerCatalog.Fire(BannerId.RuleSpecificPlayerLosesFlawless0Captures,
+                    new Dictionary<string, string> { ["OpponentName"] = OpponentNameDisplay });
+                if (result.Kind == BannerFireKind.Message) MatchResultFlavorText = result.Text;
+            }
+
+            _consecutiveRematchWins = 0;
+            _consecutiveRematchLosses++;
+            if (_consecutiveRematchLosses == 3)
+            {
+                var streakResult = BannerCatalog.Fire(BannerId.Gameplay3RematchLossesInARowAgainstTheSameOpponent,
+                    new Dictionary<string, string> { ["OpponentName"] = OpponentNameDisplay });
+                if (streakResult.Kind == BannerFireKind.Message) EnqueueBanner(streakResult.Text!);
+            }
+        }
+        else
+        {
+            _consecutiveRematchWins = 0;
+            _consecutiveRematchLosses = 0;
+        }
 
         State.Phase = HoneycombPhase.Result;
         _isAnimating = false;
@@ -1367,10 +1768,21 @@ public partial class HoneycombViewModel : ObservableObject
         StartTurn();
     }
 
+    // Reset once per match (FinishMatchSetup) — fires exactly on the 3rd hint request,
+    // not "count >= 3", which would fire on every hint after that too.
+    private int _hintUsageCountThisMatch;
+
     public void FindHint()
     {
         if (!IsPlaying || State.CurrentTurn != 1 || _isAnimating || State.PlayerHand.Count == 0) return;
-        
+
+        _hintUsageCountThisMatch++;
+        if (_hintUsageCountThisMatch == 3)
+        {
+            var hintResult = BannerCatalog.Fire(BannerId.Gameplay3HintsUsedInOneMatch);
+            if (hintResult.Kind == BannerFireKind.Message) EnqueueBanner(hintResult.Text!);
+        }
+
         var knownOpponent = State.OpponentHand.Where(c => State.OpponentRevealedIds.Contains(c.UniqueInstanceId)).ToList();
         // How many of the opponent's real cards remain unrevealed — knownOpponent above
         // is only the subset the player has actually seen; treating that subset as the

@@ -152,6 +152,7 @@
                     <!-- Subtitle hidden/removed as requested to match mockup -->
                     <TextBlock x:Name="OverlayLoseTitle" Text="Not today, partner!" FontSize="36" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI" IsVisible="False" />
                     <TextBlock x:Name="OverlaySubtitle" Text="" FontSize="18" Foreground="#CCCCCC" HorizontalAlignment="Center" IsVisible="False" />
+                    <TextBlock x:Name="OverlayFlavorText" Text="" FontSize="20" FontWeight="SemiBold" Foreground="#FFFFFF" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontFamily="Segoe UI" IsVisible="False" />
                     
                     <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
                         <Button x:Name="NewGameButton" Classes="honeycomb-blue" Click="NewGame_Click">

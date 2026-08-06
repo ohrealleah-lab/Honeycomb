@@ -37,6 +37,7 @@ let package = Package(
                 "mac/src/shuffle.aiff",
                 "mac/src/snap.aiff",
                 "mac/src/victory.aiff",
+                "shared/Honeycomb/Resources/HoneycombBannerCatalog.json",
             ],
             sources: ["shared", "mac/src"]
         ),
