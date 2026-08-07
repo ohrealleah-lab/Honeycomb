@@ -1,6 +1,5 @@
 using System;
 using Avalonia.Controls;
-using Avalonia.Media;
 using Avalonia.Threading;
 
 namespace SoliBee.Desktop.Views;
@@ -24,15 +23,6 @@ public partial class FlashToast : UserControl
     {
         MessageText.Text = message;
         MessageText.Foreground = Avalonia.Media.SolidColorBrush.Parse("#FFD600");
-
-        // MainWindow scales each game's board (LayoutTransform on MainContentWrapper) to
-        // fit its own natural size into the window — this control lives inside that same
-        // scaled subtree, so without correction the identical markup would render larger
-        // or smaller depending on which game's zoom happens to be in effect. Counter-scale
-        // by the inverse so the toast always reads at its designed size, centered the same
-        // way RenderTransform's default center origin already keeps it in place.
-        double zoom = (TopLevel.GetTopLevel(this) as MainWindow)?.ContentZoom ?? 1.0;
-        RenderTransform = zoom > 0 ? new ScaleTransform(1.0 / zoom, 1.0 / zoom) : null;
 
         IsVisible = true;
         

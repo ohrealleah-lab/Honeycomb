@@ -1754,15 +1754,6 @@ public partial class MainWindow : Window
         return new Size(GameAreaGrid.Bounds.Width / scale, GameAreaGrid.Bounds.Height / scale);
     }
 
-    // Current per-game responsive scale (see UpdateResponsiveLayout) — each game's board
-    // has a different natural size, so this varies by game/window size even though it's
-    // the same LayoutTransform applied to the same MainContentWrapper. FlashToast reads
-    // this to counter-scale itself (see FlashToast.Flash) so the same banner text renders
-    // at the same physical size in every game instead of whatever that game's zoom happens
-    // to be — the same "correct for the scaled subtree" approach GetUnscaledGameAreaSize
-    // above uses for the victory overlay.
-    public double ContentZoom => _contentScale.ScaleX > 0 ? _contentScale.ScaleX : 1.0;
-
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         if (BoardBackgroundImage.IsVisible && _lastBoardBackgroundOptions != null)
