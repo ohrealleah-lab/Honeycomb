@@ -154,6 +154,12 @@ public struct HoneycombView: View {
     @State private var dragLocation: CGPoint = .zero
     @State private var dragOffset: CGSize = .zero
     @State private var boardCellFrames: [Int: CGRect] = [:]
+    // DragGesture only tracks the primary (left) button — pressing right/middle mouse
+    // mid-drag doesn't cancel it, but it also doesn't call .onEnded (AppKit swallows the
+    // left-button event stream), so draggedHandCard was left stuck non-nil forever: the
+    // hand card stayed hidden (opacity 0) and its floating ghost froze in place. This
+    // monitor is a safety net that resets drag state the instant another button goes down.
+    @State private var dragCancelMonitor: Any? = nil
     @State private var animatingBoardIndices: Set<Int> = []
 
     // Banner state
@@ -792,6 +798,19 @@ public struct HoneycombView: View {
         .onAppear {
             applyInitialWindowSize()
             viewModel.checkLoadingBanner()
+            dragCancelMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown, .otherMouseDown]) { event in
+                if draggedHandCard != nil {
+                    draggedHandCard = nil
+                    dragOffset = .zero
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let monitor = dragCancelMonitor {
+                NSEvent.removeMonitor(monitor)
+                dragCancelMonitor = nil
+            }
         }
         .background(WindowAccessor(callback: { window in
             self.hostingWindow = window
