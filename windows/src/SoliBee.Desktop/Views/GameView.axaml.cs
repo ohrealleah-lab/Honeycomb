@@ -255,7 +255,8 @@ public partial class GameView : CardGameView
     {
         // Avalonia's startup cost (unlike Mac's native AppKit path) eats into the very
         // first loading banner's visible time before the window is even on screen — give
-        // just that one banner extra time to actually be read.
+        // just that one banner extra time to actually be read. Every other toast is a
+        // uniform 2s.
         var duration = BannerCatalog.ConsumeAppLaunchLoadingFlag() ? TimeSpan.FromSeconds(3) : TimeSpan.FromSeconds(2);
         Avalonia.Threading.Dispatcher.UIThread.Post(() => HintToast.Flash(message, duration));
     }

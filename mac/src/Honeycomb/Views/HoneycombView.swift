@@ -740,9 +740,13 @@ public struct HoneycombView: View {
                     viewModel.advanceBannerQueue()
                 }
             }
-            // The very first loading banner of an app session gets extra time to actually
-            // be read — see BannerCatalog.consumeAppLaunchLoadingFlag().
-            let duration = BannerCatalog.consumeAppLaunchLoadingFlag() ? 3.0 : (viewModel.flashRuleBannerIsLongDuration ? 2.0 : 1.2)
+            // All toasts are a uniform 2s now (flashRuleBannerIsLongDuration no longer
+            // distinguishes anything display-wise — kept on the queue only because
+            // removing it would mean touching every enqueueBanner call site for no
+            // behavioral gain). The one exception: the very first loading banner of an
+            // app session gets extra time to actually be read — see
+            // BannerCatalog.consumeAppLaunchLoadingFlag().
+            let duration = BannerCatalog.consumeAppLaunchLoadingFlag() ? 3.0 : 2.0
             DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: task)
             bannerTask = task
         }

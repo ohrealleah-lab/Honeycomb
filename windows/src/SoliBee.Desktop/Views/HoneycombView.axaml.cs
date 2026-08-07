@@ -128,12 +128,13 @@ public partial class HoneycombView : UserControl
     
     private void Vm_OnFlashBanner(string message, bool isLongDuration)
     {
-        // Avalonia's startup cost (unlike Mac's native AppKit path) eats into the very
-        // first loading banner's visible time before the window is even on screen — give
-        // just that one banner extra time to actually be read.
-        var duration = BannerCatalog.ConsumeAppLaunchLoadingFlag()
-            ? TimeSpan.FromSeconds(3)
-            : (isLongDuration ? TimeSpan.FromSeconds(2) : (TimeSpan?)null);
+        // All toasts are a uniform 2s now (isLongDuration no longer distinguishes
+        // anything display-wise — kept on the event/queue only because removing it
+        // would mean touching every EnqueueBanner call site in HoneycombViewModel for
+        // no behavioral gain). The one exception: Avalonia's startup cost (unlike Mac's
+        // native AppKit path) eats into the very first loading banner's visible time
+        // before the window is even on screen, so that one banner alone gets 3s.
+        var duration = BannerCatalog.ConsumeAppLaunchLoadingFlag() ? TimeSpan.FromSeconds(3) : TimeSpan.FromSeconds(2);
         Dispatcher.UIThread.Post(() => {
             _bannerActive = true;
             RuleToast.Flash(message, duration);

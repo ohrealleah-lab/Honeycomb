@@ -6,9 +6,10 @@ namespace SoliBee.Desktop.Views;
 
 public partial class FlashToast : UserControl
 {
-    // Matches Mac's non-"First Move:" banner duration (HoneycombView.swift) — "First
-    // Move:" itself passes an explicit 2s from Vm_OnFlashBanner instead of using this.
-    private static readonly TimeSpan DefaultDuration = TimeSpan.FromSeconds(1.2);
+    // All toasts across every game display for the same 2.0s — deliberately uniform,
+    // not tiered by banner "importance." Matches Mac's flashQueuedBanner/
+    // flashRuleBannerTrigger, which also always pass 2.0s.
+    private static readonly TimeSpan DefaultDuration = TimeSpan.FromSeconds(2.0);
 
     private DispatcherTimer? _dismissTimer;
 
