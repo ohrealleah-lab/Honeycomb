@@ -1272,11 +1272,6 @@ public partial class HoneycombViewModel : ObservableObject
 
     private void FinishPlacementTail(int cellIndex, List<HoneycombCard> hand, int preScore)
     {
-        // Ticks down any other still-hidden Bomb Shelter card(s) already on the board —
-        // this play counts as one of their 3 turns, whether or not this play was itself
-        // a Bomb Shelter placement.
-        AdvanceBombShelterTimers(justPlacedCellIndex: cellIndex);
-
         // Chaos's locked-card index is only re-rolled in StartTurn when it becomes this
         // side's turn again — left stale here, it would keep pointing at whatever index
         // the just-played card's removal shifted into, highlighting the wrong card (and
@@ -1288,27 +1283,41 @@ public partial class HoneycombViewModel : ObservableObject
             else State.OpponentChaosIndex = null;
         }
 
+        // Score tracking runs eagerly, unconditionally — same as the Swift port's
+        // finishPlacement, which tallies sessionCardsCaptured before ever touching the
+        // (possibly deferred) tick/reveal logic below. Neither of these reads anything
+        // AdvanceBombShelterTimers could have changed by this point.
         int postScore = State.CurrentTurn == 1 ? CountPlayerCards(State.Board, hand) : CountOpponentCards(State.Board, hand);
         // Count all captures (both player and opponent moves), not just player captures
         State.CardsCapturedThisMatch += Math.Max(0, postScore - preScore); // preScore already includes the card placed from hand
 
-        if (IsBoardFull())
+        // Ticks down any other still-hidden Bomb Shelter card(s) already on the board —
+        // this play counts as one of their 3 turns, whether or not this play was itself
+        // a Bomb Shelter placement. The rest of this method (settle-or-switch-turns, and
+        // critically the next side's AI move) only runs once that's actually resolved —
+        // immediately if nothing reached zero, or after the reveal's own banner/flip
+        // pacing if something did — so the AI can't start "thinking" about its next move
+        // until the reveal the player is watching has actually finished.
+        AdvanceBombShelterTimers(justPlacedCellIndex: cellIndex, completion: () =>
         {
-            if (State.ActiveRules.Contains(HoneycombRule.BombShelter))
+            if (IsBoardFull())
             {
-                _ = RevealBombSheltersAndSettleAsync();
+                if (State.ActiveRules.Contains(HoneycombRule.BombShelter))
+                {
+                    _ = RevealBombSheltersAndSettleAsync();
+                }
+                else
+                {
+                    SettleMatch();
+                }
             }
             else
             {
-                SettleMatch();
+                State.CurrentTurn = State.CurrentTurn == 1 ? -1 : 1;
+                _isAnimating = false;
+                StartTurn();
             }
-        }
-        else
-        {
-            State.CurrentTurn = State.CurrentTurn == 1 ? -1 : 1;
-            _isAnimating = false;
-            StartTurn();
-        }
+        });
     }
 
     // Same/Plus/Fallen Ace/Combo only ever describe what the board's last capture
@@ -1394,7 +1403,18 @@ public partial class HoneycombViewModel : ObservableObject
     // countdown itself is always committed immediately (a hidden card's timer must
     // persist every turn or it could never count down to a reveal) — only the
     // *reveal*, once a timer hits zero, gets the banner-first-then-flip pacing.
-    private void AdvanceBombShelterTimers(int justPlacedCellIndex)
+    // `completion` is FinishPlacementTail's own tail (Chaos reset, score tracking, then
+    // either settling the match or switching turns and — critically — triggering the
+    // next side's AI move). Previously this ran synchronously right after this method
+    // returned, regardless of whether a reveal had been kicked off — since
+    // StageBombShelterReveal is fire-and-forget, that meant the turn switch (and the
+    // AI's own 2.5s "thinking" delay) started at the same instant as the reveal instead
+    // of waiting for it, so the AI could end up placing its next card mere milliseconds
+    // after the reveal's own flip landed. Threading completion through and only calling
+    // it once the reveal actually finishes (mirroring the Swift port's
+    // advanceBombShelterTimers/completion) makes the AI's move properly wait for the
+    // reveal to fully resolve first, same as it already waits for an ordinary capture.
+    private void AdvanceBombShelterTimers(int justPlacedCellIndex, Action completion)
     {
         var pendingReveals = new List<int>();
         for (int i = 0; i < 9; i++)
@@ -1408,7 +1428,7 @@ public partial class HoneycombViewModel : ObservableObject
             if (cell.Card.BombShelterTurnsRemaining <= 0) pendingReveals.Add(i);
         }
 
-        if (pendingReveals.Count == 0) return;
+        if (pendingReveals.Count == 0) { completion(); return; }
 
         // Resolve every reveal this turn onto one clone before ever committing —
         // multiple simultaneous reveals (rare, but possible) compose onto the same
@@ -1431,7 +1451,7 @@ public partial class HoneycombViewModel : ObservableObject
             var revealedText = HiveSwarmRevealBanner(revealedOwner);
             banners.Add(comboText == null ? revealedText : $"{revealedText} {comboText}");
         }
-        StageBombShelterReveal(revealedBoard, banners, _matchGeneration, attackerIds);
+        StageBombShelterReveal(revealedBoard, banners, _matchGeneration, attackerIds, completion);
     }
 
     // Randomly chosen phrase set for a Hive Swarm (Bomb Shelter) reveal's own banner
@@ -1471,7 +1491,7 @@ public partial class HoneycombViewModel : ObservableObject
     // reveal is just as much a "special event" as a Same/Plus/Fallen Ace/Combo capture).
     // Guarded by _matchGeneration so a match that's moved on (New Game/Surrender/a fresh
     // match) during either delay can't commit a stale board.
-    private async void StageBombShelterReveal(HoneycombBoard revealedBoard, List<string> banners, int generation, HashSet<Guid> attackerIds)
+    private async void StageBombShelterReveal(HoneycombBoard revealedBoard, List<string> banners, int generation, HashSet<Guid> attackerIds, Action completion)
     {
         if (!_isHeadless) await Task.Delay(HiveSwarmRevealPreDelayMs);
         if (generation != _matchGeneration || !IsPlaying) return;
@@ -1481,6 +1501,12 @@ public partial class HoneycombViewModel : ObservableObject
         State.Board = revealedBoard;
         foreach (var id in attackerIds) FlashCaptureAttackers(id);
         NotifyStateChanged();
+        // Only now — reveal fully resolved — does the turn actually switch and (if it's
+        // now the AI's turn) its own 2.5s "thinking" delay start. A stale generation
+        // above already returned before reaching here, so completion (which would
+        // otherwise switch turns / trigger the AI for a match that's moved on) correctly
+        // never fires in that case.
+        completion();
     }
 
     private async Task RevealBombSheltersAndSettleAsync()
