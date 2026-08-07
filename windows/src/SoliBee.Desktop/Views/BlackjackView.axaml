@@ -3,9 +3,9 @@
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
              x:Class="SoliBee.Desktop.Views.BlackjackView">
 
-    <Grid>
+    <Grid ClipToBounds="False">
         <!-- The actual game board felt grid -->
-        <Grid x:Name="BoardFeltGrid">
+        <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
             <Grid.RowDefinitions>
                 <!-- MinHeight guards against this row collapsing below BidBar's own
                      content height, which was clipping/flattening its rounded corners

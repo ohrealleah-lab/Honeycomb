@@ -3,7 +3,7 @@
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
              x:Class="SoliBee.Desktop.Views.VideoPokerView">
 
-    <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto">
+    <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto" ClipToBounds="False">
 
         <!-- ─── Pay Table Bar (top) ──────────────────────────────────────────── -->
         <Border x:Name="PayTableBar" Grid.Row="0" Background="Transparent" Padding="12,6,12,8" Margin="0,14,0,6">

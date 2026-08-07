@@ -13,10 +13,19 @@
          gold-headline look as the other overlay banners (e.g. Video Poker's
          "Not today, partner!" toast), but headline-only and self-dismissing rather than
          needing a dismiss button, since the message is purely informational. -->
+    <!-- MaxWidth lives on both Border and TextBlock: the Border's copy caps how wide the
+         whole toast can grow, while the TextBlock's own copy is what actually matters for
+         wrapping — Viewbox measures its child at infinite width by default, which would
+         otherwise report one long unbroken line and defeat TextWrapping entirely. With a
+         real width to wrap against, short messages still hug their natural (narrower)
+         width on one line, longer ones wrap across lines instead of overflowing, and the
+         Viewbox's DownOnly shrink is left as a last-resort safety net for the rare message
+         still too tall for the toast's available space even after wrapping. -->
     <Border Classes="banner-glow" Background="#BF000000" CornerRadius="24" Padding="48,36" MaxWidth="920">
         <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
             <TextBlock x:Name="MessageText" FontSize="72" FontWeight="Black" Foreground="#FFD600"
-                       HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="NoWrap"/>
+                       HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"
+                       TextWrapping="Wrap" MaxWidth="920"/>
         </Viewbox>
     </Border>
 </UserControl>
