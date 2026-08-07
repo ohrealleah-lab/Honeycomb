@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using SoliBee.Core.Models;
+using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
 using SoliBee.Desktop.Services;
 using System.Collections.Generic;
@@ -127,9 +128,14 @@ public partial class HoneycombView : UserControl
     
     private void Vm_OnFlashBanner(string message, bool isLongDuration)
     {
+        // Avalonia's startup cost (unlike Mac's native AppKit path) eats into the very
+        // first loading banner's visible time before the window is even on screen — give
+        // just that one banner extra time to actually be read.
+        var duration = BannerCatalog.ConsumeAppLaunchLoadingFlag()
+            ? TimeSpan.FromSeconds(3)
+            : (isLongDuration ? TimeSpan.FromSeconds(2) : (TimeSpan?)null);
         Dispatcher.UIThread.Post(() => {
             _bannerActive = true;
-            var duration = isLongDuration ? TimeSpan.FromSeconds(2) : (TimeSpan?)null;
             RuleToast.Flash(message, duration);
         });
     }

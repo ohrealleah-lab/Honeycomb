@@ -162,6 +162,7 @@ public static class BannerCatalog
     {
         bool isAppLaunch = !_hasFiredAnyLoadingBannerThisSession;
         _hasFiredAnyLoadingBannerThisSession = true;
+        _lastLoadingBannerWasAppLaunch = isAppLaunch;
 
         if (isAppLaunch && FirstPlayedTracker.ShouldShowOneYearBanner()) return BannerId.LoadingFirstLaunchAfterPlayingForOneYear;
 
@@ -185,5 +186,24 @@ public static class BannerCatalog
             if (now.Hour >= 21) return BannerId.LoadingMatchStartsBetween900PmAndMidnightLocalTime;
         }
         return BannerId.LoadingOnGameLoad;
+    }
+
+    // Set by LoadingBannerId() right before its caller enqueues the resulting banner —
+    // every Loading-category catalog entry is ungated (see HoneycombBannerCatalog.json,
+    // always BannerFireKind.Message), so a LoadingBannerId() call is always immediately
+    // followed by that banner actually being flashed. Windows' Avalonia UI has a
+    // noticeable startup cost that macOS's native AppKit path doesn't, so by the time the
+    // very first frame is even on screen a chunk of the loading banner's normal on-screen
+    // duration has already elapsed unseen — this lets the flash call for specifically the
+    // app-launch banner (never a later game-switch one) use a longer duration to
+    // compensate. Consumed (reset to false) by the read itself so it can only ever apply
+    // to the one flash it was set for, not some later unrelated banner.
+    private static bool _lastLoadingBannerWasAppLaunch;
+
+    public static bool ConsumeAppLaunchLoadingFlag()
+    {
+        bool wasAppLaunch = _lastLoadingBannerWasAppLaunch;
+        _lastLoadingBannerWasAppLaunch = false;
+        return wasAppLaunch;
     }
 }

@@ -120,7 +120,11 @@ public partial class SpiderView : CardGameView
 
     private void Vm_OnFlashBanner(string message)
     {
-        Dispatcher.UIThread.Post(() => HintToast.Flash(message, TimeSpan.FromSeconds(2)));
+        // Avalonia's startup cost (unlike Mac's native AppKit path) eats into the very
+        // first loading banner's visible time before the window is even on screen — give
+        // just that one banner extra time to actually be read.
+        var duration = BannerCatalog.ConsumeAppLaunchLoadingFlag() ? TimeSpan.FromSeconds(3) : TimeSpan.FromSeconds(2);
+        Dispatcher.UIThread.Post(() => HintToast.Flash(message, duration));
     }
 
     private void HintToast_OnDismissed()
