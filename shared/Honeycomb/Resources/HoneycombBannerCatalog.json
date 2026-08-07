@@ -12,7 +12,9 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "{OpponentName} snatched your prize honey!"
+        "{OpponentName} snatched your prize honey!",
+        "{OpponentName} just flew off with your Royal Jelly!",
+        "Highway robbery in the hive! {OpponentName} stole your 5-star!"
       ]
     },
     {
@@ -25,7 +27,9 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "You’ve traded up!"
+        "You’ve traded up!",
+        "The nectar favors you.",
+        "A golden exchange."
       ]
     },
     {
@@ -38,7 +42,10 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "A classic match — just bees and honey, no gimmicks."
+        "A classic match — just bees and honey, no gimmicks.",
+        "Pure, unadulterated honey — standard rules apply!",
+        "Back to basics for the bees!",
+        "Clean comb, clean rules — just you and the cards."
       ]
     },
     {
@@ -374,7 +381,9 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "Four rules, one victory. Chaos bends to you."
+        "Four rules, one victory. Chaos bends to you.",
+        "The odds were quadrupled, and so was your glory!",
+        "Four rules? Just four more reasons to win."
       ]
     },
     {
@@ -400,7 +409,10 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "A massive swarm!"
+        "A massive swarm!",
+        "Sting 'em all!",
+        "Raking in the honey!",
+        "A sweeping sting!"
       ]
     },
     {
@@ -413,7 +425,9 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "{OpponentName} unleashes an angry swarm!"
+        "{OpponentName} unleashes an angry swarm!",
+        "{OpponentName} shows no mercy!",
+        "{OpponentName} didn't hold back!"
       ]
     },
     {
@@ -426,7 +440,10 @@
       "gateChance": 0.2,
       "fallback": "HIVE MIND x{ComboCount}!",
       "messages": [
-        "SWARM FRENZY — the whole hive is buzzing!"
+        "SWARM FRENZY — the whole hive is buzzing!",
+        "MEGA CASCADE — absolute hive pandemonium!",
+        "HIVE SUPERNOVA — a four-fold combo explosion!",
+        "ULTIMATE SWARM — cards flipping in every direction!"
       ]
     },
     {
@@ -439,7 +456,14 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "The hive is nearly overrun... is there any hope left?"
+        "The hive is nearly overrun... is there any hope left?",
+        "Cornered in the comb... can you pull off a miracle?",
+        "Down to your final stand! The hive needs a hero.",
+        "Only a few cells left! Can a single sting turn the tide?",
+        "Trapped in the comb... one last chance to strike back.",
+        "Well... this is getting uncomfortable.",
+        "Don't panic! ...Okay, maybe panic just a little.",
+        "Backed into a corner — just where we want 'em?"
       ]
     },
     {
@@ -452,7 +476,10 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "Four-way sting!"
+        "Four-way sting!",
+        "Omnidirectional sting — nothing on that board was safe!",
+        "Royal center sting!",
+        "Bullseye in the comb!"
       ]
     },
     {
@@ -465,7 +492,12 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "{OpponentName} is starting to sweat."
+        "{OpponentName} is starting to sweat.",
+        "{OpponentName}'s wings are getting tired!",
+        "{OpponentName} is losing their buzz!",
+        "You're ruling this hive!",
+        "{OpponentName} can't catch a break.",
+        "{OpponentName} might need a quick coffee break."
       ]
     },
     {
@@ -478,7 +510,11 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "{OpponentName} has your number. Time for a new strategy?"
+        "{OpponentName} has your number. Time for a new strategy?",
+        "{OpponentName} is on a roll… time to shake up your deck!",
+        "Smoked out by {OpponentName} 3 times in a row!",
+        "The swarm is favoring {OpponentName}… for now!",
+        "Got caught in {OpponentName}'s honey trap again!"
       ]
     },
     {
@@ -491,7 +527,11 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "The weakest bee just took down half the hive!"
+        "The weakest bee just took down half the hive!",
+        "A humble worker bee just staged a revolution!",
+        "Smallest bee, ENORMOUS sting!",
+        "Don't judge a bee by its stars!",
+        "Small card, big moves!"
       ]
     },
     {
@@ -504,7 +544,11 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "A worker bee just humbled royalty."
+        "A worker bee just humbled royalty.",
+        "The ultimate rarity mismatch!",
+        "Rank means nothing to a sharp stinger!",
+        "Royalty is expensive — tactics are free!",
+        "Big stars fall hard!"
       ]
     },
     {
@@ -535,7 +579,10 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "A true rivalry is forming in the comb."
+        "A true rivalry is forming in the comb.",
+        "Neither bee backs down — 5 matches and counting!",
+        "Five battles in the same comb! The bees are watching closely.",
+        "Deep in the hive, a classic matchup unfolds."
       ]
     },
     {
@@ -548,7 +595,10 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "Nothing left to sting!"
+        "Nothing left to sting!",
+        "Absolute hive takeover!",
+        "All the honey is yours!",
+        "Not even a drone left standing!"
       ]
     },
     {
@@ -696,7 +746,9 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "Pollen is in the air!"
+        "Pollen is in the air!",
+        "Flowers are blooming!",
+        "Pollen. Everywhere."
       ]
     },
     {
@@ -709,7 +761,8 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "A haze covers the comb!"
+        "A haze covers the comb!",
+        "Smoke fills the hive…"
       ]
     },
     {
@@ -722,7 +775,11 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "Addition is key!"
+        "Addition is key!",
+        "Do the math!",
+        "Sum it up!",
+        "Calculate carefully!",
+        "Class is in session!"
       ]
     },
     {
@@ -735,7 +792,8 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "Everything is upside down!"
+        "Everything is upside down!",
+        "Flying backwards — low beats high!"
       ]
     },
     {
@@ -748,7 +806,9 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "The hive is exposed!"
+        "The hive is exposed!",
+        "Clear Skies overheard.",
+        "No shade on the hive today."
       ]
     },
     {
@@ -761,7 +821,10 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "The drones are out!"
+        "The drones are out!",
+        "Scout bees have reported back!",
+        "Reconnaissance in progress!",
+        "Intel gathered!"
       ]
     },
     {
@@ -774,7 +837,9 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "Chaos takes over!"
+        "Chaos takes over!",
+        "The bees are out of control!",
+        "Those bees are wild!"
       ]
     },
     {
@@ -787,7 +852,8 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "Patterns Align!"
+        "Patterns Align!",
+        "Geometric precision required."
       ]
     },
     {
@@ -800,7 +866,9 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "A trade before the swarm!"
+        "A trade before the swarm!",
+        "Pre-game trading post open!",
+        "Nectar bartering begins!"
       ]
     },
     {
@@ -813,7 +881,9 @@
       "gateChance": 0.2,
       "fallback": "$RULE_NAME",
       "messages": [
-        "Order above all!"
+        "Order above all!",
+        "Obey the Queen!",
+        "Royal decree issued!"
       ]
     }
   ]
