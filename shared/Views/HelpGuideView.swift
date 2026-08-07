@@ -262,7 +262,7 @@ struct HoneycombHelpView: View {
                         text: HoneycombRule.allCases.map { "• \($0.rawValue): \($0.explanation())" }.joined(separator: "\n"))
             
             RuleSection(title: "🏆 Card Bank & Stealing",
-                        text: "• Steal Mechanics: After winning a match, double-click an eligible dealer card to permanently steal it into your Card Bank!\n• Deck Rarity Caps: Custom decks are limited to: at most one 5★ card, and at most one 4★ card if a 5★ is present (or up to two 4★ cards without a 5★).\n• Smart Opponent Decks: The AI automatically selects decks containing cards you don't yet own to maximize steal rewards.")
+                        text: "• Steal Mechanics: After winning a match, double-click an eligible dealer card to permanently steal it into your Card Bank! Only one steal is allowed per match.\n• Deck Rarity Caps: Custom decks are limited to: at most one 5★ card, and at most one 4★ card if a 5★ is present (or up to two 4★ cards without a 5★).\n• Smart Opponent Decks: The AI automatically selects decks containing cards you don't yet own to maximize steal rewards.\n• Steal Protection: Stuck in a Rematch chain against an opponent whose cards you just can't seem to capture? Win two Rematches in a row against the same opponent with nothing eligible to steal, and any not-yet-unlocked card left on the board becomes stealable on that second win — captured or not. Once triggered, it stays active for the rest of that Rematch chain, so every future win keeps offering a steal — you won't have to re-earn it. Starting a fresh New Game (a new opponent) is what turns it back off.")
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("⌨️ Controls & Shortcuts")

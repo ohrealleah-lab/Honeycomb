@@ -376,12 +376,14 @@ public final class HoneycombViewModel {
     private var isRematchMatch: Bool = false
     // How many rematches in a row (against the same frozen rematchOpponentDeck) the
     // player has WON with nothing new to steal — e.g. the opponent's deck happens to
-    // include a card that's realistically never capturable (an all-Ace 5★). Reset to
+    // include a card that's realistically never capturable (an all-Ace 5★). Only
+    // tracked while stealProtectionActive is still false — once protection trips,
+    // applyStealProtection() stops touching this entirely (see its comment). Reset to
     // 0 by startNewGame() (a fresh opponent pool starts this over) and by any win that
     // *does* yield a stealable card (the protection wasn't needed that time). At 2,
-    // settleMatch() flips on stealProtectionActive and resets this back to 0, rather
-    // than growing without bound. Losses/draws don't touch it either way — only a won
-    // rematch counts as evidence the player is stuck.
+    // applyStealProtection() flips on stealProtectionActive and resets this back to 0.
+    // Losses/draws don't touch it either way — only a won rematch counts as evidence
+    // the player is stuck.
     private var consecutiveNoStealWins: Int = 0
 
     // "N rematch wins/losses in a row against the same opponent" — reset by
@@ -409,8 +411,9 @@ public final class HoneycombViewModel {
     // ANY not-yet-unlocked card left on the board becomes stealable for this win — not
     // just one the player actually captured from the opponent this round — guaranteeing
     // the Steal Card button has something to offer even on a win where nothing opponent-
-    // owned was captured. Reset every time settleMatch() re-evaluates protection for a
-    // new win (see applyStealProtection) and by startNewGame().
+    // owned was captured. Once tripped, stays on for every remaining win in this rematch
+    // chain — the player shouldn't have to re-earn it card by card — only turned back off
+    // by startNewGame() (a genuinely new opponent).
     public private(set) var stealProtectionActive: Bool = false
 
     public func startNewGame() {
@@ -2320,9 +2323,17 @@ public final class HoneycombViewModel {
     // need this safety net. Once tripped, it doesn't grant a card directly — it just
     // widens steal eligibility (see isStealEligible) so the normal Steal Card flow has
     // something to offer.
+    //
+    // Deliberately sticky: once active, it stays active for every remaining win in
+    // this rematch chain rather than being re-evaluated (and potentially switched
+    // back off) each time — a player chasing two stubborn cards from the same
+    // opponent shouldn't have to re-earn protection between them. The only things
+    // that ever turn it back off are startNewGame() (a genuinely new opponent) or
+    // simply running out of anything left to steal (isStealEligible already excludes
+    // owned cards, so a full card bank makes hasStealableCard false regardless).
     private func applyStealProtection() {
-        stealProtectionActive = false
         guard isRematchMatch else { return }
+        guard !stealProtectionActive else { return }
         guard !hasStealableCard else {
             consecutiveNoStealWins = 0
             return

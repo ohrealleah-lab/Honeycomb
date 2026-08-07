@@ -66,7 +66,9 @@ public partial class HoneycombViewModel : ObservableObject
     private bool _isRematchMatch = false;
     // How many rematches in a row (against the same frozen _rematchOpponentDeck) the
     // player has WON with nothing new to steal — e.g. the opponent's deck happens to
-    // include a card that's realistically never capturable (an all-Ace 5★). Reset to
+    // include a card that's realistically never capturable (an all-Ace 5★). Only
+    // tracked while StealProtectionActive is still false — once protection trips,
+    // ApplyStealProtection() stops touching this entirely (see its comment). Reset to
     // 0 by StartNewMatch() (a fresh opponent pool starts this over) and by any win
     // that *does* yield a stealable card (the protection wasn't needed that time). At
     // 2, ApplyStealProtection() sets StealProtectionActive and resets this back to 0 —
@@ -1963,11 +1965,20 @@ public partial class HoneycombViewModel : ObservableObject
     // guarantees at least one unlockable card via RollOpponentDeck, so it doesn't
     // need this safety net. Once tripped, it doesn't grant a card directly — it just
     // widens steal eligibility (see IsStealEligible) so the normal Steal Card flow has
-    // something to offer. Mirrors the Swift port's applyStealProtection.
+    // something to offer.
+    //
+    // Deliberately sticky: once active, it stays active for every remaining win in
+    // this rematch chain rather than being re-evaluated (and potentially switched
+    // back off) each time — a player chasing two stubborn cards from the same
+    // opponent shouldn't have to re-earn protection between them. The only things
+    // that ever turn it back off are StartNewMatch() (a genuinely new opponent) or
+    // simply running out of anything left to steal (IsStealEligible already excludes
+    // owned cards, so a full card bank makes HasStealableCard() false regardless).
+    // Mirrors the Swift port's applyStealProtection.
     private void ApplyStealProtection()
     {
-        State.StealProtectionActive = false;
         if (!_isRematchMatch) return;
+        if (State.StealProtectionActive) return;
         if (HasStealableCard())
         {
             _consecutiveNoStealWins = 0;
