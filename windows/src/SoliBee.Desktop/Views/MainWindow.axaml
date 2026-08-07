@@ -89,6 +89,14 @@
                                         <MenuItem Header="Popup: Queen's Fall" Click="DebugBanner_Click" Tag="Honeycomb:FallenAce" />
                                         <MenuItem Header="Popup: Combo" Click="DebugBanner_Click" Tag="Honeycomb:Combo" />
                                     </MenuItem>
+                                    <Separator />
+                                    <MenuItem Header="Banner Catalog">
+                                        <MenuItem Header="Loading" Click="DebugBannerCategory_Click" Tag="Loading" />
+                                        <MenuItem Header="Idle Action" Click="DebugBannerCategory_Click" Tag="Idle Action" />
+                                        <MenuItem Header="Gameplay" Click="DebugBannerCategory_Click" Tag="Gameplay" />
+                                        <MenuItem Header="Milestones" Click="DebugBannerCategory_Click" Tag="Milestones" />
+                                        <MenuItem Header="Rule-Specific" Click="DebugBannerCategory_Click" Tag="Rule-Specific" />
+                                    </MenuItem>
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>

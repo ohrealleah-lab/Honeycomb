@@ -1421,6 +1421,79 @@ public partial class MainWindow : Window
         }
     }
 
+    // Dev-only banner-catalog preview — the full BannerId catalog (~55 entries) is far
+    // too many to list individually, so each category gets one MenuItem instead: a
+    // click shows the next banner in that category on the currently active game's
+    // toast, wrapping back to the first after the last, instead of a five-times-longer
+    // flyout with every banner spelled out.
+    private static readonly Dictionary<string, List<BannerId>> _debugBannerCategories = BuildDebugBannerCategories();
+    private readonly Dictionary<string, int> _debugBannerCategoryIndex = new();
+
+    private static Dictionary<string, List<BannerId>> BuildDebugBannerCategories()
+    {
+        // Keys match BannerCatalog's own Category field (see HoneycombBannerCatalog.json)
+        // so the header text lines up with the spreadsheet's naming.
+        var result = new Dictionary<string, List<BannerId>>
+        {
+            ["Loading"] = new(),
+            ["Idle Action"] = new(),
+            ["Gameplay"] = new(),
+            ["Milestones"] = new(),
+            ["Rule-Specific"] = new(),
+        };
+        foreach (BannerId id in Enum.GetValues(typeof(BannerId)))
+        {
+            var name = id.ToString();
+            if (name.StartsWith("Loading")) result["Loading"].Add(id);
+            else if (name.StartsWith("Idle")) result["Idle Action"].Add(id);
+            else if (name.StartsWith("Gameplay")) result["Gameplay"].Add(id);
+            else if (name.StartsWith("Milestones")) result["Milestones"].Add(id);
+            else if (name.StartsWith("RuleSpecific")) result["Rule-Specific"].Add(id);
+        }
+        return result;
+    }
+
+    // Debug-only text substitution — real gameplay fills these from actual match state
+    // (see HoneycombViewModel's EnqueueBanner call sites), but the catalog cycler has no
+    // live match to pull an opponent name/combo count/suit from, so it always shows the
+    // same stand-in values. Good enough for proofreading copy; not meant to look "real."
+    private static string ApplyDebugBannerTokens(string text) => text
+        .Replace("{OpponentName}", "Baby Bee")
+        .Replace("{ComboCount}", "4")
+        .Replace("{AscensionSuit}", "Spades")
+        .Replace(BannerCatalog.RuleNameSentinel, "Math Bee");
+
+    private void DebugBannerCategory_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem menuItem || menuItem.Tag is not string category) return;
+        if (!_debugBannerCategories.TryGetValue(category, out var ids) || ids.Count == 0) return;
+
+        int next = (_debugBannerCategoryIndex.TryGetValue(category, out var i) ? i + 1 : 0) % ids.Count;
+        _debugBannerCategoryIndex[category] = next;
+        var id = ids[next];
+
+        var def = BannerCatalog.Definition(id);
+        // Always the primary (first) message rather than routing through Fire()'s random
+        // gate roll — a review tool should show every entry deterministically, not
+        // silently skip to a fallback because the dice didn't cooperate this click.
+        string text = def != null && def.Messages.Count > 0 ? def.Messages[0] : def?.Fallback ?? id.ToString();
+        text = ApplyDebugBannerTokens(text);
+
+        // Left as the static category name in XAML; updated here so reopening the
+        // flyout shows exactly where the cycle left off.
+        menuItem.Header = $"{category} ({next + 1}/{ids.Count})";
+
+        switch (MainContent.Content)
+        {
+            case GameView gv: gv.DebugFlashToast(text); break;
+            case FreecellView fv: fv.DebugFlashToast(text); break;
+            case SpiderView sv: sv.DebugFlashToast(text); break;
+            case VideoPokerView vpv: vpv.DebugFlashToast(text); break;
+            case BlackjackView bjv: bjv.DebugFlashToast(text); break;
+            case HoneycombView hv: hv.DebugFlashToast(text); break;
+        }
+    }
+
     private void OnHintTrackedVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(GameViewModel.HasNoMoves))

@@ -230,6 +230,10 @@ public abstract class CardGameView : UserControl
     // this directly from the click handler fires on every press, not just the first.
     public void FlashHintUnavailable() => HintToastControl.Flash("Sorry! No hints available.");
 
+    // Dev-only banner-catalog preview — wired to the toolbar's local-only "Banners"
+    // dropdown's "Banner Catalog" section (see MainWindow.DebugBannerCategory_Click).
+    public void DebugFlashToast(string message) => HintToastControl.Flash(message, TimeSpan.FromSeconds(2));
+
     private readonly List<CardView> _hintedCardViews = new();
     private readonly List<PileView> _hintedPileViews = new();
     private DispatcherTimer? _hintAutoDismissTimer;

@@ -410,6 +410,10 @@ public partial class VideoPokerView : UserControl
         ShowBanner(NoWinOverlay);
     }
 
+    // Dev-only banner-catalog preview — wired to the toolbar's local-only "Banners"
+    // dropdown's "Banner Catalog" section (see MainWindow.DebugBannerCategory_Click).
+    public void DebugFlashToast(string message) => MilestoneToast.Flash(message, TimeSpan.FromSeconds(2));
+
     private void ShowBanner(Control banner)
     {
         if (_activeBanner == banner)

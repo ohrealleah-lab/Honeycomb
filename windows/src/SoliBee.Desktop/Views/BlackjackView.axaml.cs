@@ -497,6 +497,10 @@ public partial class BlackjackView : UserControl
         ShowBanner(win, streak: 0);
     }
 
+    // Dev-only banner-catalog preview — wired to the toolbar's local-only "Banners"
+    // dropdown's "Banner Catalog" section (see MainWindow.DebugBannerCategory_Click).
+    public void DebugFlashToast(string message) => MilestoneToast.Flash(message, TimeSpan.FromSeconds(2));
+
     private void BannerDismiss_Click(object? sender, RoutedEventArgs e)
     {
         HideBanner();
