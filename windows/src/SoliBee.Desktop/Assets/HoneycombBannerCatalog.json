@@ -127,9 +127,9 @@
       ]
     },
     {
-      "id": "loading_match_starts_between_12_00_am_and_4_00_am_local_time",
+      "id": "loading_match_starts_between_12_00_am_and_5_00_am_local_time",
       "category": "Loading",
-      "trigger": "Match starts between 12:00 AM and 4:00 AM local time.",
+      "trigger": "Match starts between 12:00 AM and 5:00 AM local time.",
       "type": "repeatableFlavor",
       "location": "loading",
       "gated": false,

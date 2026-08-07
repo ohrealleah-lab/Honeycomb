@@ -17,7 +17,7 @@ public enum BannerID: String, CaseIterable, Codable {
     case loadingGameLoadsOnValentinesDayFeb14 = "loading_game_loads_on_valentines_day_feb_14"
     case loadingFirstLaunchAfterPlayingForOneYear = "loading_first_launch_after_playing_for_one_year"
     case loadingPlayingOnAprilFoolsDayApr1 = "loading_playing_on_april_fools_day_apr_1"
-    case loadingMatchStartsBetween1200AmAnd400AmLocalTime = "loading_match_starts_between_12_00_am_and_4_00_am_local_time"
+    case loadingMatchStartsBetween1200AmAnd500AmLocalTime = "loading_match_starts_between_12_00_am_and_5_00_am_local_time"
     case loadingMatchStartsBetween500AmAnd800AmLocalTime = "loading_match_starts_between_5_00_am_and_8_00_am_local_time"
     case loadingMatchStartsBetween900PmAndMidnightLocalTime = "loading_match_starts_between_9_00_pm_and_midnight_local_time"
     case loadingMatchStartsWithinAMinuteOfLocalNoon = "loading_match_starts_within_a_minute_of_local_noon"

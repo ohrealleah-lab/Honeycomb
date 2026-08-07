@@ -48,6 +48,12 @@ public partial class HoneycombView : UserControl
     private TranslateTransform? _dragGhostTx;
     private Point _dragGhostOrigin;
 
+    // Board-cell background colors — shared static instances instead of allocating a
+    // new SolidColorBrush on every Refresh() (called on every PropertyChanged), same
+    // pattern as CardView's _brush* static fields.
+    private static readonly SolidColorBrush _brushCellDefault = new(Color.Parse("#59000000"));
+    private static readonly SolidColorBrush _brushCellHintHighlight = new(Color.Parse("#80FFFF00"));
+
     private readonly Border[] _boardCells = new Border[9];
     private readonly HoneycombCardView[] _boardCards = new HoneycombCardView[9];
     
@@ -71,7 +77,7 @@ public partial class HoneycombView : UserControl
         {
             var cellBorder = new Border
             {
-                Background = new SolidColorBrush(Color.Parse("#59000000")),
+                Background = _brushCellDefault,
                 CornerRadius = new Avalonia.CornerRadius(8),
                 Margin = new Avalonia.Thickness(4),
                 Width = 195,
@@ -122,6 +128,20 @@ public partial class HoneycombView : UserControl
                 _vm.OnSwapLanded += Vm_OnSwapLanded;
                 _vm.CheckLoadingBanner();
                 Refresh(_vm);
+            }
+        };
+
+        // MainWindow caches and reattaches this view on every game switch, so Loaded
+        // fires again on every reattach — without this, each switch back to Honeycomb
+        // stacked another set of subscriptions onto the same VM instance.
+        Unloaded += (s, e) =>
+        {
+            if (_vm != null)
+            {
+                _vm.PropertyChanged -= Vm_PropertyChanged;
+                _vm.OnFlashBanner -= Vm_OnFlashBanner;
+                _vm.OnSwapLifting -= Vm_OnSwapLifting;
+                _vm.OnSwapLanded -= Vm_OnSwapLanded;
             }
         };
     }
@@ -620,9 +640,9 @@ public partial class HoneycombView : UserControl
                 
                 // Highlight Hint if applicable
                 if (vm.ActiveHint.HasValue && vm.ActiveHint.Value.cellIndex == i)
-                    _boardCells[i].Background = new SolidColorBrush(Color.Parse("#80FFFF00"));
+                    _boardCells[i].Background = _brushCellHintHighlight;
                 else
-                    _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));
+                    _boardCells[i].Background = _brushCellDefault;
 
                 _boardCards[i].StealHighlight = false;
                 _boardCards[i].SetStatHighlight(null);
@@ -633,7 +653,7 @@ public partial class HoneycombView : UserControl
                     isCaptureAttacker: state.CaptureAttackerIds.Contains(cell.Card.UniqueInstanceId));
 
                 // Highlight cards eligible to be double-clicked and stolen
-                _boardCells[i].Background = new SolidColorBrush(Color.Parse("#59000000"));
+                _boardCells[i].Background = _brushCellDefault;
                 _boardCards[i].StealHighlight = _isStealingCard && cell.Card != null && vm.IsStealEligible(cell.Card);
 
                 // Point Highlights: flash the just-placed card's winning stat edge(s)

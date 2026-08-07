@@ -140,7 +140,7 @@ public final class BannerCatalog {
             let minute = calendar.component(.minute, from: now)
             let minutesFromMidnight = hour * 60 + minute
             if abs(minutesFromMidnight - 720) <= 1 { return .loadingMatchStartsWithinAMinuteOfLocalNoon }
-            if hour < 4 { return .loadingMatchStartsBetween1200AmAnd400AmLocalTime }
+            if hour < 5 { return .loadingMatchStartsBetween1200AmAnd500AmLocalTime }
             if hour >= 5 && hour < 8 { return .loadingMatchStartsBetween500AmAnd800AmLocalTime }
             if hour >= 8 && hour < 12 { return .loadingMatchStartsBetween800AmAnd1200PmLocalTime }
             if hour >= 12 && hour < 14 { return .loadingMatchStartsBetween1200PmAnd200PmLocalTime }

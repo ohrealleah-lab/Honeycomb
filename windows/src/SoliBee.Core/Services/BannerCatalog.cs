@@ -177,7 +177,7 @@ public static class BannerCatalog
         {
             int minutesFromMidnight = now.Hour * 60 + now.Minute;
             if (Math.Abs(minutesFromMidnight - 720) <= 1) return BannerId.LoadingMatchStartsWithinAMinuteOfLocalNoon;
-            if (now.Hour < 4) return BannerId.LoadingMatchStartsBetween1200AmAnd400AmLocalTime;
+            if (now.Hour < 5) return BannerId.LoadingMatchStartsBetween1200AmAnd500AmLocalTime;
             if (now.Hour >= 5 && now.Hour < 8) return BannerId.LoadingMatchStartsBetween500AmAnd800AmLocalTime;
             if (now.Hour >= 8 && now.Hour < 12) return BannerId.LoadingMatchStartsBetween800AmAnd1200PmLocalTime;
             if (now.Hour >= 12 && now.Hour < 14) return BannerId.LoadingMatchStartsBetween1200PmAnd200PmLocalTime;

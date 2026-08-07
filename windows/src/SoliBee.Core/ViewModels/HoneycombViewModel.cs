@@ -113,11 +113,10 @@ public partial class HoneycombViewModel : ObservableObject
     // independently since the overlay title itself is only ever overwritten, not cleared.
     public string? MatchResultFlavorText { get; private set; }
 
-    // Second parameter is IsLongDuration — "long duration" banners (First Move intro,
-    // milestones, loading flavor, idle nudge, 3-hints-used, rematch/difficulty streaks)
-    // hold for 2.0s + a 0.3s fade instead of the usual 1.2s + 0.3s rule/combo banners
-    // get — they're less urgent, more "flavor you can take your time reading" than
-    // "something that just happened on the board."
+    // Second parameter is IsLongDuration, kept for signature compatibility with the
+    // Swift port, but the duration split it used to drive is gone — every banner now
+    // holds for a uniform 2s (3s only for the very first app-launch loading banner,
+    // see HoneycombView's Vm_OnFlashBanner/BannerCatalog.ConsumeAppLaunchLoadingFlag).
     public event Action<string, bool>? OnFlashBanner;
 
     // FIFO queue of banner texts — mirrors the Swift port's bannerQueue/enqueueBanner/
@@ -1604,8 +1603,6 @@ public partial class HoneycombViewModel : ObservableObject
         if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!, longDuration: true);
     }
 
-    // Fires once, exactly on the win that crosses a threshold — not "MatchesWon >=
-    // threshold", which would fire on every subsequent win too.
     // Fires once, exactly on the 5th consecutive REMATCH at the same difficulty — not
     // "count >= 5" (which would fire on every match after that too), and not counting
     // plain New Game starts (confirmed by the person who owns this banner's content:
@@ -1636,6 +1633,8 @@ public partial class HoneycombViewModel : ObservableObject
         }
     }
 
+    // Fires once, exactly on the win that crosses a threshold — not "MatchesWon >=
+    // threshold", which would fire on every subsequent win too.
     private void CheckWinMilestones()
     {
         var thresholds = new (int Threshold, BannerId Id)[]
