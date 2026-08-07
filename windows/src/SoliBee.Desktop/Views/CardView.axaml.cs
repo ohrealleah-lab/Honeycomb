@@ -1532,12 +1532,12 @@ public partial class CardView : UserControl
                 // Use SelectedSourcePile (captured at selection time) not ParentPile,
                 // because after PointerReleased the old CardView is orphaned.
                 var sourcePile = gameView.SelectedSourcePile;
-                if (selectedCard != null && sourcePile != null && pileView.Pile != sourcePile)
+                if (selectedCard != null && sourcePile != null && thisPile != sourcePile)
                 {
                     var cardsToMove = GetCardsFromCard(selectedCard, sourcePile);
-                    if (gameView.CanMoveCards(cardsToMove, pileView.Pile))
+                    if (gameView.CanMoveCards(cardsToMove, thisPile))
                     {
-                        gameView.TryMoveCards(cardsToMove, sourcePile, pileView.Pile);
+                        gameView.TryMoveCards(cardsToMove, sourcePile, thisPile);
                         gameView.SelectedCardView.ClearSelection();
                         gameView.SelectedCardView = null;
                         gameView.SelectedSourcePile = null;
