@@ -216,12 +216,17 @@ public final class HoneycombViewModel {
     // rendered at all. The view shows `flashRuleBanner` (the queue's front) and calls
     // `advanceBannerQueue()` once its own dismiss timer completes, revealing whatever's
     // queued behind it — see enqueueBanner/advanceBannerQueue/clearBannerQueue below.
-    private var bannerQueue: [String] = []
-    public var flashRuleBanner: String? { bannerQueue.first }
+    private var bannerQueue: [(text: String, isLongDuration: Bool)] = []
+    public var flashRuleBanner: String? { bannerQueue.first?.text }
+    // "Long duration" banners (First Move intro, milestones, loading flavor, idle
+    // nudge, 3-hints-used) hold for 2.0s + a 0.3s fade instead of the usual 1.2s +
+    // 0.3s rule/combo banners get — they're less urgent, more "flavor you can take
+    // your time reading" than "something that just happened on the board."
+    public var flashRuleBannerIsLongDuration: Bool { bannerQueue.first?.isLongDuration ?? false }
     public var flashRuleBannerTrigger: Int = 0
 
-    private func enqueueBanner(_ text: String) {
-        bannerQueue.append(text)
+    private func enqueueBanner(_ text: String, longDuration: Bool = false) {
+        bannerQueue.append((text, longDuration))
         // Only bump the trigger when this becomes the front of the queue — if something
         // is already showing, the view picks this one up on its own via
         // advanceBannerQueue() once the current banner's dismiss timer fires, rather
@@ -650,14 +655,13 @@ public final class HoneycombViewModel {
         // A brand new match starting — any banner still queued from the previous one
         // (e.g. a match ended mid-combo-sequence) is no longer relevant.
         clearBannerQueue()
-        enqueueBanner(([firstMoveLine] + ruleLines).joined(separator: "\n"))
+        enqueueBanner(([firstMoveLine] + ruleLines).joined(separator: "\n"), longDuration: true)
         // stats.gamesPlayed only increments in settleMatch, so it's still 0 here iff
         // this is the very first match this player has ever started (or the first
         // since a stats reset — achievements are meant to be re-earnable after one).
         if stats.gamesPlayed == 0, case .message(let text) = BannerCatalog.shared.fire(.milestonesFirstLaunchEver) {
-            enqueueBanner(text)
+            enqueueBanner(text, longDuration: true)
         }
-        checkLoadingBanner()
         checkSameDifficultyStreak()
 
         if options.isSoundEnabled {
@@ -1276,7 +1280,7 @@ public final class HoneycombViewModel {
 
         hintUsageCountThisMatch += 1
         if hintUsageCountThisMatch == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3HintsUsedInOneMatch) {
-            enqueueBanner(text)
+            enqueueBanner(text, longDuration: true)
         }
 
         hintGeneration += 1
@@ -1773,7 +1777,7 @@ public final class HoneycombViewModel {
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.idleToastDelay) { [weak self] in
             guard let self, self.idleCheckGeneration == generation, self.gameState == .playing else { return }
             if case .message(let text) = BannerCatalog.shared.fire(.idleActionNoActionTakenForOneMinute) {
-                self.enqueueBanner(text)
+                self.enqueueBanner(text, longDuration: true)
             }
         }
     }
@@ -2075,62 +2079,34 @@ public final class HoneycombViewModel {
         }
     }
 
-    // Fires once per app session, the first time a match starts — "Loading" banners
-    // don't have a dedicated loading screen to hook into, so this is the closest
-    // real moment to "the game loads." Priority: named holiday > time-of-day window
-    // > generic fallback pool, since at most one should show per launch.
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from HoneycombView's .onAppear — a "loading" banner belongs to a
+    // screen transition, not a gameplay action, so switching to Honeycomb for the
+    // first time this session fires it; switching back to it later doesn't).
+    // Priority: named holiday > time-of-day window > generic fallback pool, since at
+    // most one should show per arrival.
     private var hasFiredLoadingBannerThisSession = false
 
-    private func checkLoadingBanner() {
+    public func checkLoadingBanner() {
         guard !hasFiredLoadingBannerThisSession else { return }
         hasFiredLoadingBannerThisSession = true
-        if case .message(let text) = BannerCatalog.shared.fire(Self.loadingBannerID()) {
-            enqueueBanner(text)
+        if case .message(let text) = BannerCatalog.shared.fire(BannerCatalog.loadingBannerID()) {
+            enqueueBanner(text, longDuration: true)
         }
     }
 
-    private static let firstPlayedDateKey = "HoneycombFirstPlayedDate"
-    private static let hasShownOneYearBannerKey = "HoneycombHasShownOneYearBanner"
-
-    private static func loadingBannerID() -> BannerID {
-        let now = Date()
-        // Anchors this device's install date the first time it's ever read — a stats
-        // reset deliberately does NOT touch this (unlike the win-count milestones),
-        // since "a year since you started playing" isn't something a stats reset
-        // should undo. Reading it here (before the check below) means the very first
-        // call always has zero elapsed time, so it can never spuriously fire that day.
-        if UserDefaults.standard.object(forKey: firstPlayedDateKey) == nil {
-            UserDefaults.standard.set(now, forKey: firstPlayedDateKey)
-        }
-        if !UserDefaults.standard.bool(forKey: hasShownOneYearBannerKey),
-           let firstPlayed = UserDefaults.standard.object(forKey: firstPlayedDateKey) as? Date,
-           now.timeIntervalSince(firstPlayed) >= 365 * 24 * 60 * 60 {
-            UserDefaults.standard.set(true, forKey: hasShownOneYearBannerKey)
-            return .loadingFirstLaunchAfterPlayingForOneYear
-        }
-
-        let calendar = Calendar.current
-        let month = calendar.component(.month, from: now)
-        let day = calendar.component(.day, from: now)
-        if month == 5, day == 20 { return .loadingGameLoadsOnMay20thWorldBeeDay }
-        if month == 1, day == 1 { return .loadingGameLoadsOnNewYearsDayJan1 }
-        if month == 10, day == 31 { return .loadingGameLoadsOnHalloweenOct31 }
-        if month == 2, day == 14 { return .loadingGameLoadsOnValentinesDayFeb14 }
-        if month == 4, day == 1 { return .loadingPlayingOnAprilFoolsDayApr1 }
-
-        let hour = calendar.component(.hour, from: now)
-        let minute = calendar.component(.minute, from: now)
-        let minutesFromMidnight = hour * 60 + minute
-        if abs(minutesFromMidnight - 720) <= 1 { return .loadingMatchStartsWithinAMinuteOfLocalNoon }
-        if hour < 4 { return .loadingMatchStartsBetween1200AmAnd400AmLocalTime }
-        if hour >= 5 && hour < 8 { return .loadingMatchStartsBetween500AmAnd800AmLocalTime }
-        if hour >= 21 { return .loadingMatchStartsBetween900PmAndMidnightLocalTime }
-        return .loadingOnGameLoad
-    }
-
-    // Fires once, exactly on the 5th consecutive match at the same difficulty — not
-    // "count >= 5", which would fire on every match after that too.
+    // Fires once, exactly on the 5th consecutive REMATCH at the same difficulty — not
+    // "count >= 5" (which would fire on every match after that too), and not counting
+    // plain New Game starts (confirmed by the person who owns this banner's content:
+    // it should read as "you keep coming back to fight this same difficulty tier,"
+    // which only a real Rematch chain demonstrates — a fresh New Game at the same
+    // difficulty doesn't).
     private func checkSameDifficultyStreak() {
+        guard isRematchMatch else {
+            consecutiveSameDifficultyCount = 0
+            lastPlayedDifficulty = nil
+            return
+        }
         if options.difficulty == lastPlayedDifficulty {
             consecutiveSameDifficultyCount += 1
         } else {
@@ -2138,7 +2114,7 @@ public final class HoneycombViewModel {
             consecutiveSameDifficultyCount = 1
         }
         if consecutiveSameDifficultyCount == 5, case .message(let text) = BannerCatalog.shared.fire(.gameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow) {
-            enqueueBanner(text)
+            enqueueBanner(text, longDuration: true)
         }
     }
 
@@ -2152,7 +2128,7 @@ public final class HoneycombViewModel {
         ]
         for (threshold, id) in thresholds where stats.matchesWon == threshold {
             if case .message(let text) = BannerCatalog.shared.fire(id) {
-                enqueueBanner(text)
+                enqueueBanner(text, longDuration: true)
             }
         }
     }
@@ -2192,7 +2168,7 @@ public final class HoneycombViewModel {
                 consecutiveRematchLosses = 0
                 consecutiveRematchWins += 1
                 if consecutiveRematchWins == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3RematchWinsInARowAgainstTheSameOpponent, tokens: ["OpponentName": options.difficulty.displayName]) {
-                    enqueueBanner(text)
+                    enqueueBanner(text, longDuration: true)
                 }
             } else if oScore > pScore {
                 matchResult = "You Lose"
@@ -2206,7 +2182,7 @@ public final class HoneycombViewModel {
                 consecutiveRematchWins = 0
                 consecutiveRematchLosses += 1
                 if consecutiveRematchLosses == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3RematchLossesInARowAgainstTheSameOpponent, tokens: ["OpponentName": options.difficulty.displayName]) {
-                    enqueueBanner(text)
+                    enqueueBanner(text, longDuration: true)
                 }
             } else if activeRules.contains(.suddenDeath) {
                 matchResult = "Draw - \(HoneycombRule.suddenDeath.rawValue)!"

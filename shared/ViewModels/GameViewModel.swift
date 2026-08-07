@@ -84,6 +84,61 @@ public final class GameViewModel {
     public var isAutocompleteAvailable: Bool = false
     public var isAutoplayRunning: Bool = false
 
+    // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
+    // port's bannerQueue/enqueueBanner/advanceBannerQueue (shared/Honeycomb/
+    // ViewModels/HoneycombViewModel.swift), generalized here since BannerCatalog
+    // itself was never Honeycomb-specific in code, just physically colocated with it.
+    private var bannerQueue: [String] = []
+    public var flashBanner: String? { bannerQueue.first }
+    public var flashBannerTrigger: Int = 0
+
+    private func enqueueBanner(_ text: String) {
+        bannerQueue.append(text)
+        if bannerQueue.count == 1 {
+            flashBannerTrigger += 1
+        }
+    }
+
+    public func advanceBannerQueue() {
+        guard !bannerQueue.isEmpty else { return }
+        bannerQueue.removeFirst()
+        if !bannerQueue.isEmpty {
+            flashBannerTrigger += 1
+        }
+    }
+
+    // Fires once, exactly on the win that crosses a threshold — not "gamesWon >=
+    // threshold", which would fire on every subsequent win too.
+    private func checkWinMilestones() {
+        let thresholds: [(Int, BannerID)] = [
+            (10, .milestonesPlayerReaches10TotalWins),
+            (100, .milestonesPlayerReaches100TotalWins),
+            (1000, .milestonesPlayerReaches1000TotalWins),
+        ]
+        for (threshold, id) in thresholds where statistics.gamesWon == threshold {
+            if case .message(let text) = BannerCatalog.shared.fire(id) {
+                enqueueBanner(text)
+            }
+        }
+    }
+
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from GameView's .onAppear — a "loading" banner belongs to a screen
+    // transition, not a gameplay action, so switching to a game you haven't visited
+    // yet this session fires it; switching back to one you have doesn't). Priority:
+    // named holiday > time-of-day window > generic fallback pool, since at most one
+    // should show per arrival. Mirrors the Honeycomb port's checkLoadingBanner/
+    // loadingBannerID.
+    private var hasFiredLoadingBannerThisSession = false
+
+    public func checkLoadingBanner() {
+        guard !hasFiredLoadingBannerThisSession else { return }
+        hasFiredLoadingBannerThisSession = true
+        if case .message(let text) = BannerCatalog.shared.fire(BannerCatalog.loadingBannerID()) {
+            enqueueBanner(text)
+        }
+    }
+
     // Point Highlights: transient "+N"/"-N" popup over the card responsible for a score
     // change — not part of `state`/undo snapshots, same precedent as isAutoplayRunning.
     public var pointPopup: CardPointPopup? = nil
@@ -204,8 +259,9 @@ public final class GameViewModel {
             stats.shortestWinTime = timeInSeconds
         }
         statistics = stats
-        
+
         UserDefaults.standard.set(stats.gamesWon, forKey: "gamesWon")
+        checkWinMilestones()
     }
     
     public init(state: GameState = GameState()) {
@@ -260,6 +316,14 @@ public final class GameViewModel {
         stopTimer()
 
         if countAsNewGame {
+            // gamesPlayed increments below at the start of every deal (not once per
+            // session like Honeycomb's own gamesPlayed, which only increments at
+            // match end) — checking it here, before that increment, is this game's
+            // equivalent of "is this the very first deal ever."
+            if statistics.gamesPlayed == 0, case .message(let text) = BannerCatalog.shared.fire(.milestonesFirstLaunchEver) {
+                enqueueBanner(text)
+            }
+
             if state.movesCount > 0 && !state.hasWon {
                 var stats = statistics
                 stats.currentStreak = 0

@@ -103,4 +103,75 @@ public final class BannerCatalog {
         }
         return result
     }
+
+    // Whether ANY game's loading banner has fired yet this app session — not
+    // per-game (each ViewModel has its own one-shot flag for that); this one is
+    // shared across every game so we can tell "app launch" (the very first
+    // loading banner shown this session, whichever game happens to load first)
+    // from a later game switch.
+    private static var hasFiredAnyLoadingBannerThisSession = false
+
+    // Decides which "loading" banner (checked once per game, per app session — each
+    // ViewModel guards this with its own one-shot flag) fits right now. Time-of-day
+    // windows and the one-year-anniversary check only apply at app launch — they're
+    // tied to "the moment you opened the app," not to switching games afterward — so
+    // on any later game switch this falls straight to holiday > generic. Shared across
+    // every game (not Honeycomb-specific) since "is it Halloween" and "has this install
+    // been played for a year" don't depend on which game asked.
+    public static func loadingBannerID() -> BannerID {
+        let isAppLaunch = !hasFiredAnyLoadingBannerThisSession
+        hasFiredAnyLoadingBannerThisSession = true
+
+        if isAppLaunch, shouldShowOneYearAnniversaryBanner() { return .loadingFirstLaunchAfterPlayingForOneYear }
+
+        let now = Date()
+        let calendar = Calendar.current
+        let month = calendar.component(.month, from: now)
+        let day = calendar.component(.day, from: now)
+        if month == 5, day == 20 { return .loadingGameLoadsOnMay20thWorldBeeDay }
+        if month == 1, day == 1 { return .loadingGameLoadsOnNewYearsDayJan1 }
+        if month == 10, day == 31 { return .loadingGameLoadsOnHalloweenOct31 }
+        if month == 2, day == 14 { return .loadingGameLoadsOnValentinesDayFeb14 }
+        if month == 4, day == 1 { return .loadingPlayingOnAprilFoolsDayApr1 }
+
+        if isAppLaunch {
+            let hour = calendar.component(.hour, from: now)
+            let minute = calendar.component(.minute, from: now)
+            let minutesFromMidnight = hour * 60 + minute
+            if abs(minutesFromMidnight - 720) <= 1 { return .loadingMatchStartsWithinAMinuteOfLocalNoon }
+            if hour < 4 { return .loadingMatchStartsBetween1200AmAnd400AmLocalTime }
+            if hour >= 5 && hour < 8 { return .loadingMatchStartsBetween500AmAnd800AmLocalTime }
+            if hour >= 8 && hour < 12 { return .loadingMatchStartsBetween800AmAnd1200PmLocalTime }
+            if hour >= 12 && hour < 14 { return .loadingMatchStartsBetween1200PmAnd200PmLocalTime }
+            if hour >= 14 && hour < 17 { return .loadingMatchStartsBetween200PmAnd500PmLocalTime }
+            if hour >= 17 && hour < 21 { return .loadingMatchStartsBetween500PmAnd900PmLocalTime }
+            if hour >= 21 { return .loadingMatchStartsBetween900PmAndMidnightLocalTime }
+        }
+        return .loadingOnGameLoad
+    }
+
+    // One shared anchor for the whole app (not per-game) — "a year since you started
+    // playing" should have one answer regardless of which game happens to load first
+    // on any given day, so this deliberately isn't scoped to Honeycomb's own stats.
+    private static let firstPlayedDateKey = "HoneycombFirstPlayedDate"
+    private static let hasShownOneYearBannerKey = "HoneycombHasShownOneYearBanner"
+
+    private static func shouldShowOneYearAnniversaryBanner() -> Bool {
+        let now = Date()
+        // Anchors this install date the first time it's ever read — a stats reset
+        // deliberately does NOT touch this, since "a year since you started playing"
+        // isn't something resetting one game's win count should undo. Reading it here
+        // (before the check below) means the very first call always has zero elapsed
+        // time, so it can never spuriously fire that day.
+        if UserDefaults.standard.object(forKey: firstPlayedDateKey) == nil {
+            UserDefaults.standard.set(now, forKey: firstPlayedDateKey)
+        }
+        guard !UserDefaults.standard.bool(forKey: hasShownOneYearBannerKey),
+              let firstPlayed = UserDefaults.standard.object(forKey: firstPlayedDateKey) as? Date,
+              now.timeIntervalSince(firstPlayed) >= 365 * 24 * 60 * 60 else {
+            return false
+        }
+        UserDefaults.standard.set(true, forKey: hasShownOneYearBannerKey)
+        return true
+    }
 }

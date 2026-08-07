@@ -229,6 +229,10 @@
                    FontSize="10" Foreground="#90FFFFFF" HorizontalAlignment="Center"
                    FontFamily="Segoe UI"
                    Margin="0,4,0,8"/>
+
+        <!-- Milestone/loading banners — separate from the hand-result overlay above,
+             which is hardcoded to specific hand-result fields (name, payout). -->
+        <local:FlashToast x:Name="MilestoneToast" Grid.Row="0" Grid.RowSpan="3"/>
     </Grid>
 
     <UserControl.Styles>

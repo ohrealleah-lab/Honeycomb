@@ -41,6 +41,57 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     public List<Pile> Tableaus { get; } = new();
 
     public event EventHandler? WasteCardDrawn;
+
+    // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
+    // port's BannerQueue/EnqueueBanner/AdvanceBannerQueue.
+    private readonly Queue<string> _bannerQueue = new();
+    public event Action<string>? OnFlashBanner;
+
+    private void EnqueueBanner(string text)
+    {
+        _bannerQueue.Enqueue(text);
+        if (_bannerQueue.Count == 1) OnFlashBanner?.Invoke(text);
+    }
+
+    public void AdvanceBannerQueue()
+    {
+        if (_bannerQueue.Count == 0) return;
+        _bannerQueue.Dequeue();
+        if (_bannerQueue.Count > 0) OnFlashBanner?.Invoke(_bannerQueue.Peek());
+    }
+
+    // Fires once, exactly on the win that crosses a threshold — not "GamesWon >=
+    // threshold", which would fire on every subsequent win too.
+    private void CheckWinMilestones()
+    {
+        var thresholds = new (int Threshold, BannerId Id)[]
+        {
+            (10, BannerId.MilestonesPlayerReaches10TotalWins),
+            (100, BannerId.MilestonesPlayerReaches100TotalWins),
+            (1000, BannerId.MilestonesPlayerReaches1000TotalWins),
+        };
+        foreach (var (threshold, id) in thresholds)
+        {
+            if (Stats.GamesWon != threshold) continue;
+            var result = BannerCatalog.Fire(id);
+            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+        }
+    }
+
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from GameView's Loaded handler — a "loading" banner belongs to a
+    // screen transition, not a gameplay action, so switching to this game for the
+    // first time this session fires it; switching back to it later doesn't).
+    private bool _hasFiredLoadingBannerThisSession;
+
+    public void CheckLoadingBanner()
+    {
+        if (_hasFiredLoadingBannerThisSession) return;
+        _hasFiredLoadingBannerThisSession = true;
+        var result = BannerCatalog.Fire(BannerCatalog.LoadingBannerId());
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
+
     private readonly Stack<GameStateSnapshot> _undoStack = new();
     private List<Card> _initialDeck = new();
     private System.Threading.Timer? _gameTimer;
@@ -236,7 +287,20 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         IsAutocompletable = false;
         HasNoMoves = false;
 
-        if (countAsNewGame) Stats.GamesPlayed++;
+        if (countAsNewGame)
+        {
+            // Stats.GamesPlayed increments below at the start of every deal (not once
+            // per session like Honeycomb's own GamesPlayed, which only increments at
+            // match end) — checking it here, before that increment, is this game's
+            // equivalent of "is this the very first deal ever."
+            if (Stats.GamesPlayed == 0)
+            {
+                var firstLaunchResult = BannerCatalog.Fire(BannerId.MilestonesFirstLaunchEver);
+                if (firstLaunchResult.Kind == BannerFireKind.Message) EnqueueBanner(firstLaunchResult.Text!);
+            }
+
+            Stats.GamesPlayed++;
+        }
         StatsService.SaveStats(Stats);
 
         // Start background timer ticking
@@ -895,6 +959,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
                 }
 
                 StatsService.SaveStats(Stats);
+                CheckWinMilestones();
             }
         }
     }

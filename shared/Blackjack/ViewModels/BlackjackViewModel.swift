@@ -60,6 +60,57 @@ public final class BlackjackViewModel {
         options.noStressMode
     }
 
+    // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
+    // port's bannerQueue/enqueueBanner/advanceBannerQueue.
+    private var bannerQueue: [String] = []
+    public var flashBanner: String? { bannerQueue.first }
+    public var flashBannerTrigger: Int = 0
+
+    private func enqueueBanner(_ text: String) {
+        bannerQueue.append(text)
+        if bannerQueue.count == 1 {
+            flashBannerTrigger += 1
+        }
+    }
+
+    public func advanceBannerQueue() {
+        guard !bannerQueue.isEmpty else { return }
+        bannerQueue.removeFirst()
+        if !bannerQueue.isEmpty {
+            flashBannerTrigger += 1
+        }
+    }
+
+    // Fires once, exactly on crossing a threshold — checked against the value BEFORE
+    // this round's wins were added, since a split round can win multiple hands at
+    // once and jump straight past a threshold (e.g. 9 -> 11), skipping "== 10" entirely.
+    private func checkWinMilestones(previousHandsWon: Int) {
+        let thresholds: [(Int, BannerID)] = [
+            (10, .milestonesPlayerReaches10TotalWins),
+            (100, .milestonesPlayerReaches100TotalWins),
+            (1000, .milestonesPlayerReaches1000TotalWins),
+        ]
+        for (threshold, id) in thresholds where previousHandsWon < threshold && statistics.handsWon >= threshold {
+            if case .message(let text) = BannerCatalog.shared.fire(id) {
+                enqueueBanner(text)
+            }
+        }
+    }
+
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from BlackjackView's .onAppear — a "loading" banner belongs to a
+    // screen transition, not a gameplay action, so switching to this game for the
+    // first time this session fires it; switching back to it later doesn't).
+    private var hasFiredLoadingBannerThisSession = false
+
+    public func checkLoadingBanner() {
+        guard !hasFiredLoadingBannerThisSession else { return }
+        hasFiredLoadingBannerThisSession = true
+        if case .message(let text) = BannerCatalog.shared.fire(BannerCatalog.loadingBannerID()) {
+            enqueueBanner(text)
+        }
+    }
+
     // Options can only be opened between hands — changing a setting like No Stress
     // Mode mid-hand would desync isFreePlay's live re-evaluation from what was
     // actually wagered when the hand started.
@@ -120,6 +171,13 @@ public final class BlackjackViewModel {
     public func deal() {
         guard state.phase == .betting || state.phase == .result else { return }
         guard isFreePlay || state.sessionCredits >= state.currentBet else { return }
+
+        // statistics.handsPlayed only grows via the increment below, so checking it
+        // here, before that increment, is this game's equivalent of "is this the very
+        // first hand ever."
+        if statistics.handsPlayed == 0, case .message(let text) = BannerCatalog.shared.fire(.milestonesFirstLaunchEver) {
+            enqueueBanner(text)
+        }
 
         if !isFreePlay {
             state.sessionCredits -= state.currentBet
@@ -326,6 +384,10 @@ public final class BlackjackViewModel {
         var summaryParts: [String] = []
         var totalPayout = 0
         var totalWagered = 0
+        // Captured before the per-hand loop below (which can win multiple split
+        // hands in one round) so checkWinMilestones can catch a threshold crossed
+        // partway through, not just landed on exactly.
+        let previousHandsWon = statistics.handsWon
 
         for i in 0..<state.playerHands.count {
             let hand = state.playerHands[i]
@@ -401,6 +463,7 @@ public final class BlackjackViewModel {
         } else if roundLost {
             statistics.currentStreak = 0
         }
+        checkWinMilestones(previousHandsWon: previousHandsWon)
     }
 
 

@@ -574,7 +574,12 @@ public struct HoneycombView: View {
                             Text("Rematch to take another.")
                                 .foregroundColor(.white).padding()
                         } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
-                            && viewModel.stealProtectionActive {
+                            && viewModel.stealProtectionActive && viewModel.hasStealableCard {
+                            // Only claims a card is available when one actually is —
+                            // stealProtectionActive alone doesn't guarantee that (it
+                            // widens eligibility to any not-yet-unlocked board card,
+                            // but if every card left on this board is already
+                            // unlocked, there's still nothing to offer).
                             Text("The hive takes pity on you — a rare card finds its way home.")
                                 .foregroundColor(.white).padding()
                         }
@@ -735,7 +740,7 @@ public struct HoneycombView: View {
                     viewModel.advanceBannerQueue()
                 }
             }
-            let duration = text.hasPrefix("First Move:") ? 2.0 : 1.2
+            let duration = viewModel.flashRuleBannerIsLongDuration ? 2.0 : 1.2
             DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: task)
             bannerTask = task
         }
@@ -778,7 +783,10 @@ public struct HoneycombView: View {
                maxWidth: .infinity,
                minHeight: Self.minWindowSize.height,
                maxHeight: .infinity)
-        .onAppear { applyInitialWindowSize() }
+        .onAppear {
+            applyInitialWindowSize()
+            viewModel.checkLoadingBanner()
+        }
         .background(WindowAccessor(callback: { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)

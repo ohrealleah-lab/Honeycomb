@@ -143,4 +143,47 @@ public static class BannerCatalog
         }
         return text;
     }
+
+    // Whether ANY game's loading banner has fired yet this app session — not
+    // per-game (each ViewModel has its own one-shot flag for that); this one is
+    // shared across every game so we can tell "app launch" (the very first
+    // loading banner shown this session, whichever game happens to load first)
+    // from a later game switch.
+    private static bool _hasFiredAnyLoadingBannerThisSession;
+
+    // Decides which "loading" banner (checked once per game, per app session — each
+    // ViewModel guards this with its own one-shot flag) fits right now. Time-of-day
+    // windows and the one-year-anniversary check only apply at app launch — they're
+    // tied to "the moment you opened the app," not to switching games afterward — so
+    // on any later game switch this falls straight to holiday > generic. Shared across
+    // every game (not Honeycomb-specific) since "is it Halloween" and "has this install
+    // been played for a year" don't depend on which game asked.
+    public static BannerId LoadingBannerId()
+    {
+        bool isAppLaunch = !_hasFiredAnyLoadingBannerThisSession;
+        _hasFiredAnyLoadingBannerThisSession = true;
+
+        if (isAppLaunch && FirstPlayedTracker.ShouldShowOneYearBanner()) return BannerId.LoadingFirstLaunchAfterPlayingForOneYear;
+
+        var now = DateTime.Now;
+        if (now.Month == 5 && now.Day == 20) return BannerId.LoadingGameLoadsOnMay20thWorldBeeDay;
+        if (now.Month == 1 && now.Day == 1) return BannerId.LoadingGameLoadsOnNewYearsDayJan1;
+        if (now.Month == 10 && now.Day == 31) return BannerId.LoadingGameLoadsOnHalloweenOct31;
+        if (now.Month == 2 && now.Day == 14) return BannerId.LoadingGameLoadsOnValentinesDayFeb14;
+        if (now.Month == 4 && now.Day == 1) return BannerId.LoadingPlayingOnAprilFoolsDayApr1;
+
+        if (isAppLaunch)
+        {
+            int minutesFromMidnight = now.Hour * 60 + now.Minute;
+            if (Math.Abs(minutesFromMidnight - 720) <= 1) return BannerId.LoadingMatchStartsWithinAMinuteOfLocalNoon;
+            if (now.Hour < 4) return BannerId.LoadingMatchStartsBetween1200AmAnd400AmLocalTime;
+            if (now.Hour >= 5 && now.Hour < 8) return BannerId.LoadingMatchStartsBetween500AmAnd800AmLocalTime;
+            if (now.Hour >= 8 && now.Hour < 12) return BannerId.LoadingMatchStartsBetween800AmAnd1200PmLocalTime;
+            if (now.Hour >= 12 && now.Hour < 14) return BannerId.LoadingMatchStartsBetween1200PmAnd200PmLocalTime;
+            if (now.Hour >= 14 && now.Hour < 17) return BannerId.LoadingMatchStartsBetween200PmAnd500PmLocalTime;
+            if (now.Hour >= 17 && now.Hour < 21) return BannerId.LoadingMatchStartsBetween500PmAnd900PmLocalTime;
+            if (now.Hour >= 21) return BannerId.LoadingMatchStartsBetween900PmAndMidnightLocalTime;
+        }
+        return BannerId.LoadingOnGameLoad;
+    }
 }

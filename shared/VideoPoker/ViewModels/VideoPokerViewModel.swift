@@ -127,6 +127,57 @@ public final class VideoPokerViewModel {
         options.noStressMode
     }
 
+    // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
+    // port's bannerQueue/enqueueBanner/advanceBannerQueue.
+    private var bannerQueue: [String] = []
+    public var flashBanner: String? { bannerQueue.first }
+    public var flashBannerTrigger: Int = 0
+
+    private func enqueueBanner(_ text: String) {
+        bannerQueue.append(text)
+        if bannerQueue.count == 1 {
+            flashBannerTrigger += 1
+        }
+    }
+
+    public func advanceBannerQueue() {
+        guard !bannerQueue.isEmpty else { return }
+        bannerQueue.removeFirst()
+        if !bannerQueue.isEmpty {
+            flashBannerTrigger += 1
+        }
+    }
+
+    // Fires once, exactly on crossing a threshold — checked against the value BEFORE
+    // this draw's wins were added, since triple play can win 2-3 hands in one draw
+    // and jump straight past a threshold (e.g. 9 -> 11), skipping "== 10" entirely.
+    private func checkWinMilestones(previousHandsWon: Int) {
+        let thresholds: [(Int, BannerID)] = [
+            (10, .milestonesPlayerReaches10TotalWins),
+            (100, .milestonesPlayerReaches100TotalWins),
+            (1000, .milestonesPlayerReaches1000TotalWins),
+        ]
+        for (threshold, id) in thresholds where previousHandsWon < threshold && statistics.handsWon >= threshold {
+            if case .message(let text) = BannerCatalog.shared.fire(id) {
+                enqueueBanner(text)
+            }
+        }
+    }
+
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from VideoPokerView's .onAppear — a "loading" banner belongs to a
+    // screen transition, not a gameplay action, so switching to this game for the
+    // first time this session fires it; switching back to it later doesn't).
+    private var hasFiredLoadingBannerThisSession = false
+
+    public func checkLoadingBanner() {
+        guard !hasFiredLoadingBannerThisSession else { return }
+        hasFiredLoadingBannerThisSession = true
+        if case .message(let text) = BannerCatalog.shared.fire(BannerCatalog.loadingBannerID()) {
+            enqueueBanner(text)
+        }
+    }
+
     // Options can only be opened between hands — changing variant/play mode mid-hand
     // would evaluate an already-dealt hand under different rules.
     public var canOpenOptions: Bool {
@@ -136,6 +187,13 @@ public final class VideoPokerViewModel {
     public func deal() {
         guard state.phase == .deal || state.phase == .result else { return }
         guard isFreePlay || state.sessionCredits >= totalBet else { return }
+
+        // statistics.handsPlayed only grows via the increment below, so checking it
+        // here, before that increment, is this game's equivalent of "is this the very
+        // first hand ever."
+        if statistics.handsPlayed == 0, case .message(let text) = BannerCatalog.shared.fire(.milestonesFirstLaunchEver) {
+            enqueueBanner(text)
+        }
 
         if !isFreePlay {
             state.sessionCredits -= totalBet
@@ -274,6 +332,7 @@ public final class VideoPokerViewModel {
             statistics.currentStreak = 0
         }
         if totalPayout > 0 {
+            let previousHandsWon = statistics.handsWon
             statistics.handsWon += winCount
             statistics.royalFlushCount += royalCount
             if !isFreePlay {
@@ -281,6 +340,7 @@ public final class VideoPokerViewModel {
                 statistics.biggestPayout = max(statistics.biggestPayout, maxSingle)
             }
             playSound(named: "victory")
+            checkWinMilestones(previousHandsWon: previousHandsWon)
         }
     }
 
@@ -313,6 +373,7 @@ public final class VideoPokerViewModel {
             statistics.currentStreak += 1
             statistics.longestStreak = max(statistics.longestStreak, statistics.currentStreak)
             if payout > 0 {
+                let previousHandsWon = statistics.handsWon
                 statistics.handsWon += 1
                 if rank == .royalFlush { statistics.royalFlushCount += 1 }
                 if !isFreePlay {
@@ -321,6 +382,7 @@ public final class VideoPokerViewModel {
                     statistics.biggestPayout = max(statistics.biggestPayout, payout)
                 }
                 playSound(named: "victory")
+                checkWinMilestones(previousHandsWon: previousHandsWon)
             }
         } else {
             statistics.currentStreak = 0

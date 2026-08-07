@@ -63,9 +63,12 @@ public partial class GameView : CardGameView
         {
             vm.PropertyChanged += ViewModel_PropertyChanged;
             vm.WasteCardDrawn += ViewModel_WasteCardDrawn;
+            vm.OnFlashBanner += Vm_OnFlashBanner;
             ApplyFeltColor(vm.Options);
             BindPiles(vm);
+            vm.CheckLoadingBanner();
         }
+        HintToast.OnDismissed += HintToast_OnDismissed;
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
         ArmDealNudgeTimer();
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
@@ -81,13 +84,20 @@ public partial class GameView : CardGameView
             Dispatcher.UIThread.InvokeAsync(UpdateAllPilesLayout));
     }
 
+    private void HintToast_OnDismissed()
+    {
+        (DataContext as GameViewModel)?.AdvanceBannerQueue();
+    }
+
     private void GameView_Unloaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is GameViewModel vm)
         {
             vm.PropertyChanged -= ViewModel_PropertyChanged;
             vm.WasteCardDrawn -= ViewModel_WasteCardDrawn;
+            vm.OnFlashBanner -= Vm_OnFlashBanner;
         }
+        HintToast.OnDismissed -= HintToast_OnDismissed;
         WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
@@ -239,6 +249,11 @@ public partial class GameView : CardGameView
         {
             AnimateTopWasteCard();
         });
+    }
+
+    private void Vm_OnFlashBanner(string message)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => HintToast.Flash(message, TimeSpan.FromSeconds(2)));
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)

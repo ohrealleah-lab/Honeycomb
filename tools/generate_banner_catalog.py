@@ -11,6 +11,11 @@ regenerated wholesale each run, so hand edits are silently discarded.
 Usage:
     python3 tools/generate_banner_catalog.py [path/to/Honeycomb_Fun_Messages.xlsx]
 
+The spreadsheet itself lives in this repo at tools/Honeycomb_Fun_Messages.xlsx
+(committed to git) — edit that copy and re-run this script with no arguments.
+It's the canonical copy; a Downloads copy is only ever a staging/editing
+convenience, never the thing to rely on long-term.
+
 Outputs:
     shared/Honeycomb/Resources/HoneycombBannerCatalog.json   (shared content — bundled by mac + Windows)
     shared/Honeycomb/Models/BannerID.swift                    (mac + iOS)
@@ -53,7 +58,12 @@ from pathlib import Path
 import openpyxl
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SOURCE = Path.home() / "Downloads" / "Honeycomb_Fun_Messages.xlsx"
+# The repo's own tracked copy is canonical — prefer it. Only fall back to
+# Downloads (where earlier edits during this project's original spreadsheet
+# session happened to live) if the repo copy is somehow missing.
+_REPO_COPY = REPO_ROOT / "tools" / "Honeycomb_Fun_Messages.xlsx"
+_DOWNLOADS_COPY = Path.home() / "Downloads" / "Honeycomb_Fun_Messages.xlsx"
+DEFAULT_SOURCE = _REPO_COPY if _REPO_COPY.exists() else _DOWNLOADS_COPY
 
 OUT_JSON = REPO_ROOT / "shared/Honeycomb/Resources/HoneycombBannerCatalog.json"
 # Windows can't reference the shared/ copy directly (separate build, no shared

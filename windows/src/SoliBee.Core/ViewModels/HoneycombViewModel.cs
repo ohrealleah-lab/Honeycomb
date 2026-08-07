@@ -44,7 +44,7 @@ public partial class HoneycombViewModel : ObservableObject
         if (_idleCheckGeneration != generation || !IsPlaying) return;
         var result = BannerCatalog.Fire(BannerId.IdleActionNoActionTakenForOneMinute);
         if (result.Kind == BannerFireKind.Message && result.Text != null)
-            EnqueueBanner(result.Text);
+            EnqueueBanner(result.Text, longDuration: true);
     }
 
     // Rematch snapshot: freeze the opponent's card pool (pre-Swap) + this match's rules
@@ -69,10 +69,11 @@ public partial class HoneycombViewModel : ObservableObject
     // include a card that's realistically never capturable (an all-Ace 5★). Reset to
     // 0 by StartNewMatch() (a fresh opponent pool starts this over) and by any win
     // that *does* yield a stealable card (the protection wasn't needed that time). At
-    // 2, SettleMatch() grants a card directly (see GrantStealProtectionCard) and
-    // resets this back to 0. Losses/draws don't touch it either way — only a won
-    // rematch counts as evidence the player is stuck. Mirrors the Swift port's
-    // consecutiveNoStealWins.
+    // 2, ApplyStealProtection() sets StealProtectionActive and resets this back to 0 —
+    // it doesn't grant a card directly, it only widens IsStealEligible so the normal
+    // Steal Card flow has something to offer (see IsStealEligible's own comment).
+    // Losses/draws don't touch it either way — only a won rematch counts as evidence
+    // the player is stuck. Mirrors the Swift port's consecutiveNoStealWins.
     private int _consecutiveNoStealWins = 0;
 
     // "N rematch wins/losses in a row against the same opponent" — reset by
@@ -112,25 +113,30 @@ public partial class HoneycombViewModel : ObservableObject
     // independently since the overlay title itself is only ever overwritten, not cleared.
     public string? MatchResultFlavorText { get; private set; }
 
-    public event Action<string>? OnFlashBanner;
+    // Second parameter is IsLongDuration — "long duration" banners (First Move intro,
+    // milestones, loading flavor, idle nudge, 3-hints-used, rematch/difficulty streaks)
+    // hold for 2.0s + a 0.3s fade instead of the usual 1.2s + 0.3s rule/combo banners
+    // get — they're less urgent, more "flavor you can take your time reading" than
+    // "something that just happened on the board."
+    public event Action<string, bool>? OnFlashBanner;
 
     // FIFO queue of banner texts — mirrors the Swift port's bannerQueue/enqueueBanner/
     // advanceBannerQueue (shared/Honeycomb/ViewModels/HoneycombViewModel.swift).
     // Without this, a second banner firing moments after an earlier one (e.g. a Bomb
     // Shelter reveal a beat after an ordinary placement's own capture) would silently
     // overwrite it via OnFlashBanner before it had been on screen long enough to read.
-    private readonly Queue<string> _bannerQueue = new();
+    private readonly Queue<(string Text, bool IsLongDuration)> _bannerQueue = new();
 
-    private void EnqueueBanner(string text)
+    private void EnqueueBanner(string text, bool longDuration = false)
     {
-        _bannerQueue.Enqueue(text);
+        _bannerQueue.Enqueue((text, longDuration));
         // Only fire OnFlashBanner when this becomes the front of the queue — if
         // something is already showing, the view picks this one up on its own via
         // AdvanceBannerQueue once the current banner's dismiss timer fires, instead of
         // interrupting it.
         if (_bannerQueue.Count == 1)
         {
-            OnFlashBanner?.Invoke(text);
+            OnFlashBanner?.Invoke(text, longDuration);
         }
     }
 
@@ -142,7 +148,8 @@ public partial class HoneycombViewModel : ObservableObject
         _bannerQueue.Dequeue();
         if (_bannerQueue.Count > 0)
         {
-            OnFlashBanner?.Invoke(_bannerQueue.Peek());
+            var next = _bannerQueue.Peek();
+            OnFlashBanner?.Invoke(next.Text, next.IsLongDuration);
         }
     }
 
@@ -694,15 +701,14 @@ public partial class HoneycombViewModel : ObservableObject
         // A brand new match starting — any banner still queued from the previous one
         // (e.g. a match ended mid-combo-sequence) is no longer relevant.
         ClearBannerQueue();
-        EnqueueBanner(string.Join("\n", bannerLines));
+        EnqueueBanner(string.Join("\n", bannerLines), longDuration: true);
         // Stats.GamesPlayed only increments in SettleMatch, so it's still 0 here iff
         // this is the very first match this player has ever started.
         if (Stats.GamesPlayed == 0)
         {
             var firstLaunchResult = BannerCatalog.Fire(BannerId.MilestonesFirstLaunchEver);
-            if (firstLaunchResult.Kind == BannerFireKind.Message) EnqueueBanner(firstLaunchResult.Text!);
+            if (firstLaunchResult.Kind == BannerFireKind.Message) EnqueueBanner(firstLaunchResult.Text!, longDuration: true);
         }
-        CheckLoadingBanner();
         CheckSameDifficultyStreak();
 
         int generation = ++_matchGeneration;
@@ -1548,45 +1554,36 @@ public partial class HoneycombViewModel : ObservableObject
         return total;
     }
 
-    // Fires once per app session, the first time a match starts — "Loading" banners
-    // don't have a dedicated loading screen to hook into, so this is the closest
-    // real moment to "the game loads." Priority: named holiday > time-of-day window
-    // > generic fallback pool, since at most one should show per launch.
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from HoneycombView's Loaded handler — a "loading" banner belongs to a
+    // screen transition, not a gameplay action, so switching to this game for the
+    // first time this session fires it; switching back to it later doesn't).
     private bool _hasFiredLoadingBannerThisSession;
 
-    private void CheckLoadingBanner()
+    public void CheckLoadingBanner()
     {
         if (_hasFiredLoadingBannerThisSession) return;
         _hasFiredLoadingBannerThisSession = true;
-        var result = BannerCatalog.Fire(LoadingBannerId());
-        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
-    }
-
-    private static BannerId LoadingBannerId()
-    {
-        if (FirstPlayedTracker.ShouldShowOneYearBanner()) return BannerId.LoadingFirstLaunchAfterPlayingForOneYear;
-
-        var now = DateTime.Now;
-        if (now.Month == 5 && now.Day == 20) return BannerId.LoadingGameLoadsOnMay20thWorldBeeDay;
-        if (now.Month == 1 && now.Day == 1) return BannerId.LoadingGameLoadsOnNewYearsDayJan1;
-        if (now.Month == 10 && now.Day == 31) return BannerId.LoadingGameLoadsOnHalloweenOct31;
-        if (now.Month == 2 && now.Day == 14) return BannerId.LoadingGameLoadsOnValentinesDayFeb14;
-        if (now.Month == 4 && now.Day == 1) return BannerId.LoadingPlayingOnAprilFoolsDayApr1;
-
-        int minutesFromMidnight = now.Hour * 60 + now.Minute;
-        if (Math.Abs(minutesFromMidnight - 720) <= 1) return BannerId.LoadingMatchStartsWithinAMinuteOfLocalNoon;
-        if (now.Hour < 4) return BannerId.LoadingMatchStartsBetween1200AmAnd400AmLocalTime;
-        if (now.Hour >= 5 && now.Hour < 8) return BannerId.LoadingMatchStartsBetween500AmAnd800AmLocalTime;
-        if (now.Hour >= 21) return BannerId.LoadingMatchStartsBetween900PmAndMidnightLocalTime;
-        return BannerId.LoadingOnGameLoad;
+        var result = BannerCatalog.Fire(BannerCatalog.LoadingBannerId());
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!, longDuration: true);
     }
 
     // Fires once, exactly on the win that crosses a threshold — not "MatchesWon >=
     // threshold", which would fire on every subsequent win too.
-    // Fires once, exactly on the 5th consecutive match at the same difficulty — not
-    // "count >= 5", which would fire on every match after that too.
+    // Fires once, exactly on the 5th consecutive REMATCH at the same difficulty — not
+    // "count >= 5" (which would fire on every match after that too), and not counting
+    // plain New Game starts (confirmed by the person who owns this banner's content:
+    // it should read as "you keep coming back to fight this same difficulty tier,"
+    // which only a real Rematch chain demonstrates — a fresh New Game at the same
+    // difficulty doesn't).
     private void CheckSameDifficultyStreak()
     {
+        if (!_isRematchMatch)
+        {
+            _consecutiveSameDifficultyCount = 0;
+            _lastPlayedDifficulty = null;
+            return;
+        }
         if (Options.Difficulty == _lastPlayedDifficulty)
         {
             _consecutiveSameDifficultyCount++;
@@ -1599,7 +1596,7 @@ public partial class HoneycombViewModel : ObservableObject
         if (_consecutiveSameDifficultyCount == 5)
         {
             var result = BannerCatalog.Fire(BannerId.GameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow);
-            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!, longDuration: true);
         }
     }
 
@@ -1615,7 +1612,7 @@ public partial class HoneycombViewModel : ObservableObject
         {
             if (Stats.MatchesWon != threshold) continue;
             var result = BannerCatalog.Fire(id);
-            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!, longDuration: true);
         }
     }
 
@@ -1677,7 +1674,7 @@ public partial class HoneycombViewModel : ObservableObject
             {
                 var streakResult = BannerCatalog.Fire(BannerId.Gameplay3RematchWinsInARowAgainstTheSameOpponent,
                     new Dictionary<string, string> { ["OpponentName"] = OpponentNameDisplay });
-                if (streakResult.Kind == BannerFireKind.Message) EnqueueBanner(streakResult.Text!);
+                if (streakResult.Kind == BannerFireKind.Message) EnqueueBanner(streakResult.Text!, longDuration: true);
             }
         }
         else if (!drawn)
@@ -1695,7 +1692,7 @@ public partial class HoneycombViewModel : ObservableObject
             {
                 var streakResult = BannerCatalog.Fire(BannerId.Gameplay3RematchLossesInARowAgainstTheSameOpponent,
                     new Dictionary<string, string> { ["OpponentName"] = OpponentNameDisplay });
-                if (streakResult.Kind == BannerFireKind.Message) EnqueueBanner(streakResult.Text!);
+                if (streakResult.Kind == BannerFireKind.Message) EnqueueBanner(streakResult.Text!, longDuration: true);
             }
         }
         else
@@ -1780,7 +1777,7 @@ public partial class HoneycombViewModel : ObservableObject
         if (_hintUsageCountThisMatch == 3)
         {
             var hintResult = BannerCatalog.Fire(BannerId.Gameplay3HintsUsedInOneMatch);
-            if (hintResult.Kind == BannerFireKind.Message) EnqueueBanner(hintResult.Text!);
+            if (hintResult.Kind == BannerFireKind.Message) EnqueueBanner(hintResult.Text!, longDuration: true);
         }
 
         var knownOpponent = State.OpponentHand.Where(c => State.OpponentRevealedIds.Contains(c.UniqueInstanceId)).ToList();

@@ -34,6 +34,12 @@ public struct VideoPokerView: View {
     @State private var resultAnimationTask:  DispatchWorkItem? = nil
     @State private var resultHideTask:       DispatchWorkItem? = nil
     @State private var idlePromptTask:       DispatchWorkItem? = nil
+    // Milestone/loading banners (viewModel.bannerQueue) — separate from the hand
+    // result banner above since these are queued (possibly several in a row) rather
+    // than a single per-hand outcome.
+    @State private var showQueuedBanner: Bool = false
+    @State private var queuedBannerText: String = ""
+    @State private var queuedBannerTask: DispatchWorkItem? = nil
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     // The toolbar stays fixed size regardless of the board's scale; only the board below
@@ -146,6 +152,10 @@ public struct VideoPokerView: View {
                 .clipped()
 
             HotkeyLegendView(text: "Space/Enter/D=Deal or Draw   1-5=Toggle Hold   H=Hold All   C=Clear   M=Bet Max")
+
+            if showQueuedBanner {
+                FlashBannerView(message: queuedBannerText)
+            }
         }
         .frame(minWidth: Self.minWindowSize.width, maxWidth: .infinity,
                minHeight: Self.minWindowSize.height, maxHeight: .infinity)
@@ -153,6 +163,7 @@ public struct VideoPokerView: View {
             DispatchQueue.main.async {
                 applyInitialWindowSize()
             }
+            viewModel.checkLoadingBanner()
         }
         .background(WindowAccessor(callback: { window in
             self.hostingWindow = window
@@ -299,6 +310,24 @@ public struct VideoPokerView: View {
             viewModel.debugSetupBannerState(kind)
             showResultBanner = true
         }
+        .onChange(of: viewModel.flashBannerTrigger) { _, _ in
+            guard let text = viewModel.flashBanner else { return }
+            flashQueuedBanner(text)
+        }
+    }
+
+    private func flashQueuedBanner(_ text: String) {
+        queuedBannerTask?.cancel()
+        queuedBannerText = text
+        withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
+        let task = DispatchWorkItem {
+            withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                viewModel.advanceBannerQueue()
+            }
+        }
+        queuedBannerTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
     }
 
     // MARK: - Toolbar

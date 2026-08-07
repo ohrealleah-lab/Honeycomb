@@ -16,6 +16,57 @@ public partial class BlackjackViewModel : ObservableObject
     [ObservableProperty] private BlackjackOptions    _options = new();
     [ObservableProperty] private BlackjackStatistics _stats   = new();
 
+    // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
+    // port's BannerQueue/EnqueueBanner/AdvanceBannerQueue.
+    private readonly Queue<string> _bannerQueue = new();
+    public event Action<string>? OnFlashBanner;
+
+    private void EnqueueBanner(string text)
+    {
+        _bannerQueue.Enqueue(text);
+        if (_bannerQueue.Count == 1) OnFlashBanner?.Invoke(text);
+    }
+
+    public void AdvanceBannerQueue()
+    {
+        if (_bannerQueue.Count == 0) return;
+        _bannerQueue.Dequeue();
+        if (_bannerQueue.Count > 0) OnFlashBanner?.Invoke(_bannerQueue.Peek());
+    }
+
+    // Fires once, exactly on crossing a threshold — checked against the value BEFORE
+    // this round's wins were added, since a split round can win multiple hands at
+    // once and jump straight past a threshold (e.g. 9 -> 11), skipping "== 10" entirely.
+    private void CheckWinMilestones(int previousHandsWon)
+    {
+        var thresholds = new (int Threshold, BannerId Id)[]
+        {
+            (10, BannerId.MilestonesPlayerReaches10TotalWins),
+            (100, BannerId.MilestonesPlayerReaches100TotalWins),
+            (1000, BannerId.MilestonesPlayerReaches1000TotalWins),
+        };
+        foreach (var (threshold, id) in thresholds)
+        {
+            if (previousHandsWon >= threshold || Stats.HandsWon < threshold) continue;
+            var result = BannerCatalog.Fire(id);
+            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+        }
+    }
+
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from BlackjackView's Loaded handler — a "loading" banner belongs to
+    // a screen transition, not a gameplay action, so switching to this game for the
+    // first time this session fires it; switching back to it later doesn't).
+    private bool _hasFiredLoadingBannerThisSession;
+
+    public void CheckLoadingBanner()
+    {
+        if (_hasFiredLoadingBannerThisSession) return;
+        _hasFiredLoadingBannerThisSession = true;
+        var result = BannerCatalog.Fire(BannerCatalog.LoadingBannerId());
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
+
     private List<Card> _deck                = new();
     private int _deckIdx                    = 0;
     private static readonly Random _rng    = new();
@@ -106,6 +157,15 @@ public partial class BlackjackViewModel : ObservableObject
         bool freePlay = Options.IsNoStressMode;
         if (!freePlay && State.Credits < State.CurrentBet) return;
         _handFreePlay = freePlay;
+
+        // Stats.HandsPlayed only increments later, per resulting hand (in
+        // ApplyPayout) — checking it here, before any of that, is still this game's
+        // equivalent of "is this the very first hand ever."
+        if (Stats.HandsPlayed == 0)
+        {
+            var firstLaunchResult = BannerCatalog.Fire(BannerId.MilestonesFirstLaunchEver);
+            if (firstLaunchResult.Kind == BannerFireKind.Message) EnqueueBanner(firstLaunchResult.Text!);
+        }
 
         _deck    = BuildAndShuffleDeck();
         _deckIdx = 0;
@@ -354,6 +414,10 @@ public partial class BlackjackViewModel : ObservableObject
     {
         var (dealerValue, _) = State.DealerHand.ComputeValue();
         bool dealerBust = dealerValue > 21;
+        // Captured before the per-hand loop below (which can win multiple split
+        // hands in one round) so CheckWinMilestones can catch a threshold crossed
+        // partway through, not just landed on exactly.
+        int previousHandsWon = Stats.HandsWon;
 
         foreach (var hand in State.PlayerHands)
         {
@@ -385,6 +449,7 @@ public partial class BlackjackViewModel : ObservableObject
         {
             Stats.CurrentStreak = 0;
         }
+        CheckWinMilestones(previousHandsWon);
 
         State.Phase         = BlackjackPhase.Result;
         Options.BetPerHand  = State.CurrentBet;

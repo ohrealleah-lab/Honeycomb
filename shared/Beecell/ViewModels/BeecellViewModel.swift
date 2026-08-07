@@ -63,6 +63,61 @@ public final class BeecellViewModel {
     
     public var highScoreString: String { String(highScore) }
 
+    // Total across every deck-count mode, not just currentModeStats — "10 wins" for a
+    // milestone should mean the game overall, not one specific mode.
+    private var totalGamesWon: Int { statistics.statsByMode.values.reduce(0) { $0 + $1.gamesWon } }
+    private var totalGamesPlayed: Int { statistics.statsByMode.values.reduce(0) { $0 + $1.gamesPlayed } }
+
+    // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
+    // port's bannerQueue/enqueueBanner/advanceBannerQueue.
+    private var bannerQueue: [String] = []
+    public var flashBanner: String? { bannerQueue.first }
+    public var flashBannerTrigger: Int = 0
+
+    private func enqueueBanner(_ text: String) {
+        bannerQueue.append(text)
+        if bannerQueue.count == 1 {
+            flashBannerTrigger += 1
+        }
+    }
+
+    public func advanceBannerQueue() {
+        guard !bannerQueue.isEmpty else { return }
+        bannerQueue.removeFirst()
+        if !bannerQueue.isEmpty {
+            flashBannerTrigger += 1
+        }
+    }
+
+    // Fires once, exactly on the win that crosses a threshold — not "totalGamesWon >=
+    // threshold", which would fire on every subsequent win too.
+    private func checkWinMilestones() {
+        let thresholds: [(Int, BannerID)] = [
+            (10, .milestonesPlayerReaches10TotalWins),
+            (100, .milestonesPlayerReaches100TotalWins),
+            (1000, .milestonesPlayerReaches1000TotalWins),
+        ]
+        for (threshold, id) in thresholds where totalGamesWon == threshold {
+            if case .message(let text) = BannerCatalog.shared.fire(id) {
+                enqueueBanner(text)
+            }
+        }
+    }
+
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from BeecellView's .onAppear — a "loading" banner belongs to a screen
+    // transition, not a gameplay action, so switching to this game for the first
+    // time this session fires it; switching back to it later doesn't).
+    private var hasFiredLoadingBannerThisSession = false
+
+    public func checkLoadingBanner() {
+        guard !hasFiredLoadingBannerThisSession else { return }
+        hasFiredLoadingBannerThisSession = true
+        if case .message(let text) = BannerCatalog.shared.fire(BannerCatalog.loadingBannerID()) {
+            enqueueBanner(text)
+        }
+    }
+
     public var scoreString: String { String(state.score) }
     
     // Board scale — no longer manual; BeecellView.recomputeScale() continuously derives
@@ -122,8 +177,9 @@ public final class BeecellViewModel {
         }
         stats.statsByMode[currentModeKey] = modeStats
         statistics = stats
+        checkWinMilestones()
     }
-    
+
     public init() {
         // Initialize all stored properties first with defaults
         self.state = BeecellState(
@@ -167,7 +223,14 @@ public final class BeecellViewModel {
     
     public func startNewGame() {
         stopTimer()
-        
+
+        // totalGamesPlayed only grows via the increment below, so checking it here,
+        // before that increment, is this game's equivalent of "is this the very
+        // first deal ever."
+        if totalGamesPlayed == 0, case .message(let text) = BannerCatalog.shared.fire(.milestonesFirstLaunchEver) {
+            enqueueBanner(text)
+        }
+
         // Record loss / reset streak if they abandoned an active game
         if state.movesCount > 0 && !state.hasWon {
             var stats = statistics

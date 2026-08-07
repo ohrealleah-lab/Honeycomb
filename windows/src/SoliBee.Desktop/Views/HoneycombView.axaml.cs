@@ -119,16 +119,17 @@ public partial class HoneycombView : UserControl
                 _vm.OnFlashBanner += Vm_OnFlashBanner;
                 _vm.OnSwapLifting += Vm_OnSwapLifting;
                 _vm.OnSwapLanded += Vm_OnSwapLanded;
+                _vm.CheckLoadingBanner();
                 Refresh(_vm);
             }
         };
     }
     
-    private void Vm_OnFlashBanner(string message)
+    private void Vm_OnFlashBanner(string message, bool isLongDuration)
     {
         Dispatcher.UIThread.Post(() => {
             _bannerActive = true;
-            var duration = message.StartsWith("First Move:") ? TimeSpan.FromSeconds(2) : (TimeSpan?)null;
+            var duration = isLongDuration ? TimeSpan.FromSeconds(2) : (TimeSpan?)null;
             RuleToast.Flash(message, duration);
         });
     }
@@ -478,7 +479,11 @@ public partial class HoneycombView : UserControl
                 AlreadyStolenWarningText.IsVisible = false;
                 // Shown alongside the Steal Card button while protection is active and
                 // there's still something to take (not once the bank's already full).
-                StealProtectionText.IsVisible = !bankFull && state.StealProtectionActive;
+                // StealProtectionActive alone doesn't guarantee hasStealableCard — it
+                // only widens eligibility to any not-yet-unlocked board card, but if
+                // every card left on this board is already unlocked, there's still
+                // nothing to offer, and this text shouldn't claim otherwise.
+                StealProtectionText.IsVisible = !bankFull && state.StealProtectionActive && hasStealableCard;
             }
             else
             {

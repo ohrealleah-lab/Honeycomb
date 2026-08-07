@@ -56,16 +56,33 @@ public partial class BlackjackView : UserControl
     {
         if (DataContext is not BlackjackViewModel vm) return;
         vm.PropertyChanged += Vm_PropertyChanged;
+        vm.OnFlashBanner += Vm_OnFlashBanner;
+        MilestoneToast.OnDismissed += MilestoneToast_OnDismissed;
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
             Dispatcher.UIThread.InvokeAsync(() => { if (DataContext is BlackjackViewModel bvm) Refresh(bvm); }));
+        vm.CheckLoadingBanner();
         Refresh(vm);
+    }
+
+    private void Vm_OnFlashBanner(string message)
+    {
+        Dispatcher.UIThread.Post(() => MilestoneToast.Flash(message, TimeSpan.FromSeconds(2)));
+    }
+
+    private void MilestoneToast_OnDismissed()
+    {
+        (DataContext as BlackjackViewModel)?.AdvanceBannerQueue();
     }
 
     private void BlackjackView_Unloaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is BlackjackViewModel vm)
+        {
             vm.PropertyChanged -= Vm_PropertyChanged;
+            vm.OnFlashBanner -= Vm_OnFlashBanner;
+        }
+        MilestoneToast.OnDismissed -= MilestoneToast_OnDismissed;
         TopLevel.GetTopLevel(this)?.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         StopTimers();

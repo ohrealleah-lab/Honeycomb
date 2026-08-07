@@ -129,7 +129,12 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "The midnight shift in the hive."
+        "The midnight shift in the hive.",
+        "Burning the midnight beeswax.",
+        "Who needs sleep when there's honey on the line?",
+        "The hive is quiet, but the night shift keeps buzzing.",
+        "Only the most dedicated bees are awake at this hour.",
+        "Moonlight glints off the wax."
       ]
     },
     {
@@ -142,7 +147,12 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "The early bee catches the nectar."
+        "The early bee catches the nectar.",
+        "Up with the sun! The morning dew is fresh on the comb.",
+        "First flight of the day.",
+        "Coffee and cards — a bee's favorite morning routine.",
+        "Rise and buzz! Time for morning cards.",
+        "The dew hasn't dried and the bees are already at it."
       ]
     },
     {
@@ -155,7 +165,13 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "One more match before the hive turns in..."
+        "One more match before the hive turns in...",
+        "Winding down after a long day in the field.",
+        "Night falls over the hive.",
+        "The comb quietens as the stars come out.",
+        "Just one more game... famous last words in the hive.",
+        "The Queen's chambers go quiet, but not this table.",
+        "A nightcap of nectar before bed."
       ]
     },
     {
@@ -169,6 +185,73 @@
       "fallback": null,
       "messages": [
         "It’s Hive Noon!"
+      ]
+    },
+    {
+      "id": "loading_match_starts_between_8_00_am_and_12_00_pm_local_time",
+      "category": "Loading",
+      "trigger": "Match starts between 8:00 AM and 12:00 PM local time.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Morning in the comb — the day's first harvest begins!",
+        "Peak pollen-gathering hours!",
+        "The hive is buzzing with morning energy.",
+        "The hive hums with a fresh day's plans."
+      ]
+    },
+    {
+      "id": "loading_match_starts_between_12_00_pm_and_2_00_pm_local_time",
+      "category": "Loading",
+      "trigger": "Match starts between 12:00 PM and 2:00 PM local time.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "High noon in the hive — time for a honey break!",
+        "The sun is high, and the nectar is sweet.",
+        "Midday match! A quick break between flights.",
+        "Even bees pause to enjoy the sunshine.",
+        "Half the day's pollen is already in."
+      ]
+    },
+    {
+      "id": "loading_match_starts_between_2_00_pm_and_5_00_pm_local_time",
+      "category": "Loading",
+      "trigger": "Match starts between 2:00 PM and 5:00 PM local time.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Golden afternoon light fills the comb.",
+        "The afternoon warmth has the bees buzzing lively.",
+        "Basking in the warm afternoon sun.",
+        "The hive settles into its afternoon rhythm.",
+        "Long shadows, long odds — let's play."
+      ]
+    },
+    {
+      "id": "loading_match_starts_between_5_00_pm_and_9_00_pm_local_time",
+      "category": "Loading",
+      "trigger": "Match starts between 5:00 PM and 9:00 PM local time.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "The sun sets over the hive — time for evening games.",
+        "Workers return home after a full day's buzz.",
+        "Golden hour in the honeycomb.",
+        "The last foragers are heading home.",
+        "Lantern-bugs light the way to the hive."
       ]
     },
     {
@@ -253,7 +336,15 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "Need a little help? The scout bees are buzzing suggestions."
+        "Need a little help? The scout bees are buzzing suggestions.",
+        "Waggle dance activated!",
+        "The bees checked every flower!",
+        "The hive mind is thinking...",
+        "The hive has reached a consensus.",
+        "Even the busiest bees ask the Queen for directions sometimes.",
+        "A drop of honey marks a sweet path forward.",
+        "Nectar trail spotted! Follow this lead.",
+        "A little bee whispered a suggestion in your ear."
       ]
     },
     {
@@ -266,7 +357,12 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "Second thoughts? Wise bees always double-check."
+        "Second thoughts? Wise bees always double-check.",
+        "Re-charting the swarm!",
+        "Mid-air flight recalculation!",
+        "Hovering backwards...",
+        "Plucking that card right back out of the wax.",
+        "Unsticking that card from the comb."
       ]
     },
     {

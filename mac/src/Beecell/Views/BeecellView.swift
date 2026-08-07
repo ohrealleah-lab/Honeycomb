@@ -54,6 +54,12 @@ public struct BeecellView: View {
     @State private var winPulse: Bool = false
     @State private var showNoHintsBanner: Bool = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
+    // Milestone/loading banners (viewModel.bannerQueue) — separate state from the
+    // no-hints banner above since these are queued (possibly several in a row) rather
+    // than a single fire-and-forget notice.
+    @State private var showQueuedBanner: Bool = false
+    @State private var queuedBannerText: String = ""
+    @State private var queuedBannerTask: DispatchWorkItem? = nil
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
     @FocusState private var isBoardFocused: Bool
@@ -587,6 +593,10 @@ public struct BeecellView: View {
                 FlashBannerView(message: "Sorry! No hints available.")
             }
 
+            if showQueuedBanner {
+                FlashBannerView(message: queuedBannerText)
+            }
+
             // Drag overlay representation (positioned globally, scaled to match board)
             if !draggedCards.isEmpty {
                 VStack(spacing: 20 - 181) {
@@ -723,7 +733,14 @@ public struct BeecellView: View {
                 break
             }
         }
-        .onAppear { applyInitialWindowSize() }
+        .onChange(of: viewModel.flashBannerTrigger) { _, _ in
+            guard let text = viewModel.flashBanner else { return }
+            flashQueuedBanner(text)
+        }
+        .onAppear {
+            applyInitialWindowSize()
+            viewModel.checkLoadingBanner()
+        }
         .background(WindowAccessor(callback: { window in
             self.hostingWindow = window
             self.zoomController = WindowZoomController(window: window)
@@ -812,6 +829,20 @@ public struct BeecellView: View {
         }
         noHintsBannerTask = task
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
+    }
+
+    private func flashQueuedBanner(_ text: String) {
+        queuedBannerTask?.cancel()
+        queuedBannerText = text
+        withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
+        let task = DispatchWorkItem {
+            withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                viewModel.advanceBannerQueue()
+            }
+        }
+        queuedBannerTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
     }
 
     private func requestNewGame(deckCount: Int? = nil) {

@@ -105,20 +105,37 @@ public partial class SpiderView : CardGameView
         if (DataContext is SpiderViewModel vm)
         {
             vm.PropertyChanged += ViewModel_PropertyChanged;
+            vm.OnFlashBanner += Vm_OnFlashBanner;
             ApplyFeltColor(vm.Options);
             BindPiles(vm);
             UpdateStockDisplay(vm);
+            vm.CheckLoadingBanner();
         }
+        HintToast.OnDismissed += HintToast_OnDismissed;
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
             Dispatcher.UIThread.InvokeAsync(RefreshAllPiles));
     }
 
+    private void Vm_OnFlashBanner(string message)
+    {
+        Dispatcher.UIThread.Post(() => HintToast.Flash(message, TimeSpan.FromSeconds(2)));
+    }
+
+    private void HintToast_OnDismissed()
+    {
+        (DataContext as SpiderViewModel)?.AdvanceBannerQueue();
+    }
+
     private void SpiderView_Unloaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is SpiderViewModel vm)
+        {
             vm.PropertyChanged -= ViewModel_PropertyChanged;
+            vm.OnFlashBanner -= Vm_OnFlashBanner;
+        }
+        HintToast.OnDismissed -= HintToast_OnDismissed;
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         CardView.ClearPileViewCache(this);

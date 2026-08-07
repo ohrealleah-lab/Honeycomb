@@ -54,7 +54,7 @@ public class HoneycombBannerTriggerTests
     private static List<string> CaptureBanners(HoneycombViewModel vm, Action action)
     {
         var captured = new List<string>();
-        void Handler(string text) => captured.Add(text);
+        void Handler(string text, bool isLongDuration) => captured.Add(text);
         vm.OnFlashBanner += Handler;
         action();
         for (int i = 0; i < 50; i++) vm.AdvanceBannerQueue();
@@ -273,14 +273,32 @@ public class HoneycombBannerTriggerTests
     public void SameDifficultyStreak_FiresOnFifthMatch()
     {
         var vm = new HoneycombViewModel(isHeadless: true);
-        // Whatever this run's loaded Difficulty is, it stays constant across every
-        // call below — that's the whole point of the streak.
+        // Only rematches count toward this streak (confirmed by the banner content
+        // owner: plain New Game starts at the same difficulty shouldn't trip it) —
+        // one real StartNewMatch() to populate _rematchOpponentDeck, then 5
+        // RematchGame() calls to reach the 5th consecutive same-difficulty match.
+        vm.StartNewMatch();
         List<string> queued = new();
         for (int i = 0; i < 5; i++)
         {
-            queued = CaptureBanners(vm, () => vm.StartNewMatch());
+            queued = CaptureBanners(vm, () => vm.RematchGame());
         }
         Assert.True(QueueContainsMessage(queued, BannerId.GameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow));
+    }
+
+    [Fact]
+    public void SameDifficultyStreak_DoesNotFireOnPlainNewGameStarts()
+    {
+        var vm = new HoneycombViewModel(isHeadless: true);
+        // Same default difficulty every time, but via StartNewMatch() (not
+        // RematchGame()) — should never trip the streak, no matter how many times
+        // it repeats.
+        List<string> queued = new();
+        for (int i = 0; i < 6; i++)
+        {
+            queued = CaptureBanners(vm, () => vm.StartNewMatch());
+        }
+        Assert.False(QueueContainsMessage(queued, BannerId.GameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow));
     }
 
     // Forces a win by directly overwriting board/hands to an 8-0 fortress split, then
@@ -351,7 +369,7 @@ public class HoneycombBannerTriggerTests
     // MARK: - Session-scoped (first launch / loading)
 
     [Fact]
-    public void FirstLaunchAndLoadingBanner_FireOnFreshStart()
+    public void FirstLaunchMilestone_FiresOnFreshStart()
     {
         var vm = new HoneycombViewModel(isHeadless: true);
         // The constructor loads whatever this machine's real honeycomb_stats.json
@@ -362,10 +380,31 @@ public class HoneycombBannerTriggerTests
         var queued = CaptureBanners(vm, () => vm.StartNewMatch());
 
         Assert.True(QueueContainsMessage(queued, BannerId.MilestonesFirstLaunchEver));
+    }
+
+    [Fact]
+    public void LoadingBanner_FiresOnViewAppear()
+    {
+        var vm = new HoneycombViewModel(isHeadless: true);
+
+        var queued = CaptureBanners(vm, () => vm.CheckLoadingBanner());
+
         // Whichever Loading banner today's actual date/time maps to, SOME loading
         // message should be present — this can't pin an exact id without mocking the
         // system clock, so it checks membership across every Loading-location entry.
         var loadingIds = Enum.GetValues<BannerId>().Where(id => id.ToString().StartsWith("Loading")).ToArray();
         Assert.True(QueueContainsMessage(queued, loadingIds));
+    }
+
+    [Fact]
+    public void LoadingBanner_DoesNotFireTwiceInSameSession()
+    {
+        var vm = new HoneycombViewModel(isHeadless: true);
+        CaptureBanners(vm, () => vm.CheckLoadingBanner());
+
+        // Simulates switching back to this game later in the same session.
+        var queued = CaptureBanners(vm, () => vm.CheckLoadingBanner());
+
+        Assert.Empty(queued);
     }
 }

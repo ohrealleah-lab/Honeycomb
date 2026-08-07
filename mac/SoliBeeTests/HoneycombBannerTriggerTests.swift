@@ -37,9 +37,12 @@ struct HoneycombBannerTriggerTests {
         testBoardImbalanceFiresBanner()
         testOpponentAboutToPlaceLastCardFiresWarning()
         testSameDifficultyStreakFiresOnFifthMatch()
+        testSameDifficultyStreakDoesNotFireOnPlainNewGameStarts()
         testRematchWinStreakFiresOnThirdWin()
         testRematchLossStreakFiresOnThirdLoss()
-        testFirstLaunchAndLoadingBannerFireOnFreshStart()
+        testFirstLaunchMilestoneFiresOnFreshStart()
+        testLoadingBannerFiresOnViewAppear()
+        testLoadingBannerDoesNotFireTwiceInSameSession()
     }
 
     // MARK: - Helpers
@@ -322,14 +325,31 @@ struct HoneycombBannerTriggerTests {
     static func testSameDifficultyStreakFiresOnFifthMatch() {
         UISound.isHeadlessMode = true
         let vm = HoneycombViewModel()
-        // Default difficulty (.medium) stays constant across every call below — that's
-        // the whole point of the streak.
+        // Only rematches count toward this streak (confirmed by the banner content
+        // owner: plain New Game starts at the same difficulty shouldn't trip it) —
+        // one real startNewGame() to populate rematchOpponentDeck, then 4 rematch()
+        // calls to reach the 5th consecutive same-difficulty match.
+        vm.startNewGame()
         for _ in 1...5 {
-            vm.startNewGame()
+            vm.rematch()
         }
         let queued = drainBannerQueue(vm)
         guard queueContainsMessage(queued, from: [.gameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow]) else {
-            fatalError("❌ HoneycombBannerTriggerTests: 5th match at the same difficulty didn't fire the streak banner (queue: \(queued))")
+            fatalError("❌ HoneycombBannerTriggerTests: 5th rematch at the same difficulty didn't fire the streak banner (queue: \(queued))")
+        }
+    }
+
+    static func testSameDifficultyStreakDoesNotFireOnPlainNewGameStarts() {
+        UISound.isHeadlessMode = true
+        let vm = HoneycombViewModel()
+        // Same default difficulty every time, but via startNewGame() (not rematch())
+        // — should never trip the streak, no matter how many times it repeats.
+        for _ in 1...6 {
+            vm.startNewGame()
+        }
+        let queued = drainBannerQueue(vm)
+        guard !queueContainsMessage(queued, from: [.gameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow]) else {
+            fatalError("❌ HoneycombBannerTriggerTests: REGRESSION — plain New Game starts at the same difficulty fired the rematch-only streak banner (queue: \(queued))")
         }
     }
 
@@ -412,7 +432,7 @@ struct HoneycombBannerTriggerTests {
 
     // MARK: - Session-scoped (first launch / loading)
 
-    static func testFirstLaunchAndLoadingBannerFireOnFreshStart() {
+    static func testFirstLaunchMilestoneFiresOnFreshStart() {
         UISound.isHeadlessMode = true
         let vm = HoneycombViewModel()
         // init() loads whatever this machine's real "honeycomb_stats" save data says
@@ -426,12 +446,40 @@ struct HoneycombBannerTriggerTests {
         guard queueContainsMessage(queued, from: [.milestonesFirstLaunchEver]) else {
             fatalError("❌ HoneycombBannerTriggerTests: first-ever match didn't fire the first-launch milestone (queue: \(queued))")
         }
+    }
+
+    // checkLoadingBanner() is no longer called from startNewGame() — it's a screen-
+    // transition banner now (fired from HoneycombView's .onAppear when the game's
+    // view actually appears, per the product decision that a "loading" toast belongs
+    // to a scene transition, not a gameplay action), so this test calls it directly
+    // rather than driving it through startNewGame().
+    static func testLoadingBannerFiresOnViewAppear() {
+        UISound.isHeadlessMode = true
+        let vm = HoneycombViewModel()
+
+        vm.checkLoadingBanner()
+
+        let queued = drainBannerQueue(vm)
         // Whichever Loading banner today's actual date/time maps to, SOME loading
         // message should be present — this can't pin an exact id without mocking the
         // system clock, so it checks membership across every Loading-location entry.
         let loadingIDs = BannerID.allCases.filter { $0.rawValue.hasPrefix("loading_") }
         guard queueContainsMessage(queued, from: loadingIDs) else {
-            fatalError("❌ HoneycombBannerTriggerTests: first match of the session didn't fire any Loading banner (queue: \(queued))")
+            fatalError("❌ HoneycombBannerTriggerTests: checkLoadingBanner() didn't fire any Loading banner (queue: \(queued))")
+        }
+    }
+
+    static func testLoadingBannerDoesNotFireTwiceInSameSession() {
+        UISound.isHeadlessMode = true
+        let vm = HoneycombViewModel()
+
+        vm.checkLoadingBanner()
+        _ = drainBannerQueue(vm)
+        vm.checkLoadingBanner() // simulates switching back to this game later
+
+        let queued = drainBannerQueue(vm)
+        guard queued.isEmpty else {
+            fatalError("❌ HoneycombBannerTriggerTests: REGRESSION — checkLoadingBanner() fired again on a revisit within the same session (queue: \(queued))")
         }
     }
 }

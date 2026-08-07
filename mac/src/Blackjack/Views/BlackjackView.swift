@@ -18,6 +18,12 @@ public struct BlackjackView: View {
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
     @State private var idlePromptTask:   DispatchWorkItem? = nil
+    // Milestone/loading banners (viewModel.bannerQueue) — separate from the hand
+    // result banner above since these are queued (possibly several in a row) rather
+    // than a single per-hand outcome.
+    @State private var showQueuedBanner: Bool = false
+    @State private var queuedBannerText: String = ""
+    @State private var queuedBannerTask: DispatchWorkItem? = nil
     // Measured width of the top toolbar row — drives the icon-only compact button swap.
     // Starts generous so buttons show full text before the first layout pass measures it.
     @State private var toolbarWidth: CGFloat = 2000
@@ -142,6 +148,10 @@ public struct BlackjackView: View {
                 .clipped()
 
             HotkeyLegendView(text: "Space=Deal   H=Hit   S=Stand   D=Double Down   P=Split")
+
+            if showQueuedBanner {
+                FlashBannerView(message: queuedBannerText)
+            }
         }
         .frame(minWidth: Self.minWindowSize.width, maxWidth: .infinity,
                minHeight: Self.minWindowSize.height, maxHeight: .infinity)
@@ -149,6 +159,7 @@ public struct BlackjackView: View {
             DispatchQueue.main.async {
                 applyInitialWindowSize()
             }
+            viewModel.checkLoadingBanner()
         }
         .background(WindowAccessor(callback: { window in
             self.hostingWindow = window
@@ -244,6 +255,24 @@ public struct BlackjackView: View {
             viewModel.debugSetupBannerState(kind)
             showResultBanner = true
         }
+        .onChange(of: viewModel.flashBannerTrigger) { _, _ in
+            guard let text = viewModel.flashBanner else { return }
+            flashQueuedBanner(text)
+        }
+    }
+
+    private func flashQueuedBanner(_ text: String) {
+        queuedBannerTask?.cancel()
+        queuedBannerText = text
+        withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
+        let task = DispatchWorkItem {
+            withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                viewModel.advanceBannerQueue()
+            }
+        }
+        queuedBannerTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
     }
 
     // MARK: - Toolbar

@@ -47,6 +47,61 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     public List<Pile> Foundations { get; } = new();
     public List<Pile> Tableaus { get; } = new();
 
+    // Total across every deck-count mode, not just the current ModeKey's bucket —
+    // "10 wins" for a milestone should mean the game overall, not one specific mode.
+    private int TotalGamesWon => Stats.FreecellStatsByMode.Values.Sum(m => m.GamesWon);
+    private int TotalGamesPlayed => Stats.FreecellStatsByMode.Values.Sum(m => m.GamesPlayed);
+
+    // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
+    // port's BannerQueue/EnqueueBanner/AdvanceBannerQueue.
+    private readonly Queue<string> _bannerQueue = new();
+    public event Action<string>? OnFlashBanner;
+
+    private void EnqueueBanner(string text)
+    {
+        _bannerQueue.Enqueue(text);
+        if (_bannerQueue.Count == 1) OnFlashBanner?.Invoke(text);
+    }
+
+    public void AdvanceBannerQueue()
+    {
+        if (_bannerQueue.Count == 0) return;
+        _bannerQueue.Dequeue();
+        if (_bannerQueue.Count > 0) OnFlashBanner?.Invoke(_bannerQueue.Peek());
+    }
+
+    // Fires once, exactly on the win that crosses a threshold — not "TotalGamesWon >=
+    // threshold", which would fire on every subsequent win too.
+    private void CheckWinMilestones()
+    {
+        var thresholds = new (int Threshold, BannerId Id)[]
+        {
+            (10, BannerId.MilestonesPlayerReaches10TotalWins),
+            (100, BannerId.MilestonesPlayerReaches100TotalWins),
+            (1000, BannerId.MilestonesPlayerReaches1000TotalWins),
+        };
+        foreach (var (threshold, id) in thresholds)
+        {
+            if (TotalGamesWon != threshold) continue;
+            var result = BannerCatalog.Fire(id);
+            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+        }
+    }
+
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from FreecellView's Loaded handler — a "loading" banner belongs to a
+    // screen transition, not a gameplay action, so switching to this game for the
+    // first time this session fires it; switching back to it later doesn't).
+    private bool _hasFiredLoadingBannerThisSession;
+
+    public void CheckLoadingBanner()
+    {
+        if (_hasFiredLoadingBannerThisSession) return;
+        _hasFiredLoadingBannerThisSession = true;
+        var result = BannerCatalog.Fire(BannerCatalog.LoadingBannerId());
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
+
     private readonly Stack<FreecellSnapshot> _undoStack = new();
     private FreecellSnapshot? _initialSnapshot;
     private System.Threading.Timer? _gameTimer;
@@ -205,7 +260,19 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
                 stats.FreecellStatsByMode[abandonedModeKey] = new ModeStats();
             stats.FreecellStatsByMode[abandonedModeKey].CurrentStreak = 0;
         }
-        if (countAsNewGame) stats.FreecellStatsByMode[ModeKey].GamesPlayed++;
+        if (countAsNewGame)
+        {
+            // Checked against the freshly-reloaded `stats` local, before this call's
+            // own increment below — Stats (the property) still holds whatever was
+            // loaded at construction time, which could already be stale by now.
+            if (stats.FreecellStatsByMode.Values.Sum(m => m.GamesPlayed) == 0)
+            {
+                var firstLaunchResult = BannerCatalog.Fire(BannerId.MilestonesFirstLaunchEver);
+                if (firstLaunchResult.Kind == BannerFireKind.Message) EnqueueBanner(firstLaunchResult.Text!);
+            }
+
+            stats.FreecellStatsByMode[ModeKey].GamesPlayed++;
+        }
         StatsService.SaveStats(stats);
         Stats = stats;
         _lastGameModeKey = ModeKey;
@@ -480,6 +547,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
             stats.FreecellStatsByMode[ModeKey] = ms;
             StatsService.SaveStats(stats);
             Stats = stats;
+            CheckWinMilestones();
         }
     }
 

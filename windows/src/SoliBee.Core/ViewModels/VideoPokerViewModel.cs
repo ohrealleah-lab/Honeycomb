@@ -26,6 +26,56 @@ public partial class VideoPokerViewModel : ObservableObject
 
     public bool IsBetBoardVisible => !Options.IsNoStressMode && !Options.HideBetBoard;
 
+    // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
+    // port's BannerQueue/EnqueueBanner/AdvanceBannerQueue.
+    private readonly Queue<string> _bannerQueue = new();
+    public event Action<string>? OnFlashBanner;
+
+    private void EnqueueBanner(string text)
+    {
+        _bannerQueue.Enqueue(text);
+        if (_bannerQueue.Count == 1) OnFlashBanner?.Invoke(text);
+    }
+
+    public void AdvanceBannerQueue()
+    {
+        if (_bannerQueue.Count == 0) return;
+        _bannerQueue.Dequeue();
+        if (_bannerQueue.Count > 0) OnFlashBanner?.Invoke(_bannerQueue.Peek());
+    }
+
+    // Fires once, exactly on crossing a threshold — checked against the value BEFORE
+    // this draw's win was added.
+    private void CheckWinMilestones(int previousWinningHands)
+    {
+        var thresholds = new (int Threshold, BannerId Id)[]
+        {
+            (10, BannerId.MilestonesPlayerReaches10TotalWins),
+            (100, BannerId.MilestonesPlayerReaches100TotalWins),
+            (1000, BannerId.MilestonesPlayerReaches1000TotalWins),
+        };
+        foreach (var (threshold, id) in thresholds)
+        {
+            if (previousWinningHands >= threshold || Stats.WinningHands < threshold) continue;
+            var result = BannerCatalog.Fire(id);
+            if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+        }
+    }
+
+    // Fires once per app session, the first time this game's view actually appears
+    // (called from VideoPokerView's Loaded handler — a "loading" banner belongs to
+    // a screen transition, not a gameplay action, so switching to this game for the
+    // first time this session fires it; switching back to it later doesn't).
+    private bool _hasFiredLoadingBannerThisSession;
+
+    public void CheckLoadingBanner()
+    {
+        if (_hasFiredLoadingBannerThisSession) return;
+        _hasFiredLoadingBannerThisSession = true;
+        var result = BannerCatalog.Fire(BannerCatalog.LoadingBannerId());
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
+
     private List<Card> _deck = new();
     // Session-scoped (not persisted) — starts at 0 each time the player buys in and
     // counts hands played since then, distinct from Stats.TotalHands's lifetime total.
@@ -164,6 +214,15 @@ public partial class VideoPokerViewModel : ObservableObject
             // bet shown on screen.
             if (State.SessionCredits < State.CurrentBet) return;
         }
+        // Stats.TotalHands only grows via the increment below, so checking it here,
+        // before that increment, is this game's equivalent of "is this the very
+        // first hand ever."
+        if (Stats.TotalHands == 0)
+        {
+            var firstLaunchResult = BannerCatalog.Fire(BannerId.MilestonesFirstLaunchEver);
+            if (firstLaunchResult.Kind == BannerFireKind.Message) EnqueueBanner(firstLaunchResult.Text!);
+        }
+
         if (!freePlay) State.SessionCredits -= State.CurrentBet;
         State.HeldSlots        = new bool[5];
         State.WinningCardMask  = new bool[5];
@@ -207,6 +266,7 @@ public partial class VideoPokerViewModel : ObservableObject
         // (streaks, "winning hand" display), but never touches money-based stats.
         if (payout > 0)
         {
+            int previousWinningHands = Stats.WinningHands;
             Stats.WinningHands++;
             Stats.CurrentStreak++;
             if (Stats.CurrentStreak > Stats.LongestStreak)
@@ -219,6 +279,7 @@ public partial class VideoPokerViewModel : ObservableObject
             var key = entry!.HandName;
             Stats.HandCounts[key] = Stats.HandCounts.GetValueOrDefault(key) + 1;
             if (entry.Rank == PokerHandRank.RoyalFlush) Stats.RoyalFlushCount++;
+            CheckWinMilestones(previousWinningHands);
         }
         else
         {

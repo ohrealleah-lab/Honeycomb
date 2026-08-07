@@ -90,6 +90,9 @@ public partial class VideoPokerView : UserControl
     {
         if (DataContext is not VideoPokerViewModel vm) return;
         vm.PropertyChanged += Vm_PropertyChanged;
+        vm.OnFlashBanner += Vm_OnFlashBanner;
+        MilestoneToast.OnDismissed += MilestoneToast_OnDismissed;
+        vm.CheckLoadingBanner();
 
         TopLevel.GetTopLevel(this)?.AddHandler(
             InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
@@ -101,10 +104,24 @@ public partial class VideoPokerView : UserControl
         Refresh(vm);
     }
 
+    private void Vm_OnFlashBanner(string message)
+    {
+        Dispatcher.UIThread.Post(() => MilestoneToast.Flash(message, TimeSpan.FromSeconds(2)));
+    }
+
+    private void MilestoneToast_OnDismissed()
+    {
+        (DataContext as VideoPokerViewModel)?.AdvanceBannerQueue();
+    }
+
     private void VideoPokerView_Unloaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is VideoPokerViewModel vm)
+        {
             vm.PropertyChanged -= Vm_PropertyChanged;
+            vm.OnFlashBanner -= Vm_OnFlashBanner;
+        }
+        MilestoneToast.OnDismissed -= MilestoneToast_OnDismissed;
         TopLevel.GetTopLevel(this)?.RemoveHandler(
             InputElement.KeyDownEvent, OnKeyDown);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
