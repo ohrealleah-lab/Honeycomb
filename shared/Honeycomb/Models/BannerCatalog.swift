@@ -111,6 +111,47 @@ public final class BannerCatalog {
     // from a later game switch.
     private static var hasFiredAnyLoadingBannerThisSession = false
 
+    // Lunisolar/lunar holidays (Holi, Rosh Hashanah, Diwali, Eid al-Fitr, Hanukkah)
+    // don't fall on a fixed Gregorian date, so — unlike the month/day checks above —
+    // they need a real per-year lookup. No formula shortcut exists for these, so this
+    // is a flat 20-year table (2025-2045) keyed "YYYY-M-D", one entry per year per
+    // holiday — each holiday is a multi-day observance in real life, but only its
+    // first day is listed here, since that's the one day the banner should show.
+    private static let floatingHolidayDates: [String: BannerID] = {
+        var dates: [String: BannerID] = [:]
+        let holi = ["2025-3-14", "2026-3-3", "2027-3-22", "2028-3-11", "2029-3-29",
+                     "2030-3-19", "2031-3-8", "2032-3-25", "2033-3-15", "2034-3-4",
+                     "2035-3-22", "2036-3-12", "2037-3-1", "2038-3-19", "2039-3-8",
+                     "2040-3-26", "2041-3-15", "2042-3-5", "2043-3-23", "2044-3-12",
+                     "2045-3-1"]
+        let roshHashanah = ["2025-9-23", "2026-9-12", "2027-10-2", "2028-9-21", "2029-9-10",
+                             "2030-9-28", "2031-9-18", "2032-9-6", "2033-9-24", "2034-9-14",
+                             "2035-10-4", "2036-9-22", "2037-9-10", "2038-9-30", "2039-9-19",
+                             "2040-9-8", "2041-9-26", "2042-9-15", "2043-10-5", "2044-9-22",
+                             "2045-9-12"]
+        let diwali = ["2025-10-20", "2026-11-8", "2027-10-29", "2028-10-17", "2029-11-5",
+                       "2030-10-26", "2031-11-14", "2032-11-2", "2033-10-22", "2034-11-10",
+                       "2035-10-30", "2036-10-19", "2037-11-7", "2038-10-28", "2039-11-15",
+                       "2040-11-4", "2041-10-24", "2042-11-12", "2043-10-31", "2044-10-20",
+                       "2045-11-9"]
+        let eidAlFitr = ["2025-3-30", "2026-3-19", "2027-3-9", "2028-2-26", "2029-2-14",
+                          "2030-2-3", "2031-1-24", "2032-1-13", "2033-1-2", "2033-12-22",
+                          "2034-12-11", "2035-11-30", "2036-11-18", "2037-11-8", "2038-10-29",
+                          "2039-10-18", "2040-10-6", "2041-9-26", "2042-9-15", "2043-9-4",
+                          "2044-8-24", "2045-8-13"]
+        let hanukkah = ["2025-12-15", "2026-12-5", "2027-12-25", "2028-12-13", "2029-12-2",
+                         "2030-12-21", "2031-12-10", "2032-11-28", "2033-12-17", "2034-12-7",
+                         "2035-12-26", "2036-12-14", "2037-12-3", "2038-12-22", "2039-12-12",
+                         "2040-11-30", "2041-12-18", "2042-12-8", "2043-12-27", "2044-12-15",
+                         "2045-12-4"]
+        for d in holi { dates[d] = .loadingGameLoadsOnHoli }
+        for d in roshHashanah { dates[d] = .loadingGameLoadsOnRoshHashanah }
+        for d in diwali { dates[d] = .loadingGameLoadsOnDiwali }
+        for d in eidAlFitr { dates[d] = .loadingGameLoadsOnEidAlFitr }
+        for d in hanukkah { dates[d] = .loadingGameLoadsOnHanukkah }
+        return dates
+    }()
+
     // Decides which "loading" banner (checked once per game, per app session — each
     // ViewModel guards this with its own one-shot flag) fits right now. Time-of-day
     // windows and the one-year-anniversary check only apply at app launch — they're
@@ -134,6 +175,13 @@ public final class BannerCatalog {
         if month == 10, day == 31 { return .loadingGameLoadsOnHalloweenOct31 }
         if month == 2, day == 14 { return .loadingGameLoadsOnValentinesDayFeb14 }
         if month == 4, day == 1 { return .loadingPlayingOnAprilFoolsDayApr1 }
+        if month == 4, day == 22 { return .loadingGameLoadsOnEarthDayApr22 }
+        if month == 8, day == 15 { return .loadingGameLoadsOnNationalHoneyDayAug15 }
+        if month == 3, day == 14 { return .loadingGameLoadsOnPiDayMar14 }
+        if month == 12, day == 31 { return .loadingGameLoadsOnNewYearsEveDec31 }
+        if month == 12, day == 25 { return .loadingGameLoadsOnChristmasDec25 }
+        let year = calendar.component(.year, from: now)
+        if let floatingID = floatingHolidayDates["\(year)-\(month)-\(day)"] { return floatingID }
 
         if isAppLaunch {
             let hour = calendar.component(.hour, from: now)

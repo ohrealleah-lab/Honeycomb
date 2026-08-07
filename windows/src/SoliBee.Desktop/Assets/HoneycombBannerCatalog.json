@@ -97,7 +97,18 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "Every heart in the hive beats for you."
+        "Every heart in the hive beats for you.",
+        "Hearts flutter through the hive today.",
+        "Every heart in the comb beats a little louder.",
+        "The hive is full of hearts, and yours is winning.",
+        "Diamonds sparkle brighter on Valentine's Day.",
+        "The bees traded honey for diamonds today.",
+        "A diamond in the rough, sweeter than honey.",
+        "Clover and clubs bloom together this Valentine's.",
+        "Even the clubs are feeling the love today.",
+        "Cupid's arrow struck the spades first.",
+        "The spades soften their edges for Valentine's Day.",
+        "Even spades dig deep for love today."
       ]
     },
     {
@@ -123,7 +134,11 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "The bees are feeling mischievous today."
+        "The bees are feeling mischievous today.",
+        "Is that card really what it seems… or an April Fools' trick?",
+        "Is that a 5-star card, or just a worker bee in a fake crown?",
+        "Maybe it's time for a wasp theme…",
+        "Pranksters in the hive! Trust your cards, not the drones."
       ]
     },
     {
@@ -884,6 +899,136 @@
         "Order above all!",
         "Obey the Queen!",
         "Royal decree issued!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_earth_day_apr_22",
+      "category": "Loading",
+      "trigger": "Game loads on Earth Day (Apr 22).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Protect the flowers, save the bees! Happy Earth Day!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_national_honey_day_aug_15",
+      "category": "Loading",
+      "trigger": "Game loads on National Honey Day (Aug 15).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "A golden celebration in the comb — Happy Honey Day!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_pi_day_mar_14",
+      "category": "Loading",
+      "trigger": "Game loads on Pi Day (Mar 14).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "The math in the comb is extra precise today!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_new_years_eve_dec_31",
+      "category": "Loading",
+      "trigger": "Game loads on New Year's Eve (Dec 31).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Counting down the final buzz of the year!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_christmas_dec_25",
+      "category": "Loading",
+      "trigger": "Game loads on Christmas (Dec 25).",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Peace, warmth, and sweetness to all in the hive this Christmas!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_holi",
+      "category": "Loading",
+      "trigger": "Game loads on Holi.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Vibrant colors bloom across the comb! Happy Holi!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_rosh_hashanah",
+      "category": "Loading",
+      "trigger": "Game loads on Rosh Hashanah.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Wishing you a sweet and fruitful new year — Shanah Tovah from the hive!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_diwali",
+      "category": "Loading",
+      "trigger": "Game loads on Diwali.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "Wishing you a season of light, sweetness, and harmony in the hive."
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_eid_al_fitr",
+      "category": "Loading",
+      "trigger": "Game loads on Eid al-Fitr.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "A season of gratitude, sweetness, and joy. Eid Mubarak from the hive!"
+      ]
+    },
+    {
+      "id": "loading_game_loads_on_hanukkah",
+      "category": "Loading",
+      "trigger": "Game loads on Hanukkah.",
+      "type": "repeatableFlavor",
+      "location": "loading",
+      "gated": false,
+      "gateChance": null,
+      "fallback": null,
+      "messages": [
+        "May your home bee filled with light, peace, and joy this Hanukkah."
       ]
     }
   ]

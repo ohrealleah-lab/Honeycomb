@@ -66,6 +66,16 @@ public enum BannerId
     RuleSpecificRouletteRollsSymmetry,
     RuleSpecificRouletteRollsNectarExchange,
     RuleSpecificRouletteRollsHierarchy,
+    LoadingGameLoadsOnEarthDayApr22,
+    LoadingGameLoadsOnNationalHoneyDayAug15,
+    LoadingGameLoadsOnPiDayMar14,
+    LoadingGameLoadsOnNewYearsEveDec31,
+    LoadingGameLoadsOnChristmasDec25,
+    LoadingGameLoadsOnHoli,
+    LoadingGameLoadsOnRoshHashanah,
+    LoadingGameLoadsOnDiwali,
+    LoadingGameLoadsOnEidAlFitr,
+    LoadingGameLoadsOnHanukkah,
 }
 
 public static class BannerIdExtensions
@@ -130,6 +140,16 @@ public static class BannerIdExtensions
         ["rule_specific_roulette_rolls_symmetry"] = BannerId.RuleSpecificRouletteRollsSymmetry,
         ["rule_specific_roulette_rolls_nectar_exchange"] = BannerId.RuleSpecificRouletteRollsNectarExchange,
         ["rule_specific_roulette_rolls_hierarchy"] = BannerId.RuleSpecificRouletteRollsHierarchy,
+        ["loading_game_loads_on_earth_day_apr_22"] = BannerId.LoadingGameLoadsOnEarthDayApr22,
+        ["loading_game_loads_on_national_honey_day_aug_15"] = BannerId.LoadingGameLoadsOnNationalHoneyDayAug15,
+        ["loading_game_loads_on_pi_day_mar_14"] = BannerId.LoadingGameLoadsOnPiDayMar14,
+        ["loading_game_loads_on_new_years_eve_dec_31"] = BannerId.LoadingGameLoadsOnNewYearsEveDec31,
+        ["loading_game_loads_on_christmas_dec_25"] = BannerId.LoadingGameLoadsOnChristmasDec25,
+        ["loading_game_loads_on_holi"] = BannerId.LoadingGameLoadsOnHoli,
+        ["loading_game_loads_on_rosh_hashanah"] = BannerId.LoadingGameLoadsOnRoshHashanah,
+        ["loading_game_loads_on_diwali"] = BannerId.LoadingGameLoadsOnDiwali,
+        ["loading_game_loads_on_eid_al_fitr"] = BannerId.LoadingGameLoadsOnEidAlFitr,
+        ["loading_game_loads_on_hanukkah"] = BannerId.LoadingGameLoadsOnHanukkah,
     };
 
     public static BannerId Parse(string id) => ById[id];
