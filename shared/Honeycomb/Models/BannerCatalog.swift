@@ -121,6 +121,7 @@ public final class BannerCatalog {
     public static func loadingBannerID() -> BannerID {
         let isAppLaunch = !hasFiredAnyLoadingBannerThisSession
         hasFiredAnyLoadingBannerThisSession = true
+        lastLoadingBannerWasAppLaunch = isAppLaunch
 
         if isAppLaunch, shouldShowOneYearAnniversaryBanner() { return .loadingFirstLaunchAfterPlayingForOneYear }
 
@@ -148,6 +149,24 @@ public final class BannerCatalog {
             if hour >= 21 { return .loadingMatchStartsBetween900PmAndMidnightLocalTime }
         }
         return .loadingOnGameLoad
+    }
+
+    // Set by loadingBannerID() right before its caller enqueues the resulting banner —
+    // every Loading-category catalog entry is ungated (always .message, never .none), so
+    // a loadingBannerID() call is always immediately followed by that banner actually
+    // being flashed. The very first loading banner of an app session gets a longer 3s
+    // display (vs. the usual 2s) so there's actually time to read it — a match for
+    // Windows, whose Avalonia UI has a startup cost native AppKit doesn't, though the
+    // Mac side keeps the same duration for consistency between platforms rather than
+    // because it strictly needs the extra time itself. Consumed (reset to false) by the
+    // read itself so it can only ever apply to the one flash it was set for, not some
+    // later unrelated banner.
+    private static var lastLoadingBannerWasAppLaunch = false
+
+    public static func consumeAppLaunchLoadingFlag() -> Bool {
+        let wasAppLaunch = lastLoadingBannerWasAppLaunch
+        lastLoadingBannerWasAppLaunch = false
+        return wasAppLaunch
     }
 
     // One shared anchor for the whole app (not per-game) — "a year since you started

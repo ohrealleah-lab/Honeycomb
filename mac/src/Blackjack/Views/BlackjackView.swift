@@ -272,7 +272,10 @@ public struct BlackjackView: View {
             }
         }
         queuedBannerTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
+        // The very first loading banner of an app session gets extra time to actually be
+        // read — see BannerCatalog.consumeAppLaunchLoadingFlag().
+        let duration = BannerCatalog.consumeAppLaunchLoadingFlag() ? 3.0 : 2.0
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: task)
     }
 
     // MARK: - Toolbar
