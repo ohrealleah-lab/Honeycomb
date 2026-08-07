@@ -64,6 +64,11 @@ public struct BeecellView: View {
     @State private var zoomController: WindowZoomController? = nil
     @FocusState private var isBoardFocused: Bool
     @State private var keyMonitor: Any? = nil
+    // DragGesture only tracks the primary (left) button — pressing right/middle mouse
+    // mid-drag doesn't cancel it, but it also doesn't call .onEnded (AppKit swallows the
+    // left-button event stream), leaving draggedCards stuck non-nil forever just like the
+    // window-losing-key-status case cancelDrag() already guards against (see its comment).
+    @State private var dragCancelMonitor: Any? = nil
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
@@ -668,11 +673,21 @@ public struct BeecellView: View {
                 }
                 return event
             }
+            dragCancelMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown, .otherMouseDown]) { event in
+                if !draggedCards.isEmpty {
+                    cancelDrag()
+                }
+                return event
+            }
         }
         .onDisappear {
             if let monitor = keyMonitor {
                 NSEvent.removeMonitor(monitor)
                 keyMonitor = nil
+            }
+            if let monitor = dragCancelMonitor {
+                NSEvent.removeMonitor(monitor)
+                dragCancelMonitor = nil
             }
             noHintsBannerTask?.cancel()
             noHintsBannerTask = nil
