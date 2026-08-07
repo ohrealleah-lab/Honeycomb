@@ -54,23 +54,23 @@ public class HoneycombCardGeneratorTests
         var cards = HoneycombCardGenerator.GenerateAllCards(1);
         Assert.Equal(552, cards.Count);
 
-        AssertCard(cards[0], 1, "Spade 1", 1, new[] {4,4,4,2}, "S");
+        AssertCard(cards[0], 1, "Spade 1", 1, new[] {2,5,3,4}, "S");
         AssertCard(cards[1], 2, "Spade 2", 1, new[] {3,1,4,5}, "S");
-        AssertCard(cards[2], 3, "Spade 3", 1, new[] {3,4,2,4}, "S");
-        AssertCard(cards[25], 26, "Spade 26", 1, new[] {2,5,4,2}, "S");
-        AssertCard(cards[26], 27, "Spade 27", 2, new[] {3,4,4,6}, "S");
-        AssertCard(cards[61], 62, "Spade 62", 2, new[] {2,7,1,7}, "S");
-        AssertCard(cards[62], 63, "Spade 63", 3, new[] {6,6,5,3}, "S");
-        AssertCard(cards[102], 103, "Spade 103", 3, new[] {3,8,5,5}, "S");
-        AssertCard(cards[103], 104, "Spade 104", 4, new[] {6,7,7,5}, "S");
-        AssertCard(cards[123], 124, "Spade 124", 4, new[] {7,7,3,7}, "S");
-        AssertCard(cards[124], 125, "Spade 125", 5, new[] {7,7,9,6}, "S");
-        AssertCard(cards[137], 138, "Spade 138", 5, new[] {10,4,8,8}, "S");
-        AssertCard(cards[138], 139, "Heart 1", 1, new[] {2,5,3,5}, "H");
-        AssertCard(cards[139], 140, "Heart 2", 1, new[] {2,6,3,4}, "H");
-        AssertCard(cards[275], 276, "Heart 138", 5, new[] {5,10,10,5}, "H");
-        AssertCard(cards[413], 414, "Diamond 138", 5, new[] {10,6,2,10}, "D");
-        AssertCard(cards[551], 552, "Club 138", 5, new[] {10,7,2,6}, "C");
+        AssertCard(cards[2], 3, "Spade 3", 1, new[] {3,4,1,7}, "S");
+        AssertCard(cards[25], 26, "Spade 26", 1, new[] {3,3,5,3}, "S");
+        AssertCard(cards[26], 27, "Spade 27", 2, new[] {2,6,6,6}, "S");
+        AssertCard(cards[61], 62, "Spade 62", 2, new[] {2,4,7,7}, "S");
+        AssertCard(cards[62], 63, "Spade 63", 3, new[] {8,6,5,4}, "S");
+        AssertCard(cards[102], 103, "Spade 103", 3, new[] {4,4,7,8}, "S");
+        AssertCard(cards[103], 104, "Spade 104", 4, new[] {8,1,9,8}, "S");
+        AssertCard(cards[123], 124, "Spade 124", 4, new[] {8,6,8,6}, "S");
+        AssertCard(cards[124], 125, "Spade 125", 5, new[] {10,5,2,10}, "S");
+        AssertCard(cards[137], 138, "Spade 138", 5, new[] {7,5,10,5}, "S");
+        AssertCard(cards[138], 139, "Heart 1", 1, new[] {1,1,6,5}, "H");
+        AssertCard(cards[139], 140, "Heart 2", 1, new[] {2,4,2,4}, "H");
+        AssertCard(cards[275], 276, "Heart 138", 5, new[] {1,8,7,9}, "H");
+        AssertCard(cards[413], 414, "Diamond 138", 5, new[] {6,10,1,10}, "D");
+        AssertCard(cards[551], 552, "Club 138", 5, new[] {6,1,9,10}, "C");
     }
 
     [Fact]
@@ -79,11 +79,11 @@ public class HoneycombCardGeneratorTests
         var cards = HoneycombCardGenerator.GenerateAllCards(42);
         Assert.Equal(552, cards.Count);
 
-        AssertCard(cards[0], 1, "Spade 1", 1, new[] {6,2,2,3}, "S");
-        AssertCard(cards[1], 2, "Spade 2", 1, new[] {3,5,2,4}, "S");
-        AssertCard(cards[137], 138, "Spade 138", 5, new[] {9,7,8,3}, "S");
-        AssertCard(cards[138], 139, "Heart 1", 1, new[] {2,2,2,7}, "H");
-        AssertCard(cards[551], 552, "Club 138", 5, new[] {6,2,8,9}, "C");
+        AssertCard(cards[0], 1, "Spade 1", 1, new[] {4,3,2,5}, "S");
+        AssertCard(cards[1], 2, "Spade 2", 1, new[] {5,4,2,1}, "S");
+        AssertCard(cards[137], 138, "Spade 138", 5, new[] {6,10,4,10}, "S");
+        AssertCard(cards[138], 139, "Heart 1", 1, new[] {5,3,4,2}, "H");
+        AssertCard(cards[551], 552, "Club 138", 5, new[] {5,5,9,8}, "C");
     }
     
     [Fact]
