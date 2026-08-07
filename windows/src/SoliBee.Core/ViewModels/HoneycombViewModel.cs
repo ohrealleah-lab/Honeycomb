@@ -1458,13 +1458,23 @@ public partial class HoneycombViewModel : ObservableObject
         return $"{possessive} {phrase}";
     }
 
-    // Banner(s) first, then the reveal's own flip once they've mostly faded — same
-    // announcement pacing as StageCaptureCommit, for the same reason (a Hive Swarm
-    // reveal is just as much a "special event" as a Same/Plus/Fallen Ace/Combo
-    // capture). Guarded by _matchGeneration so a match that's moved on (New Game/
-    // Surrender/a fresh match) during the delay can't commit a stale board.
+    // How long to hold before even announcing a Hive Swarm reveal — this fires from
+    // AdvanceBombShelterTimers synchronously, right on the heels of whatever the player
+    // was just watching land (the just-placed card, or its own capture's flip), with
+    // nothing separating the two. Without this, the reveal's banner could appear in the
+    // exact same instant as that unrelated prior event, reading as one confused flash
+    // instead of two distinct beats. Matches the Swift port's own pre-reveal delay.
+    private const int HiveSwarmRevealPreDelayMs = 1000;
+
+    // Announcement pause first, then banner(s), then the reveal's own flip once they've
+    // mostly faded — same pacing as StageCaptureCommit, for the same reason (a Hive Swarm
+    // reveal is just as much a "special event" as a Same/Plus/Fallen Ace/Combo capture).
+    // Guarded by _matchGeneration so a match that's moved on (New Game/Surrender/a fresh
+    // match) during either delay can't commit a stale board.
     private async void StageBombShelterReveal(HoneycombBoard revealedBoard, List<string> banners, int generation, HashSet<Guid> attackerIds)
     {
+        if (!_isHeadless) await Task.Delay(HiveSwarmRevealPreDelayMs);
+        if (generation != _matchGeneration || !IsPlaying) return;
         foreach (var banner in banners) EnqueueBanner(banner);
         if (!_isHeadless) await Task.Delay(CaptureBannerPauseMs);
         if (generation != _matchGeneration || !IsPlaying) return;

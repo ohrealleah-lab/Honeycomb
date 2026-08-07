@@ -1749,8 +1749,9 @@ public final class HoneycombViewModel {
         } else {
             // Give Stage A's own flip/banner a moment to actually be seen (its flip
             // animation alone runs ~0.4s — HoneycombCardView's onChange(of: card.owner))
-            // before Stage B's board change and banner(s) land.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: revealBombShelters)
+            // before Stage B's board change and banner(s) land. Matches the Windows
+            // port's HiveSwarmRevealPreDelayMs (kept at the same 1.0s on both platforms).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: revealBombShelters)
         }
     }
 
