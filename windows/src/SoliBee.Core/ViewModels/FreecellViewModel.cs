@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -99,6 +100,24 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         if (_hasFiredLoadingBannerThisSession) return;
         _hasFiredLoadingBannerThisSession = true;
         var result = BannerCatalog.Fire(BannerCatalog.LoadingBannerId());
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
+
+    // Ambiance/Idle nudge: fires if a full minute passes with no move. Re-armed via a
+    // generation-token so an already-scheduled check from before the last move sees a
+    // mismatch and silently no-ops instead of firing late. Mirrors the Honeycomb
+    // port's ScheduleIdleCheck — called from InitializeGame() and every move site.
+    private int _idleCheckGeneration = 0;
+    private const int IdleToastDelayMs = 60000;
+
+    public async void ScheduleIdleActionCheck()
+    {
+        if (TestMode.IsHeadless) return;
+        _idleCheckGeneration++;
+        var generation = _idleCheckGeneration;
+        await Task.Delay(IdleToastDelayMs);
+        if (_idleCheckGeneration != generation || State.HasWon) return;
+        var result = BannerCatalog.Fire(BannerId.IdleActionNoActionTakenForOneMinute);
         if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
     }
 
@@ -303,6 +322,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(TimeDisplay));
         OnPropertyChanged(nameof(CanUndo));
+        ScheduleIdleActionCheck();
     }
 
     public void RestartGame()
@@ -448,6 +468,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
 
         UpdateScore(source.Type, target.Type, cards.Count);
         State.MovesCount++;
+        ScheduleIdleActionCheck();
         CheckVictory();
         CheckAutocomplete();
         CheckDeadlock();
@@ -483,7 +504,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     // (its bottom-most card — cards.Last() — matching this fork's convention elsewhere).
     private void UpdatePointPopup(Card anchorCard, PileType source, PileType target, int cardCount)
     {
-        if (!Options.FreecellShowPointHighlights || IsAutoplayRunning) return;
+        if (!Options.HoneyMode || IsAutoplayRunning) return;
 
         CardPointPopup? popup;
         if (target == PileType.Foundation && source != PileType.Foundation)

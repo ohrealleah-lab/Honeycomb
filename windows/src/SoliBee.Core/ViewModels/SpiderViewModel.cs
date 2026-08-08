@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -91,6 +92,24 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         if (_hasFiredLoadingBannerThisSession) return;
         _hasFiredLoadingBannerThisSession = true;
         var result = BannerCatalog.Fire(BannerCatalog.LoadingBannerId());
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
+
+    // Ambiance/Idle nudge: fires if a full minute passes with no move. Re-armed via a
+    // generation-token so an already-scheduled check from before the last move sees a
+    // mismatch and silently no-ops instead of firing late. Mirrors the Honeycomb
+    // port's ScheduleIdleCheck — called from InitializeGame() and every move site.
+    private int _idleCheckGeneration = 0;
+    private const int IdleToastDelayMs = 60000;
+
+    public async void ScheduleIdleActionCheck()
+    {
+        if (TestMode.IsHeadless) return;
+        _idleCheckGeneration++;
+        var generation = _idleCheckGeneration;
+        await Task.Delay(IdleToastDelayMs);
+        if (_idleCheckGeneration != generation || State.HasWon) return;
+        var result = BannerCatalog.Fire(BannerId.IdleActionNoActionTakenForOneMinute);
         if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
     }
 
@@ -276,6 +295,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         OnPropertyChanged(nameof(Foundations));
         OnPropertyChanged(nameof(TimeDisplay));
         OnPropertyChanged(nameof(CanUndo));
+        ScheduleIdleActionCheck();
     }
 
     public void RestartGame()
@@ -436,6 +456,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         string? movedAnchorCardId = cards.Last().Id;
 
         State.MovesCount++;
+        ScheduleIdleActionCheck();
         // A completed run (+100, anchored to its Ace) is the more significant event —
         // let it win over this move's own -1 (same "later/more significant event wins"
         // rule as Klondike/Freecell's compound cases) when both happen in one move.
@@ -488,6 +509,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         State.Score = Math.Max(0, State.Score - 1);
 
         State.MovesCount++;
+        ScheduleIdleActionCheck();
         // No popup for the deal's own -1 — there's no single card to anchor it to (it
         // affects all ten columns at once) — but a run it happens to complete still gets
         // its usual +100 popup, anchored to that run's Ace.
@@ -512,7 +534,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     // stale-callback guard the game/autocomplete timers above use via _syncContext.
     private void ShowPointPopup(string cardId, string displayText)
     {
-        if (!Options.SpiderShowPointHighlights || IsAutoplayRunning) return;
+        if (!Options.HoneyMode || IsAutoplayRunning) return;
 
         _pointPopupGeneration++;
         int generation = _pointPopupGeneration;

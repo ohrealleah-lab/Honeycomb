@@ -10,7 +10,7 @@ public struct GameOptions: Codable, Equatable {
     public var hideHintButton: Bool = false
     public var noStressMode: Bool = false
     public var deckCount: Int = 1
-    public var showPointHighlights: Bool = true
+    public var honeyMode: Bool = true
 
     public var drawMode: GameState.DrawMode = .drawThree
 
@@ -23,7 +23,7 @@ public struct GameOptions: Codable, Equatable {
         hideHintButton: Bool = false,
         noStressMode: Bool = false,
         deckCount: Int = 1,
-        showPointHighlights: Bool = true,
+        honeyMode: Bool = true,
         drawMode: GameState.DrawMode = .drawThree
     ) {
         self.isTimed = isTimed
@@ -34,7 +34,7 @@ public struct GameOptions: Codable, Equatable {
         self.hideHintButton = hideHintButton
         self.noStressMode = noStressMode
         self.deckCount = deckCount
-        self.showPointHighlights = showPointHighlights
+        self.honeyMode = honeyMode
         self.drawMode = drawMode
     }
 
@@ -47,7 +47,7 @@ public struct GameOptions: Codable, Equatable {
         case hideHintButton
         case noStressMode
         case deckCount
-        case showPointHighlights
+        case honeyMode
         case drawMode
     }
 
@@ -61,7 +61,7 @@ public struct GameOptions: Codable, Equatable {
         self.hideHintButton = (try? container.decode(Bool.self, forKey: .hideHintButton)) ?? false
         self.noStressMode = (try? container.decode(Bool.self, forKey: .noStressMode)) ?? false
         self.deckCount = (try? container.decode(Int.self, forKey: .deckCount)) ?? 1
-        self.showPointHighlights = (try? container.decode(Bool.self, forKey: .showPointHighlights)) ?? true
+        self.honeyMode = (try? container.decode(Bool.self, forKey: .honeyMode)) ?? true
         self.drawMode = (try? container.decode(GameState.DrawMode.self, forKey: .drawMode)) ?? .drawThree
     }
 }

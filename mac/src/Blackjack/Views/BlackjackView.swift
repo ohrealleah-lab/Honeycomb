@@ -197,6 +197,7 @@ public struct BlackjackView: View {
             }
         }
         .onChange(of: viewModel.state.phase) { _, newPhase in
+            viewModel.scheduleIdleActionCheck()
             if newPhase == .result {
                 idlePromptTask?.cancel()
                 withAnimation(.easeInOut(duration: 0.4)) { showIdlePrompt = false }
@@ -811,6 +812,7 @@ struct BlackjackOptionsView: View {
     @State private var startingCredits: Int
     @State private var isSoundEnabled: Bool
     @State private var noStressMode: Bool
+    @State private var honeyMode: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -824,6 +826,7 @@ struct BlackjackOptionsView: View {
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
         _noStressMode    = State(initialValue: viewModel.options.noStressMode)
+        _honeyMode       = State(initialValue: viewModel.options.honeyMode)
     }
 
     var body: some View {
@@ -841,6 +844,7 @@ struct BlackjackOptionsView: View {
                 o.startingCredits = startingCredits
                 o.isSoundEnabled  = isSoundEnabled
                 o.noStressMode    = noStressMode
+                o.honeyMode       = honeyMode
                 viewModel.options = o
                 // Options can now be opened mid-hand — if No Stress Mode just got turned
                 // on while one is in progress, end it and deal fresh instead of leaving a
@@ -855,6 +859,7 @@ struct BlackjackOptionsView: View {
                 // value over this one.
                 coordinator.isSoundEnabled = isSoundEnabled
                 coordinator.noStressMode = noStressMode
+                coordinator.honeyMode = honeyMode
             }
         ) {
             Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 10...10000, step: 10)
@@ -864,6 +869,7 @@ struct BlackjackOptionsView: View {
 
             Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body))
             Toggle("No Stress Mode",    isOn: $noStressMode).font(.system(.body))
+            Toggle("Honey Mode (Flavor)", isOn: $honeyMode).font(.system(.body))
         }
     }
 }

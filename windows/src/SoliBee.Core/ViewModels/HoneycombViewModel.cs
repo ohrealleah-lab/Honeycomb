@@ -411,18 +411,19 @@ public partial class HoneycombViewModel : ObservableObject
     // every other rule) because its flavor text depends on what the trade actually
     // did, not just that the rule is active — a 5-star card leaving the player's hand
     // reads very differently from the player coming out ahead.
-    private static string FormatSwapRuleForBanner(PendingSwap swap)
+    private string FormatSwapRuleForBanner(PendingSwap swap)
     {
         var defaultText = HoneycombRule.Swap.DisplayName();
+        var tokens = new Dictionary<string, string> { ["OpponentName"] = OpponentNameDisplay };
         if (swap.PlayerCard.Data.Stars == 5)
         {
-            return BannerCatalogText(BannerId.RuleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, defaultText);
+            return BannerCatalogText(BannerId.RuleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, defaultText, tokens);
         }
         if (swap.OpponentCard.Data.Stars > swap.PlayerCard.Data.Stars)
         {
-            return BannerCatalogText(BannerId.RuleSpecificNectarExchangeTradesThePlayersWorstCardForThe, defaultText);
+            return BannerCatalogText(BannerId.RuleSpecificNectarExchangeTradesThePlayersWorstCardForThe, defaultText, tokens);
         }
-        return BannerCatalogText(BannerId.RuleSpecificRouletteRollsNectarExchange, defaultText);
+        return BannerCatalogText(BannerId.RuleSpecificRouletteRollsNectarExchange, defaultText, tokens);
     }
 
     private List<HoneycombCard> BuildPlayerHand()
@@ -1092,7 +1093,7 @@ public partial class HoneycombViewModel : ObservableObject
         FlashCaptureAttackers(attackerId);
         _isAnimating = true;
 
-        if (Options.ShowPointHighlights && directStatIndices.Count > 0 && !_isHeadless)
+        if (SettingsService.LoadOptions().HoneyMode && directStatIndices.Count > 0 && !_isHeadless)
         {
             // One beat with the attacker's winning stat(s) flashed before the
             // captured neighbors actually flip.
@@ -1953,6 +1954,24 @@ public partial class HoneycombViewModel : ObservableObject
             if (IsStealEligible(card)) return true;
         }
         return false;
+    }
+
+    // Whether every card in THIS opponent's frozen deck (_rematchOpponentDeck — the
+    // same cards every rematch in this chain deals from) is already in the player's
+    // global card bank. Distinct from HasStealableCard(), which only reflects whether
+    // anything was actually stealable THIS round — this is true even on a round where
+    // nothing new was captured, as long as there's nothing left to ever capture from
+    // this specific opponent. Implies !HasStealableCard() (IsStealEligible's "not
+    // already unlocked" guard runs first), so the two never conflict. Mirrors the
+    // Swift port's hasObtainedAllOpponentCards.
+    public bool HasObtainedAllOpponentCards()
+    {
+        if (_rematchOpponentDeck == null || _rematchOpponentDeck.Count == 0) return false;
+        foreach (var card in _rematchOpponentDeck)
+        {
+            if (!HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Id)) return false;
+        }
+        return true;
     }
 
     // Steal Protection: covers the case where a rematch's frozen opponent pool

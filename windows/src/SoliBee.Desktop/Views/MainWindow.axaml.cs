@@ -853,6 +853,14 @@ public partial class MainWindow : Window
             _preferencesView.VideoPokerVm = vpVm;
             _preferencesView.ActiveGameFamily = "VideoPoker";
         }
+        else if (this.DataContext is BlackjackViewModel bjVm)
+        {
+            // Same shape as Video Poker above — Blackjack's Options is its own
+            // single-consumer model, not the card games' shared GameOptions.
+            _preferencesView.DataContext = bjVm.Options;
+            _preferencesView.BlackjackVm = bjVm;
+            _preferencesView.ActiveGameFamily = "Blackjack";
+        }
         else
         {
             GameOptions options = this.DataContext switch

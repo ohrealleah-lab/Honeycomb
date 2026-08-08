@@ -119,9 +119,26 @@ public static class BannerCatalog
     // Decides what should show for `id` firing right now. `tokens` fills in
     // any `{PlaceholderName}` markers in the chosen text (e.g.
     // {"OpponentName": "Baby Bee"}, {"ComboCount": "4"}).
+    // Decides what should show for `id` firing right now. With Honey Mode off, every
+    // non-Achievement banner is either forced to its plain fallback (gated entries —
+    // e.g. Combo x4+ always reads "HIVE MIND x4!" instead of occasionally rolling
+    // flavor) or suppressed entirely (ungated entries — Loading, Idle/Ambiance, and
+    // most Gameplay/Rule-Specific toasts have no plain-text equivalent to fall back
+    // to). Every Fire() call site already discards a Fallback's own text in favor of
+    // its own existingDefaultText (see BannerCatalogText in each ViewModel), so
+    // returning Fallback("") here is safe — the actual string is never read. Reads
+    // SettingsService.LoadOptions() fresh each call (no caching, same as every other
+    // settings read in this codebase) rather than a pushed/cached flag, since
+    // ViewModels don't hold an AppCoordinator reference. Mirrors the Swift port's
+    // BannerCatalog.fire/honeyModeEnabled.
     public static BannerFireResult Fire(BannerId id, Dictionary<string, string>? tokens = null)
     {
         if (!Entries.TryGetValue(id, out var def)) return BannerFireResult.None;
+
+        if (def.Type != "achievement" && !SettingsService.LoadOptions().HoneyMode)
+        {
+            return def.Gated ? BannerFireResult.Fallback("") : BannerFireResult.None;
+        }
 
         if (def.Gated && def.GateChance.HasValue && _random.NextDouble() >= def.GateChance.Value)
         {

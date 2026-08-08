@@ -221,6 +221,7 @@ public struct VideoPokerView: View {
             }
         }
         .onChange(of: viewModel.state.phase) { _, newPhase in
+            viewModel.scheduleIdleActionCheck()
             if newPhase == .result {
                 // Cancel any leftover tasks just in case
                 resultBannerShowTask?.cancel()
@@ -924,6 +925,7 @@ struct VideoPokerOptionsView: View {
     @State private var hideHintButton: Bool
     @State private var hideBetBoard: Bool
     @State private var noStressMode: Bool
+    @State private var honeyMode: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -942,6 +944,7 @@ struct VideoPokerOptionsView: View {
         _hideHintButton  = State(initialValue: viewModel.options.hideHintButton)
         _hideBetBoard    = State(initialValue: viewModel.options.hideBetBoard)
         _noStressMode    = State(initialValue: viewModel.options.noStressMode)
+        _honeyMode       = State(initialValue: viewModel.options.honeyMode)
     }
 
     var body: some View {
@@ -966,6 +969,7 @@ struct VideoPokerOptionsView: View {
                 o.hideHintButton  = hideHintButton
                 o.hideBetBoard    = hideBetBoard
                 o.noStressMode    = noStressMode
+                o.honeyMode       = honeyMode
                 viewModel.options = o
                 if variantChanged || playModeChanged {
                     viewModel.resetHandDisplay()
@@ -983,6 +987,7 @@ struct VideoPokerOptionsView: View {
                 // value over this one.
                 coordinator.isSoundEnabled = isSoundEnabled
                 coordinator.noStressMode = noStressMode
+                coordinator.honeyMode = honeyMode
             }
         ) {
             Picker("Variant:", selection: $variant) {
@@ -1015,6 +1020,7 @@ struct VideoPokerOptionsView: View {
             Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body))
             Toggle("Hide Bet Board",   isOn: $hideBetBoard).font(.system(.body))
             Toggle("No Stress Mode",   isOn: $noStressMode).font(.system(.body))
+            Toggle("Honey Mode (Flavor)", isOn: $honeyMode).font(.system(.body))
         }
     }
 }

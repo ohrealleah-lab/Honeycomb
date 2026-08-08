@@ -580,6 +580,10 @@ public struct HoneycombView: View {
                             Text("Rematch to take another.")
                                 .foregroundColor(.white).padding()
                         } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
+                            && viewModel.hasObtainedAllOpponentCards {
+                            Text("You have obtained all cards from \(viewModel.options.difficulty.displayName)'s hand.")
+                                .foregroundColor(.white).padding()
+                        } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && viewModel.stealProtectionActive && viewModel.hasStealableCard {
                             // Only claims a card is available when one actually is —
                             // stealProtectionActive alone doesn't guarantee that (it
@@ -1155,7 +1159,7 @@ struct HoneycombOptionsView: View {
 
     @State private var isSoundEnabled: Bool
     @State private var noStressMode: Bool
-    @State private var showPointHighlights: Bool
+    @State private var honeyMode: Bool
     @State private var hideHintButton: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
@@ -1169,7 +1173,7 @@ struct HoneycombOptionsView: View {
         self.availableHeight = availableHeight
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
-        _showPointHighlights = State(initialValue: viewModel.options.showPointHighlights)
+        _honeyMode = State(initialValue: viewModel.options.honeyMode)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
     }
 
@@ -1185,7 +1189,7 @@ struct HoneycombOptionsView: View {
                 var updatedOpts = viewModel.options
                 updatedOpts.isSoundEnabled = isSoundEnabled
                 updatedOpts.noStressMode = noStressMode
-                updatedOpts.showPointHighlights = showPointHighlights
+                updatedOpts.honeyMode = honeyMode
                 updatedOpts.hideHintButton = hideHintButton
                 viewModel.options = updatedOpts
                 // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
@@ -1195,6 +1199,7 @@ struct HoneycombOptionsView: View {
                 // value over this one.
                 coordinator.isSoundEnabled = isSoundEnabled
                 coordinator.noStressMode = noStressMode
+                coordinator.honeyMode = honeyMode
                 // No Stress Mode's deck composition is only decided at match start, so
                 // toggling it on mid-match has no visible effect until the next deal —
                 // silently deal fresh instead of leaving a stale, unapplied setting.
@@ -1209,7 +1214,7 @@ struct HoneycombOptionsView: View {
             Toggle("No Stress Mode", isOn: $noStressMode)
                 .font(.system(.body))
 
-            Toggle("Point Highlights", isOn: $showPointHighlights)
+            Toggle("Honey Mode (Flavor)", isOn: $honeyMode)
                 .font(.system(.body))
 
             Toggle("Hide Hint button", isOn: $hideHintButton)

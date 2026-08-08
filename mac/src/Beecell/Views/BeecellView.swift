@@ -717,6 +717,9 @@ public struct BeecellView: View {
                 viewModel.startNewGame()
             }
         }
+        .onChange(of: viewModel.state.movesCount) {
+            viewModel.scheduleIdleActionCheck()
+        }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
         .onChange(of: viewModel.state.hasWon) { _, newVal in if newVal { dismissedWinBanner = false } }
@@ -1118,7 +1121,7 @@ struct BeecellOptionsView: View {
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
     @State private var noStressMode: Bool
-    @State private var showPointHighlights: Bool
+    @State private var honeyMode: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -1133,7 +1136,7 @@ struct BeecellOptionsView: View {
         _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
-        _showPointHighlights = State(initialValue: viewModel.options.showPointHighlights)
+        _honeyMode = State(initialValue: viewModel.options.honeyMode)
     }
 
     var body: some View {
@@ -1149,7 +1152,7 @@ struct BeecellOptionsView: View {
                 updatedOpts.isSoundEnabled = isSoundEnabled
                 updatedOpts.hideHintButton = hideHintButton
                 updatedOpts.noStressMode = noStressMode
-                updatedOpts.showPointHighlights = showPointHighlights
+                updatedOpts.honeyMode = honeyMode
 
                 viewModel.options = updatedOpts
                 // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
@@ -1159,6 +1162,7 @@ struct BeecellOptionsView: View {
                 // value over this one.
                 coordinator.isSoundEnabled = isSoundEnabled
                 coordinator.noStressMode = noStressMode
+                coordinator.honeyMode = honeyMode
             }
         ) {
             Picker("Game Mode:", selection: $deckCount) {
@@ -1178,7 +1182,7 @@ struct BeecellOptionsView: View {
             Toggle("No Stress Mode", isOn: $noStressMode)
                 .font(.system(.body))
 
-            Toggle("Point Highlights", isOn: $showPointHighlights)
+            Toggle("Honey Mode (Flavor)", isOn: $honeyMode)
                 .font(.system(.body))
         }
     }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
@@ -67,6 +68,24 @@ public partial class VideoPokerViewModel : ObservableObject
     // a screen transition, not a gameplay action, so switching to this game for the
     // first time this session fires it; switching back to it later doesn't).
     private bool _hasFiredLoadingBannerThisSession;
+
+    // Ambiance/Idle nudge: fires if a full minute passes with no action. Re-armed via
+    // a generation-token so an already-scheduled check from before the last action
+    // sees a mismatch and silently no-ops instead of firing late. Mirrors the
+    // Honeycomb port's ScheduleIdleCheck — called from Deal().
+    private int _idleCheckGeneration = 0;
+    private const int IdleToastDelayMs = 60000;
+
+    public async void ScheduleIdleActionCheck()
+    {
+        if (TestMode.IsHeadless) return;
+        _idleCheckGeneration++;
+        var generation = _idleCheckGeneration;
+        await Task.Delay(IdleToastDelayMs);
+        if (_idleCheckGeneration != generation) return;
+        var result = BannerCatalog.Fire(BannerId.IdleActionNoActionTakenForOneMinute);
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
 
     public void CheckLoadingBanner()
     {
@@ -238,6 +257,7 @@ public partial class VideoPokerViewModel : ObservableObject
         if (!freePlay) Stats.TotalCreditsWagered += State.CurrentBet;
 
         NotifyStateChanged();
+        ScheduleIdleActionCheck();
     }
 
     public void Draw()

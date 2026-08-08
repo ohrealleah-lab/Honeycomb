@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
@@ -58,6 +59,24 @@ public partial class BlackjackViewModel : ObservableObject
     // a screen transition, not a gameplay action, so switching to this game for the
     // first time this session fires it; switching back to it later doesn't).
     private bool _hasFiredLoadingBannerThisSession;
+
+    // Ambiance/Idle nudge: fires if a full minute passes with no action. Re-armed via
+    // a generation-token so an already-scheduled check from before the last action
+    // sees a mismatch and silently no-ops instead of firing late. Mirrors the
+    // Honeycomb port's ScheduleIdleCheck — called from Deal().
+    private int _idleCheckGeneration = 0;
+    private const int IdleToastDelayMs = 60000;
+
+    public async void ScheduleIdleActionCheck()
+    {
+        if (TestMode.IsHeadless) return;
+        _idleCheckGeneration++;
+        var generation = _idleCheckGeneration;
+        await Task.Delay(IdleToastDelayMs);
+        if (_idleCheckGeneration != generation) return;
+        var result = BannerCatalog.Fire(BannerId.IdleActionNoActionTakenForOneMinute);
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
 
     public void CheckLoadingBanner()
     {
@@ -189,6 +208,7 @@ public partial class BlackjackViewModel : ObservableObject
             Credits         = State.Credits,
             CurrentBet      = State.CurrentBet,
         };
+        ScheduleIdleActionCheck();
 
         // Stats.HandsPlayed is incremented per resulting hand (in ApplyPayout), not here —
         // a split round produces 2 resulting hands from 1 round, and HandsWon/Lost/Pushed
@@ -553,6 +573,9 @@ public partial class BlackjackViewModel : ObservableObject
     {
         try { Directory.CreateDirectory(DataDir); File.WriteAllText(OptionsPath, JsonSerializer.Serialize(Options, new JsonSerializerOptions { WriteIndented = true })); }
         catch { }
+        // Options is the same live instance Preferences edits directly (single consumer,
+        // no cross-ViewModel broadcast needed) — notify so the view refreshes immediately.
+        OnPropertyChanged(nameof(Options));
     }
 
     private static BlackjackOptions LoadOptions()

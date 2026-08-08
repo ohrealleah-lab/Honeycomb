@@ -126,6 +126,27 @@ public final class SpiderViewModel {
         }
     }
 
+    // Ambiance/Idle nudge: fires if a full minute passes with no move. Re-armed via a
+    // generation-token so an already-scheduled check from before the last move sees a
+    // mismatch and silently no-ops instead of firing late. Mirrors the Honeycomb port's
+    // scheduleIdleCheck (shared/Honeycomb/ViewModels/HoneycombViewModel.swift) — called
+    // from SpiderView's .onChange(of: viewModel.state.movesCount) and from
+    // startNewGame()/restartCurrentGame().
+    private var idleCheckGeneration: Int = 0
+    private static let idleToastDelay: TimeInterval = 60
+
+    public func scheduleIdleActionCheck() {
+        idleCheckGeneration += 1
+        let generation = idleCheckGeneration
+        guard !UISound.isHeadlessMode else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.idleToastDelay) { [weak self] in
+            guard let self, self.idleCheckGeneration == generation, !self.state.hasWon else { return }
+            if case .message(let text) = BannerCatalog.shared.fire(.idleActionNoActionTakenForOneMinute) {
+                self.enqueueBanner(text)
+            }
+        }
+    }
+
     public var highScoreString: String {
         return String(highScore)
     }
@@ -145,7 +166,7 @@ public final class SpiderViewModel {
     private var pointPopupGeneration: Int = 0
 
     private func showPointPopup(cardId: UUID, displayText: String, isPositive: Bool) {
-        guard options.showPointHighlights, !isAutoplayRunning else { return }
+        guard options.honeyMode, !isAutoplayRunning else { return }
         pointPopupGeneration += 1
         let generation = pointPopupGeneration
         pointPopup = CardPointPopup(cardId: cardId, displayText: displayText, isPositive: isPositive)
@@ -357,6 +378,7 @@ public final class SpiderViewModel {
         initialState = state
         clearKeyboardCursor()
         gameGeneration += 1
+        scheduleIdleActionCheck()
     }
 
     public func restartCurrentGame() {
@@ -369,6 +391,7 @@ public final class SpiderViewModel {
         isStuck = false
         clearKeyboardCursor()
         gameGeneration += 1
+        scheduleIdleActionCheck()
     }
     
     // MARK: - Core Interactions

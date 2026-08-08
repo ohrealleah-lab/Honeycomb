@@ -139,6 +139,26 @@ public final class GameViewModel {
         }
     }
 
+    // Ambiance/Idle nudge: fires if a full minute passes with no move. Re-armed via a
+    // generation-token so an already-scheduled check from before the last move sees a
+    // mismatch and silently no-ops instead of firing late. Mirrors the Honeycomb port's
+    // scheduleIdleCheck (shared/Honeycomb/ViewModels/HoneycombViewModel.swift) — called
+    // from GameView's .onChange(of: viewModel.state.movesCount) and from startNewGame().
+    private var idleCheckGeneration: Int = 0
+    private static let idleToastDelay: TimeInterval = 60
+
+    public func scheduleIdleActionCheck() {
+        idleCheckGeneration += 1
+        let generation = idleCheckGeneration
+        guard !UISound.isHeadlessMode else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.idleToastDelay) { [weak self] in
+            guard let self, self.idleCheckGeneration == generation, !self.state.hasWon else { return }
+            if case .message(let text) = BannerCatalog.shared.fire(.idleActionNoActionTakenForOneMinute) {
+                self.enqueueBanner(text)
+            }
+        }
+    }
+
     // Point Highlights: transient "+N"/"-N" popup over the card responsible for a score
     // change — not part of `state`/undo snapshots, same precedent as isAutoplayRunning.
     public var pointPopup: CardPointPopup? = nil
@@ -417,6 +437,7 @@ public final class GameViewModel {
         initialState = state
         clearHint()
         clearKeyboardCursor()
+        scheduleIdleActionCheck()
     }
 
     public func restartCurrentGame() {
@@ -436,8 +457,9 @@ public final class GameViewModel {
         gameGeneration += 1
         clearHint()
         clearKeyboardCursor()
+        scheduleIdleActionCheck()
     }
-    
+
     // MARK: - Core Interactions
     
     public func drawCard() {
@@ -637,7 +659,7 @@ public final class GameViewModel {
     // and the popup's one slot can only show one at a time; the moved card's own event
     // is the more relevant one to show).
     private func updatePointPopup(anchorCard: Card?, source: Pile.PileType, target: Pile.PileType, revealedFaceDownCard: Bool, revealedCardId: UUID?) {
-        guard options.showPointHighlights, !isAutoplayRunning else { return }
+        guard options.honeyMode, !isAutoplayRunning else { return }
         let popup: CardPointPopup?
         if options.isVegasScoring {
             if target == .foundation, source != .foundation, let anchorCard {

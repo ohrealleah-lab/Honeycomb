@@ -24,10 +24,13 @@ public struct VideoPokerOptions: Codable, Equatable {
     public var hideHintButton: Bool = false
     public var hideBetBoard: Bool = false
     public var noStressMode: Bool = false
+    // Driven by AppCoordinator.honeyMode (single app-wide source of truth) via
+    // applySharedCommonOptionsToAllGames — never user-edited here directly.
+    public var honeyMode: Bool = true
 
     enum CodingKeys: String, CodingKey {
         case variant, playMode, startingCredits, betPerHand
-        case isSoundEnabled, hideHintButton, hideBetBoard, noStressMode
+        case isSoundEnabled, hideHintButton, hideBetBoard, noStressMode, honeyMode
     }
 
     public init() {}
@@ -42,6 +45,7 @@ public struct VideoPokerOptions: Codable, Equatable {
         hideHintButton = try c.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
         hideBetBoard   = try c.decodeIfPresent(Bool.self, forKey: .hideBetBoard) ?? false
         noStressMode   = try c.decodeIfPresent(Bool.self, forKey: .noStressMode) ?? false
+        honeyMode      = try c.decodeIfPresent(Bool.self, forKey: .honeyMode) ?? true
     }
 }
 

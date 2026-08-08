@@ -144,6 +144,21 @@ public final class AppCoordinator {
             applySharedCommonOptionsToAllGames()
         }
     }
+    // "Honey Mode (Flavor)" — renamed and repurposed from the old per-game Point
+    // Highlights toggle. Single app-wide switch, same true-single-source pattern as
+    // isSoundEnabled/noStressMode above: controls both the "+N"/"-N" score popups
+    // (each game's own options.honeyMode guard, same spot showPointHighlights used to
+    // gate) and, via BannerCatalog.honeyModeEnabled, whether Repeatable Flavor/Ambiance
+    // banners fire at all. Achievement/Milestone banners are never affected. No
+    // migration from the old per-game showPointHighlights values — everyone gets a
+    // fresh default of on.
+    public var honeyMode: Bool {
+        didSet {
+            UserDefaults.standard.set(honeyMode, forKey: "global_honey_mode")
+            applySharedCommonOptionsToAllGames()
+            BannerCatalog.honeyModeEnabled = honeyMode
+        }
+    }
 
     private func applySharedCommonOptionsToAllGames() {
         klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
@@ -158,6 +173,12 @@ public final class AppCoordinator {
         videoPokerViewModel.options.noStressMode = noStressMode
         blackjackViewModel.options.noStressMode  = noStressMode
         honeycombViewModel.options.noStressMode  = noStressMode
+        klondikeViewModel.options.honeyMode   = honeyMode
+        beecellViewModel.options.honeyMode    = honeyMode
+        spiderViewModel.options.honeyMode     = honeyMode
+        videoPokerViewModel.options.honeyMode = honeyMode
+        blackjackViewModel.options.honeyMode  = honeyMode
+        honeycombViewModel.options.honeyMode  = honeyMode
     }
 
     #if canImport(AppKit)
@@ -225,6 +246,12 @@ public final class AppCoordinator {
         self.noStressMode = UserDefaults.standard.object(forKey: "global_no_stress_mode") != nil
             ? UserDefaults.standard.bool(forKey: "global_no_stress_mode")
             : klondikeViewModel.options.noStressMode
+        // No migration from the old per-game showPointHighlights value — always
+        // defaults to on for every install, per product decision.
+        self.honeyMode = UserDefaults.standard.object(forKey: "global_honey_mode") != nil
+            ? UserDefaults.standard.bool(forKey: "global_honey_mode")
+            : true
+        BannerCatalog.honeyModeEnabled = self.honeyMode
 
         #if canImport(AppKit)
         // Synchronously warm the cache for whichever background is active so that

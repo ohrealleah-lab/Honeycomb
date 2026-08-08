@@ -6,7 +6,7 @@ public struct SpiderOptions: Codable, Equatable {
     public var isSoundEnabled: Bool = true
     public var hideHintButton: Bool = false
     public var noStressMode: Bool = false
-    public var showPointHighlights: Bool = true
+    public var honeyMode: Bool = true
 
     enum CodingKeys: String, CodingKey {
         case suitCount
@@ -14,7 +14,7 @@ public struct SpiderOptions: Codable, Equatable {
         case isSoundEnabled
         case hideHintButton
         case noStressMode
-        case showPointHighlights
+        case honeyMode
     }
 
     public init(
@@ -23,14 +23,14 @@ public struct SpiderOptions: Codable, Equatable {
         isSoundEnabled: Bool = true,
         hideHintButton: Bool = false,
         noStressMode: Bool = false,
-        showPointHighlights: Bool = true
+        honeyMode: Bool = true
     ) {
         self.suitCount = suitCount
         self.isTimed = isTimed
         self.isSoundEnabled = isSoundEnabled
         self.hideHintButton = hideHintButton
         self.noStressMode = noStressMode
-        self.showPointHighlights = showPointHighlights
+        self.honeyMode = honeyMode
     }
 
     public init(from decoder: Decoder) throws {
@@ -40,7 +40,7 @@ public struct SpiderOptions: Codable, Equatable {
         self.isSoundEnabled = try container.decodeIfPresent(Bool.self, forKey: .isSoundEnabled) ?? true
         self.hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
         self.noStressMode = try container.decodeIfPresent(Bool.self, forKey: .noStressMode) ?? false
-        self.showPointHighlights = try container.decodeIfPresent(Bool.self, forKey: .showPointHighlights) ?? true
+        self.honeyMode = try container.decodeIfPresent(Bool.self, forKey: .honeyMode) ?? true
     }
 }
 

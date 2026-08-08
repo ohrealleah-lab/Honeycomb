@@ -500,10 +500,19 @@ public partial class HoneycombView : UserControl
                     }
                 }
 
+                bool obtainedAllOpponentCards = !bankFull && vm.HasObtainedAllOpponentCards();
+
                 StealCardButton.IsVisible = !bankFull && hasStealableCard;
                 BankFullWarningText.IsVisible = bankFull;
                 AllSecretsWarningText.IsVisible = bankFull;
                 AlreadyStolenWarningText.IsVisible = false;
+                // Distinct from the bank-full case above: every card FROM THIS OPPONENT
+                // specifically is already owned, even though the player's overall bank
+                // isn't full. hasStealableCard is necessarily false whenever this is
+                // true (see HasObtainedAllOpponentCards' comment), so it never competes
+                // with the Steal Protection text below.
+                ObtainedAllOpponentCardsText.Text = $"You have obtained all cards from {vm.OpponentNameDisplay}'s hand.";
+                ObtainedAllOpponentCardsText.IsVisible = obtainedAllOpponentCards;
                 // Shown alongside the Steal Card button while protection is active and
                 // there's still something to take (not once the bank's already full).
                 // StealProtectionActive alone doesn't guarantee hasStealableCard — it
@@ -518,6 +527,7 @@ public partial class HoneycombView : UserControl
                 BankFullWarningText.IsVisible = false;
                 AllSecretsWarningText.IsVisible = false;
                 StealProtectionText.IsVisible = false;
+                ObtainedAllOpponentCardsText.IsVisible = false;
                 // Only the "already stolen" scenario gets its own message here — a
                 // loss/draw or No Stress Mode has nothing steal-related to explain.
                 AlreadyStolenWarningText.IsVisible = !globalOpts.IsNoStressMode && state.HasStolenThisMatch && won;

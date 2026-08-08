@@ -178,6 +178,26 @@ public final class VideoPokerViewModel {
         }
     }
 
+    // Ambiance/Idle nudge: fires if a full minute passes with no action. Re-armed via a
+    // generation-token so an already-scheduled check from before the last action sees a
+    // mismatch and silently no-ops instead of firing late. Mirrors the Honeycomb port's
+    // scheduleIdleCheck (shared/Honeycomb/ViewModels/HoneycombViewModel.swift) — called
+    // from VideoPokerView's .onChange(of: viewModel.state.phase) and from deal().
+    private var idleCheckGeneration: Int = 0
+    private static let idleToastDelay: TimeInterval = 60
+
+    public func scheduleIdleActionCheck() {
+        idleCheckGeneration += 1
+        let generation = idleCheckGeneration
+        guard !UISound.isHeadlessMode else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.idleToastDelay) { [weak self] in
+            guard let self, self.idleCheckGeneration == generation else { return }
+            if case .message(let text) = BannerCatalog.shared.fire(.idleActionNoActionTakenForOneMinute) {
+                self.enqueueBanner(text)
+            }
+        }
+    }
+
     // Options can only be opened between hands — changing variant/play mode mid-hand
     // would evaluate an already-dealt hand under different rules.
     public var canOpenOptions: Bool {
@@ -220,6 +240,7 @@ public final class VideoPokerViewModel {
 
         state.phase = .holding
         playSound(named: "shuffle")
+        scheduleIdleActionCheck()
     }
 
     public func toggleHold(at index: Int) {

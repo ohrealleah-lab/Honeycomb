@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -89,6 +90,24 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         if (_hasFiredLoadingBannerThisSession) return;
         _hasFiredLoadingBannerThisSession = true;
         var result = BannerCatalog.Fire(BannerCatalog.LoadingBannerId());
+        if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
+    }
+
+    // Ambiance/Idle nudge: fires if a full minute passes with no move. Re-armed via a
+    // generation-token so an already-scheduled check from before the last move sees a
+    // mismatch and silently no-ops instead of firing late. Mirrors the Honeycomb
+    // port's ScheduleIdleCheck — called from StartNewGame() and every move site.
+    private int _idleCheckGeneration = 0;
+    private const int IdleToastDelayMs = 60000;
+
+    public async void ScheduleIdleActionCheck()
+    {
+        if (TestMode.IsHeadless) return;
+        _idleCheckGeneration++;
+        var generation = _idleCheckGeneration;
+        await Task.Delay(IdleToastDelayMs);
+        if (_idleCheckGeneration != generation || State.HasWon) return;
+        var result = BannerCatalog.Fire(BannerId.IdleActionNoActionTakenForOneMinute);
         if (result.Kind == BannerFireKind.Message) EnqueueBanner(result.Text!);
     }
 
@@ -321,6 +340,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         OnPropertyChanged(nameof(Tableaus));
         OnPropertyChanged(nameof(TimeDisplay));
         OnPropertyChanged(nameof(CanUndo));
+        ScheduleIdleActionCheck();
     }
 
     public void RestartGame()
@@ -477,6 +497,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
                 State.IsTimerActive = true;
             State.MovesCount++;
+            ScheduleIdleActionCheck();
             _justRecycled = true;
             CheckDeadlock();
             _justRecycled = false;
@@ -508,6 +529,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
             State.IsTimerActive = true;
         State.MovesCount++;
+        ScheduleIdleActionCheck();
         CheckAutocomplete();
         CheckDeadlock();
         WasteCardDrawn?.Invoke(this, EventArgs.Empty);
@@ -631,6 +653,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
             State.IsTimerActive = true;
         State.MovesCount++;
+        ScheduleIdleActionCheck();
         CheckVictory();
         CheckAutocomplete();
         CheckDeadlock();
@@ -687,7 +710,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     // deliberately gets no popup of its own.
     private void UpdatePointPopup(Card anchorCard, PileType source, PileType target)
     {
-        if (!Options.KlondikeShowPointHighlights || IsAutoplayRunning) return;
+        if (!Options.HoneyMode || IsAutoplayRunning) return;
 
         CardPointPopup? popup;
         if (Options.IsVegasScoring)

@@ -43,12 +43,15 @@ public class GameOptions
     public int FreecellDeckCount { get; set; } = 1;
     public int SpiderSuitCount { get; set; } = 1;
 
-    // Point Highlights: transient "+N"/"-N" popup flashed over the card responsible for
-    // a score change. Genuinely per-game (not a single global toggle synced across all
-    // three), matching how every other card-game setting in this class is scoped.
-    public bool KlondikeShowPointHighlights { get; set; } = true;
-    public bool FreecellShowPointHighlights { get; set; } = true;
-    public bool SpiderShowPointHighlights { get; set; } = true;
+    // "Honey Mode (Flavor)" — renamed and repurposed from the old per-game Point
+    // Highlights toggles (KlondikeShowPointHighlights/FreecellShowPointHighlights/
+    // SpiderShowPointHighlights/HoneycombOptions.ShowPointHighlights, now removed). A
+    // single global switch, matching IsSoundEnabled/IsNoStressMode above: controls both
+    // the "+N"/"-N" score popups in every game and, via BannerCatalog reading this
+    // field directly, whether Repeatable Flavor/Ambiance banners fire at all across all
+    // 6 games. Achievement/Milestone banners are never affected. No migration from the
+    // old per-game values — everyone gets a fresh default of on.
+    public bool HoneyMode { get; set; } = true;
 
     public bool IsVignetteEnabled { get; set; } = true;
     // Turns off timers (solitaire) and enables free play (VP/Blackjack — hides the

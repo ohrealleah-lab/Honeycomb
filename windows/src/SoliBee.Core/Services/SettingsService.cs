@@ -167,12 +167,8 @@ public static class SettingsService
                 if (GetValue("CardBackOffsetY") is double offsetY)
                     options.CardBackOffsetY = offsetY;
 
-                if (GetValue("KlondikeShowPointHighlights") is bool klPh)
-                    options.KlondikeShowPointHighlights = klPh;
-                if (GetValue("FreecellShowPointHighlights") is bool fcPh)
-                    options.FreecellShowPointHighlights = fcPh;
-                if (GetValue("SpiderShowPointHighlights") is bool spPh)
-                    options.SpiderShowPointHighlights = spPh;
+                if (GetValue("HoneyMode") is bool honeyMode)
+                    options.HoneyMode = honeyMode;
 
                 if (GetValue("IsVignetteEnabled") is bool isVignette)
                     options.IsVignetteEnabled = isVignette;
@@ -283,9 +279,7 @@ public static class SettingsService
                 SetValue("CardBackScale", options.CardBackScale);
                 SetValue("CardBackOffsetX", options.CardBackOffsetX);
                 SetValue("CardBackOffsetY", options.CardBackOffsetY);
-                SetValue("KlondikeShowPointHighlights", options.KlondikeShowPointHighlights);
-                SetValue("FreecellShowPointHighlights", options.FreecellShowPointHighlights);
-                SetValue("SpiderShowPointHighlights", options.SpiderShowPointHighlights);
+                SetValue("HoneyMode", options.HoneyMode);
 
                 SetValue("IsVignetteEnabled", options.IsVignetteEnabled);
                 SetValue("IsStatusBarVisible", options.IsStatusBarVisible);

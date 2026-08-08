@@ -118,6 +118,27 @@ public final class BeecellViewModel {
         }
     }
 
+    // Ambiance/Idle nudge: fires if a full minute passes with no move. Re-armed via a
+    // generation-token so an already-scheduled check from before the last move sees a
+    // mismatch and silently no-ops instead of firing late. Mirrors the Honeycomb port's
+    // scheduleIdleCheck (shared/Honeycomb/ViewModels/HoneycombViewModel.swift) — called
+    // from BeecellView's .onChange(of: viewModel.state.movesCount) and from
+    // startNewGame()/restartCurrentGame().
+    private var idleCheckGeneration: Int = 0
+    private static let idleToastDelay: TimeInterval = 60
+
+    public func scheduleIdleActionCheck() {
+        idleCheckGeneration += 1
+        let generation = idleCheckGeneration
+        guard !UISound.isHeadlessMode else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.idleToastDelay) { [weak self] in
+            guard let self, self.idleCheckGeneration == generation, !self.state.hasWon else { return }
+            if case .message(let text) = BannerCatalog.shared.fire(.idleActionNoActionTakenForOneMinute) {
+                self.enqueueBanner(text)
+            }
+        }
+    }
+
     public var scoreString: String { String(state.score) }
     
     // Board scale — no longer manual; BeecellView.recomputeScale() continuously derives
@@ -313,6 +334,7 @@ public final class BeecellViewModel {
         initialState = state
         clearHint()
         clearKeyboardCursor()
+        scheduleIdleActionCheck()
     }
 
     public func restartCurrentGame() {
@@ -325,6 +347,7 @@ public final class BeecellViewModel {
         isStuck = false
         clearHint()
         clearKeyboardCursor()
+        scheduleIdleActionCheck()
     }
     
     // MARK: - Sequence Limits
@@ -496,7 +519,7 @@ public final class BeecellViewModel {
 
     // Point Highlights: mirrors adjustScore's branching.
     private func updatePointPopup(anchorCard: Card?, source: Pile.PileType, target: Pile.PileType) {
-        guard options.showPointHighlights, !isAutoplayRunning, let anchorCard else { return }
+        guard options.honeyMode, !isAutoplayRunning, let anchorCard else { return }
         let popup: CardPointPopup?
         if target == .foundation && source != .foundation {
             popup = CardPointPopup(cardId: anchorCard.id, displayText: "+10", isPositive: true)

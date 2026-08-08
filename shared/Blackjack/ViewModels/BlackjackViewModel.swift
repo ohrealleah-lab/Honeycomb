@@ -111,6 +111,26 @@ public final class BlackjackViewModel {
         }
     }
 
+    // Ambiance/Idle nudge: fires if a full minute passes with no action. Re-armed via a
+    // generation-token so an already-scheduled check from before the last action sees a
+    // mismatch and silently no-ops instead of firing late. Mirrors the Honeycomb port's
+    // scheduleIdleCheck (shared/Honeycomb/ViewModels/HoneycombViewModel.swift) — called
+    // from BlackjackView's .onChange(of: viewModel.state.phase) and from deal().
+    private var idleCheckGeneration: Int = 0
+    private static let idleToastDelay: TimeInterval = 60
+
+    public func scheduleIdleActionCheck() {
+        idleCheckGeneration += 1
+        let generation = idleCheckGeneration
+        guard !UISound.isHeadlessMode else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.idleToastDelay) { [weak self] in
+            guard let self, self.idleCheckGeneration == generation else { return }
+            if case .message(let text) = BannerCatalog.shared.fire(.idleActionNoActionTakenForOneMinute) {
+                self.enqueueBanner(text)
+            }
+        }
+    }
+
     // Options can only be opened between hands — changing a setting like No Stress
     // Mode mid-hand would desync isFreePlay's live re-evaluation from what was
     // actually wagered when the hand started.
@@ -203,6 +223,7 @@ public final class BlackjackViewModel {
         state.activeHandIndex = 0
         state.lastResultSummary = ""
         state.phase = .playing
+        scheduleIdleActionCheck()
 
         // Dealer blackjack ends the hand immediately — checked here by raw rank
         // (ignoring the hole card's face-down state) rather than waiting for it to be

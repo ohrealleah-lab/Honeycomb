@@ -10,4 +10,8 @@ public class BlackjackOptions
     public string CustomFeltColorHex { get; set; } = "#592673";
     public bool IsVignetteEnabled { get; set; } = true;
     public bool IsNoStressMode { get; set; } = false;
+
+    // Shallow copy so callers can snapshot "before edits" and restore it later
+    // (e.g. Preferences' Cancel button) without aliasing the live instance.
+    public BlackjackOptions Clone() => (BlackjackOptions)MemberwiseClone();
 }

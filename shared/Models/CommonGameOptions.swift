@@ -4,8 +4,10 @@ import Foundation
 /// (sound, stress mode, hint visibility, timer). Not every game has every field — a
 /// `nil` here means "this game doesn't have this concept," so callers like
 /// `AppCoordinator.syncSharedOptions` know to leave it untouched rather than
-/// force-propagating a placeholder value. showPointHighlights is deliberately NOT here
-/// — it stays independent per game, matching the pre-refactor sync behavior.
+/// force-propagating a placeholder value. honeyMode is deliberately NOT here — like
+/// isSoundEnabled/noStressMode, it's a true single-source value living on
+/// AppCoordinator itself (see its own comments) and kept in sync across every game by
+/// applySharedCommonOptionsToAllGames(), not by this protocol's per-outgoing-game sync.
 public struct CommonGameOptions: Equatable {
     public var isSoundEnabled: Bool
     public var noStressMode: Bool

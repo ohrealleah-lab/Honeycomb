@@ -44,6 +44,8 @@ public partial class PreferencesView : UserControl
     private GameOptions? _originalGameOptions;
     private VideoPokerOptions? _originalVideoPokerOptions;
     private GameOptions? _originalSharedOptionsForVideoPoker;
+    private BlackjackOptions? _originalBlackjackOptions;
+    private GameOptions? _originalSharedOptionsForBlackjack;
 
     public static readonly StyledProperty<string> ActiveGameFamilyProperty =
         AvaloniaProperty.Register<PreferencesView, string>(nameof(ActiveGameFamily), "Klondike");
@@ -64,6 +66,7 @@ public partial class PreferencesView : UserControl
     }
 
     public VideoPokerViewModel? VideoPokerVm { get; set; }
+    public BlackjackViewModel? BlackjackVm { get; set; }
 
     public bool ShowVegasOption
     {
@@ -113,12 +116,13 @@ public partial class PreferencesView : UserControl
 
     // ── Themes panel navigation ───────────────────────────────────────────────
 
-    // Video Poker's top-level DataContext is its own VideoPokerOptions, but Visual
-    // Themes (felt, card back, face art, colors) is shared GameOptions state that
-    // already propagates into VideoPokerOptions via OptionsChangedMessage — so while
-    // the sub-panel is open we swap DataContext to a fresh GameOptions clone, then
-    // swap back (and re-sync the main panel) on the way out.
+    // Video Poker/Blackjack's top-level DataContext is their own separate Options
+    // model, but Visual Themes (felt, card back, face art, colors) is shared
+    // GameOptions state that already propagates into both via OptionsChangedMessage —
+    // so while the sub-panel is open we swap DataContext to a fresh GameOptions clone,
+    // then swap back (and re-sync the main panel) on the way out.
     private VideoPokerOptions? _vpOptionsBeforeThemes;
+    private BlackjackOptions? _bjOptionsBeforeThemes;
 
     private void OpenThemes_Click(object? sender, RoutedEventArgs e)
     {
@@ -128,6 +132,11 @@ public partial class PreferencesView : UserControl
         if (DataContext is VideoPokerOptions vpOptions)
         {
             _vpOptionsBeforeThemes = vpOptions;
+            DataContext = SettingsService.LoadOptions();
+        }
+        else if (DataContext is BlackjackOptions bjOptions)
+        {
+            _bjOptionsBeforeThemes = bjOptions;
             DataContext = SettingsService.LoadOptions();
         }
 
@@ -153,33 +162,16 @@ public partial class PreferencesView : UserControl
             SyncUIFromVideoPokerOptions((VideoPokerOptions)DataContext);
             _initializing = false;
         }
-    }
-
-    // Point Highlights is genuinely per-game (unlike No Stress Mode/Always on Top
-    // above, which are single fields shared across every game) — these two map the
-    // one checkbox to whichever backing field ActiveGameFamily currently points at.
-    // Honeycomb has its own HoneycombOptions.ShowPointHighlights (like Mac, which
-    // keeps it independent of the solitaire games' shared field) rather than a
-    // fourth GameOptions field.
-    private bool GetPointHighlights(GameOptions options) => ActiveGameFamily switch
-    {
-        "Klondike"  => options.KlondikeShowPointHighlights,
-        "Freecell"  => options.FreecellShowPointHighlights,
-        "Spider"    => options.SpiderShowPointHighlights,
-        "Honeycomb" => HoneycombOptions?.ShowPointHighlights ?? true,
-        _           => true,
-    };
-
-    private void SetPointHighlights(GameOptions options, bool value)
-    {
-        switch (ActiveGameFamily)
+        else if (_bjOptionsBeforeThemes != null)
         {
-            case "Klondike":  options.KlondikeShowPointHighlights = value; break;
-            case "Freecell":  options.FreecellShowPointHighlights = value; break;
-            case "Spider":    options.SpiderShowPointHighlights   = value; break;
-            case "Honeycomb": if (HoneycombOptions != null) HoneycombOptions.ShowPointHighlights = value; break;
+            DataContext = _bjOptionsBeforeThemes;
+            _bjOptionsBeforeThemes = null;
+            _initializing = true;
+            SyncUIFromBlackjackOptions((BlackjackOptions)DataContext);
+            _initializing = false;
         }
     }
+
 
     // Hide Hint Button: a single shared GameOptions field for every solitaire/casino
     // game, but Honeycomb keeps its own HoneycombOptions.HideHintButton (matching
@@ -258,10 +250,9 @@ public partial class PreferencesView : UserControl
         CardTextBlackColorPicker.Color = Color.Parse(options.ThemeTextBlackNormal ?? "#1A1A1A");
         CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
 
-        // Point Highlights — per-game (Klondike/Freecell/Spider/Honeycomb; not Video
-        // Poker/Blackjack, which don't have this feature).
-        PointHighlightsCheckBox.IsVisible = ActiveGameFamily is "Klondike" or "Freecell" or "Spider" or "Honeycomb";
-        PointHighlightsCheckBox.IsChecked = GetPointHighlights(options);
+        // Honey Mode (Flavor) — global, shared across all 6 games.
+        PointHighlightsCheckBox.IsVisible = true;
+        PointHighlightsCheckBox.IsChecked = options.HoneyMode;
 
         // Game Mode section
         if (ActiveGameFamily is "Klondike" or "Freecell" or "Spider")
@@ -290,6 +281,12 @@ public partial class PreferencesView : UserControl
             _originalVideoPokerOptions          = vpOptions.Clone();
             _originalSharedOptionsForVideoPoker  = SettingsService.LoadOptions().Clone();
             SyncUIFromVideoPokerOptions(vpOptions);
+        }
+        else if (DataContext is BlackjackOptions bjOptions)
+        {
+            _originalBlackjackOptions          = bjOptions.Clone();
+            _originalSharedOptionsForBlackjack  = SettingsService.LoadOptions().Clone();
+            SyncUIFromBlackjackOptions(bjOptions);
         }
         _initializing = false;
     }
@@ -321,6 +318,22 @@ public partial class PreferencesView : UserControl
             if (_originalSharedOptionsForVideoPoker != null)
                 NotifySettingsChanged(_originalSharedOptionsForVideoPoker);
         }
+        else if (_originalBlackjackOptions != null && DataContext is BlackjackOptions bjOptions)
+        {
+            var orig = _originalBlackjackOptions;
+            bjOptions.StartingCredits    = orig.StartingCredits;
+            bjOptions.BetPerHand         = orig.BetPerHand;
+            bjOptions.IsSoundEnabled     = orig.IsSoundEnabled;
+            bjOptions.CardBackTheme      = orig.CardBackTheme;
+            bjOptions.FeltColor          = orig.FeltColor;
+            bjOptions.CustomFeltColorHex = orig.CustomFeltColorHex;
+            bjOptions.IsVignetteEnabled  = orig.IsVignetteEnabled;
+            bjOptions.IsNoStressMode     = orig.IsNoStressMode;
+            BlackjackVm?.SaveOptions();
+
+            if (_originalSharedOptionsForBlackjack != null)
+                NotifySettingsChanged(_originalSharedOptionsForBlackjack);
+        }
     }
 
     // True if anything has changed since the panel opened — a live-saved settings
@@ -348,6 +361,18 @@ public partial class PreferencesView : UserControl
             }
         }
 
+        if (_originalBlackjackOptions != null && DataContext is BlackjackOptions bjOptions)
+        {
+            if (JsonSerializer.Serialize(bjOptions) != JsonSerializer.Serialize(_originalBlackjackOptions))
+                return true;
+
+            if (_originalSharedOptionsForBlackjack != null)
+            {
+                var currentShared = SettingsService.LoadOptions();
+                return JsonSerializer.Serialize(currentShared) != JsonSerializer.Serialize(_originalSharedOptionsForBlackjack);
+            }
+        }
+
         return false;
     }
 
@@ -366,6 +391,12 @@ public partial class PreferencesView : UserControl
             return !_originalSharedOptionsForVideoPoker.IsNoStressMode && currentShared.IsNoStressMode;
         }
 
+        if (_originalSharedOptionsForBlackjack != null)
+        {
+            var currentShared = SettingsService.LoadOptions();
+            return !_originalSharedOptionsForBlackjack.IsNoStressMode && currentShared.IsNoStressMode;
+        }
+
         return false;
     }
 
@@ -376,7 +407,7 @@ public partial class PreferencesView : UserControl
     {
         VegasCheckBox.IsVisible        = false;
         HideBetBoardCheckBox.IsVisible = true;
-        PointHighlightsCheckBox.IsVisible = false;
+        PointHighlightsCheckBox.IsVisible = true;
 
         HideBetBoardCheckBox.IsChecked = options.HideBetBoard;
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
@@ -385,6 +416,26 @@ public partial class PreferencesView : UserControl
         NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
         HideHintCheckBox.IsChecked     = shared.HideHintButton;
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
+        PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
+    }
+
+    // Blackjack has its own separate options model, same shape as Video Poker above —
+    // only sound is Blackjack-specific; No Stress Mode/Hide Hint/Honey Mode are global
+    // (shared GameOptions) and Visual Themes is available same as every other game.
+    // Blackjack has no Hide Bet Board concept, unlike Video Poker.
+    private void SyncUIFromBlackjackOptions(BlackjackOptions options)
+    {
+        VegasCheckBox.IsVisible        = false;
+        HideBetBoardCheckBox.IsVisible = false;
+        PointHighlightsCheckBox.IsVisible = true;
+
+        SoundCheckBox.IsChecked = options.IsSoundEnabled;
+
+        var shared = SettingsService.LoadOptions();
+        NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
+        HideHintCheckBox.IsChecked     = shared.HideHintButton;
+        AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
+        PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
     }
 
     // ── Game Mode ─────────────────────────────────────────────────────────────
@@ -789,8 +840,7 @@ public partial class PreferencesView : UserControl
             options.IsVignetteEnabled  = VignetteCheckBox.IsChecked     ?? true;
             SetHideHintButton(options, HideHintCheckBox.IsChecked ?? false);
             options.IsAlwaysOnTop      = AlwaysOnTopCheckBox.IsChecked  ?? false;
-            if (PointHighlightsCheckBox.IsVisible)
-                SetPointHighlights(options, PointHighlightsCheckBox.IsChecked ?? true);
+            options.HoneyMode          = PointHighlightsCheckBox.IsChecked  ?? true;
 
             NotifySettingsChanged(options);
             if (ActiveGameFamily == "Honeycomb") SaveHoneycombOptionsAndNotify();
@@ -806,11 +856,29 @@ public partial class PreferencesView : UserControl
             shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
             shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
             shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
+            shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
             NotifySettingsChanged(shared);
 
             // vpOptions is the live VideoPokerViewModel.Options instance, so mutations
             // above already apply — SaveOptions() persists to disk and notifies the view.
             VideoPokerVm?.SaveOptions();
+        }
+        else if (DataContext is BlackjackOptions bjOptions)
+        {
+            bjOptions.IsSoundEnabled  = SoundCheckBox.IsChecked ?? false;
+
+            // No Stress Mode/Hide Hint are global — write to the shared GameOptions
+            // so every game (Klondike/Freecell/Spider/VideoPoker too) picks up the change.
+            var shared = SettingsService.LoadOptions();
+            shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
+            shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
+            shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
+            shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
+            NotifySettingsChanged(shared);
+
+            // bjOptions is the live BlackjackViewModel.Options instance, so mutations
+            // above already apply — SaveOptions() persists to disk and notifies the view.
+            BlackjackVm?.SaveOptions();
         }
     }
 

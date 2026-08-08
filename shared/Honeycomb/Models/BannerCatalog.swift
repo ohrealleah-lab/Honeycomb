@@ -81,11 +81,30 @@ public final class BannerCatalog {
         entries[id]
     }
 
+    // Mirrors AppCoordinator's honeyMode — a static flag rather than a parameter
+    // threaded through every one of fire()'s ~40 call sites, since ViewModels don't
+    // hold an AppCoordinator reference. AppCoordinator pushes into this on init and on
+    // every change; nothing else should ever set it.
+    public static var honeyModeEnabled: Bool = true
+
     // Decides what should show for `id` firing right now. `tokens` fills in
     // any `{PlaceholderName}` markers in the chosen text (e.g.
     // ["OpponentName": "Baby Bee"], ["ComboCount": "4"]).
+    //
+    // With Honey Mode off, every non-Achievement banner is either forced to its plain
+    // fallback (gated entries — e.g. Combo x4+ always reads "HIVE MIND x4!" instead of
+    // occasionally rolling flavor) or suppressed entirely (ungated entries — Loading,
+    // Idle/Ambiance, and most Gameplay/Rule-Specific toasts have no plain-text
+    // equivalent to fall back to). Every fire() call site already discards a
+    // .fallback's own text in favor of its own existingDefaultText (see
+    // bannerCatalogText below), so returning .fallback("") here is safe — the actual
+    // string is never read.
     public func fire(_ id: BannerID, tokens: [String: String] = [:]) -> BannerFireResult {
         guard let def = entries[id] else { return .none }
+
+        if !Self.honeyModeEnabled && def.type != "achievement" {
+            return def.gated ? .fallback("") : .none
+        }
 
         if def.gated, let chance = def.gateChance, Double.random(in: 0..<1) >= chance {
             guard let fallback = def.fallback else { return .none }

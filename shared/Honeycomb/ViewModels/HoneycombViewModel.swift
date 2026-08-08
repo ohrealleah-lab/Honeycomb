@@ -14,19 +14,22 @@ public final class HoneycombViewModel {
         // an empty `selectedRules`, which means "let roulette decide" instead.
         public var forceNormalMode: Bool = false
         // Flashes the attacker's winning stat right before a capture flips the board.
-        public var showPointHighlights: Bool = true
+        // Driven by AppCoordinator.honeyMode (single app-wide source of truth, see its
+        // own comment) via applySharedCommonOptionsToAllGames — never user-edited here
+        // directly.
+        public var honeyMode: Bool = true
         public var hideHintButton: Bool = false
         public var bannedRules: Set<String> = []
 
         public init() {}
 
         // Manual decodeIfPresent-based init (rather than relying on synthesized
-        // Codable) so a new field added later — like showPointHighlights just now —
+        // Codable) so a new field added later — like honeyMode —
         // can't cause an old save missing that key to fail decoding this whole struct
         // (the caller only ever uses `try?`, so any decode error silently resets every
         // field to its default, not just the missing one).
         private enum CodingKeys: String, CodingKey {
-            case isSoundEnabled, noStressMode, difficulty, activeDeckIndex, selectedRules, forceNormalMode, showPointHighlights
+            case isSoundEnabled, noStressMode, difficulty, activeDeckIndex, selectedRules, forceNormalMode, honeyMode
             case hideHintButton, bannedRules
         }
 
@@ -41,7 +44,7 @@ public final class HoneycombViewModel {
             // from any save made back when it was a selectable rule.
             selectedRules = (try container.decodeIfPresent(Set<HoneycombRule>.self, forKey: .selectedRules) ?? []).subtracting([.reverse])
             forceNormalMode = try container.decodeIfPresent(Bool.self, forKey: .forceNormalMode) ?? false
-            showPointHighlights = try container.decodeIfPresent(Bool.self, forKey: .showPointHighlights) ?? true
+            honeyMode = try container.decodeIfPresent(Bool.self, forKey: .honeyMode) ?? true
             hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
             bannedRules = try container.decodeIfPresent(Set<String>.self, forKey: .bannedRules) ?? []
         }
@@ -54,7 +57,7 @@ public final class HoneycombViewModel {
             try container.encode(activeDeckIndex, forKey: .activeDeckIndex)
             try container.encode(selectedRules, forKey: .selectedRules)
             try container.encode(forceNormalMode, forKey: .forceNormalMode)
-            try container.encode(showPointHighlights, forKey: .showPointHighlights)
+            try container.encode(honeyMode, forKey: .honeyMode)
             try container.encode(hideHintButton, forKey: .hideHintButton)
             try container.encode(bannedRules, forKey: .bannedRules)
         }
@@ -66,7 +69,7 @@ public final class HoneycombViewModel {
                 && lhs.activeDeckIndex == rhs.activeDeckIndex
                 && lhs.selectedRules == rhs.selectedRules
                 && lhs.forceNormalMode == rhs.forceNormalMode
-                && lhs.showPointHighlights == rhs.showPointHighlights
+                && lhs.honeyMode == rhs.honeyMode
                 && lhs.hideHintButton == rhs.hideHintButton
                 && lhs.bannedRules == rhs.bannedRules
         }
@@ -577,15 +580,16 @@ public final class HoneycombViewModel {
     // every other rule) because its flavor text depends on what the trade actually
     // did, not just that the rule is active — a 5-star card leaving the player's hand
     // reads very differently from the player coming out ahead.
-    private static func formatSwapRuleForBanner(_ swapResult: SwapResult) -> String {
+    private func formatSwapRuleForBanner(_ swapResult: SwapResult) -> String {
         let defaultText = HoneycombRule.swap.rawValue
+        let tokens = ["OpponentName": options.difficulty.displayName]
         if swapResult.preSwapPlayerCard.data.stars == 5 {
-            return bannerCatalogText(for: .ruleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, existingDefaultText: defaultText)
+            return Self.bannerCatalogText(for: .ruleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, existingDefaultText: defaultText, tokens: tokens)
         }
         if swapResult.preSwapOpponentCard.data.stars > swapResult.preSwapPlayerCard.data.stars {
-            return bannerCatalogText(for: .ruleSpecificNectarExchangeTradesThePlayersWorstCardForThe, existingDefaultText: defaultText)
+            return Self.bannerCatalogText(for: .ruleSpecificNectarExchangeTradesThePlayersWorstCardForThe, existingDefaultText: defaultText, tokens: tokens)
         }
-        return bannerCatalogText(for: .ruleSpecificRouletteRollsNectarExchange, existingDefaultText: defaultText)
+        return Self.bannerCatalogText(for: .ruleSpecificRouletteRollsNectarExchange, existingDefaultText: defaultText, tokens: tokens)
     }
 
     private static func rouletteBannerID(for rule: HoneycombRule) -> BannerID? {
@@ -644,7 +648,7 @@ public final class HoneycombViewModel {
         let firstMoveLine = isPlayerTurn ? "First Move: Player!" : "First Move: \(options.difficulty.displayName)!"
         var ruleLines = activeRules.map { rule -> String in
             if rule == .swap, let swapResult {
-                return Self.formatSwapRuleForBanner(swapResult)
+                return formatSwapRuleForBanner(swapResult)
             }
             return formatRuleForBanner(rule)
         }
@@ -1632,7 +1636,7 @@ public final class HoneycombViewModel {
         flashCaptureAttackers(attackerIds)
         isAnimatingPlacement = true
 
-        if options.showPointHighlights, !directStatIndices.isEmpty, !UISound.isHeadlessMode {
+        if options.honeyMode, !directStatIndices.isEmpty, !UISound.isHeadlessMode {
             // One beat with the attacker's winning stat(s) flashed before the
             // captured neighbors actually flip.
             pointHighlight = (cardId: placedCard.id, statIndices: directStatIndices)
@@ -2310,6 +2314,18 @@ public final class HoneycombViewModel {
             guard let card = cell.card else { return false }
             return isStealEligible(card)
         }
+    }
+
+    // Whether every card in THIS opponent's frozen deck (rematchOpponentDeck — the same
+    // 5 cards every rematch in this chain deals from) is already in the player's global
+    // card bank. Distinct from hasStealableCard, which only reflects whether anything
+    // was actually stealable THIS round — this is true even on a round where nothing
+    // new was captured, as long as there's nothing left to ever capture from this
+    // specific opponent. Implies !hasStealableCard (isStealEligible's "not already
+    // unlocked" guard runs first), so the two never conflict.
+    public var hasObtainedAllOpponentCards: Bool {
+        !rematchOpponentDeck.isEmpty
+            && rematchOpponentDeck.allSatisfy { HoneycombProfileManager.shared.unlockedCardIds.contains($0.id) }
     }
 
     // Steal Protection: covers the case where a rematch's frozen opponent pool
