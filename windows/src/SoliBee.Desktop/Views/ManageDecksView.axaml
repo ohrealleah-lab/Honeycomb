@@ -83,7 +83,7 @@
                 <TextBlock Grid.Row="0" Text="Freeform search: type a value onto the card to filter the bank."
                            FontSize="12" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
-                <Border Grid.Row="1" Width="96" Height="128" HorizontalAlignment="Left"
+                <Border Grid.Row="1" Width="96" Height="128" HorizontalAlignment="Center"
                         Background="White" BorderBrush="#000000" BorderThickness="2"
                         CornerRadius="6" Margin="0,0,0,16" BoxShadow="0 3 8 0 #33000000">
                     <Grid>
