@@ -79,6 +79,26 @@ public static class HoneycombAI
         return FindMinimaxMove(board, aiHand, simulatedPlayerHand, rules, depth, useFallenAceWeight, aiOwner, playerOwner, mandatedHandIndex);
     }
 
+    // Player Hint uses this instead of FindMove(..., HoneycombDifficulty.UltraHard, ...)
+    // — same UltraHard-caliber evaluation (Fallen Ace weighting included) but 5 plies
+    // instead of 6, purely for speed. Deliberately a separate entry point rather than
+    // adding a "hint mode" branch to FindMove/depth's difficulty switch, so Killer
+    // Bee's own actual opponent-AI moves keep searching at the full 6 plies — only
+    // Hint gets the shallower, faster search.
+    public static (int HandIndex, int CellIndex) FindHintMove(
+        HoneycombBoard board,
+        List<HoneycombCard> playerHand,
+        List<HoneycombCard> opponentHand,
+        int unknownOpponentCardCount,
+        HashSet<HoneycombRule> rules,
+        int playerOwner,
+        int opponentOwner,
+        int? mandatedHandIndex)
+    {
+        var simulatedOpponentHand = BuildSimulatedHand(opponentHand, unknownOpponentCardCount, opponentOwner);
+        return FindMinimaxMove(board, playerHand, simulatedOpponentHand, rules, 5, true, playerOwner, opponentOwner, mandatedHandIndex);
+    }
+
     private static (int, int) FindGreedyMove(HoneycombBoard board, List<HoneycombCard> hand, HashSet<HoneycombRule> rules, int owner, int? mandatedHandIndex)
     {
         int bestScore = -1;

@@ -26,6 +26,13 @@ public partial class HoneycombViewModel : ObservableObject
     private bool _isHeadless = false;
     private int _matchGeneration = 0;
 
+    // Match-start prefetch of the first move's AI search — see PrefetchFirstMove.
+    // Only ever valid for the literal first move of the match it was computed for
+    // (empty board, nothing revealed), checked via _prefetchedFirstMoveGeneration
+    // against the live _matchGeneration at the point of use.
+    private Task<(int HandIndex, int CellIndex)>? _prefetchedFirstMoveTask;
+    private int _prefetchedFirstMoveGeneration = -1;
+
     // Idle Action toast: nudges the player if a full minute passes with no move
     // (either side — the clock restarts whenever StartTurn runs, so it's really "a
     // minute since the board last changed"). Re-armed via the same generation-token
@@ -704,6 +711,18 @@ public partial class HoneycombViewModel : ObservableObject
 
         State.CurrentTurn = starter;
 
+        // Kicks off the first move's AI search (whichever side goes first) right now,
+        // on a background thread, instead of only starting it once the player clicks
+        // Hint or once RunAITurn's own pacing delay elapses — by the time either of
+        // those actually needs the result, the banner setup below plus the "First
+        // Move" banner's own display time (or RunAITurn's 2.5s pacing beat) has
+        // usually already covered most or all of the wait. The first move of a match
+        // is also the single most expensive position this search will ever face that
+        // match (empty board, full hands = the largest possible move tree), so this
+        // is exactly the moment prefetching matters most.
+        int generation = ++_matchGeneration;
+        PrefetchFirstMove(generation);
+
         string starterName = starter == 1 ? "Player" : Options.Difficulty.DisplayName();
         // A single combined banner instead of separate flashes at match start — every
         // active rule (up to 2) gets its own line below "First Move", in the same font,
@@ -738,7 +757,6 @@ public partial class HoneycombViewModel : ObservableObject
         }
         CheckSameDifficultyStreak();
 
-        int generation = ++_matchGeneration;
         if (swap.HasValue)
         {
             // Highlight the two real, not-yet-swapped cards right away, in sync with
@@ -924,7 +942,42 @@ public partial class HoneycombViewModel : ObservableObject
             if (warningResult.Kind == BannerFireKind.Message) EnqueueBanner(warningResult.Text!);
         }
 
-        var move = HoneycombAI.FindMove(State.Board, State.OpponentHand, visiblePlayerCards, unknownPlayerCardCount, new HashSet<HoneycombRule>(State.ActiveRules), Options.Difficulty, -1, 1, State.OpponentChaosIndex);
+        (int HandIndex, int CellIndex) move;
+        // Reuse the match-start prefetch (see PrefetchFirstMove) only for the exact
+        // position it was computed for — the AI's literal opening move, before
+        // anything's been revealed. Every later turn falls through to a fresh search.
+        // Chaos is excluded even on the first move: State.OpponentChaosIndex is
+        // rolled in StartTurn(), which runs *after* PrefetchFirstMove — the prefetch
+        // can't have known the mandate yet, so it could suggest a card the AI isn't
+        // actually allowed to play this turn.
+        bool isFirstMoveOfMatch = emptyCellCount == 9 && visiblePlayerCards.Count == 0
+            && !State.ActiveRules.Contains(HoneycombRule.Chaos);
+        if (isFirstMoveOfMatch && _prefetchedFirstMoveTask != null && _prefetchedFirstMoveGeneration == _matchGeneration)
+        {
+            move = await _prefetchedFirstMoveTask;
+        }
+        else
+        {
+            // Snapshot before backgrounding, same rationale as FindHint — a player
+            // action landing mid-search could otherwise mutate State.Board/
+            // OpponentHand while the search is still reading them on another thread.
+            var boardSnapshot = State.Board.Clone();
+            var opponentHandSnapshot = new List<HoneycombCard>(State.OpponentHand);
+            var rules = new HashSet<HoneycombRule>(State.ActiveRules);
+            move = await Task.Run(() => HoneycombAI.FindMove(
+                boardSnapshot, opponentHandSnapshot, visiblePlayerCards, unknownPlayerCardCount,
+                rules, Options.Difficulty, -1, 1, State.OpponentChaosIndex));
+        }
+
+        // The match may have been quit/reset while the above was computing — bail
+        // rather than acting on state that no longer reflects a live game.
+        if (!IsPlaying || State.CurrentTurn != -1)
+        {
+            _isAnimating = false;
+            NotifyStateChanged();
+            return;
+        }
+
         if (move.HandIndex >= 0)
         {
             ExecutePlacement(move.HandIndex, move.CellIndex);
@@ -1828,11 +1881,59 @@ public partial class HoneycombViewModel : ObservableObject
         StartTurn();
     }
 
+    // Kicks off the first move's search on a background thread — see the call site in
+    // FinishMatchSetup for why this timing matters. Whichever side goes first gets a
+    // search matching what that side would actually use when the move is needed:
+    // FindHintMove's 5-ply UltraHard-caliber search for a player Hint (FindHint always
+    // searches at that caliber regardless of match difficulty), or the match's own
+    // Options.Difficulty for the AI's own opening move. Nothing's been revealed by
+    // either side yet this early in the match, so both snapshots pass an empty
+    // "known" hand for the other side.
+    private void PrefetchFirstMove(int generation)
+    {
+        var boardSnapshot = State.Board.Clone();
+        var rules = new HashSet<HoneycombRule>(State.ActiveRules);
+
+        if (State.CurrentTurn == 1)
+        {
+            var playerHandSnapshot = new List<HoneycombCard>(State.PlayerHand);
+            int unknownOpponentCardCount = State.OpponentHand.Count;
+            _prefetchedFirstMoveTask = Task.Run(() => HoneycombAI.FindHintMove(
+                boardSnapshot, playerHandSnapshot, new List<HoneycombCard>(), unknownOpponentCardCount,
+                rules, 1, -1, null));
+        }
+        else
+        {
+            var opponentHandSnapshot = new List<HoneycombCard>(State.OpponentHand);
+            _prefetchedFirstMoveTask = Task.Run(() => HoneycombAI.FindMove(
+                boardSnapshot, opponentHandSnapshot, new List<HoneycombCard>(), State.PlayerHand.Count,
+                rules, Options.Difficulty, -1, 1, State.OpponentChaosIndex));
+        }
+        _prefetchedFirstMoveGeneration = generation;
+    }
+
     // Reset once per match (FinishMatchSetup) — fires exactly on the 3rd hint request,
     // not "count >= 3", which would fire on every hint after that too.
     private int _hintUsageCountThisMatch;
 
-    public void FindHint()
+    // Bumped on every FindHint() call; a background search only applies its result if
+    // this still matches the generation it started with, so a superseded/stale search
+    // (another hint requested, or the match moved on, while it was still computing)
+    // gets silently discarded instead of clobbering a newer ActiveHint. Mirrors the
+    // Swift port's hintGeneration (shared/Honeycomb/ViewModels/HoneycombViewModel.swift).
+    private int _hintGeneration;
+
+    // async void (not async Task) matches how Hint_Click calls this — a fire-and-forget
+    // UI click handler, same pattern as RunAITurn(). The search itself (UltraHard-depth
+    // minimax, the heaviest configuration in the codebase — see HoneycombAI.FindMove)
+    // runs on a background thread via Task.Run instead of blocking the UI thread
+    // synchronously like before, which was the actual cause of the game "locking up"
+    // on the first hint of a match: the very first call also pays .NET's JIT warm-up
+    // cost for the minimax code path on top of the search itself, and previously both
+    // costs were paid as visible UI-thread blocking. Mirrors the Swift port's findHint(),
+    // which dispatches to DispatchQueue.global(qos: .userInitiated) for the same reason
+    // — mac never had this lockup because it was already backgrounding the search.
+    public async void FindHint()
     {
         if (!IsPlaying || State.CurrentTurn != 1 || _isAnimating || State.PlayerHand.Count == 0) return;
 
@@ -1850,9 +1951,46 @@ public partial class HoneycombViewModel : ObservableObject
         // knew the opponent could only ever play those few cards, so the remainder is
         // simulated as generic placeholder cards inside HoneycombAI.FindMove instead.
         int unknownOpponentCardCount = State.OpponentHand.Count - knownOpponent.Count;
+        var rules = new HashSet<HoneycombRule>(State.ActiveRules);
 
-        var move = HoneycombAI.FindMove(State.Board, State.PlayerHand, knownOpponent, unknownOpponentCardCount, new HashSet<HoneycombRule>(State.ActiveRules), HoneycombDifficulty.UltraHard, 1, -1, null);
-        
+        int generation = ++_hintGeneration;
+
+        (int HandIndex, int CellIndex) move;
+        // Reuse the match-start prefetch (see PrefetchFirstMove) only for the exact
+        // position it was computed for — the literal first move of the match, before
+        // anything's been revealed. Any other Hint click falls through to a fresh
+        // search snapshotting current state. Chaos is excluded even on the first move:
+        // its mandated hand index is rolled in StartTurn(), which runs *after*
+        // PrefetchFirstMove — the prefetch can't have known the mandate yet, so it
+        // could suggest a card the player isn't actually allowed to play this turn.
+        bool isFirstMoveOfMatch = knownOpponent.Count == 0 && State.Board.Cells.All(c => c.IsEmpty)
+            && !rules.Contains(HoneycombRule.Chaos);
+        if (isFirstMoveOfMatch && _prefetchedFirstMoveTask != null && _prefetchedFirstMoveGeneration == _matchGeneration)
+        {
+            move = await _prefetchedFirstMoveTask;
+        }
+        else
+        {
+            // Snapshot the board/hand before backgrounding — the search can take long
+            // enough that the player could otherwise play a card mid-search, mutating
+            // State.Board/PlayerHand while the search is still indexing/iterating them
+            // on another thread. knownOpponent above is already a fresh .ToList() copy.
+            var boardSnapshot = State.Board.Clone();
+            var playerHandSnapshot = new List<HoneycombCard>(State.PlayerHand);
+            // Order is handled inside HoneycombAI.FindMove's minimax path regardless
+            // of what's passed here, but Chaos's mandated index is only known to the
+            // caller — passing null unconditionally (as this used to) meant a hint
+            // under Frenzy could suggest a card the player wasn't actually allowed to
+            // play this turn.
+            // FindHintMove (not FindMove(..., UltraHard, ...)) — same UltraHard-caliber
+            // evaluation, but 5 plies instead of 6, purely for speed.
+            move = await Task.Run(() => HoneycombAI.FindHintMove(
+                boardSnapshot, playerHandSnapshot, knownOpponent, unknownOpponentCardCount,
+                rules, 1, -1, State.PlayerChaosIndex));
+        }
+
+        if (generation != _hintGeneration) return; // superseded while computing
+
         if (move.HandIndex < 0)
         {
             var emptyCells = new List<int>();
