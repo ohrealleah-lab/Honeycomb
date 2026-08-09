@@ -67,6 +67,7 @@ public partial class HoneycombRulesView : UserControl
         HoneycombRule_Order.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Order);
         HoneycombRule_Chaos.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Chaos);
         HoneycombRule_BombShelter.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.BombShelter);
+        HoneycombRule_Reverse.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Reverse);
         HoneycombRule_SuddenDeath.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.SuddenDeath);
 
         // Ban List
