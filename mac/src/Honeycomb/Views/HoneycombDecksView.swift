@@ -89,8 +89,8 @@ public struct HoneycombDecksView: View {
     private func statSearchField(_ binding: Binding<String>) -> some View {
         TextField("", text: binding)
             .multilineTextAlignment(.center)
-            .font(.system(size: 14, weight: .bold, design: .monospaced))
-            .frame(width: 28, height: 24)
+            .font(.system(size: 12, weight: .bold, design: .monospaced))
+            .frame(width: 18, height: 18)
             .background(Color(white: 0.95))
             .cornerRadius(4)
             .textFieldStyle(.plain)
@@ -122,6 +122,7 @@ public struct HoneycombDecksView: View {
                 statSearchField($filterStatBottom).position(x: 48, y: 108)
             }
             .frame(width: 96, height: 128)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
