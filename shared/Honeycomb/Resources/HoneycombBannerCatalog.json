@@ -634,7 +634,7 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "A new bee joins the hive. Thank you for playing!"
+        "Welcome to the colony! Time to make some honey."
       ]
     },
     {
@@ -673,7 +673,7 @@
       "gateChance": null,
       "fallback": null,
       "messages": [
-        "1000 wins. The hive bends to your will."
+        "1000 wins. A millennium of triumph. The Queen herself applauds."
       ]
     },
     {
@@ -700,7 +700,9 @@
       "gateChance": 0.2,
       "fallback": "Pollination!",
       "messages": [
-        "The pollen's thick today — {AscensionSuit} is in full bloom!"
+        "The pollen's thick today — {AscensionSuit} is in full bloom!",
+        "{AscensionSuit} is drowning in nectar!",
+        "A massive harvest! {AscensionSuit} thrives."
       ]
     },
     {
@@ -713,7 +715,8 @@
       "gateChance": 0.2,
       "fallback": "Smoked Out!",
       "messages": [
-        "Smoked out — that card can barely buzz anymore."
+        "Smoked out — that card can barely buzz anymore.",
+        "Lethargic and grounded."
       ]
     },
     {
@@ -726,7 +729,8 @@
       "gateChance": 0.2,
       "fallback": "Math Bee!",
       "messages": [
-        "The math checks out!"
+        "The math checks out!",
+        "Calculated to perfection!"
       ]
     },
     {
