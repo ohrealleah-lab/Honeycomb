@@ -35,7 +35,7 @@ public static class HoneycombRuleWeights
     // the Swift port (shared/Honeycomb/Models/HoneycombBoard.swift).
     public static string DisplayName(this HoneycombRule rule) => rule switch
     {
-        HoneycombRule.BombShelter => "Hive Swarm",
+        HoneycombRule.BombShelter => "Capped Brood",
         HoneycombRule.Ascension => "Pollination",
         HoneycombRule.Descension => "Smoked Out",
         HoneycombRule.Same => "Symmetry",

@@ -12,7 +12,7 @@ public enum HoneycombRule: String, Codable, CaseIterable {
     case swap = "Nectar Exchange"
     case order = "Hierarchy"
     case chaos = "Frenzy"
-    case bombShelter = "Hive Swarm"
+    case bombShelter = "Capped Brood"
     case suddenDeath = "Swarm to the Death"
 
     // Roulette draw weight — approximates real Triple Triad (FFXIV) NPC rule

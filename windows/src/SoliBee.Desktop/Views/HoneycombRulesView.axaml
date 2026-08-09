@@ -103,7 +103,7 @@
 
                     <CheckBox Grid.Row="11" Grid.Column="0" x:Name="Ban_BombShelter" Tag="BombShelter" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="First card played remains face-down for 3 turns before flipping automatically."/>
                     <CheckBox Grid.Row="11" Grid.Column="1" x:Name="HoneycombRule_BombShelter" Tag="BombShelter" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="First card played remains face-down for 3 turns before flipping automatically."/>
-                    <TextBlock Grid.Row="11" Grid.Column="2" Text="Hive Swarm" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="First card played remains face-down for 3 turns before flipping automatically."/>
+                    <TextBlock Grid.Row="11" Grid.Column="2" Text="Capped Brood" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="First card played remains face-down for 3 turns before flipping automatically."/>
 
                     <CheckBox Grid.Row="12" Grid.Column="0" x:Name="Ban_Reverse" Tag="Reverse" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Lower stats capture higher stats."/>
                     <CheckBox Grid.Row="12" Grid.Column="1" x:Name="HoneycombRule_Reverse" Tag="Reverse" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Lower stats capture higher stats."/>
