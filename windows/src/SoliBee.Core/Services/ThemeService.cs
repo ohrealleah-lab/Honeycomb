@@ -10,17 +10,17 @@ namespace SoliBee.Core.Services;
 public static class ThemeService
 {
     private static readonly string _dataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
 
     private static readonly string _themesPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SoliBee", "themes.json");
+        AppDataMigration.FolderName, "themes.json");
 
     // Tombstone of default-preset Ids the user has explicitly deleted, so
     // MergeInDefaultThemes doesn't resurrect them on the next launch.
     private static readonly string _deletedDefaultsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SoliBee", "deleted_default_themes.json");
+        AppDataMigration.FolderName, "deleted_default_themes.json");
 
     private static readonly JsonSerializerOptions _jsonOpts = new() { WriteIndented = true };
 

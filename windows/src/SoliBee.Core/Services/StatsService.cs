@@ -38,7 +38,7 @@ public static class StatsService
             // Ignore and fallback
         }
 
-        var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
+        var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
         if (!Directory.Exists(fallbackDir))
         {
             Directory.CreateDirectory(fallbackDir);

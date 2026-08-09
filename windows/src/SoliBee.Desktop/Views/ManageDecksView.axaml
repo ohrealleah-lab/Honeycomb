@@ -123,7 +123,7 @@
                     <StackPanel Spacing="10">
                         <TextBlock Text="Start over clears your decks and card bank, then reseeds the game."
                                    FontSize="12" Foreground="White" TextWrapping="Wrap"/>
-                        <Button Content="Start Over" Classes="light-danger"
+                        <Button Content="Start Over" Classes="light-warning"
                                 HorizontalAlignment="Left" Click="StartOver_Click"/>
                     </StackPanel>
                 </Border>

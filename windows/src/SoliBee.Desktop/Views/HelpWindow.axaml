@@ -324,6 +324,11 @@
                             <TextBlock Classes="help-body" TextWrapping="Wrap"
                                        Text="• Felt Table: Choose from 5 preset felt colors (Green, Crimson, Royal Blue, Charcoal, Desert) or set a Custom Color via picker. Toggle edge vignette on/off.&#x0a;• Card Backs: Select built-in designs or upload custom .jpg/.png/.gif files.&#x0a;• Face Card Art: Upload custom image/GIF artwork individually for Aces, Jacks, Queens, and Kings.&#x0a;• Saved Themes: Snapshot your custom felt, card backs, and face art into named custom themes to apply anytime in one click!"/>
                         </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="⚙️ Options" Classes="help-heading"/>
+                            <TextBlock Classes="help-body" TextWrapping="Wrap"
+                                       Text="• Honey Mode (Flavor): Global toggle across all 6 games — controls the &quot;+N&quot;/&quot;-N&quot; score popups and whether flavor/ambiance banners appear. Turn it off for a quieter, more minimal play experience.&#x0a;• Always on Top: Keeps the game window pinned above your other windows.&#x0a;• Sound Effects, Vegas Scoring, and Hide Hint Button are also available here per-game."/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

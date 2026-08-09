@@ -56,20 +56,20 @@ public static class HoneycombRuleWeights
     {
         HoneycombRule.Ascension => activeSuits != null && activeSuits.Count > 0
             ? $"Grants +1 to stats for all {string.Join(" and ", activeSuits.OrderBy(s => s).Select(HoneycombCardData.SuitDisplayName))} cards placed on the board."
-            : "Grants +1 to stats for cards matching the active suits placed on the board.",
+            : "Grants +1 to stats for cards matching randomly selected suits placed on the board.",
         HoneycombRule.Descension => activeSuits != null && activeSuits.Count > 0
             ? $"Inflicts -1 to stats for all {string.Join(" and ", activeSuits.OrderBy(s => s).Select(HoneycombCardData.SuitDisplayName))} cards placed on the board."
-            : "Inflicts -1 to stats for cards matching the active suits placed on the board.",
+            : "Inflicts -1 to stats for cards matching randomly selected suits placed on the board.",
         HoneycombRule.Same => "If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously.",
         HoneycombRule.Plus => "If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured.",
-        HoneycombRule.BombShelter => "First card played remains face-down for 3 turns before flipping automatically.",
+        HoneycombRule.BombShelter => "Each player's first card played remains face-down for 3 turns before flipping automatically.",
         HoneycombRule.Swap => "One card from each player's hand is randomly swapped at the start of the match.",
         HoneycombRule.AllOpen => "Both players' hands are completely visible.",
         HoneycombRule.ThreeOpen => "Three random cards in the opponent's hand are visible.",
         HoneycombRule.Order => "Cards must be played in the exact order they were drawn.",
         HoneycombRule.Chaos => "Cards are randomly selected and forced to be played each turn.",
         HoneycombRule.Reverse => "Lower stats capture higher stats.",
-        HoneycombRule.FallenAce => "A stat of A (10) can be captured by a stat of 1.",
+        HoneycombRule.FallenAce => "A stat of A (10) can be captured by a stat of 1. If Inversion is also active, this flips: a stat of A captures a stat of 1 instead.",
         HoneycombRule.SuddenDeath => "If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately.",
         _ => ""
     };

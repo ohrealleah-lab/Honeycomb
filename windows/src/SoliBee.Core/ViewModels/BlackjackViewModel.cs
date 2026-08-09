@@ -565,7 +565,7 @@ public partial class BlackjackViewModel : ObservableObject
 
     // ── Persistence ───────────────────────────────────────────────────────────
 
-    private static readonly string DataDir        = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
+    private static readonly string DataDir        = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
     private static readonly string OptionsPath    = Path.Combine(DataDir, "blackjack_options.json");
     private static readonly string StatisticsPath = Path.Combine(DataDir, "blackjack_stats.json");
 

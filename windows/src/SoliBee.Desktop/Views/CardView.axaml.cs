@@ -383,7 +383,7 @@ public partial class CardView : UserControl
     {
         var backDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SoliBee", "CardBacks");
+            AppDataMigration.FolderName, "CardBacks");
 
         foreach (var cb in options.CustomCardBacks)
         {
@@ -896,7 +896,7 @@ public partial class CardView : UserControl
                 isCustom = true;
                 customPath = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "SoliBee", "CardBacks", customBack.FileName);
+                    AppDataMigration.FolderName, "CardBacks", customBack.FileName);
                 scale = customBack.Scale;
                 offsetX = customBack.OffsetX;
                 offsetY = customBack.OffsetY;
@@ -965,7 +965,7 @@ public partial class CardView : UserControl
                 isCustom = true;
                 customPath = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "SoliBee",
+                    AppDataMigration.FolderName,
                     "CardBacks",
                     customBack.FileName
                 );

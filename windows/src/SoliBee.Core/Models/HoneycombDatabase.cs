@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using SoliBee.Core.Services;
 
 namespace SoliBee.Core.Models;
 
@@ -39,7 +40,7 @@ public class HoneycombDatabase
         }
         catch { }
 
-        var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
+        var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
         return fallbackDir;
     }
 

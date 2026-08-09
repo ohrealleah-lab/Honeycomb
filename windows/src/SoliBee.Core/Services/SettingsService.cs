@@ -12,7 +12,7 @@ public static class SettingsService
 
     private static readonly string FallbackDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SoliBee"
+        AppDataMigration.FolderName
     );
     private static readonly string FallbackFilePath = Path.Combine(FallbackDirectory, "settings.json");
 

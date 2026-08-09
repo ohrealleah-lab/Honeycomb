@@ -45,7 +45,7 @@ extension HoneycombRule {
         case .plus:
             return "If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured."
         case .fallenAce:
-            return "A card with a stat of 1 attacking a 10 (\"A\") always captures it!"
+            return "A card with a stat of 1 attacking a 10 (\"A\") always captures it! If Inversion is also active, this flips: a 10 (\"A\") captures a 1 instead."
         case .reverse:
             return "Inverts all comparisons—lower stats beat higher stats."
         case .ascension:
@@ -71,7 +71,7 @@ extension HoneycombRule {
         case .threeOpen:
             return "Three randomly selected cards from each player's hand are visible."
         case .bombShelter:
-            return "First card played remains face-down for 3 turns before flipping automatically."
+            return "Each player's first card played remains face-down for 3 turns before flipping automatically."
         case .suddenDeath:
             return "If the match ends in a draw, a rematch begins immediately."
         case .swap:

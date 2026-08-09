@@ -18,7 +18,7 @@ public static class FirstPlayedTracker
     }
 
     private static string FilePath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee", "first_played.json");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName, "first_played.json");
 
     private static FirstPlayedData Load()
     {

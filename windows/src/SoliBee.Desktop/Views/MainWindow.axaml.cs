@@ -272,7 +272,7 @@ public partial class MainWindow : Window
 
         var path = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SoliBee", "Backgrounds", customBg.FileName);
+            AppDataMigration.FolderName, "Backgrounds", customBg.FileName);
 
         if (!File.Exists(path))
         {

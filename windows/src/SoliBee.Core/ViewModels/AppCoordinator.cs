@@ -33,7 +33,7 @@ public partial class AppCoordinator : ObservableObject
 
     private static readonly string LastModeFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SoliBee", "last_mode.txt");
+        AppDataMigration.FolderName, "last_mode.txt");
 
     public AppCoordinator()
     {

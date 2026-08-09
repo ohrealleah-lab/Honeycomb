@@ -87,6 +87,14 @@
             <Setter Property="Background" Value="#CC3333" />
             <Setter Property="Foreground" Value="White" />
         </Style>
+        <Style Selector="Button.light-warning">
+            <Setter Property="Background" Value="#FFD60A" />
+            <Setter Property="Foreground" Value="Black" />
+        </Style>
+        <Style Selector="Button.light-warning:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#FFD60A" />
+            <Setter Property="Foreground" Value="Black" />
+        </Style>
 
         <!-- Casino (Blackjack/Video Poker) button base + color-coded action variants —
              both games' button ladders were previously defined nearly identically per

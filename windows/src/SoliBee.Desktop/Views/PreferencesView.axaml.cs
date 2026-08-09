@@ -997,7 +997,7 @@ public partial class PreferencesView : UserControl
             {
                 var path = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "SoliBee", "CardBacks", customBack.FileName);
+                    AppDataMigration.FolderName, "CardBacks", customBack.FileName);
                 if (File.Exists(path))
                     return new Bitmap(path);
             }
@@ -1119,7 +1119,7 @@ public partial class PreferencesView : UserControl
             {
                 var destDir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "SoliBee", "CardBacks");
+                    AppDataMigration.FolderName, "CardBacks");
                 var filePath = Path.Combine(destDir, customBack.FileName);
                 try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
             }
@@ -1177,7 +1177,7 @@ public partial class PreferencesView : UserControl
 
             var destDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SoliBee", "CardBacks");
+                AppDataMigration.FolderName, "CardBacks");
             if (!Directory.Exists(destDir))
                 Directory.CreateDirectory(destDir);
 
@@ -1286,7 +1286,7 @@ public partial class PreferencesView : UserControl
 
     private static string BackgroundsDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SoliBee", "Backgrounds");
+        AppDataMigration.FolderName, "Backgrounds");
 
     private void BackgroundComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {

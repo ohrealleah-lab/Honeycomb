@@ -2041,7 +2041,7 @@ public partial class HoneycombViewModel : ObservableObject
             }
         }
         catch { }
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
     }
 
     private static string DataDir => GetLocalFolderPath();

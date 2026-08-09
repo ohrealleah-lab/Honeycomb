@@ -256,7 +256,7 @@ struct HoneycombHelpView: View {
                         text: "Battle an AI opponent on a 3×3 grid using a 5-card deck. Each card features 4 directional stats (Top, Right, Bottom, Left). Place cards strategically to flip enemy cards to your color. Whoever controls the majority of the 9 grid cells at the end wins!")
 
             RuleSection(title: "🎮 Core Gameplay & Mechanics",
-                        text: "• Capturing: When you place a card adjacent to an opponent's card, your facing stat is compared against their opposite facing stat. If your stat is higher, the enemy card is captured (flipped to your color). Stat 10 is rendered as \"A\".\n• Combos: A card captured during a turn immediately checks its own adjacent neighbors, triggering a chain-reaction capture sequence!")
+                        text: "• Capturing: When you place a card adjacent to an opponent's card, your facing stat is compared against their opposite facing stat. If your stat is higher, the enemy card is captured (flipped to your color). Stat 10 is rendered as \"A\".\n• Hive Minds: A card captured during a turn immediately checks its own adjacent neighbors, triggering a chain-reaction capture sequence!")
 
             RuleSection(title: "🎲 Match Modifiers & Special Rules",
                         text: HoneycombRule.allCases.map { "• \($0.rawValue): \($0.explanation())" }.joined(separator: "\n"))
@@ -286,6 +286,9 @@ struct ThemesHelpView: View {
         HelpShell(title: "Themes & Global Settings", subtitle: "Customize the look of every game and adjust global modes.") {
             RuleSection(title: "🎨 Themes & Customization",
                         text: "• Felt Table: Choose from 5 preset felt colors (Green, Crimson, Royal Blue, Charcoal, Desert) or set a Custom Color via picker. Toggle edge vignette on/off.\n• Card Backs: Select built-in designs or upload custom .jpg/.png/.gif files.\n• Face Card Art: Upload custom image/GIF artwork individually for Aces, Jacks, Queens, and Kings.\n• Saved Themes: Snapshot your custom felt, card backs, and face art into named custom themes to apply anytime in one click!")
+
+            RuleSection(title: "⚙️ Options",
+                        text: "• Honey Mode (Flavor): Global toggle across all 6 games — controls the \"+N\"/\"-N\" score popups and whether flavor/ambiance banners appear. Turn it off for a quieter, more minimal play experience.\n• Stay on Top: Keeps the game window pinned above your other windows (View menu).\n• Sound Effects, Vegas Scoring, and Hide Hint Button are also available here per-game.")
         }
     }
 }

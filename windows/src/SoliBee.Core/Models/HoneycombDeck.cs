@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using SoliBee.Core.Services;
 
 namespace SoliBee.Core.Models;
 
@@ -48,7 +49,7 @@ public class HoneycombProfileManager
         }
         catch { }
 
-        var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoliBee");
+        var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
         if (!Directory.Exists(fallbackDir))
         {
             Directory.CreateDirectory(fallbackDir);

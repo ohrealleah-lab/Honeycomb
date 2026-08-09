@@ -1,5 +1,6 @@
 using System;
 using Avalonia;
+using SoliBee.Core.Services;
 using Velopack;
 
 namespace SoliBee.Desktop;
@@ -16,6 +17,10 @@ class Program
         // Velopack intercepts its own first-run/install/update/uninstall hook invocations.
         // A no-op on every normal launch.
         VelopackApp.Build().Run();
+
+        // Must run before any ViewModel/Service is constructed — those read the app-data
+        // folder in static field initializers, which trigger on first class use.
+        AppDataMigration.EnsureMigrated();
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
