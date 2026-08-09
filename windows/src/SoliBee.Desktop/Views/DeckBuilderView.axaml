@@ -16,44 +16,68 @@
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="10,5" />
         </Style>
+
+        <!-- Without this override, the default Fluent ToggleButton theme paints its
+             own accent-blue background on :checked, so a checked Favorites filter
+             turned into a bold solid-blue button — out of step with the rest of the
+             app's neutral gray/white pill styling (and with Mac, which just tints
+             it faintly). Targeting /template/ ContentPresenter matches the existing
+             pattern used for heart-btn below. -->
+        <Style Selector="ToggleButton.favorites-filter:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="#FFE3E3" />
+        </Style>
     </UserControl.Styles>
 
-    <!-- Root: fills whatever space the overlay gives it -->
-    <Grid RowDefinitions="Auto, Auto, Auto, *, Auto" Margin="24,20,24,20">
-        
-        <!-- Title -->
-        <TextBlock Grid.Row="0" Text="Deck Builder" FontSize="28" FontWeight="Black"
-                   HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#1A1A1A"/>
-        
-        <!-- Deck Name -->
-        <TextBox Grid.Row="1" x:Name="DeckNameTextBox" MaxLength="20"
-                 Watermark="Deck Name (Max 20 chars)" FontSize="16" Padding="10"
-                 CornerRadius="8" BorderBrush="#80A0FF" BorderThickness="2"
-                 HorizontalAlignment="Stretch" Margin="0,0,0,16"/>
+    <!-- Root: fills whatever space the overlay gives it. Top row is two columns —
+         title+deck-name on the left, the "Your Deck" tray pinned to the right — so
+         the tray doesn't eat a full-width row of its own above the Card Bank grid,
+         which is the part you actually scroll through to build a deck. -->
+    <Grid RowDefinitions="Auto, *, Auto" Margin="24,16,24,16">
 
-        <!-- Your Deck Area -->
-        <Border Grid.Row="2" Background="#EDF2F7" CornerRadius="12" Padding="16,12"
-                Margin="0,0,0,16" VerticalAlignment="Top">
-            <StackPanel>
-                <TextBlock x:Name="YourDeckTitle" Text="Your Deck (0/5) — Tap to Remove"
-                           FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"
-                           Margin="0,0,0,12" Foreground="#1A1A1A"/>
-                <!-- Viewbox shrinks the 5-card row to fit narrower windows -->
-                <Viewbox Stretch="Uniform" HorizontalAlignment="Center" MaxHeight="160">
-                    <StackPanel x:Name="DeckSlotsPanel" Orientation="Horizontal" Spacing="10">
-                        <!-- Populated in code-behind -->
-                    </StackPanel>
-                </Viewbox>
-            </StackPanel>
-        </Border>
+        <!-- Title + Deck Name + Card Bank header + filters (left, fixed-width) /
+             Your Deck tray (right, gets whatever width is left). A fixed left
+             width (rather than the "*" it had before) forces the subtitle to wrap
+             onto more lines instead of stretching out thin, and gives the name
+             field a natural cap instead of it stretching edge-to-edge across a
+             column sized for other content. The filters used to be their own row
+             below this whole block — now they live in the left column too, ending
+             at roughly the same height as the tray's card row on the right, so the
+             Card Bank grid below starts right after both instead of after
+             whichever one happened to be taller, freeing more room for visible
+             cards. -->
+        <Grid Grid.Row="0" ColumnDefinitions="300, *" Margin="0,0,0,10">
+            <!-- Grid (not a plain StackPanel) with a flexible middle row so the
+                 filters land in their own bottom-pinned Auto row instead of
+                 immediately trailing the subtitle text. VerticalAlignment=Stretch
+                 lets this column's own height grow to match the row's real height
+                 (set by the taller Your Deck tray on the right), so the spacer row
+                 actually has slack to push the filters down to the tray's bottom
+                 edge — right above the divider line below. -->
+            <Grid Grid.Column="0" RowDefinitions="Auto, *, Auto" VerticalAlignment="Stretch" Margin="0,0,20,0">
+                <!-- "Deck Builder" title removed — redundant with the dialog's own
+                     purpose and the "Your Deck" tray right next to it; nothing else
+                     shifted up to fill the gap since it's the StackPanel's first
+                     child now, not left with a blank reserved slot above it. -->
+                <StackPanel Grid.Row="0" Spacing="4">
+                    <TextBox x:Name="DeckNameTextBox" MaxLength="20" Width="220"
+                             Watermark="Deck Name (Max 20 chars)" FontSize="14" Padding="8"
+                             CornerRadius="8" BorderBrush="#80A0FF" BorderThickness="2"
+                             HorizontalAlignment="Left" Margin="0,0,0,6"/>
+                    <TextBlock Text="Card Bank — Tap to Add" FontSize="14" FontWeight="Bold" Foreground="#1A1A1A"/>
+                    <TextBlock Text="Maximum one 5★ and one 4★ card per deck. Two 4★ cards can be used without a 5★." FontSize="11.5" Foreground="#555555" TextWrapping="Wrap"/>
+                </StackPanel>
 
-        <!-- Card Bank Area -->
-        <Grid Grid.Row="3" RowDefinitions="Auto, *">
-            <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
-                <TextBlock Text="Card Bank — Tap to Add" FontSize="14" FontWeight="Bold" Foreground="#1A1A1A"/>
-                <TextBlock Text="Maximum one 5★ and one 4★ card per deck. Two 4★ cards can be used without a 5★." FontSize="11.5" Foreground="#555555" TextWrapping="Wrap"/>
-                <WrapPanel Orientation="Horizontal">
-                    <ComboBox x:Name="StarsFilter" Width="110" Margin="0,0,8,4"
+                <!-- Filters shrunk (narrower ComboBoxes, smaller font/padding all
+                     round) so all three fit on one line within the left column
+                     instead of the WrapPanel wrapping Favorites onto its own row.
+                     92px (not 76) leaves enough room inside the ComboBox for both
+                     the full label text and its dropdown-arrow chrome — at 76 the
+                     arrow ate into the text's own space and clipped it to "All
+                     Sta"/"All Sui". Pinned to Row 2 (bottom) rather than following
+                     the subtitle directly, so it lines up with the tray's bottom
+                     edge on the right instead of sitting right under the text. -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4">
+                    <ComboBox x:Name="StarsFilter" Width="92" Height="32" FontSize="11.5" Padding="6,4"
                               SelectionChanged="FilterCombo_SelectionChanged" SelectedIndex="0">
                         <ComboBoxItem Content="All Stars" />
                         <ComboBoxItem Content="1 Star" />
@@ -62,7 +86,7 @@
                         <ComboBoxItem Content="4 Stars" />
                         <ComboBoxItem Content="5 Stars" />
                     </ComboBox>
-                    <ComboBox x:Name="SuitsFilter" Width="110" Margin="0,0,8,4"
+                    <ComboBox x:Name="SuitsFilter" Width="92" Height="32" FontSize="11.5" Padding="6,4"
                               SelectionChanged="FilterCombo_SelectionChanged" SelectedIndex="0">
                         <ComboBoxItem Content="All Suits" />
                         <ComboBoxItem Content="Spades" />
@@ -70,20 +94,53 @@
                         <ComboBoxItem Content="Diamonds" />
                         <ComboBoxItem Content="Clubs" />
                     </ComboBox>
-                    <ToggleButton x:Name="FavoritesFilter" Content="★ Favorites" CornerRadius="8"
-                                  Background="#F0F0F0" Padding="10,5" Margin="0,0,0,4"
+                    <ToggleButton x:Name="FavoritesFilter" Content="♡ Favorites" Classes="favorites-filter" Height="32"
+                                  FontSize="11.5" VerticalContentAlignment="Center" CornerRadius="8"
+                                  Background="#F0F0F0" Padding="6,4"
                                   Checked="FilterToggle_CheckedChanged"
                                   Unchecked="FilterToggle_CheckedChanged"/>
-                </WrapPanel>
-            </StackPanel>
-            
-            <ScrollViewer Grid.Row="1">
-                <WrapPanel x:Name="BankPanel" ItemWidth="110" ItemHeight="155" Margin="0,8,0,0" />
-            </ScrollViewer>
+                </StackPanel>
+            </Grid>
+
+            <!-- HorizontalAlignment=Right (not Stretch) so the tray hugs the true
+                 right margin at its own natural width, matching the Card Bank
+                 grid below (also right-aligned — see BankPanel) instead of the two
+                 drifting out of alignment with each other. Background set in
+                 code-behind to the current felt color instead of a fixed gray, so
+                 the tray reads as "your active area" against the felt behind the
+                 dialog rather than blending into the rest of the white card. -->
+            <Border x:Name="YourDeckTray" Grid.Column="1" CornerRadius="12" Padding="12,8"
+                    HorizontalAlignment="Right" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock x:Name="YourDeckTitle" Text="Your Deck (0/5) — Tap to Remove"
+                               FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"
+                               Margin="0,0,0,6" Foreground="#1A1A1A"/>
+                    <StackPanel x:Name="DeckSlotsPanel" Orientation="Horizontal" Spacing="8">
+                        <!-- Populated in code-behind -->
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </Grid>
 
+        <!-- Card Bank Area — grid only now that its header+filters moved into the
+             left column above, so the whole row goes to visible cards. The tinted
+             panel (same #F7F7F8 tone as the Your Deck tray above, for visual
+             consistency) marks the section boundary on its own now — the divider
+             line that used to sit above it was redundant once the tint was added. -->
+        <Border Grid.Row="1" Background="#F7F7F8" CornerRadius="12" Padding="12,10" Margin="0,4,0,0">
+            <ScrollViewer x:Name="BankScrollViewer" ScrollChanged="BankScrollViewer_ScrollChanged">
+                <!-- Right-aligned so the WrapPanel's own computed width (however many
+                     whole columns of ItemWidth fit) sits flush against the true right
+                     margin — same edge the Your Deck tray above hugs — instead of
+                     left-aligning and leaving a variable-width gap on the right that
+                     made the tray look like it was "jutting out" past the grid. -->
+                <WrapPanel x:Name="BankPanel" ItemWidth="110" ItemHeight="155"
+                           HorizontalAlignment="Right" />
+            </ScrollViewer>
+        </Border>
+
         <!-- Buttons -->
-        <Grid Grid.Row="4" ColumnDefinitions="*, Auto" Margin="0,16,0,0">
+        <Grid Grid.Row="2" ColumnDefinitions="*, Auto" Margin="0,10,0,0">
             <TextBlock x:Name="ErrorText" Grid.Column="0" Foreground="#FF5555"
                        FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">

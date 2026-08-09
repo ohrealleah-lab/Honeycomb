@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct HoneycombDecksView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
     @Binding var activeDeckIndex: Int
     var viewModel: HoneycombViewModel
 
@@ -171,15 +172,18 @@ public struct HoneycombDecksView: View {
                 } else {
                     Text(deck.name).bold()
                 }
-                if activeDeckIndex == index {
-                    Text("(Active)").foregroundColor(.green).font(.caption).bold()
-                }
                 Spacer()
-                if activeDeckIndex != index && !deck.name.isEmpty {
-                    Button("Set Active") {
+                // Always shown (not just when inactive) — reads "Active" and disables
+                // itself when this is the active deck, instead of disappearing, so the
+                // active state is signaled in the same spot every deck's button sits
+                // in. No separate "(Active)" label — the disabled button state plus
+                // the row's felt-tinted background/border already say it.
+                if !deck.name.isEmpty {
+                    Button(activeDeckIndex == index ? "Active" : "Set Active") {
                         activeDeckIndex = index
                     }
                     .buttonStyle(.bordered)
+                    .disabled(activeDeckIndex == index)
                 }
                 Button(deck.name.isEmpty ? "Create" : "Edit") {
                     editingDeckIndex = index
@@ -198,8 +202,15 @@ public struct HoneycombDecksView: View {
             }
         }
         .padding()
-        .background(Color.black.opacity(0.1))
+        // Active deck gets the same felt-color background/border treatment as the
+        // Deck Builder's "Your Deck" tray, instead of the same flat black tint every
+        // deck (active or not) previously used — matches the Windows port.
+        .background(activeDeckIndex == index ? coordinator.currentFeltColor.opacity(0.5) : Color.black.opacity(0.1))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(activeDeckIndex == index ? coordinator.currentFeltColor : .clear, lineWidth: 2)
+        )
     }
 
     private var cardBankFilterBar: some View {
@@ -309,7 +320,11 @@ public struct HoneycombDecksView: View {
                 }
             }
             .padding()
-            .background(Color.blue.opacity(0.1))
+            // App-wide felt color (AppCoordinator.currentFeltColor already resolves
+            // .custom vs the built-in theme presets) instead of a fixed blue tint, so
+            // the tray reads as "your active area" against the felt rather than
+            // blending into the rest of the sheet.
+            .background(coordinator.currentFeltColor.opacity(0.5))
             .cornerRadius(12)
 
             // Card Bank for Selection — shares the same suit/star filter as the main view.
@@ -329,6 +344,18 @@ public struct HoneycombDecksView: View {
                                         if !editingDeckCards.contains(cardId) && editingDeckCards.count < 5 {
                                             editingDeckCards.append(cardId)
                                             validateDeck()
+                                        }
+                                    }
+                                    // Empty content when not in the deck renders no menu at all — no
+                                    // right-click affordance on cards that aren't placed yet. Right-
+                                    // click on macOS, long-press on iOS (same modifier, no #if os()
+                                    // needed). No confirmation: re-adding the card is one tap away.
+                                    .contextMenu {
+                                        if editingDeckCards.contains(cardId) {
+                                            Button("Remove from deck?") {
+                                                editingDeckCards.removeAll { $0 == cardId }
+                                                validateDeck()
+                                            }
                                         }
                                     }
                             }

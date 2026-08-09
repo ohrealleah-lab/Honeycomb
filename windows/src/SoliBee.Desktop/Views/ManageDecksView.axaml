@@ -27,6 +27,14 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="8,4"/>
         </Style>
+
+        <!-- Without this, the default Fluent ToggleButton theme paints its own
+             accent-blue background on :checked, turning a checked Favorites
+             filter into a bold solid-blue button instead of the neutral pill
+             used everywhere else (see DeckBuilderView.axaml for the same fix). -->
+        <Style Selector="ToggleButton#FavoritesFilter:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="#FFE3E3"/>
+        </Style>
     </UserControl.Styles>
 
     <!-- Outer grid: content + overlay -->
@@ -73,9 +81,13 @@
                            Text="CARD BANK" FontSize="12" FontWeight="Bold"
                            Foreground="#888" Margin="0,0,0,10"/>
 
-                <!-- Filters -->
+                <!-- Filters — all three given the same explicit Height, since ComboBox's
+                     template carries extra internal chrome (the dropdown-arrow area) that
+                     makes it render taller than a plain ToggleButton with matching
+                     Padding, even though neither control has an explicit Height of its
+                     own to compare against. -->
                 <WrapPanel Grid.Row="1" Margin="0,0,0,10">
-                    <ComboBox x:Name="StarsFilter" Width="105" Margin="0,0,6,6"
+                    <ComboBox x:Name="StarsFilter" Width="105" Height="36" Margin="0,0,6,6"
                               SelectionChanged="FilterCombo_SelectionChanged" SelectedIndex="0">
                         <ComboBoxItem Content="All Stars"/>
                         <ComboBoxItem Content="1 Star"/>
@@ -84,7 +96,7 @@
                         <ComboBoxItem Content="4 Stars"/>
                         <ComboBoxItem Content="5 Stars"/>
                     </ComboBox>
-                    <ComboBox x:Name="SuitsFilter" Width="105" Margin="0,0,6,6"
+                    <ComboBox x:Name="SuitsFilter" Width="105" Height="36" Margin="0,0,6,6"
                               SelectionChanged="FilterCombo_SelectionChanged" SelectedIndex="0">
                         <ComboBoxItem Content="All Suits"/>
                         <ComboBoxItem Content="Spades"/>
@@ -92,15 +104,27 @@
                         <ComboBoxItem Content="Diamonds"/>
                         <ComboBoxItem Content="Clubs"/>
                     </ComboBox>
-                    <ToggleButton x:Name="FavoritesFilter" Content="♡ Favorites"
+                    <ToggleButton x:Name="FavoritesFilter" Content="♡ Favorites" Height="36"
+                                  VerticalContentAlignment="Center"
                                   CornerRadius="8" Background="#F0F0F0" Padding="8,4"
                                   Margin="0,0,0,6"
                                   Checked="FilterToggle_CheckedChanged"
                                   Unchecked="FilterToggle_CheckedChanged"/>
                 </WrapPanel>
 
-                <ScrollViewer Grid.Row="2">
-                    <WrapPanel x:Name="BankPanel" ItemWidth="90" ItemHeight="128"/>
+                <ScrollViewer Grid.Row="2" x:Name="BankScrollViewer" ScrollChanged="BankScrollViewer_ScrollChanged">
+                    <Grid>
+                        <!-- Mac's Card Bank grid is flat (no shadow/background box per
+                             cell) with generously spaced, larger cards doing the visual
+                             separation on their own — matching that here instead of the
+                             smaller shadowed tiles from the earlier pass. -->
+                        <WrapPanel x:Name="BankPanel" ItemWidth="128" ItemHeight="172"/>
+
+                        <TextBlock x:Name="EmptyFilterMessage" Text="No cards match this filter."
+                                   FontSize="14" Foreground="#999"
+                                   HorizontalAlignment="Left" VerticalAlignment="Top"
+                                   Margin="0,24,0,0" IsVisible="False"/>
+                    </Grid>
                 </ScrollViewer>
             </Grid>
 

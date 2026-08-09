@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
@@ -15,11 +16,43 @@ public partial class ManageDecksView : UserControl
 {
     private List<HoneycombCardData> _bankCards = new();
 
+    // ── Card Bank virtualization ────────────────────────────────────────────
+    // Same rationale as DeckBuilderView: with a full unlocked collection
+    // (~550 cards), eagerly building every card as a full control tree made
+    // scrolling laggy. Cells are shells (empty Border, correctly sized) until
+    // they scroll near the viewport, at which point their real card visual gets
+    // built once — favoriting a card mutates that built visual in place
+    // afterward, so unlike DeckBuilderView there's no separate "reapply on
+    // state change" path needed here.
+    private readonly Dictionary<int, HoneycombCardData> _bankCardById = new();
+    private readonly Dictionary<int, Border> _bankCellById = new();
+    private readonly HashSet<int> _builtBankCellIds = new();
+
     public ManageDecksView()
     {
         InitializeComponent();
         LoadBank();
         RefreshUI();
+    }
+
+    // Mirrors MainWindow.ApplyFeltColor's primary-hex mapping (the app-wide felt
+    // setting, shared across all games including Honeycomb) — duplicated rather
+    // than shared since it's a tiny switch and the existing copies (MainWindow,
+    // PreferencesView, DeckBuilderView) already live in separate files with no
+    // common helper.
+    private static string CurrentFeltHex()
+    {
+        var options = SettingsService.LoadOptions();
+        if (options.FeltColor == FeltColorTheme.Custom) return options.CustomFeltColorHex;
+        return options.FeltColor switch
+        {
+            FeltColorTheme.FeltGreen => "#008000",
+            FeltColorTheme.Crimson   => "#8C0C26",
+            FeltColorTheme.RoyalBlue => "#1A3380",
+            FeltColorTheme.Charcoal  => "#2E2E2E",
+            FeltColorTheme.Desert    => "#C2967A",
+            _                        => "#008000"
+        };
     }
 
     private void LoadBank()
@@ -58,29 +91,36 @@ public partial class ManageDecksView : UserControl
             var cardRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
             for (int j = 0; j < 5; j++)
             {
+                // Empty-slot placeholder gets the flat gray box; a filled slot renders
+                // real card art via HoneycombCardView (which already draws its own
+                // border/shadow), so keeping the gray background+border underneath it
+                // too just left a mismatched sliver visible around the rounded corners.
                 var placeholder = new Border
                 {
                     Width = 46, Height = 64,
-                    CornerRadius = new Avalonia.CornerRadius(4),
-                    Background   = new SolidColorBrush(Color.Parse("#D8D8D8")),
-                    BorderBrush  = new SolidColorBrush(Color.Parse("#B0B0B0")),
-                    BorderThickness = new Avalonia.Thickness(1)
+                    CornerRadius = new Avalonia.CornerRadius(4)
                 };
 
-                if (j < deckState.CardIds.Count)
+                HoneycombCardData? data = j < deckState.CardIds.Count
+                    ? HoneycombDatabase.Shared.Card(deckState.CardIds[j])
+                    : null;
+
+                if (data != null)
                 {
-                    var data = HoneycombDatabase.Shared.Card(deckState.CardIds[j]);
-                    if (data != null)
-                    {
-                        // Render synchronously without await – use fire-and-forget
-                        // but wrap in a try/catch so a bad card never crashes the list.
-                        var cardObj  = new HoneycombCard(data, 1);
-                        var cardView = new HoneycombCardView { UseOwnershipColoring = false };
-                        var vb = new Viewbox { Child = cardView };
-                        placeholder.Child = vb;
-                        // Fire-and-forget render (no await = no async-related crash)
-                        _ = cardView.RenderCard(cardObj);
-                    }
+                    // Render synchronously without await – use fire-and-forget
+                    // but wrap in a try/catch so a bad card never crashes the list.
+                    var cardObj  = new HoneycombCard(data, 1);
+                    var cardView = new HoneycombCardView { UseOwnershipColoring = false };
+                    var vb = new Viewbox { Child = cardView };
+                    placeholder.Child = vb;
+                    // Fire-and-forget render (no await = no async-related crash)
+                    _ = cardView.RenderCard(cardObj);
+                }
+                else
+                {
+                    placeholder.Background   = new SolidColorBrush(Color.Parse("#D8D8D8"));
+                    placeholder.BorderBrush  = new SolidColorBrush(Color.Parse("#B0B0B0"));
+                    placeholder.BorderThickness = new Avalonia.Thickness(1);
                 }
 
                 cardRow.Children.Add(placeholder);
@@ -94,13 +134,17 @@ public partial class ManageDecksView : UserControl
                 HorizontalAlignment = HorizontalAlignment.Right
             };
 
-            if (!isActive && hasDeck)
+            // Always shown (not just when inactive) — reads "Active" and disables
+            // itself when this is the active deck, instead of disappearing, so the
+            // active state is signaled in the same spot every deck's button sits in.
+            if (hasDeck)
             {
                 int capturedSlot = slot;
                 var makeActiveBtn = new Button
                 {
-                    Content = "Make Active",
-                    Classes = { "light-primary" }
+                    Content    = isActive ? "Active" : "Make Active",
+                    IsEnabled  = !isActive,
+                    Classes    = { "light-secondary" }
                 };
                 makeActiveBtn.Click += (_, _) =>
                 {
@@ -116,7 +160,7 @@ public partial class ManageDecksView : UserControl
             var editBtn = new Button
             {
                 Content = hasDeck ? "Edit" : "Create",
-                Classes = { "light-primary" }
+                Classes = { "light-secondary" }
             };
             editBtn.Click += (_, e) =>
             {
@@ -126,7 +170,8 @@ public partial class ManageDecksView : UserControl
             };
             btnRow.Children.Add(editBtn);
 
-            // ── Active label badge ──
+            // No separate "(Active)" label — the disabled "Active" button state
+            // (below) plus the card's felt-tinted background/border already say it.
             var nameLine = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
             nameLine.Children.Add(new TextBlock
             {
@@ -136,23 +181,6 @@ public partial class ManageDecksView : UserControl
                 Foreground = Brushes.Black,
                 VerticalAlignment = VerticalAlignment.Center
             });
-            if (isActive)
-            {
-                nameLine.Children.Add(new Border
-                {
-                    Background    = new SolidColorBrush(Color.Parse("#27AE60")),
-                    CornerRadius  = new Avalonia.CornerRadius(20),
-                    Padding       = new Avalonia.Thickness(8, 2),
-                    Child = new TextBlock
-                    {
-                        Text       = "ACTIVE",
-                        FontSize   = 10,
-                        FontWeight = FontWeight.Bold,
-                        Foreground = Brushes.White,
-                        VerticalAlignment = VerticalAlignment.Center
-                    }
-                });
-            }
 
             // ── Header row: name left, buttons right ──
             var header = new Grid
@@ -166,11 +194,16 @@ public partial class ManageDecksView : UserControl
             header.Children.Add(btnRow);
 
             // ── Card: outer border ──
+            // Active deck uses the current felt color (light tint for the fill, full
+            // strength for the border) instead of a fixed green, matching the same
+            // felt-color treatment as the Deck Builder's "Your Deck" tray.
             var card = new Border
             {
-                Background    = new SolidColorBrush(Color.Parse(isActive ? "#E8F5E9" : "#EFEFEF")),
+                Background    = isActive
+                    ? new SolidColorBrush(Color.Parse(CurrentFeltHex())) { Opacity = 0.5 }
+                    : new SolidColorBrush(Color.Parse("#EFEFEF")),
                 CornerRadius  = new Avalonia.CornerRadius(10),
-                BorderBrush   = new SolidColorBrush(Color.Parse(isActive ? "#27AE60" : "#D0D0D0")),
+                BorderBrush   = new SolidColorBrush(Color.Parse(isActive ? CurrentFeltHex() : "#D0D0D0")),
                 BorderThickness = new Avalonia.Thickness(isActive ? 2 : 1),
                 Padding       = new Avalonia.Thickness(12, 10),
                 Margin        = new Avalonia.Thickness(0, 0, 0, 0),
@@ -193,6 +226,10 @@ public partial class ManageDecksView : UserControl
         CardBankTitle.Text = $"CARD BANK ({pm.UnlockedCardIds.Count}/{HoneycombDatabase.Shared.AllCards.Count})";
 
         BankPanel.Children.Clear();
+        _bankCardById.Clear();
+        _bankCellById.Clear();
+        _builtBankCellIds.Clear();
+        EmptyFilterMessage.IsVisible = false;
 
         int starsFilter = StarsFilter.SelectedIndex;
         int suitsFilter = SuitsFilter.SelectedIndex;
@@ -212,80 +249,157 @@ public partial class ManageDecksView : UserControl
         if (favsOnly)
             filtered = filtered.Where(c => pm.FavoriteCardIds.Contains(c.Id));
 
-        filtered = filtered
+        var results = filtered
             .OrderByDescending(c => c.Stars)
             .ThenBy(c => c.Suit)
-            .ThenByDescending(c => c.Id);
+            .ThenByDescending(c => c.Id)
+            .ToList();
 
-        foreach (var c in filtered)
+        EmptyFilterMessage.IsVisible = results.Count == 0;
+
+        foreach (var c in results)
         {
-            var cardObj  = new HoneycombCard(c, 1);
-            var cardView = new HoneycombCardView { UseOwnershipColoring = false };
-            _ = cardView.RenderCard(cardObj); // fire-and-forget, no await
+            _bankCardById[c.Id] = c;
 
-            var vb = new Viewbox
+            // Shell only — sized to match the real content (112x157 card + 8px
+            // margin all round = 128x173), so the WrapPanel/scrollbar size
+            // correctly before any card visual exists. UpdateVisibleBankCells
+            // builds the real HoneycombCardView tree lazily, only for cells near
+            // the viewport.
+            var shell = new Border
             {
-                Width  = 80,
-                Height = 112,
-                Child  = cardView,
-                Margin = new Avalonia.Thickness(4)
+                Width      = 128,
+                Height     = 173,
+                Background = Brushes.Transparent,
+                Tag        = c.Id
             };
 
-            bool isFav = pm.FavoriteCardIds.Contains(c.Id);
-
-            // Use a TextBlock as the button content so we can directly mutate its
-            // Foreground — setting Foreground on the ToggleButton itself doesn't
-            // propagate through Avalonia's ContentPresenter to the rendered text.
-            var heartText = new TextBlock
-            {
-                Text       = "♥",
-                FontSize   = 20,
-                Foreground = isFav ? Brushes.Red : new SolidColorBrush(Color.Parse("#BBBBBB")),
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Center,
-            };
-
-            var heartBtn = new ToggleButton
-            {
-                Classes             = { "heart-btn" },
-                Content             = heartText,
-                IsChecked           = isFav,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                VerticalAlignment   = VerticalAlignment.Top,
-                Margin              = new Avalonia.Thickness(0, 4, 6, 0),
-                Opacity             = isFav ? 1.0 : 0.0,
-                Tag                 = c.Id
-            };
-
-            heartBtn.IsCheckedChanged += (s, _) =>
-            {
-                var btn = (ToggleButton)s!;
-                int id  = (int)btn.Tag!;
-                if (btn.IsChecked == true)
-                {
-                    pm.FavoriteCardIds.Add(id);
-                    heartText.Foreground = Brushes.Red;
-                    btn.Opacity          = 1.0;
-                }
-                else
-                {
-                    pm.FavoriteCardIds.Remove(id);
-                    heartText.Foreground = new SolidColorBrush(Color.Parse("#BBBBBB"));
-                    btn.Opacity          = 0.0;
-                }
-                pm.SaveFavoriteCards();
-            };
-
-            var cellGrid = new Grid();
-            cellGrid.Children.Add(vb);
-            cellGrid.Children.Add(heartBtn);
-
-            var wrapper = new Border { Background = Brushes.Transparent, Child = cellGrid };
-            wrapper.PointerEntered += (_, _) => { if (heartBtn.IsChecked != true) heartBtn.Opacity = 0.8; };
-            wrapper.PointerExited  += (_, _) => { if (heartBtn.IsChecked != true) heartBtn.Opacity = 0.0; };
-
-            BankPanel.Children.Add(wrapper);
+            _bankCellById[c.Id] = shell;
+            BankPanel.Children.Add(shell);
         }
+
+        // No ScrollChanged event fires for the very first paint, so kick off one
+        // visibility pass once this layout settles; ScrollChanged covers every
+        // scroll from here on.
+        Avalonia.Threading.Dispatcher.UIThread.Post(UpdateVisibleBankCells,
+            Avalonia.Threading.DispatcherPriority.Loaded);
+    }
+
+    // Builds one bank cell's real card visual (art + favorite heart) and wires
+    // it into an already-placed shell — called once, the first time that shell
+    // scrolls near the viewport.
+    private void BuildBankCell(int cardId, Border shell)
+    {
+        var pm = HoneycombProfileManager.Shared;
+        var c  = _bankCardById[cardId];
+
+        var cardObj  = new HoneycombCard(c, 1);
+        var cardView = new HoneycombCardView { UseOwnershipColoring = false };
+        _ = cardView.RenderCard(cardObj); // fire-and-forget, no await
+
+        var vb = new Viewbox
+        {
+            Width  = 112,
+            Height = 157,
+            Child  = cardView,
+            Margin = new Avalonia.Thickness(8)
+        };
+
+        bool isFav = pm.FavoriteCardIds.Contains(c.Id);
+
+        // Use a TextBlock as the button content so we can directly mutate its
+        // Foreground — setting Foreground on the ToggleButton itself doesn't
+        // propagate through Avalonia's ContentPresenter to the rendered text.
+        var heartText = new TextBlock
+        {
+            Text       = "♥",
+            FontSize   = 18,
+            Foreground = isFav ? Brushes.Red : new SolidColorBrush(Color.Parse("#BBBBBB")),
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+        };
+
+        var heartBtn = new ToggleButton
+        {
+            Classes             = { "heart-btn" },
+            Content             = heartText,
+            IsChecked           = isFav,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment   = VerticalAlignment.Top,
+            // heartBtn lives in cellGrid at full native size, alongside (not
+            // inside) the Viewbox that scales the card art down — so its margin
+            // has to clear both the Viewbox's own 8px outer margin AND the card
+            // face's rounded corner, or it lands right on the card's edge instead
+            // of sitting on its face.
+            Margin              = new Avalonia.Thickness(0, 14, 16, 0),
+            // Unfavorited hearts sit at a faint-but-visible 0.35 rather than fully
+            // invisible — at 0 opacity the favorite affordance didn't exist at all
+            // until you happened to hover a card, so there was no way to discover
+            // it just by looking at the grid.
+            Opacity             = isFav ? 1.0 : 0.35,
+            Tag                 = c.Id
+        };
+
+        heartBtn.IsCheckedChanged += (s, _) =>
+        {
+            var btn = (ToggleButton)s!;
+            int id  = (int)btn.Tag!;
+            if (btn.IsChecked == true)
+            {
+                pm.FavoriteCardIds.Add(id);
+                heartText.Foreground = Brushes.Red;
+                btn.Opacity          = 1.0;
+            }
+            else
+            {
+                pm.FavoriteCardIds.Remove(id);
+                heartText.Foreground = new SolidColorBrush(Color.Parse("#BBBBBB"));
+                btn.Opacity          = 0.35;
+            }
+            pm.SaveFavoriteCards();
+        };
+
+        var cellGrid = new Grid();
+        cellGrid.Children.Add(vb);
+        cellGrid.Children.Add(heartBtn);
+
+        shell.Child = cellGrid;
+        shell.PointerEntered += (_, _) => { if (heartBtn.IsChecked != true) heartBtn.Opacity = 0.8; };
+        shell.PointerExited  += (_, _) => { if (heartBtn.IsChecked != true) heartBtn.Opacity = 0.35; };
+
+        _builtBankCellIds.Add(cardId);
+    }
+
+    // Builds any not-yet-built cell whose shell is within viewport + a buffer,
+    // so scrolling stays smooth (cells are ready slightly before they're seen)
+    // without ever building the full ~550-card set up front.
+    private void UpdateVisibleBankCells()
+    {
+        double viewportHeight = BankScrollViewer.Viewport.Height;
+        if (viewportHeight <= 0) return; // not laid out yet
+
+        const double buffer = 400;
+
+        foreach (var (cardId, shell) in _bankCellById)
+        {
+            if (_builtBankCellIds.Contains(cardId)) continue;
+
+            Point? pos;
+            try { pos = shell.TranslatePoint(new Point(0, 0), BankScrollViewer); }
+            catch { continue; }
+            if (pos == null) continue;
+
+            double top    = pos.Value.Y;
+            double bottom = top + shell.Height;
+
+            if (bottom >= -buffer && top <= viewportHeight + buffer)
+                BuildBankCell(cardId, shell);
+        }
+    }
+
+    private void BankScrollViewer_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        UpdateVisibleBankCells();
     }
 
     // ── Events wired from XAML ────────────────────────────────────────────
