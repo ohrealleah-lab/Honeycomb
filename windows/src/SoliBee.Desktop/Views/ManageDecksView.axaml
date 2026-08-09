@@ -81,23 +81,19 @@
                      position it actually appears on a real card, and the grid filters
                      live. Leaving a box empty means "don't filter on that side". -->
                 <TextBlock Grid.Row="0" Text="Freeform search: type a value onto the card to filter the bank."
-                           FontSize="12" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                           FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                 <Border Grid.Row="1" Width="96" Height="128" HorizontalAlignment="Left"
                         Background="White" BorderBrush="#000000" BorderThickness="2"
                         CornerRadius="6" Margin="0,0,0,16" BoxShadow="0 3 8 0 #33000000">
                     <Grid>
-                        <!-- App logo, not a real suit — a real club/heart/etc. glyph here
-                             would read as an actual card in the bank rather than a blank
-                             "type your own values" mockup, so a "dummy suit" that's never
-                             a genuine card suit is used instead. HighQuality
-                             interpolation matters here — AppIcon.png is a detailed
-                             multi-color bee icon, and downscaling it to 40px with the
-                             default (low-quality) interpolation turned its fine detail
-                             into visual noise instead of a clean watermark. -->
-                        <Image Source="avares://Honeycomb/Assets/AppIcon.png" Width="40" Height="40"
-                               Opacity="1.0" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                        <!-- Dummy suit — a club glyph at low opacity, matching mac's
+                             identical Image(systemName: "suit.club.fill").foregroundColor
+                             (.gray).opacity(0.3) treatment exactly. It's still
+                             unambiguously "a club", not a real card in the bank, purely
+                             because of the faded opacity here. -->
+                        <TextBlock Text="♣" FontSize="34" Foreground="Gray" Opacity="0.3"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <TextBox x:Name="StatSearchTop" Classes="stat-search"
                                  HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0"
                                  TextChanged="StatSearch_TextChanged"/>
@@ -181,7 +177,10 @@
                              cell) with generously spaced, larger cards doing the visual
                              separation on their own — matching that here instead of the
                              smaller shadowed tiles from the earlier pass. -->
-                        <WrapPanel x:Name="BankPanel" ItemWidth="128" ItemHeight="172"/>
+                        <!-- Sized so 5 columns fit at the dialog's fixed 1000px width
+                             instead of 4 — see BuildBankCell for the matching card
+                             content size (96x135, same aspect ratio as the old 112x157). -->
+                        <WrapPanel x:Name="BankPanel" ItemWidth="110" ItemHeight="150"/>
 
                         <TextBlock x:Name="EmptyFilterMessage" Text="No cards match this filter."
                                    FontSize="14" Foreground="#999"

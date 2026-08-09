@@ -311,15 +311,16 @@ public partial class ManageDecksView : UserControl
         {
             _bankCardById[c.Id] = c;
 
-            // Shell only — sized to match the real content (112x157 card + 8px
-            // margin all round = 128x173), so the WrapPanel/scrollbar size
-            // correctly before any card visual exists. UpdateVisibleBankCells
-            // builds the real HoneycombCardView tree lazily, only for cells near
-            // the viewport.
+            // Shell only — sized to match the real content (96x136 card + 7px
+            // margin all round = 110x150, matching BankPanel's ItemWidth/Height so
+            // 5 columns fit at the dialog's fixed width instead of 4), so the
+            // WrapPanel/scrollbar size correctly before any card visual exists.
+            // UpdateVisibleBankCells builds the real HoneycombCardView tree lazily,
+            // only for cells near the viewport.
             var shell = new Border
             {
-                Width      = 128,
-                Height     = 173,
+                Width      = 110,
+                Height     = 150,
                 Background = Brushes.Transparent,
                 Tag        = c.Id
             };
@@ -349,10 +350,10 @@ public partial class ManageDecksView : UserControl
 
         var vb = new Viewbox
         {
-            Width  = 112,
-            Height = 157,
+            Width  = 96,
+            Height = 136,
             Child  = cardView,
-            Margin = new Avalonia.Thickness(8)
+            Margin = new Avalonia.Thickness(7)
         };
 
         bool isFav = pm.FavoriteCardIds.Contains(c.Id);
@@ -378,10 +379,11 @@ public partial class ManageDecksView : UserControl
             VerticalAlignment   = VerticalAlignment.Top,
             // heartBtn lives in cellGrid at full native size, alongside (not
             // inside) the Viewbox that scales the card art down — so its margin
-            // has to clear both the Viewbox's own 8px outer margin AND the card
+            // has to clear both the Viewbox's own 7px outer margin AND the card
             // face's rounded corner, or it lands right on the card's edge instead
-            // of sitting on its face.
-            Margin              = new Avalonia.Thickness(0, 14, 16, 0),
+            // of sitting on its face. Scaled down from (0,14,16,0) to match the
+            // smaller 96x136 card (was 112x157).
+            Margin              = new Avalonia.Thickness(0, 12, 14, 0),
             // Unfavorited hearts sit at a faint-but-visible 0.35 rather than fully
             // invisible — at 0 opacity the favorite affordance didn't exist at all
             // until you happened to hover a card, so there was no way to discover
