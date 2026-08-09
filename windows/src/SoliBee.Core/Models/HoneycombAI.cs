@@ -45,6 +45,14 @@ public static class HoneycombAI
     {
         if (difficulty == HoneycombDifficulty.Easy)
         {
+            // Half the time Baby Bee plays a real (if still shallow) move via the same
+            // greedy 1-ply search Honey Bee uses, instead of being purely random every
+            // turn — makes it occasionally take an obvious capture instead of never
+            // doing so, without bringing it anywhere near Medium's consistency (Medium
+            // is greedy 100% of the time, Easy only half).
+            if (Random.Shared.NextDouble() < 0.5)
+                return FindGreedyMove(board, aiHand, rules, aiOwner, mandatedHandIndex);
+
             var emptyCells = new List<int>();
             for (int i = 0; i < 9; i++)
                 if (board.Cells[i].IsEmpty) emptyCells.Add(i);

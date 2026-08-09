@@ -23,6 +23,14 @@ enum HoneycombAI {
         
         switch difficulty {
         case .easy:
+            // Half the time Baby Bee plays a real (if still shallow) move via the same
+            // greedy 1-ply search Honey Bee uses, instead of being purely random every
+            // turn — makes it occasionally take an obvious capture instead of never
+            // doing so, without bringing it anywhere near Medium's consistency (Medium
+            // is greedy 100% of the time, Easy only half). Matches the Windows port.
+            if Bool.random() {
+                return greedyMove(board: board, opponentDeck: opponentDeck, eligibleHands: eligibleHands, empties: empties, rules: rules)
+            }
             return randomMove(eligibleHands: eligibleHands, empties: empties)
         case .medium:
             return greedyMove(board: board, opponentDeck: opponentDeck, eligibleHands: eligibleHands, empties: empties, rules: rules)
