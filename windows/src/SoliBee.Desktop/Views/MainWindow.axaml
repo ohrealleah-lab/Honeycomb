@@ -182,14 +182,16 @@
                     <!-- VerticalAlignment=Stretch keeps a constant height — with Center it
                          sized itself down to whatever the filtered Card Bank grid needed,
                          so a sparse filter (e.g. "5 Stars"+"Spades") shrank the whole
-                         dialog. Width stays Center + a literal MaxWidth cap instead of also
-                         stretching edge-to-edge — the grid wraps rather than narrowing, so
-                         width was never the shrinking dimension, and full-width stretching
-                         left the compact title/name/deck-tray content looking sparse
-                         against a huge dialog (and was the proximate trigger for a nasty
-                         layout glitch — rows overlapping, other dialogs' content bleeding
-                         through at the edges). Same fix as ManageDecksPanel. -->
-                    <Border Background="White" CornerRadius="16" Padding="0" HorizontalAlignment="Center" VerticalAlignment="Stretch" MaxWidth="1000" BoxShadow="0 4 20 0 #A0000000">
+                         dialog. Width stays Center + MaxWidth instead of also stretching
+                         edge-to-edge (full-width stretching left the compact title/name/
+                         deck-tray content looking sparse against a huge dialog), but a
+                         MaxWidth alone is only a ceiling — with very few matching cards
+                         the WrapPanel's own natural width shrinks to fit just those few
+                         columns, narrowing the whole dialog with it. MinWidth matching
+                         MaxWidth turns it into a fixed width instead, while Avalonia's
+                         Measure pass still clamps both down safely on a genuinely small
+                         window. Same fix as ManageDecksPanel. -->
+                    <Border Background="White" CornerRadius="16" Padding="0" HorizontalAlignment="Center" VerticalAlignment="Stretch" MinWidth="1000" MaxWidth="1000" BoxShadow="0 4 20 0 #A0000000">
                         <ContentControl x:Name="DeckBuilderContent" />
                     </Border>
                 </Grid>
@@ -235,15 +237,16 @@
                          sizing-to-content: with Center alignment the panel shrank to fit
                          whatever the filtered card grid needed, so narrowing a filter down
                          to 1-2 cards made the whole dialog jarringly collapse. Width stays
-                         Center + a literal MaxWidth cap rather than also stretching
-                         horizontally — the card grid wraps rather than narrowing, so width
-                         was never the dimension that shrank, and stretching it edge-to-edge
-                         on wide windows just left the dialog looking sparse/oversized
-                         instead of matching Mac's compact centered dialog. Avalonia's
-                         Measure pass already can't let MaxWidth exceed the inset's actual
-                         available width, so this stays safe on narrow windows too without
-                         needing the Bounds-binding fallback. -->
-                    <Border x:Name="ManageDecksPanel" Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Stretch" MaxWidth="1000" BoxShadow="0 4 20 0 #A0000000">
+                         Center + MaxWidth rather than also stretching horizontally
+                         (stretching edge-to-edge on wide windows left the dialog looking
+                         sparse/oversized instead of matching Mac's compact centered
+                         dialog), but MaxWidth alone is only a ceiling — with very few
+                         matching cards (e.g. the freeform stat search down to 1-2 results)
+                         the card grid's own natural width shrinks to fit just those few
+                         columns, narrowing the whole dialog with it. MinWidth matching
+                         MaxWidth turns it into a fixed width instead; Avalonia's Measure
+                         pass still clamps both down safely on a genuinely narrow window. -->
+                    <Border x:Name="ManageDecksPanel" Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Stretch" MinWidth="1000" MaxWidth="1000" BoxShadow="0 4 20 0 #A0000000">
                         <Grid RowDefinitions="Auto,*,Auto">
                             <Grid Grid.Row="0" Margin="0,0,0,15">
                                 <TextBlock Text="Manage Decks" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />

@@ -18,6 +18,16 @@ public struct HoneycombDecksView: View {
     @State private var filterSuit: String? = nil
     @State private var filterFavoritesOnly: Bool = false
 
+    // Freeform stat search — one value per card position instead of separate side/
+    // direction pickers; empty means "don't filter that side". Only ever read by
+    // statSearchedCardBank below, which only backs the main browse grid — Deck
+    // Builder's grid keeps using plain filteredCardBank so the two stay independent
+    // filters, matching the Windows port (where they're separate views entirely).
+    @State private var filterStatTop: String = ""
+    @State private var filterStatLeft: String = ""
+    @State private var filterStatRight: String = ""
+    @State private var filterStatBottom: String = ""
+
     private var filteredCardBank: [Int] {
         let db = HoneycombDatabase.shared
         return Array(profile.unlockedCardIds).sorted().filter { id in
@@ -26,6 +36,92 @@ public struct HoneycombDecksView: View {
             if let suit = filterSuit, card.suit != suit { return false }
             if filterFavoritesOnly && !profile.favoriteCardIds.contains(id) { return false }
             return true
+        }
+    }
+
+    // "A"/"a" = 10 (matches HoneycombCardView's own statString), 1-9 parse directly;
+    // anything else (a stray letter, "0", etc.) is treated the same as empty rather
+    // than blocking the keystroke — no separate validation/rejection path needed.
+    private func parseStatBox(_ text: String) -> Int? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return nil }
+        if trimmed.uppercased() == "A" { return 10 }
+        if let value = Int(trimmed), (1...9).contains(value) { return value }
+        return nil
+    }
+
+    // Index order [Top, Right, Bottom, Left] matches HoneycombCardData.stats
+    // (see HoneycombCardView's stats[0]/[1]/[2]/[3] usage).
+    private var statFilters: [Int?] {
+        [parseStatBox(filterStatTop), parseStatBox(filterStatRight),
+         parseStatBox(filterStatBottom), parseStatBox(filterStatLeft)]
+    }
+
+    // AND across every filled-in side: a card survives only if each filled side is
+    // within ±2 of its stat (exact or near). Exact-only matches (every filled side
+    // dead-on) sort first; anything relying on the ±2 tolerance sorts after and is
+    // reported in `near` so the grid can render it dimmed.
+    private var statSearchedCardBank: (ids: [Int], near: Set<Int>) {
+        let filters = statFilters
+        guard filters.contains(where: { $0 != nil }) else { return (filteredCardBank, []) }
+
+        let db = HoneycombDatabase.shared
+        var exact: [Int] = []
+        var near: [Int] = []
+        for id in filteredCardBank {
+            guard let card = db.card(id: id) else { continue }
+            var isNear = false
+            var matches = true
+            for (i, target) in filters.enumerated() {
+                guard let target else { continue }
+                let diff = abs(card.stats[i] - target)
+                if diff == 0 { continue }
+                if diff <= 2 { isNear = true; continue }
+                matches = false
+                break
+            }
+            if !matches { continue }
+            if isNear { near.append(id) } else { exact.append(id) }
+        }
+        return (exact + near, Set(near))
+    }
+
+    private func statSearchField(_ binding: Binding<String>) -> some View {
+        TextField("", text: binding)
+            .multilineTextAlignment(.center)
+            .font(.system(size: 14, weight: .bold, design: .monospaced))
+            .frame(width: 28, height: 24)
+            .background(Color(white: 0.95))
+            .cornerRadius(4)
+            .textFieldStyle(.plain)
+            .onChange(of: binding.wrappedValue) { _, newValue in
+                if newValue.count > 1 {
+                    binding.wrappedValue = String(newValue.suffix(1))
+                }
+            }
+    }
+
+    private var statSearchWidget: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Freeform search: type a value onto the card to filter the bank.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.white)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.black, lineWidth: 2))
+
+                Image(systemName: "suit.club.fill")
+                    .font(.system(size: 34))
+                    .foregroundColor(Color.gray.opacity(0.3))
+
+                statSearchField($filterStatTop).position(x: 48, y: 20)
+                statSearchField($filterStatLeft).position(x: 20, y: 64)
+                statSearchField($filterStatRight).position(x: 76, y: 64)
+                statSearchField($filterStatBottom).position(x: 48, y: 108)
+            }
+            .frame(width: 96, height: 128)
         }
     }
 
@@ -57,8 +153,10 @@ public struct HoneycombDecksView: View {
                 Divider()
 
                 HStack(spacing: 0) {
-                    // Left: Saved Decks
+                    // Left: freeform stat search, then Saved Decks
                     VStack(alignment: .leading, spacing: 10) {
+                        statSearchWidget
+
                         Text("SAVED DECKS")
                             .font(.caption).bold()
                             .foregroundColor(.secondary)
@@ -92,8 +190,9 @@ public struct HoneycombDecksView: View {
                         cardBankFilterBar
 
                         ScrollView {
+                            let searched = statSearchedCardBank
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 12)], spacing: 12) {
-                                ForEach(filteredCardBank, id: \.self) { cardId in
+                                ForEach(searched.ids, id: \.self) { cardId in
                                     if let cardData = HoneycombDatabase.shared.card(id: cardId) {
                                         // A real Button (rather than a bare .onTapGesture) so AppKit's
                                         // own hit-testing resolves which card was clicked — inside a
@@ -117,6 +216,11 @@ public struct HoneycombDecksView: View {
                                                         .shadow(color: .white, radius: 2)
                                                         .opacity(profile.favoriteCardIds.contains(cardId) ? 1 : 0)
                                                 }
+                                                // Freeform stat search: cards that only matched via the ±2
+                                                // tolerance (not an exact hit on every filled-in side) render
+                                                // dimmed, so exact matches stand out even though both are
+                                                // already sorted exact-first.
+                                                .opacity(searched.near.contains(cardId) ? 0.4 : 1.0)
                                         }
                                         .buttonStyle(.plain)
                                     }

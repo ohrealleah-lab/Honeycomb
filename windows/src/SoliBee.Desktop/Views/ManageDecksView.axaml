@@ -35,6 +35,32 @@
         <Style Selector="ToggleButton#FavoritesFilter:checked /template/ ContentPresenter">
             <Setter Property="Background" Value="#FFE3E3"/>
         </Style>
+
+        <!-- Freeform stat-search boxes: single-character slots, so narrower/shorter
+             than a normal text field, with a bottom underline (not a flat fill alone)
+             so they read as "type here" inputs rather than decorative gray blocks.
+             MinWidth/MinHeight are set explicitly (not just Width/Height) because the
+             Fluent theme's default TextBox MinWidth (~120px) otherwise wins over
+             Width, rendering these as full-size search-bar-looking boxes instead of
+             small stat slots — that's also what made Left/Right's oversized,
+             overlapping boxes visually merge into what looked like one bar instead
+             of two. -->
+        <Style Selector="TextBox.stat-search">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="MinWidth" Value="22"/>
+            <Setter Property="MinHeight" Value="22"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="#F2F2F2"/>
+            <Setter Property="BorderBrush" Value="#B0B0B0"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1.5"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="MaxLength" Value="1"/>
+        </Style>
     </UserControl.Styles>
 
     <!-- Outer grid: content + overlay -->
@@ -47,19 +73,56 @@
              column. Fixed-width left column, Card Bank takes the rest. -->
         <Grid ColumnDefinitions="320, *" Margin="16">
 
-            <!-- LEFT: Saved Decks -->
-            <Grid Grid.Column="0" RowDefinitions="Auto, *, Auto" Margin="0,0,10,0">
+            <!-- LEFT: Freeform stat search, then Saved Decks -->
+            <Grid Grid.Column="0" RowDefinitions="Auto, Auto, Auto, *, Auto" Margin="0,0,10,0">
 
-                <TextBlock Grid.Row="0" Text="SAVED DECKS"
+                <!-- Freeform stat search — a single control instead of separate
+                     side/direction dropdowns: type a value onto the mini card at the
+                     position it actually appears on a real card, and the grid filters
+                     live. Leaving a box empty means "don't filter on that side". -->
+                <TextBlock Grid.Row="0" Text="Freeform search: type a value onto the card to filter the bank."
+                           FontSize="12" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                <Border Grid.Row="1" Width="96" Height="128" HorizontalAlignment="Left"
+                        Background="White" BorderBrush="#000000" BorderThickness="2"
+                        CornerRadius="6" Margin="0,0,0,16" BoxShadow="0 3 8 0 #33000000">
+                    <Grid>
+                        <!-- App logo, not a real suit — a real club/heart/etc. glyph here
+                             would read as an actual card in the bank rather than a blank
+                             "type your own values" mockup, so a "dummy suit" that's never
+                             a genuine card suit is used instead. HighQuality
+                             interpolation matters here — AppIcon.png is a detailed
+                             multi-color bee icon, and downscaling it to 40px with the
+                             default (low-quality) interpolation turned its fine detail
+                             into visual noise instead of a clean watermark. -->
+                        <Image Source="avares://Honeycomb/Assets/AppIcon.png" Width="40" Height="40"
+                               Opacity="1.0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                        <TextBox x:Name="StatSearchTop" Classes="stat-search"
+                                 HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0"
+                                 TextChanged="StatSearch_TextChanged"/>
+                        <TextBox x:Name="StatSearchLeft" Classes="stat-search"
+                                 HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0"
+                                 TextChanged="StatSearch_TextChanged"/>
+                        <TextBox x:Name="StatSearchRight" Classes="stat-search"
+                                 HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"
+                                 TextChanged="StatSearch_TextChanged"/>
+                        <TextBox x:Name="StatSearchBottom" Classes="stat-search"
+                                 HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"
+                                 TextChanged="StatSearch_TextChanged"/>
+                    </Grid>
+                </Border>
+
+                <TextBlock Grid.Row="2" Text="SAVED DECKS"
                            FontSize="12" FontWeight="Bold" Foreground="#888"
                            Margin="0,0,0,12"/>
 
-                <ScrollViewer Grid.Row="1">
+                <ScrollViewer Grid.Row="3">
                     <StackPanel x:Name="DecksListPanel" Spacing="10"/>
                 </ScrollViewer>
 
                 <!-- Start Over -->
-                <Border Grid.Row="2" Background="#C0392B" CornerRadius="10"
+                <Border Grid.Row="4" Background="#C0392B" CornerRadius="10"
                         Padding="16,12" Margin="0,16,0,0">
                     <StackPanel Spacing="10">
                         <TextBlock Text="Start over clears your decks and card bank, then reseeds the game."

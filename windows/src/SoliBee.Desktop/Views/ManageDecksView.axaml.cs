@@ -28,6 +28,12 @@ public partial class ManageDecksView : UserControl
     private readonly Dictionary<int, Border> _bankCellById = new();
     private readonly HashSet<int> _builtBankCellIds = new();
 
+    // Freeform stat search: which cards are only a "near" (±2, not exact) match on
+    // at least one filled-in side — read by BuildBankCell to dim those cells once
+    // built, so exact matches visually stand out without a second sort pass at
+    // render time.
+    private readonly HashSet<int> _bankCellNearMatchIds = new();
+
     public ManageDecksView()
     {
         InitializeComponent();
@@ -229,11 +235,22 @@ public partial class ManageDecksView : UserControl
         _bankCardById.Clear();
         _bankCellById.Clear();
         _builtBankCellIds.Clear();
+        _bankCellNearMatchIds.Clear();
         EmptyFilterMessage.IsVisible = false;
 
         int starsFilter = StarsFilter.SelectedIndex;
         int suitsFilter = SuitsFilter.SelectedIndex;
         bool favsOnly   = FavoritesFilter.IsChecked == true;
+
+        // Stats[0..3] = Top, Right, Bottom, Left (see HoneycombCardView.RenderCard).
+        int?[] statFilters =
+        {
+            ParseStatBox(StatSearchTop),
+            ParseStatBox(StatSearchRight),
+            ParseStatBox(StatSearchBottom),
+            ParseStatBox(StatSearchLeft)
+        };
+        bool anyStatFilter = statFilters.Any(f => f != null);
 
         var filtered = _bankCards.AsEnumerable();
 
@@ -249,11 +266,44 @@ public partial class ManageDecksView : UserControl
         if (favsOnly)
             filtered = filtered.Where(c => pm.FavoriteCardIds.Contains(c.Id));
 
+        // AND across every filled-in side: a card survives only if each filled side
+        // is within ±2 of its stat (exact or near). isNearMatch is set per surviving
+        // card so exact-only matches (every filled side dead-on) sort first and
+        // render at full strength, while anything relying on the ±2 tolerance sorts
+        // after and renders dimmed.
+        var nearMatchByCard = new Dictionary<int, bool>();
+        if (anyStatFilter)
+        {
+            var survivors = new List<HoneycombCardData>();
+            foreach (var c in filtered)
+            {
+                bool isNear = false;
+                bool matches = true;
+                for (int i = 0; i < 4; i++)
+                {
+                    if (statFilters[i] is not int target) continue;
+                    int diff = Math.Abs(c.Stats[i] - target);
+                    if (diff == 0) continue;
+                    if (diff <= 2) { isNear = true; continue; }
+                    matches = false;
+                    break;
+                }
+                if (!matches) continue;
+                survivors.Add(c);
+                nearMatchByCard[c.Id] = isNear;
+            }
+            filtered = survivors;
+        }
+
         var results = filtered
-            .OrderByDescending(c => c.Stars)
+            .OrderBy(c => anyStatFilter && nearMatchByCard.GetValueOrDefault(c.Id) ? 1 : 0)
+            .ThenByDescending(c => c.Stars)
             .ThenBy(c => c.Suit)
             .ThenByDescending(c => c.Id)
             .ToList();
+
+        foreach (var id in nearMatchByCard.Where(kv => kv.Value).Select(kv => kv.Key))
+            _bankCellNearMatchIds.Add(id);
 
         EmptyFilterMessage.IsVisible = results.Count == 0;
 
@@ -363,6 +413,12 @@ public partial class ManageDecksView : UserControl
         cellGrid.Children.Add(vb);
         cellGrid.Children.Add(heartBtn);
 
+        // Freeform stat search: cards that only matched via the ±2 tolerance (not
+        // an exact hit on every filled-in side) render dimmed, so exact matches
+        // stand out even though both are already sorted exact-first.
+        if (_bankCellNearMatchIds.Contains(cardId))
+            vb.Opacity = 0.4;
+
         shell.Child = cellGrid;
         shell.PointerEntered += (_, _) => { if (heartBtn.IsChecked != true) heartBtn.Opacity = 0.8; };
         shell.PointerExited  += (_, _) => { if (heartBtn.IsChecked != true) heartBtn.Opacity = 0.35; };
@@ -419,6 +475,24 @@ public partial class ManageDecksView : UserControl
     private void FilterToggle_CheckedChanged(object? sender, RoutedEventArgs e)
     {
         if (BankPanel != null) RefreshBank();
+    }
+
+    private void StatSearch_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (BankPanel != null) RefreshBank();
+    }
+
+    // Empty box = "don't filter this side". "A"/"a" = 10 (matches HoneycombCardView's
+    // own FormatStat), 1-9 parse directly; anything else (a stray letter, "0", etc.)
+    // is treated the same as empty rather than blocking the keystroke — keeps the
+    // input simple with no separate validation/rejection path.
+    private static int? ParseStatBox(TextBox box)
+    {
+        var text = box.Text?.Trim();
+        if (string.IsNullOrEmpty(text)) return null;
+        if (text.Equals("A", StringComparison.OrdinalIgnoreCase)) return 10;
+        if (int.TryParse(text, out var v) && v is >= 1 and <= 9) return v;
+        return null;
     }
 
     private void StartOver_Click(object? sender, RoutedEventArgs e)
