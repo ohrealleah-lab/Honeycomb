@@ -142,7 +142,6 @@ public partial class PreferencesView : UserControl
 
         BackgroundComboBox.Items.Add(new ComboBoxItem { Content = "──────────", IsEnabled = false });
 
-        BackgroundComboBox.Items.Add(new ComboBoxItem { Content = "None (Felt Color)", Tag = "bg:" });
         foreach (var bg in options.CustomBackgrounds)
         {
             BackgroundComboBox.Items.Add(new ComboBoxItem { Content = bg.Name, Tag = "bg:" + bg.Name });
@@ -1392,8 +1391,7 @@ public partial class PreferencesView : UserControl
 
     // Handles both halves of the merged dropdown — a "felt:" tag picks a felt preset
     // (or reveals the Custom Color flyout) and clears any background image; a "bg:" tag
-    // picks a background image (or "None", clearing back to the felt color) and enables
-    // Delete only for a real named image, not "None".
+    // picks a background image and enables Delete for it.
     private void BackgroundComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_initializing) return;
