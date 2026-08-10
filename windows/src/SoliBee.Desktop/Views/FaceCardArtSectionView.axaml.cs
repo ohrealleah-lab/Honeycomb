@@ -61,10 +61,13 @@ public partial class FaceCardArtSectionView : UserControl
         var color = isRed ? Color.Parse("#CC1A1A") : Color.Parse("#1A1A1A");
         var brush = new SolidColorBrush(color);
 
-        // Mini card border (60×85)
+        // Mini card border (138×196 — ~2.3x the original 60×85 so the grid fills the
+        // full-width Face Cards panel instead of hugging the top-left corner; every
+        // inner element below is scaled by the same factor to keep proportions
+        // identical, per the ClipToBounds note above about not distorting this ratio).
         var cardBorder = new Border
         {
-            Width = 60, Height = 85,
+            Width = 138, Height = 196,
             Background = new SolidColorBrush(Colors.White),
             BorderBrush = new SolidColorBrush(Color.Parse("#D9000000")),
             BorderThickness = new Thickness(0.75),
@@ -82,25 +85,25 @@ public partial class FaceCardArtSectionView : UserControl
             Orientation = Avalonia.Layout.Orientation.Horizontal,
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-            Margin = new Thickness(3, 2, 0, 0),
-            Spacing = 1
+            Margin = new Thickness(7, 5, 0, 0),
+            Spacing = 2
         };
         topLeft.Children.Add(new TextBlock
         {
-            Text = rankLabel, FontSize = 9, FontWeight = FontWeight.Bold,
+            Text = rankLabel, FontSize = 21, FontWeight = FontWeight.Bold,
             Foreground = brush, FontFamily = new FontFamily("Segoe UI")
         });
         topLeft.Children.Add(new TextBlock
         {
-            Text = suitChar, FontSize = 7, Foreground = brush,
+            Text = suitChar, FontSize = 16, Foreground = brush,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
         });
         innerGrid.Children.Add(topLeft);
 
-        // Center content area (36×54)
+        // Center content area (83×124 — same ~2.3x factor as the tile above)
         var centerGrid = new Grid
         {
-            Width = 36, Height = 54,
+            Width = 83, Height = 124,
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             ClipToBounds = true
@@ -109,7 +112,7 @@ public partial class FaceCardArtSectionView : UserControl
         bool showArt = art != null;
         if (showArt && art != null)
         {
-            var img = new Image { Stretch = Stretch.Uniform, Width = 29, Height = 25 };
+            var img = new Image { Stretch = Stretch.Uniform, Width = 67, Height = 58 };
             // Created in code, not XAML — set explicitly since this control never goes
             // through the .axaml-only interpolation-mode pass (see the matching comment
             // in CardView.PopulateSuitCanvas). The source bitmap here is baked at 280x240
@@ -129,7 +132,7 @@ public partial class FaceCardArtSectionView : UserControl
             centerGrid.Children.Add(new TextBlock
             {
                 Text = isAce ? suitChar : rankLabel,
-                FontSize = isAce ? 20 : 18,
+                FontSize = isAce ? 46 : 41,
                 FontWeight = isAce ? FontWeight.Normal : FontWeight.Bold,
                 Foreground = brush,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
@@ -145,19 +148,19 @@ public partial class FaceCardArtSectionView : UserControl
             Orientation = Avalonia.Layout.Orientation.Horizontal,
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
-            Margin = new Thickness(0, 0, 3, 2),
-            Spacing = 1,
+            Margin = new Thickness(0, 0, 7, 5),
+            Spacing = 2,
             RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative)
         };
         bottomRight.RenderTransform = new RotateTransform(180);
         bottomRight.Children.Add(new TextBlock
         {
-            Text = rankLabel, FontSize = 9, FontWeight = FontWeight.Bold,
+            Text = rankLabel, FontSize = 21, FontWeight = FontWeight.Bold,
             Foreground = brush, FontFamily = new FontFamily("Segoe UI")
         });
         bottomRight.Children.Add(new TextBlock
         {
-            Text = suitChar, FontSize = 7, Foreground = brush,
+            Text = suitChar, FontSize = 16, Foreground = brush,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
         });
         innerGrid.Children.Add(bottomRight);
@@ -176,14 +179,14 @@ public partial class FaceCardArtSectionView : UserControl
             var deleteBtn = new Button
             {
                 Content = "✕",
-                Width = 20, Height = 20,
-                FontSize = 10,
+                Width = 32, Height = 32,
+                FontSize = 16,
                 Padding = new Thickness(0),
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
                 HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                Margin = new Thickness(3),
+                Margin = new Thickness(7),
                 Background = new SolidColorBrush(Color.Parse("#CC3333")),
                 Foreground = new SolidColorBrush(Colors.White)
             };

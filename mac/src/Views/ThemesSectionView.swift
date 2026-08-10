@@ -144,33 +144,39 @@ struct ThemesSectionView: View {
                 Text(theme.name)
                     .font(.system(size: 13))
                     .lineLimit(1)
-                Text(theme.cardBackTheme)
+                // Explicit "Active" caption — the Update button alone wasn't a reliable
+                // "which theme is this" signal (easy to miss, not colorblind-safe).
+                Text(manager.activeThemeId == theme.id ? "Active" : theme.cardBackTheme)
                     .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(manager.activeThemeId == theme.id ? .accentColor : .secondary)
             }
 
             Spacer()
 
             if manager.activeThemeId == theme.id {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.accentColor)
+
                 Button("Update") {
                     themeToUpdate = theme
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .focusable(false)
-            }
-
-            Button("Apply") {
-                if shouldWarnBeforeApplying() {
-                    themeToApply = theme
-                } else {
-                    coordinator.applyTheme(theme)
-                    isOptionsPresented = false
+            } else {
+                Button("Apply") {
+                    if shouldWarnBeforeApplying() {
+                        themeToApply = theme
+                    } else {
+                        coordinator.applyTheme(theme)
+                        isOptionsPresented = false
+                    }
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .focusable(false)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-            .focusable(false)
 
             Button(role: .destructive) {
                 themeToDelete = theme

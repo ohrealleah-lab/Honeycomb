@@ -2,11 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SoliBee.Desktop.Views.FaceCardArtSectionView">
   <Grid>
-    <StackPanel Spacing="4">
-      <StackPanel x:Name="SpadesRow" Orientation="Horizontal" Spacing="4" />
-      <StackPanel x:Name="HeartsRow" Orientation="Horizontal" Spacing="4" />
-      <StackPanel x:Name="DiamondsRow" Orientation="Horizontal" Spacing="4" />
-      <StackPanel x:Name="ClubsRow" Orientation="Horizontal" Spacing="4" />
+    <StackPanel Spacing="18">
+      <StackPanel x:Name="SpadesRow" Orientation="Horizontal" Spacing="18" />
+      <StackPanel x:Name="HeartsRow" Orientation="Horizontal" Spacing="18" />
+      <StackPanel x:Name="DiamondsRow" Orientation="Horizontal" Spacing="18" />
+      <StackPanel x:Name="ClubsRow" Orientation="Horizontal" Spacing="18" />
     </StackPanel>
 
     <!-- Confirm delete overlay -->

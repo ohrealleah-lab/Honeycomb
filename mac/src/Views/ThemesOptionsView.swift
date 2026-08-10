@@ -46,12 +46,16 @@ struct ThemesOptionsView: View {
     private static let sideBySideMinWidth: CGFloat = 870
 
     @State private var contentHeight: CGFloat = 0
+    // The 16-slot face card grid needs full panel width, not squeezed into the
+    // right column alongside felt/background/card colors — pushed as its own
+    // sub-screen instead, same Back-header pattern as this panel itself.
+    @State private var showingFaceCards = false
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Button(action: cancel) {
+                Button(action: showingFaceCards ? { showingFaceCards = false } : cancel) {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 13, weight: .semibold))
@@ -64,7 +68,7 @@ struct ThemesOptionsView: View {
 
                 Spacer()
 
-                Text("Themes")
+                Text(showingFaceCards ? "Face Cards" : "Themes")
                     .font(.system(size: 16, weight: .bold))
 
                 Spacer()
@@ -80,20 +84,24 @@ struct ThemesOptionsView: View {
 
             Divider()
 
-            // Only wrap in a ScrollView once content is actually taller than the room
-            // available — a ScrollView vertically *centers* content that's shorter than
-            // its own given height (a well-known SwiftUI quirk), which produced a big
-            // empty gap above/below the list even after the height was correctly capped.
-            // A plain VStack has no such quirk: it just naturally hugs/top-aligns its
-            // content, so we use one whenever there's no need to scroll.
-            Group {
-                if contentHeight > maxPanelContentHeight {
-                    ScrollView(.vertical, showsIndicators: true) {
+            if showingFaceCards {
+                faceCardsContent
+            } else {
+                // Only wrap in a ScrollView once content is actually taller than the room
+                // available — a ScrollView vertically *centers* content that's shorter than
+                // its own given height (a well-known SwiftUI quirk), which produced a big
+                // empty gap above/below the list even after the height was correctly capped.
+                // A plain VStack has no such quirk: it just naturally hugs/top-aligns its
+                // content, so we use one whenever there's no need to scroll.
+                Group {
+                    if contentHeight > maxPanelContentHeight {
+                        ScrollView(.vertical, showsIndicators: true) {
+                            panelContent
+                        }
+                        .frame(height: maxPanelContentHeight)
+                    } else {
                         panelContent
                     }
-                    .frame(height: maxPanelContentHeight)
-                } else {
-                    panelContent
                 }
             }
         }
@@ -107,6 +115,26 @@ struct ThemesOptionsView: View {
         .onChange(of: showFeltVignette) { _, _ in onCommit(false) }
         .onChange(of: customCardColors) { _, _ in onCommit(false) }
         .onChange(of: customBackgroundName) { _, _ in onCommit(false) }
+    }
+
+    private var faceCardsContent: some View {
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 4) {
+                    Text("Add Custom Card Art")
+                        .font(.system(.body).bold())
+                    Text("(.jpg or .png accepted):")
+                        .font(.system(.body))
+                }
+                .foregroundColor(.primary)
+
+                FaceCardArtSectionView()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+        }
+        .frame(height: maxPanelContentHeight)
     }
 
     private var panelContent: some View {
@@ -212,15 +240,28 @@ struct ThemesOptionsView: View {
 
     private var rightColumn: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 4) {
-                Text("Add Custom Card Art")
-                    .font(.system(.body).bold())
-                Text("(.jpg or .png accepted):")
-                    .font(.system(.body))
+            Button {
+                showingFaceCards = true
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Customize Face Cards")
+                            .font(.system(.body).bold())
+                        Text("16 slots — Aces, Jacks, Queens, Kings per suit")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.primary.opacity(0.04))
+                .cornerRadius(6)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.12), lineWidth: 1))
             }
-            .foregroundColor(.primary)
-
-            FaceCardArtSectionView()
+            .buttonStyle(.plain)
         }
         .frame(width: 410)
     }

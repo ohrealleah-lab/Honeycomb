@@ -184,6 +184,16 @@ public static class ThemeService
         SaveThemes(themes);
     }
 
+    public static void RenameTheme(Guid id, string newName)
+    {
+        var themes = LoadThemes();
+        int idx = themes.FindIndex(t => t.Id == id);
+        if (idx < 0) return;
+
+        themes[idx].Name = newName;
+        SaveThemes(themes);
+    }
+
     public static void DeleteTheme(Guid id)
     {
         // If this is a built-in default preset, record the tombstone BEFORE removing it

@@ -29,7 +29,7 @@ public partial class PreferencesView : UserControl
     private List<SoliBeeTheme> _themes = new();
     private SoliBeeTheme? _themeToDelete;
     private SoliBeeTheme? _themeToApply;
-    private SoliBeeTheme? _themeToUpdate;
+    private SoliBeeTheme? _themeToRename;
     private bool _isBackgroundEditorOpen;
     private string? _backgroundToDelete;
     private const double BackgroundReferenceWidth = 1120.0;
@@ -147,6 +147,18 @@ public partial class PreferencesView : UserControl
             _initializing = false;
             RefreshThemeList();
         }
+    }
+
+    private void OpenFaceCards_Click(object? sender, RoutedEventArgs e)
+    {
+        ThemesPanel.IsVisible    = false;
+        FaceCardsPanel.IsVisible = true;
+    }
+
+    private void CloseFaceCards_Click(object? sender, RoutedEventArgs e)
+    {
+        FaceCardsPanel.IsVisible = false;
+        ThemesPanel.IsVisible    = true;
     }
 
     private void CloseThemes_Click(object? sender, RoutedEventArgs e)
@@ -517,16 +529,12 @@ public partial class PreferencesView : UserControl
             ThemeListPanel.Children.Add(BuildThemeRow(theme, theme.Id == activeThemeId));
     }
 
-    private Grid BuildThemeRow(SoliBeeTheme theme, bool isActive)
+    // The sidebar is only 180px wide, so this stacks vertically (header row, optional
+    // "Active" caption, then a full-width action button) instead of the old single-line
+    // Grid layout, which was sized for the previous ~290px-wide column and overlapped
+    // buttons on top of the theme name at this width.
+    private Border BuildThemeRow(SoliBeeTheme theme, bool isActive)
     {
-        var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        if (isActive)
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
         var swatchHex = FeltSwatchHex(theme);
         Color swatchColor;
         try { swatchColor = Color.Parse(swatchHex); } catch { swatchColor = Colors.Green; }
@@ -534,53 +542,27 @@ public partial class PreferencesView : UserControl
         var swatch = new Border
         {
             Width = 14, Height = 14,
-            CornerRadius = new CornerRadius(2),
+            CornerRadius = new CornerRadius(7),
             Background = new SolidColorBrush(swatchColor),
             VerticalAlignment = VerticalAlignment.Center
         };
-        Grid.SetColumn(swatch, 0);
-        grid.Children.Add(swatch);
 
         var nameBlock = new TextBlock
         {
             Text = theme.Name,
             Foreground = new SolidColorBrush(Color.Parse("#1A1A1A")),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Margin = new Thickness(6, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(6, 0, 0, 0)
+            Cursor = new Cursor(StandardCursorType.Hand)
         };
+        nameBlock.DoubleTapped += (_, _) => OpenRenameTheme(theme);
+
+        var headerRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
+        Grid.SetColumn(swatch, 0);
+        headerRow.Children.Add(swatch);
         Grid.SetColumn(nameBlock, 1);
-        grid.Children.Add(nameBlock);
-
-        int col = 2;
-
-        if (isActive)
-        {
-            var updateBtn = new Button
-            {
-                Content = "Resave",
-                Tag = theme,
-                Background = new SolidColorBrush(Color.Parse("#33691E")),
-                Foreground = Brushes.White,
-                Padding = new Thickness(8, 3),
-                Margin = new Thickness(0, 0, 4, 0)
-            };
-            updateBtn.Click += UpdateTheme_Click;
-            Grid.SetColumn(updateBtn, col++);
-            grid.Children.Add(updateBtn);
-        }
-
-        var applyBtn = new Button
-        {
-            Content = "Apply",
-            Tag = theme,
-            Background = new SolidColorBrush(Color.Parse("#007AFF")),
-            Foreground = Brushes.White,
-            Padding = new Thickness(8, 3),
-            Margin = new Thickness(0, 0, 4, 0)
-        };
-        applyBtn.Click += ApplyTheme_Click;
-        Grid.SetColumn(applyBtn, col++);
-        grid.Children.Add(applyBtn);
+        headerRow.Children.Add(nameBlock);
 
         var deleteBtn = new Button
         {
@@ -588,13 +570,60 @@ public partial class PreferencesView : UserControl
             Tag = theme,
             Background = new SolidColorBrush(Color.Parse("#CC3333")),
             Foreground = Brushes.White,
-            Padding = new Thickness(6, 3)
+            Padding = new Thickness(6, 2),
+            FontSize = 10,
+            CornerRadius = new CornerRadius(6)
         };
         deleteBtn.Click += DeleteTheme_Click;
-        Grid.SetColumn(deleteBtn, col++);
-        grid.Children.Add(deleteBtn);
+        Grid.SetColumn(deleteBtn, 2);
+        headerRow.Children.Add(deleteBtn);
 
-        return grid;
+        var rowStack = new StackPanel { Spacing = 6 };
+        rowStack.Children.Add(headerRow);
+
+        // Live-save (NotifySettingsChanged) keeps the active theme's saved preset
+        // continuously up to date now, so there's nothing left to resave — the button
+        // just states the row's status instead of offering an action.
+        if (isActive)
+        {
+            var activeBtn = new Button
+            {
+                Content = "Active",
+                IsEnabled = false,
+                Background = new SolidColorBrush(Color.Parse("#DDDDDD")),
+                Foreground = new SolidColorBrush(Color.Parse("#777777")),
+                Padding = new Thickness(8, 4),
+                CornerRadius = new CornerRadius(8),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Center
+            };
+            rowStack.Children.Add(activeBtn);
+        }
+        else
+        {
+            var applyBtn = new Button
+            {
+                Content = "Apply",
+                Tag = theme,
+                Background = new SolidColorBrush(Color.Parse("#007AFF")),
+                Foreground = Brushes.White,
+                Padding = new Thickness(8, 4),
+                CornerRadius = new CornerRadius(8),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Center
+            };
+            applyBtn.Click += ApplyTheme_Click;
+            rowStack.Children.Add(applyBtn);
+        }
+
+        return new Border
+        {
+            Child = rowStack,
+            Background = Brushes.White,
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(8, 6),
+            Margin = new Thickness(0, 2, 0, 2)
+        };
     }
 
     private static string FeltSwatchHex(SoliBeeTheme theme) => theme.FeltColor switch
@@ -617,6 +646,34 @@ public partial class PreferencesView : UserControl
     private void CancelSaveTheme_Click(object? sender, RoutedEventArgs e)
     {
         SaveThemeOverlay.IsVisible = false;
+    }
+
+    private void OpenRenameTheme(SoliBeeTheme theme)
+    {
+        _themeToRename = theme;
+        RenameThemeInput.Text = theme.Name;
+        RenameThemeOverlay.IsVisible = true;
+    }
+
+    private void CancelRenameTheme_Click(object? sender, RoutedEventArgs e)
+    {
+        _themeToRename = null;
+        RenameThemeOverlay.IsVisible = false;
+    }
+
+    private void ConfirmRenameTheme_Click(object? sender, RoutedEventArgs e)
+    {
+        RenameThemeOverlay.IsVisible = false;
+        var name = RenameThemeInput.Text?.Trim();
+        if (string.IsNullOrEmpty(name) || _themeToRename == null)
+        {
+            _themeToRename = null;
+            return;
+        }
+
+        ThemeService.RenameTheme(_themeToRename.Id, name);
+        _themeToRename = null;
+        RefreshThemeList();
     }
 
     private void ConfirmSaveTheme_Click(object? sender, RoutedEventArgs e)
@@ -698,28 +755,6 @@ public partial class PreferencesView : UserControl
         RefreshThemeList();
     }
 
-    private void UpdateTheme_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button btn || btn.Tag is not SoliBeeTheme theme) return;
-        _themeToUpdate = theme;
-        UpdateThemeConfirmText.Text = $"Are you sure you want to update \"{theme.Name}\"?";
-        ConfirmUpdateThemeOverlay.IsVisible = true;
-    }
-
-    private void CancelUpdateTheme_Click(object? sender, RoutedEventArgs e)
-    {
-        _themeToUpdate = null;
-        ConfirmUpdateThemeOverlay.IsVisible = false;
-    }
-
-    private void ConfirmUpdateTheme_Click(object? sender, RoutedEventArgs e)
-    {
-        ConfirmUpdateThemeOverlay.IsVisible = false;
-        if (_themeToUpdate == null || DataContext is not GameOptions options) return;
-        ThemeService.UpdateTheme(_themeToUpdate.Id, options);
-        _themeToUpdate = null;
-        RefreshThemeList();
-    }
 
     private void DeleteTheme_Click(object? sender, RoutedEventArgs e)
     {
@@ -1697,6 +1732,16 @@ public partial class PreferencesView : UserControl
     {
         SettingsService.SaveOptions(options);
         WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(options));
+
+        // Live-save: keep the active theme's saved preset in sync with every live edit,
+        // so there's never a "Resave" step to remember — the "Active" row is always
+        // already up to date. Cheap enough to call unconditionally (small JSON file,
+        // user-paced edits, not a hot path).
+        if (options.ActiveThemeId.HasValue)
+        {
+            ThemeService.UpdateTheme(options.ActiveThemeId.Value, options);
+            if (ThemesPanel.IsVisible) RefreshThemeList();
+        }
     }
 
         

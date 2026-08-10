@@ -98,10 +98,10 @@
         <!-- ═══════════════════════════════════════════════════════════════════
              THEMES SUB-PANEL
              ═══════════════════════════════════════════════════════════════════ -->
-        <Grid x:Name="ThemesPanel" IsVisible="False" Width="594" Margin="10,10,10,10" RowDefinitions="Auto,*" ColumnDefinitions="*,*">
+        <Grid x:Name="ThemesPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="Auto,*" ColumnDefinitions="180,*,*">
 
-            <!-- Back button (Row 0, Spans both columns) -->
-            <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Click="CloseThemes_Click"
+            <!-- Back button (Row 0, Spans all columns) -->
+            <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Click="CloseThemes_Click"
                     Classes="theme-back"
                     HorizontalContentAlignment="Left" Padding="0,2"
                     BorderThickness="0" Margin="0,0,0,10">
@@ -111,20 +111,34 @@
                 </StackPanel>
             </Button>
 
-            <!-- Left Column: Settings and Themes -->
-            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="11" Margin="0,0,10,0">
+            <!-- Sidebar: Saved Themes — its own persistent column, not part of the
+                 scrolling settings, so it stays visible as a picker while the rest
+                 of the panel scrolls independently. Tinted background + divider so
+                 it reads as a distinct panel instead of blending into the settings. -->
+            <Border Grid.Row="1" Grid.Column="0" Background="#ECECEC" BorderBrush="#DCDCDC" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,10,0">
+                <Grid RowDefinitions="Auto,Auto,*">
+                    <TextBlock Grid.Row="0" Text="Saved Themes" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,4,0,0"/>
+                    <Rectangle Grid.Row="0" Height="1" Fill="#E5E5E5" VerticalAlignment="Bottom"/>
 
-                <!-- ─── SAVED THEMES ──────────────────────────────────────────── -->
-                <TextBlock Text="Saved Themes" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,4,0,0"/>
-                <Rectangle Height="1" Fill="#E5E5E5"/>
+                    <Button Grid.Row="1" x:Name="SaveThemeButton" Content="Save New Theme…"
+                            Click="SaveTheme_Click"
+                            Classes="light-primary"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            Margin="0,8,0,8"/>
 
-                <Button x:Name="SaveThemeButton" Content="Save Theme…"
-                        Click="SaveTheme_Click"
-                        Classes="light-secondary"
-                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                        Margin="0,2,0,0"/>
-                <StackPanel x:Name="ThemeListPanel" Spacing="2"/>
-                <TextBlock x:Name="NoThemesLabel" Text="No saved themes yet." FontSize="11" Foreground="#1A1A1A"/>
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="4">
+                            <StackPanel x:Name="ThemeListPanel" Spacing="2"/>
+                            <TextBlock x:Name="NoThemesLabel" Text="No saved themes yet." FontSize="11" Foreground="#1A1A1A"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <Rectangle Grid.Row="1" Grid.Column="0" Width="1" Fill="#E0E0E0" HorizontalAlignment="Right"/>
+
+            <!-- Left Column: Settings -->
+            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="14" Margin="10,0,10,0">
 
                 <!-- ─── CARD DECK ─────────────────────────────────────────────── -->
                 <TextBlock Text="Card Deck" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,6,0,0"/>
@@ -133,7 +147,7 @@
                 <Grid ColumnDefinitions="*, 12, Auto">
                     <!-- Card Back Selector (Col 0) -->
                     <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Top">
-                        <ComboBox x:Name="CardBackComboBox" HorizontalAlignment="Stretch" SelectionChanged="CardBackComboBox_SelectionChanged">
+                        <ComboBox x:Name="CardBackComboBox" Classes="pill" HorizontalAlignment="Stretch" SelectionChanged="CardBackComboBox_SelectionChanged">
                             <ComboBoxItem Content="Vulpera" Tag="Vulpera"/>
                             <ComboBoxItem Content="Moogle"   Tag="Moogle"/>
                         </ComboBox>
@@ -160,11 +174,15 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- ─── Felt Color ────────────────────────────────────────────── -->
-                <TextBlock Text="Felt Color" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,6,0,0"/>
+                <!-- ─── Background ─────────────────────────────────────────────── -->
+                <!-- Felt Color and Background merged into one section — both control
+                     what's behind the cards, and the preview swatch below already shows
+                     the felt color whenever no background image is set, so they read as
+                     one concept anyway. -->
+                <TextBlock Text="Background" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,6,0,0"/>
                 <Rectangle Height="1" Fill="#E5E5E5"/>
 
-                <ComboBox x:Name="FeltColorComboBox" HorizontalAlignment="Stretch" SelectionChanged="FeltColorComboBox_SelectionChanged">
+                <ComboBox x:Name="FeltColorComboBox" Classes="pill" HorizontalAlignment="Stretch" SelectionChanged="FeltColorComboBox_SelectionChanged">
                     <ComboBoxItem Content="Green Felt" Tag="FeltGreen"/>
                     <ComboBoxItem Content="Crimson"    Tag="Crimson"/>
                     <ComboBoxItem Content="Royal Blue" Tag="RoyalBlue"/>
@@ -181,14 +199,10 @@
                 <CheckBox x:Name="VignetteCheckBox" Content="Felt Vignette"
                           Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
 
-                <!-- ─── Background ────────────────────────────────────────────── -->
-                <TextBlock Text="Background" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,6,0,0"/>
-                <Rectangle Height="1" Fill="#E5E5E5"/>
-
                 <Grid ColumnDefinitions="*, 12, Auto">
                     <!-- Background Selector (Col 0) -->
                     <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Top">
-                        <ComboBox x:Name="BackgroundComboBox" HorizontalAlignment="Stretch" SelectionChanged="BackgroundComboBox_SelectionChanged">
+                        <ComboBox x:Name="BackgroundComboBox" Classes="pill" HorizontalAlignment="Stretch" SelectionChanged="BackgroundComboBox_SelectionChanged">
                             <ComboBoxItem Content="None (Felt Color)" Tag=""/>
                         </ComboBox>
                         <Grid ColumnDefinitions="*, *">
@@ -217,14 +231,27 @@
             </StackPanel>
 
             <!-- Right Column: Custom Face Card Art & Colors -->
-            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="11" Margin="10,0,0,0">
+            <StackPanel Grid.Row="1" Grid.Column="2" Spacing="14" Margin="10,0,0,0">
 
                 <!-- ─── CUSTOM CARD ART ───────────────────────────────────────── -->
                 <TextBlock Text="Custom Card Art" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,4,0,0"/>
                 <Rectangle Height="1" Fill="#E5E5E5"/>
 
-                <TextBlock Text="Tap a tile to upload art. Tap again to adjust." FontSize="12" Foreground="#1A1A1A" Margin="0,2,0,0"/>
-                <v:FaceCardArtSectionView/>
+                <!-- The 16-slot grid needs more room than this column can give it —
+                     opened as a full-width sub-panel instead of crammed in here. -->
+                <Button x:Name="FaceCardsButton" Click="OpenFaceCards_Click"
+                        Classes="theme-nav" Foreground="#1A1A1A"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                        Padding="12,10" CornerRadius="6"
+                        BorderThickness="1" BorderBrush="#DDDDDD">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Customize Face Cards" FontSize="14" FontWeight="SemiBold" Foreground="#1A1A1A"/>
+                            <TextBlock Text="16 slots — Aces, Jacks, Queens, Kings per suit" FontSize="11" Foreground="#1A1A1A"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="›" FontSize="20" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    </Grid>
+                </Button>
 
                 <!-- ─── CUSTOM CARD COLOR ─────────────────────────────────────── -->
                 <TextBlock Text="Custom Card Color" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,12,0,0"/>
@@ -255,6 +282,29 @@
 
                 <Button Content="Reset Card Colors" Click="ResetCardColors_Click" Classes="light-danger" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,2,0,0"/>
 
+            </StackPanel>
+
+        </Grid>
+
+        <!-- ═══════════════════════════════════════════════════════════════════
+             FACE CARDS SUB-PANEL — full width so the 16-slot grid isn't
+             squeezed into a ~270px column alongside every other setting.
+             ═══════════════════════════════════════════════════════════════════ -->
+        <Grid x:Name="FaceCardsPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="Auto,*">
+
+            <Button Grid.Row="0" Click="CloseFaceCards_Click"
+                    Classes="theme-back"
+                    HorizontalContentAlignment="Left" Padding="0,2"
+                    BorderThickness="0" Margin="0,0,0,10">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
+                    <TextBlock Text="Back" FontSize="13" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <StackPanel Grid.Row="1" Spacing="6">
+                <TextBlock Text="Tap a tile to upload art. Tap again to adjust." FontSize="12" Foreground="#1A1A1A"/>
+                <v:FaceCardArtSectionView/>
             </StackPanel>
 
         </Grid>
@@ -317,12 +367,26 @@
         <Grid x:Name="SaveThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                 <StackPanel Spacing="12" Width="230">
-                    <TextBlock Text="Save Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Save New Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
                     <TextBlock Text="Enter a name for this theme:" FontSize="12" Foreground="#1A1A1A"/>
                     <TextBox x:Name="ThemeNameInput" Watermark="Theme name…" BorderBrush="#CCCCCC" Foreground="Black"/>
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button Content="Cancel" Click="CancelSaveTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
                         <Button Content="Save"   Click="ConfirmSaveTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary" Margin="4,0,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Rename Theme -->
+        <Grid x:Name="RenameThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
+                <StackPanel Spacing="12" Width="230">
+                    <TextBlock Text="Rename Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBox x:Name="RenameThemeInput" Watermark="Theme name…" BorderBrush="#CCCCCC" Foreground="Black"/>
+                    <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
+                        <Button Content="Cancel" Click="CancelRenameTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
+                        <Button Content="Save"   Click="ConfirmRenameTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary" Margin="4,0,0,0"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -337,20 +401,6 @@
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button Content="Cancel" Click="CancelDeleteTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
                         <Button Content="Delete" Click="ConfirmDeleteTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-danger" Margin="4,0,0,0"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- Confirm Update Theme -->
-        <Grid x:Name="ConfirmUpdateThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
-                <StackPanel Spacing="12" Width="230">
-                    <TextBlock Text="Update Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="UpdateThemeConfirmText" Text="Are you sure you want to update this theme?" FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
-                    <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
-                        <Button Content="Cancel" Click="CancelUpdateTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
-                        <Button Content="Update" Click="ConfirmUpdateTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary" Margin="4,0,0,0"/>
                     </Grid>
                 </StackPanel>
             </Border>
