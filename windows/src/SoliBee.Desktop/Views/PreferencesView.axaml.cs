@@ -711,7 +711,7 @@ public partial class PreferencesView : UserControl
         {
             Content = "✕",
             Tag = theme,
-            Background = new SolidColorBrush(Color.Parse("#CC3333")),
+            Background = new SolidColorBrush(Color.Parse("#7C2D22")),
             Foreground = Brushes.White,
             Padding = new Thickness(6, 2),
             FontSize = 10,
@@ -748,8 +748,8 @@ public partial class PreferencesView : UserControl
             {
                 Content = "Apply",
                 Tag = theme,
-                Background = new SolidColorBrush(Color.Parse("#007AFF")),
-                Foreground = Brushes.White,
+                Background = new SolidColorBrush(Color.Parse("#E5E5E5")),
+                Foreground = new SolidColorBrush(Color.Parse("#1A1A1A")),
                 Padding = new Thickness(8, 4),
                 CornerRadius = new CornerRadius(8),
                 HorizontalAlignment = HorizontalAlignment.Stretch,

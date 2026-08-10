@@ -20,12 +20,13 @@
             <Setter Property="Background" Value="#F2F2F2"/>
         </Style>
         <Style Selector="Button.theme-back">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#666666"/>
+            <Setter Property="Background" Value="#F2F2F2"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+            <Setter Property="CornerRadius" Value="6"/>
         </Style>
         <Style Selector="Button.theme-back:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#666666"/>
+            <Setter Property="Background" Value="#E5E5E5"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
         </Style>
     </UserControl.Styles>
 
@@ -103,7 +104,7 @@
             <!-- Back button (Row 0, Spans all columns) -->
             <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Click="CloseThemes_Click"
                     Classes="theme-back"
-                    HorizontalContentAlignment="Left" Padding="0,2"
+                    HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="10,6"
                     BorderThickness="0" Margin="0,0,0,10">
                 <StackPanel Orientation="Horizontal" Spacing="5">
                     <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
@@ -274,7 +275,7 @@
 
             <Button Grid.Row="0" Click="CloseFaceCards_Click"
                     Classes="theme-back"
-                    HorizontalContentAlignment="Left" Padding="0,2"
+                    HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="10,6"
                     BorderThickness="0" Margin="0,0,0,10">
                 <StackPanel Orientation="Horizontal" Spacing="5">
                     <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
@@ -297,7 +298,7 @@
 
             <Button Grid.Row="0" Click="CloseCardColorsPanel_Click"
                     Classes="theme-back"
-                    HorizontalContentAlignment="Left" Padding="0,2"
+                    HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="10,6"
                     BorderThickness="0" Margin="0,0,0,10">
                 <StackPanel Orientation="Horizontal" Spacing="5">
                     <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
