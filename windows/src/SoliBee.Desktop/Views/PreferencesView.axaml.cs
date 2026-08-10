@@ -15,6 +15,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Messaging;
+using SkiaSharp;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -32,7 +33,6 @@ public partial class PreferencesView : UserControl
     private SoliBeeTheme? _themeToRename;
     private bool _isBackgroundEditorOpen;
     private string? _backgroundToDelete;
-    private const double BackgroundReferenceWidth = 1120.0;
 
     // Snapshots taken when the panel opens, so Cancel can restore whatever was actually
     // on disk beforehand — every individual control here saves+broadcasts immediately
@@ -103,14 +103,37 @@ public partial class PreferencesView : UserControl
         }
     }
 
+    // Felt colors and the image background live in one merged dropdown — both control
+    // what's behind the cards, and this avoids the two separate combos needing manual
+    // mutual-exclusion resets (picking one used to have to reach into the other and
+    // clear its selection). Tags are prefixed ("felt:"/"bg:") so a user-named background
+    // (e.g. one literally named "Custom" or "FeltGreen") can never collide with a felt
+    // preset's tag.
+    private static readonly (string Label, string FeltTag)[] _feltPresets =
+    {
+        ("Green Felt", "FeltGreen"),
+        ("Crimson", "Crimson"),
+        ("Royal Blue", "RoyalBlue"),
+        ("Charcoal", "Charcoal"),
+        ("Desert", "Desert"),
+        ("Custom Color", "Custom"),
+    };
+
     private void PopulateBackgrounds(GameOptions options)
     {
         BackgroundComboBox.Items.Clear();
-        BackgroundComboBox.Items.Add(new ComboBoxItem { Content = "None (Felt Color)", Tag = "" });
 
+        foreach (var (label, feltTag) in _feltPresets)
+        {
+            BackgroundComboBox.Items.Add(new ComboBoxItem { Content = label, Tag = "felt:" + feltTag });
+        }
+
+        BackgroundComboBox.Items.Add(new ComboBoxItem { Content = "──────────", IsEnabled = false });
+
+        BackgroundComboBox.Items.Add(new ComboBoxItem { Content = "None (Felt Color)", Tag = "bg:" });
         foreach (var bg in options.CustomBackgrounds)
         {
-            BackgroundComboBox.Items.Add(new ComboBoxItem { Content = bg.Name, Tag = bg.Name });
+            BackgroundComboBox.Items.Add(new ComboBoxItem { Content = bg.Name, Tag = "bg:" + bg.Name });
         }
     }
 
@@ -159,6 +182,120 @@ public partial class PreferencesView : UserControl
     {
         FaceCardsPanel.IsVisible = false;
         ThemesPanel.IsVisible    = true;
+    }
+
+    private bool _cardColorPreviewBuilt;
+    private SolidColorBrush? _cardColorPreviewRingBrush;
+
+    private void OpenCardColorsPanel_Click(object? sender, RoutedEventArgs e)
+    {
+        if (!_cardColorPreviewBuilt)
+        {
+            BuildCardColorPreview();
+            _cardColorPreviewBuilt = true;
+        }
+        RefreshCardColorPreviewBackdrop();
+        CardView.InvalidateAllCardViews(CardColorPreviewStack);
+
+        ThemesPanel.IsVisible     = false;
+        CardColorsPanel.IsVisible = true;
+    }
+
+    private void CloseCardColorsPanel_Click(object? sender, RoutedEventArgs e)
+    {
+        CardColorsPanel.IsVisible = false;
+        ThemesPanel.IsVisible     = true;
+    }
+
+    // Builds the 3 mock cards once and reuses them for the panel's lifetime — CardView
+    // repaints itself from the same static theme brushes the color pickers mutate
+    // (CardView.ApplyThemeColors), so it never needs to be rebuilt, only invalidated.
+    private void BuildCardColorPreview()
+    {
+        var blackAce = new CardView { Card = new Card("mock-clubs", CardSuit.Clubs, 1, true) };
+        var redAce = new CardView { Card = new Card("mock-hearts", CardSuit.Hearts, 1, true) };
+        var back = new CardView { Card = new Card("mock-back", CardSuit.Spades, 1, false) };
+
+        _cardColorPreviewRingBrush = new SolidColorBrush(CardView._hintHighlightColor);
+        var backWithRing = new Border
+        {
+            Child = back,
+            BorderBrush = _cardColorPreviewRingBrush,
+            BorderThickness = new Thickness(4),
+            CornerRadius = new CornerRadius(10)
+        };
+
+        CardColorPreviewStack.Children.Clear();
+        CardColorPreviewStack.Children.Add(blackAce);
+        CardColorPreviewStack.Children.Add(redAce);
+        CardColorPreviewStack.Children.Add(backWithRing);
+    }
+
+    // Recomputes the preview backdrop — the theme's felt color, or a sampled dominant
+    // color from the background image when one is set — and refreshes the hint ring
+    // (Hint Highlight has no dedicated ColorChanged branch of its own to hook, so this
+    // just re-reads the current static color every call, matching how the rest of the
+    // live preview already just re-reads current state rather than diffing it).
+    private void RefreshCardColorPreviewBackdrop()
+    {
+        if (DataContext is not GameOptions options || CardColorPreviewBackdrop == null) return;
+
+        Color backdropColor;
+        if (string.IsNullOrEmpty(options.BackgroundName))
+        {
+            backdropColor = Color.TryParse(FeltHexForOptions(options), out var felt) ? felt : Colors.DarkGreen;
+        }
+        else
+        {
+            var bg = options.CustomBackgrounds.Find(b => b.Name == options.BackgroundName);
+            var path = bg != null && PathSafety.IsSafeFileName(bg.FileName)
+                ? Path.Combine(BackgroundsDir, bg.FileName)
+                : null;
+            backdropColor = path != null && File.Exists(path) ? SampleDominantColor(path) : Colors.Gray;
+        }
+
+        CardColorPreviewBackdrop.Background = new SolidColorBrush(backdropColor);
+
+        if (_cardColorPreviewRingBrush != null)
+            _cardColorPreviewRingBrush.Color = CardView._hintHighlightColor;
+    }
+
+    private static string FeltHexForOptions(GameOptions options) => options.FeltColor switch
+    {
+        FeltColorTheme.FeltGreen => "#008000",
+        FeltColorTheme.Crimson   => "#8C0C26",
+        FeltColorTheme.RoyalBlue => "#1A3380",
+        FeltColorTheme.Charcoal  => "#2E2E2E",
+        FeltColorTheme.Desert    => "#C2967A",
+        FeltColorTheme.Custom    => options.CustomFeltColorHex,
+        _                        => "#008000"
+    };
+
+    // Downsamples the background image to a small thumbnail and averages its pixels —
+    // cheap enough to run on every backdrop refresh (user-paced edits, not a hot path).
+    private static Color SampleDominantColor(string filePath)
+    {
+        try
+        {
+            using var bitmap = SKBitmap.Decode(filePath);
+            if (bitmap == null) return Colors.Gray;
+            using var small = bitmap.Resize(new SKImageInfo(16, 16), SKFilterQuality.Low);
+            if (small == null) return Colors.Gray;
+
+            long r = 0, g = 0, b = 0;
+            int count = small.Width * small.Height;
+            for (int y = 0; y < small.Height; y++)
+            {
+                for (int x = 0; x < small.Width; x++)
+                {
+                    var px = small.GetPixel(x, y);
+                    r += px.Red; g += px.Green; b += px.Blue;
+                }
+            }
+            if (count == 0) return Colors.Gray;
+            return Color.FromRgb((byte)(r / count), (byte)(g / count), (byte)(b / count));
+        }
+        catch { return Colors.Gray; }
     }
 
     private void CloseThemes_Click(object? sender, RoutedEventArgs e)
@@ -217,19 +354,6 @@ public partial class PreferencesView : UserControl
         ManuallyDismissBannersCheckBox.IsChecked = options.ManuallyDismissBanners;
         AlwaysOnTopCheckBox.IsChecked  = options.IsAlwaysOnTop;
 
-        foreach (var item in FeltColorComboBox.Items.OfType<ComboBoxItem>())
-        {
-            if (item.Tag?.ToString() == options.FeltColor.ToString())
-            {
-                FeltColorComboBox.SelectedItem = item;
-                break;
-            }
-        }
-
-        CustomColorPanel.IsVisible = options.FeltColor == FeltColorTheme.Custom;
-        if (options.FeltColor == FeltColorTheme.Custom && Color.TryParse(options.CustomFeltColorHex, out var parsedColor))
-            FeltColorPicker.Color = parsedColor;
-
         PopulateCardBacks(options);
 
         foreach (var item in CardBackComboBox.Items.OfType<ComboBoxItem>())
@@ -245,16 +369,23 @@ public partial class PreferencesView : UserControl
         UpdateCardBackPreview(options);
 
         PopulateBackgrounds(options);
-        string bgTag = options.BackgroundName ?? "";
+        // A background image, if set, takes priority for selection purposes over the
+        // felt color — matches the in-game rendering priority (an image covers the felt).
+        string selectedTag = !string.IsNullOrEmpty(options.BackgroundName)
+            ? "bg:" + options.BackgroundName
+            : "felt:" + options.FeltColor;
         foreach (var item in BackgroundComboBox.Items.OfType<ComboBoxItem>())
         {
-            if ((item.Tag?.ToString() ?? "") == bgTag)
+            if ((item.Tag?.ToString() ?? "") == selectedTag)
             {
                 BackgroundComboBox.SelectedItem = item;
                 break;
             }
         }
-        DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(bgTag);
+        DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(options.BackgroundName);
+        CustomColorPanel.IsVisible = string.IsNullOrEmpty(options.BackgroundName) && options.FeltColor == FeltColorTheme.Custom;
+        if (CustomColorPanel.IsVisible && Color.TryParse(options.CustomFeltColorHex, out var parsedColor))
+            FeltColorPicker.Color = parsedColor;
         UpdateBackgroundPreview(options);
 
         // Custom Card Color Pickers
@@ -616,14 +747,27 @@ public partial class PreferencesView : UserControl
             rowStack.Children.Add(applyBtn);
         }
 
+        // Active row gets a light tint of the theme's own felt color instead of plain
+        // white — a second, at-a-glance cue for which theme is active beyond the
+        // checkmark/"Active" button, using a color already tied to that specific theme.
+        var cellBackground = isActive ? LightenTowardsWhite(swatchColor, 0.5) : Colors.White;
+
         return new Border
         {
             Child = rowStack,
-            Background = Brushes.White,
+            Background = new SolidColorBrush(cellBackground),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(8, 6),
             Margin = new Thickness(0, 2, 0, 2)
         };
+    }
+
+    // Blends a color towards white by the given fraction (0 = no change, 1 = pure white)
+    // so the active theme's swatch hue tints its row without washing out the text.
+    private static Color LightenTowardsWhite(Color color, double fraction)
+    {
+        byte Blend(byte channel) => (byte)(channel + (255 - channel) * fraction);
+        return Color.FromRgb(Blend(color.R), Blend(color.G), Blend(color.B));
     }
 
     private static string FeltSwatchHex(SoliBeeTheme theme) => theme.FeltColor switch
@@ -781,42 +925,6 @@ public partial class PreferencesView : UserControl
 
     // ── Felt Color ────────────────────────────────────────────────────────────
 
-    private void FeltColorComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (_initializing) return;
-
-        if (DataContext is GameOptions options && FeltColorComboBox.SelectedItem is ComboBoxItem item && item.Tag != null)
-        {
-            if (Enum.TryParse<FeltColorTheme>(item.Tag.ToString(), out var feltTheme))
-            {
-                options.FeltColor = feltTheme;
-
-                if (feltTheme == FeltColorTheme.Custom)
-                {
-                    CustomColorPanel.IsVisible = true;
-                    if (Color.TryParse(options.CustomFeltColorHex, out var parsedColor))
-                    {
-                        FeltColorPicker.Color = parsedColor;
-                    }
-                }
-                else
-                {
-                    CustomColorPanel.IsVisible = false;
-                }
-
-                // If they explicitly picked a felt color, clear any custom background image
-                // so the felt color they just selected is actually visible on the board.
-                if (BackgroundComboBox.SelectedIndex > 0)
-                {
-                    BackgroundComboBox.SelectedIndex = 0;
-                }
-
-                options.CustomFeltColorRevision++;
-                NotifySettingsChanged(options);
-            }
-        }
-    }
-
     private void FeltColorPicker_ColorChanged(object? sender, ColorChangedEventArgs e)
     {
         if (_initializing) return;
@@ -824,13 +932,6 @@ public partial class PreferencesView : UserControl
         if (DataContext is GameOptions options)
         {
             options.CustomFeltColorHex = e.NewColor.ToString();
-
-            // Clear any custom background image so the color being picked is visible.
-            if (BackgroundComboBox.SelectedIndex > 0)
-            {
-                BackgroundComboBox.SelectedIndex = 0;
-            }
-
             options.CustomFeltColorRevision++;
             NotifySettingsChanged(options);
         }
@@ -984,40 +1085,19 @@ public partial class PreferencesView : UserControl
             ["Solibee"]      = "solibee.png",
         };
 
+    // Keeps _cardBackPreviewBitmap warm for AdjustCardBack_Click's editor flow (it falls
+    // back to LoadCardBackBitmapForPreview when this is null, so staying fresh here is an
+    // optimization, not a correctness requirement) and refreshes the merged card+backdrop
+    // mockup — the mockup itself is a real CardView, which already renders the current
+    // CardBackTheme/scale/offset from GameOptions on its own, so no manual transform math
+    // is needed here the way the old standalone Image preview required.
     private void UpdateCardBackPreview(GameOptions options)
     {
-        bool isDingwall = options.CardBackTheme == "Dingwall" || _houliAssets.ContainsKey(options.CardBackTheme);
         var old = _cardBackPreviewBitmap;
         _cardBackPreviewBitmap = LoadCardBackBitmapForPreview(options);
-        CardBackPreviewImage.Source = _cardBackPreviewBitmap;
         old?.Dispose();
 
-        if (isDingwall)
-        {
-            CardBackPreviewImage.Stretch = Stretch.Fill;
-            CardBackPreviewImage.RenderTransform = null;
-        }
-        else
-        {
-            CardBackPreviewImage.Stretch = Stretch.Uniform;
-            double scale = options.CardBackScale;
-            double tileRatio = 80.0 / 128.0;
-            double offsetX = options.CardBackOffsetX * tileRatio;
-            double offsetY = options.CardBackOffsetY * tileRatio;
-
-            if (Math.Abs(scale - 1.0) > 0.01 || Math.Abs(offsetX) > 0.01 || Math.Abs(offsetY) > 0.01)
-            {
-                CardBackPreviewImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
-                var tg = new TransformGroup();
-                tg.Children.Add(new ScaleTransform(scale, scale));
-                tg.Children.Add(new TranslateTransform(offsetX, offsetY));
-                CardBackPreviewImage.RenderTransform = tg;
-            }
-            else
-            {
-                CardBackPreviewImage.RenderTransform = null;
-            }
-        }
+        RefreshDeckBackgroundPreview();
     }
 
     private static Bitmap? LoadCardBackBitmapForPreview(GameOptions options)
@@ -1050,11 +1130,8 @@ public partial class PreferencesView : UserControl
 
     private bool _isEditorOpen;
 
-    private async void CardBackPreview_Click(object? sender, PointerPressedEventArgs e)
+    private async void AdjustCardBack_Click(object? sender, RoutedEventArgs e)
     {
-        e.Handled = true;
-        e.Pointer.Capture(null);
-
         if (_isEditorOpen) return;
         if (DataContext is not GameOptions options) return;
 
@@ -1330,28 +1407,67 @@ public partial class PreferencesView : UserControl
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         AppDataMigration.FolderName, "Backgrounds");
 
+    // Handles both halves of the merged dropdown — a "felt:" tag picks a felt preset
+    // (or reveals the Custom Color flyout) and clears any background image; a "bg:" tag
+    // picks a background image (or "None", clearing back to the felt color) and enables
+    // Delete only for a real named image, not "None".
     private void BackgroundComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_initializing) return;
         if (DataContext is not GameOptions options) return;
         if (BackgroundComboBox.SelectedItem is not ComboBoxItem item) return;
+        var tag = item.Tag?.ToString();
+        if (string.IsNullOrEmpty(tag)) return;
 
-        var selectedTag = item.Tag?.ToString() ?? "";
-        options.BackgroundName = string.IsNullOrEmpty(selectedTag) ? null : selectedTag;
-        DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(selectedTag);
+        if (tag.StartsWith("felt:"))
+        {
+            var feltTag = tag.Substring("felt:".Length);
+            if (!Enum.TryParse<FeltColorTheme>(feltTag, out var feltTheme)) return;
 
-        var bg = options.CustomBackgrounds.Find(b => b.Name == selectedTag);
-        if (bg != null)
-        {
-            options.BackgroundScale = bg.Scale;
-            options.BackgroundOffsetX = bg.OffsetX;
-            options.BackgroundOffsetY = bg.OffsetY;
-        }
-        else
-        {
+            options.FeltColor = feltTheme;
+            options.BackgroundName = null;
             options.BackgroundScale = 1.0;
             options.BackgroundOffsetX = 0.0;
             options.BackgroundOffsetY = 0.0;
+            DeleteCustomBackgroundButton.IsEnabled = false;
+
+            if (feltTheme == FeltColorTheme.Custom)
+            {
+                CustomColorPanel.IsVisible = true;
+                if (Color.TryParse(options.CustomFeltColorHex, out var parsedColor))
+                    FeltColorPicker.Color = parsedColor;
+            }
+            else
+            {
+                CustomColorPanel.IsVisible = false;
+            }
+
+            options.CustomFeltColorRevision++;
+        }
+        else if (tag.StartsWith("bg:"))
+        {
+            var bgName = tag.Substring("bg:".Length);
+            options.BackgroundName = string.IsNullOrEmpty(bgName) ? null : bgName;
+            DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(bgName);
+            CustomColorPanel.IsVisible = false;
+
+            var bg = options.CustomBackgrounds.Find(b => b.Name == bgName);
+            if (bg != null)
+            {
+                options.BackgroundScale = bg.Scale;
+                options.BackgroundOffsetX = bg.OffsetX;
+                options.BackgroundOffsetY = bg.OffsetY;
+            }
+            else
+            {
+                options.BackgroundScale = 1.0;
+                options.BackgroundOffsetX = 0.0;
+                options.BackgroundOffsetY = 0.0;
+            }
+        }
+        else
+        {
+            return;
         }
 
         UpdateBackgroundPreview(options);
@@ -1360,28 +1476,52 @@ public partial class PreferencesView : UserControl
 
     private void UpdateBackgroundPreview(GameOptions options)
     {
-        // Use the shared bitmap cache (owned by CardView) rather than maintaining a separate
-        // private Bitmap field with its own dispose lifecycle. The cache holds full-res bitmaps;
-        // scaling to the 80 px thumbnail is handled purely by the RenderTransform below.
-        var bmp = LoadBackgroundBitmapForPreview(options);
-        BackgroundPreviewImage.Source = bmp;
+        RefreshDeckBackgroundPreview();
+    }
 
-        if (bmp == null)
+    private bool _deckBackgroundMockBuilt;
+
+    // Builds (once) and refreshes the merged Card Deck + Background mockup: the real
+    // configured card back rendered on top of the real configured backdrop (felt color,
+    // or the actual background image when one is set — shown directly, not sampled,
+    // since it's meaningful and visible here unlike the Custom Card Colors preview).
+    private void RefreshDeckBackgroundPreview()
+    {
+        if (DataContext is not GameOptions options) return;
+
+        if (!_deckBackgroundMockBuilt)
         {
-            BackgroundPreviewImage.RenderTransform = null;
-            return;
+            var mockCard = new CardView
+            {
+                Card = new Card("mock-deck-back", CardSuit.Spades, 1, false),
+                Cursor = new Cursor(StandardCursorType.Hand)
+            };
+            // Handled=true stops this from also triggering the backdrop Border's own
+            // DoubleTapped (background adjust) — double-clicking the card should only
+            // ever open the card-back editor, never both.
+            mockCard.DoubleTapped += (s, e) => { e.Handled = true; AdjustCardBack_Click(s, e); };
+            DeckBackgroundCardMockHost.Content = mockCard;
+            _deckBackgroundMockBuilt = true;
         }
 
-        double ratio = 80.0 / BackgroundReferenceWidth;
-        double scale = options.BackgroundScale;
-        double offsetX = options.BackgroundOffsetX * ratio;
-        double offsetY = options.BackgroundOffsetY * ratio;
 
-        BackgroundPreviewImage.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
-        var tg = new TransformGroup();
-        tg.Children.Add(new ScaleTransform(scale, scale));
-        tg.Children.Add(new TranslateTransform(offsetX, offsetY));
-        BackgroundPreviewImage.RenderTransform = tg;
+        var bmp = LoadBackgroundBitmapForPreview(options);
+        if (bmp != null)
+        {
+            DeckBackgroundImage.Source = bmp;
+            DeckBackgroundImage.IsVisible = true;
+            DeckBackgroundBackdrop.Background = null;
+        }
+        else
+        {
+            DeckBackgroundImage.IsVisible = false;
+            DeckBackgroundImage.Source = null;
+            DeckBackgroundBackdrop.Background = Color.TryParse(FeltHexForOptions(options), out var felt)
+                ? new SolidColorBrush(felt)
+                : new SolidColorBrush(Colors.DarkGreen);
+        }
+
+        CardView.InvalidateAllCardViews(DeckBackgroundCardMockHost);
     }
 
     private static Bitmap? LoadBackgroundBitmapForPreview(GameOptions options)
@@ -1398,11 +1538,14 @@ public partial class PreferencesView : UserControl
         catch { return null; }
     }
 
-    private async void BackgroundPreview_Click(object? sender, PointerPressedEventArgs e)
-    {
-        e.Handled = true;
-        e.Pointer.Capture(null);
+    // Double-clicking the backdrop (anywhere the mock card itself doesn't already
+    // consume the tap — see the Handled=true in RefreshDeckBackgroundPreview) opens the
+    // same background editor the old small preview thumbnail used to.
+    private void DeckBackgroundBackdrop_DoubleTapped(object? sender, TappedEventArgs e) =>
+        AdjustBackground_Click(sender, e);
 
+    private async void AdjustBackground_Click(object? sender, RoutedEventArgs e)
+    {
         if (_isBackgroundEditorOpen) return;
         if (DataContext is not GameOptions options) return;
         if (string.IsNullOrEmpty(options.BackgroundName)) return;
@@ -1555,13 +1698,14 @@ public partial class PreferencesView : UserControl
             PopulateBackgrounds(options);
             foreach (var item in BackgroundComboBox.Items.OfType<ComboBoxItem>())
             {
-                if (item.Tag?.ToString() == newBg.Name)
+                if (item.Tag?.ToString() == "bg:" + newBg.Name)
                 {
                     BackgroundComboBox.SelectedItem = item;
                     break;
                 }
             }
             DeleteCustomBackgroundButton.IsEnabled = true;
+            CustomColorPanel.IsVisible = false;
             _initializing = false;
 
             UpdateBackgroundPreview(options);
@@ -1577,7 +1721,9 @@ public partial class PreferencesView : UserControl
     private void DeleteCustomBackground_Click(object? sender, RoutedEventArgs e)
     {
         var selectedItem = BackgroundComboBox.SelectedItem as ComboBoxItem;
-        var backgroundName = selectedItem?.Tag?.ToString();
+        var selectedTag = selectedItem?.Tag?.ToString();
+        if (string.IsNullOrEmpty(selectedTag) || !selectedTag.StartsWith("bg:")) return;
+        var backgroundName = selectedTag.Substring("bg:".Length);
         if (string.IsNullOrEmpty(backgroundName)) return;
 
         // Themes store their background by name (SoliBeeTheme.BackgroundName), not by a
@@ -1641,12 +1787,14 @@ public partial class PreferencesView : UserControl
 
         _initializing = true;
         PopulateBackgrounds(options);
-        string bgTag = options.BackgroundName ?? "";
+        string selectedTag = !string.IsNullOrEmpty(options.BackgroundName)
+            ? "bg:" + options.BackgroundName
+            : "felt:" + options.FeltColor;
         foreach (var item in BackgroundComboBox.Items.OfType<ComboBoxItem>())
         {
-            if ((item.Tag?.ToString() ?? "") == bgTag) { BackgroundComboBox.SelectedItem = item; break; }
+            if ((item.Tag?.ToString() ?? "") == selectedTag) { BackgroundComboBox.SelectedItem = item; break; }
         }
-        DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(bgTag);
+        DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(options.BackgroundName);
         _initializing = false;
 
         UpdateBackgroundPreview(options);
@@ -1742,6 +1890,18 @@ public partial class PreferencesView : UserControl
             ThemeService.UpdateTheme(options.ActiveThemeId.Value, options);
             if (ThemesPanel.IsVisible) RefreshThemeList();
         }
+
+        // Keep the card-color mock preview in sync with every live edit — felt/background
+        // changes affect the backdrop, card-back/color changes affect the mock cards
+        // themselves (InvalidateAllCardViews repaints every CardView under this root).
+        if (CardColorsPanel.IsVisible)
+        {
+            RefreshCardColorPreviewBackdrop();
+            CardView.InvalidateAllCardViews(CardColorPreviewStack);
+        }
+
+        // Card Deck + Background mockup is always inline whenever ThemesPanel is open.
+        if (ThemesPanel.IsVisible) RefreshDeckBackgroundPreview();
     }
 
         

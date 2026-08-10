@@ -1606,6 +1606,10 @@ public partial class MainWindow : Window
                 if (!maximized) { opts.BlackjackWidth = Width; opts.BlackjackHeight = Height; }
                 opts.BlackjackMaximized = maximized;
                 break;
+            case "Honeycomb":
+                if (!maximized) { opts.HoneycombWidth = Width; opts.HoneycombHeight = Height; }
+                opts.HoneycombMaximized = maximized;
+                break;
             default:
                 if (!maximized) { opts.KlondikeWidth = Width; opts.KlondikeHeight = Height; }
                 opts.KlondikeMaximized = maximized;
@@ -1687,6 +1691,7 @@ public partial class MainWindow : Window
             "Spider"     => (opts.SpiderWidth,     opts.SpiderHeight,     opts.SpiderMaximized),
             "VideoPoker" => (opts.VideoPokerWidth, opts.VideoPokerHeight, opts.VideoPokerMaximized),
             "Blackjack"  => (opts.BlackjackWidth,  opts.BlackjackHeight,  opts.BlackjackMaximized),
+            "Honeycomb"  => (opts.HoneycombWidth,  opts.HoneycombHeight,  opts.HoneycombMaximized),
             _            => (opts.KlondikeWidth,   opts.KlondikeHeight,   opts.KlondikeMaximized),
         };
 

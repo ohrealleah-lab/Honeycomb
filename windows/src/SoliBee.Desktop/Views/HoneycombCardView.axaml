@@ -33,7 +33,7 @@
         <!-- Flip Container for animation -->
         <Border x:Name="FlipContainer" RenderTransformOrigin="50%,50%">
             <!-- Card Face -->
-            <Border x:Name="CardFace" BorderBrush="#33000000" BorderThickness="1.5" Background="#F0F0F0" CornerRadius="10" BoxShadow="0 4 10 0 #33000000">
+            <Border x:Name="CardFace" BorderBrush="#33000000" BorderThickness="1.5" Background="#F0F0F0" CornerRadius="16" BoxShadow="0 4 10 0 #33000000">
                 <Grid>
                     <!-- Center Suit Glyph -->
                     <Image x:Name="SuitImage" Width="150" Height="150" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
@@ -113,7 +113,7 @@
              art down to 128×181 first, then blew the result back up ~1.5x to
              Honeycomb's actual 195×276 card, blurring it unconditionally regardless of
              window size — see CardView.ResolveCardBackBitmap's comment). -->
-        <Border x:Name="CardBack" BorderBrush="#33000000" BorderThickness="1.5" CornerRadius="10" IsVisible="False" Background="White" RenderTransformOrigin="50%,50%" BoxShadow="0 4 10 0 #33000000">
+        <Border x:Name="CardBack" BorderBrush="#33000000" BorderThickness="1.5" CornerRadius="16" IsVisible="False" Background="White" RenderTransformOrigin="50%,50%" BoxShadow="0 4 10 0 #33000000">
             <Image x:Name="CardBackImage" Width="195" Height="276" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
         </Border>
 
@@ -124,6 +124,6 @@
              opponent hand card (e.g. Nectar Exchange's swap highlight, or an Order/
              Chaos mandated-card highlight on the opponent's side) never actually showed
              the border, since CardFace itself is invisible while CardBack is showing. -->
-        <Border x:Name="StealHighlightBorder" IsVisible="False" BorderThickness="8" CornerRadius="10" IsHitTestVisible="False" />
+        <Border x:Name="StealHighlightBorder" IsVisible="False" BorderThickness="8" CornerRadius="16" IsHitTestVisible="False" />
     </Grid>
 </UserControl>

@@ -245,7 +245,7 @@ struct ThemesOptionsView: View {
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Customize Face Cards")
+                        Text("Customize Face Cards for Theme")
                             .font(.system(.body).bold())
                         Text("16 slots — Aces, Jacks, Queens, Kings per suit")
                             .font(.system(size: 11))

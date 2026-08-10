@@ -98,10 +98,10 @@
         <!-- ═══════════════════════════════════════════════════════════════════
              THEMES SUB-PANEL
              ═══════════════════════════════════════════════════════════════════ -->
-        <Grid x:Name="ThemesPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="Auto,*" ColumnDefinitions="180,*,*">
+        <Grid x:Name="ThemesPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="Auto,*" ColumnDefinitions="180,*">
 
             <!-- Back button (Row 0, Spans all columns) -->
-            <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Click="CloseThemes_Click"
+            <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Click="CloseThemes_Click"
                     Classes="theme-back"
                     HorizontalContentAlignment="Left" Padding="0,2"
                     BorderThickness="0" Margin="0,0,0,10">
@@ -118,7 +118,6 @@
             <Border Grid.Row="1" Grid.Column="0" Background="#ECECEC" BorderBrush="#DCDCDC" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,10,0">
                 <Grid RowDefinitions="Auto,Auto,*">
                     <TextBlock Grid.Row="0" Text="Saved Themes" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,4,0,0"/>
-                    <Rectangle Grid.Row="0" Height="1" Fill="#E5E5E5" VerticalAlignment="Bottom"/>
 
                     <Button Grid.Row="1" x:Name="SaveThemeButton" Content="Save New Theme…"
                             Click="SaveTheme_Click"
@@ -137,16 +136,35 @@
 
             <Rectangle Grid.Row="1" Grid.Column="0" Width="1" Fill="#E0E0E0" HorizontalAlignment="Right"/>
 
-            <!-- Left Column: Settings -->
-            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="14" Margin="10,0,10,0">
+            <!-- Settings column — hero preview on top, Card Deck/Background side by
+                 side underneath, then the two full-width nav buttons. -->
+            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="14" Margin="10,0,0,0">
 
-                <!-- ─── CARD DECK ─────────────────────────────────────────────── -->
-                <TextBlock Text="Card Deck" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,6,0,0"/>
-                <Rectangle Height="1" Fill="#E5E5E5"/>
+                <!-- ─── Card + Background mockup (hero preview) ───────────────── -->
+                <!-- The actual configured card back rendered on the actual configured
+                     backdrop (felt color, or the real background image when one is
+                     set — no dominant-color sampling here, unlike the Custom Card
+                     Colors preview, since the real image is directly visible and
+                     meaningful in this context). Double-click the card or the
+                     background to adjust either. -->
+                <Border x:Name="DeckBackgroundBackdrop" Height="210" CornerRadius="10"
+                        ClipToBounds="True" HorizontalAlignment="Stretch"
+                        Cursor="Hand" DoubleTapped="DeckBackgroundBackdrop_DoubleTapped"
+                        ToolTip.Tip="Double-click the card or the background to adjust it">
+                    <Grid>
+                        <Image x:Name="DeckBackgroundImage" Stretch="UniformToFill" IsVisible="False"
+                               RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+                        <ContentControl x:Name="DeckBackgroundCardMockHost" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
 
-                <Grid ColumnDefinitions="*, 12, Auto">
-                    <!-- Card Back Selector (Col 0) -->
-                    <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Top">
+                <!-- ─── Card Deck / Background, side by side ──────────────────── -->
+                <Grid ColumnDefinitions="*,16,*" Margin="0,10,0,0">
+
+                    <!-- Card Deck -->
+                    <StackPanel Grid.Column="0" Spacing="6">
+                        <TextBlock Text="Card Deck" FontWeight="Bold" Foreground="#1A1A1A" Height="24" VerticalAlignment="Center"/>
+
                         <ComboBox x:Name="CardBackComboBox" Classes="pill" HorizontalAlignment="Stretch" SelectionChanged="CardBackComboBox_SelectionChanged">
                             <ComboBoxItem Content="Vulpera" Tag="Vulpera"/>
                             <ComboBoxItem Content="Moogle"   Tag="Moogle"/>
@@ -157,85 +175,59 @@
                         </Grid>
                     </StackPanel>
 
-                    <!-- Card Back Preview (Col 2) -->
-                    <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Top">
-                        <Border x:Name="CardBackPreviewBorder"
-                                Width="80" Height="113"
-                                BorderBrush="#D9000000" BorderThickness="0.75"
-                                CornerRadius="7" ClipToBounds="True"
-                                HorizontalAlignment="Left"
-                                Cursor="Hand" Background="White"
-                                PointerPressed="CardBackPreview_Click">
-                            <Grid Width="80" Height="113" ClipToBounds="True">
-                                <Image x:Name="CardBackPreviewImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
-                            </Grid>
-                        </Border>
-                        <TextBlock Text="Tap to adjust" FontSize="9" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Grid>
+                    <!-- Background — Felt Color and image Background merged into one
+                         section since both control what's behind the cards, and the
+                         hero preview above already shows the felt color whenever no
+                         background image is set, so they read as one concept anyway. -->
+                    <StackPanel Grid.Column="2" Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto" Height="24">
+                            <TextBlock Grid.Column="0" Text="Background" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
+                            <!-- Inline with the header (instead of its own row below) and
+                                 scaled down — it's a minor toggle, not a primary control,
+                                 so it shouldn't take the same visual weight as the dropdown
+                                 or Add/Delete buttons. LayoutTransformControl (not
+                                 RenderTransform) so the shrink actually reduces the space
+                                 this reserves in the Grid, instead of just visually
+                                 scaling a control that still claims its full unscaled
+                                 layout size — that was clipping the checkbox glyph. Row
+                                 height matches Card Deck's header exactly (24) so both
+                                 columns' dropdowns/buttons stay aligned regardless of the
+                                 checkbox's own natural size. -->
+                            <LayoutTransformControl Grid.Column="1" VerticalAlignment="Center">
+                                <LayoutTransformControl.LayoutTransform>
+                                    <ScaleTransform ScaleX="0.8" ScaleY="0.8"/>
+                                </LayoutTransformControl.LayoutTransform>
+                                <CheckBox x:Name="VignetteCheckBox" Content="Felt Vignette" FontSize="11"
+                                          Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"
+                                          Padding="4,0,0,0"/>
+                            </LayoutTransformControl>
+                        </Grid>
 
-                <!-- ─── Background ─────────────────────────────────────────────── -->
-                <!-- Felt Color and Background merged into one section — both control
-                     what's behind the cards, and the preview swatch below already shows
-                     the felt color whenever no background image is set, so they read as
-                     one concept anyway. -->
-                <TextBlock Text="Background" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,6,0,0"/>
-                <Rectangle Height="1" Fill="#E5E5E5"/>
+                        <!-- Felt presets and background images share one dropdown — fully
+                             populated in code-behind (PopulateBackgrounds), including a
+                             disabled separator row between the two groups. -->
+                        <ComboBox x:Name="BackgroundComboBox" Classes="pill" HorizontalAlignment="Stretch" SelectionChanged="BackgroundComboBox_SelectionChanged"/>
 
-                <ComboBox x:Name="FeltColorComboBox" Classes="pill" HorizontalAlignment="Stretch" SelectionChanged="FeltColorComboBox_SelectionChanged">
-                    <ComboBoxItem Content="Green Felt" Tag="FeltGreen"/>
-                    <ComboBoxItem Content="Crimson"    Tag="Crimson"/>
-                    <ComboBoxItem Content="Royal Blue" Tag="RoyalBlue"/>
-                    <ComboBoxItem Content="Charcoal"   Tag="Charcoal"/>
-                    <ComboBoxItem Content="Desert"     Tag="Desert"/>
-                    <ComboBoxItem Content="Custom"     Tag="Custom"/>
-                </ComboBox>
+                        <!-- Custom felt color lives in a popover instead of an inline
+                             expanding panel, so picking "Custom Color" doesn't push the
+                             rest of the layout down. -->
+                        <Button x:Name="CustomColorPanel" Content="Choose Custom Color…"
+                                Classes="light-secondary" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" IsVisible="False">
+                            <Button.Flyout>
+                                <Flyout>
+                                    <ColorPicker x:Name="FeltColorPicker" ColorChanged="FeltColorPicker_ColorChanged"/>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
 
-                <StackPanel x:Name="CustomColorPanel" Spacing="4" IsVisible="False">
-                    <TextBlock Text="Choose Custom Color:" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A1A"/>
-                    <ColorPicker x:Name="FeltColorPicker" ColorChanged="FeltColorPicker_ColorChanged" HorizontalAlignment="Left"/>
-                </StackPanel>
-
-                <CheckBox x:Name="VignetteCheckBox" Content="Felt Vignette"
-                          Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-
-                <Grid ColumnDefinitions="*, 12, Auto">
-                    <!-- Background Selector (Col 0) -->
-                    <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Top">
-                        <ComboBox x:Name="BackgroundComboBox" Classes="pill" HorizontalAlignment="Stretch" SelectionChanged="BackgroundComboBox_SelectionChanged">
-                            <ComboBoxItem Content="None (Felt Color)" Tag=""/>
-                        </ComboBox>
                         <Grid ColumnDefinitions="*, *">
                             <Button x:Name="AddCustomBackgroundButton"    Grid.Column="0" Content="Add…"  Click="AddCustomBackground_Click"    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,2,0"/>
                             <Button x:Name="DeleteCustomBackgroundButton" Grid.Column="1" Content="Delete" Click="DeleteCustomBackground_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-danger" Margin="2,0,0,0" IsEnabled="False"/>
                         </Grid>
                     </StackPanel>
 
-                    <!-- Background Preview (Col 2) -->
-                    <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Top">
-                        <Border x:Name="BackgroundPreviewBorder"
-                                Width="80" Height="55"
-                                BorderBrush="#D9000000" BorderThickness="0.75"
-                                CornerRadius="4" ClipToBounds="True"
-                                HorizontalAlignment="Left"
-                                Cursor="Hand" Background="#008000"
-                                PointerPressed="BackgroundPreview_Click">
-                            <Grid Width="80" Height="55" ClipToBounds="True">
-                                <Image x:Name="BackgroundPreviewImage" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
-                            </Grid>
-                        </Border>
-                        <TextBlock x:Name="BackgroundPreviewCaption" Text="Tap to adjust" FontSize="9" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
-                    </StackPanel>
                 </Grid>
-
-            </StackPanel>
-
-            <!-- Right Column: Custom Face Card Art & Colors -->
-            <StackPanel Grid.Row="1" Grid.Column="2" Spacing="14" Margin="10,0,0,0">
-
-                <!-- ─── CUSTOM CARD ART ───────────────────────────────────────── -->
-                <TextBlock Text="Custom Card Art" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,4,0,0"/>
-                <Rectangle Height="1" Fill="#E5E5E5"/>
 
                 <!-- The 16-slot grid needs more room than this column can give it —
                      opened as a full-width sub-panel instead of crammed in here. -->
@@ -246,41 +238,29 @@
                         BorderThickness="1" BorderBrush="#DDDDDD">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Spacing="3">
-                            <TextBlock Text="Customize Face Cards" FontSize="14" FontWeight="SemiBold" Foreground="#1A1A1A"/>
+                            <TextBlock Text="Customize Face Cards for Theme" FontSize="14" FontWeight="SemiBold" Foreground="#1A1A1A"/>
                             <TextBlock Text="16 slots — Aces, Jacks, Queens, Kings per suit" FontSize="11" Foreground="#1A1A1A"/>
                         </StackPanel>
                         <TextBlock Grid.Column="1" Text="›" FontSize="20" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     </Grid>
                 </Button>
 
-                <!-- ─── CUSTOM CARD COLOR ─────────────────────────────────────── -->
-                <TextBlock Text="Custom Card Color" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,12,0,0"/>
-                <Rectangle Height="1" Fill="#E5E5E5"/>
-
-                <!-- Grid of Color Pickers -->
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,4,0,4">
-                    <!-- Card Background -->
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Card Background:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
-                    <ColorPicker Grid.Row="0" Grid.Column="1" x:Name="CardBgColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
-
-                    <!-- Card Outline -->
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Card Outline:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
-                    <ColorPicker Grid.Row="1" Grid.Column="1" x:Name="CardOutlineColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
-
-                    <!-- Card Text - Black Suits -->
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Text (Black Suits):" VerticalAlignment="Center" Foreground="#1A1A1A"/>
-                    <ColorPicker Grid.Row="2" Grid.Column="1" x:Name="CardTextBlackColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
-
-                    <!-- Card Text - Red Suits -->
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Text (Red Suits):" VerticalAlignment="Center" Foreground="#1A1A1A"/>
-                    <ColorPicker Grid.Row="3" Grid.Column="1" x:Name="CardTextRedColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
-
-                    <!-- Hint Highlight -->
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Hint Highlight:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
-                    <ColorPicker Grid.Row="4" Grid.Column="1" x:Name="HintHighlightColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
-                </Grid>
-
-                <Button Content="Reset Card Colors" Click="ResetCardColors_Click" Classes="light-danger" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,2,0,0"/>
+                <!-- Card colors need a live preview against real cards/the theme's
+                     backdrop to be meaningful — opened as its own sub-panel instead of
+                     just swatch chips in this column. -->
+                <Button x:Name="CardColorsButton" Click="OpenCardColorsPanel_Click"
+                        Classes="theme-nav" Foreground="#1A1A1A"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                        Padding="12,10" CornerRadius="6"
+                        BorderThickness="1" BorderBrush="#DDDDDD">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Custom Card Colors for Theme" FontSize="14" FontWeight="SemiBold" Foreground="#1A1A1A"/>
+                            <TextBlock Text="Background, outline, text, hint highlight" FontSize="11" Foreground="#1A1A1A"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="›" FontSize="20" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    </Grid>
+                </Button>
 
             </StackPanel>
 
@@ -305,6 +285,52 @@
             <StackPanel Grid.Row="1" Spacing="6">
                 <TextBlock Text="Tap a tile to upload art. Tap again to adjust." FontSize="12" Foreground="#1A1A1A"/>
                 <v:FaceCardArtSectionView/>
+            </StackPanel>
+
+        </Grid>
+
+        <!-- ═══════════════════════════════════════════════════════════════════
+             CUSTOM CARD COLORS SUB-PANEL — live 3-card preview against the
+             theme's own backdrop, plus the 5 color pickers.
+             ═══════════════════════════════════════════════════════════════════ -->
+        <Grid x:Name="CardColorsPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="Auto,Auto,*">
+
+            <Button Grid.Row="0" Click="CloseCardColorsPanel_Click"
+                    Classes="theme-back"
+                    HorizontalContentAlignment="Left" Padding="0,2"
+                    BorderThickness="0" Margin="0,0,0,10">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
+                    <TextBlock Text="Back" FontSize="13" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <Border x:Name="CardColorPreviewBackdrop" Grid.Row="1" CornerRadius="8" Padding="20" Margin="0,0,0,14">
+                <StackPanel x:Name="CardColorPreviewStack" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center"/>
+            </Border>
+
+            <StackPanel Grid.Row="2" Spacing="8">
+                <TextBlock Text="Custom Card Colors" FontWeight="Bold" Foreground="#1A1A1A"/>
+                <Rectangle Height="1" Fill="#E5E5E5"/>
+
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,4,0,4">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Card Background:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <ColorPicker Grid.Row="0" Grid.Column="1" x:Name="CardBgColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Card Outline:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <ColorPicker Grid.Row="1" Grid.Column="1" x:Name="CardOutlineColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Text (Black Suits):" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <ColorPicker Grid.Row="2" Grid.Column="1" x:Name="CardTextBlackColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Text (Red Suits):" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <ColorPicker Grid.Row="3" Grid.Column="1" x:Name="CardTextRedColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Hint Highlight:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <ColorPicker Grid.Row="4" Grid.Column="1" x:Name="HintHighlightColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
+                </Grid>
+
+                <Button Content="Reset Card Colors" Click="ResetCardColors_Click" Classes="light-danger" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,2,0,0"/>
             </StackPanel>
 
         </Grid>

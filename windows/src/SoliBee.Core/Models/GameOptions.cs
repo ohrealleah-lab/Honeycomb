@@ -96,6 +96,9 @@ public class GameOptions
     public double BlackjackWidth     { get; set; } = 1000;
     public double BlackjackHeight    { get; set; } = 920;
     public bool   BlackjackMaximized { get; set; } = false;
+    public double HoneycombWidth     { get; set; } = 1120;
+    public double HoneycombHeight    { get; set; } = 800;
+    public bool   HoneycombMaximized { get; set; } = false;
 
     // Theme editor color overrides — null means use the compiled default
     public string? ThemeFaceBackNormal { get; set; }

@@ -79,7 +79,7 @@ public partial class HoneycombView : UserControl
             var cellBorder = new Border
             {
                 Background = _brushCellDefault,
-                CornerRadius = new Avalonia.CornerRadius(8),
+                CornerRadius = new Avalonia.CornerRadius(16),
                 Margin = new Avalonia.Thickness(4),
                 Width = 195,
                 Height = 276,
@@ -966,7 +966,7 @@ public partial class HoneycombView : UserControl
             Child = ghostCard,
             IsHitTestVisible = false,
             BoxShadow = Avalonia.Media.BoxShadows.Parse("0 8 24 4 #80000000"),
-            CornerRadius = new Avalonia.CornerRadius(8),
+            CornerRadius = new Avalonia.CornerRadius(16),
             RenderTransform = _dragGhostTx
         };
 
