@@ -255,15 +255,6 @@ public static class ThemeService
         return theme;
      }
 
-     // Compares live options against a saved theme's own snapshot (ignoring Id, which
-     // callers set to match before calling) to detect edits made since it was applied/saved.
-     public static bool CurrentMatchesTheme(GameOptions options, SoliBeeTheme theme)
-     {
-        var current = SnapshotFromOptions(theme.Name, options);
-        current.Id = theme.Id;
-        return JsonSerializer.Serialize(current, _jsonOpts) == JsonSerializer.Serialize(theme, _jsonOpts);
-     }
-
      public static GameOptions ApplyTheme(SoliBeeTheme theme, GameOptions options)
      {
         options.ActiveThemeId = theme.Id;

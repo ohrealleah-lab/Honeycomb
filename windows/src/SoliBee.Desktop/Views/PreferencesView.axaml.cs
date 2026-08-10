@@ -29,7 +29,6 @@ public partial class PreferencesView : UserControl
     private Bitmap? _cardBackPreviewBitmap;
     private List<SoliBeeTheme> _themes = new();
     private SoliBeeTheme? _themeToDelete;
-    private SoliBeeTheme? _themeToApply;
     private SoliBeeTheme? _themeToRename;
     private bool _isBackgroundEditorOpen;
     private string? _backgroundToDelete;
@@ -78,6 +77,19 @@ public partial class PreferencesView : UserControl
     {
         InitializeComponent();
         this.Loaded += PreferencesView_Loaded;
+
+        // Face card art edits (FaceCardArtSectionView, inside FaceCardsPanel) go through
+        // FaceCardArtService directly and never call NotifySettingsChanged, so they were
+        // the one live-apply surface that didn't live-save into the active theme — upload
+        // or adjust art, then Apply a different theme or close the app, and the edit was
+        // silently lost. This mirrors NotifySettingsChanged's own live-save block below,
+        // just triggered by the message FaceCardArtSectionView already sends after every
+        // upload/adjust/remove instead of by an options field changing.
+        WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
+        {
+            if (DataContext is GameOptions options && options.ActiveThemeId.HasValue)
+                ThemeService.UpdateTheme(options.ActiveThemeId.Value, options);
+        });
     }
 
     private void PopulateCardBacks(GameOptions options)
@@ -837,48 +849,19 @@ public partial class PreferencesView : UserControl
         RefreshThemeList();
     }
 
+    // Applying used to risk silently discarding custom face art, so this warned first —
+    // now moot: live-save (NotifySettingsChanged, plus the FaceCardArtChangedMessage
+    // hook in the constructor) keeps whichever theme is currently active continuously in
+    // sync with the live state, Default included (ThemeService.UpdateTheme has no
+    // special-casing by theme origin). By the time Apply is clicked, the theme you're
+    // leaving already has your current art saved under its own name — switching away
+    // never loses it.
     private void ApplyTheme_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not SoliBeeTheme theme) return;
         if (DataContext is not GameOptions options) return;
 
-        if (ShouldWarnBeforeApplyingTheme(options))
-        {
-            _themeToApply = theme;
-            ConfirmApplyThemeOverlay.IsVisible = true;
-            return;
-        }
-
         ApplyThemeNow(theme, options);
-    }
-
-    // Warn only if custom face art is actually at risk of being silently discarded:
-    // the user is on the Default theme (or has never explicitly applied/saved one), or
-    // their current saved theme has been edited since it was last applied/saved.
-    private bool ShouldWarnBeforeApplyingTheme(GameOptions options)
-    {
-        bool hasCustomArt = FaceCardArtService.GetAllArts().Any();
-        if (!hasCustomArt) return false;
-
-        bool isDefault = options.ActiveThemeId == null || options.ActiveThemeId == ThemeService.DefaultThemes[0].Id;
-        if (isDefault) return true;
-
-        var activeTheme = _themes.FirstOrDefault(t => t.Id == options.ActiveThemeId);
-        return activeTheme == null || !ThemeService.CurrentMatchesTheme(options, activeTheme);
-    }
-
-    private void CancelApplyTheme_Click(object? sender, RoutedEventArgs e)
-    {
-        _themeToApply = null;
-        ConfirmApplyThemeOverlay.IsVisible = false;
-    }
-
-    private void ConfirmApplyTheme_Click(object? sender, RoutedEventArgs e)
-    {
-        ConfirmApplyThemeOverlay.IsVisible = false;
-        if (_themeToApply == null || DataContext is not GameOptions options) return;
-        ApplyThemeNow(_themeToApply, options);
-        _themeToApply = null;
     }
 
     private void ApplyThemeNow(SoliBeeTheme theme, GameOptions options)
