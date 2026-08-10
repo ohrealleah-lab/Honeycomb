@@ -12,8 +12,10 @@ struct ThemesSectionView: View {
     @State private var newThemeName = ""
     @State private var saveError: String? = nil
     @State private var themeToDelete: SoliBeeTheme? = nil
-    @State private var themeToApply: SoliBeeTheme? = nil
-    @State private var themeToUpdate: SoliBeeTheme? = nil
+    @State private var renamingThemeId: UUID? = nil
+    @State private var renameText: String = ""
+    @State private var renameError: String? = nil
+    @FocusState private var renameFieldFocused: Bool
 
     private var manager: ThemeManager { ThemeManager.shared }
 
@@ -91,45 +93,21 @@ struct ThemesSectionView: View {
         } message: {
             Text("Delete \"\(themeToDelete?.name ?? "")\"? This cannot be undone.")
         }
-        .alert("Warning", isPresented: Binding(
-            get: { themeToApply != nil },
-            set: { if !$0 { themeToApply = nil } }
+        .alert("Rename Theme", isPresented: Binding(
+            get: { renameError != nil },
+            set: { if !$0 { renameError = nil } }
         )) {
-            Button("Cancel", role: .cancel) { themeToApply = nil }
-            Button("Accept", role: .destructive) {
-                if let t = themeToApply { coordinator.applyTheme(t) }
-                themeToApply = nil
-                isOptionsPresented = false
-            }
+            Button("OK", role: .cancel) { renameError = nil }
         } message: {
-            Text("Applying a new theme will remove your custom card art. Cancel and save as a new theme, if needed.")
-        }
-        .alert("Update Theme", isPresented: Binding(
-            get: { themeToUpdate != nil },
-            set: { if !$0 { themeToUpdate = nil } }
-        )) {
-            Button("Cancel", role: .cancel) { themeToUpdate = nil }
-            Button("Update") {
-                if let t = themeToUpdate { updateTheme(t) }
-                themeToUpdate = nil
-            }
-        } message: {
-            Text("Are you sure you want to update \"\(themeToUpdate?.name ?? "")\"?")
+            Text(renameError ?? "")
         }
     }
 
-    // Skip the warning if the user is currently on a saved, non-Default theme (nothing
-    // of theirs is at risk since it's already captured by that theme), or if there's no
-    // active custom face art to lose in the first place.
-    private func shouldWarnBeforeApplying() -> Bool {
-        guard !CustomFaceCardArtManager.shared.faceArts.isEmpty else { return false }
-        guard let activeId = manager.activeThemeId,
-              let activeTheme = manager.themes.first(where: { $0.id == activeId }) else {
-            return true
-        }
-        return activeTheme.name.lowercased() == "default"
-    }
-
+    // Applying a theme used to warn about losing custom face art, back when Apply/Update
+    // were separate actions and unsaved face-art edits could be silently discarded. Now
+    // every live edit (including face art, via liveSaveActiveTheme()) is continuously
+    // captured into whichever theme is active, so there's nothing left to lose — Apply
+    // just switches which already-saved snapshot is current.
     private func themeRow(_ theme: SoliBeeTheme) -> some View {
         HStack(spacing: 10) {
             // Colour swatch
@@ -141,11 +119,26 @@ struct ThemesSectionView: View {
                 .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.primary.opacity(0.2), lineWidth: 0.5))
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(theme.name)
-                    .font(.system(size: 13))
-                    .lineLimit(1)
-                // Explicit "Active" caption — the Update button alone wasn't a reliable
-                // "which theme is this" signal (easy to miss, not colorblind-safe).
+                if renamingThemeId == theme.id {
+                    TextField("Theme name", text: $renameText)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 13))
+                        .focused($renameFieldFocused)
+                        .onSubmit { commitRename(theme) }
+                        .onChange(of: renameFieldFocused) { _, isFocused in
+                            if !isFocused && renamingThemeId == theme.id { commitRename(theme) }
+                        }
+                } else {
+                    Text(theme.name)
+                        .font(.system(size: 13))
+                        .lineLimit(1)
+                        // Double-click to rename — matches the interaction Windows added
+                        // alongside its disabled "Active" button.
+                        .onTapGesture(count: 2) { beginRename(theme) }
+                }
+                // Explicit "Active" caption — a lone disabled button wasn't a reliable
+                // enough "which theme is this" signal on its own (easy to miss, not
+                // colorblind-safe).
                 Text(manager.activeThemeId == theme.id ? "Active" : theme.cardBackTheme)
                     .font(.system(size: 10))
                     .foregroundColor(manager.activeThemeId == theme.id ? .accentColor : .secondary)
@@ -154,24 +147,17 @@ struct ThemesSectionView: View {
             Spacer()
 
             if manager.activeThemeId == theme.id {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.accentColor)
-
-                Button("Update") {
-                    themeToUpdate = theme
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .focusable(false)
+                // Every live edit (felt/card back/colors/face art) is continuously
+                // saved into the active theme now — see AppCoordinator.liveSaveActiveTheme()
+                // — so there's nothing left to "Update"; this button just states fact.
+                Button("Active") {}
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(true)
             } else {
                 Button("Apply") {
-                    if shouldWarnBeforeApplying() {
-                        themeToApply = theme
-                    } else {
-                        coordinator.applyTheme(theme)
-                        isOptionsPresented = false
-                    }
+                    coordinator.applyTheme(theme)
+                    isOptionsPresented = false
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
@@ -218,19 +204,20 @@ struct ThemesSectionView: View {
         saveError = nil
     }
 
-    private func updateTheme(_ theme: SoliBeeTheme) {
-        let updated = SoliBeeTheme(
-            id: theme.id,
-            name: theme.name,
-            cardBackTheme: coordinator.cardBackTheme,
-            feltColor: coordinator.feltColor,
-            customFeltRed: coordinator.customFeltRed,
-            customFeltGreen: coordinator.customFeltGreen,
-            customFeltBlue: coordinator.customFeltBlue,
-            faceArts: CustomFaceCardArtManager.shared.faceArts,
-            customCardColors: coordinator.customCardColors,
-            customBackgroundName: coordinator.customBackgroundName
-        )
-        manager.updateTheme(updated)
+    private func beginRename(_ theme: SoliBeeTheme) {
+        renameText = theme.name
+        renamingThemeId = theme.id
+        renameFieldFocused = true
+    }
+
+    private func commitRename(_ theme: SoliBeeTheme) {
+        renamingThemeId = nil
+        let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != theme.name else { return }
+        if !manager.renameTheme(id: theme.id, newName: trimmed) {
+            renameError = trimmed.isEmpty
+                ? "Theme name can't be empty."
+                : "A theme named \"\(trimmed)\" already exists."
+        }
     }
 }

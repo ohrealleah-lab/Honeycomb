@@ -223,15 +223,18 @@ public final class ThemeManager {
         return themes.contains { $0.name.lowercased() == trimmed }
     }
 
-    /// Clears which saved theme is considered "active." Deliberately NOT called for
-    /// felt color / card back / custom card colors / custom background edits — those are
-    /// meant to be live-tweakable while a theme stays "selected," so the Themes panel's
-    /// Update button stays available to save the tweaks back into it. Still called from
-    /// CustomFaceCardArtManager's mutators (add/update/remove/setEnabled), which also
-    /// drives `shouldWarnBeforeApplying()`'s "you'll lose your custom card art" check —
-    /// that's a separate concern from Update and hasn't been revisited here.
-    public func invalidateActiveTheme() {
-        activeThemeId = nil
+    /// Overwrites an existing theme's name (case-insensitive collision check against
+    /// every *other* theme, so renaming a theme to its own current name is a no-op).
+    public func renameTheme(id: UUID, newName: String) -> Bool {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let idx = themes.firstIndex(where: { $0.id == id }) else { return false }
+        let collides = themes.contains {
+            $0.id != id && $0.name.lowercased() == trimmed.lowercased()
+        }
+        guard !collides else { return false }
+        themes[idx].name = trimmed
+        save()
+        return true
     }
 
     // MARK: - Asset reference lookups

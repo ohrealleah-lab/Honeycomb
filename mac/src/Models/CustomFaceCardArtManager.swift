@@ -123,7 +123,7 @@ public final class CustomFaceCardArtManager {
         let art = CustomFaceArt(id: id, slot: slot, relativePath: filename, scale: scale, offsetX: offsetX, offsetY: offsetY, isEnabled: true)
         faceArts.append(art)
         save()
-        ThemeManager.shared.invalidateActiveTheme()
+        NotificationCenter.default.post(name: .customFaceCardArtDidChange, object: nil)
         return true
     }
 
@@ -131,7 +131,7 @@ public final class CustomFaceCardArtManager {
         if let idx = faceArts.firstIndex(where: { $0.slot == updated.slot }) {
             faceArts[idx] = updated
             save()
-            ThemeManager.shared.invalidateActiveTheme()
+            NotificationCenter.default.post(name: .customFaceCardArtDidChange, object: nil)
         }
     }
 
@@ -148,7 +148,7 @@ public final class CustomFaceCardArtManager {
             imageCache.removeValue(forKey: existing.relativePath)
             faceArts.removeAll { $0.slot == slot }
             save()
-            ThemeManager.shared.invalidateActiveTheme()
+            NotificationCenter.default.post(name: .customFaceCardArtDidChange, object: nil)
         }
     }
 
@@ -156,7 +156,7 @@ public final class CustomFaceCardArtManager {
         if let idx = faceArts.firstIndex(where: { $0.slot == slot }) {
             faceArts[idx].isEnabled = enabled
             save()
-            ThemeManager.shared.invalidateActiveTheme()
+            NotificationCenter.default.post(name: .customFaceCardArtDidChange, object: nil)
         }
     }
 

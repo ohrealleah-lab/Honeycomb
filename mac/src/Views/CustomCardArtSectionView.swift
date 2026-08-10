@@ -87,18 +87,36 @@ struct CardBackPreviewView: View {
 
 struct CustomCardBackEditorView: View {
     let image: NSImage
+    // Non-nil when re-editing a deck already in the library (opened via tap on the
+    // hero preview) — locks the name field and skips the empty/uniqueness check, since
+    // renaming isn't supported (matching CustomBackgroundEditorView's existingBackground,
+    // same reasoning: CustomCardBackManager has no rename method either).
+    var existingCardBack: CustomCardBack? = nil
     let onSave: (String, Double, Double, Double) -> Void
     let onCancel: () -> Void
-    
-    @State private var name: String = ""
-    @State private var scale: Double = 1.0
-    @State private var offsetX: Double = 0.0
-    @State private var offsetY: Double = 0.0
+
+    @State private var name: String
+    @State private var scale: Double
+    @State private var offsetX: Double
+    @State private var offsetY: Double
     @State private var showError = false
-    
+
+    init(image: NSImage, existingCardBack: CustomCardBack? = nil,
+         onSave: @escaping (String, Double, Double, Double) -> Void,
+         onCancel: @escaping () -> Void) {
+        self.image = image
+        self.existingCardBack = existingCardBack
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _name = State(initialValue: existingCardBack?.name ?? "")
+        _scale = State(initialValue: existingCardBack?.scale ?? 1.0)
+        _offsetX = State(initialValue: existingCardBack?.offsetX ?? 0.0)
+        _offsetY = State(initialValue: existingCardBack?.offsetY ?? 0.0)
+    }
+
     var body: some View {
         VStack(spacing: 20) {
-            Text("Edit Custom Card Art")
+            Text(existingCardBack != nil ? "Edit Card Back" : "Edit Custom Card Art")
                 .font(.display(18))
                 .foregroundColor(.primary)
                 .padding(.top)
@@ -130,7 +148,8 @@ struct CustomCardBackEditorView: View {
             }
             .frame(width: 150, height: 200)
             
-            // Name input
+            // Name input — locked to the existing name when re-editing (see
+            // existingCardBack's doc comment above).
             VStack(alignment: .leading, spacing: 4) {
                 Text("Card Back Name:")
                     .font(.display(12))
@@ -138,6 +157,7 @@ struct CustomCardBackEditorView: View {
                 TextField("e.g. My Dog", text: $name)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
+                    .disabled(existingCardBack != nil)
             }
 
             // Horizontal Offset Slider
@@ -201,7 +221,12 @@ struct CustomCardBackEditorView: View {
 
                 themedEditorButton("Save", tint: .primary, shortcut: .defaultAction) {
                     let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if cleanedName.isEmpty ||
+                    let isRenaming = existingCardBack != nil && cleanedName != existingCardBack?.name
+                    if !isRenaming {
+                        // Re-editing the same deck's scale/offset — the name is locked
+                        // (see the field's .disabled above), so no uniqueness check needed.
+                        onSave(cleanedName, scale, offsetX, offsetY)
+                    } else if cleanedName.isEmpty ||
                         CustomCardBackManager.shared.defaultThemes.contains(cleanedName) ||
                         CustomCardBackManager.shared.customCardBacks.contains(where: { $0.name == cleanedName }) {
                         showError = true
@@ -299,9 +324,9 @@ public struct CardDeckSelectorView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Row 1: Scrollable Carousel of All Decks in Stable Order
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Card Deck Selection")
+            HStack(alignment: .firstTextBaseline) {
+                HStack(spacing: 4) {
+                    Text("Card Deck")
                         .font(.system(.body).bold())
                     Text("(.jpg, .png, or .gif accepted):")
                         .font(.system(.body))
@@ -405,7 +430,7 @@ public struct CardDeckSelectorView: View {
             Button("OK", role: .cancel) { deckInUseByTheme = nil }
         } message: {
             if let info = deckInUseByTheme {
-                Text("This card back is used by \"\(info.themeName)\". Please delete the theme first.")
+                Text("This card back is used by \"\(info.themeName)\". Please update or delete the theme first.")
             }
         }
     }
@@ -422,38 +447,32 @@ public struct CardDeckSelectorView: View {
     }
     
     private func slideRight(proxy: ScrollViewProxy, activeDecks: [String]) {
+        guard !activeDecks.isEmpty else { return }
         if let currentIndex = activeDecks.firstIndex(of: cardBackTheme) {
-            let nextIndex = currentIndex + 1
-            if nextIndex < activeDecks.count {
-                let nextName = activeDecks[nextIndex]
-                cardBackTheme = nextName
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo(nextName, anchor: .center)
-                }
+            // Loops back to the first deck once you're past the last one.
+            let nextIndex = (currentIndex + 1) % activeDecks.count
+            let nextName = activeDecks[nextIndex]
+            cardBackTheme = nextName
+            withAnimation(.easeInOut(duration: 0.3)) {
+                proxy.scrollTo(nextName, anchor: .center)
             }
-        } else {
-            if let first = activeDecks.first {
-                cardBackTheme = first
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo(first, anchor: .center)
-                }
+        } else if let first = activeDecks.first {
+            cardBackTheme = first
+            withAnimation(.easeInOut(duration: 0.3)) {
+                proxy.scrollTo(first, anchor: .center)
             }
         }
     }
-    
+
     private func slideLeft(proxy: ScrollViewProxy, activeDecks: [String]) {
+        guard !activeDecks.isEmpty else { return }
         if let currentIndex = activeDecks.firstIndex(of: cardBackTheme) {
-            let prevIndex = currentIndex - 1
-            if prevIndex >= 0 {
-                let prevName = activeDecks[prevIndex]
-                cardBackTheme = prevName
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo(prevName, anchor: .center)
-                }
-            } else if let first = activeDecks.first {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo(first, anchor: .center)
-                }
+            // Loops back to the last deck once you're before the first one.
+            let prevIndex = (currentIndex - 1 + activeDecks.count) % activeDecks.count
+            let prevName = activeDecks[prevIndex]
+            cardBackTheme = prevName
+            withAnimation(.easeInOut(duration: 0.3)) {
+                proxy.scrollTo(prevName, anchor: .center)
             }
         } else if let first = activeDecks.first {
             withAnimation(.easeInOut(duration: 0.3)) {

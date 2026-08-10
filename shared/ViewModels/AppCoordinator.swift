@@ -5,6 +5,16 @@ import SwiftUI
 import AppKit
 #endif
 
+public extension Notification.Name {
+    /// Posted after every CustomFaceCardArtManager mutation (add/update/remove/
+    /// setEnabled) so AppCoordinator can live-save the active theme without that
+    /// (mac-only, not part of the iOS target) manager needing a coordinator reference
+    /// of its own. Declared here in shared code — not in CustomFaceCardArtManager.swift
+    /// itself — so it's visible when this file compiles for iOS too, even though nothing
+    /// posts it there yet.
+    static let customFaceCardArtDidChange = Notification.Name("customFaceCardArtDidChange")
+}
+
 @Observable
 public final class AppCoordinator {
     public var gameMode: GameMode {
@@ -76,11 +86,20 @@ public final class AppCoordinator {
     // every game's Options struct used to write independently before this refactor, so
     // existing users' last-used theme carries over with no migration step.
     public var feltColor: FeltColorTheme {
-        didSet { UserDefaults.standard.set(feltColor.rawValue, forKey: "global_felt_color") }
+        didSet {
+            UserDefaults.standard.set(feltColor.rawValue, forKey: "global_felt_color")
+            liveSaveActiveTheme()
+        }
     }
     public var cardBackTheme: String {
-        didSet { UserDefaults.standard.set(cardBackTheme, forKey: "cardBackTheme") }
+        didSet {
+            UserDefaults.standard.set(cardBackTheme, forKey: "cardBackTheme")
+            liveSaveActiveTheme()
+        }
     }
+    // Not part of SoliBeeTheme on either platform — a plain app-wide display setting,
+    // not something a saved theme preset snapshots — so it deliberately does NOT trigger
+    // liveSaveActiveTheme() below.
     public var showFeltVignette: Bool {
         didSet { UserDefaults.standard.set(showFeltVignette, forKey: "showFeltVignette") }
     }
@@ -100,16 +119,26 @@ public final class AppCoordinator {
             if let encoded = try? JSONEncoder().encode(customCardColors) {
                 UserDefaults.standard.set(encoded, forKey: "customCardColors")
             }
+            liveSaveActiveTheme()
         }
     }
     public var customFeltRed: Double {
-        didSet { UserDefaults.standard.set(customFeltRed, forKey: "custom_felt_red") }
+        didSet {
+            UserDefaults.standard.set(customFeltRed, forKey: "custom_felt_red")
+            liveSaveActiveTheme()
+        }
     }
     public var customFeltGreen: Double {
-        didSet { UserDefaults.standard.set(customFeltGreen, forKey: "custom_felt_green") }
+        didSet {
+            UserDefaults.standard.set(customFeltGreen, forKey: "custom_felt_green")
+            liveSaveActiveTheme()
+        }
     }
     public var customFeltBlue: Double {
-        didSet { UserDefaults.standard.set(customFeltBlue, forKey: "custom_felt_blue") }
+        didSet {
+            UserDefaults.standard.set(customFeltBlue, forKey: "custom_felt_blue")
+            liveSaveActiveTheme()
+        }
     }
     // nil means "no custom background — render Felt Color instead". App-wide/live-shared,
     // same as the felt color fields above.
@@ -120,6 +149,7 @@ public final class AppCoordinator {
             } else {
                 UserDefaults.standard.removeObject(forKey: "custom_background_name")
             }
+            liveSaveActiveTheme()
         }
     }
 
@@ -301,6 +331,8 @@ public final class AppCoordinator {
         // which also reasserts UISound.isEnabled from it (see options.didSet in each
         // ViewModel) so nothing can silently win by being the last one to init.
         applySharedCommonOptionsToAllGames()
+
+        observeFaceArtChangesForLiveSave()
     }
 
     // MARK: - Shared option sync (genuinely per-game gameplay prefs only — theme fields
@@ -389,6 +421,15 @@ public final class AppCoordinator {
     }
 
     public func applyTheme(_ theme: SoliBeeTheme) {
+        // Reentrancy guard for liveSaveActiveTheme() below: applyTheme is *loading*
+        // already-saved data back in, field by field — without this, each individual
+        // field's didSet would fire while activeThemeId still points at whichever theme
+        // was active *before* this call (it's only reassigned at the very end here), so
+        // every one of those live-saves would silently overwrite the OLD theme's saved
+        // preset with the NEW theme's values, corrupting it one field at a time.
+        isApplyingTheme = true
+        defer { isApplyingTheme = false }
+
         cardBackTheme = theme.cardBackTheme
         feltColor     = theme.feltColor
         customCardColors = theme.customCardColors
@@ -408,6 +449,56 @@ public final class AppCoordinator {
         CustomFaceCardArtManager.shared.restore(theme.faceArts)
         #endif
         ThemeManager.shared.activeThemeId = theme.id
+    }
+
+    // MARK: - Live-save into the active theme (mirrors Windows' NotifySettingsChanged ->
+    // ThemeService.UpdateTheme live-save). Called from every theme-relevant field's
+    // didSet above, and from CustomFaceCardArtManager's mutators via
+    // notifyFaceArtChangedForLiveSave() below. No-ops when there's no active theme (the
+    // user hasn't applied/saved one, or last deleted it) or while applyTheme() itself is
+    // in the middle of loading a theme in (see isApplyingTheme).
+    @ObservationIgnored private var isApplyingTheme = false
+
+    private func liveSaveActiveTheme() {
+        guard !isApplyingTheme,
+              let activeThemeId = ThemeManager.shared.activeThemeId,
+              let existing = ThemeManager.shared.themes.first(where: { $0.id == activeThemeId })
+        else { return }
+
+        // CustomFaceCardArtManager is mac-only (not part of the iOS target) — iOS has no
+        // face-art customization concept yet, so its themes simply keep whatever faceArts
+        // they already had rather than trying to read a manager that doesn't exist there.
+        #if canImport(AppKit)
+        let faceArts = CustomFaceCardArtManager.shared.faceArts
+        #else
+        let faceArts = existing.faceArts
+        #endif
+
+        let updated = SoliBeeTheme(
+            id: activeThemeId,
+            name: existing.name,
+            cardBackTheme: cardBackTheme,
+            feltColor: feltColor,
+            customFeltRed: customFeltRed,
+            customFeltGreen: customFeltGreen,
+            customFeltBlue: customFeltBlue,
+            faceArts: faceArts,
+            customCardColors: customCardColors,
+            customBackgroundName: customBackgroundName
+        )
+        ThemeManager.shared.updateTheme(updated)
+    }
+
+    // CustomFaceCardArtManager has no AppCoordinator reference (and shouldn't gain one
+    // just for this), so it posts a notification on each mutation instead — mirrors how
+    // Windows' PreferencesView already listens for FaceCardArtChangedMessage separately
+    // from its own NotifySettingsChanged funnel. Registered once in init() below.
+    private func observeFaceArtChangesForLiveSave() {
+        NotificationCenter.default.addObserver(
+            forName: .customFaceCardArtDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.liveSaveActiveTheme()
+        }
     }
 
     public func triggerWinAnimation() {

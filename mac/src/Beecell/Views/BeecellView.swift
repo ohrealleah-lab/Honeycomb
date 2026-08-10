@@ -601,7 +601,6 @@ public struct BeecellView: View {
             if showQueuedBanner {
                 FlashBannerView(
                     message: queuedBannerText,
-                    manualDismiss: viewModel.options.manuallyDismissBanners,
                     onDismiss: dismissQueuedBanner
                 )
             }
@@ -611,7 +610,7 @@ public struct BeecellView: View {
             // left the hit-test region stuck active.
             Color.clear
                 .contentShape(Rectangle())
-                .allowsHitTesting(showQueuedBanner && viewModel.options.manuallyDismissBanners)
+                .allowsHitTesting(showQueuedBanner)
                 .onTapGesture { dismissQueuedBanner() }
 
             // Drag overlay representation (positioned globally, scaled to match board)

@@ -263,7 +263,7 @@ public partial class GameView : CardGameView
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             HintToast.Flash(message, duration, manualDismiss);
-            BannerTapCatcher.IsHitTestVisible = manualDismiss;
+            BannerTapCatcher.IsHitTestVisible = true;
         });
     }
 

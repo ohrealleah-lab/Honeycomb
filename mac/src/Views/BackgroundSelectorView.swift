@@ -2,8 +2,8 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-private struct IdentifiableBackgroundImage: Identifiable {
-    let id = UUID()
+public struct IdentifiableBackgroundImage: Identifiable {
+    public let id = UUID()
     let image: NSImage
     let data: Data
 }
@@ -11,12 +11,17 @@ private struct IdentifiableBackgroundImage: Identifiable {
 // A single unified sheet-presentation state for both the "Add Custom" and
 // "double-click to re-edit" flows. Two separate `.sheet(item:)` modifiers stacked on
 // the same parent view is unreliable in SwiftUI — only the first one reliably
-// presents — so both flows now share one `.sheet(item:)` driven by this enum.
-private enum BackgroundEditorMode: Identifiable {
+// presents — so both flows now share one `.sheet(item:)` driven by this enum. Not
+// `private` (and passed in as a Binding rather than owned here) so ThemesOptionsView's
+// hero preview can also drive it — double-tapping the hero preview opens the same
+// "editingExisting" sheet as this view's own trigger, matching Windows'
+// DeckBackgroundBackdrop_DoubleTapped consolidating what used to be a separate small
+// thumbnail's click target.
+public enum BackgroundEditorMode: Identifiable {
     case adding(IdentifiableBackgroundImage)
     case editingExisting(CustomBackground, NSImage)
 
-    var id: String {
+    public var id: String {
         switch self {
         case .adding(let item): return "add-\(item.id)"
         case .editingExisting(let background, _): return "edit-\(background.id)"
@@ -24,19 +29,37 @@ private enum BackgroundEditorMode: Identifiable {
     }
 }
 
+// One merged picker over both felt presets and custom backgrounds (rather than two
+// separate dropdowns each covering half of "what's behind the cards") — selecting a
+// felt case clears customBackgroundName, selecting a background leaves feltColor alone
+// (it becomes just the fallback for whenever no background image is set). addCustom is
+// a momentary action, not a real selection — it never gets stored back into
+// customBackgroundName/feltColor, so the picker's displayed value snaps back to
+// whichever of those is actually true the instant this triggers the file picker.
+private enum FeltOrBackgroundSelection: Hashable {
+    case felt(FeltColorTheme)
+    case background(String)
+    case addCustom
+}
+
 public struct BackgroundSelectorView: View {
     @Binding var customBackgroundName: String?
+    @Binding var feltColor: FeltColorTheme
+    @Binding var showFeltVignette: Bool
+    @Binding var editorMode: BackgroundEditorMode?
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
-    @State private var editorMode: BackgroundEditorMode? = nil
     @State private var showingDeleteConfirmation = false
     @State private var backgroundToDelete: String? = nil
     @State private var backgroundInUseByTheme: (backgroundName: String, themeName: String)? = nil
     @State private var showSaveError = false
 
-    public init(customBackgroundName: Binding<String?>) {
+    public init(customBackgroundName: Binding<String?>, feltColor: Binding<FeltColorTheme>, showFeltVignette: Binding<Bool>, editorMode: Binding<BackgroundEditorMode?>) {
         self._customBackgroundName = customBackgroundName
+        self._feltColor = feltColor
+        self._showFeltVignette = showFeltVignette
+        self._editorMode = editorMode
     }
 
     public var body: some View {
@@ -45,56 +68,71 @@ public struct BackgroundSelectorView: View {
                 Text("Background:")
                     .font(.system(.body).bold())
 
-                Picker("", selection: Binding(
-                    get: { customBackgroundName ?? "" },
-                    set: { customBackgroundName = $0.isEmpty ? nil : $0 }
-                )) {
-                    Text("None (Felt Color)").tag("")
-                    ForEach(CustomBackgroundManager.shared.customBackgrounds) { background in
-                        Text(background.name).tag(background.name)
+                Picker("", selection: Binding<FeltOrBackgroundSelection>(
+                    get: {
+                        if let name = customBackgroundName { return .background(name) }
+                        return .felt(feltColor)
+                    },
+                    set: { newValue in
+                        switch newValue {
+                        case .felt(let f):
+                            feltColor = f
+                            customBackgroundName = nil
+                        case .background(let name):
+                            customBackgroundName = name
+                        case .addCustom:
+                            selectImage()
+                        }
                     }
+                )) {
+                    Text("Felt Green").tag(FeltOrBackgroundSelection.felt(.feltGreen))
+                    Text("Crimson").tag(FeltOrBackgroundSelection.felt(.crimson))
+                    Text("Royal Blue").tag(FeltOrBackgroundSelection.felt(.royalBlue))
+                    Text("Charcoal").tag(FeltOrBackgroundSelection.felt(.charcoal))
+                    Text("Desert").tag(FeltOrBackgroundSelection.felt(.desert))
+                    Text("Custom Felt Color").tag(FeltOrBackgroundSelection.felt(.custom))
+                    if !CustomBackgroundManager.shared.customBackgrounds.isEmpty {
+                        Divider()
+                        ForEach(CustomBackgroundManager.shared.customBackgrounds) { background in
+                            Text(background.name).tag(FeltOrBackgroundSelection.background(background.name))
+                        }
+                    }
+                    Divider()
+                    Text("Add Custom Background…").tag(FeltOrBackgroundSelection.addCustom)
                 }
                 .font(.system(.body))
                 .fixedSize()
 
                 Spacer()
-
-                Button("Add Custom…") { selectImage() }
-                    .font(.system(size: 12))
-                    .buttonStyle(.plain)
-                    .foregroundColor(.accentColor)
             }
 
-            if let name = customBackgroundName,
-               let background = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == name }) {
-                HStack(spacing: 8) {
-                    ZStack(alignment: .topTrailing) {
-                        backgroundThumbnail(background)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if let image = CustomBackgroundManager.shared.image(for: background.relativePath) {
-                                    editorMode = .editingExisting(background, image)
-                                }
-                            }
-                            .help("Click to edit scale and position")
+            // Felt Vignette always lives on its own row (not gated on a custom
+            // background being set); Delete Current Wallpaper joins it to the right —
+            // only when there's actually a custom background active to delete — instead
+            // of Vignette sharing the picker's row, for a cleaner top row. No thumbnail
+            // swatch here anymore — the hero preview above already shows the background
+            // live, and double-tapping it opens the same edit-position sheet this row
+            // used to link to directly (matching Windows, which consolidated its old
+            // thumbnail's click target the same way).
+            HStack(spacing: 12) {
+                Toggle("Felt Vignette", isOn: $showFeltVignette)
+                    .font(.system(.body))
 
-                        Button {
-                            deleteBackgroundByName(name)
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.red)
-                                .background(Circle().fill(Color.white))
-                                .font(.system(size: 16))
-                        }
-                        .buttonStyle(.plain)
-                        .offset(x: 6, y: -6)
-                        .help("Delete background")
+                if let name = customBackgroundName,
+                   CustomBackgroundManager.shared.customBackgrounds.contains(where: { $0.name == name }) {
+                    // deleteBackgroundByName still runs the same "in use by a saved
+                    // theme" check first (blocking with an explanatory alert) before
+                    // showing the plain "are you sure" confirmation — unchanged from
+                    // when this was an icon button.
+                    Button("Delete Current Wallpaper") {
+                        deleteBackgroundByName(name)
                     }
-
-                    Text(name)
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                    .font(.system(size: 12))
+                    .buttonStyle(.plain)
+                    .foregroundColor(.red)
                 }
+
+                Spacer()
             }
         }
         .sheet(item: $editorMode) { mode in
@@ -155,25 +193,9 @@ public struct BackgroundSelectorView: View {
             Button("OK", role: .cancel) { backgroundInUseByTheme = nil }
         } message: {
             if let info = backgroundInUseByTheme {
-                Text("This background is used by \"\(info.themeName)\". Please delete the theme first.")
+                Text("This background is used by \"\(info.themeName)\". Please update or delete the theme first.")
             }
         }
-    }
-
-    private func backgroundThumbnail(_ background: CustomBackground) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.black.opacity(0.1))
-            if let thumb = CustomBackgroundManager.shared.thumbnail(for: background.relativePath) {
-                Image(nsImage: thumb)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.black.opacity(0.85), lineWidth: 0.5)
-        }
-        .frame(width: 60, height: 38)
     }
 
     // Two-step delete: first tap checks for theme references and either shows the

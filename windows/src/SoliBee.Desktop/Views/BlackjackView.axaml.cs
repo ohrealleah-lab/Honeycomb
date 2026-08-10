@@ -76,7 +76,7 @@ public partial class BlackjackView : UserControl
         Dispatcher.UIThread.Post(() =>
         {
             MilestoneToast.Flash(message, duration, manualDismiss);
-            BannerTapCatcher.IsHitTestVisible = manualDismiss;
+            BannerTapCatcher.IsHitTestVisible = true;
         });
     }
 

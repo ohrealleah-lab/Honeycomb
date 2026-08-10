@@ -566,7 +566,6 @@ public struct GameView: View {
             if showQueuedBanner {
                 FlashBannerView(
                     message: queuedBannerText,
-                    manualDismiss: viewModel.options.manuallyDismissBanners,
                     onDismiss: dismissQueuedBanner
                 )
             }
@@ -581,7 +580,7 @@ public struct GameView: View {
             // like opening/closing Options, cleared it), blocking every card click.
             Color.clear
                 .contentShape(Rectangle())
-                .allowsHitTesting(showQueuedBanner && viewModel.options.manuallyDismissBanners)
+                .allowsHitTesting(showQueuedBanner)
                 .onTapGesture { dismissQueuedBanner() }
 
             // Drag overlay representation (positioned globally, scaled to match board)

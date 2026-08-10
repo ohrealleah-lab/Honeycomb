@@ -162,7 +162,7 @@ public partial class FreecellView : CardGameView
         Dispatcher.UIThread.Post(() =>
         {
             HintToast.Flash(message, duration, manualDismiss);
-            BannerTapCatcher.IsHitTestVisible = manualDismiss;
+            BannerTapCatcher.IsHitTestVisible = true;
         });
     }
 

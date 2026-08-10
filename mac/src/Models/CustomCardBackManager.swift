@@ -76,7 +76,12 @@ public final class CustomCardBackManager {
     
     public var activeDecks: [String] {
         let remainingDefaults = defaultThemes.filter { !deletedDefaultDecks.contains($0) }
-        let customNames = customCardBacks.map { $0.name }
+        // Guards against a persisted custom entry whose name collides with a built-in
+        // default (e.g. an old "Solibee" import saved before addCustomCardBack/
+        // addCustomCardBackGIF started rejecting names already in defaultThemes) —
+        // without this, the carousel would show that default deck's card twice.
+        let defaultNameSet = Set(defaultThemes)
+        let customNames = customCardBacks.map { $0.name }.filter { !defaultNameSet.contains($0) }
         return remainingDefaults + customNames
     }
     
@@ -218,6 +223,17 @@ public final class CustomCardBackManager {
         return getFileURL(for: relativePath)
     }
     
+    /// Overwrites an existing custom deck's scale/offset in place — same shape as
+    /// CustomBackgroundManager.updateCustomBackground, used by the hero preview's
+    /// tap-to-edit flow so an already-imported deck's position can be re-adjusted
+    /// without deleting and re-adding it.
+    public func updateCustomCardBack(_ updated: CustomCardBack) {
+        guard let idx = customCardBacks.firstIndex(where: { $0.id == updated.id }) else { return }
+        customCardBacks[idx] = updated
+        invalidateCache(for: updated.relativePath)
+        saveCustomCardBacks()
+    }
+
     public func removeCustomCardBack(_ customBack: CustomCardBack) {
         // Don't delete the underlying file if any saved theme still references this deck
         // by name — otherwise applying that theme later silently falls back to a

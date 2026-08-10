@@ -24,41 +24,64 @@ struct FaceCardSlotTileView: View {
         // this tile when its specific slot entry in faceArts changes.
         let art = CustomFaceCardArtManager.shared.art(for: slot)
         ZStack {
-            RoundedRectangle(cornerRadius: 6).fill(Color.white).frame(width: 60, height: 85)
+            RoundedRectangle(cornerRadius: 8).fill(Color.white).frame(width: Self.tileWidth, height: Self.tileHeight)
 
             Group {
                 if let art, let img = CustomFaceCardArtManager.shared.image(for: art) {
                     Image(nsImage: img)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 44, height: 70)
+                        .frame(width: Self.artWidth, height: Self.artHeight)
                         .scaleEffect(CGFloat(art.scale))
-                        .offset(x: CGFloat(art.offsetX) * (60.0 / 128.0),
-                                y: CGFloat(art.offsetY) * (60.0 / 128.0))
+                        .offset(x: CGFloat(art.offsetX) * (Self.tileWidth / 128.0),
+                                y: CGFloat(art.offsetY) * (Self.tileWidth / 128.0))
                         .opacity(art.isEnabled ? 1.0 : 0.3)
                 } else {
-                    defaultPreview
+                    // "+" hint — clearer click affordance than a flat centered suit
+                    // watermark (which read as a rendering glitch, not an empty state),
+                    // and the suit itself is already covered by the corner indices.
+                    Image(systemName: "plus.circle")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundColor(.secondary.opacity(0.5))
                 }
             }
-            .frame(width: 60, height: 85)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .frame(width: Self.tileWidth, height: Self.tileHeight)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            RoundedRectangle(cornerRadius: 6)
+            // Corner indices — same top-left / bottom-right (rotated 180°) rank+suit
+            // pattern as the real CardView / FaceCardArtEditorView preview, scaled down
+            // to tile size, so these read as actual mini playing cards.
+            cornerIndex
+                .padding(.leading, 4).padding(.top, 3)
+                .frame(width: Self.tileWidth, height: Self.tileHeight, alignment: .topLeading)
+
+            cornerIndex
+                .rotationEffect(.degrees(180))
+                .padding(.trailing, 4).padding(.bottom, 3)
+                .frame(width: Self.tileWidth, height: Self.tileHeight, alignment: .bottomTrailing)
+
+            RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.black.opacity(0.85), lineWidth: 0.5)
-                .frame(width: 60, height: 85)
+                .frame(width: Self.tileWidth, height: Self.tileHeight)
         }
+        // Matches CardView's own shadow so these mini previews read as real cards
+        // instead of flat rectangles sitting on the panel.
+        .shadow(color: Color.black.opacity(0.15), radius: 1.5, x: 0, y: 1.5)
     }
 
-    @ViewBuilder
-    private var defaultPreview: some View {
-        if slot.rank == 1 {
-            Text(slot.suitSymbol).font(.system(size: 30)).foregroundColor(cardColor)
-        } else {
-            VStack(spacing: 0) {
-                Text(slot.rankLabel).font(.system(size: 20, weight: .bold)).foregroundColor(cardColor)
-                Text(slot.suitSymbol).font(.system(size: 14)).foregroundColor(cardColor)
-            }
+    // Sized up from the original 60×85 (and its 44×70 art window) so the grid fills
+    // more of the panel — same proportions, scaled by ~1.37x.
+    static let tileWidth: CGFloat = 82
+    static let tileHeight: CGFloat = 115
+    static let artWidth: CGFloat = 60
+    static let artHeight: CGFloat = 96
+
+    private var cornerIndex: some View {
+        VStack(spacing: 0) {
+            Text(slot.rankLabel).font(.system(size: 11, weight: .bold))
+            Text(slot.suitSymbol).font(.system(size: 9))
         }
+        .foregroundColor(cardColor)
     }
 }
 
@@ -202,18 +225,14 @@ struct FaceCardArtSectionView: View {
     private let diamondSlots: [FaceCardSlot] = [.diamondAce, .diamondJack, .diamondQueen, .diamondKing]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Face Card Art")
-                .font(.caption)
-                .foregroundColor(.white.opacity(0.6))
-                .padding(.leading, 4)
-
-            VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
+            VStack(spacing: 3) {
                 slotRow(slots: spadeSlots)
                 slotRow(slots: clubSlots)
                 slotRow(slots: heartSlots)
                 slotRow(slots: diamondSlots)
             }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
         .sheet(item: $pendingImport) { item in
             FaceCardArtEditorView(
@@ -275,7 +294,7 @@ struct FaceCardArtSectionView: View {
     }
 
     private func slotRow(slots: [FaceCardSlot]) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 9) {
             ForEach(slots) { slot in
                 slotTile(slot)
             }
@@ -284,10 +303,10 @@ struct FaceCardArtSectionView: View {
 
     private func slotTile(_ slot: FaceCardSlot) -> some View {
         let art = CustomFaceCardArtManager.shared.art(for: slot)
-        return VStack(spacing: 4) {
+        return VStack(spacing: 1) {
             ZStack(alignment: .topTrailing) {
                 // Fixed-size anchor so the ZStack never resizes
-                Color.clear.frame(width: 70, height: 95)
+                Color.clear.frame(width: FaceCardSlotTileView.tileWidth + 8, height: FaceCardSlotTileView.tileHeight + 8)
 
                 FaceCardSlotTileView(slot: slot)
                     .onTapGesture(count: 2) {
@@ -316,8 +335,8 @@ struct FaceCardArtSectionView: View {
                 set: { CustomFaceCardArtManager.shared.setEnabled($0, for: slot) }
             ))
             .toggleStyle(.switch)
-            .scaleEffect(0.7)
-            .frame(height: 20)
+            .scaleEffect(0.6)
+            .frame(height: 14)
             .opacity(art != nil ? 1 : 0)
 
             Text(slot.displayName)

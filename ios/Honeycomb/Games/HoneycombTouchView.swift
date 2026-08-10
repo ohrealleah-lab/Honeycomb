@@ -95,16 +95,19 @@ struct HoneycombTouchView: View {
 
             flashBanners
 
-            // Board-wide tap-catcher: while a manually-dismissed banner is up, the game
-            // is "paused" — any board tap (not just the banner itself) dismisses it
-            // instead of forwarding the tap to the card underneath. Kept permanently in
-            // the tree, gated by allowsHitTesting only — conditionally inserting/
-            // removing an interactive view here left its hit-test region stuck active
-            // after the animated removal, blocking every card tap until a forced
-            // relayout (e.g. opening/closing Options) cleared it.
+            // Board-wide tap-catcher: while a banner is up, the game is "paused" — any
+            // board tap (not just the banner itself) dismisses it instead of forwarding
+            // the tap to the card underneath. Kept permanently in the tree, gated by
+            // allowsHitTesting only — conditionally inserting/removing an interactive
+            // view here left its hit-test region stuck active after the animated
+            // removal, blocking every card tap until a forced relayout (e.g. opening/
+            // closing Options) cleared it. Gated purely on showingRuleBanner, not on the
+            // "Manually Dismiss Banners" option's current value — a banner shown while
+            // the option was on must still be dismissable even if the option gets
+            // turned off before it closes on its own.
             Color.clear
                 .contentShape(Rectangle())
-                .allowsHitTesting(showingRuleBanner && viewModel.options.manuallyDismissBanners)
+                .allowsHitTesting(showingRuleBanner)
                 .onTapGesture { dismissRuleBanner() }
 
             if isStealingCard {
@@ -591,7 +594,7 @@ struct HoneycombTouchView: View {
     private var flashBanners: some View {
         VStack {
             if showingRuleBanner {
-                bannerCapsule(ruleBannerText, color: .yellow, manualDismiss: viewModel.options.manuallyDismissBanners, onDismiss: dismissRuleBanner)
+                bannerCapsule(ruleBannerText, color: .yellow, onDismiss: dismissRuleBanner)
             }
             if showNoHintsBanner {
                 bannerCapsule("No hints for this one!", color: .orange)
@@ -599,10 +602,14 @@ struct HoneycombTouchView: View {
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(.top, 60)
-        .allowsHitTesting(viewModel.options.manuallyDismissBanners && showingRuleBanner)
+        .allowsHitTesting(showingRuleBanner)
     }
 
-    private func bannerCapsule(_ text: String, color: Color, manualDismiss: Bool = false, onDismiss: (() -> Void)? = nil) -> some View {
+    // Always clickable to dismiss when a dismiss handler is provided — not gated on the
+    // "Manually Dismiss Banners" option's *current* value, so a banner shown while the
+    // option was on can never get stuck if the player turns it off before it closes
+    // (nothing else would ever dismiss it, since no auto-dismiss timer was scheduled).
+    private func bannerCapsule(_ text: String, color: Color, onDismiss: (() -> Void)? = nil) -> some View {
         Text(text)
             .font(.title3.weight(.black))
             .foregroundStyle(color)
@@ -610,7 +617,7 @@ struct HoneycombTouchView: View {
             .padding(.vertical, 10)
             .background(.black.opacity(0.75), in: Capsule())
             .transition(.scale.combined(with: .opacity))
-            .onTapGesture { if manualDismiss { onDismiss?() } }
+            .onTapGesture { onDismiss?() }
     }
 
     private func dismissRuleBanner() {

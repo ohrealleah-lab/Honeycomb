@@ -21,17 +21,21 @@ public partial class FlashToast : UserControl
 
     public event Action? OnDismissed;
 
-    // "Manually Dismiss Banners": when true, the toast accepts a click (IsHitTestVisible
-    // — normally False so toasts never block board clicks) and skips the auto-dismiss
-    // timer entirely, staying up until Dismiss() is called explicitly (from this click,
-    // or from the game view's own board-wide tap-catcher — see each Vm_OnFlashBanner).
+    // "Manually Dismiss Banners": when true, skips the auto-dismiss timer entirely,
+    // staying up until Dismiss() is called explicitly. The toast is ALWAYS clickable
+    // (IsHitTestVisible=true) regardless of manualDismiss's value here — it used to be
+    // gated on it, but if the player turned the option off while a manually-shown toast
+    // (no timer was ever scheduled for it) was still on screen, the toast became
+    // permanently stuck: not clickable anymore, and nothing left to time it out either.
+    // Clicking to dismiss now always works, so a toast can never end up in a state
+    // where nothing can close it.
     public void Flash(string message, TimeSpan? duration = null, bool manualDismiss = false)
     {
         MessageText.Text = message;
         MessageText.Foreground = Avalonia.Media.SolidColorBrush.Parse("#FFD600");
 
         IsVisible = true;
-        IsHitTestVisible = manualDismiss;
+        IsHitTestVisible = true;
 
         // Use a tiny delay to allow Avalonia to process IsVisible=true before setting Opacity,
         // so the transition engine picks it up.

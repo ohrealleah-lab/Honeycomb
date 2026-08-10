@@ -5,10 +5,13 @@ import SwiftUI
 // like "No hints available", as opposed to the multi-button Game Over/Win banners.
 struct FlashBannerView: View {
     let message: String
-    // "Manually Dismiss Banners" option: when set, the banner accepts a tap (instead of
-    // passing clicks through to the board) and calls onDismiss instead of relying on the
-    // caller's auto-dismiss timer, which is skipped entirely while this is true.
-    var manualDismiss: Bool = false
+    // Always clickable to dismiss when a dismiss handler is provided — not gated on the
+    // "Manually Dismiss Banners" option's *current* value. It used to be gated on that,
+    // but if the player turned the option off while a manually-shown banner (no
+    // auto-dismiss timer was ever scheduled for it) was still on screen, the banner
+    // became permanently stuck: not clickable anymore, and nothing left to time it out
+    // either. Clicking to dismiss now always works regardless of the option, so a
+    // banner can never end up in a state where nothing can close it.
     var onDismiss: (() -> Void)? = nil
 
     var body: some View {
@@ -26,11 +29,11 @@ struct FlashBannerView: View {
                 .cornerRadius(12)
                 .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
                 .contentShape(Rectangle())
-                .onTapGesture { if manualDismiss { onDismiss?() } }
+                .onTapGesture { onDismiss?() }
             Spacer(minLength: 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .allowsHitTesting(manualDismiss)
+        .allowsHitTesting(onDismiss != nil)
         .transition(.opacity)
     }
 }

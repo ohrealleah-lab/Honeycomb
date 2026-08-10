@@ -665,7 +665,6 @@ public struct HoneycombView: View {
             if showingRuleBanner {
                 FlashBannerView(
                     message: bannerText,
-                    manualDismiss: viewModel.options.manuallyDismissBanners,
                     onDismiss: dismissRuleBanner
                 )
                     .transition(.scale.combined(with: .opacity))
@@ -677,7 +676,7 @@ public struct HoneycombView: View {
             // left the hit-test region stuck active.
             Color.clear
                 .contentShape(Rectangle())
-                .allowsHitTesting(showingRuleBanner && viewModel.options.manuallyDismissBanners)
+                .allowsHitTesting(showingRuleBanner)
                 .onTapGesture { dismissRuleBanner() }
                 .zIndex(99)
 

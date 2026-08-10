@@ -161,7 +161,7 @@ public partial class HoneycombView : UserControl
         Dispatcher.UIThread.Post(() => {
             _bannerActive = true;
             RuleToast.Flash(message, duration, manualDismiss);
-            BannerTapCatcher.IsHitTestVisible = manualDismiss;
+            BannerTapCatcher.IsHitTestVisible = true;
         });
     }
 

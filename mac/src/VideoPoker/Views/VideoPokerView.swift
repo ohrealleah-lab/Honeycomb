@@ -156,7 +156,6 @@ public struct VideoPokerView: View {
             if showQueuedBanner {
                 FlashBannerView(
                     message: queuedBannerText,
-                    manualDismiss: viewModel.options.manuallyDismissBanners,
                     onDismiss: dismissQueuedBanner
                 )
             }
@@ -166,7 +165,7 @@ public struct VideoPokerView: View {
             // left the hit-test region stuck active.
             Color.clear
                 .contentShape(Rectangle())
-                .allowsHitTesting(showQueuedBanner && viewModel.options.manuallyDismissBanners)
+                .allowsHitTesting(showQueuedBanner)
                 .onTapGesture { dismissQueuedBanner() }
         }
         .frame(minWidth: Self.minWindowSize.width, maxWidth: .infinity,
