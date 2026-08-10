@@ -111,11 +111,25 @@ public partial class VideoPokerView : UserControl
         // first loading banner's visible time before the window is even on screen — give
         // just that one banner extra time to actually be read.
         var duration = BannerCatalog.ConsumeAppLaunchLoadingFlag() ? TimeSpan.FromSeconds(3) : TimeSpan.FromSeconds(2);
-        Dispatcher.UIThread.Post(() => MilestoneToast.Flash(message, duration));
+        var manualDismiss = SettingsService.LoadOptions().ManuallyDismissBanners;
+        Dispatcher.UIThread.Post(() =>
+        {
+            MilestoneToast.Flash(message, duration, manualDismiss);
+            BannerTapCatcher.IsHitTestVisible = manualDismiss;
+        });
+    }
+
+    // Board-wide tap-catcher: while a manually-dismissed toast is up, the game is
+    // "paused" — any board click (not just the toast itself) dismisses it instead of
+    // being forwarded to the card underneath.
+    private void BannerTapCatcher_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (MilestoneToast.IsVisible) MilestoneToast.Dismiss();
     }
 
     private void MilestoneToast_OnDismissed()
     {
+        BannerTapCatcher.IsHitTestVisible = false;
         (DataContext as VideoPokerViewModel)?.AdvanceBannerQueue();
     }
 

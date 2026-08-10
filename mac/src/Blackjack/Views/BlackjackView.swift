@@ -150,8 +150,20 @@ public struct BlackjackView: View {
             HotkeyLegendView(text: "Space=Deal   H=Hit   S=Stand   D=Double Down   P=Split")
 
             if showQueuedBanner {
-                FlashBannerView(message: queuedBannerText)
+                FlashBannerView(
+                    message: queuedBannerText,
+                    manualDismiss: viewModel.options.manuallyDismissBanners,
+                    onDismiss: dismissQueuedBanner
+                )
             }
+
+            // Kept permanently in the tree, gated by allowsHitTesting only — see
+            // GameView.swift's matching comment for why conditional insert/remove here
+            // left the hit-test region stuck active.
+            Color.clear
+                .contentShape(Rectangle())
+                .allowsHitTesting(showQueuedBanner && viewModel.options.manuallyDismissBanners)
+                .onTapGesture { dismissQueuedBanner() }
         }
         .frame(minWidth: Self.minWindowSize.width, maxWidth: .infinity,
                minHeight: Self.minWindowSize.height, maxHeight: .infinity)
@@ -262,16 +274,24 @@ public struct BlackjackView: View {
         }
     }
 
+    private func dismissQueuedBanner() {
+        queuedBannerTask?.cancel()
+        queuedBannerTask = nil
+        withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            viewModel.advanceBannerQueue()
+        }
+    }
+
     private func flashQueuedBanner(_ text: String) {
         queuedBannerTask?.cancel()
         queuedBannerText = text
         withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
-        let task = DispatchWorkItem {
-            withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                viewModel.advanceBannerQueue()
-            }
+        guard !viewModel.options.manuallyDismissBanners else {
+            queuedBannerTask = nil
+            return
         }
+        let task = DispatchWorkItem { [self] in dismissQueuedBanner() }
         queuedBannerTask = task
         // The very first loading banner of an app session gets extra time to actually be
         // read — see BannerCatalog.consumeAppLaunchLoadingFlag().
@@ -813,6 +833,7 @@ struct BlackjackOptionsView: View {
     @State private var isSoundEnabled: Bool
     @State private var noStressMode: Bool
     @State private var honeyMode: Bool
+    @State private var manuallyDismissBanners: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -827,6 +848,7 @@ struct BlackjackOptionsView: View {
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
         _noStressMode    = State(initialValue: viewModel.options.noStressMode)
         _honeyMode       = State(initialValue: viewModel.options.honeyMode)
+        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
     }
 
     var body: some View {
@@ -845,6 +867,7 @@ struct BlackjackOptionsView: View {
                 o.isSoundEnabled  = isSoundEnabled
                 o.noStressMode    = noStressMode
                 o.honeyMode       = honeyMode
+                o.manuallyDismissBanners = manuallyDismissBanners
                 viewModel.options = o
                 // Options can now be opened mid-hand — if No Stress Mode just got turned
                 // on while one is in progress, end it and deal fresh instead of leaving a
@@ -860,6 +883,7 @@ struct BlackjackOptionsView: View {
                 coordinator.isSoundEnabled = isSoundEnabled
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
+                coordinator.manuallyDismissBanners = manuallyDismissBanners
             }
         ) {
             Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 10...10000, step: 10)
@@ -870,6 +894,7 @@ struct BlackjackOptionsView: View {
             Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body))
             Toggle("No Stress Mode",    isOn: $noStressMode).font(.system(.body))
             Toggle("Honey Mode (Flavor)", isOn: $honeyMode).font(.system(.body))
+            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners).font(.system(.body))
         }
     }
 }

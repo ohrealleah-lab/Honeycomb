@@ -71,6 +71,13 @@
                                    AutocompleteClicked="AutocompleteGame_Click"
                                    DismissClicked="AutocompleteDismiss_Click"/>
 
+        <!-- Board-wide tap-catcher for Manually Dismiss Banners — IsHitTestVisible is
+             toggled from code (see BannerTapCatcher_PointerPressed) only while a
+             manually-dismissed toast is showing, so a board click dismisses it instead
+             of reaching the card underneath. -->
+        <Border x:Name="BannerTapCatcher" Background="Transparent" IsHitTestVisible="False"
+                PointerPressed="BannerTapCatcher_PointerPressed"/>
+
         <!-- Flashed when Hint has nothing to suggest -->
         <local:FlashToast x:Name="HintToast"/>
 

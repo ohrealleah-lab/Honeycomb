@@ -52,16 +52,17 @@ public partial class PileView : UserControl
             HintHighlightBorder.Height = CardsCanvas.Height;
         }
         HintHighlightBorder.IsVisible = true;
-        _hintPulseBrush = new SolidColorBrush(Color.Parse("#00FFD700"));
+        var hc = CardView._hintHighlightColor;
+        _hintPulseBrush = new SolidColorBrush(Color.FromArgb(0, hc.R, hc.G, hc.B));
         HintHighlightBorder.BorderBrush = _hintPulseBrush;
         _hintPulse.Start(alpha =>
         {
             byte a = (byte)(255 * alpha);
-            _hintPulseBrush!.Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00);
+            _hintPulseBrush!.Color = Color.FromArgb(a, hc.R, hc.G, hc.B);
             var shadow = new BoxShadow
             {
                 OffsetX = 0, OffsetY = 0, Blur = 6, Spread = 1,
-                Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00)
+                Color = Color.FromArgb(a, hc.R, hc.G, hc.B)
             };
             HintHighlightBorder.BoxShadow = new BoxShadows(shadow);
         });

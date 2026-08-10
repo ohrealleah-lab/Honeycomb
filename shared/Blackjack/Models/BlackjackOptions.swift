@@ -7,9 +7,11 @@ public struct BlackjackOptions: Codable, Equatable {
     // Driven by AppCoordinator.honeyMode (single app-wide source of truth) via
     // applySharedCommonOptionsToAllGames — never user-edited here directly.
     public var honeyMode: Bool = true
+    // Same true-single-source pattern, driven by AppCoordinator.manuallyDismissBanners.
+    public var manuallyDismissBanners: Bool = false
 
     enum CodingKeys: String, CodingKey {
-        case startingCredits, isSoundEnabled, noStressMode, honeyMode
+        case startingCredits, isSoundEnabled, noStressMode, honeyMode, manuallyDismissBanners
     }
 
     public init() {}
@@ -20,6 +22,7 @@ public struct BlackjackOptions: Codable, Equatable {
         isSoundEnabled  = try c.decodeIfPresent(Bool.self,  forKey: .isSoundEnabled)  ?? true
         noStressMode    = try c.decodeIfPresent(Bool.self,  forKey: .noStressMode)    ?? false
         honeyMode       = try c.decodeIfPresent(Bool.self,  forKey: .honeyMode)       ?? true
+        manuallyDismissBanners = try c.decodeIfPresent(Bool.self, forKey: .manuallyDismissBanners) ?? false
     }
 }
 

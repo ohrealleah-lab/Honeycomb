@@ -230,6 +230,10 @@
                    FontFamily="Segoe UI"
                    Margin="0,4,0,8"/>
 
+        <!-- Board-wide tap-catcher for Manually Dismiss Banners — see GameView.axaml. -->
+        <Border x:Name="BannerTapCatcher" Grid.Row="0" Grid.RowSpan="3" Background="Transparent"
+                IsHitTestVisible="False" PointerPressed="BannerTapCatcher_PointerPressed"/>
+
         <!-- Milestone/loading banners — separate from the hand-result overlay above,
              which is hardcoded to specific hand-result fields (name, payout). -->
         <local:FlashToast x:Name="MilestoneToast" Grid.Row="0" Grid.RowSpan="3"/>

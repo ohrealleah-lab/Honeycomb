@@ -564,8 +564,25 @@ public struct GameView: View {
             }
 
             if showQueuedBanner {
-                FlashBannerView(message: queuedBannerText)
+                FlashBannerView(
+                    message: queuedBannerText,
+                    manualDismiss: viewModel.options.manuallyDismissBanners,
+                    onDismiss: dismissQueuedBanner
+                )
             }
+
+            // Board-wide tap-catcher: while a manually-dismissed banner is up, the game
+            // is "paused" — this transparent layer sits above every pile/card and turns
+            // any board click (not just the banner itself) into a dismiss instead of
+            // forwarding it to the card underneath. Kept permanently in the view tree
+            // (never inserted/removed via `if`) and gated purely by allowsHitTesting —
+            // conditionally inserting/removing an interactive view here left its hit-test
+            // region stuck active after the animated removal (only a forced relayout,
+            // like opening/closing Options, cleared it), blocking every card click.
+            Color.clear
+                .contentShape(Rectangle())
+                .allowsHitTesting(showQueuedBanner && viewModel.options.manuallyDismissBanners)
+                .onTapGesture { dismissQueuedBanner() }
 
             // Drag overlay representation (positioned globally, scaled to match board)
             if !draggedCards.isEmpty {
@@ -804,20 +821,28 @@ public struct GameView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
     }
 
+    // Shared by the auto-dismiss timer and the manual-dismiss tap handlers (banner tap,
+    // board tap-catcher) so both paths hide the banner and resume the queue identically.
+    private func dismissQueuedBanner() {
+        queuedBannerTask?.cancel()
+        queuedBannerTask = nil
+        withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            viewModel.advanceBannerQueue()
+        }
+    }
+
     private func flashQueuedBanner(_ text: String) {
         queuedBannerTask?.cancel()
         queuedBannerText = text
         withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
-        let task = DispatchWorkItem {
-            withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
-            // Reveal whatever's queued behind this banner (if anything) once this
-            // one has actually finished fading out, instead of a second event
-            // silently overwriting it mid-display — see GameViewModel's
-            // bannerQueue/advanceBannerQueue().
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                viewModel.advanceBannerQueue()
-            }
+        // Manually Dismiss Banners: the game is "paused" on this banner — no timer, it
+        // stays up until the player taps it or a card (see the board tap-catcher above).
+        guard !viewModel.options.manuallyDismissBanners else {
+            queuedBannerTask = nil
+            return
         }
+        let task = DispatchWorkItem { [self] in dismissQueuedBanner() }
         queuedBannerTask = task
         // The very first loading banner of an app session gets extra time to actually be
         // read — see BannerCatalog.consumeAppLaunchLoadingFlag().
@@ -1147,27 +1172,29 @@ struct HintHighlightModifier: ViewModifier {
 }
 
 struct HintHighlightAnimatable: AnimatableModifier {
+    @Environment(AppCoordinator.self) private var coordinator
     var isHighlighted: Bool
     var phase: Double
-    
+
     var animatableData: Double {
         get { phase }
         set { phase = newValue }
     }
-    
+
     func body(content: Content) -> some View {
         // 2 full flashes requires 2 full cycles (4 * pi).
         let opacity = isHighlighted ? (1 - cos(phase * .pi * 4)) / 2 : 0.0
-        
+        let highlightColor = coordinator.customCardColors.hintHighlightColor
+
         return content
             .overlay(
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.yellow, lineWidth: 4)
-                        .shadow(color: .yellow, radius: 4)
+                        .stroke(highlightColor, lineWidth: 4)
+                        .shadow(color: highlightColor, radius: 4)
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.yellow, lineWidth: 4)
-                        .shadow(color: .yellow, radius: 4)
+                        .stroke(highlightColor, lineWidth: 4)
+                        .shadow(color: highlightColor, radius: 4)
                 }
                 .opacity(opacity)
             )
@@ -1186,6 +1213,7 @@ struct OptionsView: View {
     @State private var hideHintButton: Bool
     @State private var noStressMode: Bool
     @State private var honeyMode: Bool
+    @State private var manuallyDismissBanners: Bool
 
     let onViewStats: (() -> Void)?
     let availableWidth: CGFloat
@@ -1205,6 +1233,7 @@ struct OptionsView: View {
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
         _honeyMode = State(initialValue: viewModel.options.honeyMode)
+        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
     }
 
     var body: some View {
@@ -1222,6 +1251,7 @@ struct OptionsView: View {
                 updatedOpts.hideHintButton = hideHintButton
                 updatedOpts.noStressMode = noStressMode
                 updatedOpts.honeyMode = honeyMode
+                updatedOpts.manuallyDismissBanners = manuallyDismissBanners
 
                 updatedOpts.drawMode = drawMode
                 if viewModel.state.drawMode != drawMode {
@@ -1238,6 +1268,7 @@ struct OptionsView: View {
                 coordinator.isSoundEnabled = isSoundEnabled
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
+                coordinator.manuallyDismissBanners = manuallyDismissBanners
             }
         ) {
             Picker("Draw Mode:", selection: $drawMode) {
@@ -1255,6 +1286,9 @@ struct OptionsView: View {
                 .font(.system(.body))
 
             Toggle("Hide Hint button", isOn: $hideHintButton)
+                .font(.system(.body))
+
+            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners)
                 .font(.system(.body))
 
             Toggle("No Stress Mode", isOn: $noStressMode)

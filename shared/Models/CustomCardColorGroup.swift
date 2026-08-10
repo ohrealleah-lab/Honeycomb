@@ -51,9 +51,60 @@ public struct CustomCardColorGroup: Codable, Equatable {
     public var shadowGreen: Double = 0.0
     public var shadowBlue: Double = 0.0
     public var shadowAlpha: Double = 0.15
-    
+
+    // Hint/hierarchy/frenzy highlight color components (Default: Gold, matches prior
+    // hardcoded Color.yellow). Independent of isEnabled — this highlight always renders
+    // with whatever color is set here, regardless of whether the rest of the custom
+    // card color scheme is toggled on, since it's a distinct feature from card recoloring.
+    public var hintHighlightRed: Double = 1.0
+    public var hintHighlightGreen: Double = 0.843
+    public var hintHighlightBlue: Double = 0.0
+    public var hintHighlightAlpha: Double = 1.0
+
     public init() {}
-    
+
+    // Custom Decodable so a JSON blob saved before hintHighlight* existed still decodes
+    // successfully (synthesized Codable would otherwise fail on the missing keys and
+    // silently reset every saved color, not just the new one, back to CustomCardColorGroup()).
+    private enum CodingKeys: String, CodingKey {
+        case isEnabled
+        case bgRed, bgGreen, bgBlue, bgAlpha
+        case outlineRed, outlineGreen, outlineBlue, outlineAlpha
+        case blackSuitRed, blackSuitGreen, blackSuitBlue, blackSuitAlpha
+        case redSuitRed, redSuitGreen, redSuitBlue, redSuitAlpha
+        case shadowRed, shadowGreen, shadowBlue, shadowAlpha
+        case hintHighlightRed, hintHighlightGreen, hintHighlightBlue, hintHighlightAlpha
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? false
+        bgRed = try container.decodeIfPresent(Double.self, forKey: .bgRed) ?? 1.0
+        bgGreen = try container.decodeIfPresent(Double.self, forKey: .bgGreen) ?? 1.0
+        bgBlue = try container.decodeIfPresent(Double.self, forKey: .bgBlue) ?? 1.0
+        bgAlpha = try container.decodeIfPresent(Double.self, forKey: .bgAlpha) ?? 1.0
+        outlineRed = try container.decodeIfPresent(Double.self, forKey: .outlineRed) ?? 0.0
+        outlineGreen = try container.decodeIfPresent(Double.self, forKey: .outlineGreen) ?? 0.0
+        outlineBlue = try container.decodeIfPresent(Double.self, forKey: .outlineBlue) ?? 0.0
+        outlineAlpha = try container.decodeIfPresent(Double.self, forKey: .outlineAlpha) ?? 0.85
+        blackSuitRed = try container.decodeIfPresent(Double.self, forKey: .blackSuitRed) ?? 0.1
+        blackSuitGreen = try container.decodeIfPresent(Double.self, forKey: .blackSuitGreen) ?? 0.1
+        blackSuitBlue = try container.decodeIfPresent(Double.self, forKey: .blackSuitBlue) ?? 0.1
+        blackSuitAlpha = try container.decodeIfPresent(Double.self, forKey: .blackSuitAlpha) ?? 1.0
+        redSuitRed = try container.decodeIfPresent(Double.self, forKey: .redSuitRed) ?? 0.8
+        redSuitGreen = try container.decodeIfPresent(Double.self, forKey: .redSuitGreen) ?? 0.1
+        redSuitBlue = try container.decodeIfPresent(Double.self, forKey: .redSuitBlue) ?? 0.1
+        redSuitAlpha = try container.decodeIfPresent(Double.self, forKey: .redSuitAlpha) ?? 1.0
+        shadowRed = try container.decodeIfPresent(Double.self, forKey: .shadowRed) ?? 0.0
+        shadowGreen = try container.decodeIfPresent(Double.self, forKey: .shadowGreen) ?? 0.0
+        shadowBlue = try container.decodeIfPresent(Double.self, forKey: .shadowBlue) ?? 0.0
+        shadowAlpha = try container.decodeIfPresent(Double.self, forKey: .shadowAlpha) ?? 0.15
+        hintHighlightRed = try container.decodeIfPresent(Double.self, forKey: .hintHighlightRed) ?? 1.0
+        hintHighlightGreen = try container.decodeIfPresent(Double.self, forKey: .hintHighlightGreen) ?? 0.843
+        hintHighlightBlue = try container.decodeIfPresent(Double.self, forKey: .hintHighlightBlue) ?? 0.0
+        hintHighlightAlpha = try container.decodeIfPresent(Double.self, forKey: .hintHighlightAlpha) ?? 1.0
+    }
+
     public mutating func reset() {
         isEnabled = false
         bgRed = 1.0; bgGreen = 1.0; bgBlue = 1.0; bgAlpha = 1.0
@@ -61,6 +112,7 @@ public struct CustomCardColorGroup: Codable, Equatable {
         blackSuitRed = 0.1; blackSuitGreen = 0.1; blackSuitBlue = 0.1; blackSuitAlpha = 1.0
         redSuitRed = 0.8; redSuitGreen = 0.1; redSuitBlue = 0.1; redSuitAlpha = 1.0
         shadowRed = 0.0; shadowGreen = 0.0; shadowBlue = 0.0; shadowAlpha = 0.15
+        hintHighlightRed = 1.0; hintHighlightGreen = 0.843; hintHighlightBlue = 0.0; hintHighlightAlpha = 1.0
     }
 }
 
@@ -126,6 +178,20 @@ extension CustomCardColorGroup {
                 shadowBlue = rgb.blue
                 shadowAlpha = rgb.alpha
                 isEnabled = true
+            }
+        }
+    }
+
+    // Does not set isEnabled — the hint highlight applies regardless of whether the
+    // rest of the custom card color scheme is toggled on.
+    public var hintHighlightColor: Color {
+        get { Color(red: hintHighlightRed, green: hintHighlightGreen, blue: hintHighlightBlue, opacity: hintHighlightAlpha) }
+        set {
+            if let rgb = rgbaComponents(of: newValue) {
+                hintHighlightRed = rgb.red
+                hintHighlightGreen = rgb.green
+                hintHighlightBlue = rgb.blue
+                hintHighlightAlpha = rgb.alpha
             }
         }
     }

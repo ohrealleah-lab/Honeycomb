@@ -456,8 +456,20 @@ public struct SpiderView: View {
             }
 
             if showQueuedBanner {
-                FlashBannerView(message: queuedBannerText)
+                FlashBannerView(
+                    message: queuedBannerText,
+                    manualDismiss: viewModel.options.manuallyDismissBanners,
+                    onDismiss: dismissQueuedBanner
+                )
             }
+
+            // Kept permanently in the tree, gated by allowsHitTesting only — see
+            // GameView.swift's matching comment for why conditional insert/remove here
+            // left the hit-test region stuck active.
+            Color.clear
+                .contentShape(Rectangle())
+                .allowsHitTesting(showQueuedBanner && viewModel.options.manuallyDismissBanners)
+                .onTapGesture { dismissQueuedBanner() }
 
             // Drag overlay representation (positioned globally, scaled to match board)
             if !draggedCards.isEmpty {
@@ -730,16 +742,24 @@ public struct SpiderView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
     }
 
+    private func dismissQueuedBanner() {
+        queuedBannerTask?.cancel()
+        queuedBannerTask = nil
+        withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            viewModel.advanceBannerQueue()
+        }
+    }
+
     private func flashQueuedBanner(_ text: String) {
         queuedBannerTask?.cancel()
         queuedBannerText = text
         withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
-        let task = DispatchWorkItem {
-            withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                viewModel.advanceBannerQueue()
-            }
+        guard !viewModel.options.manuallyDismissBanners else {
+            queuedBannerTask = nil
+            return
         }
+        let task = DispatchWorkItem { [self] in dismissQueuedBanner() }
         queuedBannerTask = task
         // The very first loading banner of an app session gets extra time to actually be
         // read — see BannerCatalog.consumeAppLaunchLoadingFlag().
@@ -844,6 +864,7 @@ struct SpiderOptionsView: View {
     @State private var hideHintButton: Bool
     @State private var noStressMode: Bool
     @State private var honeyMode: Bool
+    @State private var manuallyDismissBanners: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -859,6 +880,7 @@ struct SpiderOptionsView: View {
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
         _honeyMode = State(initialValue: viewModel.options.honeyMode)
+        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
     }
 
     var body: some View {
@@ -875,6 +897,7 @@ struct SpiderOptionsView: View {
                 updatedOpts.hideHintButton = hideHintButton
                 updatedOpts.noStressMode = noStressMode
                 updatedOpts.honeyMode = honeyMode
+                updatedOpts.manuallyDismissBanners = manuallyDismissBanners
 
                 viewModel.options = updatedOpts
                 // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
@@ -885,6 +908,7 @@ struct SpiderOptionsView: View {
                 coordinator.isSoundEnabled = isSoundEnabled
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
+                coordinator.manuallyDismissBanners = manuallyDismissBanners
             }
         ) {
             Picker("Suits:", selection: $suitCount) {
@@ -901,6 +925,9 @@ struct SpiderOptionsView: View {
                 .font(.system(.body))
 
             Toggle("Hide Hint button", isOn: $hideHintButton)
+                .font(.system(.body))
+
+            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners)
                 .font(.system(.body))
 
             Toggle("No Stress Mode", isOn: $noStressMode)

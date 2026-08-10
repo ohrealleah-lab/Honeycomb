@@ -560,7 +560,8 @@ struct BeecellSettingsSection: View {
             Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
                 .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
             Toggle("Hide Hint Button", isOn: $viewModel.options.hideHintButton)
-            Toggle("Point Highlights", isOn: $viewModel.options.showPointHighlights)
+            Toggle("Honey Mode (Flavor)", isOn: $viewModel.options.honeyMode)
+            Toggle("Manually Dismiss Banners", isOn: $viewModel.options.manuallyDismissBanners)
         }
     }
 }

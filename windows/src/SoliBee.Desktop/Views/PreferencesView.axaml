@@ -57,6 +57,9 @@
                 <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                <!-- Global, shared across all 6 games — banners/toasts stay up until the
+                     player clicks the toast or a card, instead of auto-dismissing. -->
+                <CheckBox x:Name="ManuallyDismissBannersCheckBox" Content="Manually Dismiss Banners" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="AlwaysOnTopCheckBox" Content="Always on Top" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <!-- Global, shared across all 6 games like the toggles above — controls
                      both the "+N"/"-N" score popups and whether Repeatable Flavor/Ambiance
@@ -228,7 +231,7 @@
                 <Rectangle Height="1" Fill="#E5E5E5"/>
 
                 <!-- Grid of Color Pickers -->
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,4,0,4">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,4,0,4">
                     <!-- Card Background -->
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Card Background:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
                     <ColorPicker Grid.Row="0" Grid.Column="1" x:Name="CardBgColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
@@ -244,6 +247,10 @@
                     <!-- Card Text - Red Suits -->
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Text (Red Suits):" VerticalAlignment="Center" Foreground="#1A1A1A"/>
                     <ColorPicker Grid.Row="3" Grid.Column="1" x:Name="CardTextRedColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
+
+                    <!-- Hint Highlight -->
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Hint Highlight:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <ColorPicker Grid.Row="4" Grid.Column="1" x:Name="HintHighlightColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
                 </Grid>
 
                 <Button Content="Reset Card Colors" Click="ResetCardColors_Click" Classes="light-danger" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,2,0,0"/>

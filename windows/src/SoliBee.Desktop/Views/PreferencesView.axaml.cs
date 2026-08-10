@@ -202,6 +202,7 @@ public partial class PreferencesView : UserControl
         VegasCheckBox.IsChecked        = options.IsVegasScoring;
         VignetteCheckBox.IsChecked     = options.IsVignetteEnabled;
         HideHintCheckBox.IsChecked     = GetHideHintButton(options);
+        ManuallyDismissBannersCheckBox.IsChecked = options.ManuallyDismissBanners;
         AlwaysOnTopCheckBox.IsChecked  = options.IsAlwaysOnTop;
 
         foreach (var item in FeltColorComboBox.Items.OfType<ComboBoxItem>())
@@ -249,6 +250,7 @@ public partial class PreferencesView : UserControl
         CardOutlineColorPicker.Color = Color.Parse(options.ThemeFaceBorderNormal ?? "#D9000000");
         CardTextBlackColorPicker.Color = Color.Parse(options.ThemeTextBlackNormal ?? "#1A1A1A");
         CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
+        HintHighlightColorPicker.Color = Color.Parse(options.ThemeHintHighlight ?? "#FFD700");
 
         // Honey Mode (Flavor) — global, shared across all 6 games.
         PointHighlightsCheckBox.IsVisible = true;
@@ -417,6 +419,7 @@ public partial class PreferencesView : UserControl
         HideHintCheckBox.IsChecked     = shared.HideHintButton;
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
         PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
+        ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
     }
 
     // Blackjack has its own separate options model, same shape as Video Poker above —
@@ -436,6 +439,7 @@ public partial class PreferencesView : UserControl
         HideHintCheckBox.IsChecked     = shared.HideHintButton;
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
         PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
+        ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
     }
 
     // ── Game Mode ─────────────────────────────────────────────────────────────
@@ -841,6 +845,7 @@ public partial class PreferencesView : UserControl
             SetHideHintButton(options, HideHintCheckBox.IsChecked ?? false);
             options.IsAlwaysOnTop      = AlwaysOnTopCheckBox.IsChecked  ?? false;
             options.HoneyMode          = PointHighlightsCheckBox.IsChecked  ?? true;
+            options.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
 
             NotifySettingsChanged(options);
             if (ActiveGameFamily == "Honeycomb") SaveHoneycombOptionsAndNotify();
@@ -857,6 +862,7 @@ public partial class PreferencesView : UserControl
             shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
             shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
             shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
+            shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
             NotifySettingsChanged(shared);
 
             // vpOptions is the live VideoPokerViewModel.Options instance, so mutations
@@ -874,6 +880,7 @@ public partial class PreferencesView : UserControl
             shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
             shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
             shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
+            shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
             NotifySettingsChanged(shared);
 
             // bjOptions is the live BlackjackViewModel.Options instance, so mutations
@@ -1639,6 +1646,8 @@ public partial class PreferencesView : UserControl
             options.ThemeTextBlackNormal = e.NewColor.ToString();
         else if (sender == CardTextRedColorPicker)
             options.ThemeTextRed = e.NewColor.ToString();
+        else if (sender == HintHighlightColorPicker)
+            options.ThemeHintHighlight = e.NewColor.ToString();
 
         CardView.ApplyThemeColors(options);
         NotifySettingsChanged(options);
@@ -1665,12 +1674,14 @@ public partial class PreferencesView : UserControl
         options.ThemeTextBlackNormal = null;
         options.ThemeTextRed = null;
         options.ThemeCardShadow = null;
+        options.ThemeHintHighlight = null;
 
         _initializing = true;
         CardBgColorPicker.Color = Colors.White;
         CardOutlineColorPicker.Color = Color.Parse("#D9000000");
         CardTextBlackColorPicker.Color = Color.Parse("#1A1A1A");
         CardTextRedColorPicker.Color = Color.Parse("#CC1A1A");
+        HintHighlightColorPicker.Color = Color.Parse("#FFD700");
         _initializing = false;
 
         CardView.ApplyThemeColors(options);

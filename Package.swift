@@ -25,9 +25,8 @@ let package = Package(
                 // so SPM never warns about (or slows down on) their contents.
                 "ios",
                 "windows",
+                "venv",
                 "README.md",
-                "count_cards.ps1",
-                "parse_cards.ps1",
                 // Resource files living inside the compiled source dirs.
                 "mac/src/Info.plist",
                 "mac/src/AppIcon.icns",

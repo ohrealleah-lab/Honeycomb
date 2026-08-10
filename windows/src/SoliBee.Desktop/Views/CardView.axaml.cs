@@ -78,6 +78,10 @@ public partial class CardView : UserControl
     internal static readonly SolidColorBrush _brushTextRed          = new(Color.Parse("#CC1A1A"));
     internal static readonly SolidColorBrush _brushTextBlackNormal  = new(Color.Parse("#1A1A1A"));
     internal static Color _normalShadowColor = Color.Parse("#26000000");
+    // Hint/hierarchy/frenzy pulse color — read as RGB components (not a brush) since the
+    // pulse animation varies only alpha, in CardView.ShowHint/PileView.ShowHint and
+    // HoneycombView's cell hint + mandated-highlight borders.
+    internal static Color _hintHighlightColor = Color.Parse("#FFD700");
 
     private const int CardBackCacheW = 780;  // 195 * 4 (anchored to Honeycomb's larger card; solitaire's 128x181 gets even more headroom for free)
     private const int CardBackCacheH = 1104; // 276 * 4
@@ -94,6 +98,9 @@ public partial class CardView : UserControl
         _brushTextRed.Color          = options.ThemeTextRed          != null ? Color.Parse(options.ThemeTextRed)          : Color.Parse("#CC1A1A");
         _brushTextBlackNormal.Color  = options.ThemeTextBlackNormal  != null ? Color.Parse(options.ThemeTextBlackNormal)  : Color.Parse("#1A1A1A");
         _normalShadowColor           = options.ThemeCardShadow       != null ? Color.Parse(options.ThemeCardShadow)       : Color.Parse("#26000000");
+        _hintHighlightColor          = options.ThemeHintHighlight    != null ? Color.Parse(options.ThemeHintHighlight)    : Color.Parse("#FFD700");
+        HoneycombCardView._brushStealHighlight.Color = _hintHighlightColor;
+        HoneycombView._brushCellHintHighlight.Color  = Color.FromArgb(0x80, _hintHighlightColor.R, _hintHighlightColor.G, _hintHighlightColor.B);
     }
 
     internal static double FaceLetterFontSize = 90.0;
@@ -1303,16 +1310,17 @@ public partial class CardView : UserControl
     {
         if (CardFace == null || Card == null || !Card.IsFaceUp || HintHighlightBorder == null) return;
         HintHighlightBorder.IsVisible = true;
-        _hintPulseBrush = new SolidColorBrush(Color.Parse("#00FFD700"));
+        var hc = _hintHighlightColor;
+        _hintPulseBrush = new SolidColorBrush(Color.FromArgb(0, hc.R, hc.G, hc.B));
         HintHighlightBorder.BorderBrush = _hintPulseBrush;
         _hintPulse.Start(alpha =>
         {
             byte a = (byte)(255 * alpha);
-            _hintPulseBrush!.Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00);
+            _hintPulseBrush!.Color = Color.FromArgb(a, hc.R, hc.G, hc.B);
             var shadow = new BoxShadow
             {
                 OffsetX = 0, OffsetY = 0, Blur = 6, Spread = 1,
-                Color = Color.FromArgb(a, 0xFF, 0xD7, 0x00)
+                Color = Color.FromArgb(a, hc.R, hc.G, hc.B)
             };
             HintHighlightBorder.BoxShadow = new BoxShadows(shadow);
         });

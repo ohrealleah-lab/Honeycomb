@@ -134,26 +134,28 @@ struct TouchHintHighlight: ViewModifier {
 }
 
 struct TouchHintAnimatable: AnimatableModifier {
+    @Environment(AppCoordinator.self) private var coordinator
     var isHighlighted: Bool
     var phase: Double
-    
+
     var animatableData: Double {
         get { phase }
         set { phase = newValue }
     }
-    
+
     func body(content: Content) -> some View {
         let opacity = isHighlighted ? (1 - cos(phase * .pi * 4)) / 2 : 0.0
-        
+        let highlightColor = coordinator.customCardColors.hintHighlightColor
+
         return content
             .overlay(
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.yellow, lineWidth: 4)
-                        .shadow(color: .yellow, radius: 4)
+                        .stroke(highlightColor, lineWidth: 4)
+                        .shadow(color: highlightColor, radius: 4)
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.yellow, lineWidth: 4)
-                        .shadow(color: .yellow, radius: 4)
+                        .stroke(highlightColor, lineWidth: 4)
+                        .shadow(color: highlightColor, radius: 4)
                 }
                 .opacity(opacity)
             )

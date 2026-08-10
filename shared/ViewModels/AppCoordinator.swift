@@ -159,6 +159,17 @@ public final class AppCoordinator {
             BannerCatalog.honeyModeEnabled = honeyMode
         }
     }
+    // When on, banners/toasts stay up (no auto-dismiss timer) and the game is
+    // effectively paused until the player clicks the banner or a card, at which point
+    // it dismisses and the banner queue resumes. Same true-single-source pattern as
+    // isSoundEnabled/noStressMode/honeyMode above. Default off — preserves the existing
+    // auto-dismiss behavior unless the player opts in.
+    public var manuallyDismissBanners: Bool {
+        didSet {
+            UserDefaults.standard.set(manuallyDismissBanners, forKey: "global_manually_dismiss_banners")
+            applySharedCommonOptionsToAllGames()
+        }
+    }
 
     private func applySharedCommonOptionsToAllGames() {
         klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
@@ -179,6 +190,12 @@ public final class AppCoordinator {
         videoPokerViewModel.options.honeyMode = honeyMode
         blackjackViewModel.options.honeyMode  = honeyMode
         honeycombViewModel.options.honeyMode  = honeyMode
+        klondikeViewModel.options.manuallyDismissBanners   = manuallyDismissBanners
+        beecellViewModel.options.manuallyDismissBanners    = manuallyDismissBanners
+        spiderViewModel.options.manuallyDismissBanners     = manuallyDismissBanners
+        videoPokerViewModel.options.manuallyDismissBanners = manuallyDismissBanners
+        blackjackViewModel.options.manuallyDismissBanners  = manuallyDismissBanners
+        honeycombViewModel.options.manuallyDismissBanners  = manuallyDismissBanners
     }
 
     #if canImport(AppKit)
@@ -251,6 +268,11 @@ public final class AppCoordinator {
         self.honeyMode = UserDefaults.standard.object(forKey: "global_honey_mode") != nil
             ? UserDefaults.standard.bool(forKey: "global_honey_mode")
             : true
+        // No migration — always defaults to off, preserving today's auto-dismiss
+        // behavior for everyone unless they explicitly opt in.
+        self.manuallyDismissBanners = UserDefaults.standard.object(forKey: "global_manually_dismiss_banners") != nil
+            ? UserDefaults.standard.bool(forKey: "global_manually_dismiss_banners")
+            : false
         BannerCatalog.honeyModeEnabled = self.honeyMode
 
         #if canImport(AppKit)

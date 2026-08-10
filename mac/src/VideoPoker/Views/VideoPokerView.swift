@@ -154,8 +154,20 @@ public struct VideoPokerView: View {
             HotkeyLegendView(text: "Space/Enter/D=Deal or Draw   1-5=Toggle Hold   H=Hold All   C=Clear   M=Bet Max")
 
             if showQueuedBanner {
-                FlashBannerView(message: queuedBannerText)
+                FlashBannerView(
+                    message: queuedBannerText,
+                    manualDismiss: viewModel.options.manuallyDismissBanners,
+                    onDismiss: dismissQueuedBanner
+                )
             }
+
+            // Kept permanently in the tree, gated by allowsHitTesting only — see
+            // GameView.swift's matching comment for why conditional insert/remove here
+            // left the hit-test region stuck active.
+            Color.clear
+                .contentShape(Rectangle())
+                .allowsHitTesting(showQueuedBanner && viewModel.options.manuallyDismissBanners)
+                .onTapGesture { dismissQueuedBanner() }
         }
         .frame(minWidth: Self.minWindowSize.width, maxWidth: .infinity,
                minHeight: Self.minWindowSize.height, maxHeight: .infinity)
@@ -317,16 +329,24 @@ public struct VideoPokerView: View {
         }
     }
 
+    private func dismissQueuedBanner() {
+        queuedBannerTask?.cancel()
+        queuedBannerTask = nil
+        withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            viewModel.advanceBannerQueue()
+        }
+    }
+
     private func flashQueuedBanner(_ text: String) {
         queuedBannerTask?.cancel()
         queuedBannerText = text
         withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
-        let task = DispatchWorkItem {
-            withAnimation(.easeOut(duration: 0.3)) { showQueuedBanner = false }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                viewModel.advanceBannerQueue()
-            }
+        guard !viewModel.options.manuallyDismissBanners else {
+            queuedBannerTask = nil
+            return
         }
+        let task = DispatchWorkItem { [self] in dismissQueuedBanner() }
         queuedBannerTask = task
         // The very first loading banner of an app session gets extra time to actually be
         // read — see BannerCatalog.consumeAppLaunchLoadingFlag().
@@ -926,6 +946,7 @@ struct VideoPokerOptionsView: View {
     @State private var hideBetBoard: Bool
     @State private var noStressMode: Bool
     @State private var honeyMode: Bool
+    @State private var manuallyDismissBanners: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -945,6 +966,7 @@ struct VideoPokerOptionsView: View {
         _hideBetBoard    = State(initialValue: viewModel.options.hideBetBoard)
         _noStressMode    = State(initialValue: viewModel.options.noStressMode)
         _honeyMode       = State(initialValue: viewModel.options.honeyMode)
+        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
     }
 
     var body: some View {
@@ -970,6 +992,7 @@ struct VideoPokerOptionsView: View {
                 o.hideBetBoard    = hideBetBoard
                 o.noStressMode    = noStressMode
                 o.honeyMode       = honeyMode
+                o.manuallyDismissBanners = manuallyDismissBanners
                 viewModel.options = o
                 if variantChanged || playModeChanged {
                     viewModel.resetHandDisplay()
@@ -988,6 +1011,7 @@ struct VideoPokerOptionsView: View {
                 coordinator.isSoundEnabled = isSoundEnabled
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
+                coordinator.manuallyDismissBanners = manuallyDismissBanners
             }
         ) {
             Picker("Variant:", selection: $variant) {
@@ -1021,6 +1045,7 @@ struct VideoPokerOptionsView: View {
             Toggle("Hide Bet Board",   isOn: $hideBetBoard).font(.system(.body))
             Toggle("No Stress Mode",   isOn: $noStressMode).font(.system(.body))
             Toggle("Honey Mode (Flavor)", isOn: $honeyMode).font(.system(.body))
+            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners).font(.system(.body))
         }
     }
 }

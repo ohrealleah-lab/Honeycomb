@@ -124,6 +124,6 @@
              opponent hand card (e.g. Nectar Exchange's swap highlight, or an Order/
              Chaos mandated-card highlight on the opponent's side) never actually showed
              the border, since CardFace itself is invisible while CardBack is showing. -->
-        <Border x:Name="StealHighlightBorder" IsVisible="False" BorderBrush="Yellow" BorderThickness="8" CornerRadius="10" IsHitTestVisible="False" />
+        <Border x:Name="StealHighlightBorder" IsVisible="False" BorderThickness="8" CornerRadius="10" IsHitTestVisible="False" />
     </Grid>
 </UserControl>

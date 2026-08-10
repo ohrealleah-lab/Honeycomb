@@ -196,6 +196,12 @@
                     BorderBrush="#00E5FF" BorderThickness="4" CornerRadius="8" Background="Transparent" />
         </Canvas>
 
+        <!-- Board-wide tap-catcher for Manually Dismiss Banners — see GameView.axaml.
+             ZIndex sits below RuleToast (250) so a tap on the toast itself is still
+             handled by the toast, not swallowed here first. -->
+        <Border x:Name="BannerTapCatcher" ZIndex="240" Background="Transparent" IsHitTestVisible="False"
+                PointerPressed="BannerTapCatcher_PointerPressed"/>
+
         <!-- Rule Popups -->
         <local:FlashToast x:Name="RuleToast" ZIndex="250" IsHitTestVisible="False" />
 

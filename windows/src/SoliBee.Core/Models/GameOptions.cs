@@ -53,6 +53,14 @@ public class GameOptions
     // old per-game values — everyone gets a fresh default of on.
     public bool HoneyMode { get; set; } = true;
 
+    // When on, banner/toast flashes stay up (no auto-dismiss timer) and the game is
+    // effectively paused until the player clicks the toast or a card, at which point it
+    // dismisses and the banner queue resumes. Same single global switch pattern as
+    // HoneyMode above, read directly by every game (see FlashToast.Flash and each game
+    // view's Vm_OnFlashBanner). Default off — preserves today's auto-dismiss behavior
+    // unless the player opts in.
+    public bool ManuallyDismissBanners { get; set; } = false;
+
     public bool IsVignetteEnabled { get; set; } = true;
     // Turns off timers (solitaire) and enables free play (VP/Blackjack — hides the
     // credit/bet board and betting controls; hands are played without wagering).
@@ -95,6 +103,7 @@ public class GameOptions
     public string? ThemeTextRed { get; set; }
     public string? ThemeTextBlackNormal { get; set; }
     public string? ThemeCardShadow { get; set; }
+    public string? ThemeHintHighlight { get; set; }
 
     // Deep-copies CustomCardBacks (not just the list container) so callers can diff
     // "old vs new" against the live options object — a shallow element copy would let

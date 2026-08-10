@@ -86,6 +86,7 @@ public partial class GameView : CardGameView
 
     private void HintToast_OnDismissed()
     {
+        BannerTapCatcher.IsHitTestVisible = false;
         (DataContext as GameViewModel)?.AdvanceBannerQueue();
     }
 
@@ -258,7 +259,20 @@ public partial class GameView : CardGameView
         // just that one banner extra time to actually be read. Every other toast is a
         // uniform 2s.
         var duration = BannerCatalog.ConsumeAppLaunchLoadingFlag() ? TimeSpan.FromSeconds(3) : TimeSpan.FromSeconds(2);
-        Avalonia.Threading.Dispatcher.UIThread.Post(() => HintToast.Flash(message, duration));
+        var manualDismiss = SettingsService.LoadOptions().ManuallyDismissBanners;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            HintToast.Flash(message, duration, manualDismiss);
+            BannerTapCatcher.IsHitTestVisible = manualDismiss;
+        });
+    }
+
+    // Board-wide tap-catcher: while a manually-dismissed toast is up, the game is
+    // "paused" — any board click (not just the toast itself) dismisses it instead of
+    // being forwarded to the card underneath.
+    private void BannerTapCatcher_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (HintToast.IsVisible) HintToast.Dismiss();
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)

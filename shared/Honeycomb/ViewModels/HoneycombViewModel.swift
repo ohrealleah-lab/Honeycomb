@@ -18,6 +18,8 @@ public final class HoneycombViewModel {
         // own comment) via applySharedCommonOptionsToAllGames — never user-edited here
         // directly.
         public var honeyMode: Bool = true
+        // Same true-single-source pattern, driven by AppCoordinator.manuallyDismissBanners.
+        public var manuallyDismissBanners: Bool = false
         public var hideHintButton: Bool = false
         public var bannedRules: Set<String> = []
 
@@ -30,6 +32,7 @@ public final class HoneycombViewModel {
         // field to its default, not just the missing one).
         private enum CodingKeys: String, CodingKey {
             case isSoundEnabled, noStressMode, difficulty, activeDeckIndex, selectedRules, forceNormalMode, honeyMode
+            case manuallyDismissBanners
             case hideHintButton, bannedRules
         }
 
@@ -45,6 +48,7 @@ public final class HoneycombViewModel {
             selectedRules = (try container.decodeIfPresent(Set<HoneycombRule>.self, forKey: .selectedRules) ?? []).subtracting([.reverse])
             forceNormalMode = try container.decodeIfPresent(Bool.self, forKey: .forceNormalMode) ?? false
             honeyMode = try container.decodeIfPresent(Bool.self, forKey: .honeyMode) ?? true
+            manuallyDismissBanners = try container.decodeIfPresent(Bool.self, forKey: .manuallyDismissBanners) ?? false
             hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
             bannedRules = try container.decodeIfPresent(Set<String>.self, forKey: .bannedRules) ?? []
         }
@@ -58,6 +62,7 @@ public final class HoneycombViewModel {
             try container.encode(selectedRules, forKey: .selectedRules)
             try container.encode(forceNormalMode, forKey: .forceNormalMode)
             try container.encode(honeyMode, forKey: .honeyMode)
+            try container.encode(manuallyDismissBanners, forKey: .manuallyDismissBanners)
             try container.encode(hideHintButton, forKey: .hideHintButton)
             try container.encode(bannedRules, forKey: .bannedRules)
         }
@@ -70,6 +75,7 @@ public final class HoneycombViewModel {
                 && lhs.selectedRules == rhs.selectedRules
                 && lhs.forceNormalMode == rhs.forceNormalMode
                 && lhs.honeyMode == rhs.honeyMode
+                && lhs.manuallyDismissBanners == rhs.manuallyDismissBanners
                 && lhs.hideHintButton == rhs.hideHintButton
                 && lhs.bannedRules == rhs.bannedRules
         }

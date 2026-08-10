@@ -57,6 +57,14 @@ struct CustomCardColorSectionView: View {
                     ColorPicker("", selection: $customCardColors.redSuitColor)
                         .labelsHidden()
                 }
+
+                HStack {
+                    Text("Hint Highlight")
+                        .font(.system(.body))
+                    Spacer()
+                    ColorPicker("", selection: $customCardColors.hintHighlightColor)
+                        .labelsHidden()
+                }
             }
         }
     }

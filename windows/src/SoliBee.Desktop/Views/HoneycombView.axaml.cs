@@ -52,7 +52,8 @@ public partial class HoneycombView : UserControl
     // new SolidColorBrush on every Refresh() (called on every PropertyChanged), same
     // pattern as CardView's _brush* static fields.
     private static readonly SolidColorBrush _brushCellDefault = new(Color.Parse("#59000000"));
-    private static readonly SolidColorBrush _brushCellHintHighlight = new(Color.Parse("#80FFFF00"));
+    // .Color kept in sync with CardView._hintHighlightColor by CardView.ApplyThemeColors.
+    internal static readonly SolidColorBrush _brushCellHintHighlight = new(Color.Parse("#80FFD700"));
 
     private readonly Border[] _boardCells = new Border[9];
     private readonly HoneycombCardView[] _boardCards = new HoneycombCardView[9];
@@ -109,6 +110,7 @@ public partial class HoneycombView : UserControl
         
         RuleToast.OnDismissed += () => {
             _bannerActive = false;
+            BannerTapCatcher.IsHitTestVisible = false;
             // Reveals whatever's queued behind the banner that just finished (if
             // anything) — Vm_OnFlashBanner picks it up via OnFlashBanner and flips
             // _bannerActive back to true, so the win/lose overlay (gated on
@@ -155,10 +157,20 @@ public partial class HoneycombView : UserControl
         // native AppKit path) eats into the very first loading banner's visible time
         // before the window is even on screen, so that one banner alone gets 3s.
         var duration = BannerCatalog.ConsumeAppLaunchLoadingFlag() ? TimeSpan.FromSeconds(3) : TimeSpan.FromSeconds(2);
+        var manualDismiss = SettingsService.LoadOptions().ManuallyDismissBanners;
         Dispatcher.UIThread.Post(() => {
             _bannerActive = true;
-            RuleToast.Flash(message, duration);
+            RuleToast.Flash(message, duration, manualDismiss);
+            BannerTapCatcher.IsHitTestVisible = manualDismiss;
         });
+    }
+
+    // Board-wide tap-catcher: while a manually-dismissed toast is up, the game is
+    // "paused" — any board/hand click (not just the toast itself) dismisses it instead
+    // of being forwarded to the card underneath.
+    private void BannerTapCatcher_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (RuleToast.IsVisible) RuleToast.Dismiss();
     }
 
     // Beat 1 (Lift) of the Nectar Exchange 3-beat sequence — scales the two
@@ -479,12 +491,14 @@ public partial class HoneycombView : UserControl
             var globalOpts = SoliBee.Core.Services.SettingsService.LoadOptions();
             bool won = state.PlayerScore > state.OpponentScore;
             bool canSteal = !globalOpts.IsNoStressMode && !state.HasStolenThisMatch && won;
+            bool bankFull = HoneycombProfileManager.Shared.UnlockedCardIds.Count >= HoneycombDatabase.Shared.AllCards.Count;
+            bool obtainedAllOpponentCards = !bankFull && vm.HasObtainedAllOpponentCards();
+
             if (canSteal)
             {
                 // Check if bank full — mirrors the Swift port's isCardBankFull
                 // (unlockedCardIds.count >= allCards.count), not a hardcoded guess.
-                bool bankFull = HoneycombProfileManager.Shared.UnlockedCardIds.Count >= HoneycombDatabase.Shared.AllCards.Count;
-
+                
                 // Also require at least one card on the board that's actually stealable —
                 // otherwise the button led into a steal flow with nothing on the board
                 // selectable. IsStealEligible widens this under Steal Protection.
@@ -499,8 +513,6 @@ public partial class HoneycombView : UserControl
                         break;
                     }
                 }
-
-                bool obtainedAllOpponentCards = !bankFull && vm.HasObtainedAllOpponentCards();
 
                 StealCardButton.IsVisible = !bankFull && hasStealableCard;
                 BankFullWarningText.IsVisible = bankFull;
@@ -524,13 +536,16 @@ public partial class HoneycombView : UserControl
             else
             {
                 StealCardButton.IsVisible = false;
-                BankFullWarningText.IsVisible = false;
-                AllSecretsWarningText.IsVisible = false;
+                BankFullWarningText.IsVisible = !globalOpts.IsNoStressMode && won && bankFull;
+                AllSecretsWarningText.IsVisible = !globalOpts.IsNoStressMode && won && bankFull;
                 StealProtectionText.IsVisible = false;
-                ObtainedAllOpponentCardsText.IsVisible = false;
+                
+                ObtainedAllOpponentCardsText.Text = $"You have obtained all cards from {vm.OpponentNameDisplay}'s hand.";
+                ObtainedAllOpponentCardsText.IsVisible = !globalOpts.IsNoStressMode && won && obtainedAllOpponentCards;
+                
                 // Only the "already stolen" scenario gets its own message here — a
                 // loss/draw or No Stress Mode has nothing steal-related to explain.
-                AlreadyStolenWarningText.IsVisible = !globalOpts.IsNoStressMode && state.HasStolenThisMatch && won;
+                AlreadyStolenWarningText.IsVisible = !globalOpts.IsNoStressMode && won && state.HasStolenThisMatch && !bankFull && !obtainedAllOpponentCards;
             }
         }
         

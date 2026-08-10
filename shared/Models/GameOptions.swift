@@ -11,6 +11,7 @@ public struct GameOptions: Codable, Equatable {
     public var noStressMode: Bool = false
     public var deckCount: Int = 1
     public var honeyMode: Bool = true
+    public var manuallyDismissBanners: Bool = false
 
     public var drawMode: GameState.DrawMode = .drawThree
 
@@ -24,6 +25,7 @@ public struct GameOptions: Codable, Equatable {
         noStressMode: Bool = false,
         deckCount: Int = 1,
         honeyMode: Bool = true,
+        manuallyDismissBanners: Bool = false,
         drawMode: GameState.DrawMode = .drawThree
     ) {
         self.isTimed = isTimed
@@ -35,6 +37,7 @@ public struct GameOptions: Codable, Equatable {
         self.noStressMode = noStressMode
         self.deckCount = deckCount
         self.honeyMode = honeyMode
+        self.manuallyDismissBanners = manuallyDismissBanners
         self.drawMode = drawMode
     }
 
@@ -48,6 +51,7 @@ public struct GameOptions: Codable, Equatable {
         case noStressMode
         case deckCount
         case honeyMode
+        case manuallyDismissBanners
         case drawMode
     }
 
@@ -62,6 +66,7 @@ public struct GameOptions: Codable, Equatable {
         self.noStressMode = (try? container.decode(Bool.self, forKey: .noStressMode)) ?? false
         self.deckCount = (try? container.decode(Int.self, forKey: .deckCount)) ?? 1
         self.honeyMode = (try? container.decode(Bool.self, forKey: .honeyMode)) ?? true
+        self.manuallyDismissBanners = (try? container.decode(Bool.self, forKey: .manuallyDismissBanners)) ?? false
         self.drawMode = (try? container.decode(GameState.DrawMode.self, forKey: .drawMode)) ?? .drawThree
     }
 }

@@ -576,12 +576,12 @@ public struct HoneycombView: View {
                             }
                             .foregroundColor(.white).padding()
                         } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
-                            && viewModel.hasStolenThisMatch {
-                            Text("Rematch to take another.")
-                                .foregroundColor(.white).padding()
-                        } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && viewModel.hasObtainedAllOpponentCards {
                             Text("You have obtained all cards from \(viewModel.options.difficulty.displayName)'s hand.")
+                                .foregroundColor(.white).padding()
+                        } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
+                            && viewModel.hasStolenThisMatch {
+                            Text("Rematch to take another.")
                                 .foregroundColor(.white).padding()
                         } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && viewModel.stealProtectionActive && viewModel.hasStealableCard {
@@ -663,10 +663,23 @@ public struct HoneycombView: View {
 
             // Banner Overlay — shared by Ascension/Descension/Same/Plus/Sudden Death.
             if showingRuleBanner {
-                FlashBannerView(message: bannerText)
+                FlashBannerView(
+                    message: bannerText,
+                    manualDismiss: viewModel.options.manuallyDismissBanners,
+                    onDismiss: dismissRuleBanner
+                )
                     .transition(.scale.combined(with: .opacity))
                     .zIndex(100)
             }
+
+            // Kept permanently in the tree, gated by allowsHitTesting only — see
+            // GameView.swift's matching comment for why conditional insert/remove here
+            // left the hit-test region stuck active.
+            Color.clear
+                .contentShape(Rectangle())
+                .allowsHitTesting(showingRuleBanner && viewModel.options.manuallyDismissBanners)
+                .onTapGesture { dismissRuleBanner() }
+                .zIndex(99)
 
             if showNoHintsBanner {
                 FlashBannerView(message: "Sorry! No hints available.")
@@ -738,18 +751,13 @@ public struct HoneycombView: View {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 showingRuleBanner = true
             }
-            let task = DispatchWorkItem {
-                withAnimation(.easeOut(duration: 0.3)) {
-                    showingRuleBanner = false
-                }
-                // Reveal whatever's queued behind this banner (if anything) once this
-                // one has actually finished fading out, instead of a second event
-                // silently overwriting it mid-display — see HoneycombViewModel's
-                // bannerQueue/advanceBannerQueue().
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    viewModel.advanceBannerQueue()
-                }
+            // Manually Dismiss Banners: stays up until the player taps it or a card
+            // (see the board tap-catcher above) — no auto-dismiss timer in that mode.
+            guard !viewModel.options.manuallyDismissBanners else {
+                bannerTask = nil
+                return
             }
+            let task = DispatchWorkItem { [self] in dismissRuleBanner() }
             // All toasts are a uniform 2s now (flashRuleBannerIsLongDuration no longer
             // distinguishes anything display-wise — kept on the queue only because
             // removing it would mean touching every enqueueBanner call site for no
@@ -871,6 +879,21 @@ public struct HoneycombView: View {
         guard let window = hostingWindow else { return }
         window.contentMinSize = Self.minWindowSize
         recomputeScale()
+    }
+
+    private func dismissRuleBanner() {
+        bannerTask?.cancel()
+        bannerTask = nil
+        withAnimation(.easeOut(duration: 0.3)) {
+            showingRuleBanner = false
+        }
+        // Reveal whatever's queued behind this banner (if anything) once this
+        // one has actually finished fading out, instead of a second event
+        // silently overwriting it mid-display — see HoneycombViewModel's
+        // bannerQueue/advanceBannerQueue().
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            viewModel.advanceBannerQueue()
+        }
     }
 
     private func flashNoHintsBanner() {
@@ -1109,7 +1132,7 @@ public struct HoneycombView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.yellow, lineWidth: isMandated ? 14 : 0)
+                    .stroke(coordinator.customCardColors.hintHighlightColor, lineWidth: isMandated ? 14 : 0)
             )
             // handIndex is nil once the match ends (displayHand switches to
             // playerStartingDeck, whose card ids no longer appear in the now-empty
@@ -1143,7 +1166,7 @@ public struct HoneycombView: View {
             .modifier(SwapLiftEffect(isAnimating: viewModel.swapHighlightCardIds.contains(card.id), phase: viewModel.swapAnimationPhase))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.yellow, lineWidth: isMandated ? 14 : 0)
+                    .stroke(coordinator.customCardColors.hintHighlightColor, lineWidth: isMandated ? 14 : 0)
             )
     }
 
@@ -1161,6 +1184,7 @@ struct HoneycombOptionsView: View {
     @State private var noStressMode: Bool
     @State private var honeyMode: Bool
     @State private var hideHintButton: Bool
+    @State private var manuallyDismissBanners: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -1175,6 +1199,7 @@ struct HoneycombOptionsView: View {
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
         _honeyMode = State(initialValue: viewModel.options.honeyMode)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
+        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
     }
 
     var body: some View {
@@ -1191,6 +1216,7 @@ struct HoneycombOptionsView: View {
                 updatedOpts.noStressMode = noStressMode
                 updatedOpts.honeyMode = honeyMode
                 updatedOpts.hideHintButton = hideHintButton
+                updatedOpts.manuallyDismissBanners = manuallyDismissBanners
                 viewModel.options = updatedOpts
                 // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
                 // edit there (rather than leaving it only on this game's own options)
@@ -1200,6 +1226,7 @@ struct HoneycombOptionsView: View {
                 coordinator.isSoundEnabled = isSoundEnabled
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
+                coordinator.manuallyDismissBanners = manuallyDismissBanners
                 // No Stress Mode's deck composition is only decided at match start, so
                 // toggling it on mid-match has no visible effect until the next deal —
                 // silently deal fresh instead of leaving a stale, unapplied setting.
@@ -1218,6 +1245,9 @@ struct HoneycombOptionsView: View {
                 .font(.system(.body))
 
             Toggle("Hide Hint button", isOn: $hideHintButton)
+                .font(.system(.body))
+
+            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners)
                 .font(.system(.body))
 
             Divider()

@@ -168,6 +168,10 @@
                     IsVisible="{Binding #ResultOverlay.IsVisible}"/>
         </Grid>
 
+        <!-- Board-wide tap-catcher for Manually Dismiss Banners — see GameView.axaml. -->
+        <Border x:Name="BannerTapCatcher" Background="Transparent" IsHitTestVisible="False"
+                PointerPressed="BannerTapCatcher_PointerPressed"/>
+
         <!-- Milestone/loading banners — separate from the hand-result overlay above,
              which is hardcoded to specific hand-result fields (headline, totals). -->
         <local:FlashToast x:Name="MilestoneToast"/>

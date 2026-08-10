@@ -173,6 +173,14 @@ public class ThemeEditorWindow : Window
         new("Black Suit / Rank Text",
             () => CardView._brushTextBlackNormal.Color,
             c  => CardView._brushTextBlackNormal.Color = c),
+        new("Hint Highlight",
+            () => CardView._hintHighlightColor,
+            c  =>
+            {
+                CardView._hintHighlightColor = c;
+                HoneycombCardView._brushStealHighlight.Color = c;
+                HoneycombView._brushCellHintHighlight.Color = Color.FromArgb(0x80, c.R, c.G, c.B);
+            }),
     };
 
     private void SelectSlot(ColorSlot slot, Border row, Rectangle swatch)
@@ -199,6 +207,7 @@ public class ThemeEditorWindow : Window
         options.ThemeFaceBorderNormal = CardView._brushFaceBorderNormal.Color.ToString();
         options.ThemeTextRed         = CardView._brushTextRed.Color.ToString();
         options.ThemeTextBlackNormal = CardView._brushTextBlackNormal.Color.ToString();
+        options.ThemeHintHighlight   = CardView._hintHighlightColor.ToString();
         SettingsService.SaveOptions(options);
 
         if (_statusLabel != null) _statusLabel.Text = "Saved.";

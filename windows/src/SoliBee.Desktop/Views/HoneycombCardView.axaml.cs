@@ -34,6 +34,10 @@ public partial class HoneycombCardView : UserControl
 
     private static readonly SolidColorBrush _brushPointHighlight = new(Color.Parse("#FFD600"));
 
+    // Steal-eligible / hierarchy-frenzy mandated / hint highlight border — .Color kept
+    // in sync with CardView._hintHighlightColor by CardView.ApplyThemeColors.
+    internal static readonly SolidColorBrush _brushStealHighlight = new(Color.Parse("#FFD700"));
+
     // Point Highlights: recolors the winning stat number(s) — 0=Top, 1=Right,
     // 2=Bottom, 3=Left — gold and briefly pulses their scale for a beat before a
     // capture visually flips, matching Mac's HoneycombCardView (the number itself
@@ -125,6 +129,7 @@ public partial class HoneycombCardView : UserControl
     public HoneycombCardView()
     {
         InitializeComponent();
+        StealHighlightBorder.BorderBrush = _brushStealHighlight;
     }
 
     public async Task RenderCard(HoneycombCard? card, bool faceDown = false, int hIdx = -1, int cIdx = -1, bool isCaptureAttacker = false)

@@ -226,6 +226,7 @@ public static class ThemeService
             ThemeTextRed = options.ThemeTextRed,
             ThemeTextBlackNormal = options.ThemeTextBlackNormal,
             ThemeCardShadow = options.ThemeCardShadow,
+            ThemeHintHighlight = options.ThemeHintHighlight,
         };
 
         foreach (var art in FaceCardArtService.GetAllArts())
@@ -280,6 +281,7 @@ public static class ThemeService
         options.ThemeTextRed = theme.ThemeTextRed;
         options.ThemeTextBlackNormal = theme.ThemeTextBlackNormal;
         options.ThemeCardShadow = theme.ThemeCardShadow;
+        options.ThemeHintHighlight = theme.ThemeHintHighlight;
         options.CustomFeltColorRevision++;
 
         // Restore face arts without deleting files on disk
