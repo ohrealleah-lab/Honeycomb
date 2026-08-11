@@ -49,6 +49,10 @@ public class HoneycombViewModelTests
 
         vm.State.CurrentTurn = 1;
         vm.PlayCard(0, 8); // Player places 5th card on board. Now P=5 on board, O=4 on board + 1 in hand = 5.
+        // The tie settles into Sudden Death (a fresh deal + the opponent's reply, if
+        // they start) via RunAITurn's background search — wait for it to land before
+        // reading the post-continuation state.
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         Assert.True(vm.State.IsSuddenDeath);
         Assert.Equal(1, vm.Stats.SuddenDeathCount);
@@ -106,10 +110,14 @@ public class HoneycombViewModelTests
         
         int cellIndex = Array.FindIndex(vm.State.Board.Cells, c => c.IsEmpty);
         vm.PlayCard(0, cellIndex); // Play first card to an empty cell
-        
+
         Assert.Equal(initialHandCount - 1, vm.State.PlayerHand.Count);
         Assert.False(vm.State.Board.Cells[cellIndex].IsEmpty);
-        
+        // PlayCard fires the opponent's reply via RunAITurn's background search —
+        // wait for it to land before undoing, otherwise Undo() can race it and pop
+        // the wrong entry off the undo stack.
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
+
         vm.Undo();
         
         Assert.Equal(initialHandCount, vm.State.PlayerHand.Count);

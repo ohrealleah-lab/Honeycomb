@@ -45,6 +45,7 @@ public class HoneycombBannerTriggerTests
     {
         var method = typeof(HoneycombViewModel).GetMethod("RunAITurn", BindingFlags.NonPublic | BindingFlags.Instance);
         method!.Invoke(vm, new object[] { true }); // skipPacingDelay: true
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
     }
 
     // Captures every banner text shown while `action` runs, in order — subscribes to
@@ -196,6 +197,10 @@ public class HoneycombBannerTriggerTests
         vm.State.OpponentHand = new List<HoneycombCard> { MkWeakCard(11, -1), MkWeakCard(12, -1) };
 
         vm.PlayCard(0, 0); // this move's own capture banner (if any) doesn't matter here
+        // PlayCard fires the opponent's reply via RunAITurn, which is genuinely async
+        // (hops to a background thread) — CanUndo requires CurrentTurn back on the
+        // player, so wait for that reply to actually land before checking it.
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         Assert.True(vm.CanUndo);
         var afterUndo = CaptureBanners(vm, () => vm.Undo());
@@ -205,6 +210,7 @@ public class HoneycombBannerTriggerTests
         // repeat-move banner too.
         var afterRepeat = CaptureBanners(vm, () => vm.PlayCard(0, 0));
         Assert.True(QueueContainsMessage(afterRepeat, BannerId.GameplayPlayerUsesUndoThinksAboutItAndThenMakesTheExact));
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         // Negative case: undo again, then play a DIFFERENT cell — must NOT fire.
         Assert.True(vm.CanUndo);
@@ -232,7 +238,16 @@ public class HoneycombBannerTriggerTests
         vm.State.PlayerHand = new List<HoneycombCard> { MkWeakCard(400, 1) };
         vm.State.OpponentHand = new List<HoneycombCard> { MkWeakCard(401, -1) };
 
-        var queued = CaptureBanners(vm, () => vm.PlayCard(0, 6));
+        // The imbalance banner only actually fires off the OPPONENT's placement (the
+        // 2-vs-6 split doesn't exist yet right after the player's own move) — that
+        // happens inside RunAITurn's background search, so the wait has to happen
+        // INSIDE the CaptureBanners closure, while OnFlashBanner is still subscribed,
+        // not after CaptureBanners has already drained the queue and returned.
+        var queued = CaptureBanners(vm, () =>
+        {
+            vm.PlayCard(0, 6);
+            HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
+        });
 
         int playerOwned = vm.State.Board.Cells.Count(c => c.Card?.Owner == 1);
         int opponentOwned = vm.State.Board.Cells.Count(c => c.Card?.Owner == -1);
@@ -337,14 +352,21 @@ public class HoneycombBannerTriggerTests
     {
         var vm = new HoneycombViewModel(isHeadless: true);
         // One real StartNewMatch() to populate _rematchOpponentDeck — everything else
-        // about this match is immediately overwritten.
+        // about this match is immediately overwritten. StartNewMatch/RematchGame can
+        // themselves kick off the AI's opening move (fire-and-forget, same RunAITurn
+        // background search) if the opponent happens to be dealt the first turn —
+        // wait for that to settle before the next Force*ViaFortressBoard call stomps
+        // the board out from under it, or the stale move lands on the new state later.
         vm.StartNewMatch();
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         ForceWinViaFortressBoard(vm); // win #1
         vm.RematchGame();
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         ForceWinViaFortressBoard(vm); // win #2
         vm.RematchGame();
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         var queued = CaptureBanners(vm, () => ForceWinViaFortressBoard(vm)); // win #3 — should trip the streak
         Assert.True(QueueContainsMessage(queued, BannerId.Gameplay3RematchWinsInARowAgainstTheSameOpponent));
@@ -355,12 +377,15 @@ public class HoneycombBannerTriggerTests
     {
         var vm = new HoneycombViewModel(isHeadless: true);
         vm.StartNewMatch();
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         ForceLossViaFortressBoard(vm); // loss #1
         vm.RematchGame();
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         ForceLossViaFortressBoard(vm); // loss #2
         vm.RematchGame();
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         var queued = CaptureBanners(vm, () => ForceLossViaFortressBoard(vm)); // loss #3 — should trip the streak
         Assert.True(QueueContainsMessage(queued, BannerId.Gameplay3RematchLossesInARowAgainstTheSameOpponent));
