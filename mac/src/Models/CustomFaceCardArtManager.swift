@@ -72,12 +72,24 @@ public final class CustomFaceCardArtManager {
         preloadImages()
     }
 
-    private func scaled(_ source: NSImage, to size: NSSize) -> NSImage {
-        let result = NSImage(size: size)
+    // Aspect-fit within maxSize (not a forced stretch to it) — every renderer that
+    // displays this cached copy (the editor, the tile grid, CardView) uses
+    // .aspectRatio(contentMode: .fit), which assumes an undistorted source image.
+    // Force-stretching to an exact 154×244 here silently squished/distorted any upload
+    // whose own aspect ratio didn't already match 154:244, which is what made the
+    // editor's "before saving" preview (built from the raw, un-cached NSImage) look
+    // subtly different from every later render of the same art (all of which go through
+    // this cache).
+    private func scaled(_ source: NSImage, to maxSize: NSSize) -> NSImage {
+        let sourceSize = source.size
+        guard sourceSize.width > 0, sourceSize.height > 0 else { return source }
+        let scale = min(maxSize.width / sourceSize.width, maxSize.height / sourceSize.height)
+        let targetSize = NSSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
+        let result = NSImage(size: targetSize)
         result.lockFocus()
         NSGraphicsContext.current?.imageInterpolation = .high
-        source.draw(in: NSRect(origin: .zero, size: size),
-                    from: NSRect(origin: .zero, size: source.size),
+        source.draw(in: NSRect(origin: .zero, size: targetSize),
+                    from: NSRect(origin: .zero, size: sourceSize),
                     operation: .copy, fraction: 1.0)
         result.unlockFocus()
         return result

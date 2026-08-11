@@ -100,6 +100,7 @@ struct CustomCardBackEditorView: View {
     @State private var offsetX: Double
     @State private var offsetY: Double
     @State private var showError = false
+    @State private var errorMessage = "Name cannot be empty or already exist!"
 
     init(image: NSImage, existingCardBack: CustomCardBack? = nil,
          onSave: @escaping (String, Double, Double, Double) -> Void,
@@ -209,7 +210,7 @@ struct CustomCardBackEditorView: View {
             }
 
             if showError {
-                Text("Name cannot be empty or already exist!")
+                Text(errorMessage)
                     .font(.display(12))
                     .foregroundColor(.red)
             }
@@ -221,14 +222,22 @@ struct CustomCardBackEditorView: View {
 
                 themedEditorButton("Save", tint: .primary, shortcut: .defaultAction) {
                     let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let isRenaming = existingCardBack != nil && cleanedName != existingCardBack?.name
-                    if !isRenaming {
+                    // Previously this only ran the empty/uniqueness checks when
+                    // existingCardBack != nil AND the name had changed — for a brand
+                    // new import (existingCardBack always nil) that condition was
+                    // always false, so Save silently called onSave("") with no
+                    // validation and no feedback at all when the field was left blank.
+                    let nameUnchangedFromExisting = existingCardBack != nil && cleanedName == existingCardBack?.name
+                    if nameUnchangedFromExisting {
                         // Re-editing the same deck's scale/offset — the name is locked
                         // (see the field's .disabled above), so no uniqueness check needed.
                         onSave(cleanedName, scale, offsetX, offsetY)
-                    } else if cleanedName.isEmpty ||
-                        CustomCardBackManager.shared.defaultThemes.contains(cleanedName) ||
+                    } else if cleanedName.isEmpty {
+                        errorMessage = "Add a name to save."
+                        showError = true
+                    } else if CustomCardBackManager.shared.defaultThemes.contains(cleanedName) ||
                         CustomCardBackManager.shared.customCardBacks.contains(where: { $0.name == cleanedName }) {
+                        errorMessage = "Name cannot be empty or already exist!"
                         showError = true
                     } else {
                         onSave(cleanedName, scale, offsetX, offsetY)

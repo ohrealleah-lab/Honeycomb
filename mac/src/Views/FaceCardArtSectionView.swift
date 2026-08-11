@@ -28,14 +28,25 @@ struct FaceCardSlotTileView: View {
 
             Group {
                 if let art, let img = CustomFaceCardArtManager.shared.image(for: art) {
-                    Image(nsImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: Self.artWidth, height: Self.artHeight)
-                        .scaleEffect(CGFloat(art.scale))
-                        .offset(x: CGFloat(art.offsetX) * (Self.tileWidth / 128.0),
-                                y: CGFloat(art.offsetY) * (Self.tileWidth / 128.0))
-                        .opacity(art.isEnabled ? 1.0 : 0.3)
+                    // Inner clip window (~1.12x the art's own base frame, matching
+                    // CustomFaceArtImageView's artWidth/clipWidth ratio) — without this,
+                    // the only clip boundary was the outer tileWidth×tileHeight frame
+                    // below (the whole tile), so a scaleEffect-inflated image had room
+                    // to expand and fill nearly the entire card before hitting anything,
+                    // instead of being contained the same tight amount gameplay/the
+                    // editor now are.
+                    ZStack {
+                        Image(nsImage: img)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: Self.artWidth, height: Self.artHeight)
+                            .scaleEffect(CGFloat(art.scale))
+                            .offset(x: CGFloat(art.offsetX) * (Self.tileWidth / 128.0),
+                                    y: CGFloat(art.offsetY) * (Self.tileWidth / 128.0))
+                    }
+                    .frame(width: Self.artClipWidth, height: Self.artClipHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .opacity(art.isEnabled ? 1.0 : 0.3)
                 } else {
                     // "+" hint — clearer click affordance than a flat centered suit
                     // watermark (which read as a rendering glitch, not an empty state),
@@ -69,12 +80,22 @@ struct FaceCardSlotTileView: View {
         .shadow(color: Color.black.opacity(0.15), radius: 1.5, x: 0, y: 1.5)
     }
 
-    // Sized up from the original 60×85 (and its 44×70 art window) so the grid fills
-    // more of the panel — same proportions, scaled by ~1.37x.
+    // Sized up from the original 60×85 so the grid fills more of the panel.
     static let tileWidth: CGFloat = 82
     static let tileHeight: CGFloat = 115
-    static let artWidth: CGFloat = 60
-    static let artHeight: CGFloat = 96
+    // Must be tileWidth/tileHeight scaled by the SAME ratio FaceCardArtEditorView's art
+    // frame (66×105 — see its own comment for why not the original 77×122) has to a
+    // full card (CardDimensions 128×181) — otherwise a given scale/offset value set in
+    // the editor renders at a different, more "zoomed in" apparent size here than what
+    // the editor actually showed, since scaleEffect/offset are applied relative to this
+    // frame, not to the tile as a whole.
+    static let artWidth: CGFloat = tileWidth * 66.0 / CardDimensions.width
+    static let artHeight: CGFloat = tileHeight * 105.0 / CardDimensions.height
+    // The actual containment boundary for scaled/offset art — see the inner ZStack's
+    // comment above. Same 74×119-to-128×181 ratio CustomFaceArtImageView's
+    // clipWidth/clipHeight use, scaled down to tile size.
+    static let artClipWidth: CGFloat = tileWidth * 74.0 / CardDimensions.width
+    static let artClipHeight: CGFloat = tileHeight * 119.0 / CardDimensions.height
 
     private var cornerIndex: some View {
         VStack(spacing: 0) {
@@ -131,6 +152,23 @@ struct FaceCardArtEditorView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10).fill(Color.white).frame(width: CardDimensions.width, height: CardDimensions.height).shadow(radius: 4)
 
+                    // Custom art in center area — drawn before the corner indices below
+                    // (not after) so they always stay legible on top of it, matching
+                    // CardFrontView/CustomFaceArtImageView's real gameplay z-order.
+                    // 66×105/74×119 (not 77×122/86×138) — sized down from the original
+                    // so the art's own clipped edge doesn't crowd the corner indices,
+                    // kept in sync with CustomFaceArtImageView's exact numbers.
+                    ZStack {
+                        Image(nsImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 66, height: 105)
+                            .scaleEffect(CGFloat(scale))
+                            .offset(x: CGFloat(offsetX), y: CGFloat(offsetY))
+                    }
+                    .frame(width: 74, height: 119)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
                     // Corner indices
                     HStack(alignment: .center, spacing: 1) {
                         Text(slot.rankLabel).font(.system(size: 17, weight: .bold))
@@ -148,18 +186,6 @@ struct FaceCardArtEditorView: View {
                     .rotationEffect(.degrees(180))
                     .padding(.trailing, 8).padding(.bottom, 8)
                     .frame(width: CardDimensions.width, height: CardDimensions.height, alignment: .bottomTrailing)
-
-                    // Custom art in center area
-                    ZStack {
-                        Image(nsImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 77, height: 122)
-                            .scaleEffect(CGFloat(scale))
-                            .offset(x: CGFloat(offsetX), y: CGFloat(offsetY))
-                    }
-                    .frame(width: 86, height: 138)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
 
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.black.opacity(0.85), lineWidth: 0.75)

@@ -42,9 +42,9 @@ struct ThemesOptionsView: View {
 
     // Below this width, the two settings columns (390 + 410 + 32 spacing + 48 padding =
     // 880 exact need) stack vertically instead of sitting side-by-side, so the panel
-    // never gets clipped by a game window narrower than that — plus the ~284pt the
+    // never gets clipped by a game window narrower than that — plus the ~344pt the
     // persistent Themes sidebar always occupies alongside them.
-    private static let sideBySideMinWidth: CGFloat = 1150
+    private static let sideBySideMinWidth: CGFloat = 1210
 
     @State private var contentHeight: CGFloat = 0
     // The 16-slot face card grid and the 3-mock-card color preview both need full panel
@@ -146,9 +146,9 @@ struct ThemesOptionsView: View {
             }
         }
         // 880 (leftColumn 390 + spacing 32 + rightColumn 410 + 48 padding, the panel's
-        // pre-sidebar exact-fit width) + 284 (sidebar 240 + its own leading/trailing
-        // padding) = 1164, rounded up slightly for breathing room.
-        .frame(maxWidth: 1180)
+        // pre-sidebar exact-fit width) + 344 (sidebar 300 + its own leading/trailing
+        // padding) = 1224, rounded up slightly for breathing room.
+        .frame(maxWidth: 1240)
         .background(
             Color(NSColor.windowBackgroundColor)
                 .overlay(Color.primary.opacity(0.04))
@@ -276,23 +276,19 @@ struct ThemesOptionsView: View {
         return max(300, min(availableHeight - 140, screenHeight - 160))
     }
 
-    // Fixed-width persistent column, own tinted/bordered background so it reads as a
-    // distinct panel instead of blending into the settings — same visual role as
-    // Windows' #ECECEC sidebar `Border`. Own ScrollView (rather than relying on the
-    // caller to cap it) so a long theme list scrolls independently of the settings
-    // column beside it, matching Windows' "stays visible as a picker while the rest of
-    // the panel scrolls independently" behavior.
+    // Fixed-width persistent column. No ScrollView/background chrome of its own —
+    // ThemesSectionView's own list box already provides both (it fills whatever height
+    // this frame constrains it to, and scrolls its own rows independently), so wrapping
+    // it in another ScrollView here just prevented that inner box from ever actually
+    // expanding to fill the sidebar (ScrollView content always sizes to itself), which
+    // is what left a visible gap of bare sidebar background below a short theme list —
+    // a box nested inside an emptier box instead of one filled panel.
     private var themesSidebar: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            ThemesSectionView(isOptionsPresented: $isOptionsPresented)
-                .padding(10)
-        }
-        .frame(width: 240)
-        .frame(maxHeight: maxPanelContentHeight)
-        .background(Color.primary.opacity(0.05))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.15), lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .padding(.trailing, 20)
+        ThemesSectionView()
+            .padding(10)
+            .frame(width: 300)
+            .frame(maxHeight: maxPanelContentHeight)
+            .padding(.trailing, 20)
     }
 
     private var leftColumn: some View {

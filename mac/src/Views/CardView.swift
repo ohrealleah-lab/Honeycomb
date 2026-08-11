@@ -82,6 +82,14 @@ struct CardFrontView: View {
     
     var body: some View {
         ZStack {
+            // Center Suit Icon(s) (Larger, takes up most of card) — drawn first (below
+            // the corner indices) so custom face art, which fills its 86×138 window
+            // edge-to-edge unlike the built-in decorative glyphs, can never visually
+            // cover the rank/suit corner indices. Real cards keep their indices legible
+            // over the illustration the same way.
+            CardCenterSuitView(suit: card.suit, rank: card.rank, color: color)
+                .frame(width: 86, height: 138)
+
             // Top Left Index (Horizontal, decreased size)
             HStack(alignment: .center, spacing: 1) {
                 Text(card.rankString)
@@ -93,11 +101,7 @@ struct CardFrontView: View {
             .padding(.leading, 8)
             .padding(.top, 8)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            
-            // Center Suit Icon(s) (Larger, takes up most of card)
-            CardCenterSuitView(suit: card.suit, rank: card.rank, color: color)
-                .frame(width: 86, height: 138)
-            
+
             // Bottom Right Index (Horizontal, inverted, decreased size)
             HStack(alignment: .center, spacing: 1) {
                 Text(card.rankString)
@@ -410,17 +414,29 @@ struct CardBackView: View {
 struct CustomFaceArtImageView: View {
     let art: CustomFaceArt
 
+    // Shrunk ~14% from the original 77×122/86×138 — that size put the art's clipped
+    // edge close enough to the corner rank/suit indices (8pt inset from the card's own
+    // edge) that full-bleed custom art visually crowded right up against them even
+    // after the corner indices were moved to draw on top (z-order alone kept them
+    // legible, but didn't give any breathing room). Keep FaceCardArtEditorView's
+    // preview (FaceCardArtSectionView.swift) and the tile grid's artWidth/artHeight in
+    // sync with these exact numbers, or the editor/tile stop matching gameplay.
+    private static let artWidth: CGFloat = 66
+    private static let artHeight: CGFloat = 105
+    private static let clipWidth: CGFloat = 74
+    private static let clipHeight: CGFloat = 119
+
     var body: some View {
         if let img = CustomFaceCardArtManager.shared.image(for: art) {
             ZStack {
                 Image(nsImage: img)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 77, height: 122)
+                    .frame(width: Self.artWidth, height: Self.artHeight)
                     .scaleEffect(CGFloat(art.scale))
                     .offset(x: CGFloat(art.offsetX), y: CGFloat(art.offsetY))
             }
-            .frame(width: 86, height: 138)
+            .frame(width: Self.clipWidth, height: Self.clipHeight)
             .clipShape(RoundedRectangle(cornerRadius: 4))
         }
     }

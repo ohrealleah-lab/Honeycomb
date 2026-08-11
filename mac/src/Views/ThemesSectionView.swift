@@ -4,8 +4,6 @@ import SwiftUI
 /// Reads the live app-wide theme straight off AppCoordinator — theme fields
 /// are shared and live-previewed there, so there's nothing pending to snapshot.
 struct ThemesSectionView: View {
-    @Binding var isOptionsPresented: Bool
-
     @Environment(AppCoordinator.self) private var coordinator
 
     @State private var showingSaveRow = false
@@ -62,24 +60,35 @@ struct ThemesSectionView: View {
                 }
             }
 
-            if manager.themes.isEmpty {
-                Text("No saved themes yet.")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 4)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(manager.themes) { theme in
-                        themeRow(theme)
-                        if theme.id != manager.themes.last?.id {
-                            Divider()
+            // Fills whatever vertical room the caller (ThemesOptionsView's sidebar)
+            // gives this view, rather than shrink-wrapping to content height — that
+            // used to leave the list box sitting at the top of the sidebar with a big
+            // empty gap of the sidebar's own background showing below it, reading as a
+            // box nested inside an emptier box instead of one filled panel.
+            Group {
+                if manager.themes.isEmpty {
+                    Text("No saved themes yet.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                } else {
+                    ScrollView(.vertical, showsIndicators: true) {
+                        VStack(spacing: 0) {
+                            ForEach(manager.themes) { theme in
+                                themeRow(theme)
+                                if theme.id != manager.themes.last?.id {
+                                    Divider()
+                                }
+                            }
                         }
                     }
                 }
-                .background(Color.primary.opacity(0.04))
-                .cornerRadius(6)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.12), lineWidth: 1))
             }
+            .background(Color.primary.opacity(0.04))
+            .cornerRadius(6)
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.12), lineWidth: 1))
+            .frame(maxHeight: .infinity)
         }
         .alert("Delete Theme", isPresented: Binding(
             get: { themeToDelete != nil },
@@ -108,13 +117,22 @@ struct ThemesSectionView: View {
     // every live edit (including face art, via liveSaveActiveTheme()) is continuously
     // captured into whichever theme is active, so there's nothing left to lose — Apply
     // just switches which already-saved snapshot is current.
+    // Same felt-color resolution the swatch already used — factored out so the active
+    // row's background tint (below) can share it instead of duplicating the logic.
+    private func themeColor(_ theme: SoliBeeTheme) -> Color {
+        theme.feltColor == .custom
+            ? Color(red: theme.customFeltRed, green: theme.customFeltGreen, blue: theme.customFeltBlue)
+            : theme.feltColor.primaryColor
+    }
+
+    // Back to one row now that the sidebar's wider (300pt, up from 240pt) — there's
+    // enough room for the name, Apply/Active, and trash to all sit together again
+    // without truncating names like "Honeycomb".
     private func themeRow(_ theme: SoliBeeTheme) -> some View {
         HStack(spacing: 10) {
             // Colour swatch
             RoundedRectangle(cornerRadius: 3)
-                .fill(theme.feltColor == .custom
-                      ? Color(red: theme.customFeltRed, green: theme.customFeltGreen, blue: theme.customFeltBlue)
-                      : theme.feltColor.primaryColor)
+                .fill(themeColor(theme))
                 .frame(width: 18, height: 18)
                 .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.primary.opacity(0.2), lineWidth: 0.5))
 
@@ -157,7 +175,6 @@ struct ThemesSectionView: View {
             } else {
                 Button("Apply") {
                     coordinator.applyTheme(theme)
-                    isOptionsPresented = false
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
@@ -176,6 +193,11 @@ struct ThemesSectionView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
+        // Tints the active row with its own theme's felt/background color — a stronger,
+        // more immediate "this one" signal than the small swatch + "Active" caption
+        // alone, at a low enough opacity that the row's text stays legible over any
+        // theme color, light or dark.
+        .background(manager.activeThemeId == theme.id ? themeColor(theme).opacity(0.25) : Color.clear)
     }
 
     private func saveTheme() {
