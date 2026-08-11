@@ -14,6 +14,10 @@ struct ThemesSectionView: View {
     @State private var renameText: String = ""
     @State private var renameError: String? = nil
     @FocusState private var renameFieldFocused: Bool
+    // Forces a re-render once CustomBackgroundManager finishes async-sampling a
+    // wallpaper's dominant color (see coordinator.currentAccentTint), same pattern
+    // BackgroundLayerView already uses for its own async image load.
+    @State private var accentColorTrigger: UUID = UUID()
 
     private var manager: ThemeManager { ThemeManager.shared }
 
@@ -110,6 +114,13 @@ struct ThemesSectionView: View {
         } message: {
             Text(renameError ?? "")
         }
+        // Merely changing this @State (not .id()-ing the view) is enough to make
+        // SwiftUI re-evaluate body — an .id() here would also reset renamingThemeId/
+        // renameText, discarding an in-progress rename if a sample happens to land
+        // mid-edit.
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CustomBackgroundLoaded"))) { _ in
+            accentColorTrigger = UUID()
+        }
     }
 
     // Applying a theme used to warn about losing custom face art, back when Apply/Update
@@ -130,9 +141,14 @@ struct ThemesSectionView: View {
     // without truncating names like "Honeycomb".
     private func themeRow(_ theme: SoliBeeTheme) -> some View {
         HStack(spacing: 10) {
-            // Colour swatch
+            // Colour swatch — the active theme's swatch uses currentAccentTint (same as
+            // the row background below) so it reflects a sampled wallpaper color too,
+            // not just the felt-color fallback; other rows keep the plain per-theme
+            // felt-color swatch, since sampling every saved theme's own wallpaper here
+            // would mean resolving each one's dominant color, not just the live one
+            // AppCoordinator is already synced to.
             RoundedRectangle(cornerRadius: 3)
-                .fill(themeColor(theme))
+                .fill(manager.activeThemeId == theme.id ? coordinator.currentAccentTint : themeColor(theme))
                 .frame(width: 18, height: 18)
                 .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.primary.opacity(0.2), lineWidth: 0.5))
 
@@ -196,8 +212,12 @@ struct ThemesSectionView: View {
         // Tints the active row with its own theme's felt/background color — a stronger,
         // more immediate "this one" signal than the small swatch + "Active" caption
         // alone, at a low enough opacity that the row's text stays legible over any
-        // theme color, light or dark.
-        .background(manager.activeThemeId == theme.id ? themeColor(theme).opacity(0.25) : Color.clear)
+        // theme color, light or dark. Uses currentAccentTint (not themeColor(theme))
+        // specifically for the active row — when the active theme's background is a
+        // wallpaper, coordinator is already live-synced to it, so this picks up the
+        // wallpaper's sampled dominant color instead of a felt color that may have
+        // nothing to do with what's actually on screen.
+        .background(manager.activeThemeId == theme.id ? coordinator.currentAccentTint.opacity(0.25) : Color.clear)
     }
 
     private func saveTheme() {

@@ -12,6 +12,12 @@ public struct HoneycombDecksView: View {
     @State private var editingDeckCards: [Int] = []
     @State private var validationError: String? = nil
     @State private var showStartOverConfirmation = false
+    // Forces a re-render once CustomBackgroundManager finishes async-sampling a
+    // wallpaper's dominant color (see coordinator.currentAccentTint), same pattern
+    // BackgroundLayerView already uses for its own async image load. Merely changing
+    // this @State is enough to make SwiftUI re-evaluate body — not .id()-ing the view,
+    // which would also reset in-progress state like the deck-name TextField/filters.
+    @State private var accentColorTrigger: UUID = UUID()
 
     // Card Bank filter — nil means "All".
     @State private var filterStar: Int? = nil
@@ -163,15 +169,20 @@ public struct HoneycombDecksView: View {
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
 
+                        // startOverPanel now scrolls along with the deck list instead of
+                        // sitting pinned below it — pinned, it ate into the ScrollView's
+                        // own height and cut off the last deck row before you could even
+                        // scroll to it.
                         ScrollView {
                             VStack(spacing: 10) {
                                 ForEach(0..<profile.savedDecks.count, id: \.self) { index in
                                     savedDeckRow(index: index)
                                 }
+
+                                startOverPanel
                             }
                         }
-
-                        startOverPanel
+                        .frame(maxHeight: .infinity)
                     }
                     .padding()
                     .frame(width: leftWidth, alignment: .top)
@@ -242,6 +253,9 @@ public struct HoneycombDecksView: View {
         )) { wrapper in
             deckBuilder(wrapper: wrapper)
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CustomBackgroundLoaded"))) { _ in
+            accentColorTrigger = UUID()
+        }
     }
 
     private var startOverPanel: some View {
@@ -307,14 +321,16 @@ public struct HoneycombDecksView: View {
             }
         }
         .padding()
-        // Active deck gets the same felt-color background/border treatment as the
-        // Deck Builder's "Your Deck" tray, instead of the same flat black tint every
-        // deck (active or not) previously used — matches the Windows port.
-        .background(activeDeckIndex == index ? coordinator.currentFeltColor.opacity(0.5) : Color.black.opacity(0.1))
+        // Active deck gets the same accent background/border treatment as the Deck
+        // Builder's "Your Deck" tray, instead of the same flat black tint every deck
+        // (active or not) previously used — matches the Windows port. currentAccentTint
+        // (not currentFeltColor) so an active wallpaper theme's sampled dominant color
+        // shows here too, not just a felt color that may be unrelated to what's active.
+        .background(activeDeckIndex == index ? coordinator.currentAccentTint.opacity(0.5) : Color.black.opacity(0.1))
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(activeDeckIndex == index ? coordinator.currentFeltColor : .clear, lineWidth: 2)
+                .strokeBorder(activeDeckIndex == index ? coordinator.currentAccentTint : .clear, lineWidth: 2)
         )
     }
 
@@ -425,11 +441,11 @@ public struct HoneycombDecksView: View {
                 }
             }
             .padding()
-            // App-wide felt color (AppCoordinator.currentFeltColor already resolves
-            // .custom vs the built-in theme presets) instead of a fixed blue tint, so
-            // the tray reads as "your active area" against the felt rather than
-            // blending into the rest of the sheet.
-            .background(coordinator.currentFeltColor.opacity(0.5))
+            // App-wide accent tint (AppCoordinator.currentAccentTint — felt color, or a
+            // wallpaper theme's sampled dominant color when one's active) instead of a
+            // fixed blue tint, so the tray reads as "your active area" against whatever
+            // the active theme actually looks like, rather than blending into the sheet.
+            .background(coordinator.currentAccentTint.opacity(0.5))
             .cornerRadius(12)
 
             // Card Bank for Selection — shares the same suit/star filter as the main view.

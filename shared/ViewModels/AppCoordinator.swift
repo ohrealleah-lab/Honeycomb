@@ -245,6 +245,22 @@ public final class AppCoordinator {
         }
         return Color(red: customFeltRed, green: customFeltGreen, blue: customFeltBlue)
     }
+
+    #if canImport(AppKit)
+    // What "this is the active/selected thing" UI tints (a saved theme's row, a saved
+    // deck's row, the deck builder's tray) should use for their opaque background —
+    // currentFeltColor when the active background is plain felt, but the wallpaper's
+    // own sampled average color when a custom background image is active, since the
+    // felt color setting is otherwise unrelated to what's actually showing on screen.
+    // Returns currentFeltColor (not nil) until the async sample finishes, same
+    // graceful-fallback pattern CustomBackgroundManager.image(for:) already uses.
+    public var currentAccentTint: Color {
+        guard let background = activeCustomBackground,
+              let sampled = CustomBackgroundManager.shared.dominantColor(for: background.relativePath)
+        else { return currentFeltColor }
+        return sampled
+    }
+    #endif
     // The NSWindow currently hosting the active game mode's view, kept up to date
     // by each game view's WindowAccessor so window-level actions (e.g. "make current
     // window size default") can be triggered from menu commands that don't own a window.

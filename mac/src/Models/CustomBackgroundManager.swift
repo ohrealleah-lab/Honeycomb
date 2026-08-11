@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import SwiftUI
 import Observation
+import CoreImage
 
 public struct CustomBackground: Codable, Identifiable, Equatable {
     public var id: UUID
@@ -48,6 +49,11 @@ public final class CustomBackgroundManager {
     @ObservationIgnored private var imageCache: [String: NSImage] = [:]
     @ObservationIgnored private var thumbnailCache: [String: NSImage] = [:]
     @ObservationIgnored private var loadsInFlight: Set<String> = []
+    // Sampled once per wallpaper (not recomputed per-frame) — used wherever a solid
+    // "opaque background" tint needs to represent an active wallpaper theme instead of
+    // a plain felt color (see AppCoordinator.currentAccentTint).
+    @ObservationIgnored private var dominantColorCache: [String: Color] = [:]
+    @ObservationIgnored private var dominantColorLoadsInFlight: Set<String> = []
 
     public var imageLoadTick: Int = 0
 
@@ -229,6 +235,52 @@ public final class CustomBackgroundManager {
     public func invalidateCache(for relativePath: String) {
         imageCache.removeValue(forKey: relativePath)
         thumbnailCache.removeValue(forKey: relativePath)
+        dominantColorCache.removeValue(forKey: relativePath)
+    }
+
+    // Average color of the wallpaper (via CIAreaAverage — a fast, well-established
+    // "dominant color" approximation, not a true color-cluster analysis) so UI
+    // elsewhere can tint an "opaque background" indicator to match a wallpaper theme
+    // instead of falling back to a plain felt color that may have nothing to do with
+    // what's actually on screen. Same nil-until-cached, async-then-cache pattern as
+    // image(for:) — returns nil (caller falls back to felt color) until the sample is
+    // ready, then posts the same CustomBackgroundLoaded notification image(for:) uses
+    // so already-rendered views (BackgroundLayerView's loadTrigger pattern) pick it up.
+    public func dominantColor(for relativePath: String) -> Color? {
+        if let cached = dominantColorCache[relativePath] { return cached }
+        // Needs the already-decoded image; if it's not cached yet, image(for:) is
+        // already fetching it (or about to be asked to) — bail for now, this'll
+        // resolve on the next CustomBackgroundLoaded-triggered re-render.
+        guard let source = imageCache[relativePath] else { return nil }
+        guard !dominantColorLoadsInFlight.contains(relativePath) else { return nil }
+        dominantColorLoadsInFlight.insert(relativePath)
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let sampled = Self.averageColor(of: source)
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let sampled { self.dominantColorCache[relativePath] = sampled }
+                self.dominantColorLoadsInFlight.remove(relativePath)
+                NotificationCenter.default.post(name: NSNotification.Name("CustomBackgroundLoaded"), object: nil)
+            }
+        }
+        return nil
+    }
+
+    private static func averageColor(of image: NSImage) -> Color? {
+        guard let tiffData = image.tiffRepresentation, let ciImage = CIImage(data: tiffData) else { return nil }
+        let extentVector = CIVector(x: ciImage.extent.origin.x, y: ciImage.extent.origin.y,
+                                     z: ciImage.extent.size.width, w: ciImage.extent.size.height)
+        guard let filter = CIFilter(name: "CIAreaAverage", parameters: [
+            kCIInputImageKey: ciImage, kCIInputExtentKey: extentVector
+        ]), let outputImage = filter.outputImage else { return nil }
+
+        var pixel = [UInt8](repeating: 0, count: 4)
+        let context = CIContext(options: [.workingColorSpace: NSNull()])
+        context.render(outputImage, toBitmap: &pixel, rowBytes: 4,
+                        bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                        format: .RGBA8, colorSpace: nil)
+        return Color(red: Double(pixel[0]) / 255.0, green: Double(pixel[1]) / 255.0, blue: Double(pixel[2]) / 255.0)
     }
 
     /// Warms the image cache. Any paths in `priorityPaths` are loaded
