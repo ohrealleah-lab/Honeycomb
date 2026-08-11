@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -59,6 +60,29 @@ public partial class ManageDecksView : UserControl
             FeltColorTheme.Desert    => "#C2967A",
             _                        => "#008000"
         };
+    }
+
+    // When a custom background image is active (instead of a felt color), the active-
+    // deck tint below is sampled from that image instead of falling back to whatever
+    // felt color happens to be set — same idea as PreferencesView.SwatchColorForTheme.
+    private static string BackgroundsDir => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        AppDataMigration.FolderName, "Backgrounds");
+
+    private static Color CurrentSwatchColor()
+    {
+        var options = SettingsService.LoadOptions();
+        if (!string.IsNullOrEmpty(options.BackgroundName))
+        {
+            var bg = options.CustomBackgrounds.Find(b => b.Name == options.BackgroundName);
+            if (bg != null && PathSafety.IsSafeFileName(bg.FileName))
+            {
+                var path = Path.Combine(BackgroundsDir, bg.FileName);
+                if (File.Exists(path)) return CardView.SampleDominantColor(path);
+            }
+        }
+
+        try { return Color.Parse(CurrentFeltHex()); } catch { return Colors.Green; }
     }
 
     private void LoadBank()
@@ -200,16 +224,17 @@ public partial class ManageDecksView : UserControl
             header.Children.Add(btnRow);
 
             // ── Card: outer border ──
-            // Active deck uses the current felt color (light tint for the fill, full
-            // strength for the border) instead of a fixed green, matching the same
-            // felt-color treatment as the Deck Builder's "Your Deck" tray.
+            // Active deck uses the current felt/background swatch color (light tint for
+            // the fill, full strength for the border) instead of a fixed green, matching
+            // the same treatment as the Deck Builder's "Your Deck" tray.
+            var activeSwatch = isActive ? CurrentSwatchColor() : default;
             var card = new Border
             {
                 Background    = isActive
-                    ? new SolidColorBrush(Color.Parse(CurrentFeltHex())) { Opacity = 0.5 }
+                    ? new SolidColorBrush(activeSwatch) { Opacity = 0.5 }
                     : new SolidColorBrush(Color.Parse("#EFEFEF")),
                 CornerRadius  = new Avalonia.CornerRadius(10),
-                BorderBrush   = new SolidColorBrush(Color.Parse(isActive ? CurrentFeltHex() : "#D0D0D0")),
+                BorderBrush   = new SolidColorBrush(isActive ? activeSwatch : Color.Parse("#D0D0D0")),
                 BorderThickness = new Avalonia.Thickness(isActive ? 2 : 1),
                 Padding       = new Avalonia.Thickness(12, 10),
                 Margin        = new Avalonia.Thickness(0, 0, 0, 0),

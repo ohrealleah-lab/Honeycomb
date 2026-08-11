@@ -15,7 +15,6 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Messaging;
-using SkiaSharp;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -150,6 +149,20 @@ public partial class PreferencesView : UserControl
 
     // ── Themes panel navigation ───────────────────────────────────────────────
 
+    // Lets MainWindow host a single "‹ Back" chip in the Preferences header row
+    // (shared across Themes/Face Cards/Card Colors) instead of each sub-panel
+    // drawing its own, so it reads as part of the dialog's header, not the content.
+    public event EventHandler? SubPanelVisibilityChanged;
+
+    public bool IsSubPanelOpen => ThemesPanel.IsVisible || FaceCardsPanel.IsVisible || CardColorsPanel.IsVisible;
+
+    public void GoBack()
+    {
+        if (CardColorsPanel.IsVisible) CloseCardColorsPanel_Click(this, new RoutedEventArgs());
+        else if (FaceCardsPanel.IsVisible) CloseFaceCards_Click(this, new RoutedEventArgs());
+        else if (ThemesPanel.IsVisible) CloseThemes_Click(this, new RoutedEventArgs());
+    }
+
     // Video Poker/Blackjack's top-level DataContext is their own separate Options
     // model, but Visual Themes (felt, card back, face art, colors) is shared
     // GameOptions state that already propagates into both via OptionsChangedMessage —
@@ -181,18 +194,21 @@ public partial class PreferencesView : UserControl
             _initializing = false;
             RefreshThemeList();
         }
+        SubPanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void OpenFaceCards_Click(object? sender, RoutedEventArgs e)
     {
         ThemesPanel.IsVisible    = false;
         FaceCardsPanel.IsVisible = true;
+        SubPanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void CloseFaceCards_Click(object? sender, RoutedEventArgs e)
     {
         FaceCardsPanel.IsVisible = false;
         ThemesPanel.IsVisible    = true;
+        SubPanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private bool _cardColorPreviewBuilt;
@@ -210,12 +226,14 @@ public partial class PreferencesView : UserControl
 
         ThemesPanel.IsVisible     = false;
         CardColorsPanel.IsVisible = true;
+        SubPanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void CloseCardColorsPanel_Click(object? sender, RoutedEventArgs e)
     {
         CardColorsPanel.IsVisible = false;
         ThemesPanel.IsVisible     = true;
+        SubPanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // Builds the 3 mock cards once and reuses them for the panel's lifetime — CardView
@@ -251,21 +269,23 @@ public partial class PreferencesView : UserControl
     {
         if (DataContext is not GameOptions options || CardColorPreviewBackdrop == null) return;
 
-        Color backdropColor;
-        if (string.IsNullOrEmpty(options.BackgroundName))
+        // Shows the real configured background image directly, same as the hero
+        // preview (RefreshDeckBackgroundPreview) — no more dominant-color sampling.
+        var bmp = LoadBackgroundBitmapForPreview(options);
+        if (bmp != null)
         {
-            backdropColor = Color.TryParse(FeltHexForOptions(options), out var felt) ? felt : Colors.DarkGreen;
+            CardColorPreviewImage.Source = bmp;
+            CardColorPreviewImage.IsVisible = true;
+            CardColorPreviewBackdrop.Background = null;
         }
         else
         {
-            var bg = options.CustomBackgrounds.Find(b => b.Name == options.BackgroundName);
-            var path = bg != null && PathSafety.IsSafeFileName(bg.FileName)
-                ? Path.Combine(BackgroundsDir, bg.FileName)
-                : null;
-            backdropColor = path != null && File.Exists(path) ? SampleDominantColor(path) : Colors.Gray;
+            CardColorPreviewImage.IsVisible = false;
+            CardColorPreviewImage.Source = null;
+            CardColorPreviewBackdrop.Background = Color.TryParse(FeltHexForOptions(options), out var felt)
+                ? new SolidColorBrush(felt)
+                : new SolidColorBrush(Colors.DarkGreen);
         }
-
-        CardColorPreviewBackdrop.Background = new SolidColorBrush(backdropColor);
 
         if (_cardColorPreviewRingBrush != null)
             _cardColorPreviewRingBrush.Color = CardView._hintHighlightColor;
@@ -281,33 +301,6 @@ public partial class PreferencesView : UserControl
         FeltColorTheme.Custom    => options.CustomFeltColorHex,
         _                        => "#008000"
     };
-
-    // Downsamples the background image to a small thumbnail and averages its pixels —
-    // cheap enough to run on every backdrop refresh (user-paced edits, not a hot path).
-    private static Color SampleDominantColor(string filePath)
-    {
-        try
-        {
-            using var bitmap = SKBitmap.Decode(filePath);
-            if (bitmap == null) return Colors.Gray;
-            using var small = bitmap.Resize(new SKImageInfo(16, 16), SKFilterQuality.Low);
-            if (small == null) return Colors.Gray;
-
-            long r = 0, g = 0, b = 0;
-            int count = small.Width * small.Height;
-            for (int y = 0; y < small.Height; y++)
-            {
-                for (int x = 0; x < small.Width; x++)
-                {
-                    var px = small.GetPixel(x, y);
-                    r += px.Red; g += px.Green; b += px.Blue;
-                }
-            }
-            if (count == 0) return Colors.Gray;
-            return Color.FromRgb((byte)(r / count), (byte)(g / count), (byte)(b / count));
-        }
-        catch { return Colors.Gray; }
-    }
 
     private void CloseThemes_Click(object? sender, RoutedEventArgs e)
     {
@@ -330,6 +323,7 @@ public partial class PreferencesView : UserControl
             SyncUIFromBlackjackOptions((BlackjackOptions)DataContext);
             _initializing = false;
         }
+        SubPanelVisibilityChanged?.Invoke(this, EventArgs.Empty);
     }
 
 
@@ -677,9 +671,7 @@ public partial class PreferencesView : UserControl
     // buttons on top of the theme name at this width.
     private Border BuildThemeRow(SoliBeeTheme theme, bool isActive)
     {
-        var swatchHex = FeltSwatchHex(theme);
-        Color swatchColor;
-        try { swatchColor = Color.Parse(swatchHex); } catch { swatchColor = Colors.Green; }
+        var swatchColor = SwatchColorForTheme(theme);
 
         var swatch = new Border
         {
@@ -769,7 +761,8 @@ public partial class PreferencesView : UserControl
             Background = new SolidColorBrush(cellBackground),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(8, 6),
-            Margin = new Thickness(0, 2, 0, 2)
+            Margin = new Thickness(0, 2, 0, 2),
+            HorizontalAlignment = HorizontalAlignment.Stretch
         };
     }
 
@@ -791,6 +784,25 @@ public partial class PreferencesView : UserControl
         FeltColorTheme.Custom    => theme.CustomFeltColorHex,
         _                        => "#008000"
     };
+
+    // A theme with a custom background image shows a swatch/tint sampled from that
+    // image instead of its (otherwise unrelated, possibly stale) felt color — matches
+    // what the theme actually looks like at a glance, same idea as the hero preview
+    // showing the real background instead of a felt fallback.
+    private Color SwatchColorForTheme(SoliBeeTheme theme)
+    {
+        if (!string.IsNullOrEmpty(theme.BackgroundName) && DataContext is GameOptions options)
+        {
+            var bg = options.CustomBackgrounds.Find(b => b.Name == theme.BackgroundName);
+            if (bg != null && PathSafety.IsSafeFileName(bg.FileName))
+            {
+                var path = Path.Combine(BackgroundsDir, bg.FileName);
+                if (File.Exists(path)) return CardView.SampleDominantColor(path);
+            }
+        }
+
+        try { return Color.Parse(FeltSwatchHex(theme)); } catch { return Colors.Green; }
+    }
 
     private void SaveTheme_Click(object? sender, RoutedEventArgs e)
     {

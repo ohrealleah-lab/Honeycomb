@@ -90,6 +90,18 @@
             <Setter Property="Background" Value="#5E211A" />
             <Setter Property="Foreground" Value="White" />
         </Style>
+        <!-- Shared "‹ Back" chip used in the Preferences header row and its Themes/
+             Face Cards/Card Colors sub-panels — a light rounded pill instead of a
+             transparent link so it stays legible above colorful preview backdrops. -->
+        <Style Selector="Button.theme-back">
+            <Setter Property="Background" Value="#F2F2F2"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="Button.theme-back:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#E5E5E5"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+        </Style>
         <Style Selector="Button.light-warning">
             <Setter Property="Background" Value="#FFD60A" />
             <Setter Property="Foreground" Value="Black" />

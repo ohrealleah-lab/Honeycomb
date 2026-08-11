@@ -408,8 +408,15 @@ public partial class SpiderView : CardGameView
             var cv = new CardView { IsHitTestVisible = false };
             if (i == stackCount - 1) cv.IsAnimated = true; // top card only
             cv.Card = dummyCard;
-            Avalonia.Controls.Canvas.SetLeft(cv, 0);
-            Avalonia.Controls.Canvas.SetTop(cv, i * 4);
+            // Fan sideways, not downward — SpiderStockCanvas is fixed at a single
+            // card's own 128x181 size, so a vertical offset here made the stock pile
+            // grow taller than the foundation slots beside it (visibly poking out past
+            // their shared row bottom). A horizontal offset keeps the pile's height
+            // pinned to exactly one card, matching Mac's stock-pile thickness indicator.
+            // The front/top card (i == stackCount-1, drawn last so it's on top) sits
+            // flush left at offset 0; earlier cards peek out to its right.
+            Avalonia.Controls.Canvas.SetLeft(cv, (stackCount - 1 - i) * 4);
+            Avalonia.Controls.Canvas.SetTop(cv, 0);
             SpiderStockCanvas.Children.Add(cv);
         }
     }

@@ -15,6 +15,16 @@ public abstract class CardGameView : UserControl
     public CardView? SelectedCardView { get; set; }
     public Pile? SelectedSourcePile { get; set; }
 
+    // Manual double-click tracking, keyed by card identity rather than CardView instance —
+    // PointerReleased rebuilds the source pile's CardView children, so the second click of a
+    // double-click usually lands on a brand-new instance, making e.ClickCount/instance-bound
+    // state unreliable for detecting the gesture. Lives on the CardGameView (one per open
+    // game) rather than as a static on CardView, so it can't bleed across separate game
+    // instances/windows.
+    public DateTime LastCardClickTime;
+    public string?  LastCardClickId;
+    public Point    LastCardClickPos;
+
     // Shared by CardView/PileView's PointerPressed handlers to find the ancestor
     // CardGameView instance whose cursor/selection state they need to mutate — the
     // one tree-walk implementation both used to duplicate independently.

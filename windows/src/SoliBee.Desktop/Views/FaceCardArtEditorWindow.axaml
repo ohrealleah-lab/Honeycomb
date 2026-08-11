@@ -19,6 +19,20 @@
                     CornerRadius="10" ClipToBounds="True"
                     BoxShadow="0 2 8 0 #40000000">
                 <Grid>
+                    <!-- Center art area — drawn first (below both corner indices), and
+                         clipped to a 74x119 window (CenterGrid's 86x138 shrunk ~14%, same
+                         as CardView.axaml) so this preview matches gameplay exactly instead
+                         of letting zoomed art crowd the rank/suit corners. -->
+                    <Border Width="74" Height="119"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            ClipToBounds="True">
+                        <Image x:Name="PreviewImage"
+                               Width="60" Height="52"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                    </Border>
+
                     <!-- Top-left rank/suit -->
                     <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Left" VerticalAlignment="Top"
@@ -29,17 +43,6 @@
                         <TextBlock x:Name="PreviewSuitText"
                                    FontSize="14" VerticalAlignment="Center" />
                     </StackPanel>
-
-                    <!-- Center art area -->
-                    <Grid Width="86" Height="138"
-                          HorizontalAlignment="Center" VerticalAlignment="Center"
-                          ClipToBounds="True">
-                        <Image x:Name="PreviewImage"
-                               Width="70" Height="60"
-                               Stretch="Uniform"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               RenderOptions.BitmapInterpolationMode="MediumQuality" />
-                    </Grid>
 
                     <!-- Bottom-right rank/suit (rotated 180°) -->
                     <StackPanel Orientation="Horizontal"

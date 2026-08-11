@@ -32,6 +32,8 @@ public partial class CardView : UserControl
     }
 
     private bool _isDragging;
+    private bool _dragArmed;
+    private const double DragThresholdSq = 4; // ~2px — below this, treat as a click, not a drag
     private Point _dragStartPoint;
     private List<CardView> _draggedStack = new();
     private PileView? _sourcePileView;
@@ -41,14 +43,6 @@ public partial class CardView : UserControl
     private int _lastPipRank = -1;
     private string _lastPipSuit = "";
     private uint _lastPipArgb;
-
-    // Manual double-click tracking, keyed by card identity rather than CardView instance —
-    // PointerReleased rebuilds the source pile's CardView children, so the second click of a
-    // double-click usually lands on a brand-new instance, making e.ClickCount/instance-bound
-    // state (_sourcePileView) unreliable for detecting the gesture.
-    private static DateTime _lastCardClickTime;
-    private static string?  _lastCardClickId;
-    private static Point    _lastCardClickPos;
 
     private static readonly Dictionary<string, Bitmap> _bitmapCache = new();
     private static readonly Dictionary<string, Bitmap> _customBitmapCache = new();
@@ -85,8 +79,12 @@ public partial class CardView : UserControl
 
     private const int CardBackCacheW = 780;  // 195 * 4 (anchored to Honeycomb's larger card; solitaire's 128x181 gets even more headroom for free)
     private const int CardBackCacheH = 1104; // 276 * 4
-    private const int FaceArtCacheW  = 280; // 70 * 4
-    private const int FaceArtCacheH  = 240; // 60 * 4
+    // 74x119 (not the full 86x138 CenterGrid) — shrunk ~14%, same as Mac's
+    // CustomFaceArtImageView clipWidth/clipHeight, so the baked bitmap's own hard edge
+    // stays inset from CenterGrid's true bounds instead of crowding the corner rank/suit
+    // indices. Centered inside CenterGrid at display time for the padding margin.
+    private const int FaceArtCacheW  = 296; // 74 * 4
+    private const int FaceArtCacheH  = 476; // 119 * 4
 
     public static void ApplyThemeColors(SoliBee.Core.Models.GameOptions options)
     {
@@ -150,6 +148,14 @@ public partial class CardView : UserControl
             // Full wipe (theme switch). Do NOT Dispose() here — async board refreshes
             // (FaceCardArtChangedMessage → Dispatcher.UIThread.InvokeAsync) may still
             // hold a just-cleared entry as Image.Source in a pending render pass.
+            // (Tried deferring Dispose() to DispatcherPriority.Background instead of
+            // skipping it — still crashed with a NullReferenceException inside
+            // Avalonia.Controls.Image.Render, because Avalonia 11's compositor consumes
+            // bitmaps on its own render thread, decoupled from the UI-thread dispatcher
+            // queue; posting to Dispatcher.UIThread at any priority doesn't actually
+            // serialize against it. There is no dispatcher-priority trick that makes
+            // this safe — don't reintroduce one without a real signal that rendering
+            // has finished with the bitmap, e.g. from Avalonia's render-completed hooks.)
             // Dropping the cache reference is enough; the CLR reclaims the Bitmap
             // once nothing else references it.
             // Background bitmaps are intentionally excluded: they live in
@@ -271,6 +277,50 @@ public partial class CardView : UserControl
         return bitmap;
     }
 
+    // At-a-glance swatch color for a custom background image — used wherever a saved
+    // theme or deck slot would otherwise show its felt color (theme sidebar swatch dot
+    // + active-row tint in PreferencesView, active-deck tint in ManageDecksView), so
+    // background-image themes/decks get a representative color instead of a leftover
+    // felt hex that has nothing to do with what's actually showing. Cached by file path
+    // since the same background is sampled repeatedly across UI refreshes.
+    private static readonly Dictionary<string, Color> _dominantColorCache = new();
+
+    internal static Color SampleDominantColor(string filePath)
+    {
+        if (_dominantColorCache.TryGetValue(filePath, out var cached)) return cached;
+
+        Color result;
+        try
+        {
+            using var bitmap = SKBitmap.Decode(filePath);
+            using var small = bitmap?.Resize(new SKImageInfo(16, 16), SKFilterQuality.Low);
+            if (small == null)
+            {
+                result = Colors.Gray;
+            }
+            else
+            {
+                long r = 0, g = 0, b = 0;
+                int count = small.Width * small.Height;
+                for (int y = 0; y < small.Height; y++)
+                {
+                    for (int x = 0; x < small.Width; x++)
+                    {
+                        var px = small.GetPixel(x, y);
+                        r += px.Red; g += px.Green; b += px.Blue;
+                    }
+                }
+                result = count == 0
+                    ? Colors.Gray
+                    : Color.FromRgb((byte)(r / count), (byte)(g / count), (byte)(b / count));
+            }
+        }
+        catch { result = Colors.Gray; }
+
+        _dominantColorCache[filePath] = result;
+        return result;
+    }
+
     private static Bitmap LoadAndScaleFaceArt(string filePath, double scale, double offsetX, double offsetY)
     {
         if (filePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
@@ -313,17 +363,24 @@ public partial class CardView : UserControl
             canvas.Clear(SKColors.Transparent);
             canvas.SetMatrix(SKMatrix.CreateIdentity());
 
-            // The logical size of the container in the UI
-            float logicalW = isFaceArt ? 70f : 128f;
-            float logicalH = isFaceArt ? 60f : 181f;
+            // Face art is baked onto a canvas matching a 74x119 clip window (shrunk ~14%
+            // from CenterGrid's full 86x138, same numbers Mac's CustomFaceArtImageView
+            // uses) so a zoomed/offset image can bleed well past its unscaled 60x52
+            // baseline without its own hard edge crowding right up against the rank/suit
+            // corner indices — this bitmap gets centered inside CenterGrid at display
+            // time (86x138 minus 74x119 = real padding margin on every side).
+            float canvasLogicalW = isFaceArt ? 74f : 128f;
+            float canvasLogicalH = isFaceArt ? 119f : 181f;
+            float containerLogicalW = isFaceArt ? 60f : 128f;
+            float containerLogicalH = isFaceArt ? 52f : 181f;
 
             // Scale from logical size to target high-res size
-            float ratioW = targetW / logicalW;
-            float ratioH = targetH / logicalH;
+            float ratioW = targetW / canvasLogicalW;
+            float ratioH = targetH / canvasLogicalH;
             canvas.Scale(ratioW, ratioH);
 
-            float cx = logicalW / 2f;
-            float cy = logicalH / 2f;
+            float cx = canvasLogicalW / 2f;
+            float cy = canvasLogicalH / 2f;
 
             // Apply RenderTransform (Scale & Translate) around center
             canvas.Translate(cx, cy);
@@ -331,8 +388,8 @@ public partial class CardView : UserControl
             canvas.Scale((float)scale, (float)scale);
             canvas.Translate(-cx, -cy);
 
-            // Apply Stretch="Uniform" which scales the image to fit inside the logical bounds, centered
-            float uniformScale = Math.Min(logicalW / src.Width, logicalH / src.Height);
+            // Apply Stretch="Uniform" which scales the image to fit inside the base container bounds, centered
+            float uniformScale = Math.Min(containerLogicalW / src.Width, containerLogicalH / src.Height);
             canvas.Translate(cx, cy);
             canvas.Scale(uniformScale, uniformScale);
             canvas.Translate(-src.Width / 2f, -src.Height / 2f);
@@ -516,6 +573,11 @@ public partial class CardView : UserControl
                 string fullPath = FaceCardArtService.GetFullPath(customFaceArt);
                 if (fullPath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
                 {
+                    // GIFs render live via RenderTransform (not baked), clipped by the
+                    // wrapping 74x119 Border in CardView.axaml — match the PNG bake's
+                    // 60x52 fit baseline so unscaled art appears the same size either way.
+                    FaceCardImage.Width  = 60;
+                    FaceCardImage.Height = 52;
                     FaceCardImage.Stretch = Avalonia.Media.Stretch.Uniform;
                     var tg = new TransformGroup();
                     tg.Children.Add(new ScaleTransform(customFaceArt.Scale, customFaceArt.Scale));
@@ -525,12 +587,15 @@ public partial class CardView : UserControl
                 }
                 else
                 {
+                    // Baked bitmap is 74x119 (CenterGrid's 86x138 shrunk ~14%) — display
+                    // it at that size so it stays centered within CenterGrid with real
+                    // padding on every side instead of touching the corner indices' margin.
+                    FaceCardImage.Width  = 74;
+                    FaceCardImage.Height = 119;
                     FaceCardImage.Stretch = Avalonia.Media.Stretch.Fill;
                     FaceCardImage.RenderTransform = null;
                 }
-                
-                FaceCardImage.Width  = 70;
-                FaceCardImage.Height = 60;
+
                 CenterGrid.ClipToBounds = true;
 
                 try
@@ -1423,16 +1488,16 @@ public partial class CardView : UserControl
         // click usually lands on a brand-new instance, making e.ClickCount unreliable.
         var clickNow = DateTime.UtcNow;
         var clickPos = e.GetPosition(this);
-        double ddx = clickPos.X - _lastCardClickPos.X;
-        double ddy = clickPos.Y - _lastCardClickPos.Y;
-        bool isDoubleClick = _lastCardClickId == Card.Id
-                              && (clickNow - _lastCardClickTime) < TimeSpan.FromMilliseconds(500)
+        double ddx = clickPos.X - gameView.LastCardClickPos.X;
+        double ddy = clickPos.Y - gameView.LastCardClickPos.Y;
+        bool isDoubleClick = gameView.LastCardClickId == Card.Id
+                              && (clickNow - gameView.LastCardClickTime) < TimeSpan.FromMilliseconds(500)
                               && (ddx * ddx + ddy * ddy) < 400;
 
         if (isDoubleClick)
         {
-            _lastCardClickId   = null;
-            _lastCardClickTime = DateTime.MinValue;
+            gameView.LastCardClickId   = null;
+            gameView.LastCardClickTime = DateTime.MinValue;
 
             // A double-click is its own independent quick-move action — drop any
             // pending keyboard selection unconditionally (not only on success), so it
@@ -1455,20 +1520,30 @@ public partial class CardView : UserControl
             return;
         }
 
-        _lastCardClickId   = Card.Id;
-        _lastCardClickTime = clickNow;
-        _lastCardClickPos  = clickPos;
+        gameView.LastCardClickId   = Card.Id;
+        gameView.LastCardClickTime = clickNow;
+        gameView.LastCardClickPos  = clickPos;
 
         {
             // Capture the source pile NOW, before drag setup detaches this card from its canvas
             var thisPile = pileView.Pile;
 
-            // Single-click / Start Drag
+            // Arm a potential drag, but don't actually reparent/tear down the pile yet —
+            // that rebuild reassigns pool CardView instances by index (see
+            // PileView.UpdateCardsLayout), so doing it on every plain click made rapid
+            // same-spot double-clicks land on a *different physical card* each press
+            // (the pool shuffled underneath the cursor between clicks). The affected-card
+            // snapshot (_draggedStack) is still captured right here, at the same moment
+            // as before, off the undisturbed pool — only the actual Children.Remove/Add
+            // reparenting is deferred to CardView_PointerMoved, once the pointer crosses
+            // a small movement threshold, so a click (or either half of a double-click)
+            // never touches the pile at all.
             var dragCanvas = gameView.FindControl<Canvas>("DragCanvas");
             if (dragCanvas != null)
             {
                 gameView.SizeDragCanvasToWindow(dragCanvas);
-                _isDragging = true;
+                _isDragging = false;
+                _dragArmed = true;
                 _dragCanvas = dragCanvas;
                 _dragStartPoint = e.GetPosition(dragCanvas);
                 _sourcePileView = pileView;
@@ -1488,37 +1563,10 @@ public partial class CardView : UserControl
                         }
                     }
                 }
-
                 foreach (var cv in _draggedStack)
                 {
                     var pos = cv.TranslatePoint(new Point(0, 0), dragCanvas);
                     _dragStartPositions[cv] = pos ?? new Point(0, 0);
-                }
-
-                foreach (var cv in _draggedStack)
-                {
-                    (cv.Parent as Canvas)?.Children.Remove(cv);
-                    dragCanvas.Children.Add(cv);
-                    Canvas.SetLeft(cv, _dragStartPositions[cv].X);
-                    Canvas.SetTop(cv, _dragStartPositions[cv].Y);
-
-                    // Reuse _slideTx as the drag-offset transform — a card is never
-                    // mid-slide-in and being dragged at once, so this avoids a second
-                    // TranslateTransform/TransformGroup fighting over RenderTransform.
-                    // Stop any in-flight slide first so nothing else writes to
-                    // _slideTx while it's driving the drag.
-                    cv._slideAnimTimer?.Stop();
-                    cv._slideAnimTimer = null;
-                    cv._slideTx.X = 0;
-                    cv._slideTx.Y = 0;
-                    cv.RenderTransform = cv._slideTx;
-                }
-
-                // If the drag empties the source pile, reveal its empty outline placeholder
-                // immediately, so it doesn't look like empty felt during the drag.
-                if (pileView != null && canvas != null && canvas.Children.Count == 0)
-                {
-                    pileView.ShowEmptyPlaceholder();
                 }
 
                 e.Pointer.Capture(this);
@@ -1586,7 +1634,29 @@ public partial class CardView : UserControl
 
     private void CardView_PointerMoved(object sender, PointerEventArgs e)
     {
-        if (!_isDragging || Card == null || _dragCanvas == null) return;
+        if (Card == null || _dragCanvas == null) return;
+        if (!_isDragging)
+        {
+            if (!_dragArmed) return;
+
+            var armedPoint = e.GetPosition(_dragCanvas);
+            double tdx = armedPoint.X - _dragStartPoint.X;
+            double tdy = armedPoint.Y - _dragStartPoint.Y;
+            if (tdx * tdx + tdy * tdy < DragThresholdSq) return;
+
+            var startingGameView = FindParentGameView();
+            if (startingGameView == null || _sourcePileView == null) return;
+            BeginActualDrag(_sourcePileView);
+
+            // Avalonia drops pointer capture when a captured control's parent changes —
+            // BeginActualDrag just reparented "this" from the pile's CardsCanvas into
+            // DragCanvas while capture was already held from PointerPressed. Without
+            // re-capturing here, PointerReleased silently stops firing on this card for
+            // the rest of the gesture: it never gets ResetDraggedStack, so it's left
+            // orphaned in DragCanvas at its last position while the pile rebuilds around
+            // it as if it were never grabbed.
+            e.Pointer.Capture(this);
+        }
 
         var gameView = FindParentGameView();
         if (gameView == null) return;
@@ -1609,9 +1679,58 @@ public partial class CardView : UserControl
         e.Handled = true;
     }
 
+    // Performs the actual reparent-into-DragCanvas dance, deferred out of
+    // CardView_PointerPressed so a plain click (including both halves of a
+    // double-click) never disturbs PileView's index-recycled CardView pool.
+    // _draggedStack/_dragStartPositions were already snapshotted back in
+    // PointerPressed, off the still-undisturbed pool — this only performs the
+    // actual Children.Remove/Add now that real movement confirms it's a drag.
+    private void BeginActualDrag(PileView pileView)
+    {
+        _isDragging = true;
+        _dragArmed = false;
+
+        var canvas = pileView.FindControl<Canvas>("CardsCanvas");
+        var dragCanvas = _dragCanvas!;
+
+        foreach (var cv in _draggedStack)
+        {
+            (cv.Parent as Canvas)?.Children.Remove(cv);
+            dragCanvas.Children.Add(cv);
+            Canvas.SetLeft(cv, _dragStartPositions[cv].X);
+            Canvas.SetTop(cv, _dragStartPositions[cv].Y);
+
+            // Reuse _slideTx as the drag-offset transform — a card is never
+            // mid-slide-in and being dragged at once, so this avoids a second
+            // TranslateTransform/TransformGroup fighting over RenderTransform.
+            // Stop any in-flight slide first so nothing else writes to
+            // _slideTx while it's driving the drag.
+            cv._slideAnimTimer?.Stop();
+            cv._slideAnimTimer = null;
+            cv._slideTx.X = 0;
+            cv._slideTx.Y = 0;
+            cv.RenderTransform = cv._slideTx;
+        }
+
+        // If the drag empties the source pile, reveal its empty outline placeholder
+        // immediately, so it doesn't look like empty felt during the drag.
+        if (canvas != null && canvas.Children.Count == 0)
+        {
+            pileView.ShowEmptyPlaceholder();
+        }
+    }
+
     private void CardView_PointerReleased(object sender, PointerReleasedEventArgs e)
     {
-        if (!_isDragging) return;
+        if (!_isDragging)
+        {
+            if (_dragArmed)
+            {
+                _dragArmed = false;
+                e.Pointer.Capture(null);
+            }
+            return;
+        }
 
         e.Pointer.Capture(null);
         _isDragging = false;
@@ -1684,14 +1803,14 @@ public partial class CardView : UserControl
             if (_dragCanvas != null && _dragCanvas.Children.Contains(cv))
                 _dragCanvas.Children.Remove(cv);
         }
-        
+
         _sourcePileView?.UpdateCardsLayout();
-        
+
         if (gameView != null)
         {
             (gameView as Control)?.UpdateLayout();
         }
-        
+
         _draggedStack.Clear();
         _dragStartPositions.Clear();
         _sourcePileView = null;

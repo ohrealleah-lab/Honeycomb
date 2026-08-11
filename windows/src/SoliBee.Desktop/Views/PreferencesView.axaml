@@ -19,15 +19,6 @@
         <Style Selector="Button.theme-nav:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#F2F2F2"/>
         </Style>
-        <Style Selector="Button.theme-back">
-            <Setter Property="Background" Value="#F2F2F2"/>
-            <Setter Property="Foreground" Value="#1A1A1A"/>
-            <Setter Property="CornerRadius" Value="6"/>
-        </Style>
-        <Style Selector="Button.theme-back:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#E5E5E5"/>
-            <Setter Property="Foreground" Value="#1A1A1A"/>
-        </Style>
     </UserControl.Styles>
 
     <Grid>
@@ -99,24 +90,13 @@
         <!-- ═══════════════════════════════════════════════════════════════════
              THEMES SUB-PANEL
              ═══════════════════════════════════════════════════════════════════ -->
-        <Grid x:Name="ThemesPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="Auto,*" ColumnDefinitions="180,*">
-
-            <!-- Back button (Row 0, Spans all columns) -->
-            <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Click="CloseThemes_Click"
-                    Classes="theme-back"
-                    HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="10,6"
-                    BorderThickness="0" Margin="0,0,0,10">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
-                    <TextBlock Text="Back" FontSize="13" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+        <Grid x:Name="ThemesPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="*" ColumnDefinitions="180,*">
 
             <!-- Sidebar: Saved Themes — its own persistent column, not part of the
                  scrolling settings, so it stays visible as a picker while the rest
                  of the panel scrolls independently. Tinted background + divider so
                  it reads as a distinct panel instead of blending into the settings. -->
-            <Border Grid.Row="1" Grid.Column="0" Background="#ECECEC" BorderBrush="#DCDCDC" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,10,0">
+            <Border Grid.Row="0" Grid.Column="0" Background="#ECECEC" BorderBrush="#DCDCDC" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,10,0">
                 <Grid RowDefinitions="Auto,Auto,*">
                     <TextBlock Grid.Row="0" Text="Saved Themes" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,4,0,0"/>
 
@@ -126,20 +106,21 @@
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                             Margin="0,8,0,8"/>
 
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                        <StackPanel Spacing="4">
-                            <StackPanel x:Name="ThemeListPanel" Spacing="2"/>
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                        <StackPanel Spacing="4" HorizontalAlignment="Stretch">
+                            <StackPanel x:Name="ThemeListPanel" Spacing="2" HorizontalAlignment="Stretch"/>
                             <TextBlock x:Name="NoThemesLabel" Text="No saved themes yet." FontSize="11" Foreground="#1A1A1A"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
             </Border>
 
-            <Rectangle Grid.Row="1" Grid.Column="0" Width="1" Fill="#E0E0E0" HorizontalAlignment="Right"/>
+            <Rectangle Grid.Row="0" Grid.Column="0" Width="1" Fill="#E0E0E0" HorizontalAlignment="Right"/>
 
             <!-- Settings column — hero preview on top, Card Deck/Background side by
                  side underneath, then the two full-width nav buttons. -->
-            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="14" Margin="10,0,0,0">
+            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="14" Margin="10,0,0,0">
 
                 <!-- ─── Card + Background mockup (hero preview) ───────────────── -->
                 <!-- The actual configured card back rendered on the actual configured
@@ -271,19 +252,9 @@
              FACE CARDS SUB-PANEL — full width so the 16-slot grid isn't
              squeezed into a ~270px column alongside every other setting.
              ═══════════════════════════════════════════════════════════════════ -->
-        <Grid x:Name="FaceCardsPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="Auto,*">
+        <Grid x:Name="FaceCardsPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="*">
 
-            <Button Grid.Row="0" Click="CloseFaceCards_Click"
-                    Classes="theme-back"
-                    HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="10,6"
-                    BorderThickness="0" Margin="0,0,0,10">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
-                    <TextBlock Text="Back" FontSize="13" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
-
-            <StackPanel Grid.Row="1" Spacing="6">
+            <StackPanel Grid.Row="0" Spacing="6">
                 <TextBlock Text="Tap a tile to upload art. Tap again to adjust." FontSize="12" Foreground="#1A1A1A"/>
                 <v:FaceCardArtSectionView/>
             </StackPanel>
@@ -294,23 +265,17 @@
              CUSTOM CARD COLORS SUB-PANEL — live 3-card preview against the
              theme's own backdrop, plus the 5 color pickers.
              ═══════════════════════════════════════════════════════════════════ -->
-        <Grid x:Name="CardColorsPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="Auto,Auto,*">
+        <Grid x:Name="CardColorsPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="Auto,*">
 
-            <Button Grid.Row="0" Click="CloseCardColorsPanel_Click"
-                    Classes="theme-back"
-                    HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="10,6"
-                    BorderThickness="0" Margin="0,0,0,10">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
-                    <TextBlock Text="Back" FontSize="13" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
-
-            <Border x:Name="CardColorPreviewBackdrop" Grid.Row="1" CornerRadius="8" Padding="20" Margin="0,0,0,14">
-                <StackPanel x:Name="CardColorPreviewStack" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center"/>
+            <Border x:Name="CardColorPreviewBackdrop" Grid.Row="0" Height="210" CornerRadius="8" Padding="20" Margin="0,0,0,14" ClipToBounds="True">
+                <Grid>
+                    <Image x:Name="CardColorPreviewImage" Stretch="UniformToFill" IsVisible="False"
+                           RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+                    <StackPanel x:Name="CardColorPreviewStack" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
             </Border>
 
-            <StackPanel Grid.Row="2" Spacing="8">
+            <StackPanel Grid.Row="1" Spacing="8">
                 <TextBlock Text="Custom Card Colors" FontWeight="Bold" Foreground="#1A1A1A"/>
                 <Rectangle Height="1" Fill="#E5E5E5"/>
 

@@ -842,6 +842,9 @@ public partial class MainWindow : Window
     private void Preferences_Click(object? sender, RoutedEventArgs e)
     {
         _preferencesView = new PreferencesView();
+        PreferencesBackButton.IsVisible = false;
+        _preferencesView.SubPanelVisibilityChanged += (_, _) =>
+            PreferencesBackButton.IsVisible = _preferencesView?.IsSubPanelOpen ?? false;
 
         if (this.DataContext is VideoPokerViewModel vpVm)
         {
@@ -989,6 +992,11 @@ public partial class MainWindow : Window
         _themeEditor = new ThemeEditorWindow();
         _themeEditor.Closed += (_, _) => _themeEditor = null;
         _themeEditor.Show();
+    }
+
+    private void PreferencesBackButton_Click(object? sender, RoutedEventArgs e)
+    {
+        _preferencesView?.GoBack();
     }
 
     private void ClosePreferences_Click(object? sender, RoutedEventArgs e)

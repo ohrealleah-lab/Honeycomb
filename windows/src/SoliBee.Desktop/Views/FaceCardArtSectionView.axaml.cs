@@ -102,10 +102,14 @@ public partial class FaceCardArtSectionView : UserControl
         });
         innerGrid.Children.Add(topLeft);
 
-        // Center content area (47×70 — same ~1.3x factor as the tile above)
+        // Center content area (45×73 — CardView's 74x119 face-art clip window scaled
+        // down by this tile's own ~0.61x factor vs a real 128x181 card). GetCachedFaceArtBitmap
+        // below returns the same bitmap the real card bakes, which is now sized to that
+        // 74:119 aspect — sizing this box to match keeps art proportional instead of
+        // letterboxing inside a mismatched, much wider 47x70 box.
         var centerGrid = new Grid
         {
-            Width = 47, Height = 70,
+            Width = 45, Height = 73,
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             ClipToBounds = true
@@ -114,7 +118,7 @@ public partial class FaceCardArtSectionView : UserControl
         bool showArt = art != null;
         if (showArt && art != null)
         {
-            var img = new Image { Stretch = Stretch.Uniform, Width = 38, Height = 33 };
+            var img = new Image { Stretch = Stretch.Uniform, Width = 45, Height = 73 };
             // Created in code, not XAML — set explicitly since this control never goes
             // through the .axaml-only interpolation-mode pass (see the matching comment
             // in CardView.PopulateSuitCanvas). The source bitmap here is baked at 280x240

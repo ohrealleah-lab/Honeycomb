@@ -211,7 +211,22 @@
                          while the title and Cancel/OK/View Stats row stay always visible. -->
                     <Border x:Name="PreferencesPanel" Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="{Binding #PreferencesInset.Bounds.Height}" BoxShadow="0 4 20 0 #A0000000">
                         <Grid RowDefinitions="Auto,*,Auto">
-                            <TextBlock Grid.Row="0" Text="Preferences" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" Margin="0,0,0,15" />
+                            <!-- Header row: shared "‹ Back" chip (left, hidden on the main
+                                 Preferences page) + centered title — PreferencesView toggles
+                                 this instead of each of its Themes/Face Cards/Card Colors
+                                 sub-panels drawing its own Back button above its content. -->
+                            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,15">
+                                <Button x:Name="PreferencesBackButton" Grid.Column="0" Click="PreferencesBackButton_Click"
+                                        Classes="theme-back" IsVisible="False"
+                                        HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="10,6"
+                                        BorderThickness="0">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Back" FontSize="13" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Grid.Column="1" Text="Preferences" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                 <ContentControl x:Name="PreferencesContent" />
                             </ScrollViewer>
