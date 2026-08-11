@@ -103,6 +103,17 @@ public final class AppCoordinator {
     public var showFeltVignette: Bool {
         didSet { UserDefaults.standard.set(showFeltVignette, forKey: "showFeltVignette") }
     }
+    // App-wide UI language — not a theme field (no SoliBeeTheme entry, no
+    // liveSaveActiveTheme), same single-source pattern as the theme fields above.
+    // Every L() call reads this directly, and since AppCoordinator is @Observable,
+    // assigning it re-renders every view that called L() during its last render —
+    // no restart needed.
+    public var language: AppLanguage {
+        didSet {
+            UserDefaults.standard.set(language.rawValue, forKey: "appLanguage")
+            BannerCatalog.currentLanguage = language
+        }
+    }
     #if canImport(AppKit)
     // Keeps the main game window floating above other apps' windows. Applied via
     // applyWindowLevel() both here and from activeWindow's didSet, so a saved "on"
@@ -285,6 +296,7 @@ public final class AppCoordinator {
         self.cardBackTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Solibee"
         self.showFeltVignette = UserDefaults.standard.object(forKey: "showFeltVignette") != nil
             ? UserDefaults.standard.bool(forKey: "showFeltVignette") : true
+        self.language = AppLanguage(rawValue: UserDefaults.standard.string(forKey: "appLanguage") ?? "") ?? .english
         #if canImport(AppKit)
         self.stayOnTop = UserDefaults.standard.object(forKey: "stayOnTop") != nil
             ? UserDefaults.standard.bool(forKey: "stayOnTop") : false
@@ -320,6 +332,7 @@ public final class AppCoordinator {
             ? UserDefaults.standard.bool(forKey: "global_manually_dismiss_banners")
             : false
         BannerCatalog.honeyModeEnabled = self.honeyMode
+        BannerCatalog.currentLanguage = self.language
 
         #if canImport(AppKit)
         // Synchronously warm the cache for whichever background is active so that

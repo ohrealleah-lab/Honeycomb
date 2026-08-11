@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 
@@ -115,7 +116,7 @@ public partial class HoneycombViewModel : ObservableObject
 
     // The toolbar's "Opponent" label reads the opponent's actual difficulty name (e.g.
     // "Baby Bee") instead of the literal word "Opponent" — matches the Swift port.
-    public string OpponentNameDisplay => Options.Difficulty.DisplayName();
+    public string OpponentNameDisplay => HoneycombRuleLocalization.LocalizedDifficultyName(Options.Difficulty, SettingsService.LoadOptions().Language);
 
     // Optional flavor subtitle shown alongside the win/lose overlay title (e.g.
     // "Flawless victory!") — set alongside the result in SettleMatch(), never reset
@@ -327,7 +328,7 @@ public partial class HoneycombViewModel : ObservableObject
         State.CardsCapturedThisMatch = 0;
         State.IsSuddenDeath = false;
         State.ShowPostGamePrompt = false;
-        _lastHiveSwarmPhrase = null;
+        _lastHiveSwarmIndex = null;
         _isRematchMatch = false;
         _consecutiveNoStealWins = 0;
         _consecutiveRematchWins = 0;
@@ -723,12 +724,16 @@ public partial class HoneycombViewModel : ObservableObject
         int generation = ++_matchGeneration;
         PrefetchFirstMove(generation);
 
-        string starterName = starter == 1 ? "Player" : Options.Difficulty.DisplayName();
+        var language = SettingsService.LoadOptions().Language;
         // A single combined banner instead of separate flashes at match start — every
         // active rule (up to 2) gets its own line below "First Move", in the same font,
         // rather than only Swap riding along while Ascension/Descension/etc. got their
         // own separate (and immediately-overwritten) flash.
-        var bannerLines = new List<string> { $"First Move: {starterName}!" };
+        string firstMoveLine = starter == 1
+            ? Strings.Get(StringKey.FirstMovePlayer, language)
+            : Strings.Get(StringKey.FirstMoveOpponentFmt, language)
+                .Replace("%@", HoneycombRuleLocalization.LocalizedDifficultyName(Options.Difficulty, language));
+        var bannerLines = new List<string> { firstMoveLine };
         foreach (var rule in State.ActiveRules)
         {
             bannerLines.Add(rule == HoneycombRule.Swap && swap.HasValue
@@ -1024,7 +1029,7 @@ public partial class HoneycombViewModel : ObservableObject
         // otherwise interrupted) while this was true (e.g. mid-Swap-animation-wait)
         // would otherwise leave it stuck true, permanently blocking PlayCard.
         _isAnimating = false;
-        _lastHiveSwarmPhrase = null;
+        _lastHiveSwarmIndex = null;
         State.Phase = HoneycombPhase.Playing;
         State.UndoStack.Clear();
         _lastPlayerMove = null;
@@ -1407,9 +1412,10 @@ public partial class HoneycombViewModel : ObservableObject
     // the same capture-resolution logic, so both need to surface it the same way.
     private static string? ComboBannerText(HoneycombBoard board)
     {
+        var language = SettingsService.LoadOptions().Language;
         var parts = new List<string>();
-        var sameName = HoneycombRule.Same.DisplayName().ToUpperInvariant();
-        var plusName = HoneycombRule.Plus.DisplayName().ToUpperInvariant();
+        var sameName = HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.Same, language).ToUpperInvariant();
+        var plusName = HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.Plus, language).ToUpperInvariant();
         // Same has no catalog-driven flavor alternate (not in the spreadsheet), and
         // the combined "Same & Plus" case isn't either — both stay the plain existing
         // banner text unconditionally.
@@ -1421,16 +1427,17 @@ public partial class HoneycombViewModel : ObservableObject
         }
         if (board.LastFallenAceTriggered)
         {
-            parts.Add(BannerCatalogText(BannerId.RuleSpecificFallenAceTriggersA1CapturesA10, $"{HoneycombRule.FallenAce.DisplayName()}!"));
+            parts.Add(BannerCatalogText(BannerId.RuleSpecificFallenAceTriggersA1CapturesA10, $"{HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.FallenAce, language)}!"));
         }
         // Only x4-or-higher has a catalog-driven flavor alternate (matches the
         // spreadsheet's own "Combo x4 or higher" trigger) — x2/x3 stay plain.
+        var hiveMindText = Strings.Get(StringKey.BannerHiveMindFmt, language).Replace("%d", board.LastComboFlipCount.ToString());
         if (board.LastComboFlipCount >= 4)
         {
-            parts.Add(BannerCatalogText(BannerId.GameplayComboX4OrHigher, $"HIVE MIND x{board.LastComboFlipCount}!",
+            parts.Add(BannerCatalogText(BannerId.GameplayComboX4OrHigher, hiveMindText,
                 new Dictionary<string, string> { ["ComboCount"] = board.LastComboFlipCount.ToString() }));
         }
-        else if (board.LastComboFlipCount > 0) parts.Add($"HIVE MIND x{board.LastComboFlipCount}!");
+        else if (board.LastComboFlipCount > 0) parts.Add(hiveMindText);
         return parts.Count == 0 ? null : string.Join(" ", parts);
     }
 
@@ -1536,26 +1543,43 @@ public partial class HoneycombViewModel : ObservableObject
 
     // Randomly chosen phrase set for a Hive Swarm (Bomb Shelter) reveal's own banner
     // — kept distinct between the player's and opponent's reveal within the same
-    // match (_lastHiveSwarmPhrase, reset alongside other per-match state in
+    // match (_lastHiveSwarmIndex, reset alongside other per-match state in
     // StartNewMatch/RematchGame) so a match where both sides reveal a hidden card
-    // doesn't repeat the same phrase. Mirrors the Swift port's
-    // hiveSwarmRevealPhrases/hiveSwarmRevealBanner.
-    private static readonly string[] HiveSwarmRevealPhrases =
+    // doesn't repeat the same phrase. Player/opponent use separate phrase sets
+    // (rather than a shared pool + possessive prefix) since Spanish has no 's —
+    // mirrors the Swift port's playerSwarmRevealPhraseKeys/opponentSwarmRevealPhraseKeys.
+    private static readonly StringKey[] PlayerSwarmRevealPhraseKeys =
     {
-        "Hive Stings!",
-        "Swarm is Unleashed!",
-        "Swarm Awakens!",
-        "Hive is Buzzing into Action!"
+        StringKey.SwarmRevealPlayerHiveSwarm,
+        StringKey.SwarmRevealPlayerUnleashed,
+        StringKey.SwarmRevealPlayerAwakens,
+        StringKey.SwarmRevealPlayerBuzzing
     };
-    private string? _lastHiveSwarmPhrase;
+
+    private static readonly StringKey[] OpponentSwarmRevealPhraseKeys =
+    {
+        StringKey.SwarmRevealOpponentHiveSwarmFmt,
+        StringKey.SwarmRevealOpponentUnleashedFmt,
+        StringKey.SwarmRevealOpponentAwakensFmt,
+        StringKey.SwarmRevealOpponentBuzzingFmt
+    };
+
+    private int? _lastHiveSwarmIndex;
 
     private string HiveSwarmRevealBanner(int owner)
     {
-        var pool = HiveSwarmRevealPhrases.Where(p => p != _lastHiveSwarmPhrase).ToArray();
-        var phrase = pool.Length > 0 ? pool[Random.Shared.Next(pool.Length)] : HiveSwarmRevealPhrases[Random.Shared.Next(HiveSwarmRevealPhrases.Length)];
-        _lastHiveSwarmPhrase = phrase;
-        string possessive = owner == 1 ? "Your" : $"{Options.Difficulty.DisplayName()}'s";
-        return $"{possessive} {phrase}";
+        var count = PlayerSwarmRevealPhraseKeys.Length;
+        var availableIndices = Enumerable.Range(0, count).Where(i => i != _lastHiveSwarmIndex).ToArray();
+        var index = availableIndices.Length > 0 ? availableIndices[Random.Shared.Next(availableIndices.Length)] : Random.Shared.Next(count);
+        _lastHiveSwarmIndex = index;
+
+        var language = SettingsService.LoadOptions().Language;
+        if (owner == 1)
+        {
+            return Strings.Get(PlayerSwarmRevealPhraseKeys[index], language);
+        }
+        return Strings.Get(OpponentSwarmRevealPhraseKeys[index], language)
+            .Replace("%@", HoneycombRuleLocalization.LocalizedDifficultyName(Options.Difficulty, language));
     }
 
     // How long to hold before even announcing a Hive Swarm reveal — this fires from
@@ -1848,7 +1872,7 @@ public partial class HoneycombViewModel : ObservableObject
         // Give enough time for the final card placement and any combo animations to fully resolve
         if (!_isHeadless) await Task.Delay(2500);
 
-        EnqueueBanner($"{HoneycombRule.SuddenDeath.DisplayName()}!");
+        EnqueueBanner($"{HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.SuddenDeath, SettingsService.LoadOptions().Language)}!");
         State.IsSuddenDeath = true;
         Stats.SuddenDeathCount++;
         SaveStats();

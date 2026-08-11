@@ -69,8 +69,8 @@ struct ThemesOptionsView: View {
     }
 
     private var subScreenTitle: String? {
-        if showingFaceCards { return "Face Cards" }
-        if showingCardColors { return "Card Colors" }
+        if showingFaceCards { return coordinator.L(.faceCardsTitle) }
+        if showingCardColors { return coordinator.L(.cardColorsTitle) }
         return nil
     }
 
@@ -86,7 +86,7 @@ struct ThemesOptionsView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 13, weight: .semibold))
-                        Text("Back")
+                        Text(coordinator.L(.back))
                     }
                     .font(.system(.body))
                 }
@@ -95,12 +95,12 @@ struct ThemesOptionsView: View {
 
                 Spacer()
 
-                Text(subScreenTitle ?? "Themes")
+                Text(subScreenTitle ?? coordinator.L(.themesPanelTitle))
                     .font(.system(size: 16, weight: .bold))
 
                 Spacer()
 
-                Button("Done") { onCommit(false); isShowing = false; isOptionsPresented = false }
+                Button(coordinator.L(.done)) { onCommit(false); isShowing = false; isOptionsPresented = false }
                     .font(.system(.body))
                     .buttonStyle(.plain)
                     .foregroundColor(.accentColor)
@@ -165,9 +165,9 @@ struct ThemesOptionsView: View {
         ScrollView(.vertical, showsIndicators: true) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 4) {
-                    Text("Add Custom Card Art")
+                    Text(coordinator.L(.addCustomCardArtHeading))
                         .font(.system(.body).bold())
-                    Text("(.jpg or .png accepted):")
+                    Text(coordinator.L(.jpgPngAcceptedSuffix))
                         .font(.system(.body))
                 }
                 .foregroundColor(.primary)
@@ -227,12 +227,12 @@ struct ThemesOptionsView: View {
             ThemeBackdropView(customBackgroundName: customBackgroundName)
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { openBackgroundEditor() }
-                .help(customBackgroundName != nil ? "Double-click to adjust the background" : "")
+                .help(customBackgroundName != nil ? coordinator.L(.doubleClickAdjustBackgroundTooltip) : "")
 
             CardView(card: Card(suit: .spades, rank: 1, faceUp: false))
                 .contentShape(Rectangle())
                 .onTapGesture { openCardBackEditor() }
-                .help(!CustomCardBackManager.shared.isDefaultTheme(cardBackTheme) ? "Click to adjust the card back" : "")
+                .help(!CustomCardBackManager.shared.isDefaultTheme(cardBackTheme) ? coordinator.L(.clickAdjustCardBackTooltip) : "")
         }
         .frame(maxWidth: .infinity)
         .frame(height: 220)
@@ -304,7 +304,7 @@ struct ThemesOptionsView: View {
 
             if feltColor == .custom && customBackgroundName == nil {
                 HStack(spacing: 8) {
-                    Text("Custom Felt Color:")
+                    Text(coordinator.L(.customFeltColorLabel))
                         .font(.system(.body).bold())
                     ColorPicker("", selection: $customSelectedColor)
                         .labelsHidden()
@@ -327,13 +327,13 @@ struct ThemesOptionsView: View {
     private var rightColumn: some View {
         VStack(alignment: .leading, spacing: 16) {
             navRowButton(
-                title: "Customize Face Cards for Theme",
-                subtitle: "16 slots — Aces, Jacks, Queens, Kings per suit"
+                title: coordinator.L(.customizeFaceCardsTitle),
+                subtitle: coordinator.L(.customizeFaceCardsSubtitle)
             ) { showingFaceCards = true }
 
             navRowButton(
-                title: "Custom Card Colors for Theme",
-                subtitle: "Background, outline, suit text, hint highlight"
+                title: coordinator.L(.customCardColorsTitle),
+                subtitle: coordinator.L(.customCardColorsSubtitleMac)
             ) { showingCardColors = true }
         }
         .frame(width: 410)
@@ -365,7 +365,7 @@ struct ThemesOptionsView: View {
     private var cardColorsContent: some View {
         ScrollView(.vertical, showsIndicators: true) {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Live preview — edits below apply to these cards immediately.")
+                Text(coordinator.L(.livePreviewNotice))
                     .font(.system(.body))
                     .foregroundColor(.secondary)
 

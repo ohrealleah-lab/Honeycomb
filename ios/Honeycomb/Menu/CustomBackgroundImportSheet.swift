@@ -8,6 +8,7 @@ struct CustomBackgroundImportSheet: View {
     var onImported: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
     @State private var manager = IOSCustomBackgroundManager.shared
 
     @State private var photoItem: PhotosPickerItem? = nil
@@ -69,10 +70,10 @@ struct CustomBackgroundImportSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(coordinator.L(.cancel)) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") { save() }
+                    Button(coordinator.L(.addShort)) { save() }
                         .disabled(previewImage == nil || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }

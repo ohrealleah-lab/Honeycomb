@@ -147,7 +147,7 @@ public struct BlackjackView: View {
                 .frame(width: 0, height: 0)
                 .clipped()
 
-            HotkeyLegendView(text: "Space=Deal   H=Hit   S=Stand   D=Double Down   P=Split")
+            HotkeyLegendView(text: coordinator.L(.hotkeyLegendBlackjack))
 
             if showQueuedBanner {
                 FlashBannerView(
@@ -198,9 +198,9 @@ public struct BlackjackView: View {
         .sheet(isPresented: $isShowingStats) {
             BlackjackStatsView(viewModel: viewModel)
         }
-        .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
-            Button("Cancel", role: .cancel) { }
-            Button("New Game", role: .destructive) { viewModel.startNewGame() }
+        .confirmationDialog(coordinator.L(.newGameConfirmTitleShort), isPresented: $isShowingNewGameConfirm) {
+            Button(coordinator.L(.cancel), role: .cancel) { }
+            Button(coordinator.L(.newGame), role: .destructive) { viewModel.startNewGame() }
         }
         .onAppear {
             if viewModel.state.phase == .betting && viewModel.state.playerHands.isEmpty {
@@ -303,7 +303,7 @@ public struct BlackjackView: View {
     private var toolbarView: some View {
         HStack(spacing: 20) {
             GameSelectionDropdown(coordinator: coordinator)
-            toolbarButton("Options", systemImage: "gearshape", disabled: false) {
+            toolbarButton(coordinator.L(.options), systemImage: "gearshape", disabled: false) {
                 isShowingOptions = true
             }
             Spacer()
@@ -323,7 +323,7 @@ public struct BlackjackView: View {
     private var creditDisplay: some View {
         HStack(spacing: 32) {
             VStack(spacing: 2) {
-                Text("CREDITS")
+                Text(coordinator.L(.creditsLabel))
                     .font(.display(10))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.sessionCredits)")
@@ -332,7 +332,7 @@ public struct BlackjackView: View {
             }
 
             VStack(spacing: 2) {
-                Text("BET")
+                Text(coordinator.L(.betLabel))
                     .font(.display(10))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.currentBet)")
@@ -341,7 +341,7 @@ public struct BlackjackView: View {
             }
 
             VStack(spacing: 2) {
-                Text("HANDS")
+                Text(coordinator.L(.handsLabel))
                     .font(.display(10))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.handsDealt)")
@@ -378,7 +378,7 @@ public struct BlackjackView: View {
         let dealerOverlapFraction: CGFloat = viewModel.state.dealerCards.count >= 6 ? tightOverlapFraction : lightOverlapFraction
         return VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Text("DEALER")
+                Text(coordinator.L(.dealerLabel))
                     .font(.display(12, weight: .bold))
                     .foregroundColor(.white.opacity(0.6))
                 if viewModel.state.phase != .betting {
@@ -420,7 +420,7 @@ public struct BlackjackView: View {
             Rectangle()
                 .fill(Color.white.opacity(0.12))
                 .frame(height: 1)
-            Text("VS")
+            Text(coordinator.L(.vsDivider))
                 .font(.display(11, weight: .black))
                 .foregroundColor(.white.opacity(0.4))
                 .padding(.horizontal, 10)
@@ -470,7 +470,7 @@ public struct BlackjackView: View {
 
         return VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Text("PLAYER")
+                Text(coordinator.L(.playerLabel))
                     .font(.display(12, weight: .bold))
                     .foregroundColor(.white.opacity(0.6))
                 if !viewModel.state.playerHands.isEmpty && !showCardBackPlaceholders {
@@ -544,30 +544,30 @@ public struct BlackjackView: View {
         let isWin: Bool
         
         if anyBJ {
-            headline = "Blackjack!"
-            subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
+            headline = coordinator.L(.resultHeadlineBlackjack)
+            subline = net > 0 ? coordinator.L(.resultSubNetPositiveFmt, net) : net < 0 ? coordinator.L(.resultSubNetNegativeFmt, net) : coordinator.L(.resultSubEven)
             isWin = true
         } else if anyWin {
-            headline = "You win!"
-            subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
+            headline = coordinator.L(.youWin)
+            subline = net > 0 ? coordinator.L(.resultSubNetPositiveFmt, net) : net < 0 ? coordinator.L(.resultSubNetNegativeFmt, net) : coordinator.L(.resultSubEven)
             isWin = true
         } else if allPush {
-            headline = "Push"
-            subline = "Bets returned"
+            headline = coordinator.L(.resultHeadlinePush)
+            subline = coordinator.L(.resultSubPush)
             isWin = false
         } else {
             let playerBust = !viewModel.state.playerHands.isEmpty && viewModel.state.playerHands.allSatisfy { $0.isBust }
-            headline = playerBust ? "Bust!" : "Not today, partner!"
-            subline = net > 0 ? "+\(net) credits" : net < 0 ? "\(net) credits" : "Even"
+            headline = playerBust ? coordinator.L(.resultHeadlineBust) : coordinator.L(.notTodayPartner)
+            subline = net > 0 ? coordinator.L(.resultSubNetPositiveFmt, net) : net < 0 ? coordinator.L(.resultSubNetNegativeFmt, net) : coordinator.L(.resultSubEven)
             isWin = false
         }
-        
+
         let streak = viewModel.statistics.currentStreak
         let streakText: String?
         if streak >= 2 && isWin {
-            streakText = streak >= 5 ? "*** \(streak) WIN STREAK ***"
-                       : streak >= 3 ? "** \(streak) WIN STREAK **"
-                       :               "\(streak) wins in a row!"
+            streakText = streak >= 5 ? coordinator.L(.streakText5plusFmt, streak)
+                       : streak >= 3 ? coordinator.L(.streakText3to4Fmt, streak)
+                       :               coordinator.L(.streakText2Fmt, streak)
         } else {
             streakText = nil
         }
@@ -593,8 +593,8 @@ public struct BlackjackView: View {
             }
 
             VStack(spacing: 2) {
-                Text("Dealer: \(dealerVal)")
-                Text("Player: \(playerVal)")
+                Text(coordinator.L(.resultDealerValueFmt, dealerVal))
+                Text(coordinator.L(.resultPlayerValueFmt, playerVal))
             }
             .font(.system(size: 14, weight: .bold))
             .foregroundColor(.white.opacity(0.7))
@@ -625,26 +625,26 @@ public struct BlackjackView: View {
             case .betting, .result:
                 HStack(spacing: 12) {
                     if !viewModel.isFreePlay {
-                        casinoButton("CLEAR BET", systemImage: "xmark", color: Color(white: 0.25)) { viewModel.clearBet() }
+                        casinoButton(coordinator.L(.btnClearBet), systemImage: "xmark", color: Color(white: 0.25)) { viewModel.clearBet() }
                         Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
                     }
-                    casinoButton("DEAL  [Space]", systemImage: "play.fill", color: .yellow,
+                    casinoButton(coordinator.L(.btnDealSpace), systemImage: "play.fill", color: .yellow,
                                  disabled: !viewModel.isFreePlay && viewModel.state.sessionCredits < viewModel.state.currentBet) {
                         viewModel.deal()
                     }
                     if viewModel.canRebuy {
                         Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
-                        casinoButton("REBUY", systemImage: "creditcard", color: .red.opacity(0.8)) { viewModel.rebuy() }
+                        casinoButton(coordinator.L(.btnRebuyMac), systemImage: "creditcard", color: .red.opacity(0.8)) { viewModel.rebuy() }
                     }
                 }
 
                 if !viewModel.isFreePlay {
                     HStack(spacing: 12) {
-                        casinoButton("1",  color: .white, textColor: .black) { viewModel.addToBet(1) }
-                        casinoButton("5",  color: .red.opacity(0.85)) { viewModel.addToBet(5) }
-                        casinoButton("10", color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
-                        casinoButton("25", color: .green.opacity(0.75)) { viewModel.addToBet(25) }
-                        casinoButton("2X", color: .orange.opacity(0.85)) { viewModel.doubleBet() }
+                        casinoButton(coordinator.L(.chip1),  color: .white, textColor: .black) { viewModel.addToBet(1) }
+                        casinoButton(coordinator.L(.chip5),  color: .red.opacity(0.85)) { viewModel.addToBet(5) }
+                        casinoButton(coordinator.L(.chip10), color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
+                        casinoButton(coordinator.L(.chip25), color: .green.opacity(0.75)) { viewModel.addToBet(25) }
+                        casinoButton(coordinator.L(.chip2x), color: .orange.opacity(0.85)) { viewModel.doubleBet() }
                     }
                 } else {
                     phantomChipRow
@@ -654,16 +654,16 @@ public struct BlackjackView: View {
                 HStack(spacing: 12) {
                     if viewModel.activeHand?.isSplitAce == true {
                         // Split Aces auto-stand after one card — no player action, just a brief pause.
-                        casinoButton("HIT  [H]",   systemImage: "plus.circle", color: .green.opacity(0.3), disabled: true) {}
-                        casinoButton("STAND  [S]", systemImage: "hand.raised", color: .red.opacity(0.3),   disabled: true) {}
+                        casinoButton(coordinator.L(.btnHit),   systemImage: "plus.circle", color: .green.opacity(0.3), disabled: true) {}
+                        casinoButton(coordinator.L(.btnStand), systemImage: "hand.raised", color: .red.opacity(0.3),   disabled: true) {}
                     } else {
-                        casinoButton("HIT  [H]",       systemImage: "plus.circle", color: .green.opacity(0.85))  { viewModel.hit() }
-                        casinoButton("STAND  [S]",     systemImage: "hand.raised", color: .red.opacity(0.75))    { viewModel.stand() }
+                        casinoButton(coordinator.L(.btnHit),       systemImage: "plus.circle", color: .green.opacity(0.85))  { viewModel.hit() }
+                        casinoButton(coordinator.L(.btnStand),     systemImage: "hand.raised", color: .red.opacity(0.75))    { viewModel.stand() }
                         if viewModel.canDouble {
-                            casinoButton("DOUBLE  [D]", systemImage: "arrow.up.circle", color: .blue.opacity(0.75)) { viewModel.doubleDown() }
+                            casinoButton(coordinator.L(.btnDouble), systemImage: "arrow.up.circle", color: .blue.opacity(0.75)) { viewModel.doubleDown() }
                         }
                         if viewModel.canSplit {
-                            casinoButton("SPLIT  [P]", systemImage: "square.split.2x1", color: .purple.opacity(0.75)) { viewModel.split() }
+                            casinoButton(coordinator.L(.btnSplit), systemImage: "square.split.2x1", color: .purple.opacity(0.75)) { viewModel.split() }
                         }
                     }
                 }
@@ -675,8 +675,8 @@ public struct BlackjackView: View {
 
             case .dealerTurn:
                 HStack(spacing: 12) {
-                    casinoButton("HIT  [H]",       systemImage: "plus.circle", color: .green.opacity(0.3), disabled: true) {}
-                    casinoButton("STAND  [S]",     systemImage: "hand.raised", color: .red.opacity(0.3),   disabled: true) {}
+                    casinoButton(coordinator.L(.btnHit),       systemImage: "plus.circle", color: .green.opacity(0.3), disabled: true) {}
+                    casinoButton(coordinator.L(.btnStand),     systemImage: "hand.raised", color: .red.opacity(0.3),   disabled: true) {}
                 }
                 phantomChipRow
             }
@@ -688,11 +688,11 @@ public struct BlackjackView: View {
     // measured/scaled height — never changes when the phase changes.
     private var phantomChipRow: some View {
         HStack(spacing: 12) {
-            casinoButton("1", color: .clear, textColor: .clear) {}
-            casinoButton("5", color: .clear, textColor: .clear) {}
-            casinoButton("10", color: .clear, textColor: .clear) {}
-            casinoButton("25", color: .clear, textColor: .clear) {}
-            casinoButton("2X", color: .clear, textColor: .clear) {}
+            casinoButton(coordinator.L(.chip1), color: .clear, textColor: .clear) {}
+            casinoButton(coordinator.L(.chip5), color: .clear, textColor: .clear) {}
+            casinoButton(coordinator.L(.chip10), color: .clear, textColor: .clear) {}
+            casinoButton(coordinator.L(.chip25), color: .clear, textColor: .clear) {}
+            casinoButton(coordinator.L(.chip2x), color: .clear, textColor: .clear) {}
         }
         .opacity(0)
         .allowsHitTesting(false)
@@ -885,15 +885,15 @@ struct BlackjackOptionsView: View {
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
             }
         ) {
-            Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 10...10000, step: 10)
+            Stepper(coordinator.L(.startingCreditsFmt, startingCredits), value: $startingCredits, in: 10...10000, step: 10)
                 .font(.system(.body))
 
             Divider()
 
-            Toggle("Sound Effects",     isOn: $isSoundEnabled).font(.system(.body))
-            Toggle("No Stress Mode",    isOn: $noStressMode).font(.system(.body))
-            Toggle("Honey Mode (Flavor)", isOn: $honeyMode).font(.system(.body))
-            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners).font(.system(.body))
+            Toggle(coordinator.L(.soundEffects),     isOn: $isSoundEnabled).font(.system(.body))
+            Toggle(coordinator.L(.noStressMode),    isOn: $noStressMode).font(.system(.body))
+            Toggle(coordinator.L(.honeyMode), isOn: $honeyMode).font(.system(.body))
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners).font(.system(.body))
         }
     }
 }
@@ -903,48 +903,49 @@ struct BlackjackOptionsView: View {
 struct BlackjackStatsView: View {
     var viewModel: BlackjackViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
     @State private var showingResetConfirmation = false
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Blackjack Statistics")
+            Text(coordinator.L(.blackjackStatistics))
                 .font(.system(size: 16, weight: .bold))
                 .padding(.top, 16)
 
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                StatRowView(label: "Hands Played",  value: "\(viewModel.statistics.handsPlayed)", valueBold: true)
-                StatRowView(label: "Hands Won",     value: "\(viewModel.statistics.handsWon)", valueBold: true)
-                StatRowView(label: "Hands Lost",    value: "\(viewModel.statistics.handsLost)", valueBold: true)
-                StatRowView(label: "Pushes",        value: "\(viewModel.statistics.pushes)", valueBold: true)
-                StatRowView(label: "Blackjacks",    value: "\(viewModel.statistics.blackjacks)", valueBold: true)
-                StatRowView(label: "Win Rate",      value: String(format: "%.1f%%", viewModel.statistics.winRate * 100), valueBold: true)
-                StatRowView(label: "Cur. Streak",   value: "\(viewModel.statistics.currentStreak)", valueBold: true)
-                StatRowView(label: "Best Streak",   value: "\(viewModel.statistics.longestStreak)", valueBold: true)
-                StatRowView(label: "Total Wagered", value: "\(viewModel.statistics.totalWagered)", valueBold: true)
-                StatRowView(label: "Total Paid",    value: "\(viewModel.statistics.totalPaidOut)", valueBold: true)
-                StatRowView(label: "Biggest Pay",   value: "\(viewModel.statistics.biggestPayout)", valueBold: true)
-                StatRowView(label: "RTP",           value: String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100), valueBold: true)
-                StatRowView(label: "Rebuys",        value: "\(viewModel.statistics.rebuyCount)", valueBold: true)
+                StatRowView(label: coordinator.L(.handsPlayed),  value: "\(viewModel.statistics.handsPlayed)", valueBold: true)
+                StatRowView(label: coordinator.L(.handsWon),     value: "\(viewModel.statistics.handsWon)", valueBold: true)
+                StatRowView(label: coordinator.L(.statHandsLost),    value: "\(viewModel.statistics.handsLost)", valueBold: true)
+                StatRowView(label: coordinator.L(.statPushes),        value: "\(viewModel.statistics.pushes)", valueBold: true)
+                StatRowView(label: coordinator.L(.statBlackjacks),    value: "\(viewModel.statistics.blackjacks)", valueBold: true)
+                StatRowView(label: coordinator.L(.winRate),      value: String(format: "%.1f%%", viewModel.statistics.winRate * 100), valueBold: true)
+                StatRowView(label: coordinator.L(.statCurStreakShort),   value: "\(viewModel.statistics.currentStreak)", valueBold: true)
+                StatRowView(label: coordinator.L(.statBestStreak),   value: "\(viewModel.statistics.longestStreak)", valueBold: true)
+                StatRowView(label: coordinator.L(.totalWagered), value: "\(viewModel.statistics.totalWagered)", valueBold: true)
+                StatRowView(label: coordinator.L(.totalPaid),    value: "\(viewModel.statistics.totalPaidOut)", valueBold: true)
+                StatRowView(label: coordinator.L(.biggestPay),   value: "\(viewModel.statistics.biggestPayout)", valueBold: true)
+                StatRowView(label: coordinator.L(.rtpStat),           value: String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100), valueBold: true)
+                StatRowView(label: coordinator.L(.rebuysStat),        value: "\(viewModel.statistics.rebuyCount)", valueBold: true)
             }
             .padding(.horizontal, 24)
 
             Divider()
 
             HStack {
-                Button("Reset Stats") { showingResetConfirmation = true }
+                Button(coordinator.L(.resetStats)) { showingResetConfirmation = true }
                     .buttonStyle(.borderless)
                     .foregroundColor(.red)
                     .font(.system(.body))
-                    .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
-                        Button("Reset", role: .destructive) { viewModel.resetStatistics() }
-                        Button("Cancel", role: .cancel) {}
+                    .alert(coordinator.L(.resetStatisticsTitle), isPresented: $showingResetConfirmation) {
+                        Button(coordinator.L(.reset), role: .destructive) { viewModel.resetStatistics() }
+                        Button(coordinator.L(.cancel), role: .cancel) {}
                     } message: {
-                        Text("This will permanently clear all Blackjack statistics. This cannot be undone.")
+                        Text(coordinator.L(.msgResetStatsBlackjack))
                     }
                 Spacer()
-                Button("Close") { dismiss() }
+                Button(coordinator.L(.close)) { dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .font(.system(.body))
             }

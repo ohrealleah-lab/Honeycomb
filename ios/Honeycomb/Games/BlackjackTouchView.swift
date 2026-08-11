@@ -122,7 +122,7 @@ struct BlackjackTouchView: View {
     }
 
     private var dealerLabel: String {
-        guard !viewModel.state.dealerCards.isEmpty else { return "DEALER" }
+        guard !viewModel.state.dealerCards.isEmpty else { return coordinator.L(.dealerLabel) }
         let value = viewModel.state.phase == .playing ? viewModel.state.dealerVisibleValue : viewModel.state.dealerValue
         return "DEALER  \(value)"
     }
@@ -270,7 +270,7 @@ struct BlackjackTouchView: View {
                 viewModel.deal()
                 actionHaptic.impactOccurred()
             } label: {
-                Text("Deal")
+                Text(coordinator.L(.dealButton))
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 4)
@@ -320,7 +320,7 @@ struct BlackjackTouchView: View {
             Button {
                 viewModel.rebuy()
             } label: {
-                Label("Rebuy", systemImage: "arrow.clockwise.circle")
+                Label(coordinator.L(.rebuyButton), systemImage: "arrow.clockwise.circle")
                     .font(.headline)
                     .padding(.horizontal, 12)
             }
@@ -336,6 +336,7 @@ struct BlackjackTouchView: View {
 struct BlackjackSettingsSection: View {
     @Bindable var viewModel: BlackjackViewModel
     let canOpenOptions: Bool
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -344,10 +345,10 @@ struct BlackjackSettingsSection: View {
                 .foregroundStyle(.secondary)
 
             Group {
-                Stepper("Starting Credits: \(viewModel.options.startingCredits)",
+                Stepper(coordinator.L(.startingCreditsFmt, viewModel.options.startingCredits),
                         value: $viewModel.options.startingCredits, in: 10...10000, step: 10)
-                Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
-                Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
+                Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
+                Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
                     .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
             }
             .disabledDuringGameplay(!canOpenOptions)
@@ -366,6 +367,7 @@ struct BlackjackSettingsSection: View {
 struct BlackjackStatsSheet: View {
     @Bindable var viewModel: BlackjackViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         NavigationStack {
@@ -385,7 +387,7 @@ struct BlackjackStatsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(coordinator.L(.done)) { dismiss() }
                 }
             }
         }

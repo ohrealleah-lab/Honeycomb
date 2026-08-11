@@ -3,32 +3,29 @@ import SwiftUI
 struct AboutHoneycombView: View {
     @State private var checker = UpdateChecker.shared
     @Environment(\.openURL) private var openURL
-
-    private var versionString: String {
-        "Version \(checker.currentVersion)"
-    }
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         VStack(spacing: 10) {
-            Text("Honeycomb")
+            Text(coordinator.L(.appName))
                 .font(.system(size: 32, weight: .black))
 
-            Text("CARD SUITE")
+            Text(coordinator.L(.cardSuiteLabel))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.secondary)
                 .kerning(2)
 
             Divider().padding(.vertical, 4)
 
-            Text(versionString)
+            Text(coordinator.L(.versionFmt, checker.currentVersion))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
 
-            Text("© 2026 Leahbee. All rights reserved.")
+            Text(coordinator.L(.copyrightNotice))
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
 
-            Text("For Rhinestone.")
+            Text(coordinator.L(.dedication))
                 .font(.system(size: 11))
                 .italic()
                 .foregroundColor(.secondary)
@@ -46,7 +43,7 @@ struct AboutHoneycombView: View {
     private var checkForUpdatesSection: some View {
         switch checker.manualCheckState {
         case .idle:
-            Button("Check for Updates…") {
+            Button(coordinator.L(.checkForUpdates)) {
                 checker.checkNow()
             }
             .buttonStyle(.link)
@@ -55,37 +52,37 @@ struct AboutHoneycombView: View {
         case .checking:
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
-                Text("Checking for updates…")
+                Text(coordinator.L(.checkingForUpdates))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
 
         case .upToDate:
             VStack(spacing: 4) {
-                Text("You're up to date.")
+                Text(coordinator.L(.upToDate))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
-                Button("Check Again") { checker.checkNow() }
+                Button(coordinator.L(.checkAgain)) { checker.checkNow() }
                     .buttonStyle(.link)
                     .font(.system(size: 11))
             }
 
         case .failed:
             VStack(spacing: 4) {
-                Text("Couldn't check for updates. Check your internet connection.")
+                Text(coordinator.L(.updateCheckFailed))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
-                Button("Try Again") { checker.checkNow() }
+                Button(coordinator.L(.tryAgain)) { checker.checkNow() }
                     .buttonStyle(.link)
                     .font(.system(size: 12))
             }
 
         case .newerAvailable(let outcome):
             VStack(spacing: 8) {
-                Text("Version \(outcome.latestVersion) is available.")
+                Text(coordinator.L(.newerVersionAvailableFmt, outcome.latestVersion))
                     .font(.system(size: 12, weight: .semibold))
-                Button("View Release") {
+                Button(coordinator.L(.viewRelease)) {
                     openURL(outcome.releaseURL)
                 }
                 .buttonStyle(.borderedProminent)

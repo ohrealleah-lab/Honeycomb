@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct HoneycombStatsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
     var viewModel: HoneycombViewModel
 
     @State private var profile = HoneycombProfileManager.shared
@@ -33,7 +34,7 @@ public struct HoneycombStatsView: View {
         let unlockedPercent = totalCards > 0 ? Double(totalUnlocked) / Double(totalCards) * 100 : 0
 
         VStack(spacing: 20) {
-            Text("Honeycomb Statistics")
+            Text(coordinator.L(.honeycombStatistics))
                 .font(.system(size: 16, weight: .bold))
                 .padding(.top, 12)
 
@@ -41,45 +42,45 @@ public struct HoneycombStatsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    StatRowView(label: "Games Played", value: "\(stats.gamesPlayed)")
-                    StatRowView(label: "Matches Won", value: "\(stats.matchesWon)")
-                    StatRowView(label: "Matches Lost", value: "\(stats.matchesLost)")
-                    StatRowView(label: "Matches Drawn", value: "\(stats.matchesDrawn)")
-                    StatRowView(label: "Most Swarms to the Death", value: "\(stats.suddenDeathCount)")
-                    StatRowView(label: "Win Rate", value: String(format: "%.1f%%", winRate))
+                    StatRowView(label: coordinator.L(.gamesPlayed), value: "\(stats.gamesPlayed)")
+                    StatRowView(label: coordinator.L(.statMatchesWon), value: "\(stats.matchesWon)")
+                    StatRowView(label: coordinator.L(.statMatchesLost), value: "\(stats.matchesLost)")
+                    StatRowView(label: coordinator.L(.statMatchesDrawn), value: "\(stats.matchesDrawn)")
+                    StatRowView(label: coordinator.L(.statSwarmsToDeath), value: "\(stats.suddenDeathCount)")
+                    StatRowView(label: coordinator.L(.winRate), value: String(format: "%.1f%%", winRate))
 
                     Divider()
 
-                    StatRowView(label: "Current Win Streak", value: "\(stats.currentWinStreak)")
-                    StatRowView(label: "Longest Win Streak", value: "\(stats.longestWinStreak)")
-                    StatRowView(label: "Flawless Victories (10-0 Sweep)", value: "\(stats.flawlessVictories)")
-                    StatRowView(label: "Baby Bee Wins", value: "\(stats.easyWins)")
-                    StatRowView(label: "Honey Bee Wins", value: "\(stats.mediumWins)")
-                    StatRowView(label: "Queen Bee Wins", value: "\(stats.hardWins)")
-                    StatRowView(label: "Killer Bee Wins", value: "\(stats.ultraHardWins)")
+                    StatRowView(label: coordinator.L(.statCurrentWinStreak), value: "\(stats.currentWinStreak)")
+                    StatRowView(label: coordinator.L(.statLongestWinStreak), value: "\(stats.longestWinStreak)")
+                    StatRowView(label: coordinator.L(.statFlawlessVictoriesMac), value: "\(stats.flawlessVictories)")
+                    StatRowView(label: coordinator.L(.statBabyBeeWins), value: "\(stats.easyWins)")
+                    StatRowView(label: coordinator.L(.statHoneyBeeWins), value: "\(stats.mediumWins)")
+                    StatRowView(label: coordinator.L(.statQueenBeeWins), value: "\(stats.hardWins)")
+                    StatRowView(label: coordinator.L(.statKillerBeeWins), value: "\(stats.ultraHardWins)")
 
                     Divider()
 
-                    StatRowView(label: "Total Cards Flipped", value: "\(stats.cardsCaptured)")
-                    StatRowView(label: "Queen's Falls", value: "\(stats.fallenAces)")
-                    StatRowView(label: "Symmetry/Math Bee Hive Minds Triggered", value: "\(stats.samePlusTriggers)")
-                    StatRowView(label: "Cards Stolen", value: "\(stats.cardsStolen)")
-                    StatRowView(label: "Times Started Over", value: "\(stats.timesStartedOver)")
+                    StatRowView(label: coordinator.L(.statTotalCardsFlipped), value: "\(stats.cardsCaptured)")
+                    StatRowView(label: coordinator.L(.statQueensFalls), value: "\(stats.fallenAces)")
+                    StatRowView(label: coordinator.L(.statHiveMindsTriggered), value: "\(stats.samePlusTriggers)")
+                    StatRowView(label: coordinator.L(.statCardsStolen), value: "\(stats.cardsStolen)")
+                    StatRowView(label: coordinator.L(.statTimesStartedOver), value: "\(stats.timesStartedOver)")
 
                     Divider()
 
-                    StatRowView(label: "Cards Unlocked", value: "\(totalUnlocked)/\(totalCards) (\(String(format: "%.0f%%", unlockedPercent)))")
+                    StatRowView(label: coordinator.L(.statCardsUnlockedLabel), value: coordinator.L(.statCardsUnlockedValueFmt, totalUnlocked, totalCards, String(format: "%.0f%%", unlockedPercent)))
 
                     ForEach(suitOrder, id: \.code) { entry in
                         let progress = suitProgress(entry.code)
-                        StatRowView(label: "\(entry.label) Unlocked", value: "\(progress.unlocked)/\(progress.total)")
+                        StatRowView(label: coordinator.L(.statSuitUnlockedFmt, entry.label), value: "\(progress.unlocked)/\(progress.total)")
                     }
 
                     Divider()
 
                     ForEach(1...5, id: \.self) { star in
                         let progress = starProgress(star)
-                        StatRowView(label: "\(star)\u{2605} Unlocked", value: "\(progress.unlocked)/\(progress.total)")
+                        StatRowView(label: coordinator.L(.statStarUnlockedFmt, star), value: "\(progress.unlocked)/\(progress.total)")
                     }
                 }
                 .padding(.horizontal, 36)
@@ -88,22 +89,22 @@ public struct HoneycombStatsView: View {
             Divider()
 
             HStack {
-                Button("Reset Stats") {
+                Button(coordinator.L(.resetStats)) {
                     showingResetConfirmation = true
                 }
                 .buttonStyle(.borderless)
                 .foregroundColor(.red)
                 .font(.system(.body))
-                .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
-                    Button("Reset", role: .destructive) { viewModel.resetStatistics() }
-                    Button("Cancel", role: .cancel) {}
+                .alert(coordinator.L(.resetStatisticsTitle), isPresented: $showingResetConfirmation) {
+                    Button(coordinator.L(.reset), role: .destructive) { viewModel.resetStatistics() }
+                    Button(coordinator.L(.cancel), role: .cancel) {}
                 } message: {
-                    Text("This will permanently clear all statistics. This cannot be undone.")
+                    Text(coordinator.L(.resetStatisticsBodyGeneric))
                 }
 
                 Spacer()
 
-                Button("Close") {
+                Button(coordinator.L(.close)) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)

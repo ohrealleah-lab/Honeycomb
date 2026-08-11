@@ -102,6 +102,8 @@ struct CustomCardBackEditorView: View {
     @State private var showError = false
     @State private var errorMessage = "Name cannot be empty or already exist!"
 
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
+
     init(image: NSImage, existingCardBack: CustomCardBack? = nil,
          onSave: @escaping (String, Double, Double, Double) -> Void,
          onCancel: @escaping () -> Void) {
@@ -117,7 +119,7 @@ struct CustomCardBackEditorView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text(existingCardBack != nil ? "Edit Card Back" : "Edit Custom Card Art")
+            Text(existingCardBack != nil ? coordinator.L(.editCardBackTitle) : coordinator.L(.editCustomCardArtTitle))
                 .font(.display(18))
                 .foregroundColor(.primary)
                 .padding(.top)
@@ -152,10 +154,10 @@ struct CustomCardBackEditorView: View {
             // Name input — locked to the existing name when re-editing (see
             // existingCardBack's doc comment above).
             VStack(alignment: .leading, spacing: 4) {
-                Text("Card Back Name:")
+                Text(coordinator.L(.cardBackNameLabel))
                     .font(.display(12))
                     .foregroundColor(.secondary)
-                TextField("e.g. My Dog", text: $name)
+                TextField(coordinator.L(.cardBackNamePlaceholder), text: $name)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
                     .disabled(existingCardBack != nil)
@@ -164,11 +166,11 @@ struct CustomCardBackEditorView: View {
             // Horizontal Offset Slider
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Horizontal Position:")
+                    Text(coordinator.L(.horizontalPositionLabel))
                         .font(.display(12))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(String(format: "%.0f px", offsetX))
+                    Text(coordinator.L(.pxOffsetFmt, offsetX))
                         .font(.display(12))
                         .foregroundColor(.primary)
 
@@ -180,11 +182,11 @@ struct CustomCardBackEditorView: View {
             // Vertical Offset Slider
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Vertical Position:")
+                    Text(coordinator.L(.verticalPositionLabel))
                         .font(.display(12))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(String(format: "%.0f px", offsetY))
+                    Text(coordinator.L(.pxOffsetFmt, offsetY))
                         .font(.display(12))
                         .foregroundColor(.primary)
 
@@ -196,11 +198,11 @@ struct CustomCardBackEditorView: View {
             // Scale Slider
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Scale Factor:")
+                    Text(coordinator.L(.scaleFactorLabel))
                         .font(.display(12))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(String(format: "%.2fx", scale))
+                    Text(coordinator.L(.scaleFmt, scale))
                         .font(.display(12))
                         .foregroundColor(.primary)
 
@@ -216,11 +218,11 @@ struct CustomCardBackEditorView: View {
             }
 
             HStack(spacing: 12) {
-                themedEditorButton("Cancel", tint: .primary, shortcut: .cancelAction) {
+                themedEditorButton(coordinator.L(.cancel), tint: .primary, shortcut: .cancelAction) {
                     onCancel()
                 }
 
-                themedEditorButton("Save", tint: .primary, shortcut: .defaultAction) {
+                themedEditorButton(coordinator.L(.save), tint: .primary, shortcut: .defaultAction) {
                     let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     // Previously this only ran the empty/uniqueness checks when
                     // existingCardBack != nil AND the name had changed — for a brand
@@ -233,11 +235,11 @@ struct CustomCardBackEditorView: View {
                         // (see the field's .disabled above), so no uniqueness check needed.
                         onSave(cleanedName, scale, offsetX, offsetY)
                     } else if cleanedName.isEmpty {
-                        errorMessage = "Add a name to save."
+                        errorMessage = coordinator.L(.addNameToSaveError)
                         showError = true
                     } else if CustomCardBackManager.shared.defaultThemes.contains(cleanedName) ||
                         CustomCardBackManager.shared.customCardBacks.contains(where: { $0.name == cleanedName }) {
-                        errorMessage = "Name cannot be empty or already exist!"
+                        errorMessage = coordinator.L(.nameEmptyOrExistsError)
                         showError = true
                     } else {
                         onSave(cleanedName, scale, offsetX, offsetY)
@@ -263,6 +265,7 @@ struct DeckItemView: View {
     let proxy: ScrollViewProxy
 
     @State private var showingDeleteAlert = false
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     var body: some View {
         VStack(spacing: 4) {
@@ -295,12 +298,12 @@ struct DeckItemView: View {
                     }
                     .buttonStyle(.plain)
                     .offset(x: 5, y: -5)
-                    .help("Delete deck")
-                    .alert("Delete Card Back", isPresented: $showingDeleteAlert) {
-                        Button("Cancel", role: .cancel) { }
-                        Button("Delete", role: .destructive) { deleteDeckByName(name) }
+                    .help(coordinator.L(.deleteDeckTooltip))
+                    .alert(coordinator.L(.deleteCardBackTitle), isPresented: $showingDeleteAlert) {
+                        Button(coordinator.L(.cancel), role: .cancel) { }
+                        Button(coordinator.L(.delete), role: .destructive) { deleteDeckByName(name) }
                     } message: {
-                        Text("Are you sure you want to delete \"\(name)\"?")
+                        Text(coordinator.L(.deleteNamedCardBackConfirmFmt, name))
                     }
                 }
             }
@@ -324,7 +327,9 @@ public struct CardDeckSelectorView: View {
     @State private var showingDeleteConfirmation = false
     @State private var deckToDelete: String? = nil
     @State private var deckInUseByTheme: (deckName: String, themeName: String)? = nil
-    
+
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
+
     public init(cardBackTheme: Binding<String>, feltColor: Binding<FeltColorTheme>) {
         self._cardBackTheme = cardBackTheme
         self._feltColor = feltColor
@@ -335,14 +340,14 @@ public struct CardDeckSelectorView: View {
             // Row 1: Scrollable Carousel of All Decks in Stable Order
             HStack(alignment: .firstTextBaseline) {
                 HStack(spacing: 4) {
-                    Text("Card Deck")
+                    Text(coordinator.L(.cardDeckHeading))
                         .font(.system(.body).bold())
-                    Text("(.jpg, .png, or .gif accepted):")
+                    Text(coordinator.L(.jpgPngGifAcceptedSuffix))
                         .font(.system(.body))
                 }
                 .foregroundColor(.primary)
                 Spacer()
-                Button("Add Custom…") { selectImage() }
+                Button(coordinator.L(.addCustomDeck)) { selectImage() }
                     .font(.system(size: 12))
                     .buttonStyle(.plain)
                     .foregroundColor(.accentColor)
@@ -419,27 +424,27 @@ public struct CardDeckSelectorView: View {
                 selectedImageItem = nil
             }
         }
-        .alert("Delete Card Back", isPresented: $showingDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {
+        .alert(coordinator.L(.deleteCardBackTitle), isPresented: $showingDeleteConfirmation) {
+            Button(coordinator.L(.cancel), role: .cancel) {
                 deckToDelete = nil
             }
-            Button("Delete", role: .destructive) {
+            Button(coordinator.L(.delete), role: .destructive) {
                 if let name = deckToDelete {
                     deleteDeckByName(name)
                 }
                 deckToDelete = nil
             }
         } message: {
-            Text("Are you sure you want to delete this card back?")
+            Text(coordinator.L(.deleteCardBackBody))
         }
-        .alert("Card Back In Use", isPresented: Binding(
+        .alert(coordinator.L(.cardBackInUseTitle), isPresented: Binding(
             get: { deckInUseByTheme != nil },
             set: { if !$0 { deckInUseByTheme = nil } }
         )) {
-            Button("OK", role: .cancel) { deckInUseByTheme = nil }
+            Button(coordinator.L(.ok), role: .cancel) { deckInUseByTheme = nil }
         } message: {
             if let info = deckInUseByTheme {
-                Text("This card back is used by \"\(info.themeName)\". Please update or delete the theme first.")
+                Text(coordinator.L(.cardBackInUseFmt, info.themeName))
             }
         }
     }
@@ -520,10 +525,10 @@ public struct CardDeckSelectorView: View {
                 let ext = url.pathExtension.lowercased()
                 guard ["jpg", "jpeg", "png", "gif"].contains(ext) else {
                     let alert = NSAlert()
-                    alert.messageText = "Error"
-                    alert.informativeText = "File must be .jpg, .png, or .gif!"
+                    alert.messageText = coordinator.L(.errorTitle)
+                    alert.informativeText = coordinator.L(.fileMustBeJpgPngGifError)
                     alert.alertStyle = .warning
-                    alert.addButton(withTitle: "OK")
+                    alert.addButton(withTitle: coordinator.L(.ok))
                     alert.runModal()
                     return
                 }
@@ -533,10 +538,10 @@ public struct CardDeckSelectorView: View {
                     selectedImageItem = IdentifiableImage(image: image, gifData: gifData)
                 } else {
                     let alert = NSAlert()
-                    alert.messageText = "Error"
-                    alert.informativeText = "Could not load the selected image file."
+                    alert.messageText = coordinator.L(.errorTitle)
+                    alert.informativeText = coordinator.L(.couldNotLoadSelectedImageFileError)
                     alert.alertStyle = .critical
-                    alert.addButton(withTitle: "OK")
+                    alert.addButton(withTitle: coordinator.L(.ok))
                     alert.runModal()
                 }
             }

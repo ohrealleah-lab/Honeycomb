@@ -104,7 +104,7 @@ struct VideoPokerTouchView: View {
 
             Spacer()
 
-            Text(viewModel.options.variant.rawValue)
+            Text(localizedVariantName(viewModel.options.variant, language: coordinator.language))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.8))
                 .lineLimit(1)
@@ -120,7 +120,7 @@ struct VideoPokerTouchView: View {
                     && viewModel.state.lastPayout > 0
                     && viewModel.state.lastHandName == entry.handName
                 HStack {
-                    Text(entry.handName)
+                    Text(localizedHandName(entry.handName, language: coordinator.language))
                     Spacer()
                     Text("\(entry.payout(bet: max(1, viewModel.state.currentBet)))")
                         .monospacedDigit()
@@ -148,7 +148,7 @@ struct VideoPokerTouchView: View {
             } else {
                 ForEach(Array(viewModel.state.hand.enumerated()), id: \.element.id) { i, card in
                     VStack(spacing: 4) {
-                        Text("HELD")
+                        Text(coordinator.L(.heldLabel))
                             .font(.caption2.weight(.black))
                             .foregroundStyle(.yellow)
                             .opacity(viewModel.state.heldIndices.contains(i) ? 1 : 0)
@@ -172,13 +172,14 @@ struct VideoPokerTouchView: View {
     private var resultBanner: some View {
         Group {
             if viewModel.state.phase == .result, !viewModel.state.lastHandName.isEmpty {
+                let localizedName = localizedHandName(viewModel.state.lastHandName, language: coordinator.language)
                 Text(viewModel.state.lastPayout > 0
-                     ? "\(viewModel.state.lastHandName)  +\(viewModel.state.lastPayout)"
-                     : viewModel.state.lastHandName)
+                     ? coordinator.L(.payoutResultFmt, localizedName, viewModel.state.lastPayout)
+                     : localizedName)
                     .font(.title3.weight(.black))
                     .foregroundStyle(viewModel.state.lastPayout > 0 ? .yellow : .white.opacity(0.8))
             } else if viewModel.state.phase == .holding {
-                Text("Tap cards to hold, then Draw")
+                Text(coordinator.L(.tapHoldDrawHint))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.7))
             } else {
@@ -228,7 +229,7 @@ struct VideoPokerTouchView: View {
                 Button {
                     viewModel.rebuy()
                 } label: {
-                    Label("Rebuy", systemImage: "arrow.clockwise.circle")
+                    Label(coordinator.L(.rebuyButton), systemImage: "arrow.clockwise.circle")
                         .font(.headline)
                         .padding(.horizontal, 12)
                 }
@@ -243,7 +244,7 @@ struct VideoPokerTouchView: View {
                     }
                     dealHaptic.impactOccurred()
                 } label: {
-                    Text(viewModel.state.phase == .holding ? "Draw" : "Deal")
+                    Text(viewModel.state.phase == .holding ? "Draw" : coordinator.L(.dealButton))
                         .font(.headline)
                         .padding(.horizontal, 24)
                 }
@@ -259,17 +260,18 @@ struct VideoPokerTouchView: View {
 struct VideoPokerSettingsSection: View {
     @Bindable var viewModel: VideoPokerViewModel
     let isMidHand: Bool
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("VIDEO POKER")
+            Text(coordinator.L(.settingsHeaderVideopoker))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
             Group {
-                Picker("Variant", selection: $viewModel.options.variant) {
+                Picker(coordinator.L(.pickerVariantLabel), selection: $viewModel.options.variant) {
                     ForEach(VideoPokerVariant.allCases, id: \.self) { v in
-                        Text(v.rawValue).tag(v)
+                        Text(localizedVariantName(v, language: coordinator.language)).tag(v)
                     }
                 }
                 .pickerStyle(.menu)
@@ -278,7 +280,7 @@ struct VideoPokerSettingsSection: View {
                 // three-hand layout isn't built on iOS yet, so exposing the toggle
                 // would let the player select a mode this view can't render.
 
-                Stepper("Starting Credits: \(viewModel.options.startingCredits)",
+                Stepper(coordinator.L(.startingCreditsFmt, viewModel.options.startingCredits),
                         value: $viewModel.options.startingCredits, in: 100...10000, step: 100)
 
                 Picker("Default Bet", selection: $viewModel.options.betPerHand) {
@@ -288,10 +290,10 @@ struct VideoPokerSettingsSection: View {
                 }
                 .pickerStyle(.menu)
 
-                Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
-                Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
+                Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
+                Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
                     .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
-                Toggle("Hide Bet Board", isOn: $viewModel.options.hideBetBoard)
+                Toggle(coordinator.L(.hideBetBoard), isOn: $viewModel.options.hideBetBoard)
             }
             .disabledDuringGameplay(isMidHand)
 
@@ -309,6 +311,7 @@ struct VideoPokerSettingsSection: View {
 struct VideoPokerStatsSheet: View {
     @Bindable var viewModel: VideoPokerViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         NavigationStack {
@@ -319,7 +322,7 @@ struct VideoPokerStatsSheet: View {
                     Text("\(viewModel.state.handsDealt)").foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("Royal Flushes")
+                    Text(coordinator.L(.royalFlushes))
                     Spacer()
                     Text("\(viewModel.statistics.royalFlushCount)").foregroundStyle(.secondary)
                 }
@@ -333,7 +336,7 @@ struct VideoPokerStatsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(coordinator.L(.done)) { dismiss() }
                 }
             }
         }

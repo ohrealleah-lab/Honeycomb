@@ -260,7 +260,7 @@ struct GameSelectionDropdown: View {
     var body: some View {
         Button(action: { isShowingMenu = true }) {
             HStack(spacing: 4) {
-                Text("Game Selection")
+                Text(coordinator.L(.gameSelectionLabel))
                     .font(.display(16))
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
@@ -286,6 +286,21 @@ struct GameSelectionDropdown: View {
         }
     }
 
+    // GameMode.displayName is the persisted-adjacent English source of truth (used
+    // elsewhere e.g. debug/logging) — this only swaps in a translation for display.
+    // .videoPoker/.blackjack reuse the Help Guide's title keys (identical English
+    // text, deduped onto one key during the xlsx merge); .honeycomb reuses appName.
+    private func localizedDisplayName(for mode: GameMode) -> String {
+        switch mode {
+        case .klondike:   return coordinator.L(.gamemodeKlondikeDisplay)
+        case .beecell:    return coordinator.L(.gamemodeBeecellDisplay)
+        case .spider:     return coordinator.L(.gamemodeSpiderDisplay)
+        case .videoPoker: return coordinator.L(.helpVideopokerTitle)
+        case .blackjack:  return coordinator.L(.helpBlackjackTitle)
+        case .honeycomb:  return coordinator.L(.appName)
+        }
+    }
+
     private func row(for mode: GameMode) -> some View {
         let isActive = coordinator.gameMode == mode
         return Button(action: {
@@ -294,7 +309,7 @@ struct GameSelectionDropdown: View {
             coordinator.gameMode = mode
         }) {
             HStack(spacing: 8) {
-                Text(mode.displayName)
+                Text(localizedDisplayName(for: mode))
                     .font(.display(16, weight: isActive ? .bold : .regular))
                     .lineLimit(1)
                     .foregroundColor(.primary)

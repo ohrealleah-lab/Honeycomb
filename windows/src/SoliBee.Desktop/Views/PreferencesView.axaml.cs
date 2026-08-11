@@ -15,6 +15,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -354,6 +355,8 @@ public partial class PreferencesView : UserControl
     // Syncs all UI controls to match the provided options. Call inside _initializing guard.
     private void SyncUIFromOptions(GameOptions options)
     {
+        SyncLanguageComboBox(options);
+
         NoStressModeCheckBox.IsChecked = options.IsNoStressMode;
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
         VegasCheckBox.IsChecked        = options.IsVegasScoring;
@@ -566,6 +569,7 @@ public partial class PreferencesView : UserControl
         SoundCheckBox.IsChecked        = options.IsSoundEnabled;
 
         var shared = SettingsService.LoadOptions();
+        SyncLanguageComboBox(shared);
         NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
         HideHintCheckBox.IsChecked     = shared.HideHintButton;
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
@@ -586,11 +590,108 @@ public partial class PreferencesView : UserControl
         SoundCheckBox.IsChecked = options.IsSoundEnabled;
 
         var shared = SettingsService.LoadOptions();
+        SyncLanguageComboBox(shared);
         NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
         HideHintCheckBox.IsChecked     = shared.HideHintButton;
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
         PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
+    }
+
+    // ── Language ──────────────────────────────────────────────────────────────
+
+    private void SyncLanguageComboBox(GameOptions options)
+    {
+        foreach (var item in LanguageComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (item.Tag?.ToString() == options.Language.ToString())
+            {
+                LanguageComboBox.SelectedItem = item;
+                break;
+            }
+        }
+        ApplyLocalization(options.Language);
+    }
+
+    private void ApplyLocalization(AppLanguage language)
+    {
+        LanguageLabel.Text = Strings.Get(StringKey.Language, language);
+        VisualThemesLabel.Text = Strings.Get(StringKey.VisualThemes, language);
+        VisualThemesSubtitleLabel.Text = Strings.Get(StringKey.VisualThemesSubtitle, language);
+
+        EnglishLanguageItem.Content = Strings.Get(StringKey.LanguageEnglish, language);
+        SpanishLanguageItem.Content = Strings.Get(StringKey.LanguageSpanish, language);
+
+        NoStressModeCheckBox.Content = Strings.Get(StringKey.NoStressMode, language);
+        HideBetBoardCheckBox.Content = Strings.Get(StringKey.HideBetBoard, language);
+        SoundCheckBox.Content = Strings.Get(StringKey.SoundEffects, language);
+        VegasCheckBox.Content = Strings.Get(StringKey.VegasScoring, language);
+        HideHintCheckBox.Content = Strings.Get(StringKey.HideHintButton, language);
+        ManuallyDismissBannersCheckBox.Content = Strings.Get(StringKey.ManuallyDismissBanners, language);
+        AlwaysOnTopCheckBox.Content = Strings.Get(StringKey.AlwaysOnTop, language);
+        PointHighlightsCheckBox.Content = Strings.Get(StringKey.HoneyMode, language);
+
+        AboutHoneycombButton.Content = Strings.Get(StringKey.AboutHoneycomb, language);
+
+        CardDeckHeadingText.Text = Strings.Get(StringKey.CardDeckHeading, language);
+        VignetteCheckBox.Content = Strings.Get(StringKey.FeltVignetteToggle, language);
+        AddCustomCardBackButton.Content = Strings.Get(StringKey.Add, language);
+        DeleteCustomCardBackButton.Content = Strings.Get(StringKey.Delete, language);
+        AddCustomBackgroundButton.Content = Strings.Get(StringKey.Add, language);
+        DeleteCustomBackgroundButton.Content = Strings.Get(StringKey.Delete, language);
+
+        FaceCardsButtonTitleText.Text = Strings.Get(StringKey.CustomizeFaceCardsTitle, language);
+        FaceCardsButtonSubtitleText.Text = Strings.Get(StringKey.CustomizeFaceCardsSubtitle, language);
+        CardColorsButtonTitleText.Text = Strings.Get(StringKey.CustomCardColorsTitle, language);
+        CardColorsButtonSubtitleText.Text = Strings.Get(StringKey.CustomCardColorsSubtitleWin, language);
+
+        CustomCardColorsPanelTitleText.Text = Strings.Get(StringKey.CustomCardColorsPanelTitle, language);
+        ResetCardColorsButton.Content = Strings.Get(StringKey.ResetCardColors, language);
+
+        // Overlay dialogs
+        ConfirmDeleteCardBackTitleText.Text = Strings.Get(StringKey.DeleteCardBackTitle, language);
+        ConfirmDeleteCardBackBodyText.Text = Strings.Get(StringKey.DeleteCardBackBody, language);
+        CancelDeleteCardBackButton.Content = Strings.Get(StringKey.Cancel, language);
+        ConfirmDeleteCardBackButton.Content = Strings.Get(StringKey.Delete, language);
+
+        CardBackInUseTitleText.Text = Strings.Get(StringKey.CardBackInUseTitle, language);
+        CardBackInUseOkButton.Content = Strings.Get(StringKey.Ok, language);
+
+        ConfirmDeleteBackgroundTitleText.Text = Strings.Get(StringKey.DeleteBackgroundTitle, language);
+        CancelDeleteBackgroundButton.Content = Strings.Get(StringKey.Cancel, language);
+        ConfirmDeleteBackgroundButton.Content = Strings.Get(StringKey.Delete, language);
+
+        BackgroundAlertOkButton.Content = Strings.Get(StringKey.Ok, language);
+
+        SaveThemeButton.Content = Strings.Get(StringKey.SaveNewThemeEllipsisWin, language);
+        NoThemesLabel.Text = Strings.Get(StringKey.NoSavedThemesYet, language);
+
+        CancelSaveThemeButton.Content = Strings.Get(StringKey.Cancel, language);
+        ConfirmSaveThemeButton.Content = Strings.Get(StringKey.Save, language);
+
+        CancelRenameThemeButton.Content = Strings.Get(StringKey.Cancel, language);
+        ConfirmRenameThemeButton.Content = Strings.Get(StringKey.Save, language);
+
+        CancelDeleteThemeButton.Content = Strings.Get(StringKey.Cancel, language);
+        ConfirmDeleteThemeButton.Content = Strings.Get(StringKey.Delete, language);
+
+        ConfirmResetCardColorsTitleText.Text = Strings.Get(StringKey.ResetCardColors, language);
+        ConfirmResetCardColorsBodyText.Text = Strings.Get(StringKey.ResetCardColorsConfirmBody, language);
+        CancelResetCardColorsButton.Content = Strings.Get(StringKey.Cancel, language);
+        ConfirmResetCardColorsButton.Content = Strings.Get(StringKey.Reset, language);
+    }
+
+    private void Language_Changed(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_initializing) return;
+        if (LanguageComboBox.SelectedItem is not ComboBoxItem item) return;
+        if (!Enum.TryParse<AppLanguage>(item.Tag?.ToString(), out var language)) return;
+
+        var shared = SettingsService.LoadOptions();
+        if (shared.Language == language) return;
+        shared.Language = language;
+        NotifySettingsChanged(shared);
+        ApplyLocalization(language);
     }
 
     // ── Game Mode ─────────────────────────────────────────────────────────────
@@ -725,7 +826,7 @@ public partial class PreferencesView : UserControl
         {
             var activeBtn = new Button
             {
-                Content = "Active",
+                Content = Strings.Get(StringKey.DeckActiveBadge, SettingsService.LoadOptions().Language),
                 IsEnabled = false,
                 Background = new SolidColorBrush(Color.Parse("#DDDDDD")),
                 Foreground = new SolidColorBrush(Color.Parse("#777777")),
@@ -740,7 +841,7 @@ public partial class PreferencesView : UserControl
         {
             var applyBtn = new Button
             {
-                Content = "Apply",
+                Content = Strings.Get(StringKey.ApplyThemeButton, SettingsService.LoadOptions().Language),
                 Tag = theme,
                 Background = new SolidColorBrush(Color.Parse("#E5E5E5")),
                 Foreground = new SolidColorBrush(Color.Parse("#1A1A1A")),
@@ -1204,10 +1305,14 @@ public partial class PreferencesView : UserControl
             .Select(t => t.Name)
             .ToList();
 
+        var language = SettingsService.LoadOptions().Language;
+
         if (themeNames.Count > 0)
         {
-            CardBackInUseText.Text = $"This card back is used by {string.Join(", ", themeNames)}. " +
-                $"Please delete the theme{(themeNames.Count > 1 ? "s" : "")} first.";
+            CardBackInUseText.Text = string.Format(
+                Strings.Get(StringKey.CardBackInUseMultiThemeFmt, language),
+                string.Join(", ", themeNames),
+                themeNames.Count > 1 ? "s" : "");
             CardBackInUseOverlay.IsVisible = true;
             return;
         }
@@ -1216,7 +1321,7 @@ public partial class PreferencesView : UserControl
         // or custom — so the last remaining one (of either kind) can't be removed.
         if (CardBackComboBox.Items.Count <= 1)
         {
-            CardBackInUseText.Text = "At least one card deck design must remain — you can't delete the last one.";
+            CardBackInUseText.Text = Strings.Get(StringKey.CardBackLastRemaining, language);
             CardBackInUseOverlay.IsVisible = true;
             return;
         }
@@ -1640,7 +1745,7 @@ public partial class PreferencesView : UserControl
                     total += read;
                     if (total > MaxBackgroundFileSizeBytes)
                     {
-                        BackgroundAlertText.Text = "That image is larger than 25 MB. Please choose a smaller file.";
+                        BackgroundAlertText.Text = Strings.Get(StringKey.ImageTooLargeMessage, SettingsService.LoadOptions().Language);
                         BackgroundAlertOverlay.IsVisible = true;
                         return;
                     }
@@ -1653,7 +1758,7 @@ public partial class PreferencesView : UserControl
             bool isJpeg = bytes.Length >= _jpegMagic.Length && bytes.AsSpan(0, _jpegMagic.Length).SequenceEqual(_jpegMagic);
             if (!isPng && !isJpeg)
             {
-                BackgroundAlertText.Text = "Selected file is not a valid PNG or JPEG image.";
+                BackgroundAlertText.Text = Strings.Get(StringKey.BackgroundInvalidFormatWin, SettingsService.LoadOptions().Language);
                 BackgroundAlertOverlay.IsVisible = true;
                 return;
             }

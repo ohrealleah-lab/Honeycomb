@@ -24,10 +24,10 @@ struct ThemesSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Themes")
+                Text(coordinator.L(.themesPanelTitle))
                     .font(.system(.body).bold())
                 Spacer()
-                Button("Save as New Theme") {
+                Button(coordinator.L(.saveAsNewTheme)) {
                     newThemeName = ""
                     saveError = nil
                     showingSaveRow = true
@@ -39,17 +39,17 @@ struct ThemesSectionView: View {
 
             if showingSaveRow {
                 HStack(spacing: 8) {
-                    TextField("Theme name", text: $newThemeName)
+                    TextField(coordinator.L(.themeNameFieldPlaceholder), text: $newThemeName)
                         .textFieldStyle(.roundedBorder)
                         .frame(maxWidth: .infinity)
                         .onSubmit { saveTheme() }
 
-                    Button("Save") { saveTheme() }
+                    Button(coordinator.L(.save)) { saveTheme() }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
                         .disabled(newThemeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-                    Button("Cancel") {
+                    Button(coordinator.L(.cancel)) {
                         showingSaveRow = false
                         saveError = nil
                     }
@@ -71,7 +71,7 @@ struct ThemesSectionView: View {
             // box nested inside an emptier box instead of one filled panel.
             Group {
                 if manager.themes.isEmpty {
-                    Text("No saved themes yet.")
+                    Text(coordinator.L(.noSavedThemesYet))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .padding(.vertical, 4)
@@ -94,23 +94,23 @@ struct ThemesSectionView: View {
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.12), lineWidth: 1))
             .frame(maxHeight: .infinity)
         }
-        .alert("Delete Theme", isPresented: Binding(
+        .alert(coordinator.L(.deleteThemeTitle), isPresented: Binding(
             get: { themeToDelete != nil },
             set: { if !$0 { themeToDelete = nil } }
         )) {
-            Button("Cancel", role: .cancel) { themeToDelete = nil }
-            Button("Delete", role: .destructive) {
+            Button(coordinator.L(.cancel), role: .cancel) { themeToDelete = nil }
+            Button(coordinator.L(.delete), role: .destructive) {
                 if let t = themeToDelete { manager.deleteTheme(id: t.id) }
                 themeToDelete = nil
             }
         } message: {
-            Text("Delete \"\(themeToDelete?.name ?? "")\"? This cannot be undone.")
+            Text(coordinator.L(.deleteThemeConfirmFmt, themeToDelete?.name ?? ""))
         }
-        .alert("Rename Theme", isPresented: Binding(
+        .alert(coordinator.L(.renameThemeTitle), isPresented: Binding(
             get: { renameError != nil },
             set: { if !$0 { renameError = nil } }
         )) {
-            Button("OK", role: .cancel) { renameError = nil }
+            Button(coordinator.L(.ok), role: .cancel) { renameError = nil }
         } message: {
             Text(renameError ?? "")
         }
@@ -154,7 +154,7 @@ struct ThemesSectionView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 if renamingThemeId == theme.id {
-                    TextField("Theme name", text: $renameText)
+                    TextField(coordinator.L(.themeNameFieldPlaceholder), text: $renameText)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 13))
                         .focused($renameFieldFocused)
@@ -173,7 +173,7 @@ struct ThemesSectionView: View {
                 // Explicit "Active" caption — a lone disabled button wasn't a reliable
                 // enough "which theme is this" signal on its own (easy to miss, not
                 // colorblind-safe).
-                Text(manager.activeThemeId == theme.id ? "Active" : theme.cardBackTheme)
+                Text(manager.activeThemeId == theme.id ? coordinator.L(.deckActiveBadge) : theme.cardBackTheme)
                     .font(.system(size: 10))
                     .foregroundColor(manager.activeThemeId == theme.id ? .accentColor : .secondary)
             }
@@ -184,12 +184,12 @@ struct ThemesSectionView: View {
                 // Every live edit (felt/card back/colors/face art) is continuously
                 // saved into the active theme now — see AppCoordinator.liveSaveActiveTheme()
                 // — so there's nothing left to "Update"; this button just states fact.
-                Button("Active") {}
+                Button(coordinator.L(.deckActiveBadge)) {}
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .disabled(true)
             } else {
-                Button("Apply") {
+                Button(coordinator.L(.applyThemeButton)) {
                     coordinator.applyTheme(theme)
                 }
                 .buttonStyle(.borderedProminent)
@@ -225,7 +225,7 @@ struct ThemesSectionView: View {
         guard !name.isEmpty else { return }
 
         if manager.nameExists(name) {
-            saveError = "A theme named \"\(name)\" already exists."
+            saveError = coordinator.L(.themeNameExistsErrorFmt, name)
             return
         }
 
@@ -258,8 +258,8 @@ struct ThemesSectionView: View {
         guard trimmed != theme.name else { return }
         if !manager.renameTheme(id: theme.id, newName: trimmed) {
             renameError = trimmed.isEmpty
-                ? "Theme name can't be empty."
-                : "A theme named \"\(trimmed)\" already exists."
+                ? coordinator.L(.themeNameEmptyError)
+                : coordinator.L(.themeNameExistsErrorFmt, trimmed)
         }
     }
 }

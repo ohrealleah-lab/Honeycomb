@@ -17,7 +17,7 @@ struct SoliBeeApp: App {
     var body: some Scene {
         WindowGroup {
             AppRouterView(coordinator: coordinator)
-                .navigationTitle("Honeycomb Card Suite")
+                .navigationTitle(coordinator.L(.appNavigationTitle))
                 .onAppear {
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
@@ -26,17 +26,17 @@ struct SoliBeeApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("New Game") {
+                Button(coordinator.L(.newGame)) {
                     coordinator.startNewGame()
                 }
                 .keyboardShortcut("n", modifiers: .command)
 
-                Button("Restart") {
+                Button(coordinator.L(.restart)) {
                     coordinator.restartCurrentGame()
                 }
                 .keyboardShortcut("r", modifiers: .command)
 
-                Button("Undo") {
+                Button(coordinator.L(.undo)) {
                     coordinator.undoLastAction()
                 }
                 .keyboardShortcut("z", modifiers: .command)
@@ -44,39 +44,40 @@ struct SoliBeeApp: App {
 
                 Divider()
 
-                Button("Reset Statistics") {
+                Button(coordinator.L(.resetStatisticsTitle)) {
                     let alert = NSAlert()
-                    alert.messageText = "Reset Statistics?"
-                    alert.informativeText = "This will permanently clear all statistics for the current game. This cannot be undone."
+                    alert.messageText = coordinator.L(.resetStatisticsTitle)
+                    alert.informativeText = coordinator.L(.resetStatisticsBody)
                     alert.alertStyle = .warning
-                    alert.addButton(withTitle: "Reset")
-                    alert.addButton(withTitle: "Cancel")
+                    alert.addButton(withTitle: coordinator.L(.reset))
+                    alert.addButton(withTitle: coordinator.L(.cancel))
                     if alert.runModal() == .alertFirstButtonReturn {
                         coordinator.resetStatistics()
                     }
                 }
 
-                Button("Reset Default Card Backs") {
+                Button(coordinator.L(.resetDefaultCardBacks)) {
                     CustomCardBackManager.shared.resetDefaultCardBacks()
                 }
 
                 Divider()
 
+                // Debug-only — intentionally kept in English, not run through L().
                 Button("Roll that beautiful bee footage") {
                     coordinator.triggerWinAnimation()
                 }
             }
 
             CommandGroup(replacing: .appInfo) {
-                AboutMenuCommand()
+                AboutMenuCommand(coordinator: coordinator)
             }
 
             CommandGroup(replacing: .help) {
-                HelpMenuCommands()
+                HelpMenuCommands(coordinator: coordinator)
             }
 
             CommandGroup(replacing: .toolbar) {
-                Toggle("Stay on Top", isOn: Binding(
+                Toggle(coordinator.L(.stayOnTop), isOn: Binding(
                     get: { coordinator.stayOnTop },
                     set: { coordinator.stayOnTop = $0 }
                 ))
@@ -87,43 +88,48 @@ struct SoliBeeApp: App {
             }
         }
 
-        WindowGroup("Klondike Solitaire Help", id: "klondike-help") {
-            KlondikeHelpView()
+        // Each of these is its own Scene/WindowGroup — SwiftUI's environment doesn't
+        // propagate across sibling WindowGroups, so every one needs its own
+        // .environment(coordinator), same as AppRouterView's for the main window.
+        // Without this, @Environment(AppCoordinator.self) inside these views (used
+        // for L()) fatal-errors at runtime the moment the window opens.
+        WindowGroup(coordinator.L(.helpKlondike), id: "klondike-help") {
+            KlondikeHelpView().environment(coordinator)
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("Freecell Help", id: "beecell-help") {
-            BeecellHelpView()
+        WindowGroup(coordinator.L(.helpFreecell), id: "beecell-help") {
+            BeecellHelpView().environment(coordinator)
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("Spider Solitaire Help", id: "spider-help") {
-            SpiderHelpView()
+        WindowGroup(coordinator.L(.helpSpider), id: "spider-help") {
+            SpiderHelpView().environment(coordinator)
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("Video Poker Help", id: "videopoker-help") {
-            VideoPokerHelpView()
+        WindowGroup(coordinator.L(.helpVideopoker), id: "videopoker-help") {
+            VideoPokerHelpView().environment(coordinator)
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("Video Blackjack Help", id: "blackjack-help") {
-            BlackjackHelpView()
+        WindowGroup(coordinator.L(.helpBlackjack), id: "blackjack-help") {
+            BlackjackHelpView().environment(coordinator)
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("Honeycomb Help", id: "honeycomb-help") {
-            HoneycombHelpView()
+        WindowGroup(coordinator.L(.helpHoneycomb), id: "honeycomb-help") {
+            HoneycombHelpView().environment(coordinator)
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("Themes Help", id: "themes-help") {
-            ThemesHelpView()
+        WindowGroup(coordinator.L(.helpThemes), id: "themes-help") {
+            ThemesHelpView().environment(coordinator)
         }
         .windowResizability(.contentSize)
 
-        WindowGroup("About Honeycomb", id: "about-honeycomb") {
-            AboutHoneycombView()
+        WindowGroup(coordinator.L(.aboutHoneycomb), id: "about-honeycomb") {
+            AboutHoneycombView().environment(coordinator)
         }
         .windowResizability(.contentSize)
     }
@@ -131,22 +137,24 @@ struct SoliBeeApp: App {
 
 private struct AboutMenuCommand: View {
     @Environment(\.openWindow) private var openWindow
+    let coordinator: AppCoordinator
 
     var body: some View {
-        Button("About Honeycomb") { openWindow(id: "about-honeycomb") }
+        Button(coordinator.L(.aboutHoneycomb)) { openWindow(id: "about-honeycomb") }
     }
 }
 
 private struct HelpMenuCommands: View {
     @Environment(\.openWindow) private var openWindow
+    let coordinator: AppCoordinator
 
     var body: some View {
-        Button("Klondike Solitaire Help") { openWindow(id: "klondike-help") }
-        Button("Freecell Help")            { openWindow(id: "beecell-help") }
-        Button("Spider Solitaire Help")   { openWindow(id: "spider-help") }
-        Button("Video Poker Help")        { openWindow(id: "videopoker-help") }
-        Button("Video Blackjack Help")    { openWindow(id: "blackjack-help") }
-        Button("Honeycomb Help")          { openWindow(id: "honeycomb-help") }
-        Button("Themes Help")             { openWindow(id: "themes-help") }
+        Button(coordinator.L(.helpKlondike))   { openWindow(id: "klondike-help") }
+        Button(coordinator.L(.helpFreecell))   { openWindow(id: "beecell-help") }
+        Button(coordinator.L(.helpSpider))     { openWindow(id: "spider-help") }
+        Button(coordinator.L(.helpVideopoker)) { openWindow(id: "videopoker-help") }
+        Button(coordinator.L(.helpBlackjack))  { openWindow(id: "blackjack-help") }
+        Button(coordinator.L(.helpHoneycomb))  { openWindow(id: "honeycomb-help") }
+        Button(coordinator.L(.helpThemes))     { openWindow(id: "themes-help") }
     }
 }

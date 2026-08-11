@@ -15,6 +15,11 @@
         "{OpponentName} snatched your prize honey!",
         "{OpponentName} just flew off with your Royal Jelly!",
         "Highway robbery in the hive! {OpponentName} stole your 5-star!"
+      ],
+      "messagesEs": [
+        "¡{OpponentName} robó tu mejor miel!",
+        "¡{OpponentName} acaba de salir volando con tu Jalea Real!",
+        "¡Robo a plena luz en la colmena! ¡{OpponentName} robó tu carta de 5 estrellas!"
       ]
     },
     {
@@ -30,6 +35,11 @@
         "You’ve traded up!",
         "The nectar favors you.",
         "A golden exchange."
+      ],
+      "messagesEs": [
+        "¡Has hecho un buen cambio!",
+        "El néctar te favorece.",
+        "Un intercambio dorado."
       ]
     },
     {
@@ -46,6 +56,12 @@
         "Pure, unadulterated honey — standard rules apply!",
         "Back to basics for the bees!",
         "Clean comb, clean rules — just you and the cards."
+      ],
+      "messagesEs": [
+        "Una partida clásica — solo abejas y miel, sin trucos.",
+        "Miel pura y sin adulterar — ¡se aplican reglas estándar!",
+        "¡De vuelta a lo básico para las abejas!",
+        "Panal limpio, reglas limpias — solo tú y las cartas."
       ]
     },
     {
@@ -59,6 +75,9 @@
       "fallback": null,
       "messages": [
         "Happy World Bee Day! The comb is buzzing with excitement."
+      ],
+      "messagesEs": [
+        "¡Feliz Día Mundial de las Abejas! La colmena zumba de emoción."
       ]
     },
     {
@@ -72,6 +91,9 @@
       "fallback": null,
       "messages": [
         "Blessed bee your new year!"
+      ],
+      "messagesEs": [
+        ""
       ]
     },
     {
@@ -85,6 +107,9 @@
       "fallback": null,
       "messages": [
         "A spooky swarm gathers!"
+      ],
+      "messagesEs": [
+        "¡Un enjambre espeluznante se reúne!"
       ]
     },
     {
@@ -109,6 +134,20 @@
         "Cupid's arrow struck the spades first.",
         "The spades soften their edges for Valentine's Day.",
         "Even spades dig deep for love today."
+      ],
+      "messagesEs": [
+        "Cada corazón en la colmena late por ti.",
+        "Corazones revolotean por la colmena hoy.",
+        "Cada corazón en el panal late un poco más fuerte.",
+        "La colmena está llena de corazones, y el tuyo está ganando.",
+        "Los diamantes brillan más fuerte en el Día de San Valentín.",
+        "Las abejas intercambiaron miel por diamantes hoy.",
+        "Un diamante en bruto, más dulce que la miel.",
+        "Los tréboles florecen juntos este San Valentín.",
+        "Incluso los tréboles sienten el amor hoy.",
+        "La flecha de Cupido golpeó a las picas primero.",
+        "Las picas suavizan sus bordes por el Día de San Valentín.",
+        "Incluso las picas cavan profundo por amor hoy."
       ]
     },
     {
@@ -122,6 +161,9 @@
       "fallback": null,
       "messages": [
         "One year in the hive. Thank you for playing!"
+      ],
+      "messagesEs": [
+        "Un año en la colmena. ¡Gracias por jugar!"
       ]
     },
     {
@@ -140,6 +182,14 @@
         "Maybe it's time for a wasp theme…",
         "Pranksters in the hive! Trust your cards, not the drones.",
         "Is that diamond or a rhinestone?"
+      ],
+      "messagesEs": [
+        "Las abejas se sienten traviesas hoy.",
+        "¿Es esa carta realmente lo que parece… o una broma del Día de los Inocentes?",
+        "¿Es una carta de 5 estrellas, o solo una abeja obrera con una corona falsa?",
+        "Tal vez sea hora de un tema de avispas…",
+        "¡Bromistas en la colmena! Confía en tus cartas, no en los zánganos.",
+        "¿Es un diamante o un diamante de imitación?"
       ]
     },
     {
@@ -158,6 +208,14 @@
         "The hive is quiet, but the night shift keeps buzzing.",
         "Only the most dedicated bees are awake at this hour.",
         "Moonlight glints off the wax."
+      ],
+      "messagesEs": [
+        "El turno de medianoche en la colmena.",
+        "",
+        "¿Quién necesita dormir cuando hay miel en juego?",
+        "La colmena está en silencio, pero el turno de noche sigue zumbando.",
+        "Solo las abejas más dedicadas están despiertas a esta hora.",
+        "La luz de la luna brilla en la cera."
       ]
     },
     {
@@ -176,6 +234,14 @@
         "Coffee and cards — a bee's favorite morning routine.",
         "Rise and buzz! Time for morning cards.",
         "The dew hasn't dried and the bees are already at it."
+      ],
+      "messagesEs": [
+        "",
+        "¡Arriba con el sol! El rocío matutino está fresco en el panal.",
+        "Primer vuelo del día.",
+        "Café y cartas — la rutina matutina favorita de una abeja.",
+        "¡Arriba y a zumbar! Hora de las cartas matutinas.",
+        "El rocío no se ha secado y las abejas ya están en ello."
       ]
     },
     {
@@ -194,6 +260,14 @@
         "Just one more game... famous last words in the hive.",
         "The Queen's chambers go quiet, but not this table.",
         "A nightcap of nectar before bed."
+      ],
+      "messagesEs": [
+        "Una partida más antes de que la colmena se vaya a dormir...",
+        "Cae la noche sobre la colmena.",
+        "El panal se silencia a medida que salen las estrellas.",
+        "Solo una partida más... las famosas últimas palabras en la colmena.",
+        "Las cámaras de la Reina quedan en silencio, pero no esta mesa.",
+        "Un último sorbo de néctar antes de dormir."
       ]
     },
     {
@@ -207,6 +281,9 @@
       "fallback": null,
       "messages": [
         "It’s Hive Noon!"
+      ],
+      "messagesEs": [
+        ""
       ]
     },
     {
@@ -223,6 +300,12 @@
         "Peak pollen-gathering hours!",
         "The hive is buzzing with morning energy.",
         "The hive hums with a fresh day's plans."
+      ],
+      "messagesEs": [
+        "Mañana en el panal — ¡comienza la primera cosecha del día!",
+        "¡Horas pico de recolección de polen!",
+        "La colmena zumba con energía matutina.",
+        "La colmena zumba con los planes de un nuevo día."
       ]
     },
     {
@@ -240,6 +323,13 @@
         "Midday match! A quick break between flights.",
         "Even bees pause to enjoy the sunshine.",
         "Half the day's pollen is already in."
+      ],
+      "messagesEs": [
+        "Mediodía en la colmena — ¡hora de un descanso para tomar miel!",
+        "El sol está alto, y el néctar es dulce.",
+        "¡Partida de mediodía! Un rápido descanso entre vuelos.",
+        "Incluso las abejas se detienen a disfrutar del sol.",
+        "La mitad del polen del día ya está adentro."
       ]
     },
     {
@@ -256,6 +346,12 @@
         "The afternoon warmth has the bees buzzing lively.",
         "Basking in the warm afternoon sun.",
         "The hive settles into its afternoon rhythm."
+      ],
+      "messagesEs": [
+        "La luz dorada de la tarde llena el panal.",
+        "El calor de la tarde tiene a las abejas zumbando animadamente.",
+        "Disfrutando del cálido sol de la tarde.",
+        "La colmena se asienta en su ritmo vespertino."
       ]
     },
     {
@@ -274,6 +370,14 @@
         "Long shadows, long odds — let's play.",
         "The last foragers are heading home.",
         "Lantern-bugs light the way to the hive."
+      ],
+      "messagesEs": [
+        "El sol se pone sobre la colmena — hora de las partidas nocturnas.",
+        "Las obreras regresan a casa después de un largo día de zumbidos.",
+        "Hora dorada en el panal.",
+        "Sombras largas, bajas probabilidades — a jugar.",
+        "Las últimas recolectoras van de regreso a casa.",
+        "Las luciérnagas iluminan el camino a la colmena."
       ]
     },
     {
@@ -309,6 +413,31 @@
         "Tuning antennae for reception…",
         "Propolis-sealing the cracks…",
         "Rousing drones from their nap…"
+      ],
+      "messagesEs": [
+        "Calentando los músculos de vuelo…",
+        "Polinizando los procesadores…",
+        "Desemredando la coreografía del baile de meneo…",
+        "Generando jalea real…",
+        "Sellando el panal…",
+        "Consultando a la Abeja Reina…",
+        "Calibrando aguijones…",
+        "Desplegando abejas exploradoras…",
+        "Contando a las abejas obreras…",
+        "Preparando una situación pegajosa…",
+        "El enjambre se está reuniendo…",
+        "Limpiando la colmena…",
+        "Recolectando néctar de la memoria local…",
+        "Vigilando la entrada de las avispas…",
+        "Alimentando a las larvas con bits y bytes…",
+        "Orientando a las nuevas abejas recolectoras…",
+        "Comprobando las rutas del polen…",
+        "Reclutando abejas nodrizas…",
+        "Cargando reservas de néctar…",
+        "Sincronizando con la mente colmena…",
+        "Afinando antenas para recepción…",
+        "Sellando grietas con propóleo…",
+        "Despertando a los zánganos de su siesta…"
       ]
     },
     {
@@ -379,6 +508,66 @@
         "Busy as a bee, broke as a beekeeper.",
         "Absence makes the heart grow fonder — and the hive grow louder.",
         "Two bees or not two bees — that's a math problem, not a question."
+      ],
+      "messagesEs": [
+        "La colmena zumba en silencio, esperando tu siguiente movimiento.",
+        "Una abeja perdida se desplaza por el tablero...",
+        "Es cuando no puedes escuchar a las abejas, ahí es cuando vienen las abejas.",
+        "En algún lugar, está goteando miel.",
+        "El panal cruje suavemente bajo el peso de la miel recolectada.",
+        "Un zumbido distante se hace más fuerte... ¿o es solo el tablero?",
+        "El polen se asienta sobre el tablero como nieve fina.",
+        "En algún lugar, una abeja reina tararea una nota baja y satisfecha.",
+        "El tablero brilla tenuemente en oro bajo la luz de la tarde.",
+        "Un solo pétalo cae sobre el panal.",
+        "La colmena nunca duerme realmente.",
+        "El enjambre está juzgando silenciosamente tu estrategia.",
+        "Una abeja obrera se detiene en pleno vuelo, sin saber por qué.",
+        "En algún lugar, una abeja le dice a las demás dónde has estado.",
+        "La colmena recuerda cada carta que has tocado.",
+        "Nada se mueve. Todo zumba.",
+        "Los bordes de las cartas se están poniendo un poco pegajosos.",
+        "Las abejas llevan la cuenta. Siempre lo hacen.",
+        "Una abeja aterriza, mira alrededor, y se va de nuevo.",
+        "El zumbido ha cambiado de tono. ¿Lo notaste?",
+        "El tiempo pasa de manera diferente dentro del panal.",
+        "En algún lugar, cuerpos diminutos están calentando cera.",
+        "Incluso las manos ociosas hacen miel eventualmente.",
+        "Las abejas son pacientes. ¿Lo eres tú?",
+        "La colmena marca su propio tiempo.",
+        "¿Calculando 475 movimientos por adelantado, o tomando un descanso para merendar?",
+        "Las cartas no se van a jugar solas… aunque eso sería genial.",
+        "¿Revisando tu mano dos veces? Santa Abeja estaría orgulloso.",
+        "Sin presión, es solo la partida entera la que está en juego.",
+        "Una clase magistral de la pausa dramática.",
+        "¿Barajando tus pensamientos? Tenemos tiempo.",
+        "Brain.exe está procesando la ubicación óptima…",
+        "¿Ha ido demasiado lejos la ciencia? Haz clic aquí para ver esta carta de 10 estrellas.",
+        "Abeja obrera local descubre el secreto del néctar infinito...",
+        "Top 10 de cartas para robar a la Reina. ¡El número 4 te picará!",
+        "¡Los apicultores te odiarán! ¡Gana cada partida con este simple truco!",
+        "",
+        "",
+        "Que el enjambre te acompañe.",
+        "Vive, Ríe, Poliniza.",
+        "",
+        "El hogar está donde está la colmena.",
+        "Solo una abeja obrera buscando a mi reina.",
+        "¿Vas a jugar una carta, o solo te vas a sentar ahí luciendo dulce?",
+        "",
+        "Vamos a necesitar una colmena más grande.",
+        "¡Muéstrame la miel!",
+        "",
+        "Nadie pone a Abeja Bebé en un rincón.",
+        "",
+        "",
+        "",
+        "Este extraño truco captura 4 cartas a la vez — los repartidores no quieren que lo sepas.",
+        "No vas a creer lo que pasó cuando una abeja obrera conoció a un As Caído.",
+        "Ella dijo sí a la Simetría. Él dijo sí a Abeja Matemática. Se desató el caos.",
+        "Ocupado como una abeja, arruinado como un apicultor.",
+        "La ausencia hace que el corazón se encariñe — y la colmena suene más fuerte.",
+        ""
       ]
     },
     {
@@ -400,6 +589,17 @@
         "A drop of honey marks a sweet path forward.",
         "Nectar trail spotted! Follow this lead.",
         "A little bee whispered a suggestion in your ear."
+      ],
+      "messagesEs": [
+        "¿Necesitas un poco de ayuda? Las abejas exploradoras zumban sugerencias.",
+        "¡Baile de meneo activado!",
+        "¡Las abejas revisaron cada flor!",
+        "La mente colmena está pensando...",
+        "La colmena ha llegado a un consenso.",
+        "Incluso las abejas más ocupadas piden direcciones a la Reina a veces.",
+        "Una gota de miel marca un dulce camino a seguir.",
+        "¡Rastro de néctar detectado! Sigue esta pista.",
+        "Una pequeña abeja te susurró una sugerencia al oído."
       ]
     },
     {
@@ -418,6 +618,14 @@
         "Hovering backwards...",
         "Plucking that card right back out of the wax.",
         "Unsticking that card from the comb."
+      ],
+      "messagesEs": [
+        "Las abejas sabias siempre comprueban dos veces.",
+        "¡Trazando de nuevo el enjambre!",
+        "¡Recálculo de vuelo en el aire!",
+        "Volando hacia atrás...",
+        "Sacando esa carta directamente de la cera.",
+        "Despegando esa carta del panal."
       ]
     },
     {
@@ -433,6 +641,11 @@
         "Four rules, one victory. Chaos bends to you.",
         "The odds were quadrupled, and so was your glory!",
         "Four rules? Just four more reasons to win."
+      ],
+      "messagesEs": [
+        "Cuatro reglas, una victoria. El caos se inclina ante ti.",
+        "¡Las probabilidades se cuadriplicaron, y también tu gloria!",
+        "¿Cuatro reglas? Solo cuatro razones más para ganar."
       ]
     },
     {
@@ -446,6 +659,9 @@
       "fallback": null,
       "messages": [
         "{OpponentName} prepares a final sting!"
+      ],
+      "messagesEs": [
+        "¡{OpponentName} prepara un aguijonazo final!"
       ]
     },
     {
@@ -462,6 +678,12 @@
         "Sting 'em all!",
         "Raking in the honey!",
         "A sweeping sting!"
+      ],
+      "messagesEs": [
+        "¡Un enjambre masivo!",
+        "¡Pícalos a todos!",
+        "¡Acumulando la miel!",
+        "¡Un aguijonazo arrasador!"
       ]
     },
     {
@@ -477,6 +699,11 @@
         "{OpponentName} unleashes an angry swarm!",
         "{OpponentName} shows no mercy!",
         "{OpponentName} didn't hold back!"
+      ],
+      "messagesEs": [
+        "¡{OpponentName} desata un enjambre furioso!",
+        "¡{OpponentName} no muestra piedad!",
+        "¡{OpponentName} no se contuvo!"
       ]
     },
     {
@@ -493,6 +720,12 @@
         "MEGA CASCADE — absolute hive pandemonium!",
         "HIVE SUPERNOVA — a four-fold combo explosion!",
         "ULTIMATE SWARM — cards flipping in every direction!"
+      ],
+      "messagesEs": [
+        "FRENESÍ DE ENJAMBRE — ¡toda la colmena está zumbando!",
+        "MEGA CASCADA — ¡pandemónium absoluto en la colmena!",
+        "SUPERNOVA DE COLMENA — ¡una explosión de combo cuádruple!",
+        "ENJAMBRE DEFINITIVO — ¡cartas volteándose en todas direcciones!"
       ]
     },
     {
@@ -513,6 +746,16 @@
         "Well... this is getting uncomfortable.",
         "Don't panic! ...Okay, maybe panic just a little.",
         "Backed into a corner — just where we want 'em?"
+      ],
+      "messagesEs": [
+        "La colmena está casi invadida... ¿queda alguna esperanza?",
+        "Acorralado en el panal... ¿podrás hacer un milagro?",
+        "¡Hasta tu último aliento! La colmena necesita un héroe.",
+        "¡Solo quedan unas cuantas celdas! ¿Podrá un solo aguijonazo cambiar el rumbo?",
+        "Atrapado en el panal... una última oportunidad de contraatacar.",
+        "Bueno... esto se está poniendo incómodo.",
+        "¡No entres en pánico! ...Bueno, tal vez entra un poco en pánico.",
+        "Acorralados en un rincón — ¿justo donde los queríamos?"
       ]
     },
     {
@@ -529,6 +772,12 @@
         "Omnidirectional sting — nothing on that board was safe!",
         "Royal center sting!",
         "Bullseye in the comb!"
+      ],
+      "messagesEs": [
+        "¡Aguijonazo de cuatro frentes!",
+        "Aguijonazo omnidireccional — ¡nada en el tablero estaba a salvo!",
+        "¡Aguijonazo real al centro!",
+        "¡En el blanco del panal!"
       ]
     },
     {
@@ -547,6 +796,14 @@
         "You're ruling this hive!",
         "{OpponentName} can't catch a break.",
         "{OpponentName} might need a quick coffee break."
+      ],
+      "messagesEs": [
+        "{OpponentName} está empezando a sudar.",
+        "¡Las alas de {OpponentName} se están cansando!",
+        "¡{OpponentName} está perdiendo su zumbido!",
+        "¡Tú gobiernas esta colmena!",
+        "{OpponentName} no tiene un momento de respiro.",
+        "Puede que {OpponentName} necesite un rápido descanso para tomar café."
       ]
     },
     {
@@ -564,6 +821,13 @@
         "Smoked out by {OpponentName} 3 times in a row!",
         "The swarm is favoring {OpponentName}… for now!",
         "Got caught in {OpponentName}'s honey trap again!"
+      ],
+      "messagesEs": [
+        "{OpponentName} ya te tiene calado. ¿Hora de una nueva estrategia?",
+        "{OpponentName} está en racha… ¡hora de agitar tu mazo!",
+        "¡Ahuevado con humo por {OpponentName} 3 veces seguidas!",
+        "El enjambre está a favor de {OpponentName}… ¡por ahora!",
+        "¡Atrapado en la trampa de miel de {OpponentName} otra vez!"
       ]
     },
     {
@@ -581,6 +845,13 @@
         "Smallest bee, ENORMOUS sting!",
         "Don't judge a bee by its stars!",
         "Small card, big moves!"
+      ],
+      "messagesEs": [
+        "¡La abeja más débil acaba de derribar a media colmena!",
+        "¡Una humilde abeja obrera acaba de hacer una revolución!",
+        "¡Abeja más pequeña, ENORME aguijonazo!",
+        "¡No juzgues a una abeja por sus estrellas!",
+        "¡Carta pequeña, grandes movimientos!"
       ]
     },
     {
@@ -598,6 +869,13 @@
         "Rank means nothing to a sharp stinger!",
         "Royalty is expensive — tactics are free!",
         "Big stars fall hard!"
+      ],
+      "messagesEs": [
+        "Una abeja obrera acaba de humillar a la realeza.",
+        "¡El desajuste de rareza definitivo!",
+        "¡El rango no significa nada para un aguijón afilado!",
+        "La realeza es cara — ¡las tácticas son gratis!",
+        "¡Las grandes estrellas caen fuerte!"
       ]
     },
     {
@@ -616,6 +894,14 @@
         "You just wanted to see that card flip again!",
         "A plot twist... that went absolutely nowhere!",
         "Taking the scenic route to the exact same move!"
+      ],
+      "messagesEs": [
+        "Pensándolo bien... no importa, sigamos con el plan.",
+        "Una abeja obrera nunca duda de sus instintos... ¡dos veces!",
+        "Solo estabas probando el botón de Deshacer, ¿verdad?",
+        "¡Solo querías ver cómo se volteaba esa carta otra vez!",
+        "Un giro en la trama... ¡que no llevó absolutamente a ninguna parte!",
+        "¡Tomando la ruta panorámica hacia el mismo movimiento exacto!"
       ]
     },
     {
@@ -632,6 +918,12 @@
         "Neither bee backs down — 5 matches and counting!",
         "Five battles in the same comb! The bees are watching closely.",
         "Deep in the hive, a classic matchup unfolds."
+      ],
+      "messagesEs": [
+        "Se está formando una verdadera rivalidad en el panal.",
+        "Ninguna abeja se rinde — ¡5 partidas y contando!",
+        "¡Cinco batallas en el mismo panal! Las abejas observan de cerca.",
+        "En lo profundo de la colmena, se desarrolla un clásico enfrentamiento."
       ]
     },
     {
@@ -648,6 +940,12 @@
         "Absolute hive takeover!",
         "All the honey is yours!",
         "Not even a drone left standing!"
+      ],
+      "messagesEs": [
+        "¡No queda nada a qué picar!",
+        "¡Toma de control absoluta de la colmena!",
+        "¡Toda la miel es tuya!",
+        "¡Ni un zángano ha quedado en pie!"
       ]
     },
     {
@@ -661,6 +959,9 @@
       "fallback": null,
       "messages": [
         "Welcome to the colony! Time to make some honey."
+      ],
+      "messagesEs": [
+        "¡Bienvenido a la colonia! Hora de hacer un poco de miel."
       ]
     },
     {
@@ -674,6 +975,9 @@
       "fallback": null,
       "messages": [
         "10 wins. The hive takes notice."
+      ],
+      "messagesEs": [
+        "10 victorias. La colmena toma nota."
       ]
     },
     {
@@ -687,6 +991,9 @@
       "fallback": null,
       "messages": [
         "100 wins. The colony sings your name."
+      ],
+      "messagesEs": [
+        "100 victorias. La colonia canta tu nombre."
       ]
     },
     {
@@ -700,6 +1007,9 @@
       "fallback": null,
       "messages": [
         "1000 wins. A millennium of triumph. The Queen herself applauds."
+      ],
+      "messagesEs": [
+        "1000 victorias. Un milenio de triunfos. La mismísima Reina aplaude."
       ]
     },
     {
@@ -714,6 +1024,10 @@
       "messages": [
         "The drone takes down the Queen!",
         "A lucky sting! The mighty have fallen."
+      ],
+      "messagesEs": [
+        "¡El zángano derrota a la Reina!",
+        "¡Un aguijonazo de suerte! Los poderosos han caído."
       ]
     },
     {
@@ -729,6 +1043,11 @@
         "The pollen's thick today — {AscensionSuit} is in full bloom!",
         "{AscensionSuit} is drowning in nectar!",
         "A massive harvest! {AscensionSuit} thrives."
+      ],
+      "messagesEs": [
+        "El polen está espeso hoy — ¡{AscensionSuit} está en plena floración!",
+        "¡{AscensionSuit} se está ahogando en néctar!",
+        "¡Una cosecha masiva! {AscensionSuit} prospera."
       ]
     },
     {
@@ -743,6 +1062,10 @@
       "messages": [
         "Smoked out — that card can barely buzz anymore.",
         "Lethargic and grounded."
+      ],
+      "messagesEs": [
+        "Ahuevada por el humo — esa carta apenas puede zumbar.",
+        "Letárgico y en tierra."
       ]
     },
     {
@@ -757,6 +1080,10 @@
       "messages": [
         "The math checks out!",
         "Calculated to perfection!"
+      ],
+      "messagesEs": [
+        "¡Las matemáticas son correctas!",
+        "¡Calculado a la perfección!"
       ]
     },
     {
@@ -772,6 +1099,11 @@
         "Flawless victory!",
         "Hive domination!",
         "The colony reigns supreme.."
+      ],
+      "messagesEs": [
+        "¡Victoria perfecta!",
+        "¡Dominio de la colmena!",
+        "La colonia reina supremamente..."
       ]
     },
     {
@@ -787,6 +1119,11 @@
         "Every card fell. The hive lies in ruins.",
         "{OpponentName} didn't leave you a single card standing.",
         "There are no bees left in your bonnet."
+      ],
+      "messagesEs": [
+        "Todas las cartas cayeron. La colmena yace en ruinas.",
+        "{OpponentName} no te dejó ni una sola carta en pie.",
+        ""
       ]
     },
     {
@@ -802,6 +1139,11 @@
         "Pollen is in the air!",
         "Flowers are blooming!",
         "Pollen. Everywhere."
+      ],
+      "messagesEs": [
+        "¡Hay polen en el aire!",
+        "¡Las flores están floreciendo!",
+        "Polen. Por todas partes."
       ]
     },
     {
@@ -816,6 +1158,10 @@
       "messages": [
         "A haze covers the comb!",
         "Smoke fills the hive…"
+      ],
+      "messagesEs": [
+        "¡Una niebla cubre el panal!",
+        "El humo llena la colmena…"
       ]
     },
     {
@@ -833,6 +1179,13 @@
         "Sum it up!",
         "Calculate carefully!",
         "Class is in session!"
+      ],
+      "messagesEs": [
+        "¡La suma es clave!",
+        "¡Haz los cálculos!",
+        "¡Súmalo!",
+        "¡Calcula con cuidado!",
+        "¡La clase está en sesión!"
       ]
     },
     {
@@ -847,6 +1200,10 @@
       "messages": [
         "Everything is upside down!",
         "Flying backwards — low beats high!"
+      ],
+      "messagesEs": [
+        "¡Todo está de cabeza!",
+        "Volando hacia atrás — ¡lo bajo vence a lo alto!"
       ]
     },
     {
@@ -862,6 +1219,11 @@
         "The hive is exposed!",
         "Clear Skies overheard.",
         "No shade on the hive today."
+      ],
+      "messagesEs": [
+        "¡La colmena está expuesta!",
+        "Cielos Despejados por encima.",
+        "Hoy no hay sombra sobre la colmena."
       ]
     },
     {
@@ -878,6 +1240,12 @@
         "Scout bees have reported back!",
         "Reconnaissance in progress!",
         "Intel gathered!"
+      ],
+      "messagesEs": [
+        "¡Los zánganos están fuera!",
+        "¡Las abejas exploradoras han regresado con información!",
+        "¡Reconocimiento en progreso!",
+        "¡Información recopilada!"
       ]
     },
     {
@@ -893,6 +1261,11 @@
         "Chaos takes over!",
         "The bees are out of control!",
         "Those bees are wild!"
+      ],
+      "messagesEs": [
+        "¡El caos toma el control!",
+        "¡Las abejas están fuera de control!",
+        "¡Esas abejas son salvajes!"
       ]
     },
     {
@@ -907,6 +1280,10 @@
       "messages": [
         "Patterns Align!",
         "Geometric precision required."
+      ],
+      "messagesEs": [
+        "¡Los patrones se alinean!",
+        "Se requiere precisión geométrica."
       ]
     },
     {
@@ -922,6 +1299,11 @@
         "A trade before the swarm!",
         "Pre-game trading post open!",
         "Nectar bartering begins!"
+      ],
+      "messagesEs": [
+        "¡Un intercambio antes del enjambre!",
+        "¡Puesto de intercambio previo a la partida abierto!",
+        "¡Comienza el trueque de néctar!"
       ]
     },
     {
@@ -937,6 +1319,11 @@
         "Order above all!",
         "Obey the Queen!",
         "Royal decree issued!"
+      ],
+      "messagesEs": [
+        "¡El orden ante todo!",
+        "¡Obedece a la Reina!",
+        "¡Decreto real emitido!"
       ]
     },
     {
@@ -950,6 +1337,9 @@
       "fallback": null,
       "messages": [
         "Protect the flowers, save the bees! Happy Earth Day!"
+      ],
+      "messagesEs": [
+        "¡Protege las flores, salva a las abejas! ¡Feliz Día de la Tierra!"
       ]
     },
     {
@@ -963,6 +1353,9 @@
       "fallback": null,
       "messages": [
         "A golden celebration in the comb — Happy Honey Day!"
+      ],
+      "messagesEs": [
+        "Una celebración dorada en el panal — ¡Feliz Día de la Miel!"
       ]
     },
     {
@@ -976,6 +1369,9 @@
       "fallback": null,
       "messages": [
         "The math in the comb is extra precise today!"
+      ],
+      "messagesEs": [
+        "¡Las matemáticas en el panal son extra precisas hoy!"
       ]
     },
     {
@@ -989,6 +1385,9 @@
       "fallback": null,
       "messages": [
         "Counting down the final buzz of the year!"
+      ],
+      "messagesEs": [
+        "¡Contando el último zumbido del año!"
       ]
     },
     {
@@ -1002,6 +1401,9 @@
       "fallback": null,
       "messages": [
         "Peace, warmth, and sweetness to all in the hive this Christmas!"
+      ],
+      "messagesEs": [
+        "¡Paz, calidez y dulzura a todos en la colmena en esta Navidad!"
       ]
     },
     {
@@ -1015,6 +1417,9 @@
       "fallback": null,
       "messages": [
         "Vibrant colors bloom across the comb! Happy Holi!"
+      ],
+      "messagesEs": [
+        "¡Colores vibrantes florecen en el panal! ¡Feliz Holi!"
       ]
     },
     {
@@ -1028,6 +1433,9 @@
       "fallback": null,
       "messages": [
         "Wishing you a sweet and fruitful new year — Shanah Tovah from the hive!"
+      ],
+      "messagesEs": [
+        "Deseándote un dulce y fructífero año nuevo — ¡Shaná Tová desde la colmena!"
       ]
     },
     {
@@ -1041,6 +1449,9 @@
       "fallback": null,
       "messages": [
         "Wishing you a season of light, sweetness, and harmony in the hive."
+      ],
+      "messagesEs": [
+        "Deseándote una temporada de luz, dulzura y armonía en la colmena."
       ]
     },
     {
@@ -1054,6 +1465,9 @@
       "fallback": null,
       "messages": [
         "A season of gratitude, sweetness, and joy. Eid Mubarak from the hive!"
+      ],
+      "messagesEs": [
+        "Una temporada de gratitud, dulzura y alegría. ¡Eid Mubarak desde la colmena!"
       ]
     },
     {
@@ -1067,6 +1481,9 @@
       "fallback": null,
       "messages": [
         "May your home bee filled with light, peace, and joy this Hanukkah."
+      ],
+      "messagesEs": [
+        ""
       ]
     }
   ]

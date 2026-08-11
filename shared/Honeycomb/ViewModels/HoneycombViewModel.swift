@@ -123,11 +123,11 @@ public final class HoneycombViewModel {
         case .autocomplete:
             break
         case .same:
-            enqueueBanner("\(HoneycombRule.same.rawValue.uppercased())!")
+            enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.same.rawValue, language: BannerCatalog.currentLanguage).uppercased())!")
         case .plus:
-            enqueueBanner("\(HoneycombRule.plus.rawValue.uppercased())!")
+            enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.plus.rawValue, language: BannerCatalog.currentLanguage).uppercased())!")
         case .suddenDeath:
-            enqueueBanner("\(HoneycombRule.suddenDeath.rawValue.uppercased())!")
+            enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.suddenDeath.rawValue, language: BannerCatalog.currentLanguage).uppercased())!")
         }
     }
     public var zoomScale: CGFloat = 1.0
@@ -437,7 +437,7 @@ public final class HoneycombViewModel {
         pendingUndoRepeatCheck = nil
         swapHighlightCardIds.removeAll()
         clearHint()
-        lastHiveSwarmPhrase = nil
+        lastHiveSwarmIndex = nil
         isRematchMatch = false
         consecutiveNoStealWins = 0
         stealProtectionActive = false
@@ -737,7 +737,7 @@ public final class HoneycombViewModel {
         swapHighlightCardIds.removeAll()
         clearHint()
         isAnimatingPlacement = false
-        lastHiveSwarmPhrase = nil
+        lastHiveSwarmIndex = nil
 
         board = HoneycombBoard()
         activeRules = rematchActiveRules
@@ -1491,24 +1491,25 @@ public final class HoneycombViewModel {
     // board explicitly (rather than reading `self.board`) since advanceBombShelterTimers
     // operates on a local `inout` board that hasn't been assigned to self.board yet.
     private static func comboBannerText(for board: HoneycombBoard) -> String? {
+        let language = BannerCatalog.currentLanguage
         var parts: [String] = []
         // Same has no catalog-driven flavor alternate (not in the spreadsheet), so it
         // stays the plain existing banner text unconditionally.
-        if board.lastSameTriggered { parts.append("\(HoneycombRule.same.rawValue)!") }
+        if board.lastSameTriggered { parts.append("\(honeycombLocalizedRuleName(HoneycombRule.same.rawValue, language: language))!") }
         if board.lastPlusTriggered {
-            parts.append(bannerCatalogText(for: .ruleSpecificAPlayerTriggersAPlusComboTheMathMatchesPerfectly, existingDefaultText: "\(HoneycombRule.plus.rawValue)!"))
+            parts.append(bannerCatalogText(for: .ruleSpecificAPlayerTriggersAPlusComboTheMathMatchesPerfectly, existingDefaultText: "\(honeycombLocalizedRuleName(HoneycombRule.plus.rawValue, language: language))!"))
         }
         if board.lastFallenAceTriggered {
-            parts.append(bannerCatalogText(for: .ruleSpecificFallenAceTriggersA1CapturesA10, existingDefaultText: "\(HoneycombRule.fallenAce.rawValue)!"))
+            parts.append(bannerCatalogText(for: .ruleSpecificFallenAceTriggersA1CapturesA10, existingDefaultText: "\(honeycombLocalizedRuleName(HoneycombRule.fallenAce.rawValue, language: language))!"))
         }
         // Combo = a Same/Plus-triggered flip going on to capture its own neighbors —
         // not just any move that happens to flip 2+ ordinary neighbors at once. Only
         // x4-or-higher has a catalog-driven flavor alternate (matches the spreadsheet's
         // own "Combo x4 or higher" trigger) — x2/x3 stay the plain existing text.
         if board.lastComboFlipCount >= 4 {
-            parts.append(bannerCatalogText(for: .gameplayComboX4OrHigher, existingDefaultText: "HIVE MIND x\(board.lastComboFlipCount)!", tokens: ["ComboCount": "\(board.lastComboFlipCount)"]))
+            parts.append(bannerCatalogText(for: .gameplayComboX4OrHigher, existingDefaultText: L(.bannerHiveMindFmt, language: language, board.lastComboFlipCount), tokens: ["ComboCount": "\(board.lastComboFlipCount)"]))
         } else if board.lastComboFlipCount > 0 {
-            parts.append("HIVE MIND x\(board.lastComboFlipCount)!")
+            parts.append(L(.bannerHiveMindFmt, language: language, board.lastComboFlipCount))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
@@ -1999,23 +2000,41 @@ public final class HoneycombViewModel {
 
     // Randomly chosen phrase set for a Hive Swarm (Bomb Shelter) reveal's own banner
     // — kept distinct between the player's and opponent's reveal within the same
-    // match (lastHiveSwarmPhrase, reset alongside the other per-match state in
+    // match (lastHiveSwarmIndex, reset alongside the other per-match state in
     // startNewGame/rematch) so a match where both sides reveal a hidden card doesn't
-    // repeat the same phrase.
-    private static let hiveSwarmRevealPhrases: [String] = [
-        "Hive Stings!",
-        "Swarm is Unleashed!",
-        "Swarm Awakens!",
-        "Hive is Buzzing into Action!"
+    // repeat the same phrase. Player/opponent use separate phrase sets (rather than
+    // a shared pool + possessive prefix) since Spanish has no 's.
+    private static let playerSwarmRevealPhraseKeys: [StringKey] = [
+        .swarmRevealPlayerHiveSwarm,
+        .swarmRevealPlayerUnleashed,
+        .swarmRevealPlayerAwakens,
+        .swarmRevealPlayerBuzzing
     ]
-    private var lastHiveSwarmPhrase: String?
+
+    private static let opponentSwarmRevealPhraseKeys: [StringKey] = [
+        .swarmRevealOpponentHiveSwarmFmt,
+        .swarmRevealOpponentUnleashedFmt,
+        .swarmRevealOpponentAwakensFmt,
+        .swarmRevealOpponentBuzzingFmt
+    ]
+
+    private var lastHiveSwarmIndex: Int?
 
     private func hiveSwarmRevealBanner(for owner: CardOwner) -> String {
-        let pool = Self.hiveSwarmRevealPhrases.filter { $0 != lastHiveSwarmPhrase }
-        let phrase = pool.randomElement() ?? Self.hiveSwarmRevealPhrases.randomElement()!
-        lastHiveSwarmPhrase = phrase
-        let possessive = owner == .player ? "Your" : "\(options.difficulty.displayName)'s"
-        return "\(possessive) \(phrase)"
+        let count = Self.playerSwarmRevealPhraseKeys.count
+        var availableIndices = Array(0..<count)
+        if let last = lastHiveSwarmIndex, count > 1 {
+            availableIndices.removeAll { $0 == last }
+        }
+        let index = availableIndices.randomElement() ?? 0
+        lastHiveSwarmIndex = index
+
+        let language = BannerCatalog.currentLanguage
+        if owner == .player {
+            return L(Self.playerSwarmRevealPhraseKeys[index], language: language)
+        } else {
+            return L(Self.opponentSwarmRevealPhraseKeys[index], language: language, honeycombLocalizedDifficultyName(options.difficulty, language: language))
+        }
     }
 
     private func checkWinCondition() {

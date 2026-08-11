@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SoliBee.Core.Localization;
 
 namespace SoliBee.Core.Models;
 
@@ -40,6 +41,9 @@ public class GameOptions
     public bool IsStatusBarVisible { get; set; } = true;
     public bool HideHintButton { get; set; } = false;
     public bool IsAlwaysOnTop { get; set; } = false;
+    // App-wide UI language, same single-source-of-truth pattern as FeltColor above —
+    // not per-game. Mirrors the Mac/iOS port's AppCoordinator.language.
+    public AppLanguage Language { get; set; } = AppLanguage.English;
     public int FreecellDeckCount { get; set; } = 1;
     public int SpiderSuitCount { get; set; } = 1;
 

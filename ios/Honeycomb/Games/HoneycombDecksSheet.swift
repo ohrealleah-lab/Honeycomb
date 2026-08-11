@@ -9,6 +9,7 @@ import SwiftUI
 struct HoneycombDecksSheet: View {
     @Bindable var viewModel: HoneycombViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
 
     @State private var profile = HoneycombProfileManager.shared
     @State private var tab: Tab = .decks
@@ -39,7 +40,7 @@ struct HoneycombDecksSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 Picker("", selection: $tab) {
-                    ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    ForEach(Tab.allCases, id: \.self) { Text(tabLabel($0)).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .padding(12)
@@ -49,11 +50,11 @@ struct HoneycombDecksSheet: View {
                 case .bank: cardBankTab
                 }
             }
-            .navigationTitle("Manage Decks")
+            .navigationTitle(coordinator.L(.manageDecks))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(coordinator.L(.done)) { dismiss() }
                 }
             }
             .sheet(item: Binding(
@@ -78,6 +79,13 @@ struct HoneycombDecksSheet: View {
         }
     }
 
+    private func tabLabel(_ tab: Tab) -> String {
+        switch tab {
+        case .decks: return coordinator.L(.tabSavedDecks)
+        case .bank: return coordinator.L(.tabCardBank)
+        }
+    }
+
     // MARK: Saved Decks tab
 
     private var savedDecksTab: some View {
@@ -98,21 +106,21 @@ struct HoneycombDecksSheet: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 if deck.name.isEmpty {
-                    Text("Empty Slot \(index + 1)").foregroundStyle(.secondary)
+                    Text(coordinator.L(.emptySlotFmt, index + 1)).foregroundStyle(.secondary)
                 } else {
                     Text(deck.name).bold()
                 }
                 if isActive {
-                    Text("Active").font(.caption.bold()).foregroundStyle(.green)
+                    Text(coordinator.L(.deckActiveBadge)).font(.caption.bold()).foregroundStyle(.green)
                 }
                 Spacer()
-                Button(deck.name.isEmpty ? "Create" : "Edit") {
+                Button(deck.name.isEmpty ? coordinator.L(.deckCreate) : coordinator.L(.edit)) {
                     editingDeckIndex = index
                 }
                 .buttonStyle(.bordered)
             }
             if !isActive && !deck.name.isEmpty {
-                Button("Set Active") {
+                Button(coordinator.L(.deckSetActive)) {
                     viewModel.options.activeDeckIndex = index
                 }
                 .buttonStyle(.borderless)
@@ -134,10 +142,10 @@ struct HoneycombDecksSheet: View {
 
     private var startOverPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Want a fresh start? Starting over clears your saved decks and card bank, then reseeds the game with a whole new set of cards.")
+            Text(coordinator.L(.startOverBody))
                 .font(.footnote)
                 .foregroundStyle(.white)
-            Button("Start Over", role: .destructive) {
+            Button(coordinator.L(.startOver), role: .destructive) {
                 showStartOverConfirmation = true
             }
             .buttonStyle(.borderedProminent)
@@ -147,11 +155,11 @@ struct HoneycombDecksSheet: View {
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.red.opacity(0.85), in: RoundedRectangle(cornerRadius: 10))
-        .alert("Start Over?", isPresented: $showStartOverConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Start Over", role: .destructive) { viewModel.startOver() }
+        .alert(coordinator.L(.startOverTitle), isPresented: $showStartOverConfirmation) {
+            Button(coordinator.L(.cancel), role: .cancel) {}
+            Button(coordinator.L(.startOver), role: .destructive) { viewModel.startOver() }
         } message: {
-            Text("Starting over reseeds the game with an entirely new set of cards. All saved decks and card bank progress. This can't be undone.")
+            Text(coordinator.L(.startOverAlertBody))
         }
     }
 
@@ -160,7 +168,7 @@ struct HoneycombDecksSheet: View {
     private var cardBankTab: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("CARD BANK (\(profile.unlockedCardIds.count) of \(HoneycombDatabase.shared.allCards.count))")
+                Text(coordinator.L(.cardBankCountFmt, profile.unlockedCardIds.count, HoneycombDatabase.shared.allCards.count))
                     .font(.caption.bold())
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -210,24 +218,25 @@ private struct CardBankFilterBar: View {
     @Binding var filterStar: Int?
     @Binding var filterSuit: String?
     @Binding var filterFavoritesOnly: Bool
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         HStack(spacing: 10) {
             Menu {
-                Button("All Stars") { filterStar = nil }
+                Button(coordinator.L(.allStarsFilter)) { filterStar = nil }
                 ForEach(1...5, id: \.self) { star in
-                    Button("\(star)★") { filterStar = star }
+                    Button(coordinator.L(.starCountFmt, star)) { filterStar = star }
                 }
             } label: {
-                chip(filterStar.map { "\($0)★" } ?? "All Stars")
+                chip(filterStar.map { coordinator.L(.starCountFmt, $0) } ?? coordinator.L(.allStarsFilter))
             }
 
             Menu {
-                Button("All Suits") { filterSuit = nil }
-                Button("♠ Spades") { filterSuit = "S" }
-                Button("♥ Hearts") { filterSuit = "H" }
-                Button("♦ Diamonds") { filterSuit = "D" }
-                Button("♣ Clubs") { filterSuit = "C" }
+                Button(coordinator.L(.allSuitsFilter)) { filterSuit = nil }
+                Button(coordinator.L(.suitSpades)) { filterSuit = "S" }
+                Button(coordinator.L(.suitHearts)) { filterSuit = "H" }
+                Button(coordinator.L(.suitDiamonds)) { filterSuit = "D" }
+                Button(coordinator.L(.suitClubs)) { filterSuit = "C" }
             } label: {
                 chip(suitLabel(filterSuit))
             }
@@ -238,7 +247,7 @@ private struct CardBankFilterBar: View {
                 HStack(spacing: 4) {
                     Image(systemName: filterFavoritesOnly ? "heart.fill" : "heart")
                         .foregroundStyle(filterFavoritesOnly ? .red : .primary)
-                    Text("Favorites").font(.caption.bold())
+                    Text(coordinator.L(.favoritesFilter)).font(.caption.bold())
                 }
                 .padding(.horizontal, 10).padding(.vertical, 5)
                 .background(filterFavoritesOnly ? Color.red.opacity(0.15) : Color.black.opacity(0.08),
@@ -247,7 +256,7 @@ private struct CardBankFilterBar: View {
             .buttonStyle(.plain)
 
             if filterStar != nil || filterSuit != nil || filterFavoritesOnly {
-                Button("Clear") {
+                Button(coordinator.L(.clearFilters)) {
                     filterStar = nil
                     filterSuit = nil
                     filterFavoritesOnly = false
@@ -270,11 +279,11 @@ private struct CardBankFilterBar: View {
 
     private func suitLabel(_ suit: String?) -> String {
         switch suit {
-        case "S": return "♠ Spades"
-        case "H": return "♥ Hearts"
-        case "D": return "♦ Diamonds"
-        case "C": return "♣ Clubs"
-        default: return "All Suits"
+        case "S": return coordinator.L(.suitSpades)
+        case "H": return coordinator.L(.suitHearts)
+        case "D": return coordinator.L(.suitDiamonds)
+        case "C": return coordinator.L(.suitClubs)
+        default: return coordinator.L(.allSuitsFilter)
         }
     }
 }
@@ -291,6 +300,7 @@ private struct DeckBuilderSheet: View {
     @Binding var filterFavoritesOnly: Bool
     let onSave: (String, [Int]) -> Void
     let onCancel: () -> Void
+    @Environment(AppCoordinator.self) private var coordinator
 
     @State private var name: String = ""
     @State private var cardIds: [Int] = []
@@ -300,7 +310,7 @@ private struct DeckBuilderSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    TextField("Deck Name (max 20 chars)", text: $name)
+                    TextField(coordinator.L(.deckNamePlaceholderIos), text: $name)
                         .textFieldStyle(.roundedBorder)
                         .onChange(of: name) { validate() }
 
@@ -308,13 +318,13 @@ private struct DeckBuilderSheet: View {
                     // rarity/length checks below don't cover it, so call it out on its
                     // own rather than leaving the player to guess why Save won't light up.
                     if name.isEmpty {
-                        Text("Enter a deck name to save.").font(.footnote).foregroundStyle(.orange)
+                        Text(coordinator.L(.enterDeckNameHint)).font(.footnote).foregroundStyle(.orange)
                     } else if let error = validationError {
                         Text(error).font(.footnote).foregroundStyle(.red)
                     }
 
                     VStack(spacing: 8) {
-                        Text("Your Deck (\(cardIds.count)/5) — Tap to Remove")
+                        Text(coordinator.L(.yourDeckCountFmt, cardIds.count))
                             .font(.headline)
                         HStack(spacing: 6) {
                             ForEach(0..<5, id: \.self) { i in
@@ -341,8 +351,8 @@ private struct DeckBuilderSheet: View {
                     .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Card Bank — Tap to Add").font(.headline)
-                        Text("Maximum one 5★ and one 4★ card per deck. Two 4★ cards can be used without a 5★.")
+                        Text(coordinator.L(.cardBankTapToAdd)).font(.headline)
+                        Text(coordinator.L(.deckRulesHint))
                             .font(.caption).foregroundStyle(.secondary)
                         CardBankFilterBar(filterStar: $filterStar, filterSuit: $filterSuit, filterFavoritesOnly: $filterFavoritesOnly)
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 10)], spacing: 10) {
@@ -365,14 +375,14 @@ private struct DeckBuilderSheet: View {
                 }
                 .padding()
             }
-            .navigationTitle("Deck Builder")
+            .navigationTitle(coordinator.L(.deckBuilderTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+                    Button(coordinator.L(.cancel), action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { onSave(name, cardIds) }
+                    Button(coordinator.L(.save)) { onSave(name, cardIds) }
                         .disabled(validationError != nil || cardIds.count != 5 || name.isEmpty || name.count > 20)
                 }
             }
@@ -381,7 +391,7 @@ private struct DeckBuilderSheet: View {
             // A brand-new deck (empty slot) starts with no name — default it to
             // something already valid so Save doesn't require typing just to unlock,
             // mirroring "Empty Slot N" from the Saved Decks list.
-            name = initialName.isEmpty ? "Deck \(index + 1)" : initialName
+            name = initialName.isEmpty ? coordinator.L(.deckSlotDefaultNameFmt, index + 1) : initialName
             cardIds = initialCardIds
             validate()
         }
@@ -398,13 +408,13 @@ private struct DeckBuilderSheet: View {
             }
         }
         if fiveStars > 1 {
-            validationError = "A deck can never contain more than one 5★ card."
+            validationError = coordinator.L(.errTooMany5star)
         } else if fiveStars == 1 && fourStars > 1 {
-            validationError = "If you have a 5★ card, you can only have one 4★ card."
+            validationError = coordinator.L(.err5star4starCombo)
         } else if fiveStars == 0 && fourStars > 2 {
-            validationError = "A deck can never contain more than two 4★ cards."
+            validationError = coordinator.L(.errTooMany4star)
         } else if name.count > 20 {
-            validationError = "Deck name cannot exceed 20 characters."
+            validationError = coordinator.L(.errNameTooLong)
         } else {
             validationError = nil
         }

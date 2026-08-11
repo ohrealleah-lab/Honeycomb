@@ -146,7 +146,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                     .accessibilityLabel(theme.rawValue)
                 }
             }
-            Toggle("Felt Vignette", isOn: $coordinator.showFeltVignette)
+            Toggle(coordinator.L(.feltVignetteToggle), isOn: $coordinator.showFeltVignette)
 
             sectionTitle("Card Back").padding(.top, 4)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -211,8 +211,8 @@ struct SlideDownMenu<GameSettings: View>: View {
             get: { entryPendingDelete != nil },
             set: { if !$0 { entryPendingDelete = nil } }
         )) {
-            Button("Cancel", role: .cancel) {}
-            Button("Remove", role: .destructive) {
+            Button(coordinator.L(.cancel), role: .cancel) {}
+            Button(coordinator.L(.remove), role: .destructive) {
                 if let entry = entryPendingDelete {
                     if coordinator.cardBackTheme == entry.name { coordinator.cardBackTheme = "Solibee" }
                     customCardBacks.removeCustomCardBack(entry)
@@ -225,8 +225,8 @@ struct SlideDownMenu<GameSettings: View>: View {
             get: { backgroundPendingDelete != nil },
             set: { if !$0 { backgroundPendingDelete = nil } }
         )) {
-            Button("Cancel", role: .cancel) {}
-            Button("Remove", role: .destructive) {
+            Button(coordinator.L(.cancel), role: .cancel) {}
+            Button(coordinator.L(.remove), role: .destructive) {
                 if let entry = backgroundPendingDelete {
                     if coordinator.customBackgroundName == entry.name { coordinator.customBackgroundName = nil }
                     customBackgrounds.removeCustomBackground(entry)
@@ -277,7 +277,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                         .foregroundStyle(.white)
                 }
                 .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
-                Text("Add").font(.caption2).foregroundStyle(.primary)
+                Text(coordinator.L(.addShort)).font(.caption2).foregroundStyle(.primary)
             }
         }
         .buttonStyle(.plain)
@@ -327,7 +327,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                         .foregroundStyle(.white)
                 }
                 .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
-                Text("Add")
+                Text(coordinator.L(.addShort))
                     .font(.caption2)
                     .foregroundStyle(.primary)
             }

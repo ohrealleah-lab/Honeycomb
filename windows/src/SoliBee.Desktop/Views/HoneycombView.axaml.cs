@@ -5,6 +5,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -19,6 +21,7 @@ namespace SoliBee.Desktop.Views;
 
 public partial class HoneycombView : UserControl
 {
+    private AppLanguage _language = AppLanguage.English;
     private HoneycombViewModel? _vm;
     private int _selectedHandIndex = -1;
     
@@ -107,7 +110,22 @@ public partial class HoneycombView : UserControl
         }
 
         SetupDragAndDrop();
-        
+
+        _language = SettingsService.LoadOptions().Language;
+        ApplyLocalization();
+        // Keep this view's static text in sync with a language change made while it's open
+        // (e.g. Preferences opened over the running game) — mirrors MainWindow's own
+        // OptionsChangedMessage -> ApplyLocalization hookup.
+        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
+        {
+            if (m.Options.Language != _language)
+            {
+                _language = m.Options.Language;
+                ApplyLocalization();
+                if (_vm != null) Refresh(_vm);
+            }
+        });
+
         RuleToast.OnDismissed += () => {
             _bannerActive = false;
             BannerTapCatcher.IsHitTestVisible = false;
@@ -148,6 +166,37 @@ public partial class HoneycombView : UserControl
         };
     }
     
+    // Applies the current language to every static button/label in this view. Runs once at
+    // construction and again whenever OptionsChangedMessage reports a language change,
+    // matching MainWindow's ApplyLocalization pattern. Dynamic strings built elsewhere in
+    // this file (rule names, overlay title/subtitle, "obtained all cards" line) also read
+    // Strings.Get(..., _language) at the point they're built, so they pick up the current
+    // language too.
+    private void ApplyLocalization()
+    {
+        PlayerHandLabel.Text   = Strings.Get(StringKey.PlayerLabel, _language);
+        OpponentHandLabel.Text = Strings.Get(StringKey.DealerLabel, _language);
+
+        RulesTitle.Text          = Strings.Get(StringKey.RulesBannerTitle, _language);
+        StealInstructionText.Text = Strings.Get(StringKey.StealInstruction, _language);
+        CancelStealText.Text      = Strings.Get(StringKey.Cancel, _language);
+
+        NewGameButtonText.Text  = Strings.Get(StringKey.NewGame, _language);
+        RematchButtonText.Text  = Strings.Get(StringKey.Rematch, _language);
+        StealCardButtonText.Text = Strings.Get(StringKey.StealCard, _language);
+
+        OverlayLoseTitle.Text = Strings.Get(StringKey.NotTodayPartner, _language);
+
+        BankFullWarningText.Text       = Strings.Get(StringKey.CardBankFullLine1, _language);
+        AllSecretsWarningText.Text     = Strings.Get(StringKey.CardBankFullLine2, _language);
+        AlreadyStolenWarningText.Text  = Strings.Get(StringKey.RematchToTakeAnother, _language);
+        StealProtectionText.Text       = Strings.Get(StringKey.StealProtectionLine, _language);
+
+        StealConfirmationTitleText.Text = Strings.Get(StringKey.ConfirmStealTitle, _language);
+        CancelStealDialogButton.Content = Strings.Get(StringKey.Cancel, _language);
+        ConfirmStealDialogButton.Content = Strings.Get(StringKey.Ok, _language);
+    }
+
     private void Vm_OnFlashBanner(string message, bool isLongDuration)
     {
         // All toasts are a uniform 2s now (isLongDuration no longer distinguishes
@@ -462,7 +511,7 @@ public partial class HoneycombView : UserControl
                 // now gone, since HasStolenThisMatch is true) — a repeat "You Win!" would
                 // read as stale, so it confirms what just happened instead.
                 OverlayTitle.FontSize = state.HasStolenThisMatch ? 28 : 40;
-                OverlayTitle.Text = state.HasStolenThisMatch ? "Card added to card bank." : "You Win!";
+                OverlayTitle.Text = state.HasStolenThisMatch ? Strings.Get(StringKey.CardAddedToBank, _language) : Strings.Get(StringKey.YouWin, _language);
             } else if (state.PlayerScore < state.OpponentScore) {
                 OverlayTitle.IsVisible = false;
                 OverlayLoseTitle.IsVisible = true;
@@ -472,9 +521,9 @@ public partial class HoneycombView : UserControl
                 // "Draw" that used to be unreachable here (SettleMatch used to route
                 // every tie into TriggerSuddenDeathAsync before this could show).
                 OverlayTitle.FontSize = 40;
-                OverlayTitle.Text = "Tie!";
+                OverlayTitle.Text = Strings.Get(StringKey.TieResult, _language);
             }
-            OverlaySubtitle.Text = $"Final Score: {state.PlayerScore} - {state.OpponentScore}";
+            OverlaySubtitle.Text = string.Format(Strings.Get(StringKey.FinalScoreFmt, _language), state.PlayerScore, state.OpponentScore);
             OverlayFlavorText.Text = vm.MatchResultFlavorText ?? "";
             OverlayFlavorText.IsVisible = !string.IsNullOrEmpty(vm.MatchResultFlavorText);
 
@@ -523,7 +572,7 @@ public partial class HoneycombView : UserControl
                 // isn't full. hasStealableCard is necessarily false whenever this is
                 // true (see HasObtainedAllOpponentCards' comment), so it never competes
                 // with the Steal Protection text below.
-                ObtainedAllOpponentCardsText.Text = $"You have obtained all cards from {vm.OpponentNameDisplay}'s hand.";
+                ObtainedAllOpponentCardsText.Text = Strings.Get(StringKey.ObtainedAllCardsFmt, _language).Replace("%@", vm.OpponentNameDisplay);
                 ObtainedAllOpponentCardsText.IsVisible = obtainedAllOpponentCards;
                 // Shown alongside the Steal Card button while protection is active and
                 // there's still something to take (not once the bank's already full).
@@ -540,7 +589,7 @@ public partial class HoneycombView : UserControl
                 AllSecretsWarningText.IsVisible = !globalOpts.IsNoStressMode && won && bankFull;
                 StealProtectionText.IsVisible = false;
                 
-                ObtainedAllOpponentCardsText.Text = $"You have obtained all cards from {vm.OpponentNameDisplay}'s hand.";
+                ObtainedAllOpponentCardsText.Text = Strings.Get(StringKey.ObtainedAllCardsFmt, _language).Replace("%@", vm.OpponentNameDisplay);
                 ObtainedAllOpponentCardsText.IsVisible = !globalOpts.IsNoStressMode && won && obtainedAllOpponentCards;
                 
                 // Only the "already stolen" scenario gets its own message here — a
@@ -561,29 +610,29 @@ public partial class HoneycombView : UserControl
         {
             ruleNames = state.ActiveRules.Select(r =>
             {
-                var name = r.DisplayName();
+                var name = HoneycombRuleLocalization.LocalizedRuleName(r, _language);
                 if ((r == HoneycombRule.Ascension || r == HoneycombRule.Descension) && state.Board.AscensionDescensionSuits.Count > 0)
                 {
                     var suitNames = state.Board.AscensionDescensionSuits.Select(HoneycombCardData.SuitDisplayName);
-                    return $"{name} Suit: {string.Join(", ", suitNames)}";
+                    return FormatRuleLineSuit(name, string.Join(", ", suitNames));
                 }
                 return name;
             }).ToList();
-            if (ruleNames.Count == 0) ruleNames.Add("Normal");
+            if (ruleNames.Count == 0) ruleNames.Add(Strings.Get(StringKey.RuleLineNormal, _language));
         }
         else if (vm.Options.ForceNormalRules)
         {
-            ruleNames = new List<string> { "Normal" };
+            ruleNames = new List<string> { Strings.Get(StringKey.RuleLineNormal, _language) };
         }
         else if (vm.Options.ManualRules != null && vm.Options.ManualRules.Count > 0)
         {
             ruleNames = vm.Options.ManualRules
-                .Select(r => r.DisplayName())
+                .Select(r => HoneycombRuleLocalization.LocalizedRuleName(r, _language))
                 .ToList();
         }
         else
         {
-            ruleNames = new List<string> { "Roulette" };
+            ruleNames = new List<string> { Strings.Get(StringKey.RuleLineRoulette, _language) };
         }
         RulesList.ItemsSource = ruleNames;
         
@@ -691,6 +740,22 @@ public partial class HoneycombView : UserControl
         OpponentTurnIndicator.IsVisible = vm.IsPlaying && state.CurrentTurn == -1;
         
 
+    }
+
+    // RuleLineSuitFmt has two positional %@ placeholders whose surrounding literal text
+    // is reordered per language (English "%@ Suit: %@", Spanish "Palo %@: %@") but whose
+    // argument order stays the same (rule name, then suit list) — so each %@ token is
+    // replaced in the order it appears in the template, not with a blanket Replace(),
+    // which would stomp the second placeholder with the first's value.
+    private string FormatRuleLineSuit(string ruleName, string suitList)
+    {
+        string template = Strings.Get(StringKey.RuleLineSuitFmt, _language);
+        int first = template.IndexOf("%@", StringComparison.Ordinal);
+        if (first < 0) return $"{ruleName} {suitList}";
+        string withFirst = template.Substring(0, first) + ruleName + template.Substring(first + 2);
+        int second = withFirst.IndexOf("%@", first, StringComparison.Ordinal);
+        if (second < 0) return withFirst;
+        return withFirst.Substring(0, second) + suitList + withFirst.Substring(second + 2);
     }
 
     private int CountPlayerCards(HoneycombState state)
@@ -1165,8 +1230,8 @@ public partial class HoneycombView : UserControl
         {
             items.Add(new RuleExplanationItem
             {
-                Name = "Roulette",
-                Explanation = "Rules are randomized at the start of the match."
+                Name = Strings.Get(StringKey.RuleLineRoulette, _language),
+                Explanation = Strings.Get(StringKey.RulesRandomizedAtStart, _language)
             });
         }
 
@@ -1175,8 +1240,8 @@ public partial class HoneycombView : UserControl
         {
             items.Add(new RuleExplanationItem
             {
-                Name = rule.DisplayName(),
-                Explanation = rule.GetExplanation(activeSuits)
+                Name = HoneycombRuleLocalization.LocalizedRuleName(rule, _language),
+                Explanation = HoneycombRuleLocalization.LocalizedRuleExplanation(rule, activeSuits, _language)
             });
         }
         

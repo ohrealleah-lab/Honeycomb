@@ -25,12 +25,12 @@
                     <!-- Buttons on the Left -->
                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                         <ComboBox x:Name="GameSelectionBox" Classes="toolbar-combo" SelectionChanged="GameSelectionBox_SelectionChanged">
-                            <ComboBoxItem Content="Klondike Solibee" Tag="Klondike" />
-                            <ComboBoxItem Content="Beecell"          Tag="Freecell" />
-                            <ComboBoxItem Content="Spider Solibee"   Tag="Spider" />
-                            <ComboBoxItem Content="Video Poker"      Tag="VideoPoker" />
-                            <ComboBoxItem Content="Video Blackjack"  Tag="Blackjack" />
-                            <ComboBoxItem Content="Honeycomb"        Tag="Honeycomb" />
+                            <ComboBoxItem x:Name="KlondikeSolibeeItem" Content="Klondike Solibee" Tag="Klondike" />
+                            <ComboBoxItem x:Name="BeecellItem"         Content="Beecell"          Tag="Freecell" />
+                            <ComboBoxItem x:Name="SpiderSolibeeItem"   Content="Spider Solibee"   Tag="Spider" />
+                            <ComboBoxItem x:Name="VideoPokerModeItem"  Content="Video Poker"      Tag="VideoPoker" />
+                            <ComboBoxItem x:Name="VideoBlackjackItem"  Content="Video Blackjack"  Tag="Blackjack" />
+                            <ComboBoxItem x:Name="HoneycombModeItem"   Content="Honeycomb"        Tag="Honeycomb" />
                         </ComboBox>
                         <Button x:Name="NewGameButton" Content="New Game" Click="NewGame_Click" Classes="toolbar" />
                         <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
@@ -43,9 +43,9 @@
                         <Button x:Name="HintButton" Content="Hint" Click="Hint_Click" Classes="toolbar" />
                         <ComboBox x:Name="PokerVariantBox" Classes="toolbar-combo" IsVisible="False"
                                   SelectionChanged="PokerVariantBox_SelectionChanged">
-                            <ComboBoxItem Content="Jacks or Better"/>
-                            <ComboBoxItem Content="Deuces Wild"/>
-                            <ComboBoxItem Content="Bonus Poker"/>
+                            <ComboBoxItem x:Name="JacksOrBetterItem" Content="Jacks or Better"/>
+                            <ComboBoxItem x:Name="DeucesWildItem" Content="Deuces Wild"/>
+                            <ComboBoxItem x:Name="BonusPokerItem" Content="Bonus Poker"/>
                         </ComboBox>
                         <Button x:Name="UndoButton" Content="Undo" Click="Undo_Click" Classes="toolbar" IsEnabled="{Binding CanUndo}" />
                         <Button Content="Theme Editor" Click="ThemeEditor_Click" Classes="toolbar" IsVisible="False" />
@@ -106,22 +106,22 @@
                     <StackPanel x:Name="StatsBarPanel" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="25" VerticalAlignment="Center">
                         <!-- SCORE -->
                         <StackPanel x:Name="ScoreStatPanel" Spacing="2" HorizontalAlignment="Center">
-                            <TextBlock Text="SCORE" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="ScoreLabelText" Text="SCORE" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding ScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- MOVES -->
                         <StackPanel x:Name="MovesStatPanel" Spacing="2" HorizontalAlignment="Center">
-                            <TextBlock Text="MOVES" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="MovesLabelText" Text="MOVES" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding State.MovesCount}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- TIME -->
                         <StackPanel x:Name="TimeStatPanel" Spacing="2" HorizontalAlignment="Center">
-                            <TextBlock Text="TIME" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="TimeLabelText" Text="TIME" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- HONEYCOMB SCORE: You -->
                         <StackPanel x:Name="HoneycombYouStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
-                            <TextBlock Text="You" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="HoneycombYouLabelText" Text="You" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding PlayerScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- HONEYCOMB SCORE: Opponent's difficulty name (e.g. "Baby Bee") -->
@@ -169,7 +169,7 @@
                 <Grid x:Name="HoneycombRulesInset" Margin="20">
                     <Border Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="{Binding #HoneycombRulesInset.Bounds.Height}" MaxWidth="{Binding #HoneycombRulesInset.Bounds.Width}" BoxShadow="0 4 20 0 #A0000000">
                         <Grid RowDefinitions="Auto, *">
-                            <TextBlock Grid.Row="0" Text="Honeycomb Rules" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" Margin="0,0,0,15" />
+                            <TextBlock x:Name="HoneycombRulesTitleText" Grid.Row="0" Text="Honeycomb Rules" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" Margin="0,0,0,15" />
                             <views:HoneycombRulesView x:Name="HoneycombRulesViewControl" Grid.Row="1" />
                         </Grid>
                     </Border>
@@ -222,22 +222,22 @@
                                         BorderThickness="0">
                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                         <TextBlock Text="‹" FontSize="17" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Back" FontSize="13" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="PreferencesBackLabelText" Text="Back" FontSize="13" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <TextBlock Grid.Column="1" Text="Preferences" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <TextBlock x:Name="PreferencesTitleText" Grid.Column="1" Text="Preferences" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Grid>
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                 <ContentControl x:Name="PreferencesContent" />
                             </ScrollViewer>
                             <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,15,0,0">
-                                <TextBlock Text="View Stats" Grid.Column="0"
+                                <TextBlock x:Name="ViewStatsText" Text="View Stats" Grid.Column="0"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                            Foreground="#1155AA" TextDecorations="Underline"
                                            Cursor="Hand" PointerPressed="ViewStats_PointerPressed"/>
-                                <Button Classes="light-secondary" Content="Cancel" Click="CancelPreferences_Click" Grid.Column="1"
+                                <Button x:Name="CancelPreferencesButton" Classes="light-secondary" Content="Cancel" Click="CancelPreferences_Click" Grid.Column="1"
                                         Width="80" HorizontalContentAlignment="Center" Margin="0,0,8,0" />
-                                <Button Classes="light-primary" Content="OK" Click="ClosePreferences_Click" Grid.Column="2"
+                                <Button x:Name="OkPreferencesButton" Classes="light-primary" Content="OK" Click="ClosePreferences_Click" Grid.Column="2"
                                         Width="80" HorizontalContentAlignment="Center" />
                             </Grid>
                         </Grid>
@@ -264,13 +264,13 @@
                     <Border x:Name="ManageDecksPanel" Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Stretch" MinWidth="1000" MaxWidth="1000" BoxShadow="0 4 20 0 #A0000000">
                         <Grid RowDefinitions="Auto,*,Auto">
                             <Grid Grid.Row="0" Margin="0,0,0,15">
-                                <TextBlock Text="Manage Decks" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
+                                <TextBlock x:Name="ManageDecksTitleText" Text="Manage Decks" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
                             </Grid>
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                 <ContentControl x:Name="ManageDecksContent" />
                             </ScrollViewer>
                             <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,15,0,0">
-                                <Button Classes="light-primary" Content="Done" Click="CloseManageDecks_Click" Grid.Column="1" Width="100" HorizontalContentAlignment="Center" />
+                                <Button x:Name="DoneManageDecksButton" Classes="light-primary" Content="Done" Click="CloseManageDecks_Click" Grid.Column="1" Width="100" HorizontalContentAlignment="Center" />
                             </Grid>
                         </Grid>
                     </Border>
@@ -287,35 +287,35 @@
                         <Rectangle Height="1" Fill="#DDDDDD" />
                         <StackPanel x:Name="StatsFixedRows" Spacing="8">
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Games Played" Foreground="#1A1A1A" />
+                                <TextBlock x:Name="StatsGamesPlayedLabel" Text="Games Played" Foreground="#1A1A1A" />
                                 <TextBlock Grid.Column="1" x:Name="StatsGamesPlayedText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Games Won" Foreground="#1A1A1A" />
+                                <TextBlock x:Name="StatsGamesWonLabel" Text="Games Won" Foreground="#1A1A1A" />
                                 <TextBlock Grid.Column="1" x:Name="StatsGamesWonText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="High Score" Foreground="#1A1A1A" />
+                                <TextBlock x:Name="StatsHighScoreLabel" Text="High Score" Foreground="#1A1A1A" />
                                 <TextBlock Grid.Column="1" x:Name="StatsHighScoreText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Win Percentage" Foreground="#1A1A1A" />
+                                <TextBlock x:Name="StatsWinPctLabel" Text="Win Percentage" Foreground="#1A1A1A" />
                                 <TextBlock Grid.Column="1" x:Name="StatsWinPctText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Current Streak" Foreground="#1A1A1A" />
+                                <TextBlock x:Name="StatsCurrentStreakLabel" Text="Current Streak" Foreground="#1A1A1A" />
                                 <TextBlock Grid.Column="1" x:Name="StatsCurrentStreakText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Longest Streak" Foreground="#1A1A1A" />
+                                <TextBlock x:Name="StatsLongestStreakLabel" Text="Longest Streak" Foreground="#1A1A1A" />
                                 <TextBlock Grid.Column="1" x:Name="StatsLongestStreakText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Avg Winning Time" Foreground="#1A1A1A" />
+                                <TextBlock x:Name="StatsAvgWinTimeLabel" Text="Avg Winning Time" Foreground="#1A1A1A" />
                                 <TextBlock Grid.Column="1" x:Name="StatsAvgWinTimeText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Fastest Win" Foreground="#1A1A1A" />
+                                <TextBlock x:Name="StatsFastestWinLabel" Text="Fastest Win" Foreground="#1A1A1A" />
                                 <TextBlock Grid.Column="1" x:Name="StatsFastestWinText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                         </StackPanel>
@@ -324,9 +324,9 @@
                         <StackPanel x:Name="StatsDynamicRows" Spacing="8" IsVisible="False" />
                         <Rectangle Height="1" Fill="#DDDDDD" />
                         <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Button Content="Reset Stats" Click="ResetStats_Click" Grid.Column="0"
+                            <Button x:Name="ResetStatsButton" Content="Reset Stats" Click="ResetStats_Click" Grid.Column="0"
                                     Background="Transparent" Foreground="#CC3333" BorderThickness="0" />
-                            <Button Content="Close" Click="CloseStats_Click" Grid.Column="2"
+                            <Button x:Name="CloseStatsButton" Content="Close" Click="CloseStats_Click" Grid.Column="2"
                                     Width="80" HorizontalContentAlignment="Center" Classes="light-secondary" />
                         </Grid>
                     </StackPanel>
@@ -344,7 +344,7 @@
                         <TextBlock x:Name="ConfirmActionMessage" Text="Are you sure you want to abandon the current game and start a new one?" FontSize="12" Foreground="#555555" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
                         <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                             <Button x:Name="ConfirmActionButton" Classes="light-danger" Content="New Game" Click="ConfirmAction_Click" Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,4,0" />
-                            <Button Classes="light-secondary" Content="Cancel" Click="CancelConfirmAction_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="4,0,0,0" />
+                            <Button x:Name="CancelConfirmActionButton" Classes="light-secondary" Content="Cancel" Click="CancelConfirmAction_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="4,0,0,0" />
                         </Grid>
                     </StackPanel>
                 </Border>

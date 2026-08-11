@@ -150,7 +150,7 @@ struct BeecellTouchView: View {
 
             // Undo/hint in the free-cell/foundation gap, per the agreed layout.
             VStack(spacing: 4) {
-                controlCircle(systemImage: "arrow.uturn.backward", label: "Undo",
+                controlCircle(systemImage: "arrow.uturn.backward", label: coordinator.L(.undo),
                               diameter: min(36, cardH * 0.45)) {
                     viewModel.undoLastAction()
                 }
@@ -158,7 +158,7 @@ struct BeecellTouchView: View {
                 .opacity(viewModel.canUndo ? 1 : 0.35)
 
                 if !viewModel.options.hideHintButton {
-                    controlCircle(systemImage: "lightbulb", label: "Hint",
+                    controlCircle(systemImage: "lightbulb", label: coordinator.L(.hint),
                                   diameter: min(36, cardH * 0.45)) {
                         if !viewModel.findHint() {
                             flashNoHintsBanner()
@@ -450,15 +450,15 @@ struct BeecellTouchView: View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 16) {
-                Text("You Win!")
+                Text(coordinator.L(.youWin))
                     .font(.system(size: 44, weight: .bold))
                     .foregroundColor(.yellow)
-                Text("Score: \(viewModel.scoreString)")
+                Text(coordinator.L(.scoreFmt, viewModel.scoreString))
                     .foregroundColor(.white)
                 Button {
                     viewModel.startNewGame()
                 } label: {
-                    Label("New Game", systemImage: "play.fill")
+                    Label(coordinator.L(.newGame), systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -471,7 +471,7 @@ struct BeecellTouchView: View {
 
     private var noHintsBanner: some View {
         VStack {
-            Text("Sorry! No hints available.")
+            Text(coordinator.L(.noHintsAvailable))
                 .font(.title3.weight(.black))
                 .foregroundStyle(Color.yellow)
                 .padding(.horizontal, 20)
@@ -498,10 +498,10 @@ struct BeecellTouchView: View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 14) {
-                Text("Game Over")
+                Text(coordinator.L(.gameOver))
                     .font(.system(size: 34, weight: .black))
                     .foregroundColor(.yellow)
-                Text("No moves remaining.")
+                Text(coordinator.L(.noMovesRemaining))
                     .foregroundColor(.white)
                 Button {
                     dismissedStuckBanner = true
@@ -516,7 +516,7 @@ struct BeecellTouchView: View {
                     dismissedStuckBanner = false
                     viewModel.startNewGame()
                 } label: {
-                    Label("New Game", systemImage: "play.fill")
+                    Label(coordinator.L(.newGame), systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -542,6 +542,7 @@ struct BeecellTouchView: View {
 
 struct BeecellSettingsSection: View {
     @Bindable var viewModel: BeecellViewModel
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -555,13 +556,13 @@ struct BeecellSettingsSection: View {
             }
             .pickerStyle(.segmented)
 
-            Toggle("Timed", isOn: $viewModel.options.isTimed)
-            Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
-            Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
+            Toggle(coordinator.L(.timed), isOn: $viewModel.options.isTimed)
+            Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
+            Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
                 .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
-            Toggle("Hide Hint Button", isOn: $viewModel.options.hideHintButton)
-            Toggle("Honey Mode (Flavor)", isOn: $viewModel.options.honeyMode)
-            Toggle("Manually Dismiss Banners", isOn: $viewModel.options.manuallyDismissBanners)
+            Toggle(coordinator.L(.hideHintButton), isOn: $viewModel.options.hideHintButton)
+            Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
         }
     }
 }
@@ -571,21 +572,22 @@ struct BeecellSettingsSection: View {
 struct BeecellStatsSheet: View {
     @Bindable var viewModel: BeecellViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         NavigationStack {
             List {
-                row("Games Played", "\(viewModel.currentModeStats.gamesPlayed)")
-                row("Games Won", "\(viewModel.currentModeStats.gamesWon)")
-                row("Current Streak", "\(viewModel.currentModeStats.currentStreak)")
-                row("Longest Streak", "\(viewModel.currentModeStats.longestStreak)")
-                row("High Score", viewModel.highScoreString)
+                row(coordinator.L(.gamesPlayed), "\(viewModel.currentModeStats.gamesPlayed)")
+                row(coordinator.L(.gamesWon), "\(viewModel.currentModeStats.gamesWon)")
+                row(coordinator.L(.currentStreak), "\(viewModel.currentModeStats.currentStreak)")
+                row(coordinator.L(.longestStreak), "\(viewModel.currentModeStats.longestStreak)")
+                row(coordinator.L(.highScore), viewModel.highScoreString)
             }
             .navigationTitle("BeeCell Stats (\(viewModel.options.deckCount == 1 ? "1 Deck" : "2 Decks"))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(coordinator.L(.done)) { dismiss() }
                 }
             }
         }

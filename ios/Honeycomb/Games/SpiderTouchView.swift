@@ -151,14 +151,14 @@ struct SpiderTouchView: View {
 
             Spacer()
 
-            controlCircle(systemImage: "arrow.uturn.backward", label: "Undo") {
+            controlCircle(systemImage: "arrow.uturn.backward", label: coordinator.L(.undo)) {
                 viewModel.undoLastAction()
             }
             .disabled(!viewModel.canUndo)
             .opacity(viewModel.canUndo ? 1 : 0.35)
 
             if !viewModel.options.hideHintButton {
-                controlCircle(systemImage: "lightbulb", label: "Hint") {
+                controlCircle(systemImage: "lightbulb", label: coordinator.L(.hint)) {
                     if !viewModel.findHint() {
                         flashNoHintsBanner()
                     }
@@ -429,15 +429,15 @@ struct SpiderTouchView: View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 16) {
-                Text("You Win!")
+                Text(coordinator.L(.youWin))
                     .font(.system(size: 44, weight: .bold))
                     .foregroundColor(.yellow)
-                Text("Score: \(viewModel.scoreString)")
+                Text(coordinator.L(.scoreFmt, viewModel.scoreString))
                     .foregroundColor(.white)
                 Button {
                     viewModel.startNewGame()
                 } label: {
-                    Label("New Game", systemImage: "play.fill")
+                    Label(coordinator.L(.newGame), systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -450,7 +450,7 @@ struct SpiderTouchView: View {
 
     private var noHintsBanner: some View {
         VStack {
-            Text("Sorry! No hints available.")
+            Text(coordinator.L(.noHintsAvailable))
                 .font(.title3.weight(.black))
                 .foregroundStyle(Color.yellow)
                 .padding(.horizontal, 20)
@@ -477,10 +477,10 @@ struct SpiderTouchView: View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 14) {
-                Text("Game Over")
+                Text(coordinator.L(.gameOver))
                     .font(.system(size: 34, weight: .black))
                     .foregroundColor(.yellow)
-                Text("No moves remaining.")
+                Text(coordinator.L(.noMovesRemaining))
                     .foregroundColor(.white)
                 Button {
                     dismissedStuckBanner = true
@@ -495,7 +495,7 @@ struct SpiderTouchView: View {
                     dismissedStuckBanner = false
                     viewModel.startNewGame()
                 } label: {
-                    Label("New Game", systemImage: "play.fill")
+                    Label(coordinator.L(.newGame), systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -521,6 +521,7 @@ struct SpiderTouchView: View {
 
 struct SpiderSettingsSection: View {
     @Bindable var viewModel: SpiderViewModel
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -529,19 +530,19 @@ struct SpiderSettingsSection: View {
                 .foregroundStyle(.secondary)
 
             Picker("Difficulty", selection: $viewModel.options.suitCount) {
-                Text("1 Suit").tag(1)
-                Text("2 Suits").tag(2)
-                Text("4 Suits").tag(4)
+                Text(coordinator.L(.suitCount1)).tag(1)
+                Text(coordinator.L(.suitCount2)).tag(2)
+                Text(coordinator.L(.suitCount4)).tag(4)
             }
             .pickerStyle(.segmented)
 
-            Toggle("Timed", isOn: $viewModel.options.isTimed)
-            Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
-            Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
+            Toggle(coordinator.L(.timed), isOn: $viewModel.options.isTimed)
+            Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
+            Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
                 .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
-            Toggle("Hide Hint Button", isOn: $viewModel.options.hideHintButton)
-            Toggle("Honey Mode (Flavor)", isOn: $viewModel.options.honeyMode)
-            Toggle("Manually Dismiss Banners", isOn: $viewModel.options.manuallyDismissBanners)
+            Toggle(coordinator.L(.hideHintButton), isOn: $viewModel.options.hideHintButton)
+            Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
         }
     }
 }
@@ -551,28 +552,29 @@ struct SpiderSettingsSection: View {
 struct SpiderStatsSheet: View {
     @Bindable var viewModel: SpiderViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         NavigationStack {
             List {
-                row("Games Played", "\(viewModel.gamesPlayed)")
-                row("Games Won", "\(viewModel.gamesWon)")
-                row("High Score", viewModel.highScoreString)
-                row("Fastest Win", formatTime(viewModel.shortestWinTime))
-                row("Average Win Time", formatTime(Int(viewModel.averageWinningTime)))
+                row(coordinator.L(.gamesPlayed), "\(viewModel.gamesPlayed)")
+                row(coordinator.L(.gamesWon), "\(viewModel.gamesWon)")
+                row(coordinator.L(.highScore), viewModel.highScoreString)
+                row(coordinator.L(.fastestWin), formatTime(viewModel.shortestWinTime))
+                row(coordinator.L(.statAverageWinTime), formatTime(Int(viewModel.averageWinningTime)))
             }
             .navigationTitle("Spider Stats (\(viewModel.options.suitCount) Suit)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(coordinator.L(.done)) { dismiss() }
                 }
             }
         }
     }
 
     private func formatTime(_ totalSeconds: Int) -> String {
-        if totalSeconds == 0 { return "--" }
+        if totalSeconds == 0 { return coordinator.L(.noTimePlaceholder) }
         return String(format: "%02d:%02d", totalSeconds / 60, totalSeconds % 60)
     }
 

@@ -126,7 +126,7 @@
                     <Border x:Name="IdlePrompt" Opacity="0" IsHitTestVisible="False" ZIndex="10"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             Background="#80000000" Padding="24,16" CornerRadius="8">
-                        <TextBlock Text="Hit Space to Deal" HorizontalAlignment="Center"
+                        <TextBlock x:Name="IdlePromptText" Text="Hit Space to Deal" HorizontalAlignment="Center"
                                    FontSize="32" FontWeight="Black" Foreground="White"/>
                     </Border>
 
@@ -139,13 +139,13 @@
                             <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="460"
                                     IsHitTestVisible="True" PointerPressed="NoWinOverlay_PointerPressed">
                                 <StackPanel Spacing="12" HorizontalAlignment="Center">
-                                    <TextBlock Text="Not today, partner!"
+                                    <TextBlock x:Name="NoWinHeadlineText" Text="Not today, partner!"
                                                FontSize="36" FontWeight="Black" Foreground="#FFD600"
                                                HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
                                     <StackPanel x:Name="NoWinPayoutRow" Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock Text="-" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="NoWinMinusText" Text="-" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
                                         <TextBlock Text="{Binding BetDisplay}" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
-                                        <TextBlock Text=" credits" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="NoWinCreditsSuffixText" Text=" credits" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -208,13 +208,13 @@
                 </StackPanel>
 
                 <StackPanel x:Name="BetButtonRow" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                    <Button Content="− Bet" Height="34" Padding="14,0"
+                    <Button x:Name="DecreaseBetButton" Content="− Bet" Height="34" Padding="14,0"
                             IsEnabled="{Binding IsDealing}"
                             Click="DecreaseBet_Click" Classes="casino-button vp-bet-button"/>
-                    <Button Content="Bet Max" Height="34" Padding="14,0"
+                    <Button x:Name="BetMaxButton" Content="Bet Max" Height="34" Padding="14,0"
                             IsEnabled="{Binding IsDealing}"
                             Click="BetMax_Click" Classes="casino-button vp-bet-button"/>
-                    <Button Content="+ Bet" Height="34" Padding="14,0"
+                    <Button x:Name="IncreaseBetButton" Content="+ Bet" Height="34" Padding="14,0"
                             IsEnabled="{Binding IsDealing}"
                             Click="IncreaseBet_Click" Classes="casino-button vp-bet-button"/>
                 </StackPanel>

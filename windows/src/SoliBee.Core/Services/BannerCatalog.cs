@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 
 namespace SoliBee.Core.Services;
@@ -36,6 +38,11 @@ public class BannerDefinition
     public double? GateChance { get; set; }
     public string? Fallback { get; set; }
     public List<string> Messages { get; set; } = new();
+    // Same length/order as Messages, one Spanish translation per English
+    // message — "" for a message not yet translated. Fallback is NOT
+    // translated (see tools/generate_banner_catalog.py) — it stays English
+    // regardless of language.
+    public List<string> MessagesEs { get; set; } = new();
 }
 
 public enum BannerFireKind { Message, Fallback, None }
@@ -146,9 +153,29 @@ public static class BannerCatalog
             return BannerFireResult.Fallback(Substitute(def.Fallback, tokens));
         }
 
-        if (def.Messages.Count == 0) return BannerFireResult.None;
-        var message = def.Messages[_random.Next(def.Messages.Count)];
+        var message = PickMessage(def);
+        if (message == null) return BannerFireResult.None;
         return BannerFireResult.Message(Substitute(message, tokens));
+    }
+
+    // English: any message in the pool. Spanish: only messages that actually have
+    // a translation ("" means the translator explicitly marked it "No
+    // Translation," or it hasn't been translated yet) — if none of this entry's
+    // messages are translated, the entry has nothing eligible to show in Spanish
+    // and the banner is suppressed for that fire (per product decision: don't
+    // show English filler in an otherwise-Spanish session). Mirrors the Swift
+    // port's BannerCatalog.pickMessage. Reads SettingsService fresh, same as the
+    // HoneyMode check above, rather than a cached flag.
+    private static string? PickMessage(BannerDefinition def)
+    {
+        if (SettingsService.LoadOptions().Language != AppLanguage.Spanish)
+        {
+            if (def.Messages.Count == 0) return null;
+            return def.Messages[_random.Next(def.Messages.Count)];
+        }
+        var eligible = def.MessagesEs.Where(m => !string.IsNullOrEmpty(m)).ToList();
+        if (eligible.Count == 0) return null;
+        return eligible[_random.Next(eligible.Count)];
     }
 
     private static string Substitute(string text, Dictionary<string, string>? tokens)

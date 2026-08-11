@@ -21,6 +21,8 @@ struct CustomBackgroundEditorView: View {
     @State private var offsetY: Double
     @State private var showError = false
 
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
+
     // Mock board preview — offsets are normalized against a reference board width so
     // the small preview and the real (much wider) board agree proportionally. Same idea
     // CardBackPreviewView already uses for its smaller card thumbnail.
@@ -43,7 +45,7 @@ struct CustomBackgroundEditorView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("Edit Custom Background")
+            Text(coordinator.L(.editCustomBackgroundTitle))
                 .font(.display(18))
                 .foregroundColor(.primary)
                 .padding(.top)
@@ -76,10 +78,10 @@ struct CustomBackgroundEditorView: View {
 
             // Name input
             VStack(alignment: .leading, spacing: 4) {
-                Text("Background Name:")
+                Text(coordinator.L(.backgroundNameLabel))
                     .font(.display(12))
                     .foregroundColor(.secondary)
-                TextField("e.g. My Desk", text: $name)
+                TextField(coordinator.L(.backgroundNamePlaceholder), text: $name)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 220)
                     .disabled(existingBackground != nil)
@@ -88,11 +90,11 @@ struct CustomBackgroundEditorView: View {
             // Horizontal Offset Slider
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Horizontal Position:")
+                    Text(coordinator.L(.horizontalPositionLabel))
                         .font(.display(12))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(String(format: "%.0f px", offsetX))
+                    Text(coordinator.L(.pxOffsetFmt, offsetX))
                         .font(.display(12))
                         .foregroundColor(.primary)
                 }
@@ -103,11 +105,11 @@ struct CustomBackgroundEditorView: View {
             // Vertical Offset Slider
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Vertical Position:")
+                    Text(coordinator.L(.verticalPositionLabel))
                         .font(.display(12))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(String(format: "%.0f px", offsetY))
+                    Text(coordinator.L(.pxOffsetFmt, offsetY))
                         .font(.display(12))
                         .foregroundColor(.primary)
                 }
@@ -118,11 +120,11 @@ struct CustomBackgroundEditorView: View {
             // Scale Slider
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Scale Factor:")
+                    Text(coordinator.L(.scaleFactorLabel))
                         .font(.display(12))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(String(format: "%.2fx", scale))
+                    Text(coordinator.L(.scaleFmt, scale))
                         .font(.display(12))
                         .foregroundColor(.primary)
                 }
@@ -131,17 +133,17 @@ struct CustomBackgroundEditorView: View {
             }
 
             if showError {
-                Text("Name cannot be empty or already exist!")
+                Text(coordinator.L(.nameEmptyOrExistsError))
                     .font(.display(12))
                     .foregroundColor(.red)
             }
 
             HStack(spacing: 12) {
-                themedEditorButton("Cancel", tint: .primary, shortcut: .cancelAction) {
+                themedEditorButton(coordinator.L(.cancel), tint: .primary, shortcut: .cancelAction) {
                     onCancel()
                 }
 
-                themedEditorButton("Save", tint: .primary, shortcut: .defaultAction) {
+                themedEditorButton(coordinator.L(.save), tint: .primary, shortcut: .defaultAction) {
                     let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     let nameConflict = existingBackground == nil
                         && CustomBackgroundManager.shared.customBackgrounds.contains(where: { $0.name == cleanedName })

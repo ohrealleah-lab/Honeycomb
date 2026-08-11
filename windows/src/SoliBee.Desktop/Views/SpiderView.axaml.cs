@@ -11,6 +11,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -20,6 +21,8 @@ namespace SoliBee.Desktop.Views;
 
 public partial class SpiderView : CardGameView
 {
+    private AppLanguage _language = AppLanguage.English;
+
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
         if (DataContext is not SpiderViewModel vm) return false;
@@ -83,8 +86,19 @@ public partial class SpiderView : CardGameView
     public SpiderView()
     {
         InitializeComponent();
+        _language = SettingsService.LoadOptions().Language;
+        ApplyLocalization();
         this.Loaded += SpiderView_Loaded;
         this.Unloaded += SpiderView_Unloaded;
+    }
+
+    // Applies the current language to this view's one static banner. Runs once at
+    // construction and again whenever OptionsChangedMessage reports a language change (see
+    // the registration in SpiderView_Loaded), matching MainWindow's ApplyLocalization pattern.
+    private void ApplyLocalization()
+    {
+        DealBlockedTitleText.Text = Strings.Get(StringKey.EmptyColumnWarningTitle, _language);
+        DealBlockedBodyText.Text  = Strings.Get(StringKey.EmptyColumnWarningBody, _language);
     }
 
     private void RefreshAllPiles()
@@ -116,6 +130,17 @@ public partial class SpiderView : CardGameView
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
             Dispatcher.UIThread.InvokeAsync(RefreshAllPiles));
+        // Keep this view's static text in sync with a language change made while it's open
+        // (e.g. Preferences opened over the running game) — mirrors MainWindow's own
+        // OptionsChangedMessage -> ApplyLocalization hookup.
+        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
+        {
+            if (m.Options.Language != _language)
+            {
+                _language = m.Options.Language;
+                ApplyLocalization();
+            }
+        });
     }
 
     private void Vm_OnFlashBanner(string message)
@@ -156,6 +181,7 @@ public partial class SpiderView : CardGameView
         HintToast.OnDismissed -= HintToast_OnDismissed;
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
         CardView.ClearPileViewCache(this);
         TopLevel.GetTopLevel(this)?.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
     }

@@ -10,6 +10,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -19,6 +20,8 @@ namespace SoliBee.Desktop.Views;
 
 public partial class VideoPokerView : UserControl
 {
+    private AppLanguage _language = AppLanguage.English;
+
     private readonly CardView[]  _cardViews = null!;
     private Grid[]               _cardSlots = null!;
     private readonly Dictionary<string, Border> _payRowBorders = new();
@@ -74,8 +77,34 @@ public partial class VideoPokerView : UserControl
         _payColHeaders      = new[] { PayColHdr1,  PayColHdr2,  PayColHdr3,  PayColHdr4,  PayColHdr5  };
         _payColHeadersRight = new[] { PayColHdrR1, PayColHdrR2, PayColHdrR3, PayColHdrR4, PayColHdrR5 };
 
+        _language = SettingsService.LoadOptions().Language;
+        ApplyLocalization();
+
         this.Loaded   += VideoPokerView_Loaded;
         this.Unloaded += VideoPokerView_Unloaded;
+    }
+
+    // Applies the current language to every static button/label in this view. Runs once at
+    // construction and again whenever OptionsChangedMessage reports a language change (see
+    // the registration in VideoPokerView_Loaded), matching MainWindow's ApplyLocalization
+    // pattern. Dynamic strings built elsewhere in this file (win-hand name/payout) also read
+    // Strings.Get(..., _language) at the point they're built, so they pick up the current
+    // language too.
+    private void ApplyLocalization()
+    {
+        HoldAllButton.Content = Strings.Get(StringKey.BtnHoldAllWin, _language);
+        ClearButton.Content   = Strings.Get(StringKey.BtnClearHoldsWin, _language);
+        RebuyButton.Content   = Strings.Get(StringKey.BuyInButton, _language);
+
+        DecreaseBetButton.Content = Strings.Get(StringKey.BtnDrawWinMinus, _language);
+        BetMaxButton.Content      = Strings.Get(StringKey.BetMax, _language);
+        IncreaseBetButton.Content = Strings.Get(StringKey.BtnDrawWinPlus, _language);
+
+        IdlePromptText.Text = Strings.Get(StringKey.HitSpaceToDeal, _language);
+
+        NoWinHeadlineText.Text      = Strings.Get(StringKey.NotTodayPartner, _language);
+        NoWinMinusText.Text         = Strings.Get(StringKey.BtnBetMinus, _language);
+        NoWinCreditsSuffixText.Text = " " + Strings.Get(StringKey.MinusCreditsSuffix, _language);
     }
 
     private void UpdateDealDrawButton()
@@ -100,6 +129,19 @@ public partial class VideoPokerView : UserControl
 
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
             Dispatcher.UIThread.InvokeAsync(() => { foreach (var cv in _cardViews) cv.UpdateCardFace(); }));
+
+        // Keep this view's static text in sync with a language change made while it's open
+        // (e.g. Preferences opened over the running game) — mirrors MainWindow's own
+        // OptionsChangedMessage -> ApplyLocalization hookup.
+        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
+        {
+            if (m.Options.Language != _language)
+            {
+                _language = m.Options.Language;
+                ApplyLocalization();
+                Refresh(vm);
+            }
+        });
 
         BuildPayTable(vm);
         Refresh(vm);
@@ -144,6 +186,7 @@ public partial class VideoPokerView : UserControl
         TopLevel.GetTopLevel(this)?.RemoveHandler(
             InputElement.KeyDownEvent, OnKeyDown);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
         _resultShowTimer?.Stop(); _resultShowTimer = null;
         HideActiveBanner();
         StopCardsFade();
@@ -383,11 +426,11 @@ public partial class VideoPokerView : UserControl
 
                 if (isWin)
                 {
-                    WinHandNameBlock.Text  = $"{vm.State.LastHandName}!";
+                    WinHandNameBlock.Text  = Strings.Get(StringKey.ResultHandNameFmt, _language).Replace("%@", LocalizedHandName(vm.State.LastHandName));
                     // No Stress Mode's free play still announces the winning hand, just
                     // without a credit amount attached (no credits are ever earned).
                     WinPayoutBlock.IsVisible = !vm.Options.IsNoStressMode;
-                    WinPayoutBlock.Text      = $"+{vm.State.LastPayout} credits";
+                    WinPayoutBlock.Text      = Strings.Get(StringKey.ResultCreditsWonFmt, _language).Replace("%d", vm.State.LastPayout.ToString());
                     ShowBanner(WinBanner);
                     StartPayRowPulse(vm.WinningHandName);
                 }
@@ -576,7 +619,7 @@ public partial class VideoPokerView : UserControl
 
             var nameBlock = new TextBlock
             {
-                Text         = entry.HandName,
+                Text         = LocalizedHandName(entry.HandName),
                 FontSize     = 12,
                 Foreground   = Brushes.White,
                 FontFamily   = new FontFamily("Segoe UI"),
@@ -607,6 +650,31 @@ public partial class VideoPokerView : UserControl
             panel.Children.Add(border);
         }
     }
+
+    // Display-only translation for a hand name — VideoPokerPayEntry.HandName and
+    // GameState.LastHandName stay English (they're used as dictionary keys for
+    // pay-table row highlighting, see _payRowBorders above), this only swaps in
+    // translated text at the point of rendering. Mirrors the shared Mac/iOS
+    // localizedHandName (shared/VideoPoker/Models/VideoPokerHandLocalization.swift).
+    private string LocalizedHandName(string handName) => handName switch
+    {
+        "Royal Flush"         => Strings.Get(StringKey.HandRoyalFlush, _language),
+        "High Card"           => Strings.Get(StringKey.HandHighCard, _language),
+        "One Pair"            => Strings.Get(StringKey.HandOnePair, _language),
+        "Two Pair"            => Strings.Get(StringKey.HandTwoPair, _language),
+        "Three of a Kind"     => Strings.Get(StringKey.HandThreeOfAKind, _language),
+        "Straight Flush"      => Strings.Get(StringKey.HandStraightFlush, _language),
+        "Four of a Kind"      => Strings.Get(StringKey.HandFourOfAKind, _language),
+        "Full House"          => Strings.Get(StringKey.HandFullHouse, _language),
+        "Five of a Kind"      => Strings.Get(StringKey.HandFiveOfAKind, _language),
+        "Four Aces"           => Strings.Get(StringKey.HandFourAces, _language),
+        "Four 2s–4s"          => Strings.Get(StringKey.HandFour2s4s, _language),
+        "Four Deuces"         => Strings.Get(StringKey.HandFourDeuces, _language),
+        "Natural Royal Flush" => Strings.Get(StringKey.HandNaturalRoyalFlush, _language),
+        "Wild Royal Flush"    => Strings.Get(StringKey.HandWildRoyalFlush, _language),
+        "No Win"              => Strings.Get(StringKey.HandNoWin, _language),
+        _ => handName,
+    };
 
     private void HighlightPayRow(string handName)
     {

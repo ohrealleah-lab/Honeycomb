@@ -81,7 +81,10 @@ struct OptionsSheetShell<Content: View>: View {
     var body: some View {
         ZStack {
             VStack(spacing: 20) {
-                Text(title)
+                // No caller currently overrides `title` — it's always the "Preferences"
+                // default — so that default is the one localized case; a future custom
+                // title passes through as-is rather than being silently dropped.
+                Text(title == "Preferences" ? coordinator.L(.preferences) : title)
                     .font(.system(size: 16, weight: .bold))
                     .padding(.top, 12)
 
@@ -90,6 +93,7 @@ struct OptionsSheetShell<Content: View>: View {
                 if useScrollView {
                     ScrollView(.vertical, showsIndicators: true) {
                         VStack(alignment: .leading, spacing: 12) {
+                            languageSection
                             content()
                             if showThemes {
                                 visualThemesSection
@@ -100,6 +104,7 @@ struct OptionsSheetShell<Content: View>: View {
                     .frame(maxHeight: maxContentHeight)
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
+                        languageSection
                         content()
                         if showThemes {
                             visualThemesSection
@@ -111,7 +116,7 @@ struct OptionsSheetShell<Content: View>: View {
                 Divider()
 
                 HStack {
-                    Button("Cancel") {
+                    Button(coordinator.L(.cancel)) {
                         // Revert any theme changes that were live-previewed via the Themes sub-panel.
                         coordinator.customFeltRed = originalRed
                         coordinator.customFeltGreen = originalGreen
@@ -133,7 +138,7 @@ struct OptionsSheetShell<Content: View>: View {
                             onViewStats()
                         }
                     }) {
-                        Text("View Stats")
+                        Text(coordinator.L(.viewStats))
                             .underline()
                             .foregroundColor(.blue)
                             .font(.system(.body))
@@ -142,7 +147,7 @@ struct OptionsSheetShell<Content: View>: View {
 
                     Spacer()
 
-                    Button("OK") {
+                    Button(coordinator.L(.ok)) {
                         onOK()
                         isPresented = false
                     }
@@ -184,15 +189,34 @@ struct OptionsSheetShell<Content: View>: View {
         .animation(.easeInOut(duration: 0.2), value: showingThemes)
     }
 
+    // Global setting (not per-game), so it lives here in the shared shell rather than
+    // in each game's own `content` — every game's Options sheet gets it automatically.
+    // Placed above `content()` per product decision: it's always the same regardless
+    // of which game you opened Options from, so it reads as app-level, not game-level.
+    private var languageSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(coordinator.L(.language))
+                .font(.system(size: 13, weight: .semibold))
+            Picker(coordinator.L(.language), selection: $coordinator.language) {
+                ForEach(AppLanguage.allCases, id: \.self) { lang in
+                    Text(lang.displayName).tag(lang)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            Divider()
+        }
+    }
+
     private var visualThemesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showingThemes = true } }) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Visual Themes")
+                        Text(coordinator.L(.visualThemes))
                             .font(.system(size: 15, weight: .bold))
                             .foregroundColor(.primary)
-                        Text("Felt, card back, face card art, colors")
+                        Text(coordinator.L(.visualThemesSubtitle))
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }

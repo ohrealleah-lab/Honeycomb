@@ -7,6 +7,7 @@ import PhotosUI
 /// than a dedicated settings section.
 struct CustomFaceCardArtSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
     @State private var manager = IOSCustomFaceArtManager.shared
     @State private var editingSlot: FaceCardSlot? = nil
 
@@ -26,7 +27,7 @@ struct CustomFaceCardArtSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(coordinator.L(.done)) { dismiss() }
                 }
             }
             .sheet(item: $editingSlot) { slot in
@@ -70,6 +71,7 @@ struct CustomFaceCardArtSheet: View {
 private struct FaceArtImportSheet: View {
     let slot: FaceCardSlot
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
     @State private var manager = IOSCustomFaceArtManager.shared
 
     @State private var photoItem: PhotosPickerItem? = nil
@@ -120,7 +122,7 @@ private struct FaceArtImportSheet: View {
 
                 if manager.entry(for: slot) != nil {
                     Section {
-                        Button("Remove Art", role: .destructive) {
+                        Button(coordinator.L(.removeArtTitle), role: .destructive) {
                             manager.removeArt(for: slot)
                             dismiss()
                         }
@@ -131,10 +133,10 @@ private struct FaceArtImportSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(coordinator.L(.cancel)) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
+                    Button(coordinator.L(.save)) { save() }
                         .disabled(previewImage == nil)
                 }
             }

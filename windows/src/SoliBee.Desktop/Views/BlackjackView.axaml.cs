@@ -9,6 +9,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -18,6 +19,8 @@ namespace SoliBee.Desktop.Views;
 
 public partial class BlackjackView : UserControl
 {
+    private AppLanguage _language = AppLanguage.English;
+
     private DispatcherTimer? _resultShowTimer;
     private DispatcherTimer? _bannerDelayTimer;
     private DispatcherTimer? _bannerFadeTimer;
@@ -49,8 +52,38 @@ public partial class BlackjackView : UserControl
     public BlackjackView()
     {
         InitializeComponent();
+        _language = SettingsService.LoadOptions().Language;
+        ApplyLocalization();
         this.Loaded   += BlackjackView_Loaded;
         this.Unloaded += BlackjackView_Unloaded;
+    }
+
+    // Applies the current language to every static button/label in this view. Runs once at
+    // construction and again whenever OptionsChangedMessage reports a language change (see
+    // the registration in BlackjackView_Loaded), matching MainWindow's ApplyLocalization
+    // pattern. Dynamic strings built elsewhere in this file (dealer/player count labels,
+    // result headline/subline, win-streak text) also read Strings.Get(..., _language) at
+    // the point they're built, so they pick up the current language too.
+    private void ApplyLocalization()
+    {
+        ClearBetButton.Content   = Strings.Get(StringKey.BtnClearBetWin, _language);
+        DealButton.Content       = Strings.Get(StringKey.BtnDealSpaceWin, _language);
+        RebuyButton.Content      = Strings.Get(StringKey.BuyInButton, _language);
+        Chip1Button.Content      = Strings.Get(StringKey.Chip1, _language);
+        Chip5Button.Content      = Strings.Get(StringKey.Chip5, _language);
+        Chip10Button.Content     = Strings.Get(StringKey.Chip10, _language);
+        Chip25Button.Content     = Strings.Get(StringKey.Chip25, _language);
+        DoubleBetButton.Content  = Strings.Get(StringKey.Chip2x, _language);
+
+        HitButton.Content    = Strings.Get(StringKey.BtnHitWin, _language);
+        StandButton.Content  = Strings.Get(StringKey.BtnStandWin, _language);
+        DoubleButton.Content = Strings.Get(StringKey.BtnDoubleWin, _language);
+        SplitButton.Content  = Strings.Get(StringKey.BtnSplitWin, _language);
+
+        KeyHintLabel.Text = Strings.Get(StringKey.KeyHintRowWin, _language);
+
+        VsDividerText.Text  = Strings.Get(StringKey.VsDivider, _language);
+        IdlePromptText.Text = Strings.Get(StringKey.HitSpaceToDeal, _language);
     }
 
     private void BlackjackView_Loaded(object? sender, RoutedEventArgs e)
@@ -62,6 +95,18 @@ public partial class BlackjackView : UserControl
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
             Dispatcher.UIThread.InvokeAsync(() => { if (DataContext is BlackjackViewModel bvm) Refresh(bvm); }));
+        // Keep this view's static text in sync with a language change made while it's open
+        // (e.g. Preferences opened over the running game) — mirrors MainWindow's own
+        // OptionsChangedMessage -> ApplyLocalization hookup.
+        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
+        {
+            if (m.Options.Language != _language)
+            {
+                _language = m.Options.Language;
+                ApplyLocalization();
+                Refresh(vm);
+            }
+        });
         vm.CheckLoadingBanner();
         Refresh(vm);
     }
@@ -104,6 +149,7 @@ public partial class BlackjackView : UserControl
         MilestoneToast.OnDismissed -= MilestoneToast_OnDismissed;
         TopLevel.GetTopLevel(this)?.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
         StopTimers();
     }
 
@@ -204,7 +250,7 @@ public partial class BlackjackView : UserControl
 
         if (ShowingBlankCards(vm))
         {
-            DealerCountLabel.Text = "DEALER";
+            DealerCountLabel.Text = Strings.Get(StringKey.DealerLabel, _language);
             for (int i = 0; i < 2; i++)
                 DealerCardsPanel.Children.Add(MakeCardVisual(new CardView { Card = _blankCard, IsHitTestVisible = false }, i));
             _prevDealerIds = new();
@@ -218,7 +264,7 @@ public partial class BlackjackView : UserControl
         // Only the face-up cards count toward the displayed total — the hole card
         // stays hidden from this count until it's flipped during the dealer's turn.
         var (visibleValue, _) = vm.State.DealerHand.ComputeVisibleValue();
-        DealerCountLabel.Text = $"DEALER  {visibleValue}";
+        DealerCountLabel.Text = $"{Strings.Get(StringKey.DealerLabel, _language)}  {visibleValue}";
 
         double dealerOverlap = cards.Count >= 6 ? TightOverlap : LightOverlap;
 
@@ -244,7 +290,7 @@ public partial class BlackjackView : UserControl
 
         if (ShowingBlankCards(vm))
         {
-            PlayerCountLabel.Text = "PLAYER";
+            PlayerCountLabel.Text = Strings.Get(StringKey.PlayerLabel, _language);
             var cardRow = new StackPanel { Orientation = Orientation.Horizontal };
             for (int i = 0; i < 2; i++)
                 cardRow.Children.Add(MakeCardVisual(new CardView { Card = _blankCard, IsHitTestVisible = false }, i));
@@ -254,9 +300,10 @@ public partial class BlackjackView : UserControl
             return;
         }
 
+        string playerLabel = Strings.Get(StringKey.PlayerLabel, _language);
         PlayerCountLabel.Text = vm.State.PlayerHands.Count > 1
-            ? $"PLAYER  {string.Join(" / ", vm.State.PlayerHands.Select(h => h.ComputeValue().Value))}"
-            : $"PLAYER  {vm.State.PlayerHands[0].ComputeValue().Value}";
+            ? $"{playerLabel}  {string.Join(" / ", vm.State.PlayerHands.Select(h => h.ComputeValue().Value))}"
+            : $"{playerLabel}  {vm.State.PlayerHands[0].ComputeValue().Value}";
 
         // Grow tracking list as needed
         while (_prevPlayerIds.Count < vm.State.PlayerHands.Count)
@@ -436,20 +483,26 @@ public partial class BlackjackView : UserControl
         // winning-hand values (shown via headline/streak/hand totals below) still
         // display normally, just without a credit amount attached.
         bool freePlay = vm.Options.IsNoStressMode;
-        string netStr = freePlay ? "" : net > 0 ? $"+{net} credits" : net < 0 ? $"{net} credits" : "Even";
+        string netStr = freePlay ? ""
+            : net > 0 ? Strings.Get(StringKey.ResultSubNetPositiveFmt, _language).Replace("%d", net.ToString())
+            : net < 0 ? Strings.Get(StringKey.ResultSubNetNegativeFmt, _language).Replace("%d", net.ToString())
+            : Strings.Get(StringKey.ResultSubEven, _language);
 
-        ResultDealerTotal.Text = $"Dealer: {FormatHandTotal(vm.State.DealerHand)}";
+        ResultDealerTotal.Text = Strings.Get(StringKey.ResultDealerValueFmt, _language)
+            .Replace("%d", FormatHandTotal(vm.State.DealerHand));
+        string playerValueFmt = Strings.Get(StringKey.ResultPlayerValueFmt, _language);
         ResultPlayerTotal.Text = vm.State.PlayerHands.Count > 1
-            ? $"Player: {string.Join(" / ", vm.State.PlayerHands.Select(FormatHandTotal))}"
-            : $"Player: {FormatHandTotal(vm.State.PlayerHands[0])}";
+            ? playerValueFmt.Replace("%d", string.Join(" / ", vm.State.PlayerHands.Select(FormatHandTotal)))
+            : playerValueFmt.Replace("%d", FormatHandTotal(vm.State.PlayerHands[0]));
 
         string headline, subline, background;
         bool win;
         int streak;
+        bool isNotTodayPartner = false;
 
         if (anyBJ)
         {
-            headline   = "Blackjack!";
+            headline   = Strings.Get(StringKey.ResultHeadlineBlackjack, _language);
             subline    = netStr;
             background = "#BF000000";
             win        = true;
@@ -457,7 +510,7 @@ public partial class BlackjackView : UserControl
         }
         else if (anyWin)
         {
-            headline   = "You win!";
+            headline   = Strings.Get(StringKey.YouWin, _language);
             subline    = netStr;
             background = "#BF000000";
             win        = true;
@@ -465,8 +518,8 @@ public partial class BlackjackView : UserControl
         }
         else if (allPush)
         {
-            headline   = "Push";
-            subline    = freePlay ? "" : "Bets returned";
+            headline   = Strings.Get(StringKey.ResultHeadlinePush, _language);
+            subline    = freePlay ? "" : Strings.Get(StringKey.ResultSubPush, _language);
             background = "#BF000000";
             win        = false;
             streak     = 0;
@@ -474,7 +527,8 @@ public partial class BlackjackView : UserControl
         else
         {
             bool anyBust = vm.State.PlayerHands.Any(h => h.IsBust);
-            headline   = anyBust ? "Bust!" : "Not today, partner!";
+            isNotTodayPartner = !anyBust;
+            headline   = anyBust ? Strings.Get(StringKey.ResultHeadlineBust, _language) : Strings.Get(StringKey.NotTodayPartner, _language);
             subline    = netStr;
             background = "#BF000000";
             win        = false;
@@ -494,7 +548,7 @@ public partial class BlackjackView : UserControl
             ResultSubline.Text  = subline;
             ResultOverlay.Background = new SolidColorBrush(Color.Parse(background));
             ResultOverlay.BoxShadow  = BoxShadows.Parse(BannerStyles.GoldGlowBoxShadow);
-            ResultOverlay.MaxWidth   = (headline.Contains("Not today, partner!")) ? 460 : 320;
+            ResultOverlay.MaxWidth   = isNotTodayPartner ? 460 : 320;
             ShowBanner(win, streak);
         };
         _resultShowTimer.Start();
@@ -529,9 +583,9 @@ public partial class BlackjackView : UserControl
     {
         if (streak >= 2)
         {
-            ResultStreak.Text      = streak >= 5 ? $"*** {streak} WIN STREAK ***"
-                                   : streak >= 3 ? $"** {streak} WIN STREAK **"
-                                   :               $"{streak} wins in a row!";
+            ResultStreak.Text      = streak >= 5 ? Strings.Get(StringKey.StreakText5plusFmt, _language).Replace("%d", streak.ToString())
+                                   : streak >= 3 ? Strings.Get(StringKey.StreakText3to4Fmt, _language).Replace("%d", streak.ToString())
+                                   :               Strings.Get(StringKey.StreakText2Fmt, _language).Replace("%d", streak.ToString());
             ResultStreak.IsVisible = true;
         }
         else

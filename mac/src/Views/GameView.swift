@@ -111,26 +111,26 @@ public struct GameView: View {
 
                     // New Game Button
                     GameToolbarButton(
-                        label: "New Game", systemImage: "arrow.triangle.2.circlepath",
+                        label: coordinator.L(.newGame), systemImage: "arrow.triangle.2.circlepath",
                         isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
                     ) { requestNewGame() }
 
                     // Restart Button
                     GameToolbarButton(
-                        label: "Restart", systemImage: "arrow.counterclockwise",
+                        label: coordinator.L(.restart), systemImage: "arrow.counterclockwise",
                         isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
                     ) { isShowingRestartConfirm = true }
 
                     // Options Button
                     GameToolbarButton(
-                        label: "Options", systemImage: "gearshape",
+                        label: coordinator.L(.options), systemImage: "gearshape",
                         isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
                     ) { isShowingOptions = true }
 
                     // Hint Button
                     if !viewModel.options.hideHintButton {
                         GameToolbarButton(
-                            label: "Hint", systemImage: "lightbulb",
+                            label: coordinator.L(.hint), systemImage: "lightbulb",
                             isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
                             disabled: viewModel.state.hasWon
                         ) {
@@ -144,28 +144,28 @@ public struct GameView: View {
                     // Undo Button
                     let canUndo = viewModel.canUndo && !viewModel.state.hasWon
                     GameToolbarButton(
-                        label: "Undo", systemImage: "arrow.uturn.backward",
+                        label: coordinator.L(.undo), systemImage: "arrow.uturn.backward",
                         isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
                         disabled: !canUndo
                     ) { viewModel.undoLastAction() }
                     .keyboardShortcut("z", modifiers: .command)
 
                     Spacer()
-                    
+
                     if viewModel.options.isStatusBarVisible && !viewModel.options.noStressMode {
                         HStack(alignment: .bottom, spacing: 20) {
                             // Score / Bankroll
                             if viewModel.options.isVegasScoring {
-                                StatusItemView(label: "BANKROLL", value: viewModel.vegasBankrollString)
+                                StatusItemView(label: coordinator.L(.statusBankroll), value: viewModel.vegasBankrollString)
                             } else {
-                                StatusItemView(label: "SCORE", value: viewModel.scoreString)
+                                StatusItemView(label: coordinator.L(.scoreLabel), value: viewModel.scoreString)
                             }
 
                             // Moves
-                            StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
+                            StatusItemView(label: coordinator.L(.movesLabel), value: String(viewModel.state.movesCount))
 
                             // Timer
-                            StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
+                            StatusItemView(label: coordinator.L(.timeLabel), value: formatTime(viewModel.state.timerSeconds))
                         }
                     }
                     
@@ -205,7 +205,7 @@ public struct GameView: View {
                         .offset(x: isShuffling ? -6 : 0, y: isShuffling ? -2 : 0)
                             .rotationEffect(.degrees(isShuffling ? -4 : 0))
                         if viewModel.isStockExhausted {
-                            Text("Stock\nExhausted")
+                            Text(coordinator.L(.stockExhausted))
                                 .font(.system(size: 17, weight: .bold))
                                 .multilineTextAlignment(.center)
                                 .foregroundColor(.white)
@@ -373,23 +373,23 @@ public struct GameView: View {
                     Spacer(minLength: 8)
                     ZStack(alignment: .topTrailing) {
                         VStack(spacing: 12) {
-                            Text("Game Over")
+                            Text(coordinator.L(.gameOver))
                                 .font(.system(size: 36, weight: .black))
                                 .foregroundColor(.yellow)
                                 .shadow(radius: 3)
 
-                            Text("No moves remaining.")
+                            Text(coordinator.L(.noMovesRemaining))
                                 .font(.system(.headline))
                                 .foregroundColor(.white)
 
                             if viewModel.options.isVegasScoring {
-                                Text("Final bankroll: \(viewModel.vegasBankrollString)")
+                                Text(coordinator.L(.finalBankrollFmt, viewModel.vegasBankrollString))
                                     .font(.system(.body))
                                     .foregroundColor(.yellow)
                             }
 
                             HStack(spacing: 12) {
-                                Button("New Game") {
+                                Button(coordinator.L(.newGame)) {
                                     viewModel.startNewGame()
                                 }
                                 .font(.system(.body))
@@ -401,7 +401,7 @@ public struct GameView: View {
                                 .cornerRadius(6)
                                 .buttonStyle(.plain)
 
-                                Button("Restart Game") {
+                                Button(coordinator.L(.restartGame)) {
                                     viewModel.restartCurrentGame()
                                 }
                                 .font(.system(.body))
@@ -441,15 +441,15 @@ public struct GameView: View {
                     Spacer(minLength: 8)
                     ZStack(alignment: .topTrailing) {
                         VStack(spacing: 12) {
-                            Text("Victory is guaranteed!")
+                            Text(coordinator.L(.victoryGuaranteed))
                                 .font(.system(size: 36, weight: .black))
                                 .foregroundColor(.yellow)
                                 .multilineTextAlignment(.center)
-                            Text("All remaining cards can be moved to foundations.")
+                            Text(coordinator.L(.autocompleteBodyKlondike))
                                 .font(.system(.body))
                                 .foregroundColor(.white)
                                 .multilineTextAlignment(.center)
-                            Button("Autocomplete Game") {
+                            Button(coordinator.L(.autocompleteGame)) {
                                 viewModel.runAutocomplete()
                             }
                             .font(.system(.body))
@@ -513,7 +513,7 @@ public struct GameView: View {
                         Spacer(minLength: 8)
                         ZStack(alignment: .topTrailing) {
                             VStack(spacing: 12) {
-                                Text("You win!")
+                                Text(coordinator.L(.youWin))
                                     .font(.system(size: 40, weight: .black))
                                     .foregroundColor(.yellow)
                                     .scaleEffect(winPulse ? 1.06 : 1.0)
@@ -525,7 +525,7 @@ public struct GameView: View {
                                     .font(.system(.body))
                                     .foregroundColor(.white)
 
-                                Text("Play Again")
+                                Text(coordinator.L(.playAgain))
                                     .font(.system(.body))
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
@@ -560,7 +560,7 @@ public struct GameView: View {
             }
 
             if showNoHintsBanner {
-                FlashBannerView(message: "Sorry! No hints available.")
+                FlashBannerView(message: coordinator.L(.noHintsAvailable))
             }
 
             if showQueuedBanner {
@@ -609,7 +609,7 @@ public struct GameView: View {
                 .allowsHitTesting(false)
         }
 
-            HotkeyLegendView(text: "Arrows=Move Cursor   Space/Return=Select or Move   D=Draw   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor")
+            HotkeyLegendView(text: coordinator.L(.hotkeyLegendKlondike))
         }
         .environment(\.feltColor, resolvedFeltColorTheme)
         .environment(\.activeCardBackTheme, resolvedCardBackTheme)
@@ -717,13 +717,13 @@ public struct GameView: View {
         .sheet(isPresented: $isShowingStats) {
             StatsView(viewModel: viewModel)
         }
-        .confirmationDialog("Restart this game from the beginning?", isPresented: $isShowingRestartConfirm) {
-            Button("Restart Game", role: .destructive) { viewModel.restartCurrentGame() }
-            Button("Cancel", role: .cancel) { }
+        .confirmationDialog(coordinator.L(.restartConfirmTitle), isPresented: $isShowingRestartConfirm) {
+            Button(coordinator.L(.restartGame), role: .destructive) { viewModel.restartCurrentGame() }
+            Button(coordinator.L(.cancel), role: .cancel) { }
         }
-        .confirmationDialog("Start a new game? Your current game will end.", isPresented: $isShowingNewGameConfirm) {
-            Button("Cancel", role: .cancel) { pendingDrawMode = nil }
-            Button("New Game", role: .destructive) {
+        .confirmationDialog(coordinator.L(.newGameConfirmTitle), isPresented: $isShowingNewGameConfirm) {
+            Button(coordinator.L(.cancel), role: .cancel) { pendingDrawMode = nil }
+            Button(coordinator.L(.newGame), role: .destructive) {
                 if let mode = pendingDrawMode { viewModel.state.drawMode = mode; pendingDrawMode = nil }
                 viewModel.startNewGame()
             }
@@ -1113,10 +1113,10 @@ public struct GameView: View {
 
     private var winSummaryText: String {
         let scorePart = viewModel.options.isVegasScoring
-            ? "Bankroll: \(viewModel.vegasBankrollString)"
-            : "Score: \(viewModel.scoreString)"
+            ? coordinator.L(.bankrollFmt, viewModel.vegasBankrollString)
+            : coordinator.L(.scoreFmt, viewModel.scoreString)
         guard !viewModel.options.noStressMode else { return scorePart }
-        return "\(scorePart) | Time: \(formatTime(viewModel.state.timerSeconds))"
+        return coordinator.L(.winSummaryWithTimeFmt, scorePart, formatTime(viewModel.state.timerSeconds))
     }
 }
 
@@ -1270,30 +1270,30 @@ struct OptionsView: View {
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
             }
         ) {
-            Picker("Draw Mode:", selection: $drawMode) {
-                Text("Draw One").tag(GameState.DrawMode.drawOne)
-                Text("Draw Three").tag(GameState.DrawMode.drawThree)
+            Picker(coordinator.L(.drawModeLabel), selection: $drawMode) {
+                Text(coordinator.L(.drawOne)).tag(GameState.DrawMode.drawOne)
+                Text(coordinator.L(.drawThree)).tag(GameState.DrawMode.drawThree)
             }
             .pickerStyle(.segmented)
 
             Divider()
 
-            Toggle("Sound Effects", isOn: $isSoundEnabled)
+            Toggle(coordinator.L(.soundEffects), isOn: $isSoundEnabled)
                 .font(.system(.body))
 
-            Toggle("Vegas Scoring Mode", isOn: $isVegasScoring)
+            Toggle(coordinator.L(.vegasScoringMode), isOn: $isVegasScoring)
                 .font(.system(.body))
 
-            Toggle("Hide Hint button", isOn: $hideHintButton)
+            Toggle(coordinator.L(.hideHintButton), isOn: $hideHintButton)
                 .font(.system(.body))
 
-            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners)
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners)
                 .font(.system(.body))
 
-            Toggle("No Stress Mode", isOn: $noStressMode)
+            Toggle(coordinator.L(.noStressMode), isOn: $noStressMode)
                 .font(.system(.body))
 
-            Toggle("Honey Mode (Flavor)", isOn: $honeyMode)
+            Toggle(coordinator.L(.honeyMode), isOn: $honeyMode)
                 .font(.system(.body))
         }
     }
@@ -1302,27 +1302,28 @@ struct OptionsView: View {
 struct StatsView: View {
     let viewModel: GameViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
     @State private var showingResetConfirmation = false
 
     var body: some View {
         let stats = viewModel.statistics
         
         VStack(spacing: 20) {
-            Text("Klondike Statistics")
+            Text(coordinator.L(.klondikeStatisticsTitle))
                 .font(.system(size: 16, weight: .bold))
                 .padding(.top, 12)
 
             Divider()
 
             VStack(alignment: .leading, spacing: 12) {
-                StatRowView(label: "Games Played:", value: "\(stats.gamesPlayed)")
-                StatRowView(label: "Games Won:", value: "\(stats.gamesWon)")
-                StatRowView(label: "High Score:", value: viewModel.highScoreString)
-                StatRowView(label: "Win Percentage:", value: String(format: "%.1f%%", stats.winPercentage))
+                StatRowView(label: coordinator.L(.gamesPlayedColon), value: "\(stats.gamesPlayed)")
+                StatRowView(label: coordinator.L(.gamesWonColon), value: "\(stats.gamesWon)")
+                StatRowView(label: coordinator.L(.highScoreColon), value: viewModel.highScoreString)
+                StatRowView(label: coordinator.L(.winPercentageColon), value: String(format: "%.1f%%", stats.winPercentage))
 
                 if viewModel.options.isVegasScoring {
                     HStack {
-                        Text("Vegas Bankroll:")
+                        Text(coordinator.L(.vegasBankrollLabel))
                         Spacer()
                         Text(viewModel.vegasBankrollString)
                             .foregroundColor(viewModel.vegasBankroll >= 0 ? .green : .red)
@@ -1330,35 +1331,35 @@ struct StatsView: View {
                     .font(.system(.body))
                 }
 
-                StatRowView(label: "Current Streak:", value: "\(stats.currentStreak)")
-                StatRowView(label: "Longest Streak:", value: "\(stats.longestStreak)")
-                StatRowView(label: "Avg Winning Time:", value: stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
-                StatRowView(label: "Fastest Win:", value: stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
+                StatRowView(label: coordinator.L(.currentStreakColon), value: "\(stats.currentStreak)")
+                StatRowView(label: coordinator.L(.longestStreakColon), value: "\(stats.longestStreak)")
+                StatRowView(label: coordinator.L(.avgWinningTimeColon), value: stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
+                StatRowView(label: coordinator.L(.fastestWinColon), value: stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
             }
             .padding(.horizontal, 36)
 
             Divider()
 
             HStack {
-                Button("Reset Stats") {
+                Button(coordinator.L(.resetStats)) {
                     showingResetConfirmation = true
                 }
                 .buttonStyle(.borderless)
                 .foregroundColor(.red)
                 .font(.system(.body))
-                .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
-                    Button("Reset", role: .destructive) {
+                .alert(coordinator.L(.resetStatisticsTitle), isPresented: $showingResetConfirmation) {
+                    Button(coordinator.L(.reset), role: .destructive) {
                         let emptyStats = GameStatistics()
                         viewModel.statistics = emptyStats
                         viewModel.resetStatistics()
                     }
-                    Button("Cancel", role: .cancel) {}
+                    Button(coordinator.L(.cancel), role: .cancel) {}
                 } message: {
-                    Text("This will permanently clear all statistics. This cannot be undone.")
+                    Text(coordinator.L(.resetStatisticsBodyGeneric))
                 }
 
                 if viewModel.options.isVegasScoring {
-                    Button("Reset Bankroll") { viewModel.resetVegasBankroll() }
+                    Button(coordinator.L(.resetBankrollButton)) { viewModel.resetVegasBankroll() }
                         .buttonStyle(.borderless)
                         .foregroundColor(.red)
                         .font(.system(.body))
@@ -1366,7 +1367,7 @@ struct StatsView: View {
 
                 Spacer()
 
-                Button("Close") {
+                Button(coordinator.L(.close)) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)

@@ -154,7 +154,7 @@ struct KlondikeTouchView: View {
             // here, per the agreed mobile layout. Right-aligned so the waste's sliver
             // fan never sits under them.
             VStack(spacing: 6) {
-                controlCircle(systemImage: "arrow.uturn.backward", label: "Undo",
+                controlCircle(systemImage: "arrow.uturn.backward", label: coordinator.L(.undo),
                               diameter: min(40, cardW * 0.8)) {
                     viewModel.undoLastAction()
                 }
@@ -162,7 +162,7 @@ struct KlondikeTouchView: View {
                 .opacity(viewModel.canUndo ? 1 : 0.35)
 
                 if !viewModel.options.hideHintButton {
-                    controlCircle(systemImage: "lightbulb", label: "Hint",
+                    controlCircle(systemImage: "lightbulb", label: coordinator.L(.hint),
                                   diameter: min(40, cardW * 0.8)) {
                         if !viewModel.findHint() {
                             flashNoHintsBanner()
@@ -187,7 +187,7 @@ struct KlondikeTouchView: View {
                 TouchCardView(card: Card(suit: top.suit, rank: top.rank, faceUp: false), width: cardW)
             }
             if viewModel.isStockExhausted {
-                Text("Done")
+                Text(coordinator.L(.done))
                     .font(.system(size: cardW * 0.18, weight: .bold))
                     .foregroundColor(.white)
             }
@@ -524,7 +524,7 @@ struct KlondikeTouchView: View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 16) {
-                Text("You Win!")
+                Text(coordinator.L(.youWin))
                     .font(.system(size: 44, weight: .bold))
                     .foregroundColor(.yellow)
                 Text(winSummaryText)
@@ -532,7 +532,7 @@ struct KlondikeTouchView: View {
                 Button {
                     viewModel.startNewGame()
                 } label: {
-                    Label("New Game", systemImage: "play.fill")
+                    Label(coordinator.L(.newGame), systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -545,7 +545,7 @@ struct KlondikeTouchView: View {
 
     private var noHintsBanner: some View {
         VStack {
-            Text("Sorry! No hints available.")
+            Text(coordinator.L(.noHintsAvailable))
                 .font(.title3.weight(.black))
                 .foregroundStyle(Color.yellow)
                 .padding(.horizontal, 20)
@@ -572,10 +572,10 @@ struct KlondikeTouchView: View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 14) {
-                Text("Game Over")
+                Text(coordinator.L(.gameOver))
                     .font(.system(size: 34, weight: .black))
                     .foregroundColor(.yellow)
-                Text("No moves remaining.")
+                Text(coordinator.L(.noMovesRemaining))
                     .foregroundColor(.white)
                 Button {
                     dismissedStuckBanner = true
@@ -590,7 +590,7 @@ struct KlondikeTouchView: View {
                     dismissedStuckBanner = false
                     viewModel.startNewGame()
                 } label: {
-                    Label("New Game", systemImage: "play.fill")
+                    Label(coordinator.L(.newGame), systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -616,6 +616,7 @@ struct KlondikeTouchView: View {
 
 struct KlondikeSettingsSection: View {
     @Bindable var viewModel: GameViewModel
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -624,19 +625,19 @@ struct KlondikeSettingsSection: View {
                 .foregroundStyle(.secondary)
 
             Picker("Draw Mode", selection: $viewModel.options.drawMode) {
-                Text("Draw One").tag(GameState.DrawMode.drawOne)
-                Text("Draw Three").tag(GameState.DrawMode.drawThree)
+                Text(coordinator.L(.drawOne)).tag(GameState.DrawMode.drawOne)
+                Text(coordinator.L(.drawThree)).tag(GameState.DrawMode.drawThree)
             }
             .pickerStyle(.segmented)
 
-            Toggle("Vegas Scoring", isOn: $viewModel.options.isVegasScoring)
-            Toggle("Timed", isOn: $viewModel.options.isTimed)
-            Toggle("Sound", isOn: $viewModel.options.isSoundEnabled)
-            Toggle("No Stress Mode", isOn: $viewModel.options.noStressMode)
+            Toggle(coordinator.L(.vegasScoring), isOn: $viewModel.options.isVegasScoring)
+            Toggle(coordinator.L(.timed), isOn: $viewModel.options.isTimed)
+            Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
+            Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
                 .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
-            Toggle("Hide Hint Button", isOn: $viewModel.options.hideHintButton)
-            Toggle("Honey Mode (Flavor)", isOn: $viewModel.options.honeyMode)
-            Toggle("Manually Dismiss Banners", isOn: $viewModel.options.manuallyDismissBanners)
+            Toggle(coordinator.L(.hideHintButton), isOn: $viewModel.options.hideHintButton)
+            Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
         }
     }
 }
@@ -646,24 +647,25 @@ struct KlondikeSettingsSection: View {
 struct KlondikeStatsSheet: View {
     let stats: GameStatistics
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
         NavigationStack {
             List {
-                row("Games Played", "\(stats.gamesPlayed)")
-                row("Games Won", "\(stats.gamesWon)")
-                row("Win Rate", String(format: "%.0f%%", stats.winPercentage))
-                row("Current Streak", "\(stats.currentStreak)")
-                row("Longest Streak", "\(stats.longestStreak)")
+                row(coordinator.L(.gamesPlayed), "\(stats.gamesPlayed)")
+                row(coordinator.L(.gamesWon), "\(stats.gamesWon)")
+                row(coordinator.L(.winRate), String(format: "%.0f%%", stats.winPercentage))
+                row(coordinator.L(.currentStreak), "\(stats.currentStreak)")
+                row(coordinator.L(.longestStreak), "\(stats.longestStreak)")
                 if stats.shortestWinTime > 0 {
-                    row("Fastest Win", String(format: "%02d:%02d", stats.shortestWinTime / 60, stats.shortestWinTime % 60))
+                    row(coordinator.L(.fastestWin), String(format: "%02d:%02d", stats.shortestWinTime / 60, stats.shortestWinTime % 60))
                 }
             }
             .navigationTitle("Klondike Stats")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(coordinator.L(.done)) { dismiss() }
                 }
             }
         }

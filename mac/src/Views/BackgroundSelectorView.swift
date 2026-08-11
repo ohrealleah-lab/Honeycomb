@@ -65,7 +65,7 @@ public struct BackgroundSelectorView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Background:")
+                Text(coordinator.L(.backgroundLabel))
                     .font(.system(.body).bold())
 
                 Picker("", selection: Binding<FeltOrBackgroundSelection>(
@@ -85,12 +85,12 @@ public struct BackgroundSelectorView: View {
                         }
                     }
                 )) {
-                    Text("Felt Green").tag(FeltOrBackgroundSelection.felt(.feltGreen))
-                    Text("Crimson").tag(FeltOrBackgroundSelection.felt(.crimson))
-                    Text("Royal Blue").tag(FeltOrBackgroundSelection.felt(.royalBlue))
-                    Text("Charcoal").tag(FeltOrBackgroundSelection.felt(.charcoal))
-                    Text("Desert").tag(FeltOrBackgroundSelection.felt(.desert))
-                    Text("Custom Felt Color").tag(FeltOrBackgroundSelection.felt(.custom))
+                    Text(coordinator.L(.feltGreen)).tag(FeltOrBackgroundSelection.felt(.feltGreen))
+                    Text(coordinator.L(.feltCrimson)).tag(FeltOrBackgroundSelection.felt(.crimson))
+                    Text(coordinator.L(.feltRoyalBlue)).tag(FeltOrBackgroundSelection.felt(.royalBlue))
+                    Text(coordinator.L(.feltCharcoal)).tag(FeltOrBackgroundSelection.felt(.charcoal))
+                    Text(coordinator.L(.feltDesert)).tag(FeltOrBackgroundSelection.felt(.desert))
+                    Text(coordinator.L(.feltCustomColor)).tag(FeltOrBackgroundSelection.felt(.custom))
                     if !CustomBackgroundManager.shared.customBackgrounds.isEmpty {
                         Divider()
                         ForEach(CustomBackgroundManager.shared.customBackgrounds) { background in
@@ -98,7 +98,7 @@ public struct BackgroundSelectorView: View {
                         }
                     }
                     Divider()
-                    Text("Add Custom Background…").tag(FeltOrBackgroundSelection.addCustom)
+                    Text(coordinator.L(.addCustomBackgroundOption)).tag(FeltOrBackgroundSelection.addCustom)
                 }
                 .font(.system(.body))
                 .fixedSize()
@@ -115,7 +115,7 @@ public struct BackgroundSelectorView: View {
             // used to link to directly (matching Windows, which consolidated its old
             // thumbnail's click target the same way).
             HStack(spacing: 12) {
-                Toggle("Felt Vignette", isOn: $showFeltVignette)
+                Toggle(coordinator.L(.feltVignetteToggle), isOn: $showFeltVignette)
                     .font(.system(.body))
 
                 if let name = customBackgroundName,
@@ -124,7 +124,7 @@ public struct BackgroundSelectorView: View {
                     // theme" check first (blocking with an explanatory alert) before
                     // showing the plain "are you sure" confirmation — unchanged from
                     // when this was an icon button.
-                    Button("Delete Current Wallpaper") {
+                    Button(coordinator.L(.deleteCurrentWallpaper)) {
                         deleteBackgroundByName(name)
                     }
                     .font(.system(size: 12))
@@ -156,7 +156,7 @@ public struct BackgroundSelectorView: View {
                         editorMode = nil
                     }
                     if showSaveError {
-                        Text("Could not save the background. The image may be corrupt or the disk is full.")
+                        Text(coordinator.L(.couldNotSaveBackgroundError))
                             .font(.system(size: 12))
                             .foregroundColor(.red)
                             .multilineTextAlignment(.center)
@@ -177,23 +177,23 @@ public struct BackgroundSelectorView: View {
                 }
             }
         }
-        .alert("Delete Background", isPresented: $showingDeleteConfirmation) {
-            Button("Cancel", role: .cancel) { backgroundToDelete = nil }
-            Button("Delete", role: .destructive) {
+        .alert(coordinator.L(.deleteBackgroundTitle), isPresented: $showingDeleteConfirmation) {
+            Button(coordinator.L(.cancel), role: .cancel) { backgroundToDelete = nil }
+            Button(coordinator.L(.delete), role: .destructive) {
                 if let name = backgroundToDelete { confirmDelete(name) }
                 backgroundToDelete = nil
             }
         } message: {
-            Text("Are you sure you want to delete this background?")
+            Text(coordinator.L(.deleteBackgroundBody))
         }
-        .alert("Background In Use", isPresented: Binding(
+        .alert(coordinator.L(.backgroundInUseTitle), isPresented: Binding(
             get: { backgroundInUseByTheme != nil },
             set: { if !$0 { backgroundInUseByTheme = nil } }
         )) {
-            Button("OK", role: .cancel) { backgroundInUseByTheme = nil }
+            Button(coordinator.L(.ok), role: .cancel) { backgroundInUseByTheme = nil }
         } message: {
             if let info = backgroundInUseByTheme {
-                Text("This background is used by \"\(info.themeName)\". Please update or delete the theme first.")
+                Text(coordinator.L(.backgroundInUseFmt, info.themeName))
             }
         }
     }
@@ -230,22 +230,22 @@ public struct BackgroundSelectorView: View {
 
         let ext = url.pathExtension.lowercased()
         guard ["jpg", "jpeg", "png"].contains(ext) else {
-            showAlert(title: "Error", message: "File must be .jpg or .png!", style: .warning)
+            showAlert(title: coordinator.L(.errorTitle), message: coordinator.L(.fileMustBeJpgPngError), style: .warning)
             return
         }
 
         guard let data = try? Data(contentsOf: url) else {
-            showAlert(title: "Error", message: "Could not load the selected image file.", style: .critical)
+            showAlert(title: coordinator.L(.errorTitle), message: coordinator.L(.couldNotLoadSelectedImageFileError), style: .critical)
             return
         }
 
         guard data.count <= CustomBackgroundManager.maxImportBytes else {
-            showAlert(title: "Image Too Large", message: "That image is larger than 25 MB. Please choose a smaller file.", style: .warning)
+            showAlert(title: coordinator.L(.imageTooLargeTitle), message: coordinator.L(.imageTooLargeMessage), style: .warning)
             return
         }
 
         guard let image = NSImage(data: data) else {
-            showAlert(title: "Error", message: "Could not load the selected image file.", style: .critical)
+            showAlert(title: coordinator.L(.errorTitle), message: coordinator.L(.couldNotLoadSelectedImageFileError), style: .critical)
             return
         }
 
@@ -257,7 +257,7 @@ public struct BackgroundSelectorView: View {
         alert.messageText = title
         alert.informativeText = message
         alert.alertStyle = style
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: coordinator.L(.ok))
         alert.runModal()
     }
 }

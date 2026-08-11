@@ -122,6 +122,8 @@ struct FaceCardArtEditorView: View {
     @State private var offsetX: Double
     @State private var offsetY: Double
 
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
+
     private var cardColor: Color { slot.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1) }
 
     init(slot: FaceCardSlot, image: NSImage, rawData: Data, isGIF: Bool,
@@ -145,7 +147,7 @@ struct FaceCardArtEditorView: View {
             Color(NSColor.windowBackgroundColor).ignoresSafeArea()
 
             VStack(spacing: 20) {
-                Text("Edit \(slot.rankLabel)\(slot.suitSymbol) Art")
+                Text(coordinator.L(.editFaceCardArtTitleFmt, slot.rankLabel, slot.suitSymbol))
                     .font(.display(18)).foregroundColor(.primary).padding(.top)
 
                 // Card preview
@@ -194,28 +196,28 @@ struct FaceCardArtEditorView: View {
                 .frame(width: 150, height: 200)
 
                 // Scale
-                sliderRow(label: "Scale", value: $scale, in: 0.5...3.0,
-                          format: String(format: "%.2fx", scale))
+                sliderRow(label: coordinator.L(.scaleShortLabel), value: $scale, in: 0.5...3.0,
+                          format: coordinator.L(.scaleFmt, scale))
 
                 // Horizontal offset
-                sliderRow(label: "Horizontal", value: $offsetX, in: -100...100,
-                          format: String(format: "%.0f px", offsetX))
+                sliderRow(label: coordinator.L(.horizontalShortLabel), value: $offsetX, in: -100...100,
+                          format: coordinator.L(.pxOffsetFmt, offsetX))
 
                 // Vertical offset
-                sliderRow(label: "Vertical", value: $offsetY, in: -100...100,
-                          format: String(format: "%.0f px", offsetY))
+                sliderRow(label: coordinator.L(.verticalShortLabel), value: $offsetY, in: -100...100,
+                          format: coordinator.L(.pxOffsetFmt, offsetY))
 
                 // Buttons
                 HStack(spacing: 12) {
                     if onDelete != nil {
-                        themedEditorButton("Remove", tint: .red) { onDelete?() }
+                        themedEditorButton(coordinator.L(.remove), tint: .red) { onDelete?() }
                     }
-                    themedEditorButton("Reset", tint: .secondary) {
+                    themedEditorButton(coordinator.L(.reset), tint: .secondary) {
                         scale = 1.0; offsetX = 0; offsetY = 0
                     }
                     Spacer()
-                    themedEditorButton("Cancel", tint: .primary, shortcut: .cancelAction) { onCancel() }
-                    themedEditorButton("Save", tint: .primary, shortcut: .defaultAction) { onSave(scale, offsetX, offsetY) }
+                    themedEditorButton(coordinator.L(.cancel), tint: .primary, shortcut: .cancelAction) { onCancel() }
+                    themedEditorButton(coordinator.L(.save), tint: .primary, shortcut: .defaultAction) { onSave(scale, offsetX, offsetY) }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -244,6 +246,8 @@ struct FaceCardArtSectionView: View {
     @State private var editingExistingSlot: FaceCardSlot? = nil
     @State private var slotToDelete: FaceCardSlot? = nil
     @State private var showingDeleteAlert = false
+
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     private let spadeSlots: [FaceCardSlot]   = [.spadeAce,   .spadeJack,   .spadeQueen,   .spadeKing]
     private let clubSlots: [FaceCardSlot]    = [.clubAce,    .clubJack,    .clubQueen,    .clubKing]
@@ -310,13 +314,13 @@ struct FaceCardArtSectionView: View {
                 )
             }
         }
-        .alert("Remove Art", isPresented: $showingDeleteAlert) {
-            Button("Cancel", role: .cancel) { slotToDelete = nil }
-            Button("Remove", role: .destructive) {
+        .alert(coordinator.L(.removeArtTitle), isPresented: $showingDeleteAlert) {
+            Button(coordinator.L(.cancel), role: .cancel) { slotToDelete = nil }
+            Button(coordinator.L(.remove), role: .destructive) {
                 if let slot = slotToDelete { CustomFaceCardArtManager.shared.remove(slot: slot) }
                 slotToDelete = nil
             }
-        } message: { Text("Remove the custom art for this slot?") }
+        } message: { Text(coordinator.L(.removeArtConfirmBody)) }
     }
 
     private func slotRow(slots: [FaceCardSlot]) -> some View {
@@ -352,7 +356,7 @@ struct FaceCardArtSectionView: View {
                         .font(.system(size: 16))
                 }
                 .buttonStyle(.plain)
-                .help("Remove art")
+                .help(coordinator.L(.removeArtTooltip))
                 .opacity(art != nil ? 1 : 0)
             }
 
@@ -382,11 +386,11 @@ struct FaceCardArtSectionView: View {
 
         let ext = url.pathExtension.lowercased()
         guard ["jpg", "jpeg", "png", "gif"].contains(ext) else {
-            showError("File must be .jpg, .png, or .gif.")
+            showError(coordinator.L(.fileMustBeJpgPngGifError))
             return
         }
         guard let image = NSImage(contentsOf: url) else {
-            showError("Could not load the selected image.")
+            showError(coordinator.L(.couldNotLoadSelectedImageError))
             return
         }
 
@@ -398,7 +402,7 @@ struct FaceCardArtSectionView: View {
             rawData = CustomFaceCardArtManager.shared.pngData(from: image)
         }
         guard let data = rawData else {
-            showError("Could not read image data.")
+            showError(coordinator.L(.couldNotReadImageDataError))
             return
         }
         pendingImport = FaceCardIdentifiableImage(slot: slot, image: image, rawData: data, isGIF: isGIF)
@@ -406,10 +410,10 @@ struct FaceCardArtSectionView: View {
 
     private func showError(_ message: String) {
         let alert = NSAlert()
-        alert.messageText = "Error"
+        alert.messageText = coordinator.L(.errorTitle)
         alert.informativeText = message
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: coordinator.L(.ok))
         alert.runModal()
     }
 }

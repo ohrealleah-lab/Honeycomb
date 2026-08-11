@@ -4,6 +4,7 @@ public struct RuleExplanationPopover: View {
     var viewModel: HoneycombViewModel
     let isRoulette: Bool
     let effectiveRules: [HoneycombRule]
+    @Environment(AppCoordinator.self) private var coordinator
 
     public init(viewModel: HoneycombViewModel, isRoulette: Bool, effectiveRules: [HoneycombRule]) {
         self.viewModel = viewModel
@@ -15,22 +16,22 @@ public struct RuleExplanationPopover: View {
         VStack(alignment: .leading, spacing: 8) {
             if isRoulette {
                 Group {
-                    Text("Roulette: ")
+                    Text(coordinator.L(.rouletteColonPrefix))
                         .font(.system(size: 14, weight: .black))
                         .foregroundColor(.yellow)
                     +
-                    Text("Rules are randomized at the start of the match.")
+                    Text(coordinator.L(.rulesRandomizedAtStart))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.white)
                 }
             } else {
                 ForEach(effectiveRules, id: \.self) { rule in
                     Group {
-                        Text("\(rule.rawValue): ")
+                        Text(coordinator.L(.ruleNameColonFmt, honeycombLocalizedRuleName(rule.rawValue, language: coordinator.language)))
                             .font(.system(size: 14, weight: .black))
                             .foregroundColor(.yellow)
                         +
-                        Text(rule.explanation(activeSuits: viewModel.ascensionDescensionSuits))
+                        Text(honeycombLocalizedRuleExplanation(rule, activeSuits: viewModel.ascensionDescensionSuits, language: coordinator.language))
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.white)
                     }

@@ -151,7 +151,7 @@ public struct VideoPokerView: View {
                 .frame(width: 0, height: 0)
                 .clipped()
 
-            HotkeyLegendView(text: "Space/Enter/D=Deal or Draw   1-5=Toggle Hold   H=Hold All   C=Clear   M=Bet Max")
+            HotkeyLegendView(text: coordinator.L(.hotkeyLegendVideopoker))
 
             if showQueuedBanner {
                 FlashBannerView(
@@ -204,9 +204,9 @@ public struct VideoPokerView: View {
         .sheet(isPresented: $isShowingStats) {
             VideoPokerStatsView(viewModel: viewModel)
         }
-        .confirmationDialog("Start a new game?", isPresented: $isShowingNewGameConfirm) {
-            Button("Cancel", role: .cancel) { }
-            Button("New Game", role: .destructive) { viewModel.startNewGame() }
+        .confirmationDialog(coordinator.L(.newGameConfirmTitleShort), isPresented: $isShowingNewGameConfirm) {
+            Button(coordinator.L(.cancel), role: .cancel) { }
+            Button(coordinator.L(.newGame), role: .destructive) { viewModel.startNewGame() }
         }
         .onAppear {
             if viewModel.state.phase == .deal {
@@ -358,7 +358,7 @@ public struct VideoPokerView: View {
     private var toolbarView: some View {
         HStack(spacing: 20) {
             GameSelectionDropdown(coordinator: coordinator)
-            toolbarButton("Options", systemImage: "gearshape", disabled: false) {
+            toolbarButton(coordinator.L(.options), systemImage: "gearshape", disabled: false) {
                 isShowingOptions = true
             }
             Spacer()
@@ -382,7 +382,7 @@ public struct VideoPokerView: View {
         let secondHalf = Array(entries.dropFirst(half))
 
         return VStack(spacing: 0) {
-            Text(viewModel.options.variant.rawValue.uppercased())
+            Text(localizedVariantName(viewModel.options.variant, language: coordinator.language).uppercased())
                 .font(.system(size: 11, weight: .black))
                 .foregroundColor(.yellow)
                 .padding(.vertical, 5)
@@ -408,7 +408,7 @@ public struct VideoPokerView: View {
             HStack(spacing: 0) {
                 Text("").frame(width: 118, alignment: .leading)
                 ForEach(1...5, id: \.self) { coins in
-                    Text(coins == 5 ? "MAX" : "\(coins)")
+                    Text(coins == 5 ? coordinator.L(.payTableMaxCol) : "\(coins)")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundColor(coins == viewModel.state.currentBet ? .orange : .white.opacity(0.45))
                         .frame(width: 34, alignment: .center)
@@ -422,7 +422,7 @@ public struct VideoPokerView: View {
             ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
                 let isWinner = viewModel.state.phase == .result && entry.handName == viewModel.state.lastHandName
                 HStack(spacing: 0) {
-                    Text(entry.handName)
+                    Text(localizedHandName(entry.handName, language: coordinator.language))
                         .font(.system(size: 10, weight: isWinner ? .black : .regular))
                         .foregroundColor(isWinner ? .black : .white)
                         .lineLimit(1)
@@ -523,18 +523,18 @@ public struct VideoPokerView: View {
                 if viewModel.state.lastPayout > 0 {
                     let streak = viewModel.statistics.currentStreak
                     let streakText: String? = streak >= 2
-                        ? (streak >= 5 ? "*** \(streak) WIN STREAK ***"
-                           : streak >= 3 ? "** \(streak) WIN STREAK **"
-                           : "\(streak) wins in a row!")
+                        ? (streak >= 5 ? coordinator.L(.streakText5plusFmt, streak)
+                           : streak >= 3 ? coordinator.L(.streakText3to4Fmt, streak)
+                           : coordinator.L(.streakText2Fmt, streak))
                         : nil
                     VStack(spacing: 8) {
-                        Text("\(viewModel.state.lastHandName)!")
+                        Text(coordinator.L(.resultHandNameFmt, localizedHandName(viewModel.state.lastHandName, language: coordinator.language)))
                             .font(.system(size: 36, weight: .black))
                             .foregroundColor(.yellow)
                             .scaleEffect(winFlash ? 1.1 : 1.0)
                             .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
                         if !viewModel.isFreePlay {
-                            Text("+\(viewModel.state.lastPayout) Credits")
+                            Text(coordinator.L(.resultCreditsWonFmt, viewModel.state.lastPayout))
                                 .font(.system(.body))
                                 .foregroundColor(.white)
                         }
@@ -555,11 +555,11 @@ public struct VideoPokerView: View {
                     .transition(.opacity)
                 } else {
                     VStack(spacing: 8) {
-                        Text("Not today, partner!")
+                        Text(coordinator.L(.notTodayPartner))
                             .font(.system(size: 36, weight: .black))
                             .foregroundColor(.yellow)
                         if !viewModel.isFreePlay {
-                            Text("-\(viewModel.state.currentBet) credits")
+                            Text(coordinator.L(.resultCreditsLostFmt, viewModel.state.currentBet))
                                 .font(.system(.body))
                                 .foregroundColor(.white)
                         }
@@ -698,7 +698,7 @@ public struct VideoPokerView: View {
     private var creditDisplay: some View {
         HStack(spacing: 32) {
             VStack(spacing: 2) {
-                Text("CREDITS")
+                Text(coordinator.L(.creditsLabel))
                     .font(.display(10))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.sessionCredits)")
@@ -707,7 +707,7 @@ public struct VideoPokerView: View {
             }
 
             VStack(spacing: 2) {
-                Text(viewModel.options.playMode == .triple ? "BET/HAND" : "BET")
+                Text(viewModel.options.playMode == .triple ? coordinator.L(.betHandLabel) : coordinator.L(.betLabel))
                     .font(.display(10))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.currentBet)")
@@ -717,7 +717,7 @@ public struct VideoPokerView: View {
 
             if viewModel.options.playMode == .triple {
                 VStack(spacing: 2) {
-                    Text("TOTAL BET")
+                    Text(coordinator.L(.totalBetLabel))
                         .font(.display(10))
                         .foregroundColor(.white.opacity(0.6))
                     Text("\(viewModel.totalBet)")
@@ -727,7 +727,7 @@ public struct VideoPokerView: View {
             }
 
             VStack(spacing: 2) {
-                Text("HANDS")
+                Text(coordinator.L(.handsLabel))
                     .font(.display(10))
                     .foregroundColor(.white.opacity(0.6))
                 Text("\(viewModel.state.handsDealt)")
@@ -765,29 +765,29 @@ public struct VideoPokerView: View {
             switch viewModel.state.phase {
             case .deal, .result:
                 if !viewModel.isFreePlay {
-                    casinoButton("-", color: .white.opacity(0.2)) { viewModel.decreaseBet() }
-                    casinoButton("BET MAX  [M]", systemImage: "dollarsign.circle", color: .orange.opacity(0.85)) { viewModel.maxBet() }
-                    casinoButton("+", color: .white.opacity(0.2)) { viewModel.increaseBet() }
+                    casinoButton(coordinator.L(.btnBetMinus), color: .white.opacity(0.2)) { viewModel.decreaseBet() }
+                    casinoButton(coordinator.L(.btnBetMaxMac), systemImage: "dollarsign.circle", color: .orange.opacity(0.85)) { viewModel.maxBet() }
+                    casinoButton(coordinator.L(.btnBetPlus), color: .white.opacity(0.2)) { viewModel.increaseBet() }
 
                     Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
                 }
 
-                casinoButton("DEAL  [Space]", systemImage: "play.fill", color: .yellow, textColor: .black,
+                casinoButton(coordinator.L(.btnDealSpace), systemImage: "play.fill", color: .yellow, textColor: .black,
                              disabled: !viewModel.isFreePlay && viewModel.state.sessionCredits < viewModel.totalBet) {
                     viewModel.deal()
                 }
 
             case .holding:
-                casinoButton("HOLD ALL  [H]", systemImage: "hand.raised.fill", color: .white.opacity(0.2)) { holdAll() }
-                casinoButton("CLEAR  [C]", systemImage: "xmark", color: .white.opacity(0.2)) { clearHolds() }
+                casinoButton(coordinator.L(.btnHoldAllMac), systemImage: "hand.raised.fill", color: .white.opacity(0.2)) { holdAll() }
+                casinoButton(coordinator.L(.btnClearHoldsMac), systemImage: "xmark", color: .white.opacity(0.2)) { clearHolds() }
 
                 Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
 
-                casinoButton("DRAW", systemImage: "arrow.triangle.2.circlepath", color: .green.opacity(0.85)) { viewModel.draw() }
+                casinoButton(coordinator.L(.btnDraw), systemImage: "arrow.triangle.2.circlepath", color: .green.opacity(0.85)) { viewModel.draw() }
             }
 
             if !viewModel.isFreePlay && viewModel.state.sessionCredits <= 10 && viewModel.state.phase != .holding {
-                casinoButton("REBUY", systemImage: "creditcard", color: .red.opacity(0.8)) { viewModel.rebuy() }
+                casinoButton(coordinator.L(.btnRebuyMac), systemImage: "creditcard", color: .red.opacity(0.8)) { viewModel.rebuy() }
             }
         }
     }
@@ -1013,38 +1013,49 @@ struct VideoPokerOptionsView: View {
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
             }
         ) {
-            Picker("Variant:", selection: $variant) {
-                ForEach(VideoPokerVariant.allCases, id: \.self) {
-                    Text($0.rawValue).tag($0)
+            Picker(coordinator.L(.pickerVariantLabel), selection: $variant) {
+                ForEach(VideoPokerVariant.allCases, id: \.self) { v in
+                    Text(localizedVariantName(v)).tag(v)
                 }
             }
             .font(.system(.body))
 
             if VideoPokerPlayMode.tripleEnabled {
-                Picker("Play Mode:", selection: $playMode) {
-                    ForEach(VideoPokerPlayMode.allCases, id: \.self) {
-                        Text($0.rawValue).tag($0)
+                Picker(coordinator.L(.pickerPlaymodeLabel), selection: $playMode) {
+                    ForEach(VideoPokerPlayMode.allCases, id: \.self) { mode in
+                        Text(mode == .single ? coordinator.L(.playmodeSingle) : coordinator.L(.playmodeTriple)).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
                 .font(.system(.body))
             }
 
-            Stepper("Starting Credits: \(startingCredits)", value: $startingCredits, in: 100...10000, step: 100)
+            Stepper(coordinator.L(.startingCreditsFmt, startingCredits), value: $startingCredits, in: 100...10000, step: 100)
                 .font(.system(.body))
 
-            Picker("Default Bet:", selection: $betPerHand) {
-                ForEach(1...5, id: \.self) { n in Text("\(n) coin\(n == 1 ? "" : "s")").tag(n) }
+            Picker(coordinator.L(.pickerDefaultBetLabel), selection: $betPerHand) {
+                ForEach(1...5, id: \.self) { n in Text(coordinator.L(.optionCoinCountFmt, n, n == 1 ? "" : "s")).tag(n) }
             }
             .font(.system(.body))
 
             Divider()
 
-            Toggle("Sound Effects",    isOn: $isSoundEnabled).font(.system(.body))
-            Toggle("Hide Bet Board",   isOn: $hideBetBoard).font(.system(.body))
-            Toggle("No Stress Mode",   isOn: $noStressMode).font(.system(.body))
-            Toggle("Honey Mode (Flavor)", isOn: $honeyMode).font(.system(.body))
-            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners).font(.system(.body))
+            Toggle(coordinator.L(.soundEffects),    isOn: $isSoundEnabled).font(.system(.body))
+            Toggle(coordinator.L(.hideBetBoard),   isOn: $hideBetBoard).font(.system(.body))
+            Toggle(coordinator.L(.noStressMode),   isOn: $noStressMode).font(.system(.body))
+            Toggle(coordinator.L(.honeyMode), isOn: $honeyMode).font(.system(.body))
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners).font(.system(.body))
+        }
+    }
+
+    // Display-only translation for a variant name — VideoPokerVariant.rawValue is
+    // Codable-persisted, so it stays English; this only swaps in translated text
+    // at the point of rendering.
+    private func localizedVariantName(_ variant: VideoPokerVariant) -> String {
+        switch variant {
+        case .jacksOrBetter: return coordinator.L(.variantJacksOrBetter)
+        case .deucesWild:    return coordinator.L(.variantDeucesWild)
+        case .bonusPoker:    return coordinator.L(.variantBonusPoker)
         }
     }
 }
@@ -1054,46 +1065,47 @@ struct VideoPokerOptionsView: View {
 struct VideoPokerStatsView: View {
     var viewModel: VideoPokerViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
     @State private var showingResetConfirmation = false
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Video Poker Statistics")
+            Text(coordinator.L(.videoPokerStatistics))
                 .font(.system(size: 16, weight: .bold))
                 .padding(.top, 16)
 
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                StatRowView(label: "Hands Played",  value: "\(viewModel.statistics.handsPlayed)", valueBold: true)
-                StatRowView(label: "Hands Won",     value: "\(viewModel.statistics.handsWon)", valueBold: true)
-                StatRowView(label: "Win Rate",      value: String(format: "%.1f%%", viewModel.statistics.winRate * 100), valueBold: true)
-                StatRowView(label: "Cur. Streak",   value: "\(viewModel.statistics.currentStreak)", valueBold: true)
-                StatRowView(label: "Best Streak",   value: "\(viewModel.statistics.longestStreak)", valueBold: true)
-                StatRowView(label: "Biggest Pay",   value: "\(viewModel.statistics.biggestPayout)", valueBold: true)
-                StatRowView(label: "Total Wagered", value: "\(viewModel.statistics.totalWagered)", valueBold: true)
-                StatRowView(label: "Total Paid",    value: "\(viewModel.statistics.totalPaidOut)", valueBold: true)
-                StatRowView(label: "RTP",           value: String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100), valueBold: true)
-                StatRowView(label: "Royal Flushes", value: "\(viewModel.statistics.royalFlushCount)", valueBold: true)
-                StatRowView(label: "Rebuys",        value: "\(viewModel.statistics.rebuyCount)", valueBold: true)
+                StatRowView(label: coordinator.L(.handsPlayed),  value: "\(viewModel.statistics.handsPlayed)", valueBold: true)
+                StatRowView(label: coordinator.L(.handsWon),     value: "\(viewModel.statistics.handsWon)", valueBold: true)
+                StatRowView(label: coordinator.L(.winRate),      value: String(format: "%.1f%%", viewModel.statistics.winRate * 100), valueBold: true)
+                StatRowView(label: coordinator.L(.statCurStreakShort),   value: "\(viewModel.statistics.currentStreak)", valueBold: true)
+                StatRowView(label: coordinator.L(.statBestStreak),   value: "\(viewModel.statistics.longestStreak)", valueBold: true)
+                StatRowView(label: coordinator.L(.biggestPay),   value: "\(viewModel.statistics.biggestPayout)", valueBold: true)
+                StatRowView(label: coordinator.L(.totalWagered), value: "\(viewModel.statistics.totalWagered)", valueBold: true)
+                StatRowView(label: coordinator.L(.totalPaid),    value: "\(viewModel.statistics.totalPaidOut)", valueBold: true)
+                StatRowView(label: coordinator.L(.rtpStat),           value: String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100), valueBold: true)
+                StatRowView(label: coordinator.L(.royalFlushes), value: "\(viewModel.statistics.royalFlushCount)", valueBold: true)
+                StatRowView(label: coordinator.L(.rebuysStat),        value: "\(viewModel.statistics.rebuyCount)", valueBold: true)
             }
             .padding(.horizontal, 24)
 
             Divider()
 
             HStack {
-                Button("Reset Stats") { showingResetConfirmation = true }
+                Button(coordinator.L(.resetStats)) { showingResetConfirmation = true }
                     .buttonStyle(.borderless)
                     .foregroundColor(.red)
                     .font(.system(.body))
-                    .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
-                        Button("Reset", role: .destructive) { viewModel.resetStatistics() }
-                        Button("Cancel", role: .cancel) {}
+                    .alert(coordinator.L(.resetStatisticsTitle), isPresented: $showingResetConfirmation) {
+                        Button(coordinator.L(.reset), role: .destructive) { viewModel.resetStatistics() }
+                        Button(coordinator.L(.cancel), role: .cancel) {}
                     } message: {
-                        Text("This will permanently clear all statistics. This cannot be undone.")
+                        Text(coordinator.L(.resetStatisticsBodyGeneric))
                     }
                 Spacer()
-                Button("Close") { dismiss() }
+                Button(coordinator.L(.close)) { dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .font(.system(.body))
             }

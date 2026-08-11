@@ -11,6 +11,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -33,6 +34,7 @@ public partial class MainWindow : Window
     private ManageDecksView? _manageDecksView;
     private bool _closePreferencesAfterModeConfirm;
     private INotifyPropertyChanged? _hintTrackedVm;
+    private AppLanguage _language = AppLanguage.English;
     // Keyed by game family ("Game"/"Freecell"/"Spider"/...), not by tag — variants like
     // SolitaireDraw1/SolitaireDraw3 share one GameView instance since they're the same
     // ViewModel/View with different Options, not different views.
@@ -89,6 +91,17 @@ public partial class MainWindow : Window
             // Hint is solitaire-only (no hint logic exists for VP/Blackjack).
             if (HintButton != null)    HintButton.IsVisible    = isCardGame && !m.Options.HideHintButton;
             this.Topmost = m.Options.IsAlwaysOnTop;
+
+            if (m.Options.Language != _language)
+            {
+                _language = m.Options.Language;
+                ApplyLocalization();
+                // OpponentNameDisplay (bound in the Honeycomb status bar) reads
+                // HoneycombRuleLocalization.LocalizedDifficultyName at get-time, but
+                // that binding only re-pulls the value on an explicit change
+                // notification — nothing else triggers one on a pure language switch.
+                _coordinator.HoneycombViewModel.NotifyOptionsChanged();
+            }
         });
 
         // Also listen to FaceCardArtChangedMessage to keep all cards in sync
@@ -101,6 +114,9 @@ public partial class MainWindow : Window
         ApplyFeltColor(_coordinator.GameViewModel.Options);
         ApplyBoardBackground(_coordinator.GameViewModel.Options);
         this.Topmost = _coordinator.GameViewModel.Options.IsAlwaysOnTop;
+
+        _language = SettingsService.LoadOptions().Language;
+        ApplyLocalization();
 
         // Apply any saved theme color overrides before first render
         CardView.ApplyThemeColors(_coordinator.GameViewModel.Options);
@@ -155,6 +171,74 @@ public partial class MainWindow : Window
             CardView.PreloadFaceArt();
             CardView.PreloadCardBacks(_coordinator.GameViewModel.Options);
         };
+    }
+
+    // Applies the current language to every static toolbar/overlay/dialog string in this
+    // window. Runs once at construction and again whenever OptionsChangedMessage reports a
+    // language change, so switching language mid-session updates the main window without a
+    // restart. Dynamic strings assembled elsewhere in this file (stats titles, confirm-dialog
+    // text, the solitaire key-hint row, etc.) also read Strings.Get(..., _language) at the
+    // point they're built, so they pick up the current language too.
+    private void ApplyLocalization()
+    {
+        NewGameButton.Content = Strings.Get(StringKey.NewGame, _language);
+        RestartButton.Content = Strings.Get(StringKey.Restart, _language);
+        HoneycombStartMatchButton.Content = Strings.Get(StringKey.ToolbarStartMatch, _language);
+        HoneycombRematchButton.Content = Strings.Get(StringKey.Rematch, _language);
+        HoneycombQuitMatchButton.Content = Strings.Get(StringKey.ToolbarQuitMatch, _language);
+        OptionsButton.Content = Strings.Get(StringKey.Options, _language);
+        HoneycombRulesButton.Content = Strings.Get(StringKey.ToolbarRules, _language);
+        HoneycombManageDecksButton.Content = Strings.Get(StringKey.ManageDecks, _language);
+        HintButton.Content = Strings.Get(StringKey.Hint, _language);
+        UndoButton.Content = Strings.Get(StringKey.Undo, _language);
+
+        JacksOrBetterItem.Content = Strings.Get(StringKey.VariantJacksOrBetter, _language);
+        DeucesWildItem.Content = Strings.Get(StringKey.VariantDeucesWild, _language);
+        BonusPokerItem.Content = Strings.Get(StringKey.VariantBonusPoker, _language);
+
+        // Beecell/Video Poker/Video Blackjack/Honeycomb are proper nouns the
+        // translator kept identical in both languages — still routed through
+        // Strings.Get (not left as static AXAML literals) so a future retranslation
+        // doesn't require another code change.
+        KlondikeSolibeeItem.Content = Strings.Get(StringKey.GamemodeKlondikeDisplay, _language);
+        BeecellItem.Content = Strings.Get(StringKey.GamemodeBeecellDisplay, _language);
+        SpiderSolibeeItem.Content = Strings.Get(StringKey.GamemodeSpiderDisplay, _language);
+        VideoPokerModeItem.Content = Strings.Get(StringKey.HelpVideopokerTitle, _language);
+        VideoBlackjackItem.Content = Strings.Get(StringKey.HelpBlackjackTitle, _language);
+        HoneycombModeItem.Content = Strings.Get(StringKey.AppName, _language);
+
+        ScoreLabelText.Text = Strings.Get(StringKey.ScoreLabel, _language);
+        MovesLabelText.Text = Strings.Get(StringKey.MovesLabel, _language);
+        TimeLabelText.Text = Strings.Get(StringKey.TimeLabel, _language);
+        HoneycombYouLabelText.Text = Strings.Get(StringKey.StatusYouLabel, _language);
+
+        HoneycombRulesTitleText.Text = Strings.Get(StringKey.HoneycombRulesTitle, _language);
+
+        PreferencesBackLabelText.Text = Strings.Get(StringKey.Back, _language);
+        PreferencesTitleText.Text = Strings.Get(StringKey.Preferences, _language);
+        ViewStatsText.Text = Strings.Get(StringKey.ViewStats, _language);
+        CancelPreferencesButton.Content = Strings.Get(StringKey.Cancel, _language);
+        OkPreferencesButton.Content = Strings.Get(StringKey.Ok, _language);
+
+        ManageDecksTitleText.Text = Strings.Get(StringKey.ManageDecks, _language);
+        DoneManageDecksButton.Content = Strings.Get(StringKey.Done, _language);
+
+        StatsGamesPlayedLabel.Text = Strings.Get(StringKey.GamesPlayed, _language);
+        StatsGamesWonLabel.Text = Strings.Get(StringKey.GamesWon, _language);
+        StatsHighScoreLabel.Text = Strings.Get(StringKey.HighScore, _language);
+        StatsWinPctLabel.Text = Strings.Get(StringKey.WinPercentage, _language);
+        StatsCurrentStreakLabel.Text = Strings.Get(StringKey.CurrentStreak, _language);
+        StatsLongestStreakLabel.Text = Strings.Get(StringKey.LongestStreak, _language);
+        StatsAvgWinTimeLabel.Text = Strings.Get(StringKey.AvgWinningTime, _language);
+        StatsFastestWinLabel.Text = Strings.Get(StringKey.FastestWin, _language);
+        ResetStatsButton.Content = Strings.Get(StringKey.ResetStats, _language);
+        CloseStatsButton.Content = Strings.Get(StringKey.Close, _language);
+        CancelConfirmActionButton.Content = Strings.Get(StringKey.Cancel, _language);
+
+        // Refresh whatever's currently showing in the stats overlay title/rows and the
+        // solitaire key-hint row, since both are built from literals elsewhere in this file.
+        if (StatsOverlay.IsVisible) PopulateStatsPanel();
+        UpdateSolitaireKeyHint(_currentGameTag, _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack" && _currentGameTag != "Honeycomb");
     }
 
     private void ApplyFeltColor(GameOptions options)
@@ -459,7 +543,7 @@ public partial class MainWindow : Window
             _pendingAction = "NewGame";
             ConfirmActionTitle.Text = "Start New Game?";
             ConfirmActionMessage.Text = "Are you sure you want to abandon the current game and start a new one?";
-            ConfirmActionButton.Content = "New Game";
+            ConfirmActionButton.Content = Strings.Get(StringKey.NewGame, _language);
             ConfirmActionOverlay.IsVisible = true;
         }
         else
@@ -475,7 +559,7 @@ public partial class MainWindow : Window
             _pendingAction = "RestartGame";
             ConfirmActionTitle.Text = "Restart Game?";
             ConfirmActionMessage.Text = "Are you sure you want to restart the current game?";
-            ConfirmActionButton.Content = "Restart";
+            ConfirmActionButton.Content = Strings.Get(StringKey.Restart, _language);
             ConfirmActionOverlay.IsVisible = true;
         }
         else
@@ -636,9 +720,9 @@ public partial class MainWindow : Window
     private void ResetStats_Click(object? sender, RoutedEventArgs e)
     {
         _pendingAction = "ResetStats";
-        ConfirmActionTitle.Text     = "Reset Statistics?";
-        ConfirmActionMessage.Text   = "This will permanently clear all statistics. This cannot be undone.";
-        ConfirmActionButton.Content = "Reset";
+        ConfirmActionTitle.Text     = Strings.Get(StringKey.ResetStatisticsTitle, _language);
+        ConfirmActionMessage.Text   = Strings.Get(StringKey.ResetStatisticsBodyGeneric, _language);
+        ConfirmActionButton.Content = Strings.Get(StringKey.Reset, _language);
         ConfirmActionOverlay.IsVisible = true;
     }
 
@@ -666,31 +750,31 @@ public partial class MainWindow : Window
     {
         StatsFixedRows.IsVisible   = false;
         StatsDynamicRows.IsVisible = true;
-        StatsTitleText.Text = "Blackjack Statistics";
+        StatsTitleText.Text = Strings.Get(StringKey.BlackjackStatistics, _language);
 
         var s = vm.Stats;
         double winRate = s.HandsPlayed > 0 ? 100.0 * s.HandsWon / s.HandsPlayed : 0.0;
         double rtp     = s.TotalCreditsWagered > 0 ? 100.0 * s.TotalCreditsWon / s.TotalCreditsWagered : 0.0;
 
         StatsDynamicRows.Children.Clear();
-        StatsDynamicRows.Children.Add(BuildStatRow("Hands Played",  s.HandsPlayed.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Hands Won",     s.HandsWon.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Hands Lost",    s.HandsLost.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Pushes",        s.HandsPushed.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Blackjacks",    s.Blackjacks.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Win Rate",      $"{winRate:0.0}%"));
-        StatsDynamicRows.Children.Add(BuildStatRow("Total Wagered", s.TotalCreditsWagered.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Total Paid",    s.TotalCreditsWon.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Biggest Pay",   s.BiggestPay.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("RTP",           $"{rtp:0.0}%"));
-        StatsDynamicRows.Children.Add(BuildStatRow("Rebuys",        s.Rebuys.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsPlayed, _language),  s.HandsPlayed.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsWon, _language),     s.HandsWon.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.StatHandsLost, _language),    s.HandsLost.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.StatPushes, _language),        s.HandsPushed.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.StatBlackjacks, _language),    s.Blackjacks.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),      $"{winRate:0.0}%"));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalWagered, _language), s.TotalCreditsWagered.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalPaid, _language),    s.TotalCreditsWon.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.BiggestPay, _language),   s.BiggestPay.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RtpStat, _language),           $"{rtp:0.0}%"));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RebuysStat, _language),        s.Rebuys.ToString()));
     }
 
     private void PopulateVideoPokerStats(VideoPokerViewModel vm)
     {
         StatsFixedRows.IsVisible   = false;
         StatsDynamicRows.IsVisible = true;
-        StatsTitleText.Text = "Video Poker Statistics";
+        StatsTitleText.Text = Strings.Get(StringKey.VideoPokerStatistics, _language);
 
         var s = vm.Stats;
         double winRate      = s.TotalHands > 0 ? 100.0 * s.WinningHands / s.TotalHands : 0.0;
@@ -698,15 +782,15 @@ public partial class MainWindow : Window
         int    royalFlushes = s.RoyalFlushCount;
 
         StatsDynamicRows.Children.Clear();
-        StatsDynamicRows.Children.Add(BuildStatRow("Hands Played",   s.TotalHands.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Hands Won",      s.WinningHands.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Win Rate",       $"{winRate:0.0}%"));
-        StatsDynamicRows.Children.Add(BuildStatRow("Biggest Pay",    s.BiggestPay.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Total Wagered",  s.TotalCreditsWagered.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Total Paid",     s.TotalCreditsWon.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("RTP",            $"{rtp:0.0}%"));
-        StatsDynamicRows.Children.Add(BuildStatRow("Royal Flushes",  royalFlushes.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow("Rebuys",         s.Rebuys.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsPlayed, _language),   s.TotalHands.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsWon, _language),      s.WinningHands.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),       $"{winRate:0.0}%"));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.BiggestPay, _language),    s.BiggestPay.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalWagered, _language),  s.TotalCreditsWagered.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalPaid, _language),     s.TotalCreditsWon.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RtpStat, _language),            $"{rtp:0.0}%"));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RoyalFlushes, _language),  royalFlushes.ToString()));
+        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RebuysStat, _language),         s.Rebuys.ToString()));
     }
 
     private void PopulateStatsPanel()
@@ -739,7 +823,7 @@ public partial class MainWindow : Window
 
         if (this.DataContext is GameViewModel klondikeVm)
         {
-            title = "Klondike Statistics";
+            title = Strings.Get(StringKey.KlondikeStatisticsTitle, _language);
             var s = klondikeVm.Stats;
             gamesPlayed   = s.GamesPlayed;
             gamesWon      = s.GamesWon;
@@ -754,8 +838,10 @@ public partial class MainWindow : Window
         }
         else if (this.DataContext is FreecellViewModel freecellVm)
         {
-            string deckLabel = freecellVm.Options.FreecellDeckCount == 2 ? "2-Decks" : "1-Deck";
-            title = $"Freecell Statistics ({deckLabel})";
+            string deckLabel = freecellVm.Options.FreecellDeckCount == 2
+                ? Strings.Get(StringKey.DeckCount2, _language)
+                : Strings.Get(StringKey.DeckCount1, _language);
+            title = Strings.Get(StringKey.FreecellStatisticsFmt, _language).Replace("%@", deckLabel);
             // Freecell has no Vegas mode of its own — always the "standard" bucket (see FreecellViewModel.ModeKey).
             string modeKey = $"standard_{freecellVm.Options.FreecellDeckCount}deck";
             var ms = freecellVm.Stats.FreecellStatsByMode.TryGetValue(modeKey, out var m) ? m : new ModeStats();
@@ -770,8 +856,13 @@ public partial class MainWindow : Window
         }
         else if (this.DataContext is SpiderViewModel spiderVm)
         {
-            string suitLabel = spiderVm.Options.SpiderSuitCount switch { 2 => "2 Suits", 4 => "4 Suits", _ => "1 Suit" };
-            title = $"Spider Statistics ({suitLabel})";
+            int suitCount = spiderVm.Options.SpiderSuitCount;
+            string suitWord = suitCount == 1
+                ? Strings.Get(StringKey.LabelSuitSingular, _language)
+                : Strings.Get(StringKey.LabelSuitPlural, _language);
+            title = Strings.Get(StringKey.SpiderStatisticsFmt, _language)
+                .Replace("%d", suitCount.ToString())
+                .Replace("%@", suitWord);
             string suitKey = spiderVm.Options.SpiderSuitCount.ToString();
             var ms = spiderVm.Stats.SpiderStatsBySuit.TryGetValue(suitKey, out var m) ? m : new ModeStats();
             gamesPlayed   = ms.GamesPlayed;
@@ -798,8 +889,8 @@ public partial class MainWindow : Window
         StatsWinPctText.Text       = $"{winPct:0.0}%";
         StatsCurrentStreakText.Text = currentStreak.ToString();
         StatsLongestStreakText.Text = longestStreak.ToString();
-        StatsAvgWinTimeText.Text   = timedGamesWon > 0 ? $"{totalWinSec / timedGamesWon}s" : "--";
-        StatsFastestWinText.Text  = timedGamesWon > 0 ? $"{fastestWinSec}s" : "--";
+        StatsAvgWinTimeText.Text   = timedGamesWon > 0 ? $"{totalWinSec / timedGamesWon}s" : Strings.Get(StringKey.NoTimePlaceholder, _language);
+        StatsFastestWinText.Text  = timedGamesWon > 0 ? $"{fastestWinSec}s" : Strings.Get(StringKey.NoTimePlaceholder, _language);
     }
 
     private void SetupHoneycombMode()
@@ -1052,7 +1143,7 @@ public partial class MainWindow : Window
             _pendingAction = "CancelPreferences";
             ConfirmActionTitle.Text     = "Discard Changes?";
             ConfirmActionMessage.Text   = "You have pending changes which will be lost. Are you sure you want to cancel?";
-            ConfirmActionButton.Content = "Yes";
+            ConfirmActionButton.Content = Strings.Get(StringKey.Yes, _language);
             ConfirmActionOverlay.IsVisible = true;
             return;
         }
@@ -1548,7 +1639,7 @@ public partial class MainWindow : Window
             if (HoneycombQuitMatchButton != null) 
             {
                 HoneycombQuitMatchButton.IsVisible = isPlaying;
-                HoneycombQuitMatchButton.Content = "Quit Match";
+                HoneycombQuitMatchButton.Content = Strings.Get(StringKey.ToolbarQuitMatch, _language);
             }
         }
     }
@@ -1793,9 +1884,9 @@ public partial class MainWindow : Window
         if (!isCardGame) return;
         SolitaireKeyHintLabel.Text = GetBaseGameTag(tag) switch
         {
-            "Freecell" => "Arrows=Move Cursor   Space/Return=Select or Move   C=Free Cell   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor",
-            "Spider"   => "Arrows=Move Cursor   Space/Return=Select or Move   D=Deal   A=Autocomplete   Esc=Clear Cursor",
-            _          => "Arrows=Move Cursor   Space/Return=Select or Move   D=Draw   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor",
+            "Freecell" => Strings.Get(StringKey.HotkeyLegendBeecell, _language),
+            "Spider"   => Strings.Get(StringKey.HotkeyLegendSpider, _language),
+            _          => Strings.Get(StringKey.HotkeyLegendKlondike, _language),
         };
     }
 

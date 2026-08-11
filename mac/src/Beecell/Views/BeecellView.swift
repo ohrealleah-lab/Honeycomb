@@ -106,20 +106,20 @@ public struct BeecellView: View {
 
                     // New Game Button
                     GameToolbarButton(
-                        label: "New Game", systemImage: "arrow.triangle.2.circlepath",
+                        label: coordinator.L(.newGame), systemImage: "arrow.triangle.2.circlepath",
                         isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
                     ) { requestNewGame() }
 
                     // Options
                     GameToolbarButton(
-                        label: "Options", systemImage: "gearshape",
+                        label: coordinator.L(.options), systemImage: "gearshape",
                         isCompact: toolbarWidth < Self.compactToolbarWidthThreshold
                     ) { isShowingOptions = true }
 
                     // Hint
                     if !viewModel.options.hideHintButton {
                         GameToolbarButton(
-                            label: "Hint", systemImage: "lightbulb",
+                            label: coordinator.L(.hint), systemImage: "lightbulb",
                             isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
                             disabled: viewModel.state.hasWon
                         ) {
@@ -133,7 +133,7 @@ public struct BeecellView: View {
                     // Undo
                     let canUndo = viewModel.canUndo && !viewModel.state.hasWon
                     GameToolbarButton(
-                        label: "Undo", systemImage: "arrow.uturn.backward",
+                        label: coordinator.L(.undo), systemImage: "arrow.uturn.backward",
                         isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
                         disabled: !canUndo
                     ) { viewModel.undoLastAction() }
@@ -143,9 +143,9 @@ public struct BeecellView: View {
                     
                     if !viewModel.options.noStressMode {
                         HStack(alignment: .bottom, spacing: 20) {
-                            StatusItemView(label: "SCORE", value: viewModel.scoreString)
-                            StatusItemView(label: "MOVES", value: String(viewModel.state.movesCount))
-                            StatusItemView(label: "TIME", value: formatTime(viewModel.state.timerSeconds))
+                            StatusItemView(label: coordinator.L(.scoreLabel), value: viewModel.scoreString)
+                            StatusItemView(label: coordinator.L(.movesLabel), value: String(viewModel.state.movesCount))
+                            StatusItemView(label: coordinator.L(.timeLabel), value: formatTime(viewModel.state.timerSeconds))
                         }
                     }
                     
@@ -416,17 +416,17 @@ public struct BeecellView: View {
                             Spacer(minLength: 8)
                             ZStack(alignment: .topTrailing) {
                                 VStack(spacing: 12) {
-                                    Text("Game Over")
+                                    Text(coordinator.L(.gameOver))
                                         .font(.system(size: 36, weight: .black))
                                         .foregroundColor(.yellow)
                                         .shadow(radius: 3)
 
-                                    Text("No moves remaining.")
+                                    Text(coordinator.L(.noMovesRemaining))
                                         .font(.system(.headline))
                                         .foregroundColor(.white)
 
                                     HStack(spacing: 12) {
-                                        Button("New Game") {
+                                        Button(coordinator.L(.newGame)) {
                                             viewModel.startNewGame()
                                         }
                                         .font(.system(.body))
@@ -438,7 +438,7 @@ public struct BeecellView: View {
                                         .cornerRadius(6)
                                         .buttonStyle(.plain)
 
-                                        Button("Restart Game") {
+                                        Button(coordinator.L(.restartGame)) {
                                             viewModel.restartCurrentGame()
                                         }
                                         .font(.system(.body))
@@ -478,15 +478,15 @@ public struct BeecellView: View {
                             Spacer(minLength: 8)
                             ZStack(alignment: .topTrailing) {
                                 VStack(spacing: 12) {
-                                    Text("Victory is guaranteed!")
+                                    Text(coordinator.L(.victoryGuaranteed))
                                         .font(.system(size: 36, weight: .black))
                                         .foregroundColor(.yellow)
                                         .multilineTextAlignment(.center)
-                                    Text("All remaining cards can be sorted into foundations.")
+                                    Text(coordinator.L(.autocompleteBodyOther))
                                         .font(.system(.body))
                                         .foregroundColor(.white)
                                         .multilineTextAlignment(.center)
-                                    Button("Autocomplete Game") {
+                                    Button(coordinator.L(.autocompleteGame)) {
                                         viewModel.runAutocomplete()
                                     }
                                     .font(.system(.body))
@@ -548,7 +548,7 @@ public struct BeecellView: View {
                     Spacer(minLength: 8)
                     ZStack(alignment: .topTrailing) {
                         VStack(spacing: 12) {
-                            Text("You win!")
+                            Text(coordinator.L(.youWin))
                                 .font(.system(size: 40, weight: .black))
                                 .foregroundColor(.yellow)
                                 .scaleEffect(winPulse ? 1.06 : 1.0)
@@ -560,7 +560,7 @@ public struct BeecellView: View {
                                 .font(.system(.body))
                                 .foregroundColor(.white)
 
-                            Text("Play Again")
+                            Text(coordinator.L(.playAgain))
                                 .font(.system(.body))
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
@@ -595,7 +595,7 @@ public struct BeecellView: View {
             }
 
             if showNoHintsBanner {
-                FlashBannerView(message: "Sorry! No hints available.")
+                FlashBannerView(message: coordinator.L(.noHintsAvailable))
             }
 
             if showQueuedBanner {
@@ -629,7 +629,7 @@ public struct BeecellView: View {
                 .allowsHitTesting(false)
             }
 
-            HotkeyLegendView(text: "Arrows=Move Cursor   Space/Return=Select or Move   C=Free Cell   F=Auto-Foundation   A=Autocomplete   Esc=Clear Cursor")
+            HotkeyLegendView(text: coordinator.L(.hotkeyLegendBeecell))
         }
         .environment(\.feltColor, coordinator.feltColor)
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
@@ -721,9 +721,9 @@ public struct BeecellView: View {
         .sheet(isPresented: $isShowingStats) {
             BeecellStatsView(viewModel: viewModel)
         }
-        .confirmationDialog("Start a new game? Your current game will end.", isPresented: $isShowingNewGameConfirm) {
-            Button("Cancel", role: .cancel) { pendingDeckCount = nil }
-            Button("New Game", role: .destructive) {
+        .confirmationDialog(coordinator.L(.newGameConfirmTitle), isPresented: $isShowingNewGameConfirm) {
+            Button(coordinator.L(.cancel), role: .cancel) { pendingDeckCount = nil }
+            Button(coordinator.L(.newGame), role: .destructive) {
                 if let deck = pendingDeckCount { viewModel.options.deckCount = deck; pendingDeckCount = nil }
                 viewModel.startNewGame()
             }
@@ -1017,8 +1017,9 @@ public struct BeecellView: View {
     }
 
     private var winSummaryText: String {
-        guard !viewModel.options.noStressMode else { return "Score: \(viewModel.scoreString)" }
-        return "Score: \(viewModel.scoreString) | Time: \(formatTime(viewModel.state.timerSeconds))"
+        let scorePart = coordinator.L(.scoreFmt, viewModel.scoreString)
+        guard !viewModel.options.noStressMode else { return scorePart }
+        return coordinator.L(.winSummaryWithTimeFmt, scorePart, formatTime(viewModel.state.timerSeconds))
     }
 
 }
@@ -1188,27 +1189,27 @@ struct BeecellOptionsView: View {
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
             }
         ) {
-            Picker("Game Mode:", selection: $deckCount) {
-                Text("Standard (1-Deck)").tag(1)
-                Text("Two Decks (2-Decks)").tag(2)
+            Picker(coordinator.L(.toggleGameModeLabel), selection: $deckCount) {
+                Text(coordinator.L(.option1deck)).tag(1)
+                Text(coordinator.L(.option2deck)).tag(2)
             }
             .pickerStyle(.segmented)
 
             Divider()
 
-            Toggle("Sound Effects", isOn: $isSoundEnabled)
+            Toggle(coordinator.L(.soundEffects), isOn: $isSoundEnabled)
                 .font(.system(.body))
 
-            Toggle("Hide Hint button", isOn: $hideHintButton)
+            Toggle(coordinator.L(.hideHintButton), isOn: $hideHintButton)
                 .font(.system(.body))
 
-            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners)
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners)
                 .font(.system(.body))
 
-            Toggle("No Stress Mode", isOn: $noStressMode)
+            Toggle(coordinator.L(.noStressMode), isOn: $noStressMode)
                 .font(.system(.body))
 
-            Toggle("Honey Mode (Flavor)", isOn: $honeyMode)
+            Toggle(coordinator.L(.honeyMode), isOn: $honeyMode)
                 .font(.system(.body))
         }
     }
@@ -1218,49 +1219,50 @@ struct BeecellOptionsView: View {
 struct BeecellStatsView: View {
     let viewModel: BeecellViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var coordinator
     @State private var showingResetConfirmation = false
 
     var body: some View {
         let stats = viewModel.currentModeStats
-        
+
         VStack(spacing: 20) {
-            Text("Freecell Statistics (\(viewModel.options.deckCount == 1 ? "1-Deck" : "2-Decks"))")
+            Text(coordinator.L(.freecellStatisticsFmt, viewModel.options.deckCount == 1 ? coordinator.L(.deckCount1) : coordinator.L(.deckCount2)))
                 .font(.system(size: 14, weight: .bold))
                 .padding(.top, 12)
-            
+
             Divider()
-            
+
             VStack(alignment: .leading, spacing: 12) {
-                StatRowView(label: "Games Played:", value: "\(stats.gamesPlayed)")
-                StatRowView(label: "Games Won:", value: "\(stats.gamesWon)")
-                StatRowView(label: "High Score:", value: viewModel.highScoreString)
-                StatRowView(label: "Win Percentage:", value: String(format: "%.1f%%", stats.winPercentage))
-                StatRowView(label: "Current Streak:", value: "\(stats.currentStreak)")
-                StatRowView(label: "Longest Streak:", value: "\(stats.longestStreak)")
-                StatRowView(label: "Avg Winning Time:", value: stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
-                StatRowView(label: "Fastest Win:", value: stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
+                StatRowView(label: coordinator.L(.gamesPlayedColon), value: "\(stats.gamesPlayed)")
+                StatRowView(label: coordinator.L(.gamesWonColon), value: "\(stats.gamesWon)")
+                StatRowView(label: coordinator.L(.highScoreColon), value: viewModel.highScoreString)
+                StatRowView(label: coordinator.L(.winPercentageColon), value: String(format: "%.1f%%", stats.winPercentage))
+                StatRowView(label: coordinator.L(.currentStreakColon), value: "\(stats.currentStreak)")
+                StatRowView(label: coordinator.L(.longestStreakColon), value: "\(stats.longestStreak)")
+                StatRowView(label: coordinator.L(.avgWinningTimeColon), value: stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
+                StatRowView(label: coordinator.L(.fastestWinColon), value: stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
             }
             .padding(.horizontal, 36)
 
             Divider()
 
             HStack {
-                Button("Reset Stats") {
+                Button(coordinator.L(.resetStats)) {
                     showingResetConfirmation = true
                 }
                 .buttonStyle(.borderless)
                 .foregroundColor(.red)
                 .font(.system(.body))
-                .alert("Reset Statistics?", isPresented: $showingResetConfirmation) {
-                    Button("Reset", role: .destructive) { viewModel.resetStatistics() }
-                    Button("Cancel", role: .cancel) {}
+                .alert(coordinator.L(.resetStatisticsTitle), isPresented: $showingResetConfirmation) {
+                    Button(coordinator.L(.reset), role: .destructive) { viewModel.resetStatistics() }
+                    Button(coordinator.L(.cancel), role: .cancel) {}
                 } message: {
-                    Text("This will permanently clear all statistics. This cannot be undone.")
+                    Text(coordinator.L(.resetStatisticsBodyGeneric))
                 }
 
                 Spacer()
 
-                Button("Close") {
+                Button(coordinator.L(.close)) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)

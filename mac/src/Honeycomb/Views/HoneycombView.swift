@@ -244,7 +244,7 @@ public struct HoneycombView: View {
                     // otherwise leave no obvious way to start a new one.
                     if viewModel.gameState != .playing && viewModel.gameState != .suddenDeath {
                         GameToolbarButton(
-                            label: "Start Match", systemImage: "play.fill",
+                            label: coordinator.L(.toolbarStartMatch), systemImage: "play.fill",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold
                         ) { viewModel.startNewGame() }
 
@@ -255,24 +255,24 @@ public struct HoneycombView: View {
                         // same opponent instead of rolling a fresh one.
                         if viewModel.gameState == .gameOver && viewModel.canRematch {
                             GameToolbarButton(
-                                label: "Rematch", systemImage: "arrow.counterclockwise",
+                                label: coordinator.L(.rematch), systemImage: "arrow.counterclockwise",
                                 isCompact: toolbarWidth < compactToolbarWidthThreshold
                             ) { viewModel.rematch() }
                         }
                     } else {
                         GameToolbarButton(
-                            label: "Quit Match", systemImage: "flag.fill",
+                            label: coordinator.L(.toolbarQuitMatch), systemImage: "flag.fill",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold
                         ) { viewModel.quitMatch() }
                     }
 
                     GameToolbarButton(
-                        label: "Options", systemImage: "gearshape",
+                        label: coordinator.L(.options), systemImage: "gearshape",
                         isCompact: toolbarWidth < compactToolbarWidthThreshold
                     ) { showingOptions = true }
 
                     GameToolbarButton(
-                        label: "Rules", systemImage: "checklist",
+                        label: coordinator.L(.toolbarRules), systemImage: "checklist",
                         isCompact: toolbarWidth < compactToolbarWidthThreshold
                     ) { showingRules = true }
 
@@ -285,7 +285,7 @@ public struct HoneycombView: View {
                         // fully self-directed, no optimal-move assistance.
                         if !viewModel.options.hideHintButton && viewModel.options.difficulty != .ultraHard {
                         GameToolbarButton(
-                            label: "Hint", systemImage: "lightbulb",
+                            label: coordinator.L(.hint), systemImage: "lightbulb",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold,
                             disabled: !viewModel.isPlayerTurn || viewModel.isAnimatingPlacement
                         ) {
@@ -299,7 +299,7 @@ public struct HoneycombView: View {
                         }
 
                         GameToolbarButton(
-                            label: "Undo", systemImage: "arrow.uturn.backward",
+                            label: coordinator.L(.undo), systemImage: "arrow.uturn.backward",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold,
                             disabled: !viewModel.canUndo
                         ) { viewModel.undoLastAction() }
@@ -309,17 +309,17 @@ public struct HoneycombView: View {
                         // meaningless under No Stress Mode, which always deals a
                         // fixed/random hand instead of that deck.
                         GameToolbarButton(
-                            label: "Manage Decks", systemImage: "square.grid.2x2",
+                            label: coordinator.L(.manageDecks), systemImage: "square.grid.2x2",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold
                         ) { showingDecks = true }
                     }
-                    
+
                     Spacer()
 
                     if viewModel.gameState != .setup {
                         HStack {
-                            StatusItemView(label: "You", value: "\(viewModel.board.playerScore + viewModel.playerHand.count)")
-                            StatusItemView(label: viewModel.options.difficulty.displayName, value: "\(viewModel.board.opponentScore + viewModel.opponentHand.count)")
+                            StatusItemView(label: coordinator.L(.statusYouLabel), value: "\(viewModel.board.playerScore + viewModel.playerHand.count)")
+                            StatusItemView(label: honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language), value: "\(viewModel.board.opponentScore + viewModel.opponentHand.count)")
                         }
                     }
                 }
@@ -539,7 +539,7 @@ public struct HoneycombView: View {
                     VStack {
                         if viewModel.matchResult == "You Lose" {
                             // Exact match to Video Poker's loss banner (VideoPokerView.swift).
-                            Text("Not today, partner!")
+                            Text(coordinator.L(.notTodayPartner))
                                 .font(.system(size: 36, weight: .black))
                                 .foregroundColor(.yellow)
                         } else if viewModel.matchResult == "You Win!" {
@@ -547,7 +547,7 @@ public struct HoneycombView: View {
                             // Card is now gone, since hasStolenThisMatch is true) — a
                             // repeat "You Win!" would read as stale, so it confirms what
                             // just happened instead.
-                            Text(viewModel.hasStolenThisMatch ? "Card added to card bank." : viewModel.matchResult)
+                            Text(viewModel.hasStolenThisMatch ? coordinator.L(.cardAddedToBank) : viewModel.matchResult)
                                 .font(.system(size: 60, weight: .bold)).foregroundColor(.yellow)
                         } else if viewModel.matchResult == "Tie!" {
                             // Same styling as "You Win!" — Sudden Death is now opt-in, so an
@@ -571,17 +571,17 @@ public struct HoneycombView: View {
                         if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && HoneycombProfileManager.shared.isCardBankFull {
                             VStack {
-                                Text("Your card bank is full. Start over in manage decks to steal again.")
-                                Text("All of their secrets, yours. There's nothing left to steal.")
+                                Text(coordinator.L(.cardBankFullLine1))
+                                Text(coordinator.L(.cardBankFullLine2))
                             }
                             .foregroundColor(.white).padding()
                         } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && viewModel.hasObtainedAllOpponentCards {
-                            Text("You have obtained all cards from \(viewModel.options.difficulty.displayName)'s hand.")
+                            Text(coordinator.L(.obtainedAllCardsFmt, honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language)))
                                 .foregroundColor(.white).padding()
                         } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && viewModel.hasStolenThisMatch {
-                            Text("Rematch to take another.")
+                            Text(coordinator.L(.rematchToTakeAnother))
                                 .foregroundColor(.white).padding()
                         } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
                             && viewModel.stealProtectionActive && viewModel.hasStealableCard {
@@ -590,19 +590,19 @@ public struct HoneycombView: View {
                             // widens eligibility to any not-yet-unlocked board card,
                             // but if every card left on this board is already
                             // unlocked, there's still nothing to offer).
-                            Text("The hive takes pity on you — a rare card finds its way home.")
+                            Text(coordinator.L(.stealProtectionLine))
                                 .foregroundColor(.white).padding()
                         }
 
                         HStack {
-                            Button("New Game") {
+                            Button(coordinator.L(.newGame)) {
                                 viewModel.startNewGame()
                             }.buttonStyle(.borderedProminent)
 
                             // Only available once a match has actually started this
                             // session — nothing to replay before that.
                             if viewModel.canRematch {
-                                Button("Rematch") {
+                                Button(coordinator.L(.rematch)) {
                                     viewModel.rematch()
                                 }
                                 .buttonStyle(.borderedProminent)
@@ -619,7 +619,7 @@ public struct HoneycombView: View {
                                 && !HoneycombProfileManager.shared.isCardBankFull
                                 && !viewModel.hasStolenThisMatch
                                 && viewModel.hasStealableCard {
-                                Button("Steal Card") {
+                                Button(coordinator.L(.stealCard)) {
                                     isStealingCard = true
                                 }
                                 .buttonStyle(.borderedProminent)
@@ -681,7 +681,7 @@ public struct HoneycombView: View {
                 .zIndex(99)
 
             if showNoHintsBanner {
-                FlashBannerView(message: "Sorry! No hints available.")
+                FlashBannerView(message: coordinator.L(.noHintsAvailable))
                     .zIndex(100)
             }
             
@@ -768,14 +768,14 @@ public struct HoneycombView: View {
             bannerTask = task
         }
         .alert(
-            "Are you sure you want to steal this card?",
+            coordinator.L(.confirmStealTitle),
             isPresented: Binding(
                 get: { viewModel.pendingSteal != nil },
                 set: { if !$0 { viewModel.cancelPendingSteal() } }
             )
         ) {
-            Button("Cancel", role: .cancel) { viewModel.cancelPendingSteal() }
-            Button("OK") {
+            Button(coordinator.L(.cancel), role: .cancel) { viewModel.cancelPendingSteal() }
+            Button(coordinator.L(.ok)) {
                 viewModel.confirmPendingSteal()
                 isStealingCard = false
                 // Falls straight back to the win overlay (still gameOver/showPostGamePrompt,
@@ -784,12 +784,12 @@ public struct HoneycombView: View {
             }
         }
         .confirmationDialog("Start a new match? Your current match will end.", isPresented: $isShowingNewGameConfirm) {
-            Button("Cancel", role: .cancel) { }
-            Button("New Match", role: .destructive) { viewModel.startNewGame() }
+            Button(coordinator.L(.cancel), role: .cancel) { }
+            Button(coordinator.L(.newMatch), role: .destructive) { viewModel.startNewGame() }
         }
         .confirmationDialog("Rematch? Your current match will end.", isPresented: $isShowingRematchConfirm) {
-            Button("Cancel", role: .cancel) { }
-            Button("Rematch", role: .destructive) { viewModel.rematch() }
+            Button(coordinator.L(.cancel), role: .cancel) { }
+            Button(coordinator.L(.rematch), role: .destructive) { viewModel.rematch() }
         }
         .sheet(isPresented: $showingDecks) {
             HoneycombDecksView(activeDeckIndex: $viewModel.options.activeDeckIndex, viewModel: viewModel)
@@ -914,7 +914,7 @@ public struct HoneycombView: View {
     // set and the rules will be randomized when the match starts.
     private var rulesBannerLines: [String] {
         if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
-            if viewModel.activeRules.isEmpty { return ["Normal"] }
+            if viewModel.activeRules.isEmpty { return [coordinator.L(.ruleLineNormal)] }
             return viewModel.activeRules.map { rule in
                 // Ascension/Descension only affects the 2 suits rolled for this match
                 // (setupRules) — call that out here rather than the plain rule name,
@@ -923,20 +923,20 @@ public struct HoneycombView: View {
                 if rule == .ascension || rule == .descension, !viewModel.ascensionDescensionSuits.isEmpty {
                     let suitNames = viewModel.ascensionDescensionSuits.sorted()
                         .map { HoneycombCardData.suitDisplayName($0) }
-                    return "\(rule.rawValue) Suit: \(suitNames.joined(separator: ", "))"
+                    return coordinator.L(.ruleLineSuitFmt, honeycombLocalizedRuleName(rule.rawValue, language: coordinator.language), suitNames.joined(separator: ", "))
                 }
-                return rule.rawValue
+                return honeycombLocalizedRuleName(rule.rawValue, language: coordinator.language)
             }
         }
         if viewModel.options.forceNormalMode {
-            return ["Normal"]
+            return [coordinator.L(.ruleLineNormal)]
         }
         if !viewModel.options.selectedRules.isEmpty {
             return HoneycombRule.allCases
                 .filter { viewModel.options.selectedRules.contains($0) }
-                .map(\.rawValue)
+                .map { honeycombLocalizedRuleName($0.rawValue, language: coordinator.language) }
         }
-        return ["Roulette"]
+        return [coordinator.L(.ruleLineRoulette)]
     }
 
     // Active-rules banner shown above the board. Every Text here is .fixedSize() —
@@ -946,12 +946,12 @@ public struct HoneycombView: View {
     private var rulesBanner: some View {
         if isStealingCard {
             VStack(spacing: 16) {
-                Text("Double-click a captured opponent's card\non the board to steal it.")
+                Text(coordinator.L(.stealInstruction))
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
 
-                Button("Cancel") {
+                Button(coordinator.L(.cancel)) {
                     isStealingCard = false
                 }
                 .buttonStyle(.borderedProminent)
@@ -970,7 +970,7 @@ public struct HoneycombView: View {
             let lineSpacing: CGFloat = isDense ? 2 : 6
 
             VStack(spacing: lineSpacing) {
-                Text("Rules:")
+                Text(coordinator.L(.rulesBannerTitle))
                     .font(.system(size: titleSize, weight: .black))
                     .foregroundColor(.yellow)
                     .fixedSize()
@@ -1234,19 +1234,19 @@ struct HoneycombOptionsView: View {
                 }
             }
         ) {
-            Toggle("Sound Effects", isOn: $isSoundEnabled)
+            Toggle(coordinator.L(.soundEffects), isOn: $isSoundEnabled)
                 .font(.system(.body))
 
-            Toggle("No Stress Mode", isOn: $noStressMode)
+            Toggle(coordinator.L(.noStressMode), isOn: $noStressMode)
                 .font(.system(.body))
 
-            Toggle("Honey Mode (Flavor)", isOn: $honeyMode)
+            Toggle(coordinator.L(.honeyMode), isOn: $honeyMode)
                 .font(.system(.body))
 
-            Toggle("Hide Hint button", isOn: $hideHintButton)
+            Toggle(coordinator.L(.hideHintButton), isOn: $hideHintButton)
                 .font(.system(.body))
 
-            Toggle("Manually Dismiss Banners", isOn: $manuallyDismissBanners)
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners)
                 .font(.system(.body))
 
             Divider()
@@ -1288,7 +1288,7 @@ struct HoneycombRulesView: View {
             coordinator: coordinator,
             availableWidth: availableWidth,
             availableHeight: availableHeight,
-            title: "Rules",
+            title: coordinator.L(.toolbarRules),
             showThemes: false,
             onViewStats: {},
             onOK: {
@@ -1302,9 +1302,9 @@ struct HoneycombRulesView: View {
         ) {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
-                    Picker("Opponent", selection: $difficulty) {
+                    Picker(coordinator.L(.opponentPickerLabel), selection: $difficulty) {
                         ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
-                            Text(diff.displayName).tag(diff)
+                            Text(honeycombLocalizedDifficultyName(diff, language: coordinator.language)).tag(diff)
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
@@ -1312,7 +1312,7 @@ struct HoneycombRulesView: View {
 
                     Spacer()
 
-                    Button("Honeycomb Help") { openWindow(id: "honeycomb-help") }
+                    Button(coordinator.L(.helpHoneycomb)) { openWindow(id: "honeycomb-help") }
                         .buttonStyle(.bordered)
                 }
                 .padding(.top, 16)
@@ -1322,15 +1322,15 @@ struct HoneycombRulesView: View {
                 HStack(alignment: .top, spacing: 40) {
                     // Left Column: Game Choice
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Game Choice")
+                        Text(coordinator.L(.rulesColumnTitle))
                             .font(.title2).bold()
-                    
-                    Text("Select up to 4 rules. Leave empty to let roulette decide each match rules.")
+
+                    Text(coordinator.L(.matchRulesHint))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Toggle("Normal Mode (Force Zero Rules)", isOn: Binding(
+                    Toggle(coordinator.L(.toggleNormalModeMac), isOn: Binding(
                         get: { forceNormalMode },
                         set: { isOn in
                             forceNormalMode = isOn
@@ -1341,7 +1341,7 @@ struct HoneycombRulesView: View {
                     ))
                     
                     ForEach(HoneycombRule.allCases.filter { $0 != .reverse }, id: \.self) { rule in
-                        Toggle(rule.rawValue, isOn: Binding(
+                        Toggle(honeycombLocalizedRuleName(rule.rawValue, language: coordinator.language), isOn: Binding(
                             get: { selectedRules.contains(rule) },
                             set: { isOn in
                                 if isOn {
@@ -1373,26 +1373,26 @@ struct HoneycombRulesView: View {
                         ))
                         .font(.system(.body))
                         .disabled(forceNormalMode)
-                        .help(rule.explanation())
+                        .help(localizedRuleExplanation(rule))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Right Column: Ban List
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Ban List")
+                    Text(coordinator.L(.banListDisclosure))
                         .font(.title2).bold()
-                    
-                    Text("Select games to ban from roulettes.")
+
+                    Text(coordinator.L(.banListHintMac))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    
-                    let allBanItems = ["Normal Mode"] + HoneycombRule.allCases.map { $0.rawValue }
+
+                    let allBanItems = [coordinator.L(.normalModeBanItem)] + HoneycombRule.allCases.map { $0.rawValue }
 
                     ForEach(allBanItems, id: \.self) { ruleName in
                         HStack {
-                            Toggle(ruleName, isOn: Binding(
+                            Toggle(localizedRuleName(ruleName), isOn: Binding(
                                 get: { bannedRules.contains(ruleName) },
                                 set: { isOn in
                                     if isOn {
@@ -1410,10 +1410,10 @@ struct HoneycombRulesView: View {
                                 }
                             ))
                             .font(.system(.body))
-                            .help(HoneycombRule(rawValue: ruleName)?.explanation() ?? "Forces a match with no active rules, skipping roulette.")
+                            .help(HoneycombRule(rawValue: ruleName).map(localizedRuleExplanation) ?? coordinator.L(.normalModeBanListTooltip))
 
                             if bannedRules.count == allBanItems.count - 1 && !bannedRules.contains(ruleName) {
-                                Text("You cannot blacklist every game, silly bee.")
+                                Text(coordinator.L(.sillyBeeWarning))
                                     .font(.caption)
                                     .foregroundColor(.red)
                             }
@@ -1424,5 +1424,13 @@ struct HoneycombRulesView: View {
             }
             }
         }
+    }
+
+    private func localizedRuleName(_ ruleName: String) -> String {
+        honeycombLocalizedRuleName(ruleName, language: coordinator.language)
+    }
+
+    private func localizedRuleExplanation(_ rule: HoneycombRule) -> String {
+        honeycombLocalizedRuleExplanation(rule, language: coordinator.language)
     }
 }

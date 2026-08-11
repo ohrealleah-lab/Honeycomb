@@ -3,55 +3,56 @@ import SwiftUI
 struct CustomCardColorSectionView: View {
     @Binding var customCardColors: CustomCardColorGroup
     @State private var isShowingResetConfirm = false
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Custom Card Color")
+                Text(coordinator.L(.customCardColorHeading))
                     .font(.system(.body).bold())
                 Spacer()
-                Button("Reset") {
+                Button(coordinator.L(.reset)) {
                     isShowingResetConfirm = true
                 }
                 .font(.system(size: 12))
                 .buttonStyle(.plain)
                 .foregroundColor(.red)
                 .confirmationDialog(
-                    "Are you sure you want to reset the card colors to default?",
+                    coordinator.L(.resetCardColorsConfirmBody),
                     isPresented: $isShowingResetConfirm
                 ) {
-                    Button("Reset", role: .destructive) { customCardColors.reset() }
-                    Button("Cancel", role: .cancel) { }
+                    Button(coordinator.L(.reset), role: .destructive) { customCardColors.reset() }
+                    Button(coordinator.L(.cancel), role: .cancel) { }
                 }
             }
-            
+
             VStack(spacing: 8) {
                 HStack {
-                    Text("Card Background")
+                    Text(coordinator.L(.cardBackgroundLabel))
                         .font(.system(.body))
                     Spacer()
                     ColorPicker("", selection: $customCardColors.backgroundColor)
                         .labelsHidden()
                 }
-                
+
                 HStack {
-                    Text("Card Outline")
+                    Text(coordinator.L(.cardOutlineLabel))
                         .font(.system(.body))
                     Spacer()
                     ColorPicker("", selection: $customCardColors.outlineColor)
                         .labelsHidden()
                 }
-                
+
                 HStack {
-                    Text("Black Suit Text")
+                    Text(coordinator.L(.blackSuitTextLabel))
                         .font(.system(.body))
                     Spacer()
                     ColorPicker("", selection: $customCardColors.blackSuitColor)
                         .labelsHidden()
                 }
-                
+
                 HStack {
-                    Text("Red Suit Text")
+                    Text(coordinator.L(.redSuitTextLabel))
                         .font(.system(.body))
                     Spacer()
                     ColorPicker("", selection: $customCardColors.redSuitColor)
@@ -59,7 +60,7 @@ struct CustomCardColorSectionView: View {
                 }
 
                 HStack {
-                    Text("Hint Highlight")
+                    Text(coordinator.L(.hintHighlightLabel))
                         .font(.system(.body))
                     Spacer()
                     ColorPicker("", selection: $customCardColors.hintHighlightColor)

@@ -74,7 +74,7 @@ OUT_JSON_WINDOWS = REPO_ROOT / "windows/src/SoliBee.Desktop/Assets/HoneycombBann
 OUT_SWIFT = REPO_ROOT / "shared/Honeycomb/Models/BannerID.swift"
 OUT_CS = REPO_ROOT / "windows/src/SoliBee.Core/Models/BannerId.cs"
 
-EXPECTED_HEADERS = ["Category", "Trigger", "Message", "Type", "Location"]
+EXPECTED_HEADERS = ["Category", "Trigger", "Message", "Type", "Location", "Spanish"]
 
 TYPE_MAP = {
     "Ambiance": "ambiance",
@@ -149,20 +149,35 @@ def load_rows(path: Path) -> list[dict]:
         vals = [c.value for c in ws[r]]
         if all(v is None for v in vals):
             continue
-        category, trigger, message, type_, location = vals
-        missing = [name for name, v in zip(EXPECTED_HEADERS, vals) if v is None]
+        category, trigger, message, type_, location, spanish = vals
+        # Spanish is the one column allowed to be blank — translation lands
+        # incrementally, so an untranslated row must not block regeneration.
+        # Every other column is still required.
+        missing = [
+            name for name, v in zip(EXPECTED_HEADERS, vals)
+            if v is None and name != "Spanish"
+        ]
         if missing:
             raise ValueError(f"Row {r} is missing {missing}: {vals!r}")
         if type_.strip() not in TYPE_MAP:
             raise ValueError(f"Row {r}: unknown Type {type_!r}")
         if location.strip() not in LOCATION_MAP:
             raise ValueError(f"Row {r}: unknown Location {location!r}")
+        # Both a blank cell and the literal "No Translation" (the translator's
+        # explicit "deliberately skipped this one" marker) normalize to "" —
+        # the runtime treats "" as "exclude this message from the Spanish
+        # pool entirely" (see BannerCatalog.pickMessage), not as an English
+        # fallback for that one message.
+        spanish_text = spanish.strip() if spanish else ""
+        if spanish_text.lower() == "no translation":
+            spanish_text = ""
         rows.append({
             "category": category.strip(),
             "trigger": trigger.strip(),
             "message": message.strip(),
             "type": type_.strip(),
             "location": location.strip(),
+            "spanish": spanish_text,
         })
     return rows
 
@@ -178,6 +193,7 @@ def group_rows(rows: list[dict]) -> list[dict]:
                 "type": row["type"],
                 "location": row["location"],
                 "messages": [],
+                "messages_es": [],
             }
         g = groups[key]
         if g["type"] != row["type"] or g["location"] != row["location"]:
@@ -188,6 +204,7 @@ def group_rows(rows: list[dict]) -> list[dict]:
         if row["message"] in g["messages"]:
             raise ValueError(f"Duplicate message within group {key}: {row['message']!r}")
         g["messages"].append(row["message"])
+        g["messages_es"].append(row["spanish"])
     return list(groups.values())
 
 
@@ -225,7 +242,15 @@ def build_catalog(groups: list[dict]) -> list[dict]:
             "gated": gated,
             "gateChance": GATE_CHANCE if gated else None,
             "fallback": fallback,
+            # `fallback` text (existing production banner strings like "Queen's
+            # Fall!", or the rule-name sentinel) is NOT translated here — those
+            # strings mirror other already-shipped English text (e.g.
+            # HoneycombRule display names) that isn't itself part of either
+            # localization pipeline yet. Translating just the fallback would
+            # create a second, inconsistent source of truth for that text.
+            # Tracked as a known follow-up, not silently done here.
             "messages": g["messages"],
+            "messagesEs": g["messages_es"],
         })
     return catalog
 

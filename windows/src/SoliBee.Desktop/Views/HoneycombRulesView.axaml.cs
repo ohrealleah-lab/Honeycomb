@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -16,6 +17,7 @@ public partial class HoneycombRulesView : UserControl
     private HoneycombOptions _localOpts;
     private bool _initializing = true;
     private HelpWindow? _helpWindow;
+    private AppLanguage _language = AppLanguage.English;
 
     public event EventHandler<bool>? OnCloseRequested;
 
@@ -28,7 +30,7 @@ public partial class HoneycombRulesView : UserControl
     public void Initialize(HoneycombViewModel vm)
     {
         _vm = vm;
-        
+
         // Deep copy options so Cancel discards changes
         _localOpts = new HoneycombOptions
         {
@@ -37,8 +39,64 @@ public partial class HoneycombRulesView : UserControl
             ManualRules = vm.Options.ManualRules != null ? new HashSet<HoneycombRule>(vm.Options.ManualRules) : new HashSet<HoneycombRule>(),
             BannedRules = vm.Options.BannedRules != null ? new HashSet<string>(vm.Options.BannedRules) : new HashSet<string>()
         };
-        
+
+        _language = SettingsService.LoadOptions().Language;
+        ApplyLocalization();
         SyncUI();
+    }
+
+    // Static labels/tooltips only — the Tag values driving BannedRules/ManualRules
+    // (see SyncUI/BanRule_Changed below) are untouched English identifiers, same as
+    // everywhere else in this pipeline.
+    private void ApplyLocalization()
+    {
+        OpponentLabel.Text = Strings.Get(StringKey.OpponentLabelColon, _language);
+        BabyBeeItem.Content = Strings.Get(StringKey.StatBabyBee, _language);
+        HoneyBeeItem.Content = Strings.Get(StringKey.StatHoneyBee, _language);
+        QueenBeeItem.Content = Strings.Get(StringKey.StatQueenBee, _language);
+        KillerBeeItem.Content = Strings.Get(StringKey.StatKillerBee, _language);
+        HoneycombHelpButton.Content = Strings.Get(StringKey.HelpHoneycomb, _language);
+
+        BanColumnHeaderText.Text = Strings.Get(StringKey.BanColumnHeader, _language);
+        PlayColumnHeaderText.Text = Strings.Get(StringKey.PlayColumnHeader, _language);
+        MatchRulesHintText.Text = Strings.Get(StringKey.MatchRulesHintWin, _language);
+        BanRemovesRuleHintText.Text = Strings.Get(StringKey.BanRemovesRuleHint, _language);
+
+        var normalModeExplanation = Strings.Get(StringKey.NormalModeBanListTooltip, _language);
+        RuleLabel_NormalMode.Text = Strings.Get(StringKey.ToggleNormalModeMac, _language);
+        RuleLabel_NormalMode.SetValue(ToolTip.TipProperty, normalModeExplanation);
+        Ban_NormalMode.SetValue(ToolTip.TipProperty, normalModeExplanation);
+        HoneycombRule_ForceNormal.SetValue(ToolTip.TipProperty, normalModeExplanation);
+        SetRuleLabel(RuleLabel_Ascension, HoneycombRule.Ascension);
+        SetRuleLabel(RuleLabel_Descension, HoneycombRule.Descension);
+        SetRuleLabel(RuleLabel_Same, HoneycombRule.Same);
+        SetRuleLabel(RuleLabel_Plus, HoneycombRule.Plus);
+        SetRuleLabel(RuleLabel_FallenAce, HoneycombRule.FallenAce);
+        SetRuleLabel(RuleLabel_AllOpen, HoneycombRule.AllOpen);
+        SetRuleLabel(RuleLabel_ThreeOpen, HoneycombRule.ThreeOpen);
+        SetRuleLabel(RuleLabel_Swap, HoneycombRule.Swap);
+        SetRuleLabel(RuleLabel_Order, HoneycombRule.Order);
+        SetRuleLabel(RuleLabel_Chaos, HoneycombRule.Chaos);
+        SetRuleLabel(RuleLabel_BombShelter, HoneycombRule.BombShelter);
+        SetRuleLabel(RuleLabel_Reverse, HoneycombRule.Reverse);
+        SetRuleLabel(RuleLabel_SuddenDeath, HoneycombRule.SuddenDeath);
+
+        SillyBeeWarning.Text = Strings.Get(StringKey.SillyBeeWarning, _language);
+        CancelButton.Content = Strings.Get(StringKey.Cancel, _language);
+        OkButton.Content = Strings.Get(StringKey.Ok, _language);
+    }
+
+    private void SetRuleLabel(TextBlock label, HoneycombRule rule)
+    {
+        var name = HoneycombRuleLocalization.LocalizedRuleName(rule, _language);
+        var explanation = HoneycombRuleLocalization.LocalizedRuleExplanation(rule, null, _language);
+        label.Text = name;
+        label.SetValue(ToolTip.TipProperty, explanation);
+        // The Ban checkbox one column to the left shares the same tooltip text.
+        var banCheckBox = this.FindControl<CheckBox>($"Ban_{rule}");
+        var ruleCheckBox = this.FindControl<CheckBox>($"HoneycombRule_{rule}");
+        banCheckBox?.SetValue(ToolTip.TipProperty, explanation);
+        ruleCheckBox?.SetValue(ToolTip.TipProperty, explanation);
     }
 
     private void SyncUI()

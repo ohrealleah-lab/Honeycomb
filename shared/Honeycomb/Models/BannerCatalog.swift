@@ -21,6 +21,12 @@ public struct BannerDefinition: Codable {
     public let gateChance: Double?
     public let fallback: String?
     public let messages: [String]
+    // Same length/order as `messages`, one Spanish translation per English
+    // message — "" for a message not yet translated (translation lands
+    // incrementally via the spreadsheet's Spanish column). `fallback` is NOT
+    // translated (see tools/generate_banner_catalog.py for why) — it stays
+    // English regardless of language.
+    public let messagesEs: [String]
 }
 
 // What `BannerCatalog.fire(_:)` decided should actually show.
@@ -87,6 +93,11 @@ public final class BannerCatalog {
     // every change; nothing else should ever set it.
     public static var honeyModeEnabled: Bool = true
 
+    // Same pattern as honeyModeEnabled above, for the same reason (ViewModels don't
+    // hold an AppCoordinator reference). AppCoordinator pushes into this on init and
+    // on every language change.
+    public static var currentLanguage: AppLanguage = .english
+
     // Decides what should show for `id` firing right now. `tokens` fills in
     // any `{PlaceholderName}` markers in the chosen text (e.g.
     // ["OpponentName": "Baby Bee"], ["ComboCount": "4"]).
@@ -110,8 +121,21 @@ public final class BannerCatalog {
             guard let fallback = def.fallback else { return .none }
             return .fallback(Self.substitute(fallback, tokens: tokens))
         }
-        guard let message = def.messages.randomElement() else { return .none }
+        guard let message = Self.pickMessage(from: def) else { return .none }
         return .message(Self.substitute(message, tokens: tokens))
+    }
+
+    // English: any message in the pool. Spanish: only messages that actually have
+    // a translation ("" means the translator explicitly marked it "No
+    // Translation," or it hasn't been translated yet) — if none of this entry's
+    // messages are translated, the entry has nothing eligible to show in Spanish
+    // and the banner is suppressed for that fire (per product decision: don't
+    // show English filler in an otherwise-Spanish session), same as any other
+    // catalog entry with no eligible content.
+    private static func pickMessage(from def: BannerDefinition) -> String? {
+        guard currentLanguage == .spanish else { return def.messages.randomElement() }
+        let eligible = def.messagesEs.filter { !$0.isEmpty }
+        return eligible.randomElement()
     }
 
     private static func substitute(_ text: String, tokens: [String: String]) -> String {

@@ -109,7 +109,7 @@ public struct HoneycombDecksView: View {
 
     private var statSearchWidget: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Freeform search: type a value onto the card to filter the bank.")
+            Text(coordinator.L(.statSearchHint))
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -149,10 +149,10 @@ public struct HoneycombDecksView: View {
 
             VStack(spacing: 0) {
                 HStack {
-                    Text("Saved Decks & Card Bank")
+                    Text(coordinator.L(.sheetTitleMac))
                         .font(.system(size: 22, weight: .bold))
                     Spacer()
-                    Button("Done") { dismiss() }
+                    Button(coordinator.L(.done)) { dismiss() }
                         .buttonStyle(.borderedProminent)
                 }
                 .padding()
@@ -164,7 +164,7 @@ public struct HoneycombDecksView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         statSearchWidget
 
-                        Text("SAVED DECKS")
+                        Text(coordinator.L(.savedDecksHeader))
                             .font(.caption).bold()
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
@@ -192,7 +192,7 @@ public struct HoneycombDecksView: View {
                     // Right: Card Bank
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("CARD BANK (\(profile.unlockedCardIds.count) of \(HoneycombDatabase.shared.allCards.count))")
+                            Text(coordinator.L(.cardBankCountFmt, profile.unlockedCardIds.count, HoneycombDatabase.shared.allCards.count))
                                 .font(.caption).bold()
                                 .foregroundColor(.secondary)
                             Spacer()
@@ -260,10 +260,10 @@ public struct HoneycombDecksView: View {
 
     private var startOverPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Want a fresh start? Starting over clears your saved decks and card bank, then reseeds the game with a whole new set of cards.")
+            Text(coordinator.L(.startOverBody))
                 .foregroundColor(.white)
 
-            Button("Start Over") {
+            Button(coordinator.L(.startOver)) {
                 showStartOverConfirmation = true
             }
             .buttonStyle(.borderedProminent)
@@ -274,11 +274,11 @@ public struct HoneycombDecksView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.red)
         .cornerRadius(10)
-        .alert("Start Over?", isPresented: $showStartOverConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Start Over", role: .destructive) { performStartOver() }
+        .alert(coordinator.L(.startOverTitle), isPresented: $showStartOverConfirmation) {
+            Button(coordinator.L(.cancel), role: .cancel) {}
+            Button(coordinator.L(.startOver), role: .destructive) { performStartOver() }
         } message: {
-            Text("Starting over reseeds the game with an entirely new set of cards. All saved decks and card bank progress. This can't be undone.")
+            Text(coordinator.L(.startOverAlertBody))
         }
     }
 
@@ -287,7 +287,7 @@ public struct HoneycombDecksView: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 if deck.name.isEmpty {
-                    Text("Empty Slot \(index + 1)").foregroundColor(.secondary)
+                    Text(coordinator.L(.emptySlotFmt, index + 1)).foregroundColor(.secondary)
                 } else {
                     Text(deck.name).bold()
                 }
@@ -298,13 +298,13 @@ public struct HoneycombDecksView: View {
                 // in. No separate "(Active)" label — the disabled button state plus
                 // the row's felt-tinted background/border already say it.
                 if !deck.name.isEmpty {
-                    Button(activeDeckIndex == index ? "Active" : "Set Active") {
+                    Button(activeDeckIndex == index ? coordinator.L(.deckActiveBadge) : coordinator.L(.deckSetActive)) {
                         activeDeckIndex = index
                     }
                     .buttonStyle(.bordered)
                     .disabled(activeDeckIndex == index)
                 }
-                Button(deck.name.isEmpty ? "Create" : "Edit") {
+                Button(deck.name.isEmpty ? coordinator.L(.deckCreate) : coordinator.L(.edit)) {
                     editingDeckIndex = index
                     newDeckName = deck.name
                     editingDeckCards = deck.cardIds
@@ -337,22 +337,22 @@ public struct HoneycombDecksView: View {
     private var cardBankFilterBar: some View {
         HStack(spacing: 10) {
             Menu {
-                Button("All Stars") { filterStar = nil }
+                Button(coordinator.L(.allStarsFilter)) { filterStar = nil }
                 ForEach(1...5, id: \.self) { star in
-                    Button("\(star)★") { filterStar = star }
+                    Button(coordinator.L(.starCountFmt, star)) { filterStar = star }
                 }
             } label: {
-                filterChip(label: filterStar.map { "\($0)★" } ?? "All Stars")
+                filterChip(label: filterStar.map { coordinator.L(.starCountFmt, $0) } ?? coordinator.L(.allStarsFilter))
             }
 
             Menu {
-                Button("All Suits") { filterSuit = nil }
-                Button("♠ Spades") { filterSuit = "S" }
-                Button("♥ Hearts") { filterSuit = "H" }
-                Button("♦ Diamonds") { filterSuit = "D" }
-                Button("♣ Clubs") { filterSuit = "C" }
+                Button(coordinator.L(.allSuitsFilter)) { filterSuit = nil }
+                Button(coordinator.L(.suitSpades)) { filterSuit = "S" }
+                Button(coordinator.L(.suitHearts)) { filterSuit = "H" }
+                Button(coordinator.L(.suitDiamonds)) { filterSuit = "D" }
+                Button(coordinator.L(.suitClubs)) { filterSuit = "C" }
             } label: {
-                filterChip(label: filterSuit.map { suitLabel($0) } ?? "All Suits")
+                filterChip(label: filterSuit.map { suitLabel($0) } ?? coordinator.L(.allSuitsFilter))
             }
 
             Button {
@@ -361,7 +361,7 @@ public struct HoneycombDecksView: View {
                 HStack(spacing: 4) {
                     Image(systemName: filterFavoritesOnly ? "heart.fill" : "heart")
                         .foregroundColor(filterFavoritesOnly ? .red : .primary)
-                    Text("Favorites").font(.caption).bold()
+                    Text(coordinator.L(.favoritesFilter)).font(.caption).bold()
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
@@ -371,7 +371,7 @@ public struct HoneycombDecksView: View {
             .buttonStyle(.plain)
 
             if filterStar != nil || filterSuit != nil || filterFavoritesOnly {
-                Button("Clear") {
+                Button(coordinator.L(.clearFilters)) {
                     filterStar = nil
                     filterSuit = nil
                     filterFavoritesOnly = false
@@ -397,10 +397,10 @@ public struct HoneycombDecksView: View {
 
     private func suitLabel(_ suit: String) -> String {
         switch suit {
-        case "S": return "♠ Spades"
-        case "H": return "♥ Hearts"
-        case "D": return "♦ Diamonds"
-        case "C": return "♣ Clubs"
+        case "S": return coordinator.L(.suitSpades)
+        case "H": return coordinator.L(.suitHearts)
+        case "D": return coordinator.L(.suitDiamonds)
+        case "C": return coordinator.L(.suitClubs)
         default: return suit
         }
     }
@@ -408,9 +408,9 @@ public struct HoneycombDecksView: View {
     @ViewBuilder
     private func deckBuilder(wrapper: DeckEditWrapper) -> some View {
         VStack(spacing: 20) {
-            Text("Deck Builder").font(.largeTitle).bold()
+            Text(coordinator.L(.deckBuilderTitle)).font(.largeTitle).bold()
 
-            TextField("Deck Name (Max 20 chars)", text: $newDeckName)
+            TextField(coordinator.L(.deckNamePlaceholder), text: $newDeckName)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .frame(width: 300)
 
@@ -420,7 +420,7 @@ public struct HoneycombDecksView: View {
 
             // Current Deck
             VStack {
-                Text("Your Deck (\(editingDeckCards.count)/5) - Tap to Remove").font(.headline)
+                Text(coordinator.L(.yourDeckCountFmt, editingDeckCards.count)).font(.headline)
                 HStack {
                     ForEach(0..<5) { i in
                         if i < editingDeckCards.count {
@@ -450,8 +450,8 @@ public struct HoneycombDecksView: View {
 
             // Card Bank for Selection — shares the same suit/star filter as the main view.
             VStack(alignment: .leading, spacing: 8) {
-                Text("Card Bank - Tap to Add").font(.headline)
-                Text("Maximum one 5★ and one 4★ card per deck. Two 4★ cards can be used without a 5★.")
+                Text(coordinator.L(.cardBankTapToAdd)).font(.headline)
+                Text(coordinator.L(.deckRulesHint))
                     .font(.caption)
                     .foregroundColor(.secondary)
                 cardBankFilterBar
@@ -473,7 +473,7 @@ public struct HoneycombDecksView: View {
                                     // needed). No confirmation: re-adding the card is one tap away.
                                     .contextMenu {
                                         if editingDeckCards.contains(cardId) {
-                                            Button("Remove from deck?") {
+                                            Button(coordinator.L(.contextRemoveFromDeck)) {
                                                 editingDeckCards.removeAll { $0 == cardId }
                                                 validateDeck()
                                             }
@@ -487,8 +487,8 @@ public struct HoneycombDecksView: View {
             }
 
             HStack(spacing: 40) {
-                Button("Cancel") { editingDeckIndex = nil }
-                Button("Save Deck") {
+                Button(coordinator.L(.cancel)) { editingDeckIndex = nil }
+                Button(coordinator.L(.btnSaveDeck)) {
                     if validationError == nil && editingDeckCards.count == 5 && !newDeckName.isEmpty {
                         profile.saveDeck(index: wrapper.index, name: newDeckName, cardIds: editingDeckCards)
                         editingDeckIndex = nil
@@ -515,13 +515,13 @@ public struct HoneycombDecksView: View {
         }
 
         if fiveStars > 1 {
-            validationError = "A deck can never contain more than one 5★ card."
+            validationError = coordinator.L(.errTooMany5star)
         } else if fiveStars == 1 && fourStars > 1 {
-            validationError = "If you have a 5★ card, you can only have one 4★ card."
+            validationError = coordinator.L(.err5star4starCombo)
         } else if fiveStars == 0 && fourStars > 2 {
-            validationError = "A deck can never contain more than two 4★ cards."
+            validationError = coordinator.L(.errTooMany4star)
         } else if newDeckName.count > 20 {
-            validationError = "Deck name cannot exceed 20 characters."
+            validationError = coordinator.L(.errNameTooLong)
         } else {
             validationError = nil
         }
