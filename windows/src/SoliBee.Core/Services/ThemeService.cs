@@ -172,16 +172,23 @@ public static class ThemeService
     // Overwrites the saved theme with the given id using the current live settings,
     // keeping that theme's existing id and name unchanged. Works on default presets
     // too — no special-casing based on theme origin, same as DeleteTheme.
-    public static void UpdateTheme(Guid id, GameOptions options)
+    // Returns false when `id` doesn't match any saved theme (e.g. it was deleted out
+    // from under an in-memory GameOptions still pointing at it) — callers that live-save
+    // on every edit (PreferencesView's FaceCardArtChangedMessage hook) should treat a
+    // false return as "there's no active theme to save into anymore" and clear
+    // options.ActiveThemeId, rather than silently retrying this same no-op on every
+    // future edit until a theme switch discards whatever wasn't actually being saved.
+    public static bool UpdateTheme(Guid id, GameOptions options)
     {
         var themes = LoadThemes();
         int idx = themes.FindIndex(t => t.Id == id);
-        if (idx < 0) return;
+        if (idx < 0) return false;
 
         var updated = SnapshotFromOptions(themes[idx].Name, options);
         updated.Id = id;
         themes[idx] = updated;
         SaveThemes(themes);
+        return true;
     }
 
     public static void RenameTheme(Guid id, string newName)

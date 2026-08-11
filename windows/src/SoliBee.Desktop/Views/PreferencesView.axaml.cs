@@ -87,7 +87,10 @@ public partial class PreferencesView : UserControl
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
         {
             if (DataContext is GameOptions options && options.ActiveThemeId.HasValue)
-                ThemeService.UpdateTheme(options.ActiveThemeId.Value, options);
+            {
+                if (!ThemeService.UpdateTheme(options.ActiveThemeId.Value, options))
+                    options.ActiveThemeId = null; // stale id (its theme was deleted) — see UpdateTheme's doc comment
+            }
         });
     }
 
@@ -912,6 +915,22 @@ public partial class PreferencesView : UserControl
     {
         ConfirmDeleteThemeOverlay.IsVisible = false;
         if (_themeToDelete == null) return;
+
+        // Deleting the currently-active theme must clear ActiveThemeId, not just remove
+        // it from themes.json — otherwise it's left pointing at an id that no longer
+        // exists, and ThemeService.UpdateTheme's own "theme not found" guard silently
+        // no-ops on every future live-save (see its `if (idx < 0) return;`). That turns
+        // live-save into a permanent, undetectable no-op: face-art edits keep appearing
+        // to work, but nothing is actually being persisted, until the next Apply wipes
+        // them via FaceCardArtService.ReplaceAll with zero warning.
+        if (DataContext is GameOptions options && options.ActiveThemeId == _themeToDelete.Id)
+        {
+            options.ActiveThemeId = null;
+            SettingsService.SaveOptions(options);
+            if (_originalGameOptions != null && _originalGameOptions.ActiveThemeId == _themeToDelete.Id)
+                _originalGameOptions.ActiveThemeId = null;
+        }
+
         ThemeService.DeleteTheme(_themeToDelete.Id);
         _themeToDelete = null;
         RefreshThemeList();
@@ -1880,7 +1899,8 @@ public partial class PreferencesView : UserControl
         // user-paced edits, not a hot path).
         if (options.ActiveThemeId.HasValue)
         {
-            ThemeService.UpdateTheme(options.ActiveThemeId.Value, options);
+            if (!ThemeService.UpdateTheme(options.ActiveThemeId.Value, options))
+                options.ActiveThemeId = null; // stale id (its theme was deleted) — see UpdateTheme's doc comment
             if (ThemesPanel.IsVisible) RefreshThemeList();
         }
 
