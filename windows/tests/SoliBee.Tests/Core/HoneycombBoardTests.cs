@@ -187,8 +187,102 @@ public class HoneycombBoardTests
 
         board.PlaceCard(CreateCard(1, new[] {5,5,5,5}, 1, "S"), 0, rules);
         Assert.Equal(-1, board.Cells[0].Card!.Modifier);
-        
+
         // Test clamping (Stat method)
-        Assert.Equal(4, board.Cells[0].Card!.Stat(0)); 
+        Assert.Equal(4, board.Cells[0].Card!.Stat(0));
+    }
+
+    [Fact]
+    public void PlainCapture_DoesNotFlipOwnCard()
+    {
+        var board = new HoneycombBoard();
+        var rules = new HashSet<HoneycombRule>();
+
+        // Same shape as PlainCapture_HigherBeatsLower, but the neighbor belongs to the
+        // SAME owner as the attacker — a stronger facing stat must never flip your own card.
+        board.PlaceCard(CreateCard(1, new[] {5,5,2,5}, 1), 4, rules); // Player center, bottom=2
+        var flipped = board.PlaceCard(CreateCard(2, new[] {6,5,5,5}, 1), 7, rules); // Player bottom, top=6
+
+        Assert.Empty(flipped);
+        Assert.Equal(1, board.Cells[4].Card!.Owner);
+    }
+
+    [Fact]
+    public void Same_DoesNotTriggerWhenAllMatchesAreOwnCards()
+    {
+        var board = new HoneycombBoard();
+        var rules = new HashSet<HoneycombRule> { HoneycombRule.Same };
+
+        // Both matching neighbors already belong to the attacker's own side — nothing
+        // should flip, and the trigger flag/session count must not fire since nothing
+        // actually happened.
+        board.PlaceCard(CreateCard(1, new[] {5,5,5,5}, 1), 1, rules); // Player top, bottom=5
+        board.PlaceCard(CreateCard(2, new[] {5,5,5,5}, 1), 3, rules); // Player left, right=5
+
+        var flipped = board.PlaceCard(CreateCard(3, new[] {5,5,5,5}, 1), 4, rules);
+
+        Assert.Empty(flipped);
+        Assert.False(board.LastSameTriggered);
+        Assert.Equal(0, board.SessionSamePlusTriggers);
+    }
+
+    [Fact]
+    public void SamePlus_SingleMatchDoesNotTrigger()
+    {
+        var board = new HoneycombBoard();
+        var rules = new HashSet<HoneycombRule> { HoneycombRule.Same, HoneycombRule.Plus };
+
+        // Only one neighbor, with a stat exactly equal to the attacker's (a Same match)
+        // — a single match never triggers Same/Plus, and equal stats don't win a plain
+        // capture either (attacker needs to be strictly greater) — nothing should flip.
+        board.PlaceCard(CreateCard(1, new[] {5,5,5,5}, 2), 1, rules); // Opponent top, bottom=5
+
+        var flipped = board.PlaceCard(CreateCard(2, new[] {5,5,5,5}, 1), 4, rules); // Player center, top=5
+
+        Assert.Empty(flipped);
+        Assert.False(board.LastSameTriggered);
+        Assert.False(board.LastPlusTriggered);
+    }
+
+    [Fact]
+    public void FaceDownNeighbor_IsIgnoredByCaptureAndSamePlus()
+    {
+        var board = new HoneycombBoard();
+        var rules = new HashSet<HoneycombRule> { HoneycombRule.Same, HoneycombRule.Plus };
+
+        // A face-down (Bomb Shelter) neighbor must be invisible to both plain captures
+        // and Same/Plus matching — even though its stats would otherwise lose/match.
+        board.PlaceCard(CreateCard(1, new[] {1,1,1,1}, 2), 1, rules); // Opponent top, weak
+        board.Cells[1].Card!.IsFaceDown = true;
+
+        var flipped = board.PlaceCard(CreateCard(2, new[] {9,5,5,5}, 1), 4, rules); // Player center, top=9
+
+        Assert.Empty(flipped);
+        Assert.True(board.Cells[1].Card!.IsFaceDown);
+        Assert.Equal(2, board.Cells[1].Card!.Owner); // still the opponent's
+    }
+
+    [Fact]
+    public void PlaceCard_OnOccupiedCellIsNoOp()
+    {
+        var board = new HoneycombBoard();
+        var rules = new HashSet<HoneycombRule>();
+
+        board.PlaceCard(CreateCard(1, new[] {1,1,1,1}, 2), 4, rules);
+        var flipped = board.PlaceCard(CreateCard(2, new[] {9,9,9,9}, 1), 4, rules);
+
+        Assert.Empty(flipped);
+        Assert.Equal(1, board.Cells[4].Card!.Data.Id);
+    }
+
+    [Fact]
+    public void PlaceCard_OutOfBoundsIsNoOp()
+    {
+        var board = new HoneycombBoard();
+        var rules = new HashSet<HoneycombRule>();
+
+        var flipped = board.PlaceCard(CreateCard(1, new[] {9,9,9,9}, 1), 9, rules);
+
+        Assert.Empty(flipped);
     }
 }
