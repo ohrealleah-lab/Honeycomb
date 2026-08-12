@@ -80,6 +80,8 @@ public enum StringKey: String, CaseIterable {
     case hideHintButton = "hide_hint_button"
     /// Toggle label, reused across every game's Options on Mac/iOS/Windows
     case manuallyDismissBanners = "manually_dismiss_banners"
+    /// Mac-only dev menu title (SoliBeeApp's CommandMenu) for the banner-review debug tool
+    case debugBannersMenu = "debug_banners_menu"
     /// Toggle label (Windows short form; Mac/iOS use 'Vegas Scoring Mode' — separate key)
     case vegasScoring = "vegas_scoring"
     /// Toggle label, longer form used on Mac/iOS Klondike Options

@@ -10,25 +10,28 @@
         <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared static
              soft gold halo (no offset, 16px blur, 50% opacity — matches the Mac
              original's .shadow(color: gold.opacity(0.5), radius: 16)). -->
-        <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320">
+        <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="380">
             <StackPanel Spacing="12" HorizontalAlignment="Center">
                 <TextBlock x:Name="TitleText" Text="Game Over" FontSize="36" FontWeight="Black"
                            Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
-                           TextAlignment="Center"/>
+                           TextAlignment="Center" TextWrapping="Wrap"/>
 
                 <TextBlock x:Name="BodyText" Text="No moves remaining." FontSize="14" FontWeight="Bold"
                            Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI"
-                           TextAlignment="Center"/>
+                           TextAlignment="Center" TextWrapping="Wrap"/>
 
                 <!-- Hidden label to compile with code-behind -->
                 <TextBlock x:Name="NoMovesStatsLabel" IsVisible="False" />
 
                 <ContentControl Content="{Binding $parent[local:StuckBanner].ExtraContent}" />
 
-                <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
-                    <Button x:Name="NewGameButton" Classes="banner-action" Content="New Game" Click="NewGame_Click"/>
-                    <Button x:Name="RestartGameButton" Classes="banner-action" Content="Restart Game" Click="Restart_Click"/>
-                </StackPanel>
+                <!-- WrapPanel (not StackPanel) so longer translated button labels (e.g.
+                     Spanish "Reiniciar Partida") drop to a second line instead of
+                     overflowing past the banner's MaxWidth. -->
+                <WrapPanel HorizontalAlignment="Center">
+                    <Button x:Name="NewGameButton" Classes="banner-action" Content="New Game" Click="NewGame_Click" Margin="0,0,12,8"/>
+                    <Button x:Name="RestartGameButton" Classes="banner-action" Content="Restart Game" Click="Restart_Click" Margin="0,0,0,8"/>
+                </WrapPanel>
             </StackPanel>
         </Border>
         <!-- Dismiss button anchored TopRight, overlapping corner -->

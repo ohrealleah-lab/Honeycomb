@@ -84,6 +84,8 @@ public partial class BlackjackView : UserControl
 
         VsDividerText.Text  = Strings.Get(StringKey.VsDivider, _language);
         IdlePromptText.Text = Strings.Get(StringKey.HitSpaceToDeal, _language);
+
+        BidBar.ApplyLanguage(_language);
     }
 
     private void BlackjackView_Loaded(object? sender, RoutedEventArgs e)

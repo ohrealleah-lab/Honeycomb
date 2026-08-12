@@ -105,6 +105,8 @@ public partial class VideoPokerView : UserControl
         NoWinHeadlineText.Text      = Strings.Get(StringKey.NotTodayPartner, _language);
         NoWinMinusText.Text         = Strings.Get(StringKey.BtnBetMinus, _language);
         NoWinCreditsSuffixText.Text = " " + Strings.Get(StringKey.MinusCreditsSuffix, _language);
+
+        BidBar.ApplyLanguage(_language);
     }
 
     private void UpdateDealDrawButton()
@@ -674,6 +676,11 @@ public partial class VideoPokerView : UserControl
         "Four Deuces"         => Strings.Get(StringKey.HandFourDeuces, _language),
         "Natural Royal Flush" => Strings.Get(StringKey.HandNaturalRoyalFlush, _language),
         "Wild Royal Flush"    => Strings.Get(StringKey.HandWildRoyalFlush, _language),
+        // Deuces Wild's pay table (VideoPokerViewModel.DeucesTable) names these two
+        // rows "Natural Royal"/"Wild Royal" (no "Flush") to keep the paytable column
+        // narrow — same hands, so they resolve to the same localized strings as above.
+        "Natural Royal"       => Strings.Get(StringKey.HandNaturalRoyalFlush, _language),
+        "Wild Royal"          => Strings.Get(StringKey.HandWildRoyalFlush, _language),
         "No Win"              => Strings.Get(StringKey.HandNoWin, _language),
         _ => handName,
     };

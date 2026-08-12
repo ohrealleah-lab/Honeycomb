@@ -80,7 +80,7 @@
                      side/direction dropdowns: type a value onto the mini card at the
                      position it actually appears on a real card, and the grid filters
                      live. Leaving a box empty means "don't filter on that side". -->
-                <TextBlock Grid.Row="0" Text="Freeform search: type a value onto the card to filter the bank."
+                <TextBlock x:Name="StatSearchHintText" Grid.Row="0" Text="Freeform search: type a value onto the card to filter the bank."
                            FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                 <Border Grid.Row="1" Width="96" Height="128" HorizontalAlignment="Center"

@@ -716,6 +716,23 @@ public partial class PreferencesView : UserControl
         shared.Language = language;
         NotifySettingsChanged(shared);
         ApplyLocalization(language);
+
+        if (ActiveGameFamily is "Klondike" or "Freecell" or "Spider")
+        {
+            // PopulateGameModeCombo rebuilds the combo's selection from the saved
+            // options, which would silently discard a pending-but-not-yet-confirmed
+            // game-mode change (e.g. user picked Draw 3 but hasn't clicked OK yet) —
+            // capture it here and re-apply it after relabeling so it survives.
+            string? pendingTag = TryGetPendingGameModeChange(out var tag) ? tag : null;
+            PopulateGameModeCombo(shared, ActiveGameFamily);
+            if (pendingTag != null)
+            {
+                foreach (var comboItem in GameModeCombo.Items.OfType<ComboBoxItem>())
+                {
+                    if (comboItem.Tag?.ToString() == pendingTag) { GameModeCombo.SelectedItem = comboItem; break; }
+                }
+            }
+        }
     }
 
     // ── Game Mode ─────────────────────────────────────────────────────────────
@@ -723,23 +740,24 @@ public partial class PreferencesView : UserControl
     private void PopulateGameModeCombo(GameOptions options, string family)
     {
         GameModeCombo.Items.Clear();
+        var language = options.Language;
         string currentTag;
         switch (family)
         {
             case "Klondike":
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "Draw 1", Tag = "SolitaireDraw1" });
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "Draw 3", Tag = "SolitaireDraw3" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = Strings.Get(StringKey.DrawOne, language), Tag = "SolitaireDraw1" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = Strings.Get(StringKey.DrawThree, language), Tag = "SolitaireDraw3" });
                 currentTag = options.IsDrawConstraintsEnabled ? "SolitaireDraw3" : "SolitaireDraw1";
                 break;
             case "Freecell":
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Deck Freecell", Tag = "Freecell1" });
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "2 Deck Freecell", Tag = "Freecell2" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = Strings.Get(StringKey.Option1deck, language), Tag = "Freecell1" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = Strings.Get(StringKey.Option2deck, language), Tag = "Freecell2" });
                 currentTag = options.FreecellDeckCount == 2 ? "Freecell2" : "Freecell1";
                 break;
             case "Spider":
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "1 Suit",  Tag = "Spider1" });
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "2 Suits", Tag = "Spider2" });
-                GameModeCombo.Items.Add(new ComboBoxItem { Content = "4 Suits", Tag = "Spider4" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = Strings.Get(StringKey.OptionSuits1, language), Tag = "Spider1" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = Strings.Get(StringKey.OptionSuits2, language), Tag = "Spider2" });
+                GameModeCombo.Items.Add(new ComboBoxItem { Content = Strings.Get(StringKey.OptionSuits4, language), Tag = "Spider4" });
                 currentTag = options.SpiderSuitCount switch { 2 => "Spider2", 4 => "Spider4", _ => "Spider1" };
                 break;
             default: return;
@@ -1272,6 +1290,13 @@ public partial class PreferencesView : UserControl
     {
         if (_isEditorOpen) return;
         if (DataContext is not GameOptions options) return;
+
+        // Scale/Offset only make sense for a custom (user-uploaded) card back — a
+        // built-in like Solibee/Moogle/Vulpera is a pre-composed bundled asset with no
+        // saved position to adjust, so double-clicking one is a silent no-op instead of
+        // opening an editor that doesn't actually do anything useful for it.
+        bool isCustom = options.CustomCardBacks.Exists(c => c.Name == options.CardBackTheme);
+        if (!isCustom) return;
 
         _isEditorOpen = true;
         try

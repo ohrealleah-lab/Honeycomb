@@ -191,6 +191,7 @@ public partial class MainWindow : Window
         HoneycombManageDecksButton.Content = Strings.Get(StringKey.ManageDecks, _language);
         HintButton.Content = Strings.Get(StringKey.Hint, _language);
         UndoButton.Content = Strings.Get(StringKey.Undo, _language);
+        DebugBannerButton.Content = Strings.Get(StringKey.DebugBannersMenu, _language);
 
         JacksOrBetterItem.Content = Strings.Get(StringKey.VariantJacksOrBetter, _language);
         DeucesWildItem.Content = Strings.Get(StringKey.VariantDeucesWild, _language);
@@ -1292,7 +1293,8 @@ public partial class MainWindow : Window
             {
                 _coordinator.GameViewModel.Options.IsDrawConstraintsEnabled = wantDrawThree;
                 SettingsService.SaveOptions(_coordinator.GameViewModel.Options);
-                _coordinator.GameViewModel.InitializeGame();
+                try { _coordinator.GameViewModel.InitializeGame(); }
+                catch (Exception ex) { CrashLogger.Log(ex, "ApplyGameSwitch(Klondike).InitializeGame"); }
             }
             _coordinator.SwitchToGame();
         }
@@ -1305,7 +1307,8 @@ public partial class MainWindow : Window
             {
                 opts.FreecellDeckCount = deckCount;
                 SettingsService.SaveOptions(opts);
-                _coordinator.FreecellViewModel.InitializeGame();
+                try { _coordinator.FreecellViewModel.InitializeGame(); }
+                catch (Exception ex) { CrashLogger.Log(ex, "ApplyGameSwitch(Freecell).InitializeGame"); }
             }
             _coordinator.SwitchToFreecell();
         }
@@ -1323,7 +1326,8 @@ public partial class MainWindow : Window
             {
                 opts.SpiderSuitCount = suitCount;
                 SettingsService.SaveOptions(opts);
-                _coordinator.SpiderViewModel.InitializeGame();
+                try { _coordinator.SpiderViewModel.InitializeGame(); }
+                catch (Exception ex) { CrashLogger.Log(ex, "ApplyGameSwitch(Spider).InitializeGame"); }
             }
             _coordinator.SwitchToSpider();
         }
@@ -1350,16 +1354,29 @@ public partial class MainWindow : Window
         bool isNewView = !_cachedViews.TryGetValue(cacheKey, out var activeView);
         if (isNewView)
         {
-            activeView = cacheKey switch
+            // A view's construction/binding pass (not just the InitializeGame() calls
+            // above) is exactly where a half-initialized State from a caught
+            // InitializeGame() failure would surface as a second exception — guard it
+            // too, and bail out leaving whatever was on screen before rather than
+            // crash the whole app on a broken new view.
+            try
             {
-                "Game" => new GameView { DataContext = _coordinator.GameViewModel },
-                "Freecell" => new FreecellView { DataContext = _coordinator.FreecellViewModel },
-                "Spider" => new SpiderView { DataContext = _coordinator.SpiderViewModel },
-                "VideoPoker" => new VideoPokerView { DataContext = _coordinator.VideoPokerViewModel },
-                "Blackjack" => new BlackjackView { DataContext = _coordinator.BlackjackViewModel },
-                "Honeycomb" => new HoneycombView { DataContext = _coordinator.HoneycombViewModel },
-                _ => throw new InvalidOperationException($"Unhandled cache key: {cacheKey}")
-            };
+                activeView = cacheKey switch
+                {
+                    "Game" => new GameView { DataContext = _coordinator.GameViewModel },
+                    "Freecell" => new FreecellView { DataContext = _coordinator.FreecellViewModel },
+                    "Spider" => new SpiderView { DataContext = _coordinator.SpiderViewModel },
+                    "VideoPoker" => new VideoPokerView { DataContext = _coordinator.VideoPokerViewModel },
+                    "Blackjack" => new BlackjackView { DataContext = _coordinator.BlackjackViewModel },
+                    "Honeycomb" => new HoneycombView { DataContext = _coordinator.HoneycombViewModel },
+                    _ => throw new InvalidOperationException($"Unhandled cache key: {cacheKey}")
+                };
+            }
+            catch (Exception ex)
+            {
+                CrashLogger.Log(ex, $"ApplyGameSwitch({cacheKey}).ConstructView");
+                return;
+            }
             _cachedViews[cacheKey] = activeView;
         }
         this.MainContent.Content = activeView;
@@ -1982,11 +1999,11 @@ public partial class MainWindow : Window
         // 2. Responsive Toolbar
         bool isCompact = GameAreaGrid.Bounds.Width < 700;
         
-        if (NewGameButton != null) NewGameButton.Content = isCompact ? "➕" : "New Game";
-        if (RestartButton != null) RestartButton.Content = isCompact ? "🔄" : "Restart";
-        if (OptionsButton != null) OptionsButton.Content = isCompact ? "⚙️" : "Options";
-        if (HintButton != null)    HintButton.Content    = isCompact ? "💡" : "Hint";
-        if (UndoButton != null)    UndoButton.Content    = isCompact ? "↩️" : "Undo";
+        if (NewGameButton != null) NewGameButton.Content = isCompact ? "➕" : Strings.Get(StringKey.NewGame, _language);
+        if (RestartButton != null) RestartButton.Content = isCompact ? "🔄" : Strings.Get(StringKey.Restart, _language);
+        if (OptionsButton != null) OptionsButton.Content = isCompact ? "⚙️" : Strings.Get(StringKey.Options, _language);
+        if (HintButton != null)    HintButton.Content    = isCompact ? "💡" : Strings.Get(StringKey.Hint, _language);
+        if (UndoButton != null)    UndoButton.Content    = isCompact ? "↩️" : Strings.Get(StringKey.Undo, _language);
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)

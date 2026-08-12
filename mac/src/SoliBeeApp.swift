@@ -83,7 +83,7 @@ struct SoliBeeApp: App {
                 ))
             }
 
-            CommandMenu("Banners") {
+            CommandMenu(coordinator.L(.debugBannersMenu)) {
                 DebugBannerCommands(coordinator: coordinator)
             }
         }

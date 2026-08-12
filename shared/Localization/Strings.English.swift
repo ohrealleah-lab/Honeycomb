@@ -41,6 +41,7 @@ enum StringsEnglish {
         .honeyMode: "Honey Mode (Flavor)",
         .hideHintButton: "Hide Hint Button",
         .manuallyDismissBanners: "Manually Dismiss Banners",
+        .debugBannersMenu: "Banners",
         .vegasScoring: "Vegas Scoring",
         .vegasScoringMode: "Vegas Scoring Mode",
         .alwaysOnTop: "Always on Top",

@@ -187,6 +187,9 @@ public static class SettingsService
                 if (GetValue("SpiderSuitCount") is int spiderSuits)
                     options.SpiderSuitCount = spiderSuits;
 
+                if (GetValue("Language") is string langStr && Enum.TryParse<Localization.AppLanguage>(langStr, out var lang))
+                    options.Language = lang;
+
                 if (GetValue("HasAppliedDefaultTheme") is bool hat) options.HasAppliedDefaultTheme = hat;
                 if (GetValue("LastGameMode") is string lgm) options.LastGameMode = lgm;
                 if (GetValue("HoneycombActiveDeckIndex") is int hdi) options.HoneycombActiveDeckIndex = hdi;
@@ -288,6 +291,8 @@ public static class SettingsService
                 SetValue("FreecellDeckCount", options.FreecellDeckCount);
                 SetValue("SpiderSuitCount", options.SpiderSuitCount);
 
+                SetValue("Language", options.Language.ToString());
+
                 SetValue("HasAppliedDefaultTheme", options.HasAppliedDefaultTheme);
                 SetValue("LastGameMode", options.LastGameMode);
                 SetValue("HoneycombActiveDeckIndex", options.HoneycombActiveDeckIndex);
@@ -354,7 +359,15 @@ public static class SettingsService
                 Directory.CreateDirectory(FallbackDirectory);
             }
             var json = JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(FallbackFilePath, json);
+            // Write-then-replace: if the process dies mid-write (e.g. an unhandled
+            // exception during a game switch), the old settings.json is left intact
+            // instead of being truncated/corrupted, which previously meant every
+            // saved setting — including Language — silently reset to defaults on
+            // the next launch. The temp filename is per-call (not a fixed ".tmp"),
+            // so two overlapping SaveOptions calls can't collide on the same file.
+            var tempPath = FallbackFilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, FallbackFilePath, overwrite: true);
         }
         catch
         {

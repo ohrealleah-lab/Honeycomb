@@ -193,6 +193,7 @@ public partial class FreecellView : CardGameView
         HintToast.OnDismissed -= HintToast_OnDismissed;
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
         CardView.ClearPileViewCache(this);
         TopLevel.GetTopLevel(this)?.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
     }

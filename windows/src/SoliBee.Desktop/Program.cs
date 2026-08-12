@@ -22,6 +22,8 @@ class Program
         // folder in static field initializers, which trigger on first class use.
         AppDataMigration.EnsureMigrated();
 
+        CrashLogger.Install();
+
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

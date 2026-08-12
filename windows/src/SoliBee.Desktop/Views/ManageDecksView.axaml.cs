@@ -67,6 +67,7 @@ public partial class ManageDecksView : UserControl
 
         FavoritesFilter.Content = "♡ " + Strings.Get(StringKey.FavoritesFilter, language);
         EmptyFilterMessage.Text = Strings.Get(StringKey.NoCardsMatchFilter, language);
+        StatSearchHintText.Text = Strings.Get(StringKey.StatSearchHint, language);
 
         StartOverOverlayTitleText.Text = Strings.Get(StringKey.StartOverTitle, language);
         StartOverOverlayBodyText.Text = Strings.Get(StringKey.StartOverAlertBody, language);
@@ -204,7 +205,9 @@ public partial class ManageDecksView : UserControl
                 int capturedSlot = slot;
                 var makeActiveBtn = new Button
                 {
-                    Content    = isActive ? "Active" : "Make Active",
+                    Content    = isActive
+                        ? Strings.Get(StringKey.DeckActiveBadge, opts.Language)
+                        : Strings.Get(StringKey.DeckSetActive, opts.Language),
                     IsEnabled  = !isActive,
                     Classes    = { "light-secondary" }
                 };
@@ -221,7 +224,9 @@ public partial class ManageDecksView : UserControl
             int capturedSlotEdit = slot;
             var editBtn = new Button
             {
-                Content = hasDeck ? "Edit" : "Create",
+                Content = hasDeck
+                    ? Strings.Get(StringKey.Edit, opts.Language)
+                    : Strings.Get(StringKey.DeckCreate, opts.Language),
                 Classes = { "light-secondary" }
             };
             editBtn.Click += (_, e) =>
@@ -237,7 +242,7 @@ public partial class ManageDecksView : UserControl
             var nameLine = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
             nameLine.Children.Add(new TextBlock
             {
-                Text       = deckState.Name,
+                Text       = LocalizedDeckName(deckState.Name, slot, opts.Language),
                 FontWeight = FontWeight.Bold,
                 FontSize   = 15,
                 Foreground = Brushes.Black,
@@ -279,6 +284,24 @@ public partial class ManageDecksView : UserControl
 
             DecksListPanel.Children.Add(card);
         }
+    }
+
+    // Saved deck names are stored in English ("Default", "Empty Slot %d") so the
+    // save format stays portable across languages — only the display is localized,
+    // and only for names still matching the canonical default FOR THAT SLOT (slot 0
+    // is "Default", slot N is "Empty Slot {N+1}"). A user can name a deck anything
+    // up to 20 characters (see HoneycombDeck.ValidateDeck), including something that
+    // happens to collide with a reserved default string in the wrong slot — checking
+    // the slot number too, not just the text, keeps that from being relabeled.
+    private static string LocalizedDeckName(string name, int slot, AppLanguage language)
+    {
+        if (slot == 0 && name == "Default")
+            return Strings.Get(StringKey.DeckDefaultName, language);
+
+        if (name == $"Empty Slot {slot + 1}")
+            return Strings.Get(StringKey.EmptySlotFmt, language).Replace("%d", (slot + 1).ToString());
+
+        return name;
     }
 
     // ── Card bank panel ───────────────────────────────────────────────────
