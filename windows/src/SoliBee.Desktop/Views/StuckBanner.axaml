@@ -12,11 +12,11 @@
              original's .shadow(color: gold.opacity(0.5), radius: 16)). -->
         <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320">
             <StackPanel Spacing="12" HorizontalAlignment="Center">
-                <TextBlock Text="Game Over" FontSize="36" FontWeight="Black"
+                <TextBlock x:Name="TitleText" Text="Game Over" FontSize="36" FontWeight="Black"
                            Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
                            TextAlignment="Center"/>
 
-                <TextBlock Text="No moves remaining." FontSize="14" FontWeight="Bold"
+                <TextBlock x:Name="BodyText" Text="No moves remaining." FontSize="14" FontWeight="Bold"
                            Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI"
                            TextAlignment="Center"/>
 
@@ -26,8 +26,8 @@
                 <ContentControl Content="{Binding $parent[local:StuckBanner].ExtraContent}" />
 
                 <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
-                    <Button Classes="banner-action" Content="New Game" Click="NewGame_Click"/>
-                    <Button Classes="banner-action" Content="Restart Game" Click="Restart_Click"/>
+                    <Button x:Name="NewGameButton" Classes="banner-action" Content="New Game" Click="NewGame_Click"/>
+                    <Button x:Name="RestartGameButton" Classes="banner-action" Content="Restart Game" Click="Restart_Click"/>
                 </StackPanel>
             </StackPanel>
         </Border>

@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
@@ -7,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using SkiaSharp;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 
@@ -47,6 +49,18 @@ public partial class FaceCardArtEditorWindow : Window
         string suitChar = _slot.GetSuitSymbol();
         var color = isRed ? Color.Parse("#CC1A1A") : Color.Parse("#1A1A1A");
         var brush = new SolidColorBrush(color);
+
+        var language = SettingsService.LoadOptions().Language;
+        var titleFmt = Strings.Get(StringKey.EditFaceCardArtTitleFmt, language);
+        int firstArg = titleFmt.IndexOf("%@", StringComparison.Ordinal);
+        titleFmt = titleFmt.Remove(firstArg, 2).Insert(firstArg, rankLabel);
+        int secondArg = titleFmt.IndexOf("%@", firstArg + rankLabel.Length, StringComparison.Ordinal);
+        Title = titleFmt.Remove(secondArg, 2).Insert(secondArg, suitChar);
+        ScaleLabelText.Text = Strings.Get(StringKey.ScaleFactorLabel, language);
+        HorizontalOffsetLabelText.Text = Strings.Get(StringKey.HorizontalPositionLabel, language);
+        VerticalOffsetLabelText.Text = Strings.Get(StringKey.VerticalPositionLabel, language);
+        CancelButton.Content = Strings.Get(StringKey.Cancel, language);
+        SaveButton.Content = Strings.Get(StringKey.Save, language);
 
         PreviewRankText.Text = rankLabel;
         PreviewRankTextBottom.Text = rankLabel;

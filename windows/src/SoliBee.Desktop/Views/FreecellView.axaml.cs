@@ -142,6 +142,7 @@ public partial class FreecellView : CardGameView
             vm.PropertyChanged += ViewModel_PropertyChanged;
             vm.OnFlashBanner += Vm_OnFlashBanner;
             ApplyFeltColor(vm.Options);
+            ApplyBannerLocalization(vm.Options.Language);
             BindPiles(vm);
             vm.CheckLoadingBanner();
         }
@@ -150,6 +151,8 @@ public partial class FreecellView : CardGameView
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
             Dispatcher.UIThread.InvokeAsync(RefreshAllPiles));
+        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
+            ApplyBannerLocalization(m.Options.Language));
     }
 
     private void Vm_OnFlashBanner(string message)

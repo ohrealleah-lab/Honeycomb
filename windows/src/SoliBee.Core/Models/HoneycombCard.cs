@@ -1,4 +1,5 @@
 using System;
+using SoliBee.Core.Localization;
 
 namespace SoliBee.Core.Models;
 
@@ -16,6 +17,21 @@ public class HoneycombCardData
         "H" => "Hearts",
         "D" => "Diamonds",
         "C" => "Clubs",
+        _ => code
+    };
+
+    // Localized plain suit name (no symbol prefix, unlike SuitSpades/etc's deck-filter
+    // labels) — for sentence-embedded contexts like the persistent Rules bar's
+    // "Ascension: Spades, Hearts". Deliberately separate from SuitDisplayName above,
+    // which stays English at every call site inside the deep gameplay-logic banner
+    // construction (FormatRuleForBanner and friends) and GetExplanation(activeSuits) —
+    // both left unlocalized by product decision, see HoneycombRuleLocalization.cs.
+    public static string LocalizedSuitName(string code, AppLanguage language) => code switch
+    {
+        "S" => Strings.Get(StringKey.SuitNameSpadesPlain, language),
+        "H" => Strings.Get(StringKey.SuitNameHeartsPlain, language),
+        "D" => Strings.Get(StringKey.SuitNameDiamondsPlain, language),
+        "C" => Strings.Get(StringKey.SuitNameClubsPlain, language),
         _ => code
     };
 }

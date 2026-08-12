@@ -5,6 +5,8 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using SoliBee.Core.Localization;
+using SoliBee.Core.Services;
 
 namespace SoliBee.Desktop.Views;
 
@@ -27,6 +29,15 @@ public partial class CardBackEditorWindow : Window
 
     private void OnLoaded(Bitmap image, double scale, double offsetX, double offsetY)
     {
+        var language = SettingsService.LoadOptions().Language;
+        Title = Strings.Get(StringKey.EditCardBackTitle, language);
+        ScaleLabelText.Text = Strings.Get(StringKey.ScaleFactorLabel, language);
+        HorizontalOffsetLabelText.Text = Strings.Get(StringKey.HorizontalPositionLabel, language);
+        VerticalOffsetLabelText.Text = Strings.Get(StringKey.VerticalPositionLabel, language);
+        FillNote.Text = Strings.Get(StringKey.CardBackFillNote, language);
+        CancelButton.Content = Strings.Get(StringKey.Cancel, language);
+        SaveButton.Content = Strings.Get(StringKey.Save, language);
+
         if (_isFill)
         {
             PreviewImage.Source = image;

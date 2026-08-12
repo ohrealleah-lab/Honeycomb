@@ -922,7 +922,7 @@ public struct HoneycombView: View {
                 // until the player notices it in play.
                 if rule == .ascension || rule == .descension, !viewModel.ascensionDescensionSuits.isEmpty {
                     let suitNames = viewModel.ascensionDescensionSuits.sorted()
-                        .map { HoneycombCardData.suitDisplayName($0) }
+                        .map { HoneycombCardData.localizedSuitName($0, language: coordinator.language) }
                     return coordinator.L(.ruleLineSuitFmt, honeycombLocalizedRuleName(rule.rawValue, language: coordinator.language), suitNames.joined(separator: ", "))
                 }
                 return honeycombLocalizedRuleName(rule.rawValue, language: coordinator.language)

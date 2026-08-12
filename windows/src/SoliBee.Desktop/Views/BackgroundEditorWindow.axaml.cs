@@ -5,6 +5,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Services;
 
 namespace SoliBee.Desktop.Views;
@@ -44,7 +45,15 @@ public partial class BackgroundEditorWindow : Window
 
     private void OnLoaded(Bitmap image, string initialName, double scale, double offsetX, double offsetY)
     {
-        Title = _isNew ? "Add Background" : "Edit Background";
+        var language = SettingsService.LoadOptions().Language;
+        Title = Strings.Get(_isNew ? StringKey.AddBackgroundTitle : StringKey.EditBackgroundTitle, language);
+        NameLabelText.Text = Strings.Get(StringKey.BackgroundNameLabel, language).TrimEnd(':');
+        NameTextBox.Watermark = Strings.Get(StringKey.BackgroundNamePlaceholder, language);
+        ScaleLabelText.Text = Strings.Get(StringKey.ScaleFactorLabel, language);
+        HorizontalOffsetLabelText.Text = Strings.Get(StringKey.HorizontalPositionLabel, language);
+        VerticalOffsetLabelText.Text = Strings.Get(StringKey.VerticalPositionLabel, language);
+        CancelButton.Content = Strings.Get(StringKey.Cancel, language);
+        SaveButton.Content = Strings.Get(StringKey.Save, language);
 
         NameTextBox.Text = initialName;
         NameTextBox.IsEnabled = _isNew;

@@ -9,13 +9,13 @@
              original's .shadow(color: gold.opacity(0.5), radius: 16)). -->
         <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="400">
             <StackPanel Spacing="12" HorizontalAlignment="Center">
-                <TextBlock Text="Victory is guaranteed!" FontSize="36" FontWeight="Black"
+                <TextBlock x:Name="TitleText" Text="Victory is guaranteed!" FontSize="36" FontWeight="Black"
                            Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI"
                            TextAlignment="Center" TextWrapping="Wrap"/>
-                <TextBlock Text="All remaining cards can be moved to foundations."
+                <TextBlock x:Name="BodyText" Text="All remaining cards can be moved to foundations."
                            FontSize="14" Foreground="White" HorizontalAlignment="Center"
                            FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
-                <Button Classes="banner-action" Content="Autocomplete Game" Click="Autocomplete_Click"
+                <Button x:Name="AutocompleteButton" Classes="banner-action" Content="Autocomplete Game" Click="Autocomplete_Click"
                         HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>

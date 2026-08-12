@@ -60,7 +60,7 @@
             <local:StuckBanner.ExtraContent>
                 <!-- Klondike-only (Vegas mode): "Final bankroll: -$52.00" — #FFD600, body size -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" IsVisible="{Binding Options.IsVegasScoring}">
-                    <TextBlock Text="Final bankroll: " Foreground="#FFD600" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold"/>
+                    <TextBlock x:Name="FinalBankrollLabelText" Text="Final bankroll: " Foreground="#FFD600" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold"/>
                     <TextBlock Text="{Binding ScoreDisplay}" Foreground="#FFD600" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold"/>
                 </StackPanel>
             </local:StuckBanner.ExtraContent>

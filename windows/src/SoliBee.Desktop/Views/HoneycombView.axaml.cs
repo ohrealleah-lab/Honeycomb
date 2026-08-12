@@ -613,7 +613,7 @@ public partial class HoneycombView : UserControl
                 var name = HoneycombRuleLocalization.LocalizedRuleName(r, _language);
                 if ((r == HoneycombRule.Ascension || r == HoneycombRule.Descension) && state.Board.AscensionDescensionSuits.Count > 0)
                 {
-                    var suitNames = state.Board.AscensionDescensionSuits.Select(HoneycombCardData.SuitDisplayName);
+                    var suitNames = state.Board.AscensionDescensionSuits.Select(s => HoneycombCardData.LocalizedSuitName(s, _language));
                     return FormatRuleLineSuit(name, string.Join(", ", suitNames));
                 }
                 return name;

@@ -16,6 +16,22 @@ public struct HoneycombCardData: Codable, Identifiable, Equatable {
         default: return code
         }
     }
+
+    // Localized plain suit name (no symbol prefix, unlike suitSpades/etc's deck-filter
+    // labels) — for sentence-embedded contexts like the persistent Rules bar's
+    // "Ascension: Spades, Hearts". Deliberately separate from suitDisplayName above,
+    // which stays English at every call site inside the deep gameplay-logic banner
+    // construction (FormatRuleForBanner and friends) and rule.explanation(activeSuits:) —
+    // both left unlocalized by product decision, see HoneycombRuleLocalization.swift.
+    public static func localizedSuitName(_ code: String, language: AppLanguage) -> String {
+        switch code {
+        case "S": return L(.suitNameSpadesPlain, language: language)
+        case "H": return L(.suitNameHeartsPlain, language: language)
+        case "D": return L(.suitNameDiamondsPlain, language: language)
+        case "C": return L(.suitNameClubsPlain, language: language)
+        default: return code
+        }
+    }
 }
 
 public enum CardOwner: String, Codable, Equatable {

@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using SoliBee.Core.Localization;
 
 namespace SoliBee.Desktop.Views;
 
@@ -31,6 +32,14 @@ public partial class StuckBanner : UserControl
     public StuckBanner()
     {
         InitializeComponent();
+    }
+
+    public void ApplyLocalization(AppLanguage language)
+    {
+        TitleText.Text = Strings.Get(StringKey.GameOver, language);
+        BodyText.Text = Strings.Get(StringKey.NoMovesRemaining, language);
+        NewGameButton.Content = Strings.Get(StringKey.NewGame, language);
+        RestartGameButton.Content = Strings.Get(StringKey.RestartGame, language);
     }
 
     private void NewGame_Click(object? sender, RoutedEventArgs e) => NewGameClicked?.Invoke(this, EventArgs.Empty);

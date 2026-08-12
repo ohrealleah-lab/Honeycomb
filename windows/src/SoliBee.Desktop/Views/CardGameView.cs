@@ -4,7 +4,9 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
+using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
 using SoliBee.Desktop.Services;
 
@@ -88,6 +90,21 @@ public abstract class CardGameView : UserControl
     protected abstract WinAnimationView VictoryOverlayControl { get; }
     protected abstract StuckBanner NoMovesBannerControl { get; }
     protected abstract AutocompleteBanner AutocompleteBannerControl { get; }
+
+    // Klondike's Autocomplete banner reads "moved to foundations" — Freecell/Spider read
+    // "sorted into foundations" instead (see AutocompleteBanner.ApplyLocalization).
+    // Overridden true only by GameView (Klondike).
+    protected virtual bool IsKlondikeAutocompleteWording => false;
+
+    // Localizes the three shared inline banners (win/stuck/autocomplete) — call on load
+    // and whenever OptionsChangedMessage fires with a new language, same as every other
+    // view's ApplyLocalization.
+    protected void ApplyBannerLocalization(AppLanguage language)
+    {
+        VictoryOverlayControl.ApplyLocalization(language);
+        NoMovesBannerControl.ApplyLocalization(language);
+        AutocompleteBannerControl.ApplyLocalization(language, IsKlondikeAutocompleteWording);
+    }
 
     // Per-game: converts each Foundation PileView's on-screen position into the point
     // the win-cascade's cards should spawn from/fly toward. Stays abstract (not folded
@@ -238,7 +255,7 @@ public abstract class CardGameView : UserControl
     // [ObservableProperty]'s default equality check treats as "unchanged" and never
     // re-raises — silently swallowing the flash on the second and later presses. Calling
     // this directly from the click handler fires on every press, not just the first.
-    public void FlashHintUnavailable() => HintToastControl.Flash("Sorry! No hints available.");
+    public void FlashHintUnavailable() => HintToastControl.Flash(Strings.Get(StringKey.NoHintsAvailable, SettingsService.LoadOptions().Language));
 
     // Dev-only banner-catalog preview — wired to the toolbar's local-only "Banners"
     // dropdown's "Banner Catalog" section (see MainWindow.DebugBannerCategory_Click).

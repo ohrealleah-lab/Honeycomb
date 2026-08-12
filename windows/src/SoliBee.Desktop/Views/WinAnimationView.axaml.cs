@@ -93,6 +93,12 @@ public partial class WinAnimationView : UserControl
         InitializeComponent();
     }
 
+    public void ApplyLocalization(SoliBee.Core.Localization.AppLanguage language)
+    {
+        TitleText.Text = SoliBee.Core.Localization.Strings.Get(SoliBee.Core.Localization.StringKey.YouWin, language);
+        PlayAgainText.Text = SoliBee.Core.Localization.Strings.Get(SoliBee.Core.Localization.StringKey.PlayAgain, language);
+    }
+
     // Shared by the win banner here and the "No Moves Remaining" banners in
     // GameView/FreecellView/SpiderView, so the score/time line always reads the same way.
     public static string FormatStatsLine(string scoreText, string timeText)

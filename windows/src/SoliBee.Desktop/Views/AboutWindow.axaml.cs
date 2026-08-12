@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Services;
 
 namespace SoliBee.Desktop.Views;
@@ -9,12 +10,20 @@ namespace SoliBee.Desktop.Views;
 public partial class AboutWindow : Window
 {
     private UpdateCheckOutcome? _lastOutcome;
+    private readonly AppLanguage _language;
 
     public AboutWindow()
     {
         InitializeComponent();
 
-        VersionText.Text = $"Version {UpdateCheckService.CurrentVersion}";
+        _language = SettingsService.LoadOptions().Language;
+        VersionText.Text = string.Format(Strings.Get(StringKey.VersionFmt, _language).Replace("%@", "{0}"), UpdateCheckService.CurrentVersion);
+        CardSuiteText.Text = Strings.Get(StringKey.CardSuiteLabel, _language);
+        CopyrightText.Text = Strings.Get(StringKey.CopyrightNotice, _language);
+        DedicationText.Text = Strings.Get(StringKey.Dedication, _language);
+        CheckForUpdatesButton.Content = Strings.Get(StringKey.CheckForUpdates, _language);
+        InstallUpdateButton.Content = Strings.Get(StringKey.InstallAndRestart, _language);
+        CloseButton.Content = Strings.Get(StringKey.Close, _language);
     }
 
     private void Close_Click(object? sender, RoutedEventArgs e) => Close();
@@ -24,7 +33,7 @@ public partial class AboutWindow : Window
         CheckForUpdatesButton.IsVisible = false;
         InstallUpdateButton.IsVisible = false;
         UpdateStatusText.IsVisible = true;
-        UpdateStatusText.Text = "Checking for updates…";
+        UpdateStatusText.Text = Strings.Get(StringKey.CheckingForUpdates, _language);
 
         try
         {
@@ -33,20 +42,20 @@ public partial class AboutWindow : Window
 
             if (outcome.IsNewer && outcome.UpdateInfo != null)
             {
-                UpdateStatusText.Text = $"Version {outcome.UpdateInfo.TargetFullRelease.Version} is available.";
+                UpdateStatusText.Text = Strings.Get(StringKey.NewerVersionAvailableFmt, _language).Replace("%@", outcome.UpdateInfo.TargetFullRelease.Version.ToString());
                 InstallUpdateButton.IsVisible = true;
             }
             else
             {
-                UpdateStatusText.Text = "You're up to date.";
-                CheckForUpdatesButton.Content = "Check Again";
+                UpdateStatusText.Text = Strings.Get(StringKey.UpToDate, _language);
+                CheckForUpdatesButton.Content = Strings.Get(StringKey.CheckAgain, _language);
                 CheckForUpdatesButton.IsVisible = true;
             }
         }
         catch
         {
-            UpdateStatusText.Text = "Couldn't check for updates. Check your internet connection.";
-            CheckForUpdatesButton.Content = "Try Again";
+            UpdateStatusText.Text = Strings.Get(StringKey.UpdateCheckFailed, _language);
+            CheckForUpdatesButton.Content = Strings.Get(StringKey.TryAgain, _language);
             CheckForUpdatesButton.IsVisible = true;
         }
     }
@@ -54,26 +63,26 @@ public partial class AboutWindow : Window
     private async void InstallUpdate_Click(object? sender, RoutedEventArgs e)
     {
         if (_lastOutcome?.UpdateInfo == null) return;
-        
+
         InstallUpdateButton.IsEnabled = false;
-        UpdateStatusText.Text = "Downloading update...";
+        UpdateStatusText.Text = Strings.Get(StringKey.AboutDownloadingUpdate, _language);
 
         try
         {
-            await UpdateCheckService.DownloadAndApplyUpdatesAsync(_lastOutcome.UpdateInfo, progress => 
+            await UpdateCheckService.DownloadAndApplyUpdatesAsync(_lastOutcome.UpdateInfo, progress =>
             {
                 // Must marshal to UI thread if we want to show real-time progress
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => 
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
-                    UpdateStatusText.Text = $"Downloading update... {progress}%";
+                    UpdateStatusText.Text = Strings.Get(StringKey.AboutDownloadingUpdatePctFmt, _language).Replace("%d", progress.ToString());
                 });
             });
         }
         catch
         {
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => 
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                UpdateStatusText.Text = "Failed to download the update.";
+                UpdateStatusText.Text = Strings.Get(StringKey.AboutUpdateDownloadFailed, _language);
                 InstallUpdateButton.IsEnabled = true;
             });
         }

@@ -65,6 +65,8 @@ public partial class GameView : CardGameView
             vm.WasteCardDrawn += ViewModel_WasteCardDrawn;
             vm.OnFlashBanner += Vm_OnFlashBanner;
             ApplyFeltColor(vm.Options);
+            ApplyBannerLocalization(vm.Options.Language);
+            ApplyBankrollLabelLocalization(vm.Options.Language);
             BindPiles(vm);
             vm.CheckLoadingBanner();
         }
@@ -77,6 +79,8 @@ public partial class GameView : CardGameView
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
             ApplyFeltColor(m.Options);
+            ApplyBannerLocalization(m.Options.Language);
+            ApplyBankrollLabelLocalization(m.Options.Language);
             UpdateAllPilesLayout();
         });
 
@@ -392,10 +396,19 @@ public partial class GameView : CardGameView
         Tableau6.Pile = vm.Tableaus[6];
     }
 
+    // "Final bankroll: %@" split around the ScoreDisplay binding (StuckBanner.ExtraContent
+    // in GameView.axaml) — only the literal prefix before %@ needs localizing.
+    private void ApplyBankrollLabelLocalization(SoliBee.Core.Localization.AppLanguage language)
+    {
+        var fmt = SoliBee.Core.Localization.Strings.Get(SoliBee.Core.Localization.StringKey.FinalBankrollFmt, language);
+        FinalBankrollLabelText.Text = fmt.Split("%@")[0];
+    }
+
     protected override WinAnimationView VictoryOverlayControl => VictoryOverlay;
     protected override StuckBanner NoMovesBannerControl => NoMovesBanner;
     protected override AutocompleteBanner AutocompleteBannerControl => AutocompleteBanner;
     protected override FlashToast HintToastControl => HintToast;
+    protected override bool IsKlondikeAutocompleteWording => true;
 
     private void ApplyFeltColor(GameOptions options)
     {

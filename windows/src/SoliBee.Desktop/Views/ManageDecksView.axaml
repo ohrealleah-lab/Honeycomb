@@ -121,9 +121,9 @@
                 <Border Grid.Row="4" Background="#C0392B" CornerRadius="10"
                         Padding="16,12" Margin="0,16,0,0">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="Start over clears your decks and card bank, then reseeds the game."
+                        <TextBlock x:Name="StartOverBodyText" Text="Start over clears your decks and card bank, then reseeds the game."
                                    FontSize="12" Foreground="White" TextWrapping="Wrap"/>
-                        <Button Content="Start Over" Classes="light-warning"
+                        <Button x:Name="StartOverButton" Content="Start Over" Classes="light-warning"
                                 HorizontalAlignment="Left" Click="StartOver_Click"/>
                     </StackPanel>
                 </Border>
@@ -148,20 +148,20 @@
                 <WrapPanel Grid.Row="1" Margin="0,0,0,10">
                     <ComboBox x:Name="StarsFilter" Width="105" Height="36" Margin="0,0,6,6"
                               SelectionChanged="FilterCombo_SelectionChanged" SelectedIndex="0">
-                        <ComboBoxItem Content="All Stars"/>
-                        <ComboBoxItem Content="1 Star"/>
-                        <ComboBoxItem Content="2 Stars"/>
-                        <ComboBoxItem Content="3 Stars"/>
-                        <ComboBoxItem Content="4 Stars"/>
-                        <ComboBoxItem Content="5 Stars"/>
+                        <ComboBoxItem x:Name="AllStarsItem" Content="All Stars"/>
+                        <ComboBoxItem x:Name="OneStarItem" Content="1 Star"/>
+                        <ComboBoxItem x:Name="TwoStarsItem" Content="2 Stars"/>
+                        <ComboBoxItem x:Name="ThreeStarsItem" Content="3 Stars"/>
+                        <ComboBoxItem x:Name="FourStarsItem" Content="4 Stars"/>
+                        <ComboBoxItem x:Name="FiveStarsItem" Content="5 Stars"/>
                     </ComboBox>
                     <ComboBox x:Name="SuitsFilter" Width="105" Height="36" Margin="0,0,6,6"
                               SelectionChanged="FilterCombo_SelectionChanged" SelectedIndex="0">
-                        <ComboBoxItem Content="All Suits"/>
-                        <ComboBoxItem Content="Spades"/>
-                        <ComboBoxItem Content="Hearts"/>
-                        <ComboBoxItem Content="Diamonds"/>
-                        <ComboBoxItem Content="Clubs"/>
+                        <ComboBoxItem x:Name="AllSuitsItem" Content="All Suits"/>
+                        <ComboBoxItem x:Name="SpadesItem" Content="Spades"/>
+                        <ComboBoxItem x:Name="HeartsItem" Content="Hearts"/>
+                        <ComboBoxItem x:Name="DiamondsItem" Content="Diamonds"/>
+                        <ComboBoxItem x:Name="ClubsItem" Content="Clubs"/>
                     </ComboBox>
                     <ToggleButton x:Name="FavoritesFilter" Content="♡ Favorites" Height="36"
                                   VerticalContentAlignment="Center"
@@ -198,14 +198,14 @@
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     MaxWidth="380" BoxShadow="0 6 24 0 #88000000">
                 <StackPanel Spacing="16">
-                    <TextBlock Text="Start Over?" FontSize="20" FontWeight="Bold"
+                    <TextBlock x:Name="StartOverOverlayTitleText" Text="Start Over?" FontSize="20" FontWeight="Bold"
                                HorizontalAlignment="Center" Foreground="#1A1A1A"/>
-                    <TextBlock Text="This will clear all saved decks and your card bank, then reseed the game with brand new cards. This cannot be undone."
+                    <TextBlock x:Name="StartOverOverlayBodyText" Text="This will clear all saved decks and your card bank, then reseed the game with brand new cards. This cannot be undone."
                                FontSize="13" Foreground="#555" TextWrapping="Wrap"
                                HorizontalAlignment="Center" TextAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center" Margin="0,8,0,0">
-                        <Button Content="Cancel" Classes="light-secondary" Click="CancelStartOver_Click"/>
-                        <Button Content="Yes, Start Over" Classes="light-danger" Click="ConfirmStartOver_Click"/>
+                        <Button x:Name="CancelStartOverButton" Content="Cancel" Classes="light-secondary" Click="CancelStartOver_Click"/>
+                        <Button x:Name="ConfirmStartOverButton" Content="Yes, Start Over" Classes="light-danger" Click="ConfirmStartOver_Click"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

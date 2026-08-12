@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 
@@ -177,7 +178,7 @@ public partial class VideoPokerViewModel : ObservableObject
     // stays visible alongside it (RebuyButton doesn't hide it in the XAML), so this
     // isn't a hard block, just a heads-up before the player actually runs out.
     public bool   NeedsRebuy      => !Options.IsNoStressMode && State.SessionCredits <= 10;
-    public string DealDrawLabel   => IsHolding ? "Draw  [D]" : "Deal  [D]";
+    public string DealDrawLabel   => Strings.Get(IsHolding ? StringKey.BtnDrawDHotkey : StringKey.BtnDealDHotkey, SettingsService.LoadOptions().Language);
     public string VariantName     => Options.Variant switch
     {
         VideoPokerVariant.DeucesWild => "DEUCES WILD",

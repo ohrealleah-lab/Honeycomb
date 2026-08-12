@@ -17,7 +17,7 @@
                        HorizontalAlignment="Center"
                        FontFamily="Segoe UI" />
 
-            <TextBlock Text="Card Suite"
+            <TextBlock x:Name="CardSuiteText" Text="Card Suite"
                        FontSize="13" FontWeight="SemiBold"
                        Foreground="#707070"
                        HorizontalAlignment="Center"
@@ -29,11 +29,11 @@
                        FontSize="12" Foreground="#555555"
                        HorizontalAlignment="Center" />
 
-            <TextBlock Text="© 2026 Leahbee. All rights reserved."
+            <TextBlock x:Name="CopyrightText" Text="© 2026 Leahbee. All rights reserved."
                        FontSize="11" Foreground="#808080"
                        HorizontalAlignment="Center" />
 
-            <TextBlock Text="For Rhinestone."
+            <TextBlock x:Name="DedicationText" Text="For Rhinestone."
                        FontSize="11" Foreground="#707070" FontStyle="Italic"
                        HorizontalAlignment="Center" Margin="0,4,0,0" />
 
@@ -63,7 +63,7 @@
                     IsVisible="False" />
         </StackPanel>
 
-        <Button Grid.Row="1"
+        <Button x:Name="CloseButton" Grid.Row="1"
                 Content="Close"
                 Click="Close_Click"
                 HorizontalAlignment="Right"

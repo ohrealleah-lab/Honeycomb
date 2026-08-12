@@ -1180,4 +1180,50 @@ public enum StringKey: String, CaseIterable {
     case swarmRevealOpponentBuzzingFmt = "swarm_reveal_opponent_buzzing_fmt"
     /// Chain-reaction capture combo banner; %d is the flip count (2+)
     case bannerHiveMindFmt = "banner_hive_mind_fmt"
+    /// Windows Options page: Game Mode section header above the draw-mode/suit-count/deck-count picker
+    case gameModeSectionHeader = "game_mode_section_header"
+    /// Windows Options page: Themes sub-panel sidebar header
+    case savedThemesHeader = "saved_themes_header"
+    /// Windows Options page: hero preview tooltip (combined card+background, unlike Mac which has separate tooltips)
+    case doubleClickCardOrBackgroundTooltip = "double_click_card_or_background_tooltip"
+    /// Windows Options page: Delete Background confirmation dialog body
+    case deleteBackgroundConfirmBody = "delete_background_confirm_body"
+    /// Windows Options page: Save New Theme dialog title (distinct from the button which has an ellipsis)
+    case saveNewThemeTitle = "save_new_theme_title"
+    /// Windows Options page: Save New Theme dialog prompt text
+    case enterThemeNamePrompt = "enter_theme_name_prompt"
+    /// Windows Options page: Face Cards sub-panel instructional hint
+    case tapTileUploadArtHint = "tap_tile_upload_art_hint"
+    /// Plain suit name (no symbol prefix) — Ascension/Descension rule-bar suit list, e.g. "Ascension: Spades, Hearts"
+    case suitNameSpadesPlain = "suit_name_spades_plain"
+    /// Plain suit name (no symbol prefix) — Ascension/Descension rule-bar suit list
+    case suitNameHeartsPlain = "suit_name_hearts_plain"
+    /// Plain suit name (no symbol prefix) — Ascension/Descension rule-bar suit list
+    case suitNameDiamondsPlain = "suit_name_diamonds_plain"
+    /// Plain suit name (no symbol prefix) — Ascension/Descension rule-bar suit list
+    case suitNameClubsPlain = "suit_name_clubs_plain"
+    /// Windows About window: update download in progress
+    case aboutDownloadingUpdate = "about_downloading_update"
+    /// Windows About window: update download progress with percentage
+    case aboutDownloadingUpdatePctFmt = "about_downloading_update_pct_fmt"
+    /// Windows About window: update download failure message
+    case aboutUpdateDownloadFailed = "about_update_download_failed"
+    /// Windows About window: button to install a downloaded update and restart
+    case installAndRestart = "install_and_restart"
+    /// Windows Background editor window title when adding a new background
+    case addBackgroundTitle = "add_background_title"
+    /// Windows Background editor window title when editing an existing background
+    case editBackgroundTitle = "edit_background_title"
+    /// Windows Card Back editor: note shown instead of position sliders for fill-type card backs
+    case cardBackFillNote = "card_back_fill_note"
+    /// Windows Video Poker Deal/Draw toggle button, Deal state (D hotkey)
+    case btnDealDHotkey = "btn_deal_d_hotkey"
+    /// Windows Video Poker Deal/Draw toggle button, Draw state (D hotkey)
+    case btnDrawDHotkey = "btn_draw_d_hotkey"
+    /// Windows Deck Builder: right-click context menu item on a deck card
+    case removeFromDeckContextMenu = "remove_from_deck_context_menu"
+    /// Windows Manage Decks: star-count filter dropdown item, e.g. "1 Star"/"3 Stars"
+    case starCountFilterFmt = "star_count_filter_fmt"
+    /// Windows Manage Decks: empty state when the current filter selection matches no cards
+    case noCardsMatchFilter = "no_cards_match_filter"
 }

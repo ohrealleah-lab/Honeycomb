@@ -8,6 +8,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 
@@ -38,8 +39,39 @@ public partial class ManageDecksView : UserControl
     public ManageDecksView()
     {
         InitializeComponent();
+        ApplyLocalization();
         LoadBank();
         RefreshUI();
+    }
+
+    private void ApplyLocalization()
+    {
+        var language = SettingsService.LoadOptions().Language;
+
+        StartOverBodyText.Text = Strings.Get(StringKey.StartOverBody, language);
+        StartOverButton.Content = Strings.Get(StringKey.StartOver, language);
+
+        AllStarsItem.Content = Strings.Get(StringKey.AllStarsFilter, language);
+        var starWord = Strings.Get(StringKey.StarCountFilterFmt, language);
+        OneStarItem.Content   = starWord.Replace("%d", "1").Replace("%@", "");
+        TwoStarsItem.Content  = starWord.Replace("%d", "2").Replace("%@", "s");
+        ThreeStarsItem.Content = starWord.Replace("%d", "3").Replace("%@", "s");
+        FourStarsItem.Content  = starWord.Replace("%d", "4").Replace("%@", "s");
+        FiveStarsItem.Content  = starWord.Replace("%d", "5").Replace("%@", "s");
+
+        AllSuitsItem.Content = Strings.Get(StringKey.AllSuitsFilter, language);
+        SpadesItem.Content   = HoneycombCardData.LocalizedSuitName("S", language);
+        HeartsItem.Content   = HoneycombCardData.LocalizedSuitName("H", language);
+        DiamondsItem.Content = HoneycombCardData.LocalizedSuitName("D", language);
+        ClubsItem.Content    = HoneycombCardData.LocalizedSuitName("C", language);
+
+        FavoritesFilter.Content = "♡ " + Strings.Get(StringKey.FavoritesFilter, language);
+        EmptyFilterMessage.Text = Strings.Get(StringKey.NoCardsMatchFilter, language);
+
+        StartOverOverlayTitleText.Text = Strings.Get(StringKey.StartOverTitle, language);
+        StartOverOverlayBodyText.Text = Strings.Get(StringKey.StartOverAlertBody, language);
+        CancelStartOverButton.Content = Strings.Get(StringKey.Cancel, language);
+        ConfirmStartOverButton.Content = Strings.Get(StringKey.StartOver, language);
     }
 
     // Mirrors MainWindow.ApplyFeltColor's primary-hex mapping (the app-wide felt
@@ -254,7 +286,11 @@ public partial class ManageDecksView : UserControl
     {
         var pm = HoneycombProfileManager.Shared;
 
-        CardBankTitle.Text = $"CARD BANK ({pm.UnlockedCardIds.Count}/{HoneycombDatabase.Shared.AllCards.Count})";
+        var bankFmt = Strings.Get(StringKey.CardBankCountFmt, SettingsService.LoadOptions().Language);
+        int firstD = bankFmt.IndexOf("%d", StringComparison.Ordinal);
+        bankFmt = bankFmt.Remove(firstD, 2).Insert(firstD, pm.UnlockedCardIds.Count.ToString());
+        int secondD = bankFmt.IndexOf("%d", firstD, StringComparison.Ordinal);
+        CardBankTitle.Text = bankFmt.Remove(secondD, 2).Insert(secondD, HoneycombDatabase.Shared.AllCards.Count.ToString());
 
         BankPanel.Children.Clear();
         _bankCardById.Clear();

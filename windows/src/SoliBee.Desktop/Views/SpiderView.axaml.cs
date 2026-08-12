@@ -99,6 +99,7 @@ public partial class SpiderView : CardGameView
     {
         DealBlockedTitleText.Text = Strings.Get(StringKey.EmptyColumnWarningTitle, _language);
         DealBlockedBodyText.Text  = Strings.Get(StringKey.EmptyColumnWarningBody, _language);
+        ApplyBannerLocalization(_language);
     }
 
     private void RefreshAllPiles()

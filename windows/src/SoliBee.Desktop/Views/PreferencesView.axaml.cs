@@ -679,6 +679,30 @@ public partial class PreferencesView : UserControl
         ConfirmResetCardColorsBodyText.Text = Strings.Get(StringKey.ResetCardColorsConfirmBody, language);
         CancelResetCardColorsButton.Content = Strings.Get(StringKey.Cancel, language);
         ConfirmResetCardColorsButton.Content = Strings.Get(StringKey.Reset, language);
+
+        HelpGuideButton.Content = Strings.Get(StringKey.HelpGuideWindowTitle, language);
+        GameModeSectionHeaderText.Text = Strings.Get(StringKey.GameModeSectionHeader, language);
+        SavedThemesHeaderText.Text = Strings.Get(StringKey.SavedThemesHeader, language);
+        var backgroundLabel = Strings.Get(StringKey.BackgroundLabel, language).TrimEnd(':');
+        BackgroundSectionHeaderText.Text = backgroundLabel;
+        BackgroundAlertTitleText.Text = backgroundLabel;
+        TapTileHintText.Text = Strings.Get(StringKey.TapTileUploadArtHint, language);
+        DeckBackgroundBackdrop.SetValue(ToolTip.TipProperty, Strings.Get(StringKey.DoubleClickCardOrBackgroundTooltip, language));
+
+        CardBackgroundColorLabelText.Text = Strings.Get(StringKey.CardBackgroundLabel, language) + ":";
+        CardOutlineColorLabelText.Text = Strings.Get(StringKey.CardOutlineLabel, language) + ":";
+        BlackSuitTextColorLabelText.Text = Strings.Get(StringKey.BlackSuitTextLabel, language) + ":";
+        RedSuitTextColorLabelText.Text = Strings.Get(StringKey.RedSuitTextLabel, language) + ":";
+        HintHighlightColorLabelText.Text = Strings.Get(StringKey.HintHighlightLabel, language) + ":";
+
+        ConfirmDeleteBackgroundBodyText.Text = Strings.Get(StringKey.DeleteBackgroundConfirmBody, language);
+        SaveThemeTitleText.Text = Strings.Get(StringKey.SaveNewThemeTitle, language);
+        SaveThemePromptText.Text = Strings.Get(StringKey.EnterThemeNamePrompt, language);
+        var themeNamePlaceholder = Strings.Get(StringKey.ThemeNameFieldPlaceholder, language);
+        ThemeNameInput.Watermark = themeNamePlaceholder;
+        RenameThemeInput.Watermark = themeNamePlaceholder;
+        RenameThemeTitleText.Text = Strings.Get(StringKey.RenameThemeTitle, language);
+        DeleteThemeTitleText.Text = Strings.Get(StringKey.DeleteThemeTitle, language);
     }
 
     private void Language_Changed(object? sender, SelectionChangedEventArgs e)
@@ -1002,7 +1026,7 @@ public partial class PreferencesView : UserControl
     {
         if (sender is not Button btn || btn.Tag is not SoliBeeTheme theme) return;
         _themeToDelete = theme;
-        DeleteThemeConfirmText.Text = $"Delete \"{theme.Name}\"? This cannot be undone.";
+        DeleteThemeConfirmText.Text = Strings.Get(StringKey.DeleteThemeConfirmFmt, SettingsService.LoadOptions().Language).Replace("%@", theme.Name);
         ConfirmDeleteThemeOverlay.IsVisible = true;
     }
 

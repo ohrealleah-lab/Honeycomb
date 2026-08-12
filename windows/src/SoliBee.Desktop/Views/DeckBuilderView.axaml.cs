@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 
@@ -32,6 +33,7 @@ public partial class DeckBuilderView : UserControl
     public DeckBuilderView(int deckSlotIndex)
     {
         InitializeComponent();
+        ApplyLocalization();
         _deckSlotIndex = deckSlotIndex;
         LoadData();
         RefreshUI();
@@ -41,8 +43,37 @@ public partial class DeckBuilderView : UserControl
     public DeckBuilderView()
     {
         InitializeComponent();
+        ApplyLocalization();
         LoadData();
         RefreshUI();
+    }
+
+    private void ApplyLocalization()
+    {
+        var language = SettingsService.LoadOptions().Language;
+
+        DeckNameTextBox.Watermark = Strings.Get(StringKey.DeckNamePlaceholder, language);
+        CardBankTapToAddText.Text = Strings.Get(StringKey.CardBankTapToAdd, language);
+        DeckRulesHintText.Text = Strings.Get(StringKey.DeckRulesHint, language);
+
+        AllStarsItem.Content = Strings.Get(StringKey.AllStarsFilter, language);
+        var starWord = Strings.Get(StringKey.StarCountFilterFmt, language);
+        OneStarItem.Content    = starWord.Replace("%d", "1").Replace("%@", "");
+        TwoStarsItem.Content   = starWord.Replace("%d", "2").Replace("%@", "s");
+        ThreeStarsItem.Content = starWord.Replace("%d", "3").Replace("%@", "s");
+        FourStarsItem.Content  = starWord.Replace("%d", "4").Replace("%@", "s");
+        FiveStarsItem.Content  = starWord.Replace("%d", "5").Replace("%@", "s");
+
+        AllSuitsItem.Content = Strings.Get(StringKey.AllSuitsFilter, language);
+        SpadesItem.Content   = HoneycombCardData.LocalizedSuitName("S", language);
+        HeartsItem.Content   = HoneycombCardData.LocalizedSuitName("H", language);
+        DiamondsItem.Content = HoneycombCardData.LocalizedSuitName("D", language);
+        ClubsItem.Content    = HoneycombCardData.LocalizedSuitName("C", language);
+
+        FavoritesFilter.Content = "♡ " + Strings.Get(StringKey.FavoritesFilter, language);
+
+        CancelButton.Content = Strings.Get(StringKey.Cancel, language);
+        SaveButton.Content = Strings.Get(StringKey.BtnSaveDeck, language);
     }
 
     private void LoadData()
@@ -140,7 +171,7 @@ public partial class DeckBuilderView : UserControl
             DeckSlotsPanel.Children.Add(slot);
         }
 
-        YourDeckTitle.Text = $"Your Deck ({_currentCardIds.Count}/5) — Tap to Remove";
+        YourDeckTitle.Text = Strings.Get(StringKey.YourDeckCountFmt, SettingsService.LoadOptions().Language).Replace("%d", _currentCardIds.Count.ToString());
     }
 
     private void RefreshBank()
@@ -262,7 +293,7 @@ public partial class DeckBuilderView : UserControl
 
         if (_currentCardIds.Contains(cardId))
         {
-            var removeItem = new MenuItem { Header = "Remove from deck?" };
+            var removeItem = new MenuItem { Header = Strings.Get(StringKey.RemoveFromDeckContextMenu, SettingsService.LoadOptions().Language) };
             removeItem.Click += (_, _) =>
             {
                 _currentCardIds.Remove(cardId);

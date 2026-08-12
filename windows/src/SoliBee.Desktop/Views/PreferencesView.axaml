@@ -50,7 +50,7 @@
 
             <!-- Game Mode (hidden for Video Poker / Blackjack) -->
             <StackPanel x:Name="GameModeSection" IsVisible="False" Spacing="6">
-                <TextBlock Text="Game Mode" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A"/>
+                <TextBlock x:Name="GameModeSectionHeaderText" Text="Game Mode" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A"/>
                 <ComboBox x:Name="GameModeCombo" HorizontalAlignment="Stretch"
                           SelectionChanged="GameMode_Changed"/>
                 <Rectangle Height="1" Fill="#DDDDDD" Margin="0,4,0,0"/>
@@ -111,7 +111,7 @@
                  it reads as a distinct panel instead of blending into the settings. -->
             <Border Grid.Row="0" Grid.Column="0" Background="#ECECEC" BorderBrush="#DCDCDC" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,10,0">
                 <Grid RowDefinitions="Auto,Auto,*">
-                    <TextBlock Grid.Row="0" Text="Saved Themes" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,4,0,0"/>
+                    <TextBlock Grid.Row="0" x:Name="SavedThemesHeaderText" Text="Saved Themes" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,4,0,0"/>
 
                     <Button Grid.Row="1" x:Name="SaveThemeButton" Content="Save New Theme…"
                             Click="SaveTheme_Click"
@@ -176,7 +176,7 @@
                          background image is set, so they read as one concept anyway. -->
                     <StackPanel Grid.Column="2" Spacing="6">
                         <Grid ColumnDefinitions="*,Auto" Height="24">
-                            <TextBlock Grid.Column="0" Text="Background" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" x:Name="BackgroundSectionHeaderText" Text="Background" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center"/>
                             <!-- Inline with the header (instead of its own row below) and
                                  scaled down — it's a minor toggle, not a primary control,
                                  so it shouldn't take the same visual weight as the dropdown
@@ -268,7 +268,7 @@
         <Grid x:Name="FaceCardsPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="*">
 
             <StackPanel Grid.Row="0" Spacing="6">
-                <TextBlock Text="Tap a tile to upload art. Tap again to adjust." FontSize="12" Foreground="#1A1A1A"/>
+                <TextBlock x:Name="TapTileHintText" Text="Tap a tile to upload art. Tap again to adjust." FontSize="12" Foreground="#1A1A1A"/>
                 <v:FaceCardArtSectionView/>
             </StackPanel>
 
@@ -293,19 +293,19 @@
                 <Rectangle Height="1" Fill="#E5E5E5"/>
 
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,4,0,4">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Card Background:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" x:Name="CardBackgroundColorLabelText" Text="Card Background:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
                     <ColorPicker Grid.Row="0" Grid.Column="1" x:Name="CardBgColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Card Outline:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" x:Name="CardOutlineColorLabelText" Text="Card Outline:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
                     <ColorPicker Grid.Row="1" Grid.Column="1" x:Name="CardOutlineColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Text (Black Suits):" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" x:Name="BlackSuitTextColorLabelText" Text="Text (Black Suits):" VerticalAlignment="Center" Foreground="#1A1A1A"/>
                     <ColorPicker Grid.Row="2" Grid.Column="1" x:Name="CardTextBlackColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Text (Red Suits):" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <TextBlock Grid.Row="3" Grid.Column="0" x:Name="RedSuitTextColorLabelText" Text="Text (Red Suits):" VerticalAlignment="Center" Foreground="#1A1A1A"/>
                     <ColorPicker Grid.Row="3" Grid.Column="1" x:Name="CardTextRedColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
 
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Hint Highlight:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
+                    <TextBlock Grid.Row="4" Grid.Column="0" x:Name="HintHighlightColorLabelText" Text="Hint Highlight:" VerticalAlignment="Center" Foreground="#1A1A1A"/>
                     <ColorPicker Grid.Row="4" Grid.Column="1" x:Name="HintHighlightColorPicker" ColorChanged="CardColorPicker_ColorChanged" HorizontalAlignment="Right" Margin="0,2,0,2"/>
                 </Grid>
 
@@ -348,7 +348,7 @@
             <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                 <StackPanel Spacing="12" Width="230">
                     <TextBlock x:Name="ConfirmDeleteBackgroundTitleText" Text="Delete Background" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Are you sure you want to delete this custom background? This cannot be undone." FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    <TextBlock x:Name="ConfirmDeleteBackgroundBodyText" Text="Are you sure you want to delete this custom background? This cannot be undone." FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button x:Name="CancelDeleteBackgroundButton" Content="Cancel" Click="CancelDeleteBackground_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
                         <Button x:Name="ConfirmDeleteBackgroundButton" Content="Delete" Click="ConfirmDeleteBackground_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-danger" Margin="4,0,0,0"/>
@@ -361,7 +361,7 @@
         <Grid x:Name="BackgroundAlertOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                 <StackPanel Spacing="12" Width="230">
-                    <TextBlock Text="Background" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="BackgroundAlertTitleText" Text="Background" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="BackgroundAlertText" Text="" FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
                     <Button x:Name="BackgroundAlertOkButton" Content="OK" Click="BackgroundAlertOk_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary"/>
                 </StackPanel>
@@ -372,8 +372,8 @@
         <Grid x:Name="SaveThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                 <StackPanel Spacing="12" Width="230">
-                    <TextBlock Text="Save New Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Enter a name for this theme:" FontSize="12" Foreground="#1A1A1A"/>
+                    <TextBlock x:Name="SaveThemeTitleText" Text="Save New Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="SaveThemePromptText" Text="Enter a name for this theme:" FontSize="12" Foreground="#1A1A1A"/>
                     <TextBox x:Name="ThemeNameInput" Watermark="Theme name…" BorderBrush="#CCCCCC" Foreground="Black"/>
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button x:Name="CancelSaveThemeButton" Content="Cancel" Click="CancelSaveTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
@@ -387,7 +387,7 @@
         <Grid x:Name="RenameThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                 <StackPanel Spacing="12" Width="230">
-                    <TextBlock Text="Rename Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="RenameThemeTitleText" Text="Rename Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
                     <TextBox x:Name="RenameThemeInput" Watermark="Theme name…" BorderBrush="#CCCCCC" Foreground="Black"/>
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button x:Name="CancelRenameThemeButton" Content="Cancel" Click="CancelRenameTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
@@ -401,7 +401,7 @@
         <Grid x:Name="ConfirmDeleteThemeOverlay" Background="#D0000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                 <StackPanel Spacing="12" Width="230">
-                    <TextBlock Text="Delete Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="DeleteThemeTitleText" Text="Delete Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="DeleteThemeConfirmText" Text="Delete this theme?" FontSize="12" Foreground="#1A1A1A" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button x:Name="CancelDeleteThemeButton" Content="Cancel" Click="CancelDeleteTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>

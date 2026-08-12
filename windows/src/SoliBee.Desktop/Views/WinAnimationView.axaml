@@ -19,7 +19,7 @@
             <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320">
                 <StackPanel Spacing="12" HorizontalAlignment="Center">
 
-                    <TextBlock Text="You win!"
+                    <TextBlock x:Name="TitleText" Text="You win!"
                                FontSize="40" FontWeight="Black" Foreground="#FFD600"
                                FontFamily="Segoe UI"
                                HorizontalAlignment="Center"/>
@@ -35,7 +35,7 @@
                             Classes="banner-action"
                             Click="PlayAgain_Click"
                             HorizontalAlignment="Center">
-                        <TextBlock Text="Play Again"
+                        <TextBlock x:Name="PlayAgainText" Text="Play Again"
                                    FontSize="16" FontWeight="Bold"
                                    FontFamily="Segoe UI"/>
                     </Button>

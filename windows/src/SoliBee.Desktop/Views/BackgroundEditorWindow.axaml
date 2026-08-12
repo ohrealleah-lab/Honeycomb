@@ -13,7 +13,7 @@
 
         <!-- Name -->
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
-            <TextBlock Text="Name" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" />
+            <TextBlock x:Name="NameLabelText" Text="Name" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" />
             <TextBox x:Name="NameTextBox" Watermark="Background name…" BorderBrush="#CCCCCC" Foreground="Black" />
         </StackPanel>
 
@@ -37,21 +37,21 @@
         <!-- Sliders -->
         <StackPanel x:Name="SliderPanel" Grid.Row="2" Spacing="5">
             <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="Scale:" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
+                <TextBlock x:Name="ScaleLabelText" Text="Scale:" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
                 <TextBlock x:Name="ScaleValueText" Text="1.00" Foreground="#555555" FontSize="12" VerticalAlignment="Center" />
             </StackPanel>
             <Slider x:Name="ScaleSlider" Minimum="1.0" Maximum="3.0" Value="1.0"
                     ValueChanged="Slider_Changed" />
 
             <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="Horizontal Offset:" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
+                <TextBlock x:Name="HorizontalOffsetLabelText" Text="Horizontal Offset:" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
                 <TextBlock x:Name="OffsetXValueText" Text="0" Foreground="#555555" FontSize="12" VerticalAlignment="Center" />
             </StackPanel>
             <Slider x:Name="OffsetXSlider" Minimum="-300" Maximum="300" Value="0"
                     ValueChanged="Slider_Changed" />
 
             <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="Vertical Offset:" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
+                <TextBlock x:Name="VerticalOffsetLabelText" Text="Vertical Offset:" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" Width="110" VerticalAlignment="Center" />
                 <TextBlock x:Name="OffsetYValueText" Text="0" Foreground="#555555" FontSize="12" VerticalAlignment="Center" />
             </StackPanel>
             <Slider x:Name="OffsetYSlider" Minimum="-300" Maximum="300" Value="0"
@@ -60,10 +60,10 @@
 
         <!-- Save / Cancel -->
         <Grid Grid.Row="3" ColumnDefinitions="*,*" Margin="0,12,0,0">
-            <Button Content="Cancel" Click="Cancel_Click" Grid.Column="0"
+            <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click" Grid.Column="0"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                     Classes="light-secondary" Margin="0,0,4,0" />
-            <Button Content="Save" Click="Save_Click" Grid.Column="1"
+            <Button x:Name="SaveButton" Content="Save" Click="Save_Click" Grid.Column="1"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                     Classes="light-primary" Margin="4,0,0,0" />
         </Grid>
