@@ -171,7 +171,7 @@ struct HoneycombTouchView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel("Menu")
+            .accessibilityLabel(coordinator.L(.menuHeaderTitle))
             // Options only take effect on the next match (same gating as mac).
             .disabled(isMidMatch && viewModel.showPostGamePrompt)
 
@@ -761,7 +761,7 @@ struct HoneycombTouchView: View {
 
     private var stealInstructionBar: some View {
         VStack(spacing: 12) {
-            Text("Double-tap a captured opponent's card\non the board to steal it.")
+            Text(coordinator.L(.stealInstructionTap))
                 .font(.headline.weight(.bold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)

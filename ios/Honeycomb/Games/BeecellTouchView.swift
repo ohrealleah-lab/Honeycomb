@@ -111,7 +111,7 @@ struct BeecellTouchView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel("Menu")
+            .accessibilityLabel(coordinator.L(.menuHeaderTitle))
 
             Spacer()
 
@@ -134,7 +134,7 @@ struct BeecellTouchView: View {
                 dismissedStuckBanner = false
                 viewModel.startNewGame()
             } label: {
-                Label("New", systemImage: "play.fill")
+                Label(coordinator.L(.touchNewDealLabel), systemImage: "play.fill")
             }
             .buttonStyle(.borderedProminent)
         }
@@ -435,7 +435,7 @@ struct BeecellTouchView: View {
             Button {
                 viewModel.runAutocomplete()
             } label: {
-                Label("Autocomplete", systemImage: "wand.and.stars")
+                Label(coordinator.L(.helpShortcutAutocomplete), systemImage: "wand.and.stars")
                     .font(.headline)
                     .padding(.horizontal, 8)
             }
@@ -507,7 +507,7 @@ struct BeecellTouchView: View {
                     dismissedStuckBanner = true
                     viewModel.undoLastAction()
                 } label: {
-                    Label("Undo Last Move", systemImage: "arrow.uturn.backward")
+                    Label(coordinator.L(.touchUndoLastMoveLabel), systemImage: "arrow.uturn.backward")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -550,9 +550,9 @@ struct BeecellSettingsSection: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            Picker("Decks", selection: $viewModel.options.deckCount) {
-                Text("Single Deck").tag(1)
-                Text("Double Deck").tag(2)
+            Picker(coordinator.L(.touchDecksPickerLabel), selection: $viewModel.options.deckCount) {
+                Text(coordinator.L(.touchSingleDeckOption)).tag(1)
+                Text(coordinator.L(.touchDoubleDeckOption)).tag(2)
             }
             .pickerStyle(.segmented)
 
@@ -583,7 +583,7 @@ struct BeecellStatsSheet: View {
                 row(coordinator.L(.longestStreak), "\(viewModel.currentModeStats.longestStreak)")
                 row(coordinator.L(.highScore), viewModel.highScoreString)
             }
-            .navigationTitle("BeeCell Stats (\(viewModel.options.deckCount == 1 ? "1 Deck" : "2 Decks"))")
+            .navigationTitle(coordinator.L(.freecellStatisticsFmt, viewModel.options.deckCount == 1 ? coordinator.L(.deckCount1) : coordinator.L(.deckCount2)))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

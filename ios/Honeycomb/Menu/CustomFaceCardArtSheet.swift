@@ -23,7 +23,7 @@ struct CustomFaceCardArtSheet: View {
                 }
                 .padding()
             }
-            .navigationTitle("Face Card Art")
+            .navigationTitle(coordinator.L(.faceCardArtNavRow))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -105,7 +105,7 @@ private struct FaceArtImportSheet: View {
                                        scale: $scale, offsetXFraction: $offsetXFraction, offsetYFraction: $offsetYFraction)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
-                        Button("Reset Position") {
+                        Button(coordinator.L(.touchResetPositionButton)) {
                             withAnimation(.spring(response: 0.3)) {
                                 scale = 1; offsetXFraction = 0; offsetYFraction = 0
                             }

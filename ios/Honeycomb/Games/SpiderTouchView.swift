@@ -106,7 +106,7 @@ struct SpiderTouchView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel("Menu")
+            .accessibilityLabel(coordinator.L(.menuHeaderTitle))
 
             Spacer()
 
@@ -118,7 +118,7 @@ struct SpiderTouchView: View {
                 dismissedStuckBanner = false
                 viewModel.startNewGame()
             } label: {
-                Label("New", systemImage: "play.fill")
+                Label(coordinator.L(.touchNewDealLabel), systemImage: "play.fill")
             }
             .buttonStyle(.borderedProminent)
         }
@@ -191,7 +191,7 @@ struct SpiderTouchView: View {
         .frame(width: cardW + CGFloat(max(dealsLeft - 1, 0)) * 6, height: cardH, alignment: .topLeading)
         .contentShape(Rectangle())
         .onTapGesture { performDeal() }
-        .accessibilityLabel("Deal")
+        .accessibilityLabel(coordinator.L(.touchDealA11y))
     }
 
     private func runsIndicator(cardW: CGFloat, cardH: CGFloat) -> some View {
@@ -209,7 +209,7 @@ struct SpiderTouchView: View {
             }
         }
         .frame(width: cardW * 1.4, height: cardH)
-        .accessibilityLabel("Completed runs")
+        .accessibilityLabel(coordinator.L(.touchCompletedRunsA11y))
     }
 
     // MARK: Tableau
@@ -414,7 +414,7 @@ struct SpiderTouchView: View {
             Button {
                 viewModel.runAutocomplete()
             } label: {
-                Label("Autocomplete", systemImage: "wand.and.stars")
+                Label(coordinator.L(.helpShortcutAutocomplete), systemImage: "wand.and.stars")
                     .font(.headline)
                     .padding(.horizontal, 8)
             }
@@ -486,7 +486,7 @@ struct SpiderTouchView: View {
                     dismissedStuckBanner = true
                     viewModel.undoLastAction()
                 } label: {
-                    Label("Undo Last Move", systemImage: "arrow.uturn.backward")
+                    Label(coordinator.L(.touchUndoLastMoveLabel), systemImage: "arrow.uturn.backward")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -529,7 +529,7 @@ struct SpiderSettingsSection: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            Picker("Difficulty", selection: $viewModel.options.suitCount) {
+            Picker(coordinator.L(.touchSuitsPickerLabel), selection: $viewModel.options.suitCount) {
                 Text(coordinator.L(.suitCount1)).tag(1)
                 Text(coordinator.L(.suitCount2)).tag(2)
                 Text(coordinator.L(.suitCount4)).tag(4)
@@ -563,7 +563,7 @@ struct SpiderStatsSheet: View {
                 row(coordinator.L(.fastestWin), formatTime(viewModel.shortestWinTime))
                 row(coordinator.L(.statAverageWinTime), formatTime(Int(viewModel.averageWinningTime)))
             }
-            .navigationTitle("Spider Stats (\(viewModel.options.suitCount) Suit)")
+            .navigationTitle(coordinator.L(.spiderStatisticsFmt, viewModel.options.suitCount, viewModel.options.suitCount == 1 ? coordinator.L(.labelSuitSingular) : coordinator.L(.labelSuitPlural)))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

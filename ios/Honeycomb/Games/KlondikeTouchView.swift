@@ -109,7 +109,7 @@ struct KlondikeTouchView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel("Menu")
+            .accessibilityLabel(coordinator.L(.menuHeaderTitle))
 
             Spacer()
 
@@ -121,7 +121,7 @@ struct KlondikeTouchView: View {
                 dismissedStuckBanner = false
                 viewModel.startNewGame()
             } label: {
-                Label("New", systemImage: "play.fill")
+                Label(coordinator.L(.touchNewDealLabel), systemImage: "play.fill")
             }
             .buttonStyle(.borderedProminent)
         }
@@ -501,7 +501,7 @@ struct KlondikeTouchView: View {
             Button {
                 viewModel.runAutocomplete()
             } label: {
-                Label("Autocomplete", systemImage: "wand.and.stars")
+                Label(coordinator.L(.helpShortcutAutocomplete), systemImage: "wand.and.stars")
                     .font(.headline)
                     .padding(.horizontal, 8)
             }
@@ -581,7 +581,7 @@ struct KlondikeTouchView: View {
                     dismissedStuckBanner = true
                     viewModel.undoLastAction()
                 } label: {
-                    Label("Undo Last Move", systemImage: "arrow.uturn.backward")
+                    Label(coordinator.L(.touchUndoLastMoveLabel), systemImage: "arrow.uturn.backward")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -624,7 +624,7 @@ struct KlondikeSettingsSection: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            Picker("Draw Mode", selection: $viewModel.options.drawMode) {
+            Picker(coordinator.L(.drawModeLabel), selection: $viewModel.options.drawMode) {
                 Text(coordinator.L(.drawOne)).tag(GameState.DrawMode.drawOne)
                 Text(coordinator.L(.drawThree)).tag(GameState.DrawMode.drawThree)
             }
@@ -661,7 +661,7 @@ struct KlondikeStatsSheet: View {
                     row(coordinator.L(.fastestWin), String(format: "%02d:%02d", stats.shortestWinTime / 60, stats.shortestWinTime % 60))
                 }
             }
-            .navigationTitle("Klondike Stats")
+            .navigationTitle(coordinator.L(.klondikeStatisticsTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

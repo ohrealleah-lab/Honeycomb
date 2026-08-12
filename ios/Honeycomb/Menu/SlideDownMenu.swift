@@ -13,6 +13,14 @@ struct SlideDownMenu<GameSettings: View>: View {
         case games = "Game Selection"
         case options = "Options"
         case themes = "Themes"
+
+        func localizedLabel(_ coordinator: AppCoordinator) -> String {
+            switch self {
+            case .games:   return coordinator.L(.menuTabGameSelection)
+            case .options: return coordinator.L(.options)
+            case .themes:  return coordinator.L(.themesPanelTitle)
+            }
+        }
     }
     @State private var selectedTab: MenuTab = .games
 
@@ -43,7 +51,7 @@ struct SlideDownMenu<GameSettings: View>: View {
 
                         Picker("", selection: $selectedTab) {
                             ForEach(MenuTab.allCases, id: \.self) { tab in
-                                Text(tab.rawValue).tag(tab)
+                                Text(tab.localizedLabel(coordinator)).tag(tab)
                             }
                         }
                         .pickerStyle(.segmented)
@@ -84,7 +92,7 @@ struct SlideDownMenu<GameSettings: View>: View {
 
     private var header: some View {
         HStack {
-            Text("Menu").font(.headline)
+            Text(coordinator.L(.menuHeaderTitle)).font(.headline)
             Spacer()
             Button {
                 close()
@@ -93,7 +101,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                     .font(.title2)
                     .foregroundStyle(.secondary)
             }
-            .accessibilityLabel("Close menu")
+            .accessibilityLabel(coordinator.L(.closeMenuA11y))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -101,14 +109,14 @@ struct SlideDownMenu<GameSettings: View>: View {
 
     private var gameSelectionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("Game")
+            sectionTitle(coordinator.L(.menuSectionGame))
             ForEach(GameMode.allCases) { mode in
                 Button {
                     coordinator.gameMode = mode
                     close()
                 } label: {
                     HStack {
-                        Text(mode.displayName)
+                        Text(mode.localizedDisplayName(language: coordinator.language))
                         Spacer()
                         if coordinator.gameMode == mode {
                             Image(systemName: "checkmark")
@@ -128,7 +136,7 @@ struct SlideDownMenu<GameSettings: View>: View {
 
     private var themeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("Theme")
+            sectionTitle(coordinator.L(.menuSectionTheme))
             HStack(spacing: 12) {
                 ForEach(FeltColorTheme.allCases.filter { $0 != .custom }, id: \.self) { theme in
                     Button {
@@ -143,12 +151,12 @@ struct SlideDownMenu<GameSettings: View>: View {
                             )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(theme.rawValue)
+                    .accessibilityLabel(localizedFeltName(theme))
                 }
             }
             Toggle(coordinator.L(.feltVignetteToggle), isOn: $coordinator.showFeltVignette)
 
-            sectionTitle("Card Back").padding(.top, 4)
+            sectionTitle(coordinator.L(.menuSectionCardBack)).padding(.top, 4)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     // Leads the row (not trailing) so it's visible without scrolling —
@@ -164,7 +172,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                 .padding(.vertical, 2)
             }
 
-            sectionTitle("Background").padding(.top, 4)
+            sectionTitle(coordinator.L(.menuSectionBackground)).padding(.top, 4)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     addBackgroundButton
@@ -186,7 +194,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                                 RoundedRectangle(cornerRadius: 5)
                                     .stroke(Color.accentColor, lineWidth: coordinator.customBackgroundName == nil ? 3 : 0)
                             )
-                            Text("None").font(.caption2).foregroundStyle(.primary)
+                            Text(coordinator.L(.backgroundNoneOption)).font(.caption2).foregroundStyle(.primary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -207,7 +215,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                 coordinator.customBackgroundName = name
             }
         }
-        .alert("Remove Card Back?", isPresented: .init(
+        .alert(coordinator.L(.removeCardBackAlertTitle), isPresented: .init(
             get: { entryPendingDelete != nil },
             set: { if !$0 { entryPendingDelete = nil } }
         )) {
@@ -219,9 +227,9 @@ struct SlideDownMenu<GameSettings: View>: View {
                 }
             }
         } message: {
-            Text("This removes the imported image. It can't be undone.")
+            Text(coordinator.L(.removeImportedImageBody))
         }
-        .alert("Remove Background?", isPresented: .init(
+        .alert(coordinator.L(.removeBackgroundAlertTitle), isPresented: .init(
             get: { backgroundPendingDelete != nil },
             set: { if !$0 { backgroundPendingDelete = nil } }
         )) {
@@ -233,7 +241,7 @@ struct SlideDownMenu<GameSettings: View>: View {
                 }
             }
         } message: {
-            Text("This removes the imported image. It can't be undone.")
+            Text(coordinator.L(.removeImportedImageBody))
         }
     }
 
@@ -353,7 +361,7 @@ struct SlideDownMenu<GameSettings: View>: View {
             onShowStats()
         } label: {
             HStack {
-                Label("Statistics", systemImage: "chart.bar")
+                Label(coordinator.L(.statisticsNavRow), systemImage: "chart.bar")
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }
@@ -368,7 +376,7 @@ struct SlideDownMenu<GameSettings: View>: View {
             showingHelp = true
         } label: {
             HStack {
-                Label("How to Play", systemImage: "questionmark.circle")
+                Label(coordinator.L(.howToPlayNavRow), systemImage: "questionmark.circle")
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }
@@ -403,7 +411,7 @@ struct SlideDownMenu<GameSettings: View>: View {
             showingFaceArtSheet = true
         } label: {
             HStack {
-                Label("Face Card Art", systemImage: "person.crop.rectangle")
+                Label(coordinator.L(.faceCardArtNavRow), systemImage: "person.crop.rectangle")
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }
@@ -412,6 +420,19 @@ struct SlideDownMenu<GameSettings: View>: View {
         .buttonStyle(.plain)
         .padding(.vertical, 8)
         .sheet(isPresented: $showingFaceArtSheet) { CustomFaceCardArtSheet() }
+    }
+
+    // Mirrors Mac's per-case felt-name key usage (BackgroundSelectorView.swift) —
+    // .rawValue read out to VoiceOver was unlocalized/unformatted ("feltGreen").
+    private func localizedFeltName(_ theme: FeltColorTheme) -> String {
+        switch theme {
+        case .feltGreen:  return coordinator.L(.feltGreen)
+        case .crimson:    return coordinator.L(.feltCrimson)
+        case .royalBlue:  return coordinator.L(.feltRoyalBlue)
+        case .charcoal:   return coordinator.L(.feltCharcoal)
+        case .desert:     return coordinator.L(.feltDesert)
+        case .custom:     return coordinator.L(.feltCustomColor)
+        }
     }
 
     private func sectionTitle(_ text: String) -> some View {

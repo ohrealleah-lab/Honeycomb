@@ -78,7 +78,7 @@ struct BlackjackTouchView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel("Menu")
+            .accessibilityLabel(coordinator.L(.menuHeaderTitle))
 
             Spacer()
 
@@ -140,7 +140,7 @@ struct BlackjackTouchView: View {
                                       ? Color.yellow : Color.white.opacity(0.3))
                                 .frame(width: 8, height: 8)
                         }
-                        Text("\(handLabel(hand, index: i))  \(hand.value)\(hand.isBust ? " BUST" : "")")
+                        Text("\(handLabel(hand, index: i))  \(hand.value)\(hand.isBust ? coordinator.L(.touchBustSuffix) : "")")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(hand.isBust ? .red : .white)
                         if let result = hand.result {
@@ -167,16 +167,16 @@ struct BlackjackTouchView: View {
     }
 
     private func handLabel(_ hand: BlackjackHand, index: Int) -> String {
-        viewModel.state.playerHands.count > 1 ? "HAND \(index + 1)" : "YOU"
+        viewModel.state.playerHands.count > 1 ? coordinator.L(.touchHandLabelFmt, index + 1) : coordinator.L(.touchYouLabel)
     }
 
     private func resultText(_ result: BlackjackHandResult) -> String {
         switch result {
-        case .win: return "WIN"
-        case .loss: return "LOSS"
-        case .push: return "PUSH"
-        case .blackjack: return "BLACKJACK!"
-        case .bust: return "BUST"
+        case .win: return coordinator.L(.touchResultWin)
+        case .loss: return coordinator.L(.touchResultLoss)
+        case .push: return coordinator.L(.touchResultPush)
+        case .blackjack: return coordinator.L(.touchResultBlackjack)
+        case .bust: return coordinator.L(.touchResultBust)
         }
     }
 
@@ -282,19 +282,19 @@ struct BlackjackTouchView: View {
 
     private var actionControls: some View {
         HStack(spacing: 10) {
-            actionButton("Hit", systemImage: "plus.circle") {
+            actionButton(coordinator.L(.touchActionHit), systemImage: "plus.circle") {
                 viewModel.hit()
             }
-            actionButton("Stand", systemImage: "hand.raised") {
+            actionButton(coordinator.L(.touchActionStand), systemImage: "hand.raised") {
                 viewModel.stand()
             }
             if viewModel.canDouble {
-                actionButton("Double", systemImage: "multiply.circle") {
+                actionButton(coordinator.L(.touchActionDouble), systemImage: "multiply.circle") {
                     viewModel.doubleDown()
                 }
             }
             if viewModel.canSplit {
-                actionButton("Split", systemImage: "arrow.triangle.branch") {
+                actionButton(coordinator.L(.touchActionSplit), systemImage: "arrow.triangle.branch") {
                     viewModel.split()
                 }
             }
@@ -354,7 +354,7 @@ struct BlackjackSettingsSection: View {
             .disabledDuringGameplay(!canOpenOptions)
 
             if !canOpenOptions {
-                Text("Settings unlock between hands.")
+                Text(coordinator.L(.touchSettingsUnlockBetweenHands))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -373,17 +373,17 @@ struct BlackjackStatsSheet: View {
         NavigationStack {
             List {
                 HStack {
-                    Text("Hands Dealt")
+                    Text(coordinator.L(.touchHandsDealtStat))
                     Spacer()
                     Text("\(viewModel.state.handsDealt)").foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("Session Credits")
+                    Text(coordinator.L(.touchSessionCreditsStat))
                     Spacer()
                     Text("\(viewModel.state.sessionCredits)").foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Blackjack Stats")
+            .navigationTitle(coordinator.L(.blackjackStatistics))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

@@ -1244,4 +1244,88 @@ public enum StringKey: String, CaseIterable {
     case newMatchConfirmTitle = "new_match_confirm_title"
     /// Confirmation dialog when requesting a rematch mid-match
     case rematchConfirmTitle = "rematch_confirm_title"
+    /// iOS slide-down menu segmented tab
+    case menuTabGameSelection = "menu_tab_game_selection"
+    /// iOS slide-down menu header title
+    case menuHeaderTitle = "menu_header_title"
+    /// iOS slide-down menu close-button accessibility label
+    case closeMenuA11y = "close_menu_a11y"
+    /// iOS slide-down menu Game Selection tab section header
+    case menuSectionGame = "menu_section_game"
+    /// iOS slide-down menu Themes tab felt-color section header
+    case menuSectionTheme = "menu_section_theme"
+    /// iOS slide-down menu Themes tab card-back section header
+    case menuSectionCardBack = "menu_section_card_back"
+    /// iOS slide-down menu Themes tab background section header
+    case menuSectionBackground = "menu_section_background"
+    /// iOS slide-down menu: clears the custom background back to felt color
+    case backgroundNoneOption = "background_none_option"
+    /// iOS slide-down menu: confirm removing a custom card back
+    case removeCardBackAlertTitle = "remove_card_back_alert_title"
+    /// iOS slide-down menu: confirm removing a custom background
+    case removeBackgroundAlertTitle = "remove_background_alert_title"
+    /// iOS slide-down menu: alert body, reused for both card-back and background removal
+    case removeImportedImageBody = "remove_imported_image_body"
+    /// iOS slide-down menu: Statistics destination row
+    case statisticsNavRow = "statistics_nav_row"
+    /// iOS slide-down menu: Help destination row
+    case howToPlayNavRow = "how_to_play_nav_row"
+    /// iOS slide-down menu: Face Card Art destination row
+    case faceCardArtNavRow = "face_card_art_nav_row"
+    /// iOS touch game views: New (deal) toolbar Label, Klondike/Spider/Beecell
+    case touchNewDealLabel = "touch_new_deal_label"
+    /// iOS touch game views: Undo Last Move toolbar Label, Klondike/Spider/Beecell
+    case touchUndoLastMoveLabel = "touch_undo_last_move_label"
+    /// iOS Spider touch view: stock pile accessibility label
+    case touchDealA11y = "touch_deal_a11y"
+    /// iOS Spider touch view: completed-runs tray accessibility label
+    case touchCompletedRunsA11y = "touch_completed_runs_a11y"
+    /// iOS Beecell touch view: deck-count Picker label
+    case touchDecksPickerLabel = "touch_decks_picker_label"
+    /// iOS Beecell touch view: deck-count Picker option
+    case touchSingleDeckOption = "touch_single_deck_option"
+    /// iOS Beecell touch view: deck-count Picker option
+    case touchDoubleDeckOption = "touch_double_deck_option"
+    /// iOS Spider touch view: suit-count Picker label (mislabeled "Difficulty" in source, corrected to match Mac's "Suits:")
+    case touchSuitsPickerLabel = "touch_suits_picker_label"
+    /// iOS Video Poker touch view: Max bet button
+    case touchBetMaxButton = "touch_bet_max_button"
+    /// iOS Blackjack touch view: settings-locked notice during a round
+    case touchSettingsUnlockBetweenHands = "touch_settings_unlock_between_hands"
+    /// iOS Video Poker touch view: settings-locked notice during a hand
+    case touchSettingsUnlockHandEnds = "touch_settings_unlock_hand_ends"
+    /// iOS Blackjack/Video Poker touch stats: hands-dealt row label
+    case touchHandsDealtStat = "touch_hands_dealt_stat"
+    /// iOS Blackjack/Video Poker touch stats: session-credits row label
+    case touchSessionCreditsStat = "touch_session_credits_stat"
+    /// iOS Blackjack touch view: per-hand label when split (multiple hands), %d is the hand number
+    case touchHandLabelFmt = "touch_hand_label_fmt"
+    /// iOS Blackjack touch view: player hand label when not split (single hand)
+    case touchYouLabel = "touch_you_label"
+    /// iOS Blackjack touch view: appended to a hand value when busted (leading space intentional)
+    case touchBustSuffix = "touch_bust_suffix"
+    /// iOS Blackjack touch view: per-hand result badge
+    case touchResultWin = "touch_result_win"
+    /// iOS Blackjack touch view: per-hand result badge
+    case touchResultLoss = "touch_result_loss"
+    /// iOS Blackjack touch view: per-hand result badge
+    case touchResultPush = "touch_result_push"
+    /// iOS Blackjack touch view: per-hand result badge
+    case touchResultBlackjack = "touch_result_blackjack"
+    /// iOS Blackjack touch view: per-hand result badge
+    case touchResultBust = "touch_result_bust"
+    /// iOS Blackjack touch view: action button
+    case touchActionHit = "touch_action_hit"
+    /// iOS Blackjack touch view: action button
+    case touchActionStand = "touch_action_stand"
+    /// iOS Blackjack touch view: action button
+    case touchActionDouble = "touch_action_double"
+    /// iOS Blackjack touch view: action button
+    case touchActionSplit = "touch_action_split"
+    /// iOS custom-art import sheets: Reset Position button
+    case touchResetPositionButton = "touch_reset_position_button"
+    /// iOS custom card-back import sheet nav title
+    case touchAddCardBackTitle = "touch_add_card_back_title"
+    /// Steal-mode instructional hint, iOS (touch wording — Mac/Windows use the click-based steal_instruction key)
+    case stealInstructionTap = "steal_instruction_tap"
 }

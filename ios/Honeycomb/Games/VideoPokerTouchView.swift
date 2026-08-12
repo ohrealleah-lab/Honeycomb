@@ -88,7 +88,7 @@ struct VideoPokerTouchView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel("Menu")
+            .accessibilityLabel(coordinator.L(.menuHeaderTitle))
 
             Spacer()
 
@@ -216,7 +216,7 @@ struct VideoPokerTouchView: View {
                 .foregroundStyle(.white)
                 .background(.black.opacity(0.35), in: Capsule())
 
-                Button("Max") {
+                Button(coordinator.L(.touchBetMaxButton)) {
                     viewModel.maxBet()
                 }
                 .buttonStyle(.bordered)
@@ -283,7 +283,7 @@ struct VideoPokerSettingsSection: View {
                 Stepper(coordinator.L(.startingCreditsFmt, viewModel.options.startingCredits),
                         value: $viewModel.options.startingCredits, in: 100...10000, step: 100)
 
-                Picker("Default Bet", selection: $viewModel.options.betPerHand) {
+                Picker(coordinator.L(.pickerDefaultBetLabel), selection: $viewModel.options.betPerHand) {
                     ForEach(1...5, id: \.self) { bet in
                         Text("\(bet)").tag(bet)
                     }
@@ -298,7 +298,7 @@ struct VideoPokerSettingsSection: View {
             .disabledDuringGameplay(isMidHand)
 
             if isMidHand {
-                Text("Settings unlock when the hand ends.")
+                Text(coordinator.L(.touchSettingsUnlockHandEnds))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -317,7 +317,7 @@ struct VideoPokerStatsSheet: View {
         NavigationStack {
             List {
                 HStack {
-                    Text("Hands Dealt")
+                    Text(coordinator.L(.touchHandsDealtStat))
                     Spacer()
                     Text("\(viewModel.state.handsDealt)").foregroundStyle(.secondary)
                 }
@@ -327,12 +327,12 @@ struct VideoPokerStatsSheet: View {
                     Text("\(viewModel.statistics.royalFlushCount)").foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("Session Credits")
+                    Text(coordinator.L(.touchSessionCreditsStat))
                     Spacer()
                     Text("\(viewModel.state.sessionCredits)").foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Video Poker Stats")
+            .navigationTitle(coordinator.L(.videoPokerStatistics))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

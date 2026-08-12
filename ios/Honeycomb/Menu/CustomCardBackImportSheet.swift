@@ -52,7 +52,7 @@ struct CustomCardBackImportSheet: View {
                                        scale: $scale, offsetXFraction: $offsetXFraction, offsetYFraction: $offsetYFraction)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
-                        Button("Reset Position") {
+                        Button(coordinator.L(.touchResetPositionButton)) {
                             withAnimation(.spring(response: 0.3)) {
                                 scale = 1; offsetXFraction = 0; offsetYFraction = 0
                             }
@@ -72,7 +72,7 @@ struct CustomCardBackImportSheet: View {
                     }
                 }
             }
-            .navigationTitle("Add Card Back")
+            .navigationTitle(coordinator.L(.touchAddCardBackTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
