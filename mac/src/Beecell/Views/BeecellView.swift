@@ -453,8 +453,8 @@ public struct BeecellView: View {
                                 }
                                 .padding(.horizontal, 12)
                     .padding(.vertical, 24)
-                                .frame(maxWidth: 280)
-                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(minWidth: 280)
+                                .fixedSize(horizontal: true, vertical: true)
                                 .background(Color.black.opacity(0.75))
                                 .cornerRadius(12)
                                 .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)

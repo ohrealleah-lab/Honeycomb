@@ -663,6 +663,8 @@ public partial class VideoPokerView : UserControl
         "One Pair"            => Strings.Get(StringKey.HandOnePair, _language),
         "Two Pair"            => Strings.Get(StringKey.HandTwoPair, _language),
         "Three of a Kind"     => Strings.Get(StringKey.HandThreeOfAKind, _language),
+        "Flush"                => Strings.Get(StringKey.HandFlush, _language),
+        "Straight"             => Strings.Get(StringKey.HandStraight, _language),
         "Straight Flush"      => Strings.Get(StringKey.HandStraightFlush, _language),
         "Four of a Kind"      => Strings.Get(StringKey.HandFourOfAKind, _language),
         "Full House"          => Strings.Get(StringKey.HandFullHouse, _language),

@@ -843,6 +843,10 @@ public enum StringKey: String, CaseIterable {
     /// Pay table row / result banner
     case handStraightFlush = "hand_straight_flush"
     /// Pay table row / result banner
+    case handFlush = "hand_flush"
+    /// Pay table row / result banner
+    case handStraight = "hand_straight"
+    /// Pay table row / result banner
     case handFourOfAKind = "hand_four_of_a_kind"
     /// Pay table row / result banner
     case handFullHouse = "hand_full_house"

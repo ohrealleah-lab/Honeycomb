@@ -12,6 +12,8 @@ public func localizedHandName(_ handName: String, language: AppLanguage) -> Stri
     case "One Pair":             return L(.handOnePair, language: language)
     case "Two Pair":             return L(.handTwoPair, language: language)
     case "Three of a Kind":      return L(.handThreeOfAKind, language: language)
+    case "Flush":                return L(.handFlush, language: language)
+    case "Straight":             return L(.handStraight, language: language)
     case "Straight Flush":       return L(.handStraightFlush, language: language)
     case "Four of a Kind":       return L(.handFourOfAKind, language: language)
     case "Full House":           return L(.handFullHouse, language: language)

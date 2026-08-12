@@ -422,6 +422,8 @@ enum StringsSpanish {
         .handTwoPair: "Dos Pares",
         .handThreeOfAKind: "Tercia",
         .handStraightFlush: "Escalera de Color",
+        .handFlush: "Color",
+        .handStraight: "Escalera",
         .handFourOfAKind: "Póker",
         .handFullHouse: "Full House",
         .handFiveOfAKind: "Repóker",

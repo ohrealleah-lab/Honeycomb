@@ -427,6 +427,8 @@ public enum StringKey
     HandTwoPair,
     HandThreeOfAKind,
     HandStraightFlush,
+    HandFlush,
+    HandStraight,
     HandFourOfAKind,
     HandFullHouse,
     HandFiveOfAKind,

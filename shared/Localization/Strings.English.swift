@@ -422,6 +422,8 @@ enum StringsEnglish {
         .handTwoPair: "Two Pair",
         .handThreeOfAKind: "Three of a Kind",
         .handStraightFlush: "Straight Flush",
+        .handFlush: "Flush",
+        .handStraight: "Straight",
         .handFourOfAKind: "Four of a Kind",
         .handFullHouse: "Full House",
         .handFiveOfAKind: "Five of a Kind",
