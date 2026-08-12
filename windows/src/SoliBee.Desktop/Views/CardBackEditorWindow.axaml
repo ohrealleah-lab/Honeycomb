@@ -13,7 +13,7 @@
         <!-- Card back preview -->
         <Border Grid.Row="0" HorizontalAlignment="Center" Margin="0,18,0,12">
             <Border Width="128" Height="181"
-                    BorderBrush="#D9000000" BorderThickness="0.75"
+                    BorderBrush="#D9000000" BorderThickness="1.5"
                     CornerRadius="10" ClipToBounds="True"
                     BoxShadow="0 2 8 0 #40000000" Background="White">
                 <Grid Width="128" Height="181" ClipToBounds="True">
