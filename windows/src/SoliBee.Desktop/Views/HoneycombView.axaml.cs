@@ -1074,7 +1074,7 @@ public partial class HoneycombView : UserControl
                 OverlayTitle.IsVisible = true;
                 OverlayLoseTitle.IsVisible = false;
                 OverlayTitle.FontSize = 40;
-                OverlayTitle.Text = "You Win!";
+                OverlayTitle.Text = Strings.Get(StringKey.YouWin, _language);
                 OverlaySubtitle.Text = "Final Score: 10 - 5";
                 break;
             case "Loss":
@@ -1086,7 +1086,7 @@ public partial class HoneycombView : UserControl
                 OverlayTitle.IsVisible = true;
                 OverlayLoseTitle.IsVisible = false;
                 OverlayTitle.FontSize = 40;
-                OverlayTitle.Text = "Tie!";
+                OverlayTitle.Text = Strings.Get(StringKey.TieResult, _language);
                 OverlaySubtitle.Text = "Final Score: 7 - 7";
                 break;
             default:

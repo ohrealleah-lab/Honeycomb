@@ -614,5 +614,14 @@ enum StringsEnglish {
         .removeFromDeckContextMenu: "Remove from deck?",
         .starCountFilterFmt: "%d Star%@",
         .noCardsMatchFilter: "No cards match this filter.",
+        .youLose: "You Lose",
+        .drawSuddenDeathFmt: "Draw - %@!",
+        .resultDealerWins: "Dealer Wins",
+        .resultHandWinFmt: "Hand %d: Win",
+        .resultHandLossFmt: "Hand %d: Loss",
+        .resultHandPushFmt: "Hand %d: Push",
+        .resultHandBustFmt: "Hand %d: Bust",
+        .newMatchConfirmTitle: "Start a new match? Your current match will end.",
+        .rematchConfirmTitle: "Rematch? Your current match will end.",
     ]
 }

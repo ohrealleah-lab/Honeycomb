@@ -1226,4 +1226,22 @@ public enum StringKey: String, CaseIterable {
     case starCountFilterFmt = "star_count_filter_fmt"
     /// Windows Manage Decks: empty state when the current filter selection matches no cards
     case noCardsMatchFilter = "no_cards_match_filter"
+    /// Match-result overlay title on a loss (Honeycomb)
+    case youLose = "you_lose"
+    /// Match-result overlay title when a tied match enters Sudden Death; %@ is the localized Sudden Death rule name
+    case drawSuddenDeathFmt = "draw_sudden_death_fmt"
+    /// Result summary label, single-hand loss (iOS visible text)
+    case resultDealerWins = "result_dealer_wins"
+    /// Result summary label, multi-hand (split) win — %d is the hand number
+    case resultHandWinFmt = "result_hand_win_fmt"
+    /// Result summary label, multi-hand (split) loss — %d is the hand number
+    case resultHandLossFmt = "result_hand_loss_fmt"
+    /// Result summary label, multi-hand (split) push — %d is the hand number
+    case resultHandPushFmt = "result_hand_push_fmt"
+    /// Result summary label, multi-hand (split) bust — %d is the hand number
+    case resultHandBustFmt = "result_hand_bust_fmt"
+    /// Confirmation dialog when starting a new match mid-match
+    case newMatchConfirmTitle = "new_match_confirm_title"
+    /// Confirmation dialog when requesting a rematch mid-match
+    case rematchConfirmTitle = "rematch_confirm_title"
 }

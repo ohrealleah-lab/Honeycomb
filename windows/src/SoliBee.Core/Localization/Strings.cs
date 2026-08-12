@@ -630,6 +630,15 @@ public static class Strings
         [StringKey.RemoveFromDeckContextMenu] = "Remove from deck?",
         [StringKey.StarCountFilterFmt] = "%d Star%@",
         [StringKey.NoCardsMatchFilter] = "No cards match this filter.",
+        [StringKey.YouLose] = "You Lose",
+        [StringKey.DrawSuddenDeathFmt] = "Draw - %@!",
+        [StringKey.ResultDealerWins] = "Dealer Wins",
+        [StringKey.ResultHandWinFmt] = "Hand %d: Win",
+        [StringKey.ResultHandLossFmt] = "Hand %d: Loss",
+        [StringKey.ResultHandPushFmt] = "Hand %d: Push",
+        [StringKey.ResultHandBustFmt] = "Hand %d: Bust",
+        [StringKey.NewMatchConfirmTitle] = "Start a new match? Your current match will end.",
+        [StringKey.RematchConfirmTitle] = "Rematch? Your current match will end.",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1244,5 +1253,14 @@ public static class Strings
         [StringKey.RemoveFromDeckContextMenu] = "¿Quitar del mazo?",
         [StringKey.StarCountFilterFmt] = "%d Estrella%@",
         [StringKey.NoCardsMatchFilter] = "Ninguna carta coincide con este filtro.",
+        [StringKey.YouLose] = "Perdiste",
+        [StringKey.DrawSuddenDeathFmt] = "¡Empate - %@!",
+        [StringKey.ResultDealerWins] = "Gana el Repartidor",
+        [StringKey.ResultHandWinFmt] = "Mano %d: Gana",
+        [StringKey.ResultHandLossFmt] = "Mano %d: Pierde",
+        [StringKey.ResultHandPushFmt] = "Mano %d: Empate",
+        [StringKey.ResultHandBustFmt] = "Mano %d: Se pasó",
+        [StringKey.NewMatchConfirmTitle] = "¿Empezar un nuevo partido? Tu partido actual terminará.",
+        [StringKey.RematchConfirmTitle] = "¿Revancha? Tu partido actual terminará.",
     };
 }

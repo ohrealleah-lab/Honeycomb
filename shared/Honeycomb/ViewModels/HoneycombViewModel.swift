@@ -651,7 +651,10 @@ public final class HoneycombViewModel {
         // same font (FlashBannerView just renders whatever's after each "\n") —
         // rather than only Swap riding along while Ascension/Descension/etc. never
         // got shown here at all.
-        let firstMoveLine = isPlayerTurn ? "First Move: Player!" : "First Move: \(options.difficulty.displayName)!"
+        let firstMoveLanguage = BannerCatalog.currentLanguage
+        let firstMoveLine = isPlayerTurn
+            ? L(.firstMovePlayer, language: firstMoveLanguage)
+            : L(.firstMoveOpponentFmt, language: firstMoveLanguage, honeycombLocalizedDifficultyName(options.difficulty, language: firstMoveLanguage))
         var ruleLines = activeRules.map { rule -> String in
             if rule == .swap, let swapResult {
                 return formatSwapRuleForBanner(swapResult)
@@ -2176,7 +2179,7 @@ public final class HoneycombViewModel {
             let oScore = board.opponentScore + opponentHand.count
             
             if pScore > oScore {
-                matchResult = "You Win!"
+                matchResult = L(.youWin, language: BannerCatalog.currentLanguage)
                 gameState = .gameOver
                 if options.isSoundEnabled { UISound.play(named: "victory", enabled: true) }
                 let flawless = oScore == 0
@@ -2204,7 +2207,7 @@ public final class HoneycombViewModel {
                     enqueueBanner(text, longDuration: true)
                 }
             } else if oScore > pScore {
-                matchResult = "You Lose"
+                matchResult = L(.youLose, language: BannerCatalog.currentLanguage)
                 gameState = .gameOver
                 stats.recordGame(won: false, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
                 if pScore == 0, case .message(let text) = BannerCatalog.shared.fire(.ruleSpecificPlayerLosesFlawless0Captures, tokens: ["OpponentName": options.difficulty.displayName]) {
@@ -2218,7 +2221,8 @@ public final class HoneycombViewModel {
                     enqueueBanner(text, longDuration: true)
                 }
             } else if activeRules.contains(.suddenDeath) {
-                matchResult = "Draw - \(HoneycombRule.suddenDeath.rawValue)!"
+                let suddenDeathLanguage = BannerCatalog.currentLanguage
+                matchResult = L(.drawSuddenDeathFmt, language: suddenDeathLanguage, honeycombLocalizedRuleName(HoneycombRule.suddenDeath.rawValue, language: suddenDeathLanguage))
                 gameState = .suddenDeath
                 matchResultFlavorText = nil
                 // Not a final result — Sudden Death continues this same match into
@@ -2228,7 +2232,7 @@ public final class HoneycombViewModel {
 
                 // Give enough time for the final card placement and any combo animations to fully resolve
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                    self?.enqueueBanner("\(HoneycombRule.suddenDeath.rawValue)!")
+                    self?.enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.suddenDeath.rawValue, language: BannerCatalog.currentLanguage))!")
                     self?.triggerSuddenDeath()
                 }
                 return
@@ -2236,7 +2240,7 @@ public final class HoneycombViewModel {
                 // Sudden Death isn't active for this match (Triple Triad-style: it's now
                 // an opt-in Rule, not automatic on every tie) — a tie is a final result
                 // like a win/loss, not a continuation.
-                matchResult = "Tie!"
+                matchResult = L(.tieResult, language: BannerCatalog.currentLanguage)
                 gameState = .gameOver
                 matchResultFlavorText = nil
                 consecutiveRematchWins = 0

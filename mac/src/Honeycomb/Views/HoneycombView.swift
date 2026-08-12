@@ -349,7 +349,7 @@ public struct HoneycombView: View {
                     let displayHand: [HoneycombCard] = viewModel.gameState == .setup ? Self.placeholderHand
                         : (viewModel.gameState == .gameOver ? viewModel.playerStartingDeck : viewModel.playerHand)
                     VStack(spacing: 6) {
-                        handSideLabel("PLAYER")
+                        handSideLabel(coordinator.L(.playerLabel))
                         handGrid(hand: displayHand) { i, card in
                             HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
@@ -479,7 +479,7 @@ public struct HoneycombView: View {
                     // Opponent Hand (Right) — same top offset as the player's hand.
                     let opponentDisplayHand = viewModel.gameState == .setup ? Self.placeholderHand : viewModel.opponentHand
                     VStack(spacing: 6) {
-                        handSideLabel("DEALER")
+                        handSideLabel(coordinator.L(.dealerLabel))
                         handGrid(hand: opponentDisplayHand) { i, card in
                             HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
@@ -783,11 +783,11 @@ public struct HoneycombView: View {
                 // its title switches to the steal confirmation since Steal Card is now gone.
             }
         }
-        .confirmationDialog("Start a new match? Your current match will end.", isPresented: $isShowingNewGameConfirm) {
+        .confirmationDialog(coordinator.L(.newMatchConfirmTitle), isPresented: $isShowingNewGameConfirm) {
             Button(coordinator.L(.cancel), role: .cancel) { }
             Button(coordinator.L(.newMatch), role: .destructive) { viewModel.startNewGame() }
         }
-        .confirmationDialog("Rematch? Your current match will end.", isPresented: $isShowingRematchConfirm) {
+        .confirmationDialog(coordinator.L(.rematchConfirmTitle), isPresented: $isShowingRematchConfirm) {
             Button(coordinator.L(.cancel), role: .cancel) { }
             Button(coordinator.L(.rematch), role: .destructive) { viewModel.rematch() }
         }

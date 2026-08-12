@@ -462,13 +462,15 @@ public final class BlackjackViewModel {
                 }
             }
 
+            let summaryLanguage = BannerCatalog.currentLanguage
+            let isMultiHand = state.playerHands.count > 1
             let label: String
             switch result {
-            case .blackjack: label = "Blackjack! 🃏"
-            case .win:       label = state.playerHands.count > 1 ? "Hand \(i+1): Win" : "You win!"
-            case .loss:      label = state.playerHands.count > 1 ? "Hand \(i+1): Loss" : "Dealer Wins"
-            case .push:      label = state.playerHands.count > 1 ? "Hand \(i+1): Push" : "Push"
-            case .bust:      label = state.playerHands.count > 1 ? "Hand \(i+1): Bust" : "Bust!"
+            case .blackjack: label = L(.resultHeadlineBlackjack, language: summaryLanguage) + " 🃏"
+            case .win:       label = isMultiHand ? L(.resultHandWinFmt, language: summaryLanguage, i + 1) : L(.youWin, language: summaryLanguage)
+            case .loss:      label = isMultiHand ? L(.resultHandLossFmt, language: summaryLanguage, i + 1) : L(.resultDealerWins, language: summaryLanguage)
+            case .push:      label = isMultiHand ? L(.resultHandPushFmt, language: summaryLanguage, i + 1) : L(.resultHeadlinePush, language: summaryLanguage)
+            case .bust:      label = isMultiHand ? L(.resultHandBustFmt, language: summaryLanguage, i + 1) : L(.resultHeadlineBust, language: summaryLanguage)
             }
             summaryParts.append(label)
         }
@@ -530,7 +532,7 @@ public final class BlackjackViewModel {
             state.dealerCards  = [Card(suit: .diamonds, rank: 9, faceUp: true),
                                   Card(suit: .clubs,    rank: 8, faceUp: true)]
             state.lastNetResult    = 100
-            state.lastResultSummary = "You win!"
+            state.lastResultSummary = L(.youWin, language: BannerCatalog.currentLanguage)
         case .loss:
             var hand = BlackjackHand(
                 cards: [Card(suit: .hearts, rank: 8, faceUp: true),
@@ -541,7 +543,7 @@ public final class BlackjackViewModel {
             state.dealerCards  = [Card(suit: .diamonds, rank: 10, faceUp: true),
                                   Card(suit: .clubs,    rank: 10, faceUp: true)]
             state.lastNetResult    = -50
-            state.lastResultSummary = "Dealer Wins"
+            state.lastResultSummary = L(.resultDealerWins, language: BannerCatalog.currentLanguage)
         default: break
         }
     }

@@ -619,4 +619,13 @@ public enum StringKey
     RemoveFromDeckContextMenu,
     StarCountFilterFmt,
     NoCardsMatchFilter,
+    YouLose,
+    DrawSuddenDeathFmt,
+    ResultDealerWins,
+    ResultHandWinFmt,
+    ResultHandLossFmt,
+    ResultHandPushFmt,
+    ResultHandBustFmt,
+    NewMatchConfirmTitle,
+    RematchConfirmTitle,
 }

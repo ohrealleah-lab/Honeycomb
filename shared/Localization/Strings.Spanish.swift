@@ -614,5 +614,14 @@ enum StringsSpanish {
         .removeFromDeckContextMenu: "¿Quitar del mazo?",
         .starCountFilterFmt: "%d Estrella%@",
         .noCardsMatchFilter: "Ninguna carta coincide con este filtro.",
+        .youLose: "Perdiste",
+        .drawSuddenDeathFmt: "¡Empate - %@!",
+        .resultDealerWins: "Gana el Repartidor",
+        .resultHandWinFmt: "Mano %d: Gana",
+        .resultHandLossFmt: "Mano %d: Pierde",
+        .resultHandPushFmt: "Mano %d: Empate",
+        .resultHandBustFmt: "Mano %d: Se pasó",
+        .newMatchConfirmTitle: "¿Empezar un nuevo partido? Tu partido actual terminará.",
+        .rematchConfirmTitle: "¿Revancha? Tu partido actual terminará.",
     ]
 }
