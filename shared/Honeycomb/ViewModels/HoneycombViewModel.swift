@@ -567,12 +567,13 @@ public final class HoneycombViewModel {
     // "Swap", "Ascension: Hearts". No trailing punctuation; the banner's own "!"
     // belongs only after "First Move: Player/Opponent".
     private func formatRuleForBanner(_ rule: HoneycombRule) -> String {
+        let localizedName = honeycombLocalizedRuleName(rule.rawValue, language: BannerCatalog.currentLanguage)
         let defaultText: String
         if rule == .ascension || rule == .descension {
             let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }
-            defaultText = "\(rule.rawValue): \(suitNames.joined(separator: ", "))"
+            defaultText = "\(localizedName): \(suitNames.joined(separator: ", "))"
         } else {
-            defaultText = rule.rawValue
+            defaultText = localizedName
         }
         // 20% of the time, the intro banner swaps a rule's plain name for a flavor
         // line (e.g. "Pollen is in the air!" instead of "Pollination") — same gate
@@ -587,7 +588,7 @@ public final class HoneycombViewModel {
     // did, not just that the rule is active — a 5-star card leaving the player's hand
     // reads very differently from the player coming out ahead.
     private func formatSwapRuleForBanner(_ swapResult: SwapResult) -> String {
-        let defaultText = HoneycombRule.swap.rawValue
+        let defaultText = honeycombLocalizedRuleName(HoneycombRule.swap.rawValue, language: BannerCatalog.currentLanguage)
         let tokens = ["OpponentName": options.difficulty.displayName]
         if swapResult.preSwapPlayerCard.data.stars == 5 {
             return Self.bannerCatalogText(for: .ruleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, existingDefaultText: defaultText, tokens: tokens)
@@ -1374,13 +1375,15 @@ public final class HoneycombViewModel {
     // formatting for Ascension/Descension (calling out the 2 affected suits) so the two
     // banners never disagree about what the match's rules actually are.
     private func activeRulesSummaryText() -> String {
-        if activeRules.isEmpty { return "Normal" }
+        let language = BannerCatalog.currentLanguage
+        if activeRules.isEmpty { return L(.ruleLineNormal, language: language) }
         return activeRules.map { rule -> String in
+            let localizedName = honeycombLocalizedRuleName(rule.rawValue, language: language)
             if (rule == .ascension || rule == .descension), !ascensionDescensionSuits.isEmpty {
                 let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }
-                return "\(rule.rawValue) Suit: \(suitNames.joined(separator: ", "))"
+                return L(.ruleLineSuitFmt, language: language, localizedName, suitNames.joined(separator: ", "))
             }
-            return rule.rawValue
+            return localizedName
         }.joined(separator: ", ")
     }
 
@@ -1404,7 +1407,7 @@ public final class HoneycombViewModel {
         // since those describe what the final move itself actually did.
         if !board.isFull && board.ascensionDescensionSuits.contains(placedSuit) {
             if activeRules.contains(.ascension) {
-                let defaultText = "\(HoneycombRule.ascension.rawValue)!"
+                let defaultText = "\(honeycombLocalizedRuleName(HoneycombRule.ascension.rawValue, language: BannerCatalog.currentLanguage))!"
                 // The catalog's flavor alternate only fires once the suit-wide modifier
                 // this placement just produced (every matching-suit card on the board
                 // shares the same +suitCount value) is severe enough to actually read as
@@ -1420,7 +1423,7 @@ public final class HoneycombViewModel {
                     parts.append(defaultText)
                 }
             } else if activeRules.contains(.descension) {
-                let defaultText = "\(HoneycombRule.descension.rawValue)!"
+                let defaultText = "\(honeycombLocalizedRuleName(HoneycombRule.descension.rawValue, language: BannerCatalog.currentLanguage))!"
                 // Same idea in reverse: only fires once the (negative) suit-wide modifier
                 // has actually clamped some matching-suit card's stat down to the 1 floor
                 // (HoneycombCard.stat(at:) clamps to 1...10) — not just "Descension is

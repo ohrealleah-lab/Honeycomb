@@ -381,7 +381,7 @@ public partial class HoneycombViewModel : ObservableObject
     // belongs only after "First Move: Player/Opponent".
     private string FormatRuleForBanner(HoneycombRule rule)
     {
-        var name = rule.DisplayName();
+        var name = HoneycombRuleLocalization.LocalizedRuleName(rule, SettingsService.LoadOptions().Language);
         string defaultText;
         if (rule == HoneycombRule.Ascension || rule == HoneycombRule.Descension)
         {
@@ -421,7 +421,7 @@ public partial class HoneycombViewModel : ObservableObject
     // reads very differently from the player coming out ahead.
     private string FormatSwapRuleForBanner(PendingSwap swap)
     {
-        var defaultText = HoneycombRule.Swap.DisplayName();
+        var defaultText = HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.Swap, SettingsService.LoadOptions().Language);
         var tokens = new Dictionary<string, string> { ["OpponentName"] = OpponentNameDisplay };
         if (swap.PlayerCard.Data.Stars == 5)
         {
@@ -1264,7 +1264,7 @@ public partial class HoneycombViewModel : ObservableObject
         {
             if (State.ActiveRules.Contains(HoneycombRule.Ascension))
             {
-                var defaultText = $"{HoneycombRule.Ascension.DisplayName()}!";
+                var defaultText = $"{HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.Ascension, SettingsService.LoadOptions().Language)}!";
                 // The catalog's flavor alternate only fires once the suit-wide modifier
                 // this placement just produced (every matching-suit card on the board
                 // shares the same +suitCount value) is severe enough to actually read as
@@ -1281,7 +1281,7 @@ public partial class HoneycombViewModel : ObservableObject
             }
             else if (State.ActiveRules.Contains(HoneycombRule.Descension))
             {
-                var defaultText = $"{HoneycombRule.Descension.DisplayName()}!";
+                var defaultText = $"{HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.Descension, SettingsService.LoadOptions().Language)}!";
                 // Same idea in reverse: only fires once the (negative) suit-wide modifier
                 // has actually clamped some matching-suit card's stat down to the 1 floor
                 // (HoneycombCard.Stat(int) clamps to 1...10) — not just "Descension is
@@ -2088,6 +2088,17 @@ public partial class HoneycombViewModel : ObservableObject
         try { if (File.Exists(StatisticsPath)) { var s = JsonSerializer.Deserialize<HoneycombStats>(File.ReadAllText(StatisticsPath)); if (s != null) return s; } }
         catch { }
         return new HoneycombStats();
+    }
+
+    // Callable from ManageDecksView (which has no live HoneycombViewModel instance to
+    // call SaveStats() on) after HoneycombProfileManager.StartOver() — mirrors Mac's
+    // startOver(), which increments stats.timesStartedOver in the same place.
+    public static void RecordStartOver()
+    {
+        var stats = LoadStats();
+        stats.TimesStartedOver++;
+        try { Directory.CreateDirectory(DataDir); File.WriteAllText(StatisticsPath, JsonSerializer.Serialize(stats, new JsonSerializerOptions { WriteIndented = true })); }
+        catch { }
     }
 
     public void NotifyOptionsChanged()

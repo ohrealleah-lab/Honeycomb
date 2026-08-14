@@ -14,7 +14,11 @@ struct OptionsSheetShell<Content: View>: View {
     var fixedSizeHorizontal: Bool
     var title: String
     var showThemes: Bool
-    var onViewStats: () -> Void
+    // Optional — the Honeycomb Rules sheet (a second, separate OptionsSheetShell user
+    // from HoneycombRulesView, not to be confused with Honeycomb's own Options sheet,
+    // which does show stats) has no stats view of its own to jump to, so it omits this
+    // entirely rather than wiring a dead `{}` closure to a link that did nothing.
+    var onViewStats: (() -> Void)?
     var onOK: () -> Void
     @ViewBuilder var content: () -> Content
 
@@ -40,7 +44,7 @@ struct OptionsSheetShell<Content: View>: View {
         fixedSizeHorizontal: Bool = true,
         title: String = "Preferences",
         showThemes: Bool = true,
-        onViewStats: @escaping () -> Void,
+        onViewStats: (() -> Void)? = nil,
         onOK: @escaping () -> Void,
         @ViewBuilder content: @escaping () -> Content
     ) {
@@ -132,20 +136,22 @@ struct OptionsSheetShell<Content: View>: View {
 
                     Spacer()
 
-                    Button(action: {
-                        isPresented = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                            onViewStats()
+                    if let onViewStats {
+                        Button(action: {
+                            isPresented = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                onViewStats()
+                            }
+                        }) {
+                            Text(coordinator.L(.viewStats))
+                                .underline()
+                                .foregroundColor(.blue)
+                                .font(.system(.body))
                         }
-                    }) {
-                        Text(coordinator.L(.viewStats))
-                            .underline()
-                            .foregroundColor(.blue)
-                            .font(.system(.body))
-                    }
-                    .buttonStyle(.plain)
+                        .buttonStyle(.plain)
 
-                    Spacer()
+                        Spacer()
+                    }
 
                     Button(coordinator.L(.ok)) {
                         onOK()

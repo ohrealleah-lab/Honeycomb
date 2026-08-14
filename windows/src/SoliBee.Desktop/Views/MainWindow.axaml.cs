@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -751,30 +752,34 @@ public partial class MainWindow : Window
     {
         StatsFixedRows.IsVisible   = false;
         StatsDynamicRows.IsVisible = true;
+        StatsDynamicRowsCol2.IsVisible = false;
+        StatsPanelRoot.Width = 300;
         StatsTitleText.Text = Strings.Get(StringKey.BlackjackStatistics, _language);
 
         var s = vm.Stats;
         double winRate = s.HandsPlayed > 0 ? 100.0 * s.HandsWon / s.HandsPlayed : 0.0;
         double rtp     = s.TotalCreditsWagered > 0 ? 100.0 * s.TotalCreditsWon / s.TotalCreditsWagered : 0.0;
 
-        StatsDynamicRows.Children.Clear();
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsPlayed, _language),  s.HandsPlayed.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsWon, _language),     s.HandsWon.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.StatHandsLost, _language),    s.HandsLost.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.StatPushes, _language),        s.HandsPushed.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.StatBlackjacks, _language),    s.Blackjacks.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),      $"{winRate:0.0}%"));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalWagered, _language), s.TotalCreditsWagered.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalPaid, _language),    s.TotalCreditsWon.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.BiggestPay, _language),   s.BiggestPay.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RtpStat, _language),           $"{rtp:0.0}%"));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RebuysStat, _language),        s.Rebuys.ToString()));
+        StatsDynamicRowsCol1.Children.Clear();
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsPlayed, _language),  s.HandsPlayed.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsWon, _language),     s.HandsWon.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatHandsLost, _language),    s.HandsLost.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatPushes, _language),        s.HandsPushed.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatBlackjacks, _language),    s.Blackjacks.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),      $"{winRate:0.0}%"));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalWagered, _language), s.TotalCreditsWagered.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalPaid, _language),    s.TotalCreditsWon.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.BiggestPay, _language),   s.BiggestPay.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.RtpStat, _language),           $"{rtp:0.0}%"));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.RebuysStat, _language),        s.Rebuys.ToString()));
     }
 
     private void PopulateVideoPokerStats(VideoPokerViewModel vm)
     {
         StatsFixedRows.IsVisible   = false;
         StatsDynamicRows.IsVisible = true;
+        StatsDynamicRowsCol2.IsVisible = false;
+        StatsPanelRoot.Width = 300;
         StatsTitleText.Text = Strings.Get(StringKey.VideoPokerStatistics, _language);
 
         var s = vm.Stats;
@@ -782,16 +787,111 @@ public partial class MainWindow : Window
         double rtp          = s.TotalCreditsWagered > 0 ? 100.0 * s.TotalCreditsWon / s.TotalCreditsWagered : 0.0;
         int    royalFlushes = s.RoyalFlushCount;
 
-        StatsDynamicRows.Children.Clear();
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsPlayed, _language),   s.TotalHands.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsWon, _language),      s.WinningHands.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),       $"{winRate:0.0}%"));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.BiggestPay, _language),    s.BiggestPay.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalWagered, _language),  s.TotalCreditsWagered.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalPaid, _language),     s.TotalCreditsWon.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RtpStat, _language),            $"{rtp:0.0}%"));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RoyalFlushes, _language),  royalFlushes.ToString()));
-        StatsDynamicRows.Children.Add(BuildStatRow(Strings.Get(StringKey.RebuysStat, _language),         s.Rebuys.ToString()));
+        StatsDynamicRowsCol1.Children.Clear();
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsPlayed, _language),   s.TotalHands.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsWon, _language),      s.WinningHands.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),       $"{winRate:0.0}%"));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.BiggestPay, _language),    s.BiggestPay.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalWagered, _language),  s.TotalCreditsWagered.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalPaid, _language),     s.TotalCreditsWon.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.RtpStat, _language),            $"{rtp:0.0}%"));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.RoyalFlushes, _language),  royalFlushes.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.RebuysStat, _language),         s.Rebuys.ToString()));
+    }
+
+    // Formats "%d/%d (%@)" (StatCardsUnlockedValueFmt) by replacing each placeholder
+    // occurrence in order — same technique as ManageDecksView's CardBankCountFmt
+    // handling, since a blanket .Replace("%d", ...) can't put two different numbers
+    // into two identical tokens.
+    private static string FormatCardsUnlockedValue(string fmt, int unlocked, int total, string percentText)
+    {
+        int firstD = fmt.IndexOf("%d", StringComparison.Ordinal);
+        fmt = fmt.Remove(firstD, 2).Insert(firstD, unlocked.ToString());
+        int secondD = fmt.IndexOf("%d", firstD, StringComparison.Ordinal);
+        fmt = fmt.Remove(secondD, 2).Insert(secondD, total.ToString());
+        return fmt.Replace("%@", percentText);
+    }
+
+    private static Avalonia.Controls.Shapes.Rectangle BuildStatsDivider() => new()
+    {
+        Height = 1,
+        Fill = new SolidColorBrush(Color.Parse("#DDDDDD")),
+        Margin = new Avalonia.Thickness(0, 4)
+    };
+
+    // Mirrors Mac's HoneycombStatsView field-for-field (same HoneycombStats model,
+    // shared/Honeycomb/Models/HoneycombStats.swift) — same rows, same order, same
+    // labels/keys, including the computed Win Rate and the card-collection section
+    // (per-suit/per-star unlock progress), so the two platforms report identical
+    // numbers for identical play. Suit names route through
+    // HoneycombCardData.LocalizedSuitName instead of Mac's hardcoded English suit
+    // labels — an improvement (the counts still match), not a deviation.
+    private void PopulateHoneycombStats(HoneycombViewModel vm)
+    {
+        StatsFixedRows.IsVisible   = false;
+        StatsDynamicRows.IsVisible = true;
+        StatsDynamicRowsCol2.IsVisible = true;
+        // Two columns — Col1 is match/streak/gameplay stats, Col2 is card-collection
+        // progress — instead of one long single column, which stretched this popup
+        // much taller than every other game's stats panel.
+        StatsPanelRoot.Width = 620;
+        StatsTitleText.Text = Strings.Get(StringKey.HoneycombStatistics, _language);
+
+        var s = vm.Stats;
+        int decisiveGames = s.GamesPlayed - s.MatchesDrawn;
+        double winRate = decisiveGames > 0 ? 100.0 * s.MatchesWon / decisiveGames : 0.0;
+
+        StatsDynamicRowsCol1.Children.Clear();
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.GamesPlayed, _language),            s.GamesPlayed.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatMatchesWon, _language),         s.MatchesWon.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatMatchesLost, _language),        s.MatchesLost.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatMatchesDrawn, _language),       s.MatchesDrawn.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatSwarmsToDeath, _language),      s.SuddenDeathCount.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),                $"{winRate:0.0}%"));
+
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatCurrentWinStreak, _language),       s.CurrentWinStreak.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatLongestWinStreak, _language),       s.LongestWinStreak.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatFlawlessVictoriesMac, _language),   s.FlawlessVictories.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatBabyBeeWins, _language),         s.EasyWins.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatHoneyBeeWins, _language),        s.MediumWins.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatQueenBeeWins, _language),        s.HardWins.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatKillerBeeWins, _language),       s.UltraHardWins.ToString()));
+
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatTotalCardsFlipped, _language),   s.CardsCaptured.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatQueensFalls, _language),         s.FallenAces.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatHiveMindsTriggered, _language),  s.SamePlusTriggers.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatCardsStolen, _language),         s.CardsStolen.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatTimesStartedOver, _language),    s.TimesStartedOver.ToString()));
+
+        StatsDynamicRowsCol2.Children.Clear();
+
+        var allCards = HoneycombDatabase.Shared.AllCards;
+        var unlockedIds = HoneycombProfileManager.Shared.UnlockedCardIds;
+        int totalUnlocked = unlockedIds.Count;
+        int totalCards = allCards.Count;
+        double unlockedPercent = totalCards > 0 ? 100.0 * totalUnlocked / totalCards : 0.0;
+        string unlockedValue = FormatCardsUnlockedValue(
+            Strings.Get(StringKey.StatCardsUnlockedValueFmt, _language), totalUnlocked, totalCards, $"{unlockedPercent:0}%");
+        StatsDynamicRowsCol2.Children.Add(BuildStatRow(Strings.Get(StringKey.StatCardsUnlockedLabel, _language), unlockedValue));
+
+        var suitCodes = new[] { "S", "H", "D", "C" };
+        foreach (var suitCode in suitCodes)
+        {
+            var suitCards = allCards.Where(c => c.Suit == suitCode).ToList();
+            int suitUnlocked = suitCards.Count(c => unlockedIds.Contains(c.Id));
+            string suitLabel = Strings.Get(StringKey.StatSuitUnlockedFmt, _language).Replace("%@", HoneycombCardData.LocalizedSuitName(suitCode, _language));
+            StatsDynamicRowsCol2.Children.Add(BuildStatRow(suitLabel, $"{suitUnlocked}/{suitCards.Count}"));
+        }
+
+        StatsDynamicRowsCol2.Children.Add(BuildStatsDivider());
+
+        for (int star = 1; star <= 5; star++)
+        {
+            var starCards = allCards.Where(c => c.Stars == star).ToList();
+            int starUnlocked = starCards.Count(c => unlockedIds.Contains(c.Id));
+            string starLabel = Strings.Get(StringKey.StatStarUnlockedFmt, _language).Replace("%d", star.ToString());
+            StatsDynamicRowsCol2.Children.Add(BuildStatRow(starLabel, $"{starUnlocked}/{starCards.Count}"));
+        }
     }
 
     private void PopulateStatsPanel()
@@ -808,15 +908,13 @@ public partial class MainWindow : Window
         }
         if (this.DataContext is HoneycombViewModel hVm)
         {
-            var statsWindow = new HoneycombStatsWindow();
-            statsWindow.ShowDialog(this);
-            // Hide the overlay since we show a separate window for Honeycomb
-            StatsOverlay.IsVisible = false;
+            PopulateHoneycombStats(hVm);
             return;
         }
 
         StatsFixedRows.IsVisible   = true;
         StatsDynamicRows.IsVisible = false;
+        StatsPanelRoot.Width = 300;
 
         string title;
         int gamesPlayed, gamesWon, timedGamesWon, currentStreak, longestStreak, fastestWinSec, totalWinSec;

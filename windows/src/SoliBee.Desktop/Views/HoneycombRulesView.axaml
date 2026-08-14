@@ -34,9 +34,18 @@
                  "Inversion" only exists in the ban set (no HoneycombRule enum
                  value — it can never be manually selected, only banned from the
                  roulette pool), so its row has no Select checkbox. -->
-            <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,0,0,6">
-                <TextBlock x:Name="BanColumnHeaderText" Grid.Column="0" Text="Ban?" FontSize="11" FontWeight="Bold" Foreground="#707070" Width="34"/>
-                <TextBlock x:Name="PlayColumnHeaderText" Grid.Column="1" Text="Play" FontSize="11" FontWeight="Bold" Foreground="#707070"/>
+            <!-- Fixed (not Auto) widths: this header Grid and the checkbox Grid below it
+                 size independently, so Auto columns here never actually matched the
+                 checkboxes' own Auto width below — harmless for the short English "Ban?"/
+                 "Play" labels, but "¿Vetar?" (translated, longer, needs its trailing "?"
+                 visible) overflowed past a width sized only for "Ban?". Fixed widths keep
+                 both Grids' columns matched regardless of translation length, and give the
+                 checkboxes below more breathing room besides. -->
+            <Grid ColumnDefinitions="50,58,*" Margin="0,0,0,6">
+                <TextBlock x:Name="BanColumnHeaderText" Grid.Column="0" Text="Ban?" FontSize="11" FontWeight="Bold" Foreground="#707070"
+                           TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="2,0"/>
+                <TextBlock x:Name="PlayColumnHeaderText" Grid.Column="1" Text="Play" FontSize="11" FontWeight="Bold" Foreground="#707070"
+                           TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="2,0"/>
                 <!-- Right margin clears the ScrollViewer's own scrollbar gutter — without
                      it this text wrapped right up against (and visually under) the
                      scrollbar instead of leaving it clear space. -->
@@ -53,9 +62,19 @@
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <!-- ToolTip.ShowDelay (ms) makes each rule's hover explanation match the
-                     same "hold for a beat" pacing as the mac port's .help() tooltips. -->
-                <Grid ColumnDefinitions="Auto,Auto,*"
+                     same "hold for a beat" pacing as the mac port's .help() tooltips.
+                     Column widths (50,58) match the header Grid above, not Auto — see
+                     that Grid's own comment. -->
+                <Grid ColumnDefinitions="50,58,*"
                       RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                    <!-- Centers every checkbox within its now-wider fixed column instead
+                         of them hugging the left edge, so each sits under its header
+                         label ("¿Vetar?"/"Jugar") instead of bunched together. -->
+                    <Grid.Styles>
+                        <Style Selector="CheckBox">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                        </Style>
+                    </Grid.Styles>
 
                     <CheckBox Grid.Row="0" Grid.Column="0" x:Name="Ban_NormalMode" Tag="Normal Mode" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Forces a match with no active rules, skipping roulette."/>
                     <CheckBox Grid.Row="0" Grid.Column="1" x:Name="HoneycombRule_ForceNormal" Tag="ForceNormal" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Forces a match with no active rules, skipping roulette."/>

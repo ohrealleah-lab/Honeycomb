@@ -390,7 +390,7 @@ struct HoneycombTouchView: View {
         if !viewModel.options.selectedRules.isEmpty {
             return HoneycombRule.allCases
                 .filter { viewModel.options.selectedRules.contains($0) }
-                .map(\.rawValue)
+                .map { honeycombLocalizedRuleName($0.rawValue, language: coordinator.language) }
         }
         return [coordinator.L(.ruleLineRoulette)]
     }

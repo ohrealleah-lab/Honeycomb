@@ -11,6 +11,7 @@ using Avalonia.Media;
 using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
+using SoliBee.Core.ViewModels;
 
 namespace SoliBee.Desktop.Views;
 
@@ -597,6 +598,7 @@ public partial class ManageDecksView : UserControl
 
         var pm = HoneycombProfileManager.Shared;
         pm.StartOver();
+        HoneycombViewModel.RecordStartOver();
 
         var opts = SettingsService.LoadOptions();
         opts.HoneycombActiveDeckIndex = 0;

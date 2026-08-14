@@ -1056,11 +1056,11 @@ public partial class HoneycombView : UserControl
         if (kind == "Same" || kind == "Plus" || kind == "FallenAce" || kind == "Combo" || kind == "SuddenDeath")
         {
             _bannerActive = true;
-            if (kind == "FallenAce") RuleToast.Flash($"{HoneycombRule.FallenAce.DisplayName()}!");
+            if (kind == "FallenAce") RuleToast.Flash($"{HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.FallenAce, _language)}!");
             else if (kind == "Combo") RuleToast.Flash("HIVE MIND x2!");
-            else if (kind == "SuddenDeath") RuleToast.Flash($"{HoneycombRule.SuddenDeath.DisplayName()}!");
-            else if (kind == "Same") RuleToast.Flash($"{HoneycombRule.Same.DisplayName()}!");
-            else if (kind == "Plus") RuleToast.Flash($"{HoneycombRule.Plus.DisplayName()}!");
+            else if (kind == "SuddenDeath") RuleToast.Flash($"{HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.SuddenDeath, _language)}!");
+            else if (kind == "Same") RuleToast.Flash($"{HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.Same, _language)}!");
+            else if (kind == "Plus") RuleToast.Flash($"{HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.Plus, _language)}!");
             else RuleToast.Flash($"{kind}!");
             return;
         }

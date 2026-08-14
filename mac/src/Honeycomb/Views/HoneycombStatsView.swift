@@ -40,47 +40,53 @@ public struct HoneycombStatsView: View {
 
             Divider()
 
+            // Two columns instead of one long list — Col1 is match/streak/gameplay stats,
+            // Col2 is card-collection progress — so this sheet doesn't stretch so tall.
+            // Mirrors the same split on Windows (MainWindow.axaml.cs's
+            // PopulateHoneycombStats/StatsDynamicRowsCol1/Col2).
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    StatRowView(label: coordinator.L(.gamesPlayed), value: "\(stats.gamesPlayed)")
-                    StatRowView(label: coordinator.L(.statMatchesWon), value: "\(stats.matchesWon)")
-                    StatRowView(label: coordinator.L(.statMatchesLost), value: "\(stats.matchesLost)")
-                    StatRowView(label: coordinator.L(.statMatchesDrawn), value: "\(stats.matchesDrawn)")
-                    StatRowView(label: coordinator.L(.statSwarmsToDeath), value: "\(stats.suddenDeathCount)")
-                    StatRowView(label: coordinator.L(.winRate), value: String(format: "%.1f%%", winRate))
+                HStack(alignment: .top, spacing: 32) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        StatRowView(label: coordinator.L(.gamesPlayed), value: "\(stats.gamesPlayed)")
+                        StatRowView(label: coordinator.L(.statMatchesWon), value: "\(stats.matchesWon)")
+                        StatRowView(label: coordinator.L(.statMatchesLost), value: "\(stats.matchesLost)")
+                        StatRowView(label: coordinator.L(.statMatchesDrawn), value: "\(stats.matchesDrawn)")
+                        StatRowView(label: coordinator.L(.statSwarmsToDeath), value: "\(stats.suddenDeathCount)")
+                        StatRowView(label: coordinator.L(.winRate), value: String(format: "%.1f%%", winRate))
 
-                    Divider()
+                        Divider()
 
-                    StatRowView(label: coordinator.L(.statCurrentWinStreak), value: "\(stats.currentWinStreak)")
-                    StatRowView(label: coordinator.L(.statLongestWinStreak), value: "\(stats.longestWinStreak)")
-                    StatRowView(label: coordinator.L(.statFlawlessVictoriesMac), value: "\(stats.flawlessVictories)")
-                    StatRowView(label: coordinator.L(.statBabyBeeWins), value: "\(stats.easyWins)")
-                    StatRowView(label: coordinator.L(.statHoneyBeeWins), value: "\(stats.mediumWins)")
-                    StatRowView(label: coordinator.L(.statQueenBeeWins), value: "\(stats.hardWins)")
-                    StatRowView(label: coordinator.L(.statKillerBeeWins), value: "\(stats.ultraHardWins)")
+                        StatRowView(label: coordinator.L(.statCurrentWinStreak), value: "\(stats.currentWinStreak)")
+                        StatRowView(label: coordinator.L(.statLongestWinStreak), value: "\(stats.longestWinStreak)")
+                        StatRowView(label: coordinator.L(.statFlawlessVictoriesMac), value: "\(stats.flawlessVictories)")
+                        StatRowView(label: coordinator.L(.statBabyBeeWins), value: "\(stats.easyWins)")
+                        StatRowView(label: coordinator.L(.statHoneyBeeWins), value: "\(stats.mediumWins)")
+                        StatRowView(label: coordinator.L(.statQueenBeeWins), value: "\(stats.hardWins)")
+                        StatRowView(label: coordinator.L(.statKillerBeeWins), value: "\(stats.ultraHardWins)")
 
-                    Divider()
+                        Divider()
 
-                    StatRowView(label: coordinator.L(.statTotalCardsFlipped), value: "\(stats.cardsCaptured)")
-                    StatRowView(label: coordinator.L(.statQueensFalls), value: "\(stats.fallenAces)")
-                    StatRowView(label: coordinator.L(.statHiveMindsTriggered), value: "\(stats.samePlusTriggers)")
-                    StatRowView(label: coordinator.L(.statCardsStolen), value: "\(stats.cardsStolen)")
-                    StatRowView(label: coordinator.L(.statTimesStartedOver), value: "\(stats.timesStartedOver)")
-
-                    Divider()
-
-                    StatRowView(label: coordinator.L(.statCardsUnlockedLabel), value: coordinator.L(.statCardsUnlockedValueFmt, totalUnlocked, totalCards, String(format: "%.0f%%", unlockedPercent)))
-
-                    ForEach(suitOrder, id: \.code) { entry in
-                        let progress = suitProgress(entry.code)
-                        StatRowView(label: coordinator.L(.statSuitUnlockedFmt, entry.label), value: "\(progress.unlocked)/\(progress.total)")
+                        StatRowView(label: coordinator.L(.statTotalCardsFlipped), value: "\(stats.cardsCaptured)")
+                        StatRowView(label: coordinator.L(.statQueensFalls), value: "\(stats.fallenAces)")
+                        StatRowView(label: coordinator.L(.statHiveMindsTriggered), value: "\(stats.samePlusTriggers)")
+                        StatRowView(label: coordinator.L(.statCardsStolen), value: "\(stats.cardsStolen)")
+                        StatRowView(label: coordinator.L(.statTimesStartedOver), value: "\(stats.timesStartedOver)")
                     }
 
-                    Divider()
+                    VStack(alignment: .leading, spacing: 12) {
+                        StatRowView(label: coordinator.L(.statCardsUnlockedLabel), value: coordinator.L(.statCardsUnlockedValueFmt, totalUnlocked, totalCards, String(format: "%.0f%%", unlockedPercent)))
 
-                    ForEach(1...5, id: \.self) { star in
-                        let progress = starProgress(star)
-                        StatRowView(label: coordinator.L(.statStarUnlockedFmt, star), value: "\(progress.unlocked)/\(progress.total)")
+                        ForEach(suitOrder, id: \.code) { entry in
+                            let progress = suitProgress(entry.code)
+                            StatRowView(label: coordinator.L(.statSuitUnlockedFmt, entry.label), value: "\(progress.unlocked)/\(progress.total)")
+                        }
+
+                        Divider()
+
+                        ForEach(1...5, id: \.self) { star in
+                            let progress = starProgress(star)
+                            StatRowView(label: coordinator.L(.statStarUnlockedFmt, star), value: "\(progress.unlocked)/\(progress.total)")
+                        }
                     }
                 }
                 .padding(.horizontal, 36)
@@ -112,7 +118,7 @@ public struct HoneycombStatsView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
         }
-        .frame(width: 440, height: 560)
+        .frame(width: 680, height: 480)
         .background(
             Color(NSColor.windowBackgroundColor)
                 .overlay(Color.primary.opacity(0.04))

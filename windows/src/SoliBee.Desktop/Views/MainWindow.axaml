@@ -282,7 +282,11 @@
                  (ZIndex above VignetteOverlay so its buttons stay unaffected) -->
             <Grid x:Name="StatsOverlay" Background="#90000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="95">
                 <Border Background="White" CornerRadius="8" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
-                    <StackPanel Spacing="14" Width="300">
+                    <!-- Width is fixed per-panel in code-behind (PopulateStatsPanel's callees) —
+                         300 for the single-column games, wider for Honeycomb's two-column layout
+                         (StatsDynamicRowsCol1/Col2 below), so its long stat list doesn't stretch
+                         the popup so tall. -->
+                    <StackPanel x:Name="StatsPanelRoot" Spacing="14" Width="300">
                         <TextBlock x:Name="StatsTitleText" Text="Klondike Statistics" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
                         <Rectangle Height="1" Fill="#DDDDDD" />
                         <StackPanel x:Name="StatsFixedRows" Spacing="8">
@@ -319,9 +323,15 @@
                                 <TextBlock Grid.Column="1" x:Name="StatsFastestWinText" Foreground="#1A1A1A" FontWeight="Bold" />
                             </Grid>
                         </StackPanel>
-                        <!-- Blackjack / Video Poker have a different field set (no streaks/timing),
-                             so their rows are built in code-behind rather than fixed like above. -->
-                        <StackPanel x:Name="StatsDynamicRows" Spacing="8" IsVisible="False" />
+                        <!-- Blackjack / Video Poker / Honeycomb have different field sets, so
+                             their rows are built in code-behind rather than fixed like above.
+                             Two side-by-side columns — Blackjack/VideoPoker only ever populate
+                             Col1 and hide Col2; Honeycomb (many more rows) splits across both so
+                             its popup doesn't stretch so tall. -->
+                        <Grid x:Name="StatsDynamicRows" IsVisible="False" ColumnDefinitions="*,*">
+                            <StackPanel x:Name="StatsDynamicRowsCol1" Grid.Column="0" Spacing="8" />
+                            <StackPanel x:Name="StatsDynamicRowsCol2" Grid.Column="1" Spacing="8" Margin="20,0,0,0" IsVisible="False" />
+                        </Grid>
                         <Rectangle Height="1" Fill="#DDDDDD" />
                         <Grid ColumnDefinitions="Auto,*,Auto">
                             <Button x:Name="ResetStatsButton" Content="Reset Stats" Click="ResetStats_Click" Grid.Column="0"
