@@ -1,8 +1,9 @@
 import Foundation
 
 // Regression coverage for BannerCatalog (shared/Honeycomb/Models/BannerCatalog.swift)
-// and its generated companion BannerID.swift — both produced from
-// Honeycomb_Fun_Messages.xlsx by tools/generate_banner_catalog.py. The main risk
+// and its generated companion BannerID.swift — both produced from the
+// BannerFlavorText sheet of Honeycomb_Localization.xlsx by
+// tools/generate_banner_catalog.py. The main risk
 // this guards against is drift: every BannerID case must have a matching catalog
 // entry (and vice versa), which a hand-edit to either the enum or the JSON without
 // re-running the generator would silently break.

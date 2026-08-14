@@ -1,6 +1,6 @@
 // GENERATED FILE — do not hand-edit.
 // Regenerate via `python3 tools/generate_banner_catalog.py` from
-// Honeycomb_Fun_Messages.xlsx. See that script for the id/gating rules.
+// Honeycomb_Localization.xlsx (BannerFlavorText sheet). See that script for the id/gating rules.
 
 // Stable identifier for every banner/toast catalog entry (mac + iOS).
 // The raw value is the JSON catalog's `id` field — HoneycombBannerCatalog.json

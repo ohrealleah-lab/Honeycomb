@@ -1,6 +1,6 @@
 // GENERATED FILE — do not hand-edit.
 // Regenerate via `python3 tools/generate_banner_catalog.py` from
-// Honeycomb_Fun_Messages.xlsx. See that script for the id/gating rules.
+// Honeycomb_Localization.xlsx (BannerFlavorText sheet). See that script for the id/gating rules.
 
 using System.Collections.Generic;
 

@@ -14,6 +14,7 @@ struct OptionsSheetShell<Content: View>: View {
     var fixedSizeHorizontal: Bool
     var title: String
     var showThemes: Bool
+    var showLanguage: Bool
     // Optional — the Honeycomb Rules sheet (a second, separate OptionsSheetShell user
     // from HoneycombRulesView, not to be confused with Honeycomb's own Options sheet,
     // which does show stats) has no stats view of its own to jump to, so it omits this
@@ -44,6 +45,7 @@ struct OptionsSheetShell<Content: View>: View {
         fixedSizeHorizontal: Bool = true,
         title: String = "Preferences",
         showThemes: Bool = true,
+        showLanguage: Bool = true,
         onViewStats: (() -> Void)? = nil,
         onOK: @escaping () -> Void,
         @ViewBuilder content: @escaping () -> Content
@@ -57,6 +59,7 @@ struct OptionsSheetShell<Content: View>: View {
         self.fixedSizeHorizontal = fixedSizeHorizontal
         self.title = title
         self.showThemes = showThemes
+        self.showLanguage = showLanguage
         self.onViewStats = onViewStats
         self.onOK = onOK
         self.content = content
@@ -97,7 +100,9 @@ struct OptionsSheetShell<Content: View>: View {
                 if useScrollView {
                     ScrollView(.vertical, showsIndicators: true) {
                         VStack(alignment: .leading, spacing: 12) {
-                            languageSection
+                            if showLanguage {
+                                languageSection
+                            }
                             content()
                             if showThemes {
                                 visualThemesSection
@@ -108,7 +113,9 @@ struct OptionsSheetShell<Content: View>: View {
                     .frame(maxHeight: maxContentHeight)
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
-                        languageSection
+                        if showLanguage {
+                            languageSection
+                        }
                         content()
                         if showThemes {
                             visualThemesSection

@@ -3,15 +3,17 @@
 Generates the Honeycomb banner/toast catalog and its matching Swift + C#
 identifier enums from a single source of truth: the content spreadsheet.
 
-Source of truth: Honeycomb_Fun_Messages.xlsx (Category / Trigger / Message /
-Type / Location columns). Re-run this script after every spreadsheet edit.
-Never hand-edit any of the generated output files below — they're
-regenerated wholesale each run, so hand edits are silently discarded.
+Source of truth: the "BannerFlavorText" sheet of Honeycomb_Localization.xlsx
+(Category / Trigger / Message / Type / Location / Spanish columns) — merged
+into the same workbook as the UI-string sheet so translators only ever have
+one file to review. Re-run this script after every spreadsheet edit. Never
+hand-edit any of the generated output files below — they're regenerated
+wholesale each run, so hand edits are silently discarded.
 
 Usage:
-    python3 tools/generate_banner_catalog.py [path/to/Honeycomb_Fun_Messages.xlsx]
+    python3 tools/generate_banner_catalog.py [path/to/Honeycomb_Localization.xlsx]
 
-The spreadsheet itself lives in this repo at tools/Honeycomb_Fun_Messages.xlsx
+The spreadsheet itself lives in this repo at tools/Honeycomb_Localization.xlsx
 (committed to git) — edit that copy and re-run this script with no arguments.
 It's the canonical copy; a Downloads copy is only ever a staging/editing
 convenience, never the thing to rely on long-term.
@@ -61,9 +63,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # The repo's own tracked copy is canonical — prefer it. Only fall back to
 # Downloads (where earlier edits during this project's original spreadsheet
 # session happened to live) if the repo copy is somehow missing.
-_REPO_COPY = REPO_ROOT / "tools" / "Honeycomb_Fun_Messages.xlsx"
-_DOWNLOADS_COPY = Path.home() / "Downloads" / "Honeycomb_Fun_Messages.xlsx"
+_REPO_COPY = REPO_ROOT / "tools" / "Honeycomb_Localization.xlsx"
+_DOWNLOADS_COPY = Path.home() / "Downloads" / "Honeycomb_Localization.xlsx"
 DEFAULT_SOURCE = _REPO_COPY if _REPO_COPY.exists() else _DOWNLOADS_COPY
+
+SHEET_NAME = "BannerFlavorText"
 
 OUT_JSON = REPO_ROOT / "shared/Honeycomb/Resources/HoneycombBannerCatalog.json"
 # Windows can't reference the shared/ copy directly (separate build, no shared
@@ -139,7 +143,9 @@ def snake_to_pascal(snake: str) -> str:
 
 def load_rows(path: Path) -> list[dict]:
     wb = openpyxl.load_workbook(path)
-    ws = wb.active
+    if SHEET_NAME not in wb.sheetnames:
+        raise ValueError(f"{path} has no {SHEET_NAME!r} sheet; found {wb.sheetnames!r}")
+    ws = wb[SHEET_NAME]
     headers = [c.value for c in ws[1]]
     if headers != EXPECTED_HEADERS:
         raise ValueError(f"Unexpected header row {headers!r}; expected {EXPECTED_HEADERS!r}")
@@ -270,7 +276,7 @@ def write_swift(catalog: list[dict], path: Path) -> None:
     lines = [
         "// GENERATED FILE — do not hand-edit.",
         "// Regenerate via `python3 tools/generate_banner_catalog.py` from",
-        "// Honeycomb_Fun_Messages.xlsx. See that script for the id/gating rules.",
+        "// Honeycomb_Localization.xlsx (BannerFlavorText sheet). See that script for the id/gating rules.",
         "",
         "// Stable identifier for every banner/toast catalog entry (mac + iOS).",
         "// The raw value is the JSON catalog's `id` field — HoneycombBannerCatalog.json",
@@ -291,7 +297,7 @@ def write_cs(catalog: list[dict], path: Path) -> None:
     lines = [
         "// GENERATED FILE — do not hand-edit.",
         "// Regenerate via `python3 tools/generate_banner_catalog.py` from",
-        "// Honeycomb_Fun_Messages.xlsx. See that script for the id/gating rules.",
+        "// Honeycomb_Localization.xlsx (BannerFlavorText sheet). See that script for the id/gating rules.",
         "",
         "using System.Collections.Generic;",
         "",

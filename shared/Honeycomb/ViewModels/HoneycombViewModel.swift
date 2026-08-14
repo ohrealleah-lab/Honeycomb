@@ -567,10 +567,11 @@ public final class HoneycombViewModel {
     // "Swap", "Ascension: Hearts". No trailing punctuation; the banner's own "!"
     // belongs only after "First Move: Player/Opponent".
     private func formatRuleForBanner(_ rule: HoneycombRule) -> String {
-        let localizedName = honeycombLocalizedRuleName(rule.rawValue, language: BannerCatalog.currentLanguage)
+        let language = BannerCatalog.currentLanguage
+        let localizedName = honeycombLocalizedRuleName(rule.rawValue, language: language)
         let defaultText: String
         if rule == .ascension || rule == .descension {
-            let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }
+            let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.localizedSuitName($0, language: language) }
             defaultText = "\(localizedName): \(suitNames.joined(separator: ", "))"
         } else {
             defaultText = localizedName
@@ -1380,12 +1381,13 @@ public final class HoneycombViewModel {
         return activeRules.map { rule -> String in
             let localizedName = honeycombLocalizedRuleName(rule.rawValue, language: language)
             if (rule == .ascension || rule == .descension), !ascensionDescensionSuits.isEmpty {
-                let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.suitDisplayName($0) }
+                let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.localizedSuitName($0, language: language) }
                 return L(.ruleLineSuitFmt, language: language, localizedName, suitNames.joined(separator: ", "))
             }
             return localizedName
         }.joined(separator: ", ")
     }
+
 
     // Ascension/Descension now only affects 2 chosen suits (not every card), so this
     // flashes for either side's placement as long as the placed card's own suit is

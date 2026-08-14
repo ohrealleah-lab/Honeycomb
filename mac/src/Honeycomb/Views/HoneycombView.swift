@@ -1290,6 +1290,7 @@ struct HoneycombRulesView: View {
             availableHeight: availableHeight,
             title: coordinator.L(.toolbarRules),
             showThemes: false,
+            showLanguage: false,
             onOK: {
                 var updatedOpts = viewModel.options
                 updatedOpts.difficulty = difficulty
