@@ -843,25 +843,20 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         ActiveHint      = hint with { Index = shownIndex + 1, Total = _hintCycleList.Count };
     }
 
+    // In 2-deck mode a suit can have more than one foundation (one per physical Ace); a
+    // still-unstarted duplicate must count as rank 0, not be skipped, or a card could be
+    // deemed safe while an untouched copy of that opposite-colour suit hasn't even begun.
+    // LiveFoundationRanks() already pads for this (see its comment) — reuse it here instead
+    // of hand-counting foundations directly.
     private bool IsSafeFoundationMove(Card card)
     {
         if (card.Rank <= 2) return true;
-        bool isRed = card.Suit == CardSuit.Hearts || card.Suit == CardSuit.Diamonds;
         int reqRank = card.Rank - 1;
-        int safeCount = 0;
-        foreach (var foundation in Foundations)
-        {
-            if (foundation.Cards.Count > 0)
-            {
-                var top = foundation.Cards.Last();
-                bool topIsRed = top.Suit == CardSuit.Hearts || top.Suit == CardSuit.Diamonds;
-                if (topIsRed != isRed && top.Rank >= reqRank)
-                {
-                    safeCount++;
-                }
-            }
-        }
-        return safeCount == 2;
+        var ranks = LiveFoundationRanks();
+        var oppositeSuits = IsRed(card.Suit)
+            ? new[] { CardSuit.Spades, CardSuit.Clubs }
+            : new[] { CardSuit.Hearts, CardSuit.Diamonds };
+        return oppositeSuits.All(s => ranks[s].Min() >= reqRank);
     }
 
     private GameStateSnapshot CreateVirtualSnapshot()
