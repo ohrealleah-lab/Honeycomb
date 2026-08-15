@@ -749,37 +749,44 @@ public final class SpiderViewModel {
         while didMove {
             didMove = false
             var nextMove: (cards: [Card], sourceIdx: Int, targetIdx: Int)? = nil
-            
+            var fallbackMove: (cards: [Card], sourceIdx: Int, targetIdx: Int)? = nil
+
+            // Must mirror findNextAutocompleteMove() exactly, including which function it
+            // calls to judge a landing spot — isValidMove() only requires the target's top
+            // card to be exactly one rank higher, suit doesn't matter. This loop used to
+            // hand-roll that check with an extra `topCard.suit == firstCard.suit` condition
+            // that isValidMove() doesn't have, and never considered an empty column as a
+            // landing spot at all. Either gap alone could make this simulation report a
+            // dead end (isAutocompleteAvailable == false) on a board the real executor
+            // would actually complete successfully.
             for srcIdx in 0..<simTableau.count where !simTableau[srcIdx].cards.isEmpty {
                 let source = simTableau[srcIdx]
-                guard let lastCard = source.cards.last, lastCard.faceUp else { continue }
-                var seq = [lastCard]
-                
-                if source.cards.count > 1 {
-                    for i in stride(from: source.cards.count - 2, through: 0, by: -1) {
-                        let card = source.cards[i]
-                        let prevCard = source.cards[i + 1]
-                        if card.faceUp, card.suit == prevCard.suit, card.rank == prevCard.rank + 1 {
-                            seq.insert(card, at: 0)
-                        } else {
-                            break
-                        }
-                    }
-                }
-                
-                guard let firstCard = seq.first else { continue }
-                
+                let seq = getLongestValidSequence(in: source)
+                if seq.isEmpty { continue }
+
+                var matchedThisSource = false
                 for tgtIdx in 0..<simTableau.count where tgtIdx != srcIdx {
                     let target = simTableau[tgtIdx]
-                    if let topCard = target.topCard, topCard.suit == firstCard.suit, topCard.rank == firstCard.rank + 1 {
+                    if !target.isEmpty, isValidMove(cards: seq, to: target) {
                         nextMove = (seq, srcIdx, tgtIdx)
+                        matchedThisSource = true
                         break
                     }
                 }
-                if nextMove != nil { break }
+                if matchedThisSource { break }
+
+                // Fallback: park a partial sequence (never the whole column, which would
+                // just relocate which column is empty) on an empty column when no matching
+                // top card exists anywhere.
+                if fallbackMove == nil, seq.count < source.cards.count {
+                    for tgtIdx in 0..<simTableau.count where tgtIdx != srcIdx && simTableau[tgtIdx].cards.isEmpty {
+                        fallbackMove = (seq, srcIdx, tgtIdx)
+                        break
+                    }
+                }
             }
-            
-            if let move = nextMove {
+
+            if let move = nextMove ?? fallbackMove {
                 didMove = true
                 let cardIDs = Set(move.cards.map { $0.id })
                 simTableau[move.sourceIdx].cards.removeAll { cardIDs.contains($0.id) }
