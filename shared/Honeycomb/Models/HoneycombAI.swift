@@ -388,6 +388,16 @@ enum HoneycombAI {
         if fallenAce && stat == fallenAceVulnerableStat {
             value -= 3
         }
+        // The mirror image of the penalty above: HoneycombBoard.canCapture's
+        // isFallenAceBlockedLoss makes this stat (1 normally, 10 under Reverse) immune
+        // to capture by the one specific value that would otherwise beat it outright —
+        // without this, a 1 was scored at its worst-case baseline exposure (-4),
+        // missing that it's actually a safe anchor against the board's most common
+        // threat under this rule.
+        let fallenAceProtectedStat = reverse ? 10 : 1
+        if fallenAce && stat == fallenAceProtectedStat {
+            value += 3
+        }
         return value
     }
 
@@ -460,14 +470,20 @@ enum HoneycombAI {
                 neighbors.append((direction: direction, owner: card.owner, stat: card.stat(at: towardEmptyDirection)))
             }
             
+            guard neighbors.count >= 2 else { continue }
+
             for targetOwner: CardOwner in [.player, .opponent] {
-                let targets = neighbors.filter { $0.owner == targetOwner }
-                guard targets.count >= 2 else { continue }
-                
+                // Matches HoneycombBoard.resolveCaptures: Same/Plus triggers off ANY 2+
+                // neighbors whose stats match, regardless of who owns them — a card can
+                // bridge one allied neighbor and one enemy neighbor to trigger a capture.
+                // The old code required both matched neighbors to belong to targetOwner,
+                // making the AI blind to exactly that bridging case. What actually matters
+                // for scoring is whether the trigger captures anything — i.e. at least one
+                // of the 2+ matched neighbors belongs to targetOwner (the victim side).
                 let attackerDeck = targetOwner == .player ? opponentDeck : playerDeck
                 var hasSame = false
                 var hasPlus = false
-                
+
                 for cardData in attackerDeck {
                     var modifier = 0
                     if board.ascensionDescensionSuits.contains(cardData.suit) {
@@ -481,28 +497,27 @@ enum HoneycombAI {
                             modifier = -count
                         }
                     }
-                    
+
                     if rules.contains(.same) {
-                        var matches = 0
-                        for t in targets {
-                            let attackerStat = min(10, max(1, cardData.stats[t.direction] + modifier))
-                            if attackerStat == t.stat { matches += 1 }
+                        let matches = neighbors.filter { n in
+                            let attackerStat = min(10, max(1, cardData.stats[n.direction] + modifier))
+                            return attackerStat == n.stat
                         }
-                        if matches >= 2 { hasSame = true }
+                        if matches.count >= 2 && matches.contains(where: { $0.owner == targetOwner }) { hasSame = true }
                     }
-                    
+
                     if rules.contains(.plus) {
-                        var sumCounts: [Int: Int] = [:]
-                        for t in targets {
-                            let attackerStat = min(10, max(1, cardData.stats[t.direction] + modifier))
-                            let sum = attackerStat + t.stat
-                            sumCounts[sum, default: 0] += 1
+                        var sumGroups: [Int: [(direction: Int, owner: CardOwner, stat: Int)]] = [:]
+                        for n in neighbors {
+                            let attackerStat = min(10, max(1, cardData.stats[n.direction] + modifier))
+                            let sum = attackerStat + n.stat
+                            sumGroups[sum, default: []].append(n)
                         }
-                        if sumCounts.values.contains(where: { $0 >= 2 }) { hasPlus = true }
+                        if sumGroups.values.contains(where: { $0.count >= 2 && $0.contains(where: { $0.owner == targetOwner }) }) { hasPlus = true }
                     }
                     if hasSame && hasPlus { break } // already max potential
                 }
-                
+
                 if hasSame || hasPlus {
                     let weight = (hasSame ? 6 : 0) + (hasPlus ? 3 : 0)
                     // If AI (opponent) has a card to combo player's cards, it's good (+)

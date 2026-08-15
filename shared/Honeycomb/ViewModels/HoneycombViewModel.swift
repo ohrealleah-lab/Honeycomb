@@ -1592,7 +1592,9 @@ public final class HoneycombViewModel {
             if UISound.isHeadlessMode {
                 self.aiPlayTurn()
             } else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Self.opponentMoveDelay) {
+                let generation = self.handSetupGeneration
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.opponentMoveDelay) { [weak self] in
+                    guard let self, self.handSetupGeneration == generation else { return }
                     self.aiPlayTurn()
                 }
             }
@@ -2065,15 +2067,19 @@ public final class HoneycombViewModel {
 
     private func revealBombSheltersAndSettle() {
         isAnimatingPlacement = true
+        let generation = handSetupGeneration
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
+            // A New Game/Quit during this delay bumps handSetupGeneration — without this
+            // check, starterCell/secondCell below would be computed from (and later
+            // reused against) whatever board belongs to the match that replaced this one.
+            guard let self, self.handSetupGeneration == generation else { return }
 
             let starterOwner: CardOwner = self.playerHand.isEmpty ? .player : .opponent
-            
+
             var starterCell = -1
             var secondCell = -1
-            
+
             for i in 0..<9 {
                 if let card = self.board.cells[i].card, card.isFaceDown {
                     if card.originalOwner == starterOwner { starterCell = i }
@@ -2094,14 +2100,15 @@ public final class HoneycombViewModel {
                         self.enqueueBanner(combo)
                     } else {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                            self?.enqueueBanner(combo)
+                            guard let self, self.handSetupGeneration == generation else { return }
+                            self.enqueueBanner(combo)
                         }
                     }
                 }
             }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                guard let self = self else { return }
+                guard let self, self.handSetupGeneration == generation else { return }
 
                 if secondCell != -1 {
                     let flips = self.board.revealFaceDownCard(at: secondCell, rules: self.activeRules)
@@ -2113,14 +2120,15 @@ public final class HoneycombViewModel {
                             self.enqueueBanner(combo)
                         } else {
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                                self?.enqueueBanner(combo)
+                                guard let self, self.handSetupGeneration == generation else { return }
+                                self.enqueueBanner(combo)
                             }
                         }
                     }
                 }
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                    guard let self = self else { return }
+                    guard let self, self.handSetupGeneration == generation else { return }
                     self.isAnimatingPlacement = false
                     self.settleMatch()
                 }
@@ -2248,9 +2256,14 @@ public final class HoneycombViewModel {
                 // ever recorded once.
 
                 // Give enough time for the final card placement and any combo animations to fully resolve
+                let generation = handSetupGeneration
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                    self?.enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.suddenDeath.rawValue, language: BannerCatalog.currentLanguage))!")
-                    self?.triggerSuddenDeath()
+                    // A New Game/Quit during this delay bumps handSetupGeneration — without
+                    // this check, this stale closure would still increment suddenDeathCount
+                    // and stomp the turn/undo-stack state of whatever match replaced this one.
+                    guard let self, self.handSetupGeneration == generation else { return }
+                    self.enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.suddenDeath.rawValue, language: BannerCatalog.currentLanguage))!")
+                    self.triggerSuddenDeath()
                 }
                 return
             } else {
@@ -2322,7 +2335,9 @@ public final class HoneycombViewModel {
             if UISound.isHeadlessMode {
                 self.aiPlayTurn()
             } else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Self.opponentMoveDelay) {
+                let generation = handSetupGeneration
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.opponentMoveDelay) { [weak self] in
+                    guard let self, self.handSetupGeneration == generation else { return }
                     self.aiPlayTurn()
                 }
             }

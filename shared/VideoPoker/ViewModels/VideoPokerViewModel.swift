@@ -536,6 +536,12 @@ public final class VideoPokerViewModel {
     // MARK: - AppCoordinator compatibility stubs
 
     public func startNewGame() {
+        // A dealt-but-unresolved hand (cards held, draw not yet taken) being abandoned
+        // here must break the streak same as a real loss would — otherwise a player
+        // could dodge any unfavorable deal for free and keep an infinite streak.
+        if state.phase == .holding {
+            statistics.currentStreak = 0
+        }
         state = VideoPokerState()
         state.sessionCredits = options.startingCredits
         state.currentBet = options.betPerHand

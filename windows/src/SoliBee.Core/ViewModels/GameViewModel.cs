@@ -158,6 +158,17 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
     public string ScoreDisplay => ScoreFormatter.FormatScore(State?.Score ?? 0, Options?.IsVegasScoring == true);
 
+    // Real Vegas-scoring rules: Draw One gets a single pass through the deck (no
+    // recycles at all); Draw Three gets 2 recycles (3 total passes). Canonical source
+    // for this limit — every recycle-eligibility check in this file (DrawCard,
+    // HasAnyLegalMoves, ComputeReachableStockWasteCardIds, EvaluateImmediateMoves) reads
+    // this instead of re-deriving the mode-based limit inline, so they can't drift out
+    // of sync with each other the way separate copies previously could.
+    private bool IsVegasRecycleLimitReached =>
+        Options.IsVegasScoring && State.RecyclesCount >= (State.Mode == DrawMode.DrawThree ? 2 : 0);
+
+    public bool CanRecycleStock => Waste.Cards.Count > 0 && !IsVegasRecycleLimitReached;
+
     private void SyncVegasScore()
     {
         if (Options?.IsVegasScoring == true && State != null && Stats != null)
@@ -475,11 +486,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         if (Stock.Cards.Count == 0)
         {
             // Recycle waste back to stock — guard no-ops before snapshot
-            if (Waste.Cards.Count == 0) return;
-            // Real Vegas-scoring rules: Draw One gets a single pass through the deck (no
-            // recycles at all); Draw Three gets 2 recycles (3 total passes).
-            int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
-            if (Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit) return;
+            if (!CanRecycleStock) return;
 
             ClearHintCycle();
             SaveStateForUndo();
@@ -1003,6 +1010,17 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         stats.TotalWinSeconds    = 0;
         StatsService.SaveStats(stats);
         Stats = stats;
+
+        // State.Score for an in-progress Vegas game still carries the old cumulative
+        // bankroll baked in via _vegasBalanceBeforeDeal — without this, the next move's
+        // SyncVegasScore() would write that stale value straight back into the
+        // VegasCumulativeScore just cleared above, silently undoing the reset.
+        if (Options.IsVegasScoring)
+        {
+            State.Score -= _vegasBalanceBeforeDeal;
+            _vegasBalanceBeforeDeal = 0;
+            OnPropertyChanged(nameof(ScoreDisplay));
+        }
     }
 
     private void CheckDeadlock()
@@ -1029,9 +1047,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         foreach (var card in Stock.Cards)
             if (reachableIds.Contains(card.Id) && CardCanPlayAnywhere(card)) return true;
 
-        int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
-        bool canRecycle = Waste.Cards.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
-        if (canRecycle && Waste.Cards.Count > 1)
+        if (CanRecycleStock && Waste.Cards.Count > 1)
         {
             for (int i = 0; i < Waste.Cards.Count - 1; i++)
                 if (reachableIds.Contains(Waste.Cards[i].Id) && CardCanPlayAnywhere(Waste.Cards[i])) return true;
@@ -1074,7 +1090,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         }
         else
         {
-            if (canRecycle)
+            if (CanRecycleStock)
                 return true; // Delay banner to let them have the satisfaction of clicking the recycle button
             else
                 return false; // Out of recycles, let the banner pop
@@ -1129,7 +1145,6 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     {
         var reachable = new HashSet<string>();
         int batchSize = State.Mode == DrawMode.DrawThree ? 3 : 1;
-        int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
 
         var simStock = new List<Card>(Stock.Cards);
         var simWaste = new List<Card>(Waste.Cards);
@@ -1153,7 +1168,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
         DrawThroughStock();
 
-        bool canRecycle = simWaste.Count > 0 && !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
+        bool canRecycle = simWaste.Count > 0 && !IsVegasRecycleLimitReached;
         if (canRecycle)
         {
             var reversed = new List<Card>(simWaste);
@@ -1370,11 +1385,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
         if (Stock.Cards.Count == 0 && Waste.Cards.Count > 0)
         {
-            // Real Vegas-scoring rules: Draw One gets a single pass through the deck (no
-            // recycles at all); Draw Three gets 2 recycles (3 total passes).
-            int vegasRecycleLimit = State.Mode == DrawMode.DrawThree ? 2 : 0;
-            bool canRecycle = !(Options.IsVegasScoring && State.RecyclesCount >= vegasRecycleLimit);
-            if (canRecycle && Waste.Cards.Any(c => reachableIds.Contains(c.Id) && CardCanPlayAnywhere(c)))
+            if (!IsVegasRecycleLimitReached && Waste.Cards.Any(c => reachableIds.Contains(c.Id) && CardCanPlayAnywhere(c)))
                 scored.Add((20, new HintMove(new Card("recycle", CardSuit.Spades, 1, false), Waste.Id, Stock.Id,
                     "Recycle waste back to stock.")));
         }

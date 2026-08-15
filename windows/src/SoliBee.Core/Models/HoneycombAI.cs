@@ -436,6 +436,14 @@ public static class HoneycombAI
         int fallenAceVulnerableStat = reverse ? 1 : 10;
         if (useFallenAceWeight && fallenAce && stat == fallenAceVulnerableStat)
             value -= 3;
+        // The mirror image of the penalty above: HoneycombBoard's IsFallenAceBlockedLoss
+        // makes this stat (1 normally, 10 under Reverse) immune to capture by the one
+        // specific value that would otherwise beat it outright — without this, a 1 was
+        // scored at its worst-case baseline exposure (-4), missing that it's actually a
+        // safe anchor against the board's most common threat under this rule.
+        int fallenAceProtectedStat = reverse ? 10 : 1;
+        if (useFallenAceWeight && fallenAce && stat == fallenAceProtectedStat)
+            value += 3;
         return value;
     }
 
@@ -475,11 +483,17 @@ public static class HoneycombAI
             if (col > 0 && !board.Cells[i - 1].IsEmpty && !board.Cells[i - 1].Card!.IsFaceDown)
                 neighbors.Add((3, board.Cells[i - 1].Card!.Owner, board.Cells[i - 1].Card!.Stat(1)));
 
+            if (neighbors.Count < 2) continue;
+
             foreach (var targetOwner in new[] { aiOwner, playerOwner })
             {
-                var targets = neighbors.Where(n => n.Owner == targetOwner).ToList();
-                if (targets.Count < 2) continue;
-
+                // Matches HoneycombBoard's real capture resolution: Same/Plus triggers off
+                // ANY 2+ neighbors whose stats match, regardless of who owns them — a card
+                // can bridge one allied neighbor and one enemy neighbor to trigger a
+                // capture. Filtering neighbors down to just targetOwner (as this used to)
+                // made the AI blind to exactly that bridging case. What matters for scoring
+                // is whether the trigger captures anything, i.e. at least one of the 2+
+                // matched neighbors belongs to targetOwner (the victim side).
                 var attackerHand = targetOwner == playerOwner ? aiHand : playerHand;
                 bool hasSame = false;
                 bool hasPlus = false;
@@ -501,19 +515,20 @@ public static class HoneycombAI
 
                     if (checkSame)
                     {
-                        int matches = targets.Count(t => AttackerStat(t.Direction) == t.FacingStat);
-                        if (matches >= 2) hasSame = true;
+                        var matches = neighbors.Where(n => AttackerStat(n.Direction) == n.FacingStat).ToList();
+                        if (matches.Count >= 2 && matches.Any(m => m.Owner == targetOwner)) hasSame = true;
                     }
 
                     if (checkPlus)
                     {
-                        var sumCounts = new Dictionary<int, int>();
-                        foreach (var t in targets)
+                        var sumGroups = new Dictionary<int, List<(int Direction, int Owner, int FacingStat)>>();
+                        foreach (var n in neighbors)
                         {
-                            int sum = AttackerStat(t.Direction) + t.FacingStat;
-                            sumCounts[sum] = sumCounts.GetValueOrDefault(sum) + 1;
+                            int sum = AttackerStat(n.Direction) + n.FacingStat;
+                            if (!sumGroups.TryGetValue(sum, out var group)) { group = new(); sumGroups[sum] = group; }
+                            group.Add(n);
                         }
-                        if (sumCounts.Values.Any(v => v >= 2)) hasPlus = true;
+                        if (sumGroups.Values.Any(g => g.Count >= 2 && g.Any(m => m.Owner == targetOwner))) hasPlus = true;
                     }
 
                     if (hasSame && hasPlus) break; // already max potential

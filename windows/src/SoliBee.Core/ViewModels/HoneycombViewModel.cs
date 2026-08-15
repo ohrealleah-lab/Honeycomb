@@ -911,12 +911,18 @@ public partial class HoneycombViewModel : ObservableObject
 
     private async void RunAITurn(bool skipPacingDelay = false)
     {
+        int generation = _matchGeneration;
         _isAnimating = true;
         NotifyStateChanged();
 
         if (!_isHeadless && !skipPacingDelay) await Task.Delay(2500); // UI pace beat
-        
-        if (!IsPlaying || State.CurrentTurn != -1)
+
+        // A New Game/Quit during the pacing delay bumps _matchGeneration — without this
+        // check, a stale continuation could pass the IsPlaying/CurrentTurn checks below
+        // for a NEW match that also happens to start on the AI's turn, racing (or
+        // duplicating) that match's own legitimate RunAITurn() call against the same
+        // live state. Matches every other delayed continuation in this file.
+        if (generation != _matchGeneration || !IsPlaying || State.CurrentTurn != -1)
         {
             _isAnimating = false;
             NotifyStateChanged();
@@ -1615,16 +1621,23 @@ public partial class HoneycombViewModel : ObservableObject
 
     private async Task RevealBombSheltersAndSettleAsync()
     {
+        int generation = _matchGeneration;
         _isAnimating = true;
         NotifyStateChanged();
 
         await Task.Delay(1000);
+        // A New Game/Quit during any of this method's delays must stop it from reusing
+        // starterCell/secondCell (computed below, against the board at the time of the
+        // reveal) against whatever board State now holds — otherwise a stale index could
+        // flip/reveal the wrong cell on a match that has already moved on. Matches
+        // StageBombShelterReveal's own generation guard.
+        if (generation != _matchGeneration || !IsPlaying) return;
 
         int starter = State.PlayerHand.Count == 0 ? 1 : -1;
-        
+
         int starterCell = -1;
         int secondCell = -1;
-        
+
         for (int i=0; i<9; i++)
         {
             if (!State.Board.Cells[i].IsEmpty && State.Board.Cells[i].Card!.IsFaceDown)
@@ -1647,10 +1660,12 @@ public partial class HoneycombViewModel : ObservableObject
             {
                 EnqueueBanner(comboText);
                 if (!_isHeadless) await Task.Delay(CaptureBannerPauseMs);
+                if (generation != _matchGeneration || !IsPlaying) return;
             }
             State.Board = revealedBoard;
             NotifyStateChanged();
             await Task.Delay(1000);
+            if (generation != _matchGeneration || !IsPlaying) return;
         }
 
         if (secondCell != -1)
@@ -1662,10 +1677,12 @@ public partial class HoneycombViewModel : ObservableObject
             {
                 EnqueueBanner(comboText);
                 if (!_isHeadless) await Task.Delay(CaptureBannerPauseMs);
+                if (generation != _matchGeneration || !IsPlaying) return;
             }
             State.Board = revealedBoard;
             NotifyStateChanged();
             await Task.Delay(1000);
+            if (generation != _matchGeneration || !IsPlaying) return;
         }
 
         _isAnimating = false;
@@ -1758,6 +1775,13 @@ public partial class HoneycombViewModel : ObservableObject
 
     private void SettleMatch()
     {
+        // A stale RevealBombSheltersAndSettleAsync/TriggerSuddenDeathAsync continuation
+        // from an abandoned match (New Game/Quit during its delay) can still reach here
+        // after State.Board has already been reset for a new match — settling that fresh,
+        // not-yet-played board would record a bogus result and corrupt the new match.
+        // Matches Swift's settleMatch(), which is a no-op unless board.isFull.
+        if (!IsBoardFull()) return;
+
         State.PlayerScore = CountPlayerCards(State.Board, State.PlayerHand);
         State.OpponentScore = CountOpponentCards(State.Board, State.OpponentHand);
 
@@ -1866,11 +1890,16 @@ public partial class HoneycombViewModel : ObservableObject
 
     private async void TriggerSuddenDeathAsync()
     {
+        int generation = _matchGeneration;
         _isAnimating = true;
         NotifyStateChanged();
 
         // Give enough time for the final card placement and any combo animations to fully resolve
         if (!_isHeadless) await Task.Delay(2500);
+        // A New Game/Quit during this delay bumps _matchGeneration — without this check,
+        // this stale continuation would still increment SuddenDeathCount and stomp the
+        // turn/undo-stack state of whatever match has replaced this one.
+        if (generation != _matchGeneration || !IsPlaying) return;
 
         EnqueueBanner($"{HoneycombRuleLocalization.LocalizedRuleName(HoneycombRule.SuddenDeath, SettingsService.LoadOptions().Language)}!");
         State.IsSuddenDeath = true;

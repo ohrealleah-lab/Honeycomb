@@ -769,10 +769,29 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
             foreach (var tgt in Tableaus)
             {
                 if (tgt.Id == src.Id) continue;
-                if (MoveSequenceHelper.AnySuffixMoves(seq, s => CanMoveSequence(s, tgt))) return true;
+                // A purely lateral move (see IsLateralMove) must be excluded here exactly as
+                // EvaluateImmediateMoves excludes it from Hint — otherwise a board where only
+                // such moves remain reads as "not deadlocked" to this check while Hint
+                // correctly finds nothing to suggest, trapping the player without a Game Over.
+                if (MoveSequenceHelper.AnySuffixMoves(seq, s => CanMoveSequence(s, tgt),
+                        len => IsLateralMove(src, src.Cards.Count - len, tgt))) return true;
             }
         }
         return false;
+    }
+
+    // A move is non-progressive if the card it would expose on the source pile has the
+    // same suit+rank as the target pile's current top card — with two decks in play,
+    // that's a different physical card but a structurally identical stack, so relocating
+    // the run there doesn't actually change anything about the board. Shared by
+    // HasAnyLegalMoves and EvaluateImmediateMoves/CollectAllHints so they can't disagree
+    // about whether the player has a real move available.
+    private static bool IsLateralMove(Pile src, int exposedIdx, Pile tgt)
+    {
+        if (exposedIdx <= 0 || tgt.Cards.Count == 0) return false;
+        var exposed = src.Cards[exposedIdx - 1];
+        var targetTop = tgt.Cards[^1];
+        return exposed.IsFaceUp && exposed.Suit == targetTop.Suit && exposed.Rank == targetTop.Rank;
     }
 
     // MARK: - Hint
@@ -857,13 +876,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
                         bool revealsHidden   = startIdx == firstFaceUpIdx && firstFaceUpIdx > 0;
                         bool emptiesColumn   = src.Cards.Count - len == 0;
 
-                        // Check for lateral move: if the card we are breaking from is identical to the target
-                        if (startIdx > 0 && src.Cards[startIdx - 1].IsFaceUp && 
-                            src.Cards[startIdx - 1].Suit == tgt.Cards.Last().Suit && 
-                            src.Cards[startIdx - 1].Rank == tgt.Cards.Last().Rank)
-                        {
-                            continue;
-                        }
+                        if (IsLateralMove(src, startIdx, tgt)) continue;
 
                         bool sameSuit        = subSeq[0].Suit == tgt.Cards.Last().Suit;
                         int faceDownBonus    = revealsHidden ? firstFaceUpIdx * 150 : 0;

@@ -340,6 +340,18 @@ public final class GameViewModel {
     public func startNewGame(countAsNewGame: Bool = true) {
         stopTimer()
 
+        // Breaking the streak on an in-progress, unwon game must run unconditionally
+        // (not just when countAsNewGame) — otherwise toggling an option like Vegas
+        // Scoring mid-game (countAsNewGame: false) discards the current deal for a
+        // fresh one while dodging the loss, letting a losing streak be preserved
+        // indefinitely just by flipping an option back and forth. Matches the Windows
+        // port's InitializeGame, which checks this unconditionally at the top.
+        if state.movesCount > 0 && !state.hasWon {
+            var stats = statistics
+            stats.currentStreak = 0
+            statistics = stats
+        }
+
         if countAsNewGame {
             // gamesPlayed increments below at the start of every deal (not once per
             // session like Honeycomb's own gamesPlayed, which only increments at
@@ -349,11 +361,6 @@ public final class GameViewModel {
                 enqueueBanner(text)
             }
 
-            if state.movesCount > 0 && !state.hasWon {
-                var stats = statistics
-                stats.currentStreak = 0
-                statistics = stats
-            }
             gamesPlayed += 1
         } else {
             // Re-dealing because of an option change, not a player-initiated new game.
@@ -527,7 +534,21 @@ public final class GameViewModel {
     
     public func isValidMove(cards: [Card], to targetPile: Pile) -> Bool {
         guard let firstCard = cards.first else { return false }
-        
+
+        // A multi-card drag must itself be a valid descending-alternating-color run, not
+        // just have its first card line up with the target — matches Beecell's own
+        // isValidMove (shared/Beecell/ViewModels/BeecellViewModel.swift) and the Windows
+        // port's CanMoveCard, which both validate the whole array natively. hasValidMoves
+        // and the Hint search used to re-derive this same loop themselves before calling
+        // in here; now they can just pass any candidate slice and trust this check.
+        if cards.count > 1 {
+            for i in 0..<(cards.count - 1) {
+                if cards[i].rank != cards[i+1].rank + 1 || cards[i].isRed == cards[i+1].isRed {
+                    return false
+                }
+            }
+        }
+
         switch targetPile.type {
         case .tableau:
             if targetPile.isEmpty {
@@ -836,12 +857,6 @@ public final class GameViewModel {
                 let col = state.tableau[colIdx]
                 for startIdx in 0..<col.cards.count where col.cards[startIdx].faceUp {
                     let seq = Array(col.cards[startIdx...])
-                    // Validate sequence
-                    var valid = true
-                    for i in 0..<seq.count - 1 {
-                        if seq[i].rank != seq[i+1].rank + 1 || seq[i].isRed == seq[i+1].isRed { valid = false; break }
-                    }
-                    guard valid else { continue }
                     for target in state.tableau where target.id != source.id {
                         if isValidMove(cards: seq, to: target),
                            isProgressiveMove(cards: seq, source: source, target: target) {
@@ -1021,11 +1036,6 @@ public final class GameViewModel {
             guard let firstFaceUpIdx = col.cards.firstIndex(where: { $0.faceUp }) else { continue }
             for startIdx in firstFaceUpIdx..<col.cards.count {
                 let dragStack = Array(col.cards[startIdx...])
-                var valid = true
-                for i in 0..<dragStack.count - 1 {
-                    if dragStack[i].rank != dragStack[i+1].rank + 1 || dragStack[i].isRed == dragStack[i+1].isRed { valid = false; break }
-                }
-                guard valid else { continue }
 
                 for targetCol in state.tableau where targetCol.id != col.id && isValidMove(cards: dragStack, to: targetCol) {
                     guard isProgressiveMove(cards: dragStack, source: col, target: targetCol) else { continue }

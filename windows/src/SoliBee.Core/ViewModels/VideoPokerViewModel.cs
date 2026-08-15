@@ -407,6 +407,14 @@ public partial class VideoPokerViewModel : ObservableObject
 
     public void StartNewGame()
     {
+        // A dealt-but-unresolved hand (cards held, draw not yet taken) being abandoned
+        // here must break the streak same as a real loss would — otherwise a player
+        // could dodge any unfavorable deal for free and keep an infinite streak.
+        if (State.Phase == VideoPokerPhase.Holding)
+        {
+            Stats.CurrentStreak = 0;
+            SaveStatistics();
+        }
         _sessionHandsPlayed = 0;
         _preferredBet = Math.Clamp(Options.BetPerHand, 1, 5);
         State = new VideoPokerState

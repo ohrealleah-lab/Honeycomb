@@ -1329,7 +1329,7 @@ struct HoneycombRulesView: View {
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    let allBanItems = [coordinator.L(.normalModeBanItem)] + HoneycombRule.allCases.map { $0.rawValue }
+                    let allBanItems = ["Normal Mode"] + HoneycombRule.allCases.map { $0.rawValue }
 
                     ForEach(allBanItems, id: \.self) { ruleName in
                         HStack {

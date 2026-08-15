@@ -363,8 +363,13 @@ struct BlackjackSettingsSection: View {
                 Stepper(coordinator.L(.startingCreditsFmt, viewModel.options.startingCredits),
                         value: $viewModel.options.startingCredits, in: 10...10000, step: 10)
                 Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
+                // No startNewGame() call here, unlike mac's equivalent — this Toggle is
+                // disabled during gameplay (.disabledDuringGameplay below), so it can only
+                // ever fire between hands, when there's no in-progress hand to interrupt.
+                // isFreePlay reads options.noStressMode live, so the change takes effect
+                // on the next deal on its own; calling startNewGame() here only served to
+                // unconditionally wipe the win streak on a benign settings change.
                 Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
-                    .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
             }
             .disabledDuringGameplay(!canOpenOptions)
 

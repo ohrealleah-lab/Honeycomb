@@ -11,6 +11,7 @@ import Foundation
 // site so they can't drift out of sync as rules are added or re-translated.
 public func honeycombLocalizedRuleName(_ ruleName: String, language: AppLanguage) -> String {
     switch ruleName {
+    case "Normal Mode":                       return L(.normalModeBanItem, language: language)
     case HoneycombRule.ascension.rawValue:    return L(.ruleNamePollination, language: language)
     case HoneycombRule.descension.rawValue:   return L(.ruleNameSmokedOut, language: language)
     case HoneycombRule.same.rawValue:         return L(.ruleNameSymmetry, language: language)

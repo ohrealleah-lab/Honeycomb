@@ -92,6 +92,7 @@ struct BeecellTouchView: View {
             // Moving this modifier to a different view breaks drop hit-testing silently.
             .coordinateSpace(name: Self.boardSpace)
         }
+        .environment(\.feltColor, coordinator.feltColor)
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { BeecellStatsSheet(viewModel: viewModel) }

@@ -951,7 +951,7 @@ struct HoneycombSettingsSection: View {
                 }
 
                 DisclosureGroup(coordinator.L(.banListDisclosure)) {
-                    let allBanItems = [coordinator.L(.normalModeBanItem)] + HoneycombRule.allCases.map { $0.rawValue }
+                    let allBanItems = ["Normal Mode"] + HoneycombRule.allCases.map { $0.rawValue }
                     ForEach(allBanItems, id: \.self) { ruleName in
                         Toggle(honeycombLocalizedRuleName(ruleName, language: coordinator.language), isOn: .init(
                             get: { viewModel.options.bannedRules.contains(ruleName) },

@@ -119,6 +119,15 @@ public final class BlackjackViewModel {
     private var idleCheckGeneration: Int = 0
     private static let idleToastDelay: TimeInterval = 60
 
+    // Guards the delayed executeDealerTurn() closures (dealer/player blackjack auto-
+    // resolve, split-aces auto-resolve) against the ABA problem a bare `state.phase ==
+    // .playing` check can't catch on its own: startNewGame()/restartCurrentGame() don't
+    // guard on phase, so a hand can be abandoned and a fresh one dealt (back to
+    // .playing) within the ~1-1.5s delay — a stale closure would then resolve the wrong
+    // hand since the phase alone matches again. Bumped alongside state resets the same
+    // way Honeycomb/Klondike bump their own match generation counters.
+    private var handGeneration: Int = 0
+
     public func scheduleIdleActionCheck() {
         idleCheckGeneration += 1
         let generation = idleCheckGeneration
@@ -233,9 +242,11 @@ public final class BlackjackViewModel {
         // their own cards land before the hand auto-completes out from under them.
         let dealerRanks = state.dealerCards.map { $0.rank }
         let dealerHasBlackjack = dealerRanks.count == 2 && dealerRanks.contains(1) && dealerRanks.contains { $0 >= 10 }
+        let generation = handGeneration
         if dealerHasBlackjack {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                self?.executeDealerTurn()
+                guard let self, self.handGeneration == generation else { return }
+                self.executeDealerTurn()
             }
             return
         }
@@ -243,7 +254,8 @@ public final class BlackjackViewModel {
         // Check for player blackjack — delay so the player can see their cards first
         if state.playerHands[0].isBlackjack {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                self?.executeDealerTurn()
+                guard let self, self.handGeneration == generation else { return }
+                self.executeDealerTurn()
             }
         }
     }
@@ -326,8 +338,10 @@ public final class BlackjackViewModel {
         // Delay the auto-resolve so the player has a moment to see both hands' cards
         // before the round jumps to the dealer's turn.
         if isAces {
+            let generation = handGeneration
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                self?.executeDealerTurn()
+                guard let self, self.handGeneration == generation else { return }
+                self.executeDealerTurn()
             }
         } else if state.playerHands[state.activeHandIndex].value == 21 {
             // The freshly dealt second card already completes this hand — matches the
@@ -556,6 +570,7 @@ public final class BlackjackViewModel {
     }
 
     public func startNewGame() {
+        handGeneration += 1
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
         state.currentBet = 1
@@ -563,6 +578,7 @@ public final class BlackjackViewModel {
     }
 
     public func restartCurrentGame() {
+        handGeneration += 1
         state = BlackjackState()
         state.sessionCredits = options.startingCredits
         state.currentBet = 1
