@@ -1,0 +1,99 @@
+name: Build and Test (iOS)
+
+# Mirrors build-release-mac.yml's shape: build (and smoke-test) on every push/PR as a
+# sanity check. No release/packaging step here — unlike Mac (DMG) and Windows
+# (Velopack), shipping to the App Store needs signing certs/provisioning profiles this
+# repo doesn't have configured, so that's out of scope for this workflow.
+#
+# There's no XCTest target for this app (see ios/project.yml — a single Honeycomb app
+# target only), so "build succeeds" plus an actual headless launch is the meaningful
+# check here; the shared game-logic test suite already runs in the Mac job on the same
+# push (mac/SoliBeeTests exercises the same shared/ code iOS links against).
+#
+# NOTE: this file must live here, at the repo root's .github/workflows/ — GitHub Actions
+# only discovers workflows at that exact path, never inside a subdirectory's own
+# .github/workflows/.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-smoke-test:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: ios
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Honeycomb.xcodeproj \
+            -scheme Honeycomb \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      # Boots a real simulator, installs the just-built app, and launches it — a fresh
+      # install has no saved "selectedGameMode" (defaults to Klondike, see
+      # AppCoordinator.swift), so this exercises app launch + Klondike's default view
+      # rendering, not a specific game. That's enough to catch a crash-on-launch or
+      # crash-on-first-render that a plain successful `xcodebuild build` wouldn't —
+      # simctl launch itself only reports whether the launch REQUEST succeeded, not
+      # whether the app then immediately crashed.
+      - name: Boot Simulator and smoke-test launch
+        run: |
+          set -euo pipefail
+          BUNDLE_ID="com.leah.Honeycomb"
+
+          UDID=$(xcrun simctl list devices available iOS --json \
+            | python3 -c "
+import json, sys
+data = json.load(sys.stdin)['devices']
+for runtime, devices in data.items():
+    if not devices:
+        continue
+    print(devices[0]['udid'])
+    sys.exit(0)
+sys.exit('No available iOS simulator found')
+")
+          echo "Using simulator $UDID"
+
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Honeycomb.app" -path "*Debug-iphonesimulator*" -print -quit)
+          if [ -z "$APP_PATH" ]; then
+            echo "Could not locate built Honeycomb.app under DerivedData" >&2
+            exit 1
+          fi
+          echo "Installing $APP_PATH"
+          xcrun simctl install "$UDID" "$APP_PATH"
+
+          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+
+          # Give the app a few seconds to finish launching, then confirm the process is
+          # still alive.
+          sleep 5
+          if ! xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE_ID"; then
+            echo "Honeycomb crashed (or exited) shortly after launch" >&2
+            xcrun simctl spawn "$UDID" log show --last 30s --predicate "process == \"Honeycomb\"" || true
+            exit 1
+          fi
+          echo "Honeycomb launched and is still running — smoke test passed."
+
+          xcrun simctl shutdown "$UDID"
