@@ -53,6 +53,27 @@ public partial class AppCoordinator : ObservableObject
             "Honeycomb"  => (object)HoneycombViewModel,
             _            => (object)GameViewModel
         };
+
+        // OptionsChangedMessage is broadcast from many places (Preferences, MainWindow,
+        // and each timer-having ViewModel's own No-Stress-Mode toggle) and every
+        // registered listener receives it regardless of which game is actually on
+        // screen — including the two ViewModels PauseTimer/ResumeTimerForSwitch above
+        // never touch (only the outgoing and incoming game are paused/resumed on a
+        // switch). If a third, backgrounded Klondike/Freecell/Spider still has an
+        // abandoned, unfinished hand (MovesCount > 0, !HasWon) when No Stress Mode gets
+        // switched off elsewhere, that ViewModel's own OptionsChangedMessage handler sets
+        // State.IsTimerActive = true for itself — silently resuming its already-running
+        // background _gameTimer for a screen nobody is looking at, corrupting
+        // ShortestWinSeconds/TotalWinSeconds if the player returns to it later. Re-pause
+        // every non-active timer-having ViewModel after any options broadcast to
+        // guarantee only the active game can have a running timer, regardless of what
+        // each one's own handler decided to do.
+        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
+        {
+            if (ActiveViewModel != GameViewModel)      GameViewModel.PauseTimerForSwitch();
+            if (ActiveViewModel != FreecellViewModel)   FreecellViewModel.PauseTimerForSwitch();
+            if (ActiveViewModel != SpiderViewModel)     SpiderViewModel.PauseTimerForSwitch();
+        });
     }
 
     public bool CanUndo => ActiveViewModel switch

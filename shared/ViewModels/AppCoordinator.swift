@@ -43,6 +43,21 @@ public final class AppCoordinator {
             // bug this replaced: syncSharedOptions used to broadcast whichever game you
             // just left onto every other game, including these two fields).
             applySharedCommonOptionsToAllGames()
+            // The broadcast above reassigns `options` on every backgrounded game too,
+            // which re-fires each one's own handleOptionsChanged — including its "No
+            // Stress Mode just turned off, start the timer" branch. That branch assumes
+            // it's only ever reacting to a change on the game the player is actively
+            // looking at (true for a direct in-game toggle), but a background game with
+            // an abandoned, unfinished hand still sitting in memory (movesCount > 0,
+            // !hasWon) satisfies that same branch's condition too — silently starting a
+            // real wall-clock timer for a screen nobody is looking at, which would
+            // corrupt that hand's eventual time-based stats if the player returns to it
+            // later. Only Klondike/Beecell/Spider have timers; defensively re-stop every
+            // one except whichever just became active, undoing any such spurious start
+            // regardless of what each game's own handleOptionsChanged decided to do.
+            if gameMode != .klondike { klondikeViewModel.stopTimer() }
+            if gameMode != .beecell  { beecellViewModel.stopTimer() }
+            if gameMode != .spider   { spiderViewModel.stopTimer() }
             #if canImport(AppKit)
             applyWindowSizeForCurrentGameMode()
             #endif

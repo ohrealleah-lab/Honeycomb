@@ -14,6 +14,7 @@ struct StatsRegressionTests {
         testKlondikeResetStatisticsClearsStreaksAndHighScoreAndSurvivesRelaunch()
         testBeecellDeckCountSwitchResetsAbandonedModeNotNewMode()
         testSpiderSuitCountSwitchResetsAbandonedModeNotNewMode()
+        testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync()
     }
 
     // MARK: - Honeycomb
@@ -259,6 +260,63 @@ struct StatsRegressionTests {
         }
         guard vm.statistics.statsBySuits[2]?.currentStreak == 2 else {
             fatalError("❌ StatsRegressionTests: switching Spider to 2 suits incorrectly reset the NEW 2-suit mode's streak instead of the abandoned 1-suit one (got \(vm.statistics.statsBySuits[2]?.currentStreak ?? -1))")
+        }
+    }
+
+    // MARK: - AppCoordinator cross-game options sync
+
+    // syncSharedOptions/applySharedCommonOptionsToAllGames (AppCoordinator.gameMode's
+    // didSet) reassign `options` on every backgrounded game, not just the one actually
+    // being switched to/from — which re-fires each one's own handleOptionsChanged,
+    // including its "No Stress Mode just turned off, start the timer" branch. That
+    // branch used to assume it was only ever reacting to a change on the game the
+    // player is actively looking at; a THIRD game (neither the one being left nor the
+    // one being entered) with an abandoned, unfinished hand still sitting in memory
+    // satisfied that same branch's condition too, silently (re)starting a real
+    // wall-clock timer for a screen nobody was looking at.
+    static func testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync() {
+        let keys = ["selectedGameMode", "solitaire_options", "beecell_options", "honeycomb_options"]
+        let saved = keys.map { ($0, UserDefaults.standard.object(forKey: $0)) }
+        defer {
+            for (key, value) in saved {
+                if let value { UserDefaults.standard.set(value, forKey: key) }
+                else { UserDefaults.standard.removeObject(forKey: key) }
+            }
+        }
+
+        let coordinator = AppCoordinator()
+
+        // Klondike: an abandoned, untimed, unfinished hand left sitting in the
+        // background — the exact shape that satisfies handleOptionsChanged's "start
+        // timer" condition once effectiveTimed flips from false to true.
+        coordinator.gameMode = .klondike
+        var klondikeOpts = coordinator.klondikeViewModel.options
+        klondikeOpts.noStressMode = true
+        coordinator.klondikeViewModel.options = klondikeOpts
+        coordinator.klondikeViewModel.state.movesCount = 1
+        coordinator.klondikeViewModel.state.hasWon = false
+        coordinator.klondikeViewModel.stopTimer() // matches the real "was backgrounded" state
+
+        // Switch away to Beecell (Klondike is now backgrounded, its timer stopped by
+        // the outgoing-game logic in gameMode's didSet).
+        coordinator.gameMode = .beecell
+        guard coordinator.klondikeViewModel.state.isTimerActive == false else {
+            fatalError("❌ StatsRegressionTests: Klondike's timer should already be stopped after switching away from it")
+        }
+
+        // Toggle No Stress Mode off on Beecell directly (not through the coordinator —
+        // an in-game options change doesn't propagate anywhere until the NEXT mode
+        // switch, matching how a player's own Options sheet interaction works).
+        var beecellOpts = coordinator.beecellViewModel.options
+        beecellOpts.noStressMode = false
+        coordinator.beecellViewModel.options = beecellOpts
+
+        // Switch to a THIRD game — this is what broadcasts Beecell's new noStressMode
+        // to every other game, including the backgrounded Klondike.
+        coordinator.gameMode = .honeycomb
+
+        guard coordinator.klondikeViewModel.state.isTimerActive == false else {
+            fatalError("❌ StatsRegressionTests: switching from Beecell to Honeycomb resumed the backgrounded Klondike game's timer via the cross-game options sync, even though nobody is looking at Klondike")
         }
     }
 }
