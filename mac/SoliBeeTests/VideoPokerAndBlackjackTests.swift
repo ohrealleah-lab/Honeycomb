@@ -15,6 +15,9 @@ struct VideoPokerAndBlackjackTests {
         testBlackjackCanRebuy()
         testBlackjackPaysThreeToOne()
         testBlackjackFreePlayBypassesCreditChecks()
+        testBlackjackActionsBlockedDuringDealerBlackjackPendingWindow()
+        testBlackjackAdvanceHandSkipsAlreadyComplete21AfterSplit()
+        testVideoPokerJacksOrBetterHandNameIsLocalized()
         print("✅ VideoPokerAndBlackjackTests passed.")
     }
 
@@ -299,5 +302,80 @@ struct VideoPokerAndBlackjackTests {
         viewModel.split()
         assert(viewModel.state.sessionCredits == 0, "Free play split should not deduct credits")
         assert(viewModel.state.playerHands.count == 2, "Split should still create two hands in free play")
+    }
+
+    static func testBlackjackActionsBlockedDuringDealerBlackjackPendingWindow() {
+        let viewModel = BlackjackViewModel()
+        viewModel.state.sessionCredits = 1000
+        viewModel.state.currentBet = 10
+        // deal() opens phase == .playing before checking for a concealed dealer
+        // blackjack, then defers resolution — simulate landing exactly in that window.
+        viewModel.state.phase = .playing
+        viewModel.state.dealerCards = [
+            Card(suit: .spades, rank: 13, faceUp: true),
+            Card(suit: .hearts, rank: 1, faceUp: false)
+        ]
+        viewModel.state.playerHands = [
+            BlackjackHand(cards: [
+                Card(suit: .hearts, rank: 6, faceUp: true),
+                Card(suit: .spades, rank: 6, faceUp: true)
+            ], bet: 10)
+        ]
+        viewModel.state.activeHandIndex = 0
+        viewModel.state.deck = [Card(suit: .clubs, rank: 9, faceUp: true)]
+        let creditsBefore = viewModel.state.sessionCredits
+        let wageredBefore = viewModel.statistics.totalWagered
+
+        viewModel.hit()
+        assert(viewModel.state.playerHands[0].cards.count == 2, "hit() must not deal a card against a pending dealer blackjack")
+        viewModel.doubleDown()
+        assert(viewModel.state.sessionCredits == creditsBefore, "doubleDown() must not charge credits against a pending dealer blackjack")
+        viewModel.split()
+        assert(viewModel.state.playerHands.count == 1, "split() must not create a second wagered hand against a pending dealer blackjack")
+        viewModel.stand()
+        assert(viewModel.state.activeHandIndex == 0, "stand() must not advance past a pending dealer blackjack")
+        assert(viewModel.statistics.totalWagered == wageredBefore, "No action should wager additional credits against a pending dealer blackjack")
+    }
+
+    static func testBlackjackAdvanceHandSkipsAlreadyComplete21AfterSplit() {
+        let viewModel = BlackjackViewModel()
+        viewModel.state.sessionCredits = 1000
+        viewModel.state.phase = .playing
+        viewModel.state.dealerCards = [
+            Card(suit: .spades, rank: 9, faceUp: true),
+            Card(suit: .hearts, rank: 7, faceUp: false)
+        ]
+        // Hand 0: not yet complete. Hand 1: already a made 21 from the split deal itself.
+        viewModel.state.playerHands = [
+            BlackjackHand(cards: [
+                Card(suit: .hearts, rank: 6, faceUp: true),
+                Card(suit: .spades, rank: 4, faceUp: true)
+            ], bet: 10),
+            BlackjackHand(cards: [
+                Card(suit: .clubs, rank: 10, faceUp: true),
+                Card(suit: .diamonds, rank: 1, faceUp: true)
+            ], bet: 10)
+        ]
+        viewModel.state.activeHandIndex = 0
+        viewModel.state.deck = [Card(suit: .clubs, rank: 2, faceUp: true)]
+        assert(viewModel.state.playerHands[1].isComplete, "A made 21 must be reported complete")
+
+        viewModel.stand()
+
+        // advanceHand() must skip straight past the already-complete hand 1 into the
+        // dealer's turn, never leaving it sitting active with Hit/Stand still enabled.
+        assert(viewModel.state.phase != .playing, "Standing on hand 0 must not leave an already-complete hand 1 open to further action")
+    }
+
+    static func testVideoPokerJacksOrBetterHandNameIsLocalized() {
+        // "Jacks or Better" is the base qualifying-pair win in both the Jacks or Better
+        // and Bonus Poker pay tables — the most common winning category in the default
+        // variant — but localizedHandName had no case for it and silently fell through
+        // to the raw English string in every non-English locale.
+        let english = localizedHandName("Jacks or Better", language: .english)
+        let spanish = localizedHandName("Jacks or Better", language: .spanish)
+        assert(english == "Jacks or Better", "English hand name should read as-is, got \(english)")
+        assert(spanish == "Jotas o Mejor", "Spanish hand name should be translated, got \(spanish)")
+        assert(spanish != "Jacks or Better", "Spanish hand name must not fall through to the raw English string")
     }
 }
