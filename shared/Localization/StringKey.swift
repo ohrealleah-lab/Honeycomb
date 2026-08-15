@@ -1348,4 +1348,18 @@ public enum StringKey: String, CaseIterable {
     case debugBannersMenu = "debug_banners_menu"
     /// Windows Manage Decks: display name for the slot-0 (default) deck
     case deckDefaultName = "deck_default_name"
+    /// iOS Blackjack/Video Poker touch view: credits capsule label in free-play mode
+    case freePlayLabel = "free_play_label"
+    /// iOS custom-art import sheets: photo picker button, no image chosen yet
+    case touchChoosePhoto = "touch_choose_photo"
+    /// iOS custom-art import sheets: photo picker button, image already chosen
+    case touchChooseDifferentPhoto = "touch_choose_different_photo"
+    /// iOS custom-art import sheets: crop editor section header
+    case touchPinchZoomReposition = "touch_pinch_zoom_reposition"
+    /// iOS custom-art import sheets: name TextField placeholder
+    case touchNameFieldPlaceholder = "touch_name_field_placeholder"
+    /// iOS custom-art import sheets: duplicate-name validation error
+    case touchNameAlreadyTakenError = "touch_name_already_taken_error"
+    /// iOS custom face-card-art import sheet: Enabled toggle label
+    case touchEnabledToggle = "touch_enabled_toggle"
 }

@@ -213,7 +213,8 @@ public final class HoneycombViewModel {
     
     // Post-game state
     public var showPostGamePrompt: Bool = false
-    public var matchResult: String = "" // "You Win!", "You Lose", "Draw"
+    public var matchResult: String = "" // "You Win!", "You Lose", "Draw" — display text only, localized; see matchOutcome for gameplay-logic branching
+    public var matchOutcome: HoneycombMatchOutcome = .none
     // Optional flavor subtitle shown alongside matchResult on the post-game overlay
     // (e.g. "Flawless victory!") — set alongside matchResult in settleMatch(), never
     // reset independently since matchResult itself is only ever overwritten, not cleared.
@@ -307,7 +308,7 @@ public final class HoneycombViewModel {
                     moves.append(HoneycombLegalMove(action: "playCard", handIndex: hIdx, boardIndex: bIdx, replaceHandIndex: nil))
                 }
             }
-        } else if gameState == .gameOver && showPostGamePrompt && matchResult == "You Win!" {
+        } else if gameState == .gameOver && showPostGamePrompt && matchOutcome == .win {
             // Matches requestSteal's real eligibility (see isStealEligible) and the
             // one-steal-per-match cap not already spent.
             let opponentBoardIndices = hasStolenThisMatch ? [] : (0..<9).filter {
@@ -1605,6 +1606,13 @@ public final class HoneycombViewModel {
     // caller uses it to schedule whatever comes next (the opponent's turn, or the
     // player's), so that scheduling can't race ahead of an in-progress animation.
     private func applyPlacement(card: HoneycombCard, boardIndex: Int, isFirstCard: Bool, completion: @escaping () -> Void) {
+        // Captured once here and threaded through stageCaptureCommit/finishPlacement/
+        // commitReveal below — same pattern as stageSwapAnimation and settleMatch's
+        // delayed showPostGamePrompt. quitMatch() (and startNewGame()) bump this and
+        // reset the board specifically so any placement/capture animation still
+        // in-flight from a match the player already left can detect it's stale and
+        // no-op, instead of resurrecting the abandoned board over the new setup screen.
+        let generation = handSetupGeneration
         var capturedBoard = board
         var placedCard = card
 
@@ -1657,15 +1665,15 @@ public final class HoneycombViewModel {
             pointHighlight = (cardId: placedCard.id, statIndices: directStatIndices)
 
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.pointHighlightDelay) { [weak self] in
-                guard let self else { return }
+                guard let self, self.handSetupGeneration == generation else { return }
                 self.pointHighlight = nil
-                self.stageCaptureCommit(capturedBoard, banner: banner, hasCapture: !attackerIds.isEmpty) {
-                    self.finishPlacement(flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
+                self.stageCaptureCommit(capturedBoard, banner: banner, hasCapture: !attackerIds.isEmpty, generation: generation) {
+                    self.finishPlacement(flipsCount: flips.count, excludingBoardIndex: boardIndex, generation: generation, completion: completion)
                 }
             }
         } else {
-            stageCaptureCommit(capturedBoard, banner: banner, hasCapture: !attackerIds.isEmpty) { [weak self] in
-                self?.finishPlacement(flipsCount: flips.count, excludingBoardIndex: boardIndex, completion: completion)
+            stageCaptureCommit(capturedBoard, banner: banner, hasCapture: !attackerIds.isEmpty, generation: generation) { [weak self] in
+                self?.finishPlacement(flipsCount: flips.count, excludingBoardIndex: boardIndex, generation: generation, completion: completion)
             }
         }
     }
@@ -1687,7 +1695,7 @@ public final class HoneycombViewModel {
     // move, or an Ascension/Descension-only note with no capture behind it, commits
     // `newBoard` immediately: there's nothing left to protect from the banner (for a
     // non-capturing move, `newBoard` is identical to what's already on screen anyway).
-    private func stageCaptureCommit(_ newBoard: HoneycombBoard, banner: String?, hasCapture: Bool, onCommit: @escaping () -> Void) {
+    private func stageCaptureCommit(_ newBoard: HoneycombBoard, banner: String?, hasCapture: Bool, generation: Int, onCommit: @escaping () -> Void) {
         guard let banner, hasCapture, !UISound.isHeadlessMode else {
             if let banner { enqueueBanner(banner) }
             board = newBoard
@@ -1698,7 +1706,7 @@ public final class HoneycombViewModel {
         }
         enqueueBanner(banner)
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.captureBannerPauseDelay) { [weak self] in
-            guard let self else { return }
+            guard let self, self.handSetupGeneration == generation else { return }
             withAnimation {
                 self.board = newBoard
             }
@@ -1716,7 +1724,7 @@ public final class HoneycombViewModel {
     // each other — previously both were computed into one board mutation and committed
     // together, so a reveal's own flip/banner could appear (or get silently overwritten)
     // in the exact same frame as the placed card's own capture.
-    private func finishPlacement(flipsCount: Int, excludingBoardIndex: Int, completion: @escaping () -> Void) {
+    private func finishPlacement(flipsCount: Int, excludingBoardIndex: Int, generation: Int, completion: @escaping () -> Void) {
         sessionCardsCaptured += flipsCount
         if options.isSoundEnabled {
             UISound.play(named: "snap", enabled: true)
@@ -1737,11 +1745,11 @@ public final class HoneycombViewModel {
 
         isAnimatingPlacement = true
         let revealBombShelters = { [weak self] in
-            guard let self else { return }
+            guard let self, self.handSetupGeneration == generation else { return }
             let (revealedBoard, banners, attackerIds) = self.revealBombShelterCards(at: pendingReveals)
 
             let commitReveal = { [weak self] in
-                guard let self else { return }
+                guard let self, self.handSetupGeneration == generation else { return }
                 withAnimation {
                     self.board = revealedBoard
                 }
@@ -2185,6 +2193,7 @@ public final class HoneycombViewModel {
             
             if pScore > oScore {
                 matchResult = L(.youWin, language: BannerCatalog.currentLanguage)
+                matchOutcome = .win
                 gameState = .gameOver
                 if options.isSoundEnabled { UISound.play(named: "victory", enabled: true) }
                 let flawless = oScore == 0
@@ -2213,6 +2222,7 @@ public final class HoneycombViewModel {
                 }
             } else if oScore > pScore {
                 matchResult = L(.youLose, language: BannerCatalog.currentLanguage)
+                matchOutcome = .loss
                 gameState = .gameOver
                 stats.recordGame(won: false, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
                 if pScore == 0, case .message(let text) = BannerCatalog.shared.fire(.ruleSpecificPlayerLosesFlawless0Captures, tokens: ["OpponentName": options.difficulty.displayName]) {
@@ -2228,12 +2238,14 @@ public final class HoneycombViewModel {
             } else if activeRules.contains(.suddenDeath) {
                 let suddenDeathLanguage = BannerCatalog.currentLanguage
                 matchResult = L(.drawSuddenDeathFmt, language: suddenDeathLanguage, honeycombLocalizedRuleName(HoneycombRule.suddenDeath.rawValue, language: suddenDeathLanguage))
+                matchOutcome = .suddenDeathPending
                 gameState = .suddenDeath
                 matchResultFlavorText = nil
                 // Not a final result — Sudden Death continues this same match into
-                // overtime, so the rematch win/loss streak stays untouched until
-                // settleMatch() actually resolves it (win/lose/tie branches above).
-                stats.recordGame(won: false, drawn: true, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
+                // overtime, so neither the rematch win/loss streak nor stats.recordGame
+                // fire here; settleMatch() actually resolves both (win/lose/tie branches
+                // above) once the tie-break itself lands, so this same match is only
+                // ever recorded once.
 
                 // Give enough time for the final card placement and any combo animations to fully resolve
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
@@ -2246,6 +2258,7 @@ public final class HoneycombViewModel {
                 // an opt-in Rule, not automatic on every tie) — a tie is a final result
                 // like a win/loss, not a continuation.
                 matchResult = L(.tieResult, language: BannerCatalog.currentLanguage)
+                matchOutcome = .tie
                 gameState = .gameOver
                 matchResultFlavorText = nil
                 consecutiveRematchWins = 0

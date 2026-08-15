@@ -132,7 +132,7 @@ struct HoneycombBannerTriggerTests {
 
         _ = vm.playerPlayCard(handIndex: 0, boardIndex: 8)
 
-        guard vm.matchResult == "You Win!" else {
+        guard vm.matchOutcome == .win else {
             fatalError("❌ HoneycombBannerTriggerTests: forced 9-0 board didn't produce a win (matchResult=\(vm.matchResult))")
         }
         guard flavorContainsMessage(vm.matchResultFlavorText, from: [.ruleSpecificPlayerWinsFlawlessOpponentScore0, .gameplayPlayerWinsByTheMaximumPossibleMargin]) else {
@@ -161,7 +161,7 @@ struct HoneycombBannerTriggerTests {
 
         vm.aiPlayTurn()
 
-        guard vm.matchResult == "You Lose" else {
+        guard vm.matchOutcome == .loss else {
             fatalError("❌ HoneycombBannerTriggerTests: forced 0-9 board didn't produce a loss (matchResult=\(vm.matchResult))")
         }
         guard flavorContainsMessage(vm.matchResultFlavorText, from: [.ruleSpecificPlayerLosesFlawless0Captures]) else {
@@ -187,7 +187,7 @@ struct HoneycombBannerTriggerTests {
 
         _ = vm.playerPlayCard(handIndex: 0, boardIndex: 8)
 
-        guard vm.matchResult == "You Win!" else {
+        guard vm.matchOutcome == .win else {
             fatalError("❌ HoneycombBannerTriggerTests: forced 6-3 board didn't produce a win (matchResult=\(vm.matchResult))")
         }
         guard flavorContainsMessage(vm.matchResultFlavorText, from: [.gameplayPlayerWinsAMatchWith4RulesActiveAtOnce]) else {

@@ -96,10 +96,23 @@ public class HoneycombProfileManager {
     // right after this, since that's shared match/AI state this manager doesn't own.
     public func startOver() {
         let db = HoneycombDatabase.shared
+        // computeStartOverDecks calls this closure once per composition slot
+        // independently (e.g. three separate calls for a "three 3-star" slot), so even
+        // though randomCards() itself samples without replacement, two of those
+        // separate single-card calls could still land on the same card by chance.
+        // Drawing a small batch and picking the first not already used this Start Over
+        // keeps every call's contract (one card in, one card out) while guaranteeing no
+        // duplicate ends up in the rebuilt deck.
+        var alreadyDrawn: Set<Int> = []
         savedDecks = HoneycombProfileManager.computeStartOverDecks(
             currentDecks: savedDecks,
             starLookup: { db.card(id: $0)?.stars },
-            randomCard: { stars in db.randomCards(stars: stars, count: 1).first?.id }
+            randomCard: { stars in
+                let candidates = db.randomCards(stars: stars, count: 5)
+                let pick = candidates.first { !alreadyDrawn.contains($0.id) } ?? candidates.first
+                if let id = pick?.id { alreadyDrawn.insert(id) }
+                return pick?.id
+            }
         )
         unlockedCardIds = Set(savedDecks[0].cardIds)
         favoriteCardIds = []

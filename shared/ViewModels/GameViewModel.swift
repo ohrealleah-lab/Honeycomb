@@ -273,10 +273,15 @@ public final class GameViewModel {
         stats.gamesWon += 1
         stats.currentStreak += 1
         stats.longestStreak = max(stats.longestStreak, stats.currentStreak)
-        stats.winningGamesCount += 1
-        stats.totalWinningTime += timeInSeconds
-        if timeInSeconds > 0 && (stats.shortestWinTime == 0 || timeInSeconds < stats.shortestWinTime) {
-            stats.shortestWinTime = timeInSeconds
+        // No Stress Mode wins arrive with timeInSeconds == 0 (the timer never runs), so
+        // counting them here would silently deflate averageWinningTime — matches
+        // Beecell's/Spider's recordWin, which guard the same way.
+        if timeInSeconds > 0 {
+            stats.winningGamesCount += 1
+            stats.totalWinningTime += timeInSeconds
+            if stats.shortestWinTime == 0 || timeInSeconds < stats.shortestWinTime {
+                stats.shortestWinTime = timeInSeconds
+            }
         }
         statistics = stats
 
@@ -1031,7 +1036,10 @@ public final class GameViewModel {
                     
                     if revealsHidden {
                         let faceDownCount = firstFaceUpIdx
-                        let label = faceDownCount == 1 ? "Reveal 1 face-down card." : "Reveal \(faceDownCount) face-down cards."
+                        // The move only ever flips the single new top card, regardless of
+                        // how many face-down cards sit below it — faceDownCount here is
+                        // just the depth-weighted score bonus, not how many actually flip.
+                        let label = "Reveal 1 face-down card."
                         scored.append((HintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                             description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) — \(label)"), 500 + faceDownCount * 150 + vacateBonus))
                     } else if !targetCol.isEmpty {
@@ -1246,9 +1254,25 @@ public final class GameViewModel {
     public var zoomScale: CGFloat = 1.0
 
     public func resetStatistics() {
+        // gamesWon/gamesPlayed go through their own property setters (not a direct
+        // `statistics = GameStatistics()`) because init() re-derives those two fields
+        // from separate legacy "gamesWon"/"gamesPlayed" UserDefaults keys on every
+        // launch — bypassing the setters here would reset the in-memory value but
+        // leave the legacy keys stale, silently un-resetting on next launch.
         gamesWon = 0
         gamesPlayed = 0
+        var stats = statistics
+        stats.currentStreak = 0
+        stats.longestStreak = 0
+        stats.totalWinningTime = 0
+        stats.winningGamesCount = 0
+        stats.shortestWinTime = 0
+        statistics = stats
+        // highScore's own didSet only persists the CURRENT scoring mode's key — clear
+        // the other mode's stored key too so Reset Stats clears both regardless of
+        // which mode is active when it's tapped.
         highScore = options.isVegasScoring ? -5200 : 0
+        UserDefaults.standard.removeObject(forKey: options.isVegasScoring ? "highScore" : "highScoreVegas")
     }
 
     // MARK: - Keyboard Navigation

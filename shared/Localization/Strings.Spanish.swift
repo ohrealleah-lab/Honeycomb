@@ -675,5 +675,12 @@ enum StringsSpanish {
         .touchBeecellBanner: "BEECELL",
         .debugBannersMenu: "Anuncios",
         .deckDefaultName: "Predeterminado",
+        .freePlayLabel: "Juego Libre",
+        .touchChoosePhoto: "Elegir Foto",
+        .touchChooseDifferentPhoto: "Elegir Otra Foto",
+        .touchPinchZoomReposition: "Pellizca para hacer zoom, arrastra para reposicionar",
+        .touchNameFieldPlaceholder: "Nombre",
+        .touchNameAlreadyTakenError: "Ese nombre ya está en uso — elige otro.",
+        .touchEnabledToggle: "Activado",
     ]
 }

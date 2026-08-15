@@ -479,24 +479,23 @@ public struct HoneycombView: View {
             if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner {
                 ZStack(alignment: .topTrailing) {
                     VStack {
-                        if viewModel.matchResult == "You Lose" {
+                        if viewModel.matchOutcome == .loss {
                             // Exact match to Video Poker's loss banner (VideoPokerView.swift).
                             Text(coordinator.L(.notTodayPartner))
                                 .font(.system(size: 36, weight: .black))
                                 .foregroundColor(.yellow)
-                        } else if viewModel.matchResult == "You Win!" {
+                        } else if viewModel.matchOutcome == .win {
                             // The win overlay reappears after a steal is confirmed (Steal
                             // Card is now gone, since hasStolenThisMatch is true) — a
                             // repeat "You Win!" would read as stale, so it confirms what
                             // just happened instead.
                             Text(viewModel.hasStolenThisMatch ? coordinator.L(.cardAddedToBank) : viewModel.matchResult)
                                 .font(.system(size: 60, weight: .bold)).foregroundColor(.yellow)
-                        } else if viewModel.matchResult == "Tie!" {
+                        } else if viewModel.matchOutcome == .tie {
                             // Same styling as "You Win!" — Sudden Death is now opt-in, so an
                             // unresolved tie is a final result like a win/loss, not a lesser
                             // outcome. No Steal Card here: every steal conditional below is
-                            // already scoped to "You Win!" specifically, so it's excluded for
-                            // free.
+                            // already scoped to .win specifically, so it's excluded for free.
                             Text(viewModel.matchResult)
                                 .font(.system(size: 60, weight: .bold)).foregroundColor(.yellow)
                         } else {
@@ -510,22 +509,22 @@ public struct HoneycombView: View {
                                 .padding(.top, 4)
                         }
 
-                        if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
+                        if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
                             && HoneycombProfileManager.shared.isCardBankFull {
                             VStack {
                                 Text(coordinator.L(.cardBankFullLine1))
                                 Text(coordinator.L(.cardBankFullLine2))
                             }
                             .foregroundColor(.white).padding()
-                        } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
+                        } else if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
                             && viewModel.hasObtainedAllOpponentCards {
                             Text(coordinator.L(.obtainedAllCardsFmt, honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language)))
                                 .foregroundColor(.white).padding()
-                        } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
+                        } else if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
                             && viewModel.hasStolenThisMatch {
                             Text(coordinator.L(.rematchToTakeAnother))
                                 .foregroundColor(.white).padding()
-                        } else if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
+                        } else if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
                             && viewModel.stealProtectionActive && viewModel.hasStealableCard {
                             // Only claims a card is available when one actually is —
                             // stealProtectionActive alone doesn't guarantee that (it
@@ -557,7 +556,7 @@ public struct HoneycombView: View {
                             // Hidden once the card bank is full (nothing left to steal)
                             // or once this match's one steal has already been spent —
                             // Rematch is required to steal again.
-                            if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode
+                            if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
                                 && !HoneycombProfileManager.shared.isCardBankFull
                                 && !viewModel.hasStolenThisMatch
                                 && viewModel.hasStealableCard {
@@ -1090,7 +1089,7 @@ public struct HoneycombView: View {
         // state (idle .setup between matches, or a loss/draw's gameOver) previously fell
         // through to "reveal everything" too, since the check was just `!= .playing`
         // rather than the specific win-reveal condition.
-        let isPostWinReveal = viewModel.gameState == .gameOver && viewModel.showPostGamePrompt && viewModel.matchResult == "You Win!"
+        let isPostWinReveal = viewModel.gameState == .gameOver && viewModel.showPostGamePrompt && viewModel.matchOutcome == .win
         let flipped = !isPostWinReveal && !viewModel.isOpponentCardVisible(cardId: card.id)
         // Same Order/Chaos highlight as the player's hand — shown as soon as it's
         // decided (Order: always; Chaos: re-rolled the instant their turn starts),

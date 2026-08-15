@@ -72,6 +72,7 @@ struct VideoPokerTouchView: View {
             }
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
+        .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { VideoPokerStatsSheet(viewModel: viewModel) }
     }
 
@@ -94,7 +95,7 @@ struct VideoPokerTouchView: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "creditcard")
-                Text(viewModel.isFreePlay ? "Free Play" : "\(viewModel.state.sessionCredits)")
+                Text(viewModel.isFreePlay ? coordinator.L(.freePlayLabel) : "\(viewModel.state.sessionCredits)")
             }
             .font(.subheadline.weight(.bold).monospacedDigit())
             .foregroundStyle(.yellow)
@@ -244,7 +245,7 @@ struct VideoPokerTouchView: View {
                     }
                     dealHaptic.impactOccurred()
                 } label: {
-                    Text(viewModel.state.phase == .holding ? "Draw" : coordinator.L(.dealButton))
+                    Text(viewModel.state.phase == .holding ? coordinator.L(.btnDraw) : coordinator.L(.dealButton))
                         .font(.headline)
                         .padding(.horizontal, 24)
                 }

@@ -680,4 +680,11 @@ public enum StringKey
     TouchBeecellBanner,
     DebugBannersMenu,
     DeckDefaultName,
+    FreePlayLabel,
+    TouchChoosePhoto,
+    TouchChooseDifferentPhoto,
+    TouchPinchZoomReposition,
+    TouchNameFieldPlaceholder,
+    TouchNameAlreadyTakenError,
+    TouchEnabledToggle,
 }

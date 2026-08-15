@@ -122,7 +122,10 @@ struct ImageCropDisplay: View {
         GeometryReader { geo in
             Image(uiImage: image)
                 .resizable()
-                .aspectRatio(contentMode: .fit)
+                // Matches ImageCropEditor's preview (.fill) — was .fit, so a cropped
+                // face-art image displayed smaller/letterboxed than what the player
+                // saw and framed while cropping it.
+                .aspectRatio(contentMode: .fill)
                 .scaleEffect(scale)
                 .offset(x: offsetXFraction * geo.size.width,
                         y: offsetYFraction * geo.size.height)

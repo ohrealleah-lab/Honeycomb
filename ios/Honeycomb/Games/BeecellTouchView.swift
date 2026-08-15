@@ -93,6 +93,7 @@ struct BeecellTouchView: View {
             .coordinateSpace(name: Self.boardSpace)
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
+        .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { BeecellStatsSheet(viewModel: viewModel) }
         .onAppear { viewModel.startTimerIfNeeded() }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }

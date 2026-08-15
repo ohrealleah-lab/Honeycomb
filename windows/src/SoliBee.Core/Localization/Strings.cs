@@ -691,6 +691,13 @@ public static class Strings
         [StringKey.TouchBeecellBanner] = "BEECELL",
         [StringKey.DebugBannersMenu] = "Banners",
         [StringKey.DeckDefaultName] = "Default",
+        [StringKey.FreePlayLabel] = "Free Play",
+        [StringKey.TouchChoosePhoto] = "Choose Photo",
+        [StringKey.TouchChooseDifferentPhoto] = "Choose a Different Photo",
+        [StringKey.TouchPinchZoomReposition] = "Pinch to zoom, drag to reposition",
+        [StringKey.TouchNameFieldPlaceholder] = "Name",
+        [StringKey.TouchNameAlreadyTakenError] = "That name is already taken — pick another.",
+        [StringKey.TouchEnabledToggle] = "Enabled",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1366,5 +1373,12 @@ public static class Strings
         [StringKey.TouchBeecellBanner] = "BEECELL",
         [StringKey.DebugBannersMenu] = "Anuncios",
         [StringKey.DeckDefaultName] = "Predeterminado",
+        [StringKey.FreePlayLabel] = "Juego Libre",
+        [StringKey.TouchChoosePhoto] = "Elegir Foto",
+        [StringKey.TouchChooseDifferentPhoto] = "Elegir Otra Foto",
+        [StringKey.TouchPinchZoomReposition] = "Pellizca para hacer zoom, arrastra para reposicionar",
+        [StringKey.TouchNameFieldPlaceholder] = "Nombre",
+        [StringKey.TouchNameAlreadyTakenError] = "Ese nombre ya está en uso — elige otro.",
+        [StringKey.TouchEnabledToggle] = "Activado",
     };
 }

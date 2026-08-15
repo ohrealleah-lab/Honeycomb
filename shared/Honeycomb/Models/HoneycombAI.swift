@@ -160,7 +160,7 @@ enum HoneycombAI {
     }
 
     // Hard/Ultra Hard: minimax with alpha-beta pruning, looking `lookaheadPlies` moves
-    // ahead (Hard: 2 — this move + the player's best reply. Ultra Hard: 6 — three full
+    // ahead (Hard: 5 — two and a half exchanges. Ultra Hard: 6 — three full
     // exchanges), scored by a positional heuristic rather than just this move's own
     // capture count. Ties at the top-level minimax score are broken by preferring the
     // move that captures the most cards *immediately* (more aggressive — previously
@@ -471,7 +471,10 @@ enum HoneycombAI {
                 for cardData in attackerDeck {
                     var modifier = 0
                     if board.ascensionDescensionSuits.contains(cardData.suit) {
-                        let count = board.cells.compactMap { $0.card }.filter { $0.data.suit == cardData.suit }.count + 1
+                        // Matches HoneycombBoard.suitCount()'s real modifier math — face-down
+                        // (Bomb Shelter) cards don't count toward Ascension/Descension until
+                        // they're revealed, so this simulation shouldn't count them either.
+                        let count = board.cells.compactMap { $0.card }.filter { !$0.isFaceDown && $0.data.suit == cardData.suit }.count + 1
                         if rules.contains(.ascension) {
                             modifier = count
                         } else if rules.contains(.descension) {

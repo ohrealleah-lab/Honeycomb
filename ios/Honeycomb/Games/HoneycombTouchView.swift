@@ -140,6 +140,7 @@ struct HoneycombTouchView: View {
         }
         .sheet(isPresented: $showingDecks) { HoneycombDecksSheet(viewModel: viewModel) }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
+        .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { HoneycombStatsSheet(stats: viewModel.stats) }
         // Headless-testing hook: `simctl launch ... -honeycombAutostart 1` starts a match
         // immediately, so match-state rendering can be screenshotted without tap input.
@@ -203,8 +204,6 @@ struct HoneycombTouchView: View {
                     .contentShape(Rectangle())
             }
             .accessibilityLabel(coordinator.L(.menuHeaderTitle))
-            // Options only take effect on the next match (same gating as mac).
-            .disabled(isMidMatch && viewModel.showPostGamePrompt)
 
             Spacer()
 
@@ -646,7 +645,7 @@ struct HoneycombTouchView: View {
 
     @ViewBuilder
     private func opponentHandCard(_ card: HoneycombCard, size: CGSize) -> some View {
-        let isPostWinReveal = viewModel.gameState == .gameOver && viewModel.showPostGamePrompt && viewModel.matchResult == "You Win!"
+        let isPostWinReveal = viewModel.gameState == .gameOver && viewModel.showPostGamePrompt && viewModel.matchOutcome == .win
         let flipped = !isPostWinReveal && !viewModel.isOpponentCardVisible(cardId: card.id)
         let handIndex = viewModel.opponentHand.firstIndex(where: { $0.id == card.id })
         let isMandated = viewModel.gameState == .playing
@@ -731,7 +730,7 @@ struct HoneycombTouchView: View {
     // MARK: Post-game
 
     private var canStealCard: Bool {
-        viewModel.matchResult == "You Win!"
+        viewModel.matchOutcome == .win
             && !viewModel.options.noStressMode
             && !viewModel.hasStolenThisMatch
             && !HoneycombProfileManager.shared.isCardBankFull
@@ -743,7 +742,7 @@ struct HoneycombTouchView: View {
             Color.black.opacity(0.45).ignoresSafeArea()
 
             VStack(spacing: 16) {
-                if viewModel.matchResult == "You Lose" {
+                if viewModel.matchOutcome == .loss {
                     Text(coordinator.L(.notTodayPartner))
                         .font(.system(size: 30, weight: .black))
                         .foregroundColor(.yellow)
@@ -752,14 +751,14 @@ struct HoneycombTouchView: View {
                     // Card is now gone, since hasStolenThisMatch is true) — a repeat
                     // "You Win!" would read as stale, so it confirms what just
                     // happened instead.
-                    let title = (viewModel.matchResult == "You Win!" && viewModel.hasStolenThisMatch)
+                    let title = (viewModel.matchOutcome == .win && viewModel.hasStolenThisMatch)
                         ? coordinator.L(.cardAddedToBank) : viewModel.matchResult
                     Text(title)
                         .font(.system(size: 44, weight: .bold))
-                        .foregroundColor(viewModel.matchResult == "You Win!" ? .yellow : .white)
+                        .foregroundColor(viewModel.matchOutcome == .win ? .yellow : .white)
                 }
 
-                if viewModel.matchResult == "You Win!" && !viewModel.options.noStressMode {
+                if viewModel.matchOutcome == .win && !viewModel.options.noStressMode {
                     if HoneycombProfileManager.shared.isCardBankFull {
                         VStack(spacing: 4) {
                             Text(coordinator.L(.cardBankFullLine1))

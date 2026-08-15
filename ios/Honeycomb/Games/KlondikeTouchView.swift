@@ -91,6 +91,7 @@ struct KlondikeTouchView: View {
             .coordinateSpace(name: Self.boardSpace)
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
+        .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { KlondikeStatsSheet(stats: viewModel.statistics) }
         .onAppear { viewModel.startTimerIfNeeded() }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
@@ -514,10 +515,10 @@ struct KlondikeTouchView: View {
 
     private var winSummaryText: String {
         let scorePart = viewModel.options.isVegasScoring
-            ? "Bankroll: \(viewModel.vegasBankrollString)"
-            : "Score: \(viewModel.scoreString)"
+            ? coordinator.L(.bankrollFmt, viewModel.vegasBankrollString)
+            : coordinator.L(.scoreFmt, viewModel.scoreString)
         guard !viewModel.options.noStressMode else { return scorePart }
-        return "\(scorePart)  •  Time: \(formatTime(viewModel.state.timerSeconds))"
+        return coordinator.L(.winSummaryWithTimeFmt, scorePart, formatTime(viewModel.state.timerSeconds))
     }
 
     private var winOverlay: some View {

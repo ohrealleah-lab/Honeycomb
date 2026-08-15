@@ -32,7 +32,7 @@ struct CustomCardBackImportSheet: View {
             Form {
                 Section {
                     PhotosPicker(selection: $photoItem, matching: .images) {
-                        Label(previewImage == nil ? "Choose Photo" : "Choose a Different Photo",
+                        Label(previewImage == nil ? coordinator.L(.touchChoosePhoto) : coordinator.L(.touchChooseDifferentPhoto),
                               systemImage: "photo.on.rectangle")
                     }
                     .onChange(of: photoItem) {
@@ -47,7 +47,7 @@ struct CustomCardBackImportSheet: View {
                 }
 
                 if let previewImage {
-                    Section("Pinch to zoom, drag to reposition") {
+                    Section(coordinator.L(.touchPinchZoomReposition)) {
                         ImageCropEditor(image: previewImage, aspect: Self.cardAspect,
                                        scale: $scale, offsetXFraction: $offsetXFraction, offsetYFraction: $offsetYFraction)
                             .frame(maxWidth: .infinity)
@@ -62,7 +62,7 @@ struct CustomCardBackImportSheet: View {
                 }
 
                 Section {
-                    TextField("Name", text: $name)
+                    TextField(coordinator.L(.touchNameFieldPlaceholder), text: $name)
                         .onChange(of: name) { errorMessage = nil }
                 }
 
@@ -94,7 +94,7 @@ struct CustomCardBackImportSheet: View {
             onImported(cleaned)
             dismiss()
         } else {
-            errorMessage = "That name is already taken — pick another."
+            errorMessage = coordinator.L(.touchNameAlreadyTakenError)
         }
     }
 }

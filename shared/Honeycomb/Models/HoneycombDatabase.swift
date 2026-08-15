@@ -34,14 +34,15 @@ public class HoneycombDatabase {
         return allCards.first { $0.id == id }
     }
     
+    // Samples without replacement — every caller wants `count` distinct cards (a
+    // starter set, an opponent hand, a per-star rebuild), and duplicates silently
+    // shrink whatever Set the caller collapses the result into (e.g. loadProfile()'s
+    // unlockedCardIds), which used to be able to leave the Default deck one or more
+    // cards short.
     public func randomCards(stars: Int, count: Int) -> [HoneycombCardData] {
         let pool = allCards.filter { $0.stars == stars }
         guard !pool.isEmpty else { return [] }
-        var result: [HoneycombCardData] = []
-        for _ in 0..<count {
-            result.append(pool.randomElement()!)
-        }
-        return result
+        return Array(pool.shuffled().prefix(count))
     }
 
     // Same star-tier pool as randomCards, but biased toward whichever cards are

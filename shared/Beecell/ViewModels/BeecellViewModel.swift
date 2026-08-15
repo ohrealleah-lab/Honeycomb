@@ -169,7 +169,12 @@ public final class BeecellViewModel {
         }
 
         if options.deckCount != oldValue.deckCount {
-            startNewGame()
+            // options (and therefore currentModeKey) has already flipped to the NEW
+            // deck count by the time this didSet fires — pass the OLD mode's key
+            // explicitly so the abandoned-game streak reset below targets the mode
+            // that was actually being played, not the one being switched to.
+            let abandonedModeKey = oldValue.deckCount == 1 ? "1deck" : "2deck"
+            startNewGame(abandonedModeKey: abandonedModeKey)
         }
     }
     
@@ -242,7 +247,12 @@ public final class BeecellViewModel {
 
     // MARK: - Game Setup
     
-    public func startNewGame() {
+    // abandonedModeKey: which mode's streak to reset for the game being abandoned by
+    // this call. Defaults to currentModeKey (the common case: the mode hasn't changed).
+    // handleOptionsChanged passes the OLD mode's key explicitly, since options.didSet
+    // has already applied the new value by the time it calls this — currentModeKey
+    // alone would target the mode being switched TO, not the one being abandoned.
+    public func startNewGame(abandonedModeKey: String? = nil) {
         stopTimer()
 
         // totalGamesPlayed only grows via the increment below, so checking it here,
@@ -255,9 +265,10 @@ public final class BeecellViewModel {
         // Record loss / reset streak if they abandoned an active game
         if state.movesCount > 0 && !state.hasWon {
             var stats = statistics
-            var modeStats = stats.statsByMode[currentModeKey] ?? ModeStats()
+            let modeKey = abandonedModeKey ?? currentModeKey
+            var modeStats = stats.statsByMode[modeKey] ?? ModeStats()
             modeStats.currentStreak = 0
-            stats.statsByMode[currentModeKey] = modeStats
+            stats.statsByMode[modeKey] = modeStats
             statistics = stats
         }
         
@@ -817,7 +828,8 @@ public final class BeecellViewModel {
                 }
             }
         }
-        return safeCount == 2
+        // 2-per-deck: 2 opposite-color foundations in 1-deck mode, 4 in 2-deck mode.
+        return safeCount == 2 * options.deckCount
     }
 
     private func evaluateImmediateMoves(depth: Int = 0) -> [(HintMove, Int)] {

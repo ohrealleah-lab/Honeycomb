@@ -62,6 +62,7 @@ struct BlackjackTouchView: View {
             }
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
+        .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { BlackjackStatsSheet(viewModel: viewModel) }
     }
 
@@ -84,7 +85,7 @@ struct BlackjackTouchView: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "creditcard")
-                Text(viewModel.isFreePlay ? "Free Play" : "\(viewModel.state.sessionCredits)")
+                Text(viewModel.isFreePlay ? coordinator.L(.freePlayLabel) : "\(viewModel.state.sessionCredits)")
             }
             .font(.subheadline.weight(.bold).monospacedDigit())
             .foregroundStyle(.yellow)

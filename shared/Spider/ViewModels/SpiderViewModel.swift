@@ -217,7 +217,10 @@ public final class SpiderViewModel {
         }
 
         if options.suitCount != oldValue.suitCount {
-            startNewGame()
+            // options has already flipped to the NEW suitCount by the time this didSet
+            // fires — pass the OLD value explicitly so the abandoned-game streak reset
+            // below targets the mode that was actually being played.
+            startNewGame(abandonedSuitCount: oldValue.suitCount)
         }
     }
     
@@ -279,7 +282,11 @@ public final class SpiderViewModel {
 
     // MARK: - Game Setup
     
-    public func startNewGame() {
+    // abandonedSuitCount: which suit-count mode's streak to reset for the game being
+    // abandoned by this call. Defaults to options.suitCount (the common case). See
+    // Beecell's analogous startNewGame(abandonedModeKey:) for why handleOptionsChanged
+    // needs to pass the OLD value explicitly instead.
+    public func startNewGame(abandonedSuitCount: Int? = nil) {
         stopTimer()
 
         // totalGamesPlayed only grows via the increment below, so checking it here,
@@ -291,9 +298,10 @@ public final class SpiderViewModel {
 
         if state.movesCount > 0 && !state.hasWon {
             var stats = statistics
-            var modeStats = stats.statsBySuits[options.suitCount] ?? SpiderModeStats()
+            let suitCount = abandonedSuitCount ?? options.suitCount
+            var modeStats = stats.statsBySuits[suitCount] ?? SpiderModeStats()
             modeStats.currentStreak = 0
-            stats.statsBySuits[options.suitCount] = modeStats
+            stats.statsBySuits[suitCount] = modeStats
             statistics = stats
         }
         
@@ -971,7 +979,10 @@ public final class SpiderViewModel {
                     if targetCol.isEmpty {
                         // Moving to empty column: only worthwhile if it exposes a face-down card
                         if faceDownBelow > 0 {
-                            let label = faceDownBelow == 1 ? "Reveal 1 face-down card." : "Reveal \(faceDownBelow) face-down cards."
+                            // The move only ever flips the single new top card, regardless
+                            // of how many face-down cards sit below it — faceDownBelow here
+                            // is just the depth-weighted score bonus, not how many actually flip.
+                            let label = "Reveal 1 face-down card."
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                                 description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to empty column — \(label)"),
                                 350 + faceDownBelow * 150))
@@ -1008,13 +1019,15 @@ public final class SpiderViewModel {
                         if sameSuit {
                             // Best: extends a same-suit run
                             let score = faceDownBelow > 0 ? 1000 + faceDownBonus + vacateBonus : 900 + vacateBonus
-                            let label = faceDownBelow > 0 ? " — Reveal \(faceDownBelow) face-down card\(faceDownBelow > 1 ? "s" : "")." : "."
+                            // Always reveals exactly 1 card (the new top), regardless of
+                            // faceDownBelow — see note above.
+                            let label = faceDownBelow > 0 ? " — Reveal 1 face-down card." : "."
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                                 description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) onto \(topCard.rankString)\(topCard.suit.symbol)\(label)"), score))
                         } else {
                             // Cross-suit build
                             let score = faceDownBelow > 0 ? 600 + faceDownBonus + vacateBonus + cleanStackPenalty : 400 + vacateBonus + cleanStackPenalty
-                            let label = faceDownBelow > 0 ? " — Reveal \(faceDownBelow) face-down card\(faceDownBelow > 1 ? "s" : "")." : "."
+                            let label = faceDownBelow > 0 ? " — Reveal 1 face-down card." : "."
                             scored.append((SpiderHintMove(card: dragStack.first!, sourcePileId: col.id, targetPileId: targetCol.id,
                                 description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) to \(topCard.rankString)\(topCard.suit.symbol)\(label)"), score))
                         }
@@ -1114,8 +1127,7 @@ public final class SpiderViewModel {
     }
     
     public func resetStatistics() {
-        gamesWon = 0
-        gamesPlayed = 0
+        statistics.statsBySuits[options.suitCount] = SpiderModeStats()
     }
 
     // MARK: - Keyboard Navigation

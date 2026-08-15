@@ -23,6 +23,20 @@ public enum HoneycombGameState: String, Codable, Equatable {
     case suddenDeath
 }
 
+// Language-independent counterpart to HoneycombViewModel.matchResult (which holds the
+// already-localized display string, e.g. "You Win!"/"¡Ganaste!") — gameplay logic (Take
+// a Card eligibility, win-color highlighting, etc.) must branch on this instead of
+// comparing matchResult against a hardcoded English literal, which silently never
+// matches once the display string is translated.
+public enum HoneycombMatchOutcome: Equatable {
+    case none
+    case win
+    case loss
+    case tie
+    // Sudden Death triggered — not a final result, the match continues into overtime.
+    case suddenDeathPending
+}
+
 public struct SimplifiedCard: Codable {
     public var name: String
     public var owner: String
