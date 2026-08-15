@@ -53,29 +53,28 @@ struct TouchCardView: View {
             RoundedRectangle(cornerRadius: width * 0.07)
                 .fill(faceColor)
 
-            if card.faceUp {
-                // Matches mac's CardView outline (`Color.black.opacity(0.85)` at
-                // lineWidth 0.75) — this was opacity 0.25 before, which nearly
-                // disappeared between overlapping tableau cards at the smaller sizes
-                // Klondike/Spider/BeeCell use on iPhone portrait.
-                RoundedRectangle(cornerRadius: width * 0.07)
-                    .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
+            // Matches mac's CardView outline (`Color.black.opacity(0.85)` at lineWidth
+            // 0.75), applied unconditionally like mac's — not just when face up. A
+            // face-down card in a deep tableau stack (Klondike's stock, Spider's initial
+            // deal) needs the same edge definition an overlapping face-up card does, or
+            // adjacent card boundaries disappear into each other.
+            RoundedRectangle(cornerRadius: width * 0.07)
+                .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
 
+            if card.faceUp {
                 if let slot = FaceCardSlot.slot(rank: card.rank, suit: card.suit),
                    let entry = IOSCustomFaceArtManager.shared.enabledEntry(for: slot),
                    let image = IOSCustomFaceArtManager.shared.image(for: entry) {
                     ImageCropDisplay(image: image, entry: entry)
                         .frame(width: width * 0.7, height: height * 0.7)
-                } else if card.rank >= 11 {
-                    // Face cards: large letter over the suit, like the mac dark-mode letters.
-                    VStack(spacing: height * 0.02) {
-                        Text(rankText)
-                            .font(.system(size: width * 0.42, weight: .black, design: .serif))
-                        Image(systemName: suitSymbol)
-                            .resizable().aspectRatio(contentMode: .fit)
-                            .frame(width: width * 0.22)
-                    }
-                    .foregroundStyle(suitColor)
+                } else if card.rank >= 11 || card.rank == 1 {
+                    // Face cards (and Ace) show just the rank letter, centered — matches
+                    // mac's dark-mode letter art (dark_k_red.png etc.), which is a single
+                    // full-frame letter with no separate suit glyph; suit is conveyed by
+                    // color alone there, same as here.
+                    Text(rankText)
+                        .font(.system(size: width * 0.56, weight: .black, design: .serif))
+                        .foregroundStyle(suitColor)
                 } else {
                     Image(systemName: suitSymbol)
                         .resizable().aspectRatio(contentMode: .fit)
@@ -95,6 +94,10 @@ struct TouchCardView: View {
             }
         }
         .frame(width: width, height: height)
+        // Matches mac's CardView exactly — in a tightly overlapping tableau, this subtle
+        // shadow (not just the thin 0.75pt stroke above) is what actually separates
+        // adjacent card edges visually; without it stacked cards read as one flat block.
+        .shadow(color: Color.black.opacity(0.15), radius: 1.5, x: 0, y: 1.5)
     }
 
     private var cornerIndex: some View {
