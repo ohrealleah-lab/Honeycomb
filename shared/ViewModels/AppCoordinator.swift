@@ -286,6 +286,11 @@ public final class AppCoordinator {
         else { return currentFeltColor }
         return sampled
     }
+    #else
+    // iOS has its own IOSCustomBackgroundManager (no dominant-color sampling yet) —
+    // falls back to the felt color, same graceful-fallback this returns on mac before
+    // an async sample finishes.
+    public var currentAccentTint: Color { currentFeltColor }
     #endif
     // The NSWindow currently hosting the active game mode's view, kept up to date
     // by each game view's WindowAccessor so window-level actions (e.g. "make current

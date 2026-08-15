@@ -229,6 +229,16 @@ struct ThemesSectionView: View {
             return
         }
 
+        // iOS's IOSCustomFaceArtManager uses its own Entry type (not CustomFaceArt), and
+        // applyTheme() already only restores faceArts on platforms that can import
+        // AppKit (see its #if canImport(AppKit) guard) — so there's nothing meaningful
+        // to round-trip through a saved theme on iOS yet.
+        #if canImport(AppKit)
+        let faceArts = CustomFaceCardArtManager.shared.faceArts
+        #else
+        let faceArts: [CustomFaceArt] = []
+        #endif
+
         let theme = SoliBeeTheme(
             name: name,
             cardBackTheme: coordinator.cardBackTheme,
@@ -236,7 +246,7 @@ struct ThemesSectionView: View {
             customFeltRed: coordinator.customFeltRed,
             customFeltGreen: coordinator.customFeltGreen,
             customFeltBlue: coordinator.customFeltBlue,
-            faceArts: CustomFaceCardArtManager.shared.faceArts,
+            faceArts: faceArts,
             customCardColors: coordinator.customCardColors,
             customBackgroundName: coordinator.customBackgroundName
         )

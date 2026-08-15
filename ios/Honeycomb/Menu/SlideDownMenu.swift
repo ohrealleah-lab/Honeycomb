@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Which tab SlideDownMenu opens to. Hoisted out of SlideDownMenu (not nested/private)
 /// so a game's topBar buttons can pass a specific tab in — e.g. an Options button jumps
@@ -71,8 +72,12 @@ struct SlideDownMenu<GameSettings: View>: View {
                                     statsRow
                                     helpRow
                                 case .themes:
+                                    savedThemesSection
+                                    Divider().overlay(Color.white.opacity(0.2))
                                     themeSection
                                     faceCardArtRow
+                                    Divider().overlay(Color.white.opacity(0.2))
+                                    CustomCardColorSectionView(customCardColors: $coordinator.customCardColors)
                                 }
                             }
                             .padding(16)
@@ -156,7 +161,40 @@ struct SlideDownMenu<GameSettings: View>: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(localizedFeltName(theme))
                 }
+
+                // Matches mac's "Custom Color" felt option — tapping just selects
+                // .custom (the ColorPicker to actually edit it appears below once
+                // selected, same as mac only showing its ColorPicker when
+                // feltColor == .custom).
+                Button {
+                    coordinator.feltColor = .custom
+                } label: {
+                    Circle()
+                        .fill(FeltColorTheme.custom.primaryColor)
+                        .frame(width: 34, height: 34)
+                        .overlay(
+                            Circle().stroke(Color.white, lineWidth: coordinator.feltColor == .custom ? 3 : 0)
+                        )
+                        .overlay(
+                            Image(systemName: "paintbrush.pointed.fill")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.white)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(coordinator.L(.feltCustomColor))
             }
+
+            if coordinator.feltColor == .custom && coordinator.customBackgroundName == nil {
+                HStack(spacing: 8) {
+                    Text(coordinator.L(.customFeltColorLabel))
+                        .font(.system(.body).bold())
+                    ColorPicker("", selection: customFeltColorBinding)
+                        .labelsHidden()
+                    Spacer()
+                }
+            }
+
             Toggle(coordinator.L(.feltVignetteToggle), isOn: $coordinator.showFeltVignette)
 
             sectionTitle(coordinator.L(.menuSectionCardBack)).padding(.top, 4)
@@ -246,6 +284,36 @@ struct SlideDownMenu<GameSettings: View>: View {
         } message: {
             Text(coordinator.L(.removeImportedImageBody))
         }
+    }
+
+    // ThemesSectionView (save/apply/rename/delete a whole named theme bundle) is
+    // designed for a fixed-height sidebar on mac; here it's embedded directly inside
+    // SlideDownMenu's own ScrollView, so it needs a finite height of its own to scroll
+    // within rather than an unconstrained maxHeight: .infinity, which is undefined
+    // inside another scroll container.
+    private var savedThemesSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ThemesSectionView()
+                .frame(height: 220)
+        }
+    }
+
+    // ColorPicker binds to a SwiftUI Color; extracting RGB components to persist into
+    // AppCoordinator's customFeltRed/Green/Blue needs UIColor on iOS (mac's equivalent,
+    // ThemesOptionsView.swift, uses NSColor — same idea, different platform type).
+    private var customFeltColorBinding: Binding<Color> {
+        Binding(
+            get: {
+                Color(red: coordinator.customFeltRed, green: coordinator.customFeltGreen, blue: coordinator.customFeltBlue)
+            },
+            set: { newColor in
+                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+                UIColor(newColor).getRed(&r, green: &g, blue: &b, alpha: &a)
+                coordinator.customFeltRed = Double(r)
+                coordinator.customFeltGreen = Double(g)
+                coordinator.customFeltBlue = Double(b)
+            }
+        )
     }
 
     private func backgroundButton(_ entry: IOSCustomBackgroundManager.Entry) -> some View {
