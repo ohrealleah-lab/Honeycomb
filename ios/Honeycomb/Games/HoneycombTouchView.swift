@@ -168,6 +168,20 @@ struct HoneycombTouchView: View {
                 isOpponentCardRevealed = [Bool](repeating: false, count: 5)
                 handIdentityToken += 1
                 triggerDealFlip()
+            } else if newValue == .playing && oldValue == .suddenDeath {
+                // triggerSuddenDeath() rebuilds both hands from every card each side
+                // currently owns (across the whole board plus any leftover hand cards) —
+                // commonly more than 5, which the fixed-size-5 arrays above aren't sized
+                // for; indexing past 5 here would crash. These are already-known cards
+                // moving back into hand, not new mystery cards, so size the arrays to the
+                // actual new hand counts and mark every slot already revealed. Bumping
+                // handIdentityToken creates fresh HoneycombFlipContainers that pick up
+                // `true` as their initial displayedRevealed value (no flip animation) —
+                // reusing the existing containers instead would hit their onChange-
+                // triggered flip path and animate a reveal that shouldn't happen.
+                isPlayerCardRevealed = [Bool](repeating: true, count: viewModel.playerHand.count)
+                isOpponentCardRevealed = [Bool](repeating: true, count: viewModel.opponentHand.count)
+                handIdentityToken += 1
             }
         }
         .onChange(of: viewModel.flashRuleBannerTrigger) { _, _ in
