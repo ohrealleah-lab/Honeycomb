@@ -2,21 +2,40 @@ using System;
 using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Localization;
 using SoliBee.Core.Services;
+using SoliBee.Core.ViewModels;
 
 namespace SoliBee.Desktop.Views;
 
 public partial class AboutWindow : Window
 {
     private UpdateCheckOutcome? _lastOutcome;
-    private readonly AppLanguage _language;
+    private AppLanguage _language;
 
     public AboutWindow()
     {
         InitializeComponent();
 
         _language = SettingsService.LoadOptions().Language;
+        ApplyLocalization();
+
+        // Shown non-modally (Show, not ShowDialog — see MainWindow's About_Click), so
+        // Preferences stays reachable while this window is open. Without this, changing
+        // the language while About is already open would leave it stuck in the old
+        // language until closed and reopened.
+        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
+        {
+            if (m.Options.Language == _language) return;
+            _language = m.Options.Language;
+            ApplyLocalization();
+        });
+        Closed += (_, _) => WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
+    }
+
+    private void ApplyLocalization()
+    {
         VersionText.Text = string.Format(Strings.Get(StringKey.VersionFmt, _language).Replace("%@", "{0}"), UpdateCheckService.CurrentVersion);
         CardSuiteText.Text = Strings.Get(StringKey.CardSuiteLabel, _language);
         CopyrightText.Text = Strings.Get(StringKey.CopyrightNotice, _language);
