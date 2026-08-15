@@ -3,32 +3,59 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
+using SoliBee.Core.ViewModels;
 
 namespace SoliBee.Desktop.Views;
 
 public partial class HelpWindow : Window
 {
-    public IEnumerable<string> DynamicRules { get; }
+    public IEnumerable<string> DynamicRules { get; private set; } = Array.Empty<string>();
+
+    private AppLanguage _language;
 
     public HelpWindow(bool startAtHoneycomb = false)
     {
         InitializeComponent();
 
-        var language = SettingsService.LoadOptions().Language;
-        var rules = Enum.GetValues<SoliBee.Core.Models.HoneycombRule>();
-        DynamicRules = rules.Select(r =>
-            $"• {HoneycombRuleLocalization.LocalizedRuleName(r, language)}: {HoneycombRuleLocalization.LocalizedRuleExplanation(r, null, language)}");
+        _language = SettingsService.LoadOptions().Language;
+        RecomputeDynamicRules();
         DataContext = this;
 
-        ApplyLocalization(language);
+        ApplyLocalization(_language);
 
         if (startAtHoneycomb)
         {
             Opened += (_, _) => ScrollToHoneycomb();
         }
+
+        // This window is shown non-modally (Show, not ShowDialog — see MainWindow's
+        // OpenHelp), so the main window (and Preferences) stays fully interactive while
+        // it's open. Without this, switching the language while Help is already open
+        // would leave it stuck showing the old language until closed and reopened.
+        WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
+        {
+            if (m.Options.Language == _language) return;
+            _language = m.Options.Language;
+            ApplyLocalization(_language);
+            RecomputeDynamicRules();
+            // DynamicRules has no property-changed notification (this window is plain
+            // code-behind, not INotifyPropertyChanged) — toggling DataContext forces the
+            // ItemsControl's {Binding DynamicRules} to re-pull the new value.
+            DataContext = null;
+            DataContext = this;
+        });
+        Closed += (_, _) => WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
+    }
+
+    private void RecomputeDynamicRules()
+    {
+        var rules = Enum.GetValues<SoliBee.Core.Models.HoneycombRule>();
+        DynamicRules = rules.Select(r =>
+            $"• {HoneycombRuleLocalization.LocalizedRuleName(r, _language)}: {HoneycombRuleLocalization.LocalizedRuleExplanation(r, null, _language)}");
     }
 
     // Mirrors the Mac port's HelpGuideView.swift content 1:1 (same source strings),
