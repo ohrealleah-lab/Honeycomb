@@ -194,9 +194,12 @@ public partial class MainWindow : Window
         UndoButton.Content = Strings.Get(StringKey.Undo, _language);
         DebugBannerButton.Content = Strings.Get(StringKey.DebugBannersMenu, _language);
 
-        JacksOrBetterItem.Content = Strings.Get(StringKey.VariantJacksOrBetter, _language);
-        DeucesWildItem.Content = Strings.Get(StringKey.VariantDeucesWild, _language);
-        BonusPokerItem.Content = Strings.Get(StringKey.VariantBonusPoker, _language);
+        // Deliberately NOT translated, in any language — "Jacks or Better", "Deuces
+        // Wild", and "Bonus Poker" are the actual names of these casino game variants,
+        // and Spanish-speaking players expect to see them in English (the same way
+        // "Blackjack" itself isn't translated) rather than a literal translation of the
+        // phrase. Left as the static AXAML-authored English literal (see JacksOrBetterItem
+        // etc. in MainWindow.axaml) instead of routing through Strings.Get.
 
         // Beecell/Video Poker/Video Blackjack/Honeycomb are proper nouns the
         // translator kept identical in both languages — still routed through

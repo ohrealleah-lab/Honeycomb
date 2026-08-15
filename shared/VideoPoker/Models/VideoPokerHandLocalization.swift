@@ -29,14 +29,13 @@ public func localizedHandName(_ handName: String, language: AppLanguage) -> Stri
     }
 }
 
-// Display-only translation for a variant name — VideoPokerVariant.rawValue is
-// Codable-persisted, so it stays English; this only swaps in translated text at the
-// point of rendering. Shared so Mac's VideoPokerView.swift and iOS's
+// Deliberately NOT translated, in any language — "Jacks or Better", "Deuces Wild", and
+// "Bonus Poker" are the actual names of these casino game variants, and Spanish-speaking
+// players expect to see them in English (the same way "Blackjack" itself isn't
+// translated) rather than a literal translation of the phrase. Keeps the `language`
+// parameter so call sites don't need to change if this ever needs to differ per
+// language again. Shared so Mac's VideoPokerView.swift and iOS's
 // VideoPokerTouchView.swift can't drift out of sync.
 public func localizedVariantName(_ variant: VideoPokerVariant, language: AppLanguage) -> String {
-    switch variant {
-    case .jacksOrBetter: return L(.variantJacksOrBetter, language: language)
-    case .deucesWild:    return L(.variantDeucesWild, language: language)
-    case .bonusPoker:    return L(.variantBonusPoker, language: language)
-    }
+    variant.rawValue
 }

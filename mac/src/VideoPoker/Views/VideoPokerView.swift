@@ -1048,15 +1048,10 @@ struct VideoPokerOptionsView: View {
         }
     }
 
-    // Display-only translation for a variant name — VideoPokerVariant.rawValue is
-    // Codable-persisted, so it stays English; this only swaps in translated text
-    // at the point of rendering.
+    // Deliberately NOT translated — see the shared localizedVariantName(_:language:)
+    // in VideoPokerHandLocalization.swift for why.
     private func localizedVariantName(_ variant: VideoPokerVariant) -> String {
-        switch variant {
-        case .jacksOrBetter: return coordinator.L(.variantJacksOrBetter)
-        case .deucesWild:    return coordinator.L(.variantDeucesWild)
-        case .bonusPoker:    return coordinator.L(.variantBonusPoker)
-        }
+        variant.rawValue
     }
 }
 

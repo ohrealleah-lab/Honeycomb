@@ -18,6 +18,7 @@ struct VideoPokerAndBlackjackTests {
         testBlackjackActionsBlockedDuringDealerBlackjackPendingWindow()
         testBlackjackAdvanceHandSkipsAlreadyComplete21AfterSplit()
         testVideoPokerJacksOrBetterHandNameIsLocalized()
+        testVideoPokerVariantNamesStayEnglish()
         print("✅ VideoPokerAndBlackjackTests passed.")
     }
 
@@ -377,5 +378,18 @@ struct VideoPokerAndBlackjackTests {
         assert(english == "Jacks or Better", "English hand name should read as-is, got \(english)")
         assert(spanish == "Jotas o Mejor", "Spanish hand name should be translated, got \(spanish)")
         assert(spanish != "Jacks or Better", "Spanish hand name must not fall through to the raw English string")
+    }
+
+    static func testVideoPokerVariantNamesStayEnglish() {
+        // Unlike poker hand results (win banner / pay table rows), the variant names
+        // themselves — "Jacks or Better", "Deuces Wild", "Bonus Poker" — are the actual
+        // names of these casino games and deliberately stay in English in every
+        // language, per explicit product direction.
+        for variant in VideoPokerVariant.allCases {
+            let english = localizedVariantName(variant, language: .english)
+            let spanish = localizedVariantName(variant, language: .spanish)
+            assert(spanish == variant.rawValue, "Variant name must stay English in Spanish, got \(spanish) for \(variant.rawValue)")
+            assert(english == spanish, "Variant name must be identical in both languages, got \(english) vs \(spanish)")
+        }
     }
 }
