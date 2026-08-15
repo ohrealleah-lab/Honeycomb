@@ -253,24 +253,12 @@ struct BeecellTouchView: View {
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMove(card: card, from: pile)
                     }
-                    .gesture(isDraggableSequence(stack) ? cardDragGesture(pile: pile, stack: stack) : nil)
+                    .gesture(viewModel.isValidDragSequence(stack) ? cardDragGesture(pile: pile, stack: stack) : nil)
             }
         }
         .frame(width: cardW, height: columnHeight, alignment: .top)
         .modifier(TouchHintHighlight(isHighlighted: pile.cards.isEmpty && hintTouches(pile.id)))
         .background(frameTracker(id: pile.id))
-    }
-
-    /// A grabbable stack must be a descending, alternating-color run (Freecell rule).
-    /// Move-count limits are enforced by the ViewModel on drop.
-    private func isDraggableSequence(_ cards: [Card]) -> Bool {
-        guard !cards.isEmpty else { return false }
-        for i in 0..<(cards.count - 1) {
-            let upper = cards[i]
-            let lower = cards[i + 1]
-            guard lower.rank == upper.rank - 1, lower.isRed != upper.isRed else { return false }
-        }
-        return true
     }
 
     // MARK: Shared pieces

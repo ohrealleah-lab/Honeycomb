@@ -385,20 +385,28 @@ public final class BeecellViewModel {
     
     // MARK: - Move Validation & Execution
     
-    public func isValidMove(cards: [Card], to targetPile: Pile) -> Bool {
-        guard let firstCard = cards.first else { return false }
-        
-        // Verify that the dragged cards form a valid descending alternating color sequence
-        if cards.count > 1 {
-            for i in 0..<(cards.count - 1) {
-                let upper = cards[i]
-                let lower = cards[i+1]
-                if upper.rank != lower.rank + 1 || upper.isRed == lower.isRed {
-                    return false
-                }
+    // Whether `cards` (as a group, top-to-bottom drag order) forms a valid descending
+    // alternating-color run — the rule governing what can be grabbed as a unit, independent
+    // of where it's being dropped. Exposed publicly so drag-gesture code (iOS's
+    // BeecellTouchView gates whether a stack is even grabbable) can reuse this exact rule
+    // instead of re-deriving it locally — mirrors Spider's isValidDragSequence(_:).
+    public func isValidDragSequence(_ cards: [Card]) -> Bool {
+        guard !cards.isEmpty else { return false }
+        guard cards.count > 1 else { return true }
+        for i in 0..<(cards.count - 1) {
+            let upper = cards[i]
+            let lower = cards[i+1]
+            if upper.rank != lower.rank + 1 || upper.isRed == lower.isRed {
+                return false
             }
         }
-        
+        return true
+    }
+
+    public func isValidMove(cards: [Card], to targetPile: Pile) -> Bool {
+        guard let firstCard = cards.first else { return false }
+        guard isValidDragSequence(cards) else { return false }
+
         switch targetPile.type {
         case .freeCell:
             // Free Cells only accept a single card at a time and must be vacant
