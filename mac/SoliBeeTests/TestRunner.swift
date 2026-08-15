@@ -58,6 +58,10 @@ struct TestRunner {
         CrossGameRegressionTests.run()
         print("✅ CrossGameRegressionTests passed.")
 
+        print("🧪 Running StatsRegressionTests...")
+        StatsRegressionTests.run()
+        print("✅ StatsRegressionTests passed.")
+
         VideoPokerAndBlackjackTests.run()
         
         print("🎉 ALL TESTS PASSED SUCCESSFULLY!")
