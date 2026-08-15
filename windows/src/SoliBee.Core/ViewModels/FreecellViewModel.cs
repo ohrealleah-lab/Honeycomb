@@ -943,11 +943,15 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
                     if (!CanMoveCards(subSeq, tgt)) continue;
 
                     bool emptiesSource = len == src.Cards.Count;
-                    bool aloneToEmpty  = len == 1 && src.Cards.Count == 1 && tgt.Cards.Count == 0;
-                    if (aloneToEmpty) break;
-
+                    // Must match HasAnyLegalMoves' AnySuffixMoves skip predicate exactly —
+                    // moving the whole column onto an empty target just relocates which
+                    // column is empty, no real progress. If that were the only tableau move
+                    // on the board, offering it as a hint would contradict a correctly
+                    // declared deadlock.
                     bool isPointlessEmptyToEmpty = emptiesSource && tgt.Cards.Count == 0;
-                    int score = isPointlessEmptyToEmpty ? 50 : (emptiesSource ? 700 : 400 + len * 20);
+                    if (isPointlessEmptyToEmpty) continue;
+
+                    int score = emptiesSource ? 700 : 400 + len * 20;
                     scored.Add((score, new HintMove(subSeq[0], src.Id, tgt.Id,
                         $"Move {RankStr(subSeq[0].Rank)}{SuitStr(subSeq[0].Suit)} sequence.")));
                     break;

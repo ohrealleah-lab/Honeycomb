@@ -871,10 +871,14 @@ public final class BeecellViewModel {
                 for len in (1...maxDraggable).reversed() {
                     let dragStack = Array(sourceCol.cards[(sourceCol.cards.count - len)...])
                     guard isValidMove(cards: dragStack, to: targetCol) else { continue }
-                    if targetCol.isEmpty && dragStack.count == 1 && len == maxDraggable { continue }
+                    // Must match hasValidMoves()'s isProgressiveMove check exactly — moving
+                    // an entire column (any length) onto an empty target just relocates which
+                    // column is empty, no real progress, and hasValidMoves() excludes it. If
+                    // that were the only tableau-to-tableau "move" on the board, showing it as
+                    // a hint would contradict a correctly-declared stuck/Game Over state.
+                    guard isProgressiveMove(cards: dragStack, source: sourceCol, target: targetCol) else { continue }
                     let freesColumn = dragStack.count == sourceCol.cards.count
-                    let isPointlessEmptyToEmpty = freesColumn && targetCol.isEmpty
-                    let score = isPointlessEmptyToEmpty ? 50 : (freesColumn ? 700 : 400 + dragStack.count * 20)
+                    let score = freesColumn ? 700 : 400 + dragStack.count * 20
                     scored.append((HintMove(card: dragStack.first!, sourcePileId: sourceCol.id, targetPileId: targetCol.id,
                         description: "Move \(dragStack.first!.rankString)\(dragStack.first!.suit.symbol) sequence to Tableau."), score))
                     break
