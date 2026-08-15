@@ -135,7 +135,7 @@ public partial class VideoPokerViewModel : ObservableObject
         new("Royal Flush",    PokerHandRank.RoyalFlush,    VideoPokerQualifier.NoWild,     new[]{250,250,250,250,800}),
         new("Straight Flush", PokerHandRank.StraightFlush, VideoPokerQualifier.None,       new[]{50, 50, 50, 50, 50 }),
         new("Four Aces",      PokerHandRank.FourOfAKind,   VideoPokerQualifier.BonusAces,  new[]{80, 80, 80, 80, 80 }),
-        new("Four 2s-4s",     PokerHandRank.FourOfAKind,   VideoPokerQualifier.Bonus234s,  new[]{40, 40, 40, 40, 40 }),
+        new("Four 2s–4s",     PokerHandRank.FourOfAKind,   VideoPokerQualifier.Bonus234s,  new[]{40, 40, 40, 40, 40 }),
         new("Four of a Kind", PokerHandRank.FourOfAKind,   VideoPokerQualifier.None,       new[]{25, 25, 25, 25, 25 }),
         new("Full House",     PokerHandRank.FullHouse,     VideoPokerQualifier.None,       new[]{8,  8,  8,  8,  8  }),
         new("Flush",          PokerHandRank.Flush,         VideoPokerQualifier.None,       new[]{5,  5,  5,  5,  5  }),

@@ -584,6 +584,7 @@ enum StringsSpanish {
         .helpShortcutClearAllHolds: "Soltar Todas las Cartas",
         .settingsHeaderVideopoker: "VIDEO POKER",
         .handRoyalFlush: "Escalera Real",
+        .handJacksOrBetter: "Jotas o Mejor",
         .swarmRevealPlayerHiveSwarm: "Tu Enjambre de Colmena",
         .swarmRevealPlayerUnleashed: "¡Tu Enjambre se Desata!",
         .swarmRevealPlayerAwakens: "¡Tu Enjambre Despierta!",

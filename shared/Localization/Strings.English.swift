@@ -584,6 +584,7 @@ enum StringsEnglish {
         .helpShortcutClearAllHolds: "Clear All Holds",
         .settingsHeaderVideopoker: "VIDEO POKER",
         .handRoyalFlush: "Royal Flush",
+        .handJacksOrBetter: "Jacks or Better",
         .swarmRevealPlayerHiveSwarm: "Your Hive Swarm",
         .swarmRevealPlayerUnleashed: "Your Swarm is Unleashed!",
         .swarmRevealPlayerAwakens: "Your Swarm Awakens!",

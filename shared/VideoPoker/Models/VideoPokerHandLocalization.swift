@@ -8,6 +8,7 @@ import Foundation
 public func localizedHandName(_ handName: String, language: AppLanguage) -> String {
     switch handName {
     case "Royal Flush":          return L(.handRoyalFlush, language: language)
+    case "Jacks or Better":      return L(.handJacksOrBetter, language: language)
     case "High Card":            return L(.handHighCard, language: language)
     case "One Pair":             return L(.handOnePair, language: language)
     case "Two Pair":             return L(.handTwoPair, language: language)

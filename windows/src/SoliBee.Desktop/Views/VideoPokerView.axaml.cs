@@ -661,6 +661,7 @@ public partial class VideoPokerView : UserControl
     private string LocalizedHandName(string handName) => handName switch
     {
         "Royal Flush"         => Strings.Get(StringKey.HandRoyalFlush, _language),
+        "Jacks or Better"     => Strings.Get(StringKey.HandJacksOrBetter, _language),
         "High Card"           => Strings.Get(StringKey.HandHighCard, _language),
         "One Pair"            => Strings.Get(StringKey.HandOnePair, _language),
         "Two Pair"            => Strings.Get(StringKey.HandTwoPair, _language),

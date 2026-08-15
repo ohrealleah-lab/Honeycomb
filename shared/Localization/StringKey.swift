@@ -1166,6 +1166,8 @@ public enum StringKey: String, CaseIterable {
     case settingsHeaderVideopoker = "settings_header_videopoker"
     /// Pay table row / result banner, standard (non-Deuces-Wild) tables — VideoPokerViewModel.swift/.cs handName (display-only, stored value stays English)
     case handRoyalFlush = "hand_royal_flush"
+    /// Pay table row / result banner, standard (non-Deuces-Wild, non-Bonus) tables base qualifying win — VideoPokerViewModel.swift/.cs handName
+    case handJacksOrBetter = "hand_jacks_or_better"
     /// Random banner phrase when the player triggers a Hive Swarm reveal
     case swarmRevealPlayerHiveSwarm = "swarm_reveal_player_hive_swarm"
     /// Random banner phrase when the player triggers a Hive Swarm reveal

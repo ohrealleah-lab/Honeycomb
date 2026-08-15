@@ -589,6 +589,7 @@ public enum StringKey
     HelpShortcutClearAllHolds,
     SettingsHeaderVideopoker,
     HandRoyalFlush,
+    HandJacksOrBetter,
     SwarmRevealPlayerHiveSwarm,
     SwarmRevealPlayerUnleashed,
     SwarmRevealPlayerAwakens,
