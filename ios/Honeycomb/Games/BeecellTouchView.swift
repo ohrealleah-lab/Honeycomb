@@ -188,7 +188,7 @@ struct BeecellTouchView: View {
 
     private func freeCellView(pile: Pile, cardW: CGFloat, cardH: CGFloat) -> some View {
         ZStack {
-            emptySlot(cardW: cardW, cardH: cardH, symbol: "hexagon")
+            emptySlot(cardW: cardW, cardH: cardH)
             if let card = pile.cards.last {
                 TouchCardView(card: card, width: cardW)
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
@@ -204,9 +204,8 @@ struct BeecellTouchView: View {
     }
 
     private func foundationView(pile: Pile, cardW: CGFloat, cardH: CGFloat) -> some View {
-        let suitString = pile.id.components(separatedBy: "_").last ?? "hearts"
         return ZStack {
-            emptySlot(cardW: cardW, cardH: cardH, symbol: foundationSymbol(suitString))
+            emptySlot(cardW: cardW, cardH: cardH, letterSymbol: "A")
             if let top = pile.cards.last {
                 TouchCardView(card: top, width: cardW)
             }
@@ -263,7 +262,7 @@ struct BeecellTouchView: View {
 
     // MARK: Shared pieces
 
-    private func emptySlot(cardW: CGFloat, cardH: CGFloat, symbol: String?) -> some View {
+    private func emptySlot(cardW: CGFloat, cardH: CGFloat, symbol: String? = nil, letterSymbol: String? = nil) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: cardW * 0.07)
                 .fill(Color.black.opacity(0.18))
@@ -274,21 +273,16 @@ struct BeecellTouchView: View {
                     .resizable().aspectRatio(contentMode: .fit)
                     .frame(width: cardW * 0.35)
                     .foregroundStyle(.white.opacity(0.35))
+            } else if let letterSymbol {
+                // Matches mac's EmptyPileView(symbol: "A", ...) — an empty foundation
+                // shows the rank it's waiting for (an Ace), not a suit icon, since
+                // BeeCell foundations aren't suit-keyed until a card actually lands.
+                Text(letterSymbol)
+                    .font(.system(size: cardW * 0.35, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.35))
             }
         }
         .frame(width: cardW, height: cardH)
-    }
-
-    private func foundationSymbol(_ suit: String) -> String {
-        switch suit {
-        case "spades": return "suit.spade.fill"
-        case "hearts": return "suit.heart.fill"
-        case "diamonds": return "suit.diamond.fill"
-        case "clubs": return "suit.club.fill"
-        // BeeCell foundation ids aren't suit-keyed (suits claim foundations as aces
-        // land), so show a neutral ace marker instead of a wrong suit.
-        default: return "a.circle"
-        }
     }
 
     private func controlCircle(systemImage: String, label: String, diameter: CGFloat,
