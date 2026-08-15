@@ -9,6 +9,7 @@ import UIKit
 struct BeecellTouchView: View {
     @Bindable var viewModel: BeecellViewModel
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
+    @Environment(\.scenePhase) private var scenePhase
 
     private static let boardSpace = "beecellBoard"
     private static let columnSpacing: CGFloat = 4
@@ -98,6 +99,15 @@ struct BeecellTouchView: View {
         .sheet(isPresented: $showingStats) { BeecellStatsSheet(viewModel: viewModel) }
         .onAppear { viewModel.startTimerIfNeeded() }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
+        // Mirrors the mac view's NSWindow.didResignKeyNotification safety net: SwiftUI's
+        // DragGesture has no "cancelled" callback, so a drag interrupted by the app
+        // backgrounding (Control Center, an incoming call, the home gesture, etc.) never
+        // fires .onEnded — without this, the floating drag overlay would keep rendering
+        // forever and the source pile would stay hidden its dragged card.
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase != .active, !draggedCards.isEmpty else { return }
+            cancelDrag()
+        }
     }
 
     // MARK: Top bar
