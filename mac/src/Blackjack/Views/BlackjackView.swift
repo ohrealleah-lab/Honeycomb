@@ -137,7 +137,7 @@ public struct BlackjackView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             // Result banner overlay
-            if showResultBanner && !viewModel.state.lastResultSummary.isEmpty {
+            if showResultBanner && viewModel.state.resultOutcome != .none {
                 resultBanner
             }
 
@@ -534,33 +534,8 @@ public struct BlackjackView: View {
     // MARK: - Result Banner
 
     private var resultBanner: some View {
-        let net = viewModel.state.lastNetResult
-        let anyBJ = viewModel.state.playerHands.contains { $0.result == .blackjack }
-        let anyWin = viewModel.state.playerHands.contains { $0.result == .win || $0.result == .blackjack }
-        let allPush = !viewModel.state.playerHands.isEmpty && viewModel.state.playerHands.allSatisfy { $0.result == .push }
-        
-        let headline: String
-        let subline: String
-        let isWin: Bool
-        
-        if anyBJ {
-            headline = coordinator.L(.resultHeadlineBlackjack)
-            subline = net > 0 ? coordinator.L(.resultSubNetPositiveFmt, net) : net < 0 ? coordinator.L(.resultSubNetNegativeFmt, net) : coordinator.L(.resultSubEven)
-            isWin = true
-        } else if anyWin {
-            headline = coordinator.L(.youWin)
-            subline = net > 0 ? coordinator.L(.resultSubNetPositiveFmt, net) : net < 0 ? coordinator.L(.resultSubNetNegativeFmt, net) : coordinator.L(.resultSubEven)
-            isWin = true
-        } else if allPush {
-            headline = coordinator.L(.resultHeadlinePush)
-            subline = coordinator.L(.resultSubPush)
-            isWin = false
-        } else {
-            let playerBust = !viewModel.state.playerHands.isEmpty && viewModel.state.playerHands.allSatisfy { $0.isBust }
-            headline = playerBust ? coordinator.L(.resultHeadlineBust) : coordinator.L(.notTodayPartner)
-            subline = net > 0 ? coordinator.L(.resultSubNetPositiveFmt, net) : net < 0 ? coordinator.L(.resultSubNetNegativeFmt, net) : coordinator.L(.resultSubEven)
-            isWin = false
-        }
+        let (headline, subline) = localizedBlackjackResult(viewModel.state, language: coordinator.language)
+        let isWin: Bool = viewModel.state.isWinRound
 
         let streak = viewModel.statistics.currentStreak
         let streakText: String?

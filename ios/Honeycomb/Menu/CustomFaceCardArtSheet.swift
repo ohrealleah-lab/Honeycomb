@@ -50,6 +50,7 @@ struct CustomFaceCardArtSheet: View {
                         ImageCropDisplay(image: image, entry: entry)
                             .aspectRatio((1.0 / CardDimensions.aspectRatio), contentMode: .fit)
                             .opacity(entry.isEnabled ? 1 : 0.3)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                     } else {
                         VStack(spacing: 2) {
                             Text(slot.rankLabel).font(.title3.bold())

@@ -94,7 +94,7 @@ struct BlackjackTouchView: View {
 
             Spacer()
 
-            Text("Blackjack")
+            Text(coordinator.L(.touchBlackjackTitle))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.8))
         }
@@ -124,7 +124,7 @@ struct BlackjackTouchView: View {
     private var dealerLabel: String {
         guard !viewModel.state.dealerCards.isEmpty else { return coordinator.L(.dealerLabel) }
         let value = viewModel.state.phase == .playing ? viewModel.state.dealerVisibleValue : viewModel.state.dealerValue
-        return "DEALER  \(value)"
+        return "\(coordinator.L(.dealerLabel))  \(value)"
     }
 
     // MARK: Player hand(s)
@@ -190,15 +190,29 @@ struct BlackjackTouchView: View {
 
     private var resultBanner: some View {
         Group {
-            if viewModel.state.phase == .result, !viewModel.state.lastResultSummary.isEmpty {
-                Text(viewModel.state.lastResultSummary)
-                    .font(.title3.weight(.black))
-                    .foregroundStyle(viewModel.state.lastNetResult > 0 ? .yellow : .white.opacity(0.85))
+            if viewModel.state.phase == .result, viewModel.state.resultOutcome != .none {
+                let (headline, subline) = localizedBlackjackResult(viewModel.state, language: coordinator.language)
+                VStack(spacing: 2) {
+                    Text(headline)
+                        .font(.title3.weight(.black))
+                        .foregroundStyle(viewModel.state.isWinRound ? .yellow : .white)
+
+                    if !viewModel.isFreePlay {
+                        Text(subline)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                }
             } else {
-                Text(" ").font(.title3.weight(.black))
+                VStack(spacing: 2) {
+                    Text(" ").font(.title3.weight(.black))
+                    if !viewModel.isFreePlay {
+                        Text(" ").font(.subheadline)
+                    }
+                }
             }
         }
-        .frame(height: 28)
+        .frame(height: viewModel.isFreePlay ? 28 : 48)
     }
 
     // MARK: Controls
@@ -237,7 +251,7 @@ struct BlackjackTouchView: View {
                             .frame(width: 36, height: 36)
                             .contentShape(Rectangle())
                     }
-                    Text("BET \(viewModel.state.currentBet)")
+                    Text("\(coordinator.L(.betLabel)) \(viewModel.state.currentBet)")
                         .font(.subheadline.weight(.bold).monospacedDigit())
                         .frame(minWidth: 60)
                     Button {
@@ -340,7 +354,7 @@ struct BlackjackSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("BLACKJACK")
+            Text(coordinator.L(.touchBlackjackBanner))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 

@@ -55,6 +55,15 @@ Each game follows the same three-layer pattern:
 2. If it's genuinely shared across most/all games (like `isSoundEnabled`/`noStressMode`) rather than one-game-specific, add it to `CommonGameOptions` (`shared/Models/CommonGameOptions.swift`, Optional if not every game has the concept) and wire it into each conforming Options struct's `commonOptions` getter/setter — `syncSharedOptions` itself never needs to change. One-game-specific fields (e.g. `drawMode`, `startingCredits`) skip this step entirely; theme fields never go here regardless.
 3. Add `@State` + init + `updatedOpts` assignment in that game's Options view.
 
+### Banner/toast content pipeline
+Honeycomb's in-game banner/toast messages (loading tips, achievement flavor text, idle nudges, etc.) are content-authored, not hand-coded. Source of truth is the **`BannerFlavorText`** sheet inside `tools/Honeycomb_Localization.xlsx` (columns: `Category, Trigger, Message, Type, Location, Spanish`) — the same workbook used for UI-chrome/help-text localization, so there's one file for translators to review, not two. (An earlier, now-retired version of this pipeline used a separate `Honeycomb_Fun_Messages.xlsx` workbook — deleted 2026-08-14 in favor of this merged sheet.)
+
+To add messages to an **existing** trigger: append rows to the `BannerFlavorText` sheet with the exact same (Category, Trigger) text as the existing rows (must match byte-for-byte or it becomes a new entry), then run `python3 tools/generate_banner_catalog.py` (no args — defaults to the repo copy). This regenerates `shared/Honeycomb/Resources/HoneycombBannerCatalog.json` and rewrites `BannerID.swift`/`BannerId.cs` (Windows gets its own JSON copy since it can't reference the shared resource bundle). Never hand-edit any of those generated files — they're overwritten wholesale on every run.
+
+To add a **brand new trigger**: just add the spreadsheet row with new trigger text and regenerate — IDs are auto-derived by slugifying `Category_Trigger` (see `slugify()` in the script), so the new enum case appears automatically in both `BannerID.swift` and `BannerId.cs`. The spreadsheet insert is separate from wiring the trigger into code — a new time-slot/event trigger still needs its condition-checking logic added at the call site (e.g. `loadingBannerID()` in `BannerCatalog.swift`/`BannerCatalog.cs`).
+
+Rebuild + test both platforms after regenerating (`make build && make test` here; `dotnet build && dotnet test` on Windows).
+
 ### Dark mode card colors
 - Red suits (hearts/diamonds): `Color(red: 1.0, green: 0.267, blue: 0.267)` — #FF4444
 - Black suits (spades/clubs): `Color(red: 0.753, green: 0.753, blue: 0.753)` — #C0C0C0

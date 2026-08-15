@@ -620,7 +620,7 @@ struct KlondikeSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("KLONDIKE")
+            Text(coordinator.L(.touchKlondikeBanner))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 

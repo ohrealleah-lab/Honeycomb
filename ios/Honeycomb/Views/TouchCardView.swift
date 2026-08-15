@@ -61,14 +61,6 @@ struct TouchCardView: View {
                 RoundedRectangle(cornerRadius: width * 0.07)
                     .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
 
-                cornerIndex
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .padding(width * 0.06)
-                cornerIndex
-                    .rotationEffect(.degrees(180))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(width * 0.06)
-
                 if let slot = FaceCardSlot.slot(rank: card.rank, suit: card.suit),
                    let entry = IOSCustomFaceArtManager.shared.enabledEntry(for: slot),
                    let image = IOSCustomFaceArtManager.shared.image(for: entry) {
@@ -90,6 +82,14 @@ struct TouchCardView: View {
                         .frame(width: width * 0.4)
                         .foregroundStyle(suitColor)
                 }
+
+                cornerIndex
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(width * 0.06)
+                cornerIndex
+                    .rotationEffect(.degrees(180))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(width * 0.06)
             } else {
                 HoneycombSimpleCardBack()
             }

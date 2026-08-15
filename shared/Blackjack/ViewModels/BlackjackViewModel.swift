@@ -221,7 +221,7 @@ public final class BlackjackViewModel {
         state.playerHands = [BlackjackHand(cards: [p1, p2], bet: state.currentBet)]
         state.dealerCards = [d1, d2]
         state.activeHandIndex = 0
-        state.lastResultSummary = ""
+        state.resultOutcome = .none
         state.phase = .playing
         scheduleIdleActionCheck()
 
@@ -402,7 +402,6 @@ public final class BlackjackViewModel {
     private func evaluateAllHands() {
         let dealerValue = BlackjackState.handValue(state.dealerCards)
         let dealerBJ = state.dealerCards.count == 2 && dealerValue == 21
-        var summaryParts: [String] = []
         var totalPayout = 0
         var totalWagered = 0
         // Captured before the per-hand loop below (which can win multiple split
@@ -461,23 +460,31 @@ public final class BlackjackViewModel {
                     statistics.biggestPayout = max(statistics.biggestPayout, payout)
                 }
             }
-
-            let summaryLanguage = BannerCatalog.currentLanguage
-            let isMultiHand = state.playerHands.count > 1
-            let label: String
-            switch result {
-            case .blackjack: label = L(.resultHeadlineBlackjack, language: summaryLanguage) + " 🃏"
-            case .win:       label = isMultiHand ? L(.resultHandWinFmt, language: summaryLanguage, i + 1) : L(.youWin, language: summaryLanguage)
-            case .loss:      label = isMultiHand ? L(.resultHandLossFmt, language: summaryLanguage, i + 1) : L(.resultDealerWins, language: summaryLanguage)
-            case .push:      label = isMultiHand ? L(.resultHandPushFmt, language: summaryLanguage, i + 1) : L(.resultHeadlinePush, language: summaryLanguage)
-            case .bust:      label = isMultiHand ? L(.resultHandBustFmt, language: summaryLanguage, i + 1) : L(.resultHeadlineBust, language: summaryLanguage)
-            }
-            summaryParts.append(label)
         }
 
-        state.lastResultSummary = summaryParts.joined(separator: "  ·  ")
         state.lastNetResult = totalPayout - totalWagered
-        
+
+        // Only the aggregate outcome is stored — display text (including the per-hand
+        // breakdown for a split round) is derived live from this + playerHands/
+        // lastNetResult by localizedBlackjackResult(_:language:), so it can't go stale
+        // if the language changes while the result banner is still showing.
+        let anyBJ = state.playerHands.contains { $0.result == .blackjack }
+        let anyWin = state.playerHands.contains { $0.result == .win || $0.result == .blackjack }
+        let allPush = !state.playerHands.isEmpty && state.playerHands.allSatisfy { $0.result == .push }
+        let playerBust = !state.playerHands.isEmpty && state.playerHands.allSatisfy { $0.isBust }
+
+        if anyBJ {
+            state.resultOutcome = .blackjack
+        } else if anyWin {
+            state.resultOutcome = .win
+        } else if allPush {
+            state.resultOutcome = .push
+        } else if playerBust {
+            state.resultOutcome = .bust
+        } else {
+            state.resultOutcome = .loss
+        }
+
         let roundWon = state.playerHands.contains { $0.result == .win || $0.result == .blackjack }
         let roundLost = state.playerHands.contains { $0.result == .loss || $0.result == .bust }
         if roundWon && !roundLost {
@@ -507,7 +514,7 @@ public final class BlackjackViewModel {
         state.playerHands = []
         state.activeHandIndex = 0
         state.dealerCards = []
-        state.lastResultSummary = ""
+        state.resultOutcome = .none
         state.lastNetResult = 0
         state.phase = .betting
     }
@@ -532,7 +539,7 @@ public final class BlackjackViewModel {
             state.dealerCards  = [Card(suit: .diamonds, rank: 9, faceUp: true),
                                   Card(suit: .clubs,    rank: 8, faceUp: true)]
             state.lastNetResult    = 100
-            state.lastResultSummary = L(.youWin, language: BannerCatalog.currentLanguage)
+            state.resultOutcome = .win
         case .loss:
             var hand = BlackjackHand(
                 cards: [Card(suit: .hearts, rank: 8, faceUp: true),
@@ -543,7 +550,7 @@ public final class BlackjackViewModel {
             state.dealerCards  = [Card(suit: .diamonds, rank: 10, faceUp: true),
                                   Card(suit: .clubs,    rank: 10, faceUp: true)]
             state.lastNetResult    = -50
-            state.lastResultSummary = L(.resultDealerWins, language: BannerCatalog.currentLanguage)
+            state.resultOutcome = .loss
         default: break
         }
     }

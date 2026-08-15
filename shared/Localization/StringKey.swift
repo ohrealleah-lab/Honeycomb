@@ -80,8 +80,6 @@ public enum StringKey: String, CaseIterable {
     case hideHintButton = "hide_hint_button"
     /// Toggle label, reused across every game's Options on Mac/iOS/Windows
     case manuallyDismissBanners = "manually_dismiss_banners"
-    /// Mac-only dev menu title (SoliBeeApp's CommandMenu) for the banner-review debug tool
-    case debugBannersMenu = "debug_banners_menu"
     /// Toggle label (Windows short form; Mac/iOS use 'Vegas Scoring Mode' — separate key)
     case vegasScoring = "vegas_scoring"
     /// Toggle label, longer form used on Mac/iOS Klondike Options
@@ -1334,4 +1332,20 @@ public enum StringKey: String, CaseIterable {
     case touchAddCardBackTitle = "touch_add_card_back_title"
     /// Steal-mode instructional hint, iOS (touch wording — Mac/Windows use the click-based steal_instruction key)
     case stealInstructionTap = "steal_instruction_tap"
+    /// Placeholder/fallback text
+    case touchLayoutComingSoon = "touch_layout_coming_soon"
+    /// Title-case game label
+    case touchBlackjackTitle = "touch_blackjack_title"
+    /// All-caps banner/header label
+    case touchBlackjackBanner = "touch_blackjack_banner"
+    /// All-caps banner/header label
+    case touchSpiderBanner = "touch_spider_banner"
+    /// All-caps banner/header label
+    case touchKlondikeBanner = "touch_klondike_banner"
+    /// All-caps banner/header label
+    case touchBeecellBanner = "touch_beecell_banner"
+    /// Mac-only dev menu title
+    case debugBannersMenu = "debug_banners_menu"
+    /// Windows Manage Decks: display name for the slot-0 (default) deck
+    case deckDefaultName = "deck_default_name"
 }

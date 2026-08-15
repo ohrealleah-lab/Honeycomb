@@ -546,7 +546,7 @@ struct BeecellSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("BEECELL")
+            Text(coordinator.L(.touchBeecellBanner))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 

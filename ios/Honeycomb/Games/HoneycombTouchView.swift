@@ -1,7 +1,10 @@
 import SwiftUI
 import UIKit
 
-/// Touch-first Honeycomb board for iPhone/iPad. Reuses the shared HoneycombViewModel and
+// HoneycombFlipContainer and SwapLiftEffect live in shared/Honeycomb/Views/
+// HoneycombFlipAnimation.swift now — shared with mac's HoneycombView.swift so
+// the two platforms can't drift out of sync.
+
 /// HoneycombCardView; layout is a fixed intrinsic design scaled to fit the screen (the
 /// same fit-to-window approach the mac view uses, driven by GeometryReader instead of
 /// NSWindow). Portrait stacks opponent hand / board / player hand vertically; landscape
@@ -18,6 +21,7 @@ struct HoneycombTouchView: View {
     private static let opponentCardSize = CGSize(width: 96, height: 96 * cardAspect)
     private static let boardSpacing: CGFloat = 10
     private static let handSpacing: CGFloat = 6
+    private static let dealFlipStagger: Double = HoneycombFlipTiming.duration
 
     // Face-down placeholders shown pre-match, same trick as the mac view: fixed ids so
     // ForEach identity stays stable across re-renders.
@@ -41,6 +45,13 @@ struct HoneycombTouchView: View {
     @State private var dragOffset: CGSize = .zero
 
     @State private var selectedHandCardId: String? = nil
+
+    // Deal-flip and Nectar Exchange animation state
+    @State private var isPlayerCardRevealed = [Bool](repeating: false, count: 5)
+    @State private var isOpponentCardRevealed = [Bool](repeating: false, count: 5)
+    @State private var handIdentityToken = 0
+    @Namespace private var animationSpace
+
     // "Steal Card" mode: double-tap an eligible captured opponent card on the board
     // to steal it straight into the card bank.
     @State private var isStealingCard = false
@@ -138,7 +149,27 @@ struct HoneycombTouchView: View {
                 viewModel.startNewGame()
             }
         }
-        .onChange(of: viewModel.flashRuleBannerTrigger) {
+        .onChange(of: viewModel.gameState) { oldValue, newValue in
+            if newValue == .setup {
+                isPlayerCardRevealed = [Bool](repeating: false, count: 5)
+                isOpponentCardRevealed = [Bool](repeating: false, count: 5)
+            } else if newValue == .playing && (oldValue == .setup || oldValue == .gameOver) {
+                // Both hands start fully unrevealed here (not pre-seeded from the
+                // underlying game-rule visibility) so every card genuinely animates
+                // in via triggerDealFlip() below — pre-seeding a card's reveal flag
+                // to its final value before handIdentityToken creates the fresh
+                // HoneycombFlipContainer made that container start already "revealed"
+                // (see HoneycombFlipContainer's `_displayedRevealed = State(initialValue:
+                // isRevealed)`), skipping the flip animation entirely. Excludes
+                // .suddenDeath -> .playing: that path can rebuild hands larger than 5
+                // cards, which these fixed-size-5 arrays aren't sized for.
+                isPlayerCardRevealed = [Bool](repeating: false, count: 5)
+                isOpponentCardRevealed = [Bool](repeating: false, count: 5)
+                handIdentityToken += 1
+                triggerDealFlip()
+            }
+        }
+        .onChange(of: viewModel.flashRuleBannerTrigger) { _, _ in
             guard let text = viewModel.flashRuleBanner else { return }
             flashRuleBanner(text)
         }
@@ -237,25 +268,74 @@ struct HoneycombTouchView: View {
             HStack(alignment: .center, spacing: 24) {
                 VStack(spacing: 6) {
                     handLabel(coordinator.L(.handLabelYou))
-                    pyramidHand(cards: playerDisplayHand, size: Self.playerCardSize) { playerHandCard($0) }
+                    pyramidHand(cards: playerDisplayHand, size: Self.playerCardSize) { i, card in
+                        HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
+                            HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)
+                        } back: {
+                            playerHandCard(card)
+                                .id(card.id)
+                        }
+                        .id(handIdentityToken)
+                        .matchedGeometryEffect(id: card.id, in: animationSpace)
+                        .modifier(SwapLiftEffect(isAnimating: viewModel.swapAnimationPhase != .idle && viewModel.swapHighlightCardIds.contains(card.id), phase: viewModel.swapAnimationPhase))
+                    }
                 }
+                .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
+
                 VStack(spacing: 8) {
                     bannerRow
                     boardGrid
                 }
+
                 VStack(spacing: 6) {
                     handLabel(coordinator.L(.dealerLabel))
-                    pyramidHand(cards: opponentDisplayHand, size: Self.playerCardSize) { opponentHandCard($0, size: Self.playerCardSize) }
+                    pyramidHand(cards: opponentDisplayHand, size: Self.playerCardSize) { i, card in
+                        HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
+                            HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)
+                        } back: {
+                            opponentHandCard(card, size: Self.playerCardSize)
+                                .id(card.id)
+                        }
+                        .id(handIdentityToken)
+                        .matchedGeometryEffect(id: card.id, in: animationSpace)
+                        .modifier(SwapLiftEffect(isAnimating: viewModel.swapAnimationPhase != .idle && viewModel.swapHighlightCardIds.contains(card.id), phase: viewModel.swapAnimationPhase))
+                    }
                 }
+                .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
             }
             .padding(16)
         } else {
             VStack(spacing: 8) {
-                rowHand(cards: opponentDisplayHand, size: Self.opponentCardSize) { opponentHandCard($0, size: Self.opponentCardSize) }
+                rowHand(cards: opponentDisplayHand, size: Self.opponentCardSize) { i, card in
+                    HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
+                        HoneycombCardView(card: card, size: Self.opponentCardSize, isFlipped: true)
+                    } back: {
+                        opponentHandCard(card, size: Self.opponentCardSize)
+                            .id(card.id)
+                    }
+                    .id(handIdentityToken)
+                    .matchedGeometryEffect(id: card.id, in: animationSpace)
+                    .modifier(SwapLiftEffect(isAnimating: viewModel.swapAnimationPhase != .idle && viewModel.swapHighlightCardIds.contains(card.id), phase: viewModel.swapAnimationPhase))
+                }
+                .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
+
                 bannerRow
+
                 boardGrid
                     .padding(.vertical, 4)
-                rowHand(cards: playerDisplayHand, size: Self.playerCardSize) { playerHandCard($0) }
+
+                rowHand(cards: playerDisplayHand, size: Self.playerCardSize) { i, card in
+                    HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
+                        HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)
+                    } back: {
+                        playerHandCard(card)
+                            .id(card.id)
+                    }
+                    .id(handIdentityToken)
+                    .matchedGeometryEffect(id: card.id, in: animationSpace)
+                    .modifier(SwapLiftEffect(isAnimating: viewModel.swapAnimationPhase != .idle && viewModel.swapHighlightCardIds.contains(card.id), phase: viewModel.swapAnimationPhase))
+                }
+                .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
             }
             .padding(8)
         }
@@ -277,19 +357,23 @@ struct HoneycombTouchView: View {
     }
 
     private func rowHand<Content: View>(cards: [HoneycombCard], size: CGSize,
-                                        @ViewBuilder content: @escaping (HoneycombCard) -> Content) -> some View {
+                                        @ViewBuilder content: @escaping (Int, HoneycombCard) -> Content) -> some View {
         HStack(spacing: Self.handSpacing) {
-            ForEach(cards) { card in content(card) }
+            ForEach(Array(cards.enumerated()), id: \.element.id) { i, card in content(i, card) }
         }
         .frame(height: size.height)
     }
 
     private func pyramidHand<Content: View>(cards: [HoneycombCard], size: CGSize,
-                                            @ViewBuilder content: @escaping (HoneycombCard) -> Content) -> some View {
+                                            @ViewBuilder content: @escaping (Int, HoneycombCard) -> Content) -> some View {
         VStack(spacing: Self.handSpacing) {
-            HStack(spacing: Self.handSpacing) { ForEach(cards.prefix(2)) { content($0) } }
-            HStack(spacing: Self.handSpacing) { ForEach(Array(cards.dropFirst(2).prefix(2))) { content($0) } }
-            HStack(spacing: Self.handSpacing) { ForEach(Array(cards.dropFirst(4))) { content($0) } }
+            HStack(spacing: Self.handSpacing) { ForEach(0..<min(2, cards.count), id: \.self) { i in content(i, cards[i]) } }
+            if cards.count > 2 {
+                HStack(spacing: Self.handSpacing) { ForEach(2..<min(4, cards.count), id: \.self) { i in content(i, cards[i]) } }
+            }
+            if cards.count > 4 {
+                HStack(spacing: Self.handSpacing) { ForEach(4..<cards.count, id: \.self) { i in content(i, cards[i]) } }
+            }
         }
         .frame(width: 2 * size.width + Self.handSpacing)
     }
@@ -464,44 +548,40 @@ struct HoneycombTouchView: View {
 
     @ViewBuilder
     private func playerHandCard(_ card: HoneycombCard) -> some View {
-        if viewModel.gameState == .setup {
-            HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)
-        } else {
-            let handIndex = viewModel.playerHand.firstIndex(where: { $0.id == card.id })
-            let isMandated = viewModel.gameState == .playing
-                && viewModel.mandatedPlayerHandIndex != nil
-                && viewModel.mandatedPlayerHandIndex == handIndex
-            let isLegalToPlay = viewModel.mandatedPlayerHandIndex == nil || viewModel.mandatedPlayerHandIndex == handIndex
+        let handIndex = viewModel.playerHand.firstIndex(where: { $0.id == card.id })
+        let isMandated = viewModel.gameState == .playing
+            && viewModel.mandatedPlayerHandIndex != nil
+            && viewModel.mandatedPlayerHandIndex == handIndex
+        let isLegalToPlay = viewModel.mandatedPlayerHandIndex == nil || viewModel.mandatedPlayerHandIndex == handIndex
 
-            HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: false)
-                .onTapGesture {
-                    if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
-                        selectedHandCardId = selectedHandCardId == card.id ? nil : card.id
-                        selectionHaptic.impactOccurred()
-                    }
+        HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: false)
+            .onTapGesture {
+                if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
+                    selectedHandCardId = selectedHandCardId == card.id ? nil : card.id
+                    selectionHaptic.impactOccurred()
                 }
-                .opacity(dragHandCard?.id == card.id ? 0 : 1)
-                .gesture(
-                    (viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay)
-                        ? handDragGesture(card: card) : nil
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.blue, lineWidth: selectedHandCardId == card.id ? 4 : 0)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(coordinator.customCardColors.hintHighlightColor, lineWidth: isMandated ? 8 : 0)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.yellow, lineWidth: viewModel.swapHighlightCardIds.contains(card.id) ? 8 : 0)
-                )
-                .modifier(TouchHintHighlight(isHighlighted: handIndex != nil && viewModel.activeHint?.handIndex == handIndex))
-                // Lift the selected card slightly so the two-tap flow reads clearly.
-                .offset(y: selectedHandCardId == card.id ? -10 : 0)
-                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: selectedHandCardId)
-        }
+            }
+            .opacity(dragHandCard?.id == card.id ? 0 : 1)
+            .gesture(
+                (viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay)
+                    ? handDragGesture(card: card) : nil
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.blue, lineWidth: selectedHandCardId == card.id ? 4 : 0)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(coordinator.customCardColors.hintHighlightColor, lineWidth: isMandated ? 8 : 0)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.yellow, lineWidth: viewModel.swapHighlightCardIds.contains(card.id) ? 8 : 0)
+            )
+            .modifier(TouchHintHighlight(isHighlighted: handIndex != nil && viewModel.activeHint?.handIndex == handIndex))
+            // Lift the selected card slightly so the two-tap flow reads clearly.
+            .offset(y: selectedHandCardId == card.id ? -10 : 0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: selectedHandCardId)
     }
 
     // MARK: Custom drag gestures (Klondike pattern, in pre-scale board space)
@@ -566,20 +646,17 @@ struct HoneycombTouchView: View {
 
     @ViewBuilder
     private func opponentHandCard(_ card: HoneycombCard, size: CGSize) -> some View {
-        if viewModel.gameState == .setup {
-            HoneycombCardView(card: card, size: size, isFlipped: true)
-        } else {
-            let isPostWinReveal = viewModel.gameState == .gameOver && viewModel.showPostGamePrompt && viewModel.matchResult == "You Win!"
-            let flipped = !isPostWinReveal && !viewModel.isOpponentCardVisible(cardId: card.id)
-            let handIndex = viewModel.opponentHand.firstIndex(where: { $0.id == card.id })
-            let isMandated = viewModel.gameState == .playing
-                && !viewModel.isPlayerTurn
-                && viewModel.mandatedOpponentHandIndex != nil
-                && viewModel.mandatedOpponentHandIndex == handIndex
+        let isPostWinReveal = viewModel.gameState == .gameOver && viewModel.showPostGamePrompt && viewModel.matchResult == "You Win!"
+        let flipped = !isPostWinReveal && !viewModel.isOpponentCardVisible(cardId: card.id)
+        let handIndex = viewModel.opponentHand.firstIndex(where: { $0.id == card.id })
+        let isMandated = viewModel.gameState == .playing
+            && !viewModel.isPlayerTurn
+            && viewModel.mandatedOpponentHandIndex != nil
+            && viewModel.mandatedOpponentHandIndex == handIndex
 
-            HoneycombCardView(card: card, size: size, isFlipped: flipped)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+        HoneycombCardView(card: card, size: size, isFlipped: flipped)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
                         .stroke(coordinator.customCardColors.hintHighlightColor, lineWidth: isMandated ? 8 : 0)
                 )
                 .overlay(
@@ -587,7 +664,6 @@ struct HoneycombTouchView: View {
                         .stroke(Color.yellow, lineWidth: viewModel.swapHighlightCardIds.contains(card.id) ? 8 : 0)
                 )
         }
-    }
 
     // MARK: Flash banners
 
@@ -778,6 +854,27 @@ struct HoneycombTouchView: View {
         .padding(.top, 60)
     }
 
+    private func triggerDealFlip() {
+        // Capture the current deal's identity so a stale closure from an interrupted
+        // deal (quit + restart within the stagger window) can detect it's no longer
+        // current and no-op instead of flipping cards that belong to a different deal.
+        let generation = handIdentityToken
+        for i in 0..<5 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * Self.dealFlipStagger) {
+                guard handIdentityToken == generation else { return }
+                isPlayerCardRevealed[i] = true
+            }
+        }
+        // Interleaved with the player's stagger (not offset to start after it finishes)
+        // — the two hands are independent, so there's no reason dealing should take 2x
+        // as long as a single hand's reveal.
+        for i in 0..<5 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * Self.dealFlipStagger) {
+                guard handIdentityToken == generation else { return }
+                isOpponentCardRevealed[i] = true
+            }
+        }
+    }
 }
 
 // MARK: - Settings section shown inside the slide-down menu

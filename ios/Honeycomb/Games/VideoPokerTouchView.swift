@@ -202,7 +202,7 @@ struct VideoPokerTouchView: View {
                             .frame(width: 40, height: 40)
                             .contentShape(Rectangle())
                     }
-                    Text("BET \(viewModel.state.currentBet)")
+                    Text("\(coordinator.L(.betLabel)) \(viewModel.state.currentBet)")
                         .font(.subheadline.weight(.bold).monospacedDigit())
                         .frame(minWidth: 60)
                     Button {

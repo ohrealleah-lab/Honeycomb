@@ -41,7 +41,6 @@ enum StringsEnglish {
         .honeyMode: "Honey Mode (Flavor)",
         .hideHintButton: "Hide Hint Button",
         .manuallyDismissBanners: "Manually Dismiss Banners",
-        .debugBannersMenu: "Banners",
         .vegasScoring: "Vegas Scoring",
         .vegasScoringMode: "Vegas Scoring Mode",
         .alwaysOnTop: "Always on Top",
@@ -668,5 +667,13 @@ enum StringsEnglish {
         .touchResetPositionButton: "Reset Position",
         .touchAddCardBackTitle: "Add Card Back",
         .stealInstructionTap: "Double-tap a captured opponent's card\non the board to steal it.",
+        .touchLayoutComingSoon: "Touch layout coming soon",
+        .touchBlackjackTitle: "Blackjack",
+        .touchBlackjackBanner: "BLACKJACK",
+        .touchSpiderBanner: "SPIDER",
+        .touchKlondikeBanner: "KLONDIKE",
+        .touchBeecellBanner: "BEECELL",
+        .debugBannersMenu: "Banners",
+        .deckDefaultName: "Default",
     ]
 }

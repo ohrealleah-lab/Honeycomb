@@ -15,6 +15,18 @@ public enum BlackjackHandResult: String, Equatable, Codable {
     case bust
 }
 
+// Aggregate outcome of a just-finished round (across all of the player's hands, in
+// case of a split) — deliberately not the display text itself, see
+// BlackjackState.resultOutcome.
+public enum BlackjackRoundOutcome: String, Equatable, Codable {
+    case none
+    case blackjack
+    case win
+    case push
+    case bust
+    case loss
+}
+
 public struct BlackjackHand: Equatable, Codable {
     public var cards: [Card]
     public var bet: Int
@@ -41,7 +53,13 @@ public struct BlackjackState: Equatable, Codable {
     public var sessionCredits: Int = 100
     public var currentBet: Int = 1
     public var handsDealt: Int = 0
-    public var lastResultSummary: String = ""
+    // Which aggregate outcome the just-finished round landed on — stored as data, not
+    // pre-translated text, so the result banner's display strings (see
+    // localizedBlackjackResult(_:language:) in BlackjackResultLocalization.swift) are
+    // recomputed live from the current language every time the view renders, instead of
+    // freezing in whatever language was active the instant the round completed.
+    public var resultOutcome: BlackjackRoundOutcome = .none
+    public var isWinRound: Bool { resultOutcome == .blackjack || resultOutcome == .win }
     public var lastNetResult: Int = 0
     public var dealerValue: Int { BlackjackState.handValue(dealerCards) }
     public var dealerVisibleValue: Int {
