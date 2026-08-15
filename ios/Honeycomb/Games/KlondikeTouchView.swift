@@ -163,8 +163,8 @@ struct KlondikeTouchView: View {
             wasteView(cardW: cardW, cardH: cardH)
 
             // The empty grid slot between waste and foundations — undo and hint live
-            // here, per the agreed mobile layout. Right-aligned so the waste's sliver
-            // fan never sits under them.
+            // here, per the agreed mobile layout, centered in the gap between the
+            // stock/waste pair and the foundations.
             VStack(spacing: 6) {
                 controlCircle(systemImage: "arrow.uturn.backward", label: coordinator.L(.undo),
                               diameter: min(40, cardW * 0.8)) {
@@ -182,7 +182,7 @@ struct KlondikeTouchView: View {
                     }
                 }
             }
-            .frame(width: cardW, height: cardH, alignment: .trailing)
+            .frame(width: cardW, height: cardH, alignment: .center)
             .zIndex(3)
 
             ForEach(viewModel.state.foundations) { pile in
@@ -238,9 +238,8 @@ struct KlondikeTouchView: View {
     }
 
     private func foundationView(pile: Pile, cardW: CGFloat, cardH: CGFloat) -> some View {
-        let suitString = pile.id.components(separatedBy: "_").last ?? "hearts"
         return ZStack {
-            emptySlot(cardW: cardW, cardH: cardH, symbol: foundationSymbol(suitString))
+            emptySlot(cardW: cardW, cardH: cardH, letterSymbol: "A")
             if let top = pile.cards.last {
                 TouchCardView(card: top, width: cardW)
                     .opacity(draggedCards.contains(where: { $0.id == top.id }) ? 0 : 1)
@@ -310,7 +309,7 @@ struct KlondikeTouchView: View {
 
     // MARK: Shared pieces
 
-    private func emptySlot(cardW: CGFloat, cardH: CGFloat, symbol: String?) -> some View {
+    private func emptySlot(cardW: CGFloat, cardH: CGFloat, symbol: String? = nil, letterSymbol: String? = nil) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: cardW * 0.07)
                 .fill(Color.black.opacity(0.18))
@@ -321,18 +320,16 @@ struct KlondikeTouchView: View {
                     .resizable().aspectRatio(contentMode: .fit)
                     .frame(width: cardW * 0.35)
                     .foregroundStyle(.white.opacity(0.35))
+            } else if let letterSymbol {
+                // Matches mac/iOS's EmptyPileView(symbol: "A", ...) — an empty foundation
+                // shows the rank it's waiting for (an Ace), not a suit icon, since a
+                // foundation isn't suit-locked until its first card lands.
+                Text(letterSymbol)
+                    .font(.system(size: cardW * 0.35, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.35))
             }
         }
         .frame(width: cardW, height: cardH)
-    }
-
-    private func foundationSymbol(_ suit: String) -> String {
-        switch suit {
-        case "spades": return "suit.spade.fill"
-        case "hearts": return "suit.heart.fill"
-        case "diamonds": return "suit.diamond.fill"
-        default: return "suit.club.fill"
-        }
     }
 
     private func controlCircle(systemImage: String, label: String, diameter: CGFloat = 40,
