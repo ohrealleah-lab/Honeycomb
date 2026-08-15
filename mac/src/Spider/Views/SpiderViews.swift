@@ -49,6 +49,7 @@ public struct SpiderTableauView: View {
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
     let onDoubleClick: (Card) -> Void
+    let isValidSequence: ([Card]) -> Bool
 
     public init(
         pile: Pile,
@@ -62,7 +63,8 @@ public struct SpiderTableauView: View {
         onDragStarted: @escaping (Card, [Card], CGPoint) -> Void,
         onDragChanged: @escaping (CGSize) -> Void,
         onDragEnded: @escaping () -> Void,
-        onDoubleClick: @escaping (Card) -> Void
+        onDoubleClick: @escaping (Card) -> Void,
+        isValidSequence: @escaping ([Card]) -> Bool
     ) {
         self.pile = pile
         self.draggedCardIDs = draggedCardIDs
@@ -76,6 +78,7 @@ public struct SpiderTableauView: View {
         self.onDragChanged = onDragChanged
         self.onDragEnded = onDragEnded
         self.onDoubleClick = onDoubleClick
+        self.isValidSequence = isValidSequence
     }
     
     // Face-down cards get tighter spacing than face-up ones (20pt vs 32pt) — same
@@ -155,8 +158,7 @@ public struct SpiderTableauView: View {
                             .onChanged { val in
                                 // Can only drag if this card and subsequent cards form a valid Spider drag sequence
                                 let dragStack = Array(pile.cards[index..<pile.cards.count])
-                                
-                                // Call viewModel's check or do check locally
+
                                 if isValidSequence(dragStack) {
                                     onDragStarted(card, dragStack, val.startLocation)
                                     onDragChanged(val.translation)
@@ -175,18 +177,5 @@ public struct SpiderTableauView: View {
             }
         }
         .frame(width: 128, height: totalHeight(compressionRatio: compressionRatio), alignment: .top)
-    }
-    
-    private func isValidSequence(_ cards: [Card]) -> Bool {
-        guard !cards.isEmpty else { return false }
-        guard cards.allSatisfy({ $0.faceUp }) else { return false }
-        
-        let suit = cards[0].suit
-        for i in 1..<cards.count {
-            if cards[i].suit != suit || cards[i].rank != cards[i-1].rank - 1 {
-                return false
-            }
-        }
-        return true
     }
 }

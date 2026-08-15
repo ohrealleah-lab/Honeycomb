@@ -231,7 +231,8 @@ public struct SpiderView: View {
                                     },
                                     onDoubleClick: { card in
                                         viewModel.doubleClickMove(card: card, from: pile)
-                                    }
+                                    },
+                                    isValidSequence: { viewModel.isValidDragSequence($0) }
                                 )
                                 .background(GeometryReader { geo in
                                     Color.clear
