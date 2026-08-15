@@ -56,6 +56,7 @@ struct HoneycombTouchView: View {
     // to steal it straight into the card bank.
     @State private var isStealingCard = false
     @State private var isMenuOpen = false
+    @State private var menuTab: MenuTab = .games
     @State private var showingStats = false
     @State private var showingDecks = false
     @State private var showNoHintsBanner = false
@@ -104,7 +105,17 @@ struct HoneycombTouchView: View {
                 }
             }
 
-            flashBanners
+            // Matches mac's HoneycombView: two independent FlashBannerView render sites
+            // (not a combined container) — mutually exclusive in practice, and each one
+            // centers itself via FlashBannerView's own symmetric Spacers.
+            if showingRuleBanner {
+                FlashBannerView(message: ruleBannerText, onDismiss: dismissRuleBanner)
+                    .zIndex(100)
+            }
+            if showNoHintsBanner {
+                FlashBannerView(message: coordinator.L(.noHintsBanner))
+                    .zIndex(100)
+            }
 
             // Board-wide tap-catcher: while a banner is up, the game is "paused" — any
             // board tap (not just the banner itself) dismisses it instead of forwarding
@@ -129,7 +140,7 @@ struct HoneycombTouchView: View {
                 postGameOverlay
             }
 
-            SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator) {
+            SlideDownMenu(isOpen: $isMenuOpen, selectedTab: $menuTab, coordinator: coordinator) {
                 showingStats = true
             } gameSettings: {
                 HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch) {
@@ -208,16 +219,16 @@ struct HoneycombTouchView: View {
 
     private var topBar: some View {
         HStack(spacing: 12) {
-            Button {
+            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, coordinator: coordinator)
+
+            // Rules/ban-list editing lives in the Options tab's Match Rules/Ban List
+            // disclosure groups (no dedicated full-screen Rules sheet exists on iOS the
+            // way mac's HoneycombRulesView is one) — this jumps straight there instead
+            // of making it two taps deep behind the generic Options button.
+            topBarIconButton(systemImage: "checklist", accessibilityLabel: coordinator.L(.toolbarRules)) {
+                menuTab = .options
                 isMenuOpen = true
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
             }
-            .accessibilityLabel(coordinator.L(.menuHeaderTitle))
 
             Spacer()
 
@@ -678,36 +689,6 @@ struct HoneycombTouchView: View {
                 )
         }
 
-    // MARK: Flash banners
-
-    private var flashBanners: some View {
-        VStack {
-            if showingRuleBanner {
-                bannerCapsule(ruleBannerText, color: .yellow, onDismiss: dismissRuleBanner)
-            }
-            if showNoHintsBanner {
-                bannerCapsule(coordinator.L(.noHintsBanner), color: .orange)
-            }
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .padding(.top, 60)
-        .allowsHitTesting(showingRuleBanner)
-    }
-
-    // Always clickable to dismiss when a dismiss handler is provided — not gated on the
-    // "Manually Dismiss Banners" option's *current* value, so a banner shown while the
-    // option was on can never get stuck if the player turns it off before it closes
-    // (nothing else would ever dismiss it, since no auto-dismiss timer was scheduled).
-    private func bannerCapsule(_ text: String, color: Color, onDismiss: (() -> Void)? = nil) -> some View {
-        Text(text)
-            .font(.title3.weight(.black))
-            .foregroundStyle(color)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .background(.black.opacity(0.75), in: Capsule())
-            .transition(.scale.combined(with: .opacity))
-            .onTapGesture { onDismiss?() }
-    }
 
     private func dismissRuleBanner() {
         ruleBannerTask?.cancel()

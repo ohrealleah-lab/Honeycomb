@@ -1,28 +1,31 @@
 import SwiftUI
 
+/// Which tab SlideDownMenu opens to. Hoisted out of SlideDownMenu (not nested/private)
+/// so a game's topBar buttons can pass a specific tab in — e.g. an Options button jumps
+/// straight to `.options` instead of always landing on `.games`.
+enum MenuTab: String, CaseIterable {
+    case games = "Game Selection"
+    case options = "Options"
+    case themes = "Themes"
+
+    func localizedLabel(_ coordinator: AppCoordinator) -> String {
+        switch self {
+        case .games:   return coordinator.L(.menuTabGameSelection)
+        case .options: return coordinator.L(.options)
+        case .themes:  return coordinator.L(.themesPanelTitle)
+        }
+    }
+}
+
 /// Top-docked slide-down menu — the iOS replacement for the mac toolbar's dropdown +
 /// options/stats buttons. Opens to 50% of screen height; game selection, per-game
 /// settings (injected by the active game's view), themes, and stats live here.
 struct SlideDownMenu<GameSettings: View>: View {
     @Binding var isOpen: Bool
+    @Binding var selectedTab: MenuTab
     @Bindable var coordinator: AppCoordinator
     var onShowStats: () -> Void
     @ViewBuilder var gameSettings: () -> GameSettings
-
-    private enum MenuTab: String, CaseIterable {
-        case games = "Game Selection"
-        case options = "Options"
-        case themes = "Themes"
-
-        func localizedLabel(_ coordinator: AppCoordinator) -> String {
-            switch self {
-            case .games:   return coordinator.L(.menuTabGameSelection)
-            case .options: return coordinator.L(.options)
-            case .themes:  return coordinator.L(.themesPanelTitle)
-            }
-        }
-    }
-    @State private var selectedTab: MenuTab = .games
 
     @State private var customCardBacks = IOSCustomCardBackManager.shared
     @State private var showingImportSheet = false

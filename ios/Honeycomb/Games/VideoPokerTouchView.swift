@@ -10,6 +10,7 @@ struct VideoPokerTouchView: View {
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     @State private var isMenuOpen = false
+    @State private var menuTab: MenuTab = .games
     @State private var showingStats = false
 
     private let holdHaptic = UIImpactFeedbackGenerator(style: .light)
@@ -63,7 +64,7 @@ struct VideoPokerTouchView: View {
                     .frame(minHeight: geo.size.height)
                 }
 
-                SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator) {
+                SlideDownMenu(isOpen: $isMenuOpen, selectedTab: $menuTab, coordinator: coordinator) {
                     showingStats = true
                 } gameSettings: {
                     VideoPokerSettingsSection(viewModel: viewModel,
@@ -74,22 +75,19 @@ struct VideoPokerTouchView: View {
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { VideoPokerStatsSheet(viewModel: viewModel) }
+        .queuedFlashBanner(
+            trigger: viewModel.flashBannerTrigger,
+            latestMessage: viewModel.flashBanner,
+            manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
+            onAdvanceQueue: viewModel.advanceBannerQueue
+        )
     }
 
     // MARK: Top bar
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            Button {
-                isMenuOpen = true
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel(coordinator.L(.menuHeaderTitle))
+            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, coordinator: coordinator)
 
             Spacer()
 

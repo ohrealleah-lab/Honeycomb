@@ -21,6 +21,7 @@ struct BeecellTouchView: View {
     @State private var dragOffset: CGSize = .zero
 
     @State private var isMenuOpen = false
+    @State private var menuTab: MenuTab = .games
     @State private var showingStats = false
     @State private var dismissedStuckBanner = false
     @State private var showNoHintsBanner = false
@@ -82,7 +83,7 @@ struct BeecellTouchView: View {
                     noHintsBanner
                 }
 
-                SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator) {
+                SlideDownMenu(isOpen: $isMenuOpen, selectedTab: $menuTab, coordinator: coordinator) {
                     showingStats = true
                 } gameSettings: {
                     BeecellSettingsSection(viewModel: viewModel)
@@ -108,22 +109,19 @@ struct BeecellTouchView: View {
             guard newPhase != .active, !draggedCards.isEmpty else { return }
             cancelDrag()
         }
+        .queuedFlashBanner(
+            trigger: viewModel.flashBannerTrigger,
+            latestMessage: viewModel.flashBanner,
+            manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
+            onAdvanceQueue: viewModel.advanceBannerQueue
+        )
     }
 
     // MARK: Top bar
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            Button {
-                isMenuOpen = true
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel(coordinator.L(.menuHeaderTitle))
+            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, coordinator: coordinator)
 
             Spacer()
 
