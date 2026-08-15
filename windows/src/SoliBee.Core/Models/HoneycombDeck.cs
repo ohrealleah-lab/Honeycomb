@@ -231,11 +231,21 @@ public class HoneycombProfileManager
 
         if (previousCardIds != null && previousCardIds.Count == 5)
         {
+            // RandomCards itself samples without replacement, but this loop calls it
+            // once per composition slot independently (e.g. three separate calls for a
+            // "three 3-star" slot), so two of those separate single-card calls could
+            // still land on the same card by chance. Drawing a small batch per call and
+            // picking the first not already used this Start Over guarantees no
+            // duplicate ends up in the rebuilt deck.
+            var alreadyDrawn = new HashSet<int>();
             foreach (var id in previousCardIds)
             {
                 var cardData = HoneycombDatabase.Shared.Card(id);
                 int stars = cardData?.Stars ?? 1;
-                newIds.Add(HoneycombDatabase.Shared.RandomCards(stars, 1).First().Id);
+                var candidates = HoneycombDatabase.Shared.RandomCards(stars, 5);
+                var pick = candidates.FirstOrDefault(c => !alreadyDrawn.Contains(c.Id)) ?? candidates.First();
+                alreadyDrawn.Add(pick.Id);
+                newIds.Add(pick.Id);
             }
         }
         else

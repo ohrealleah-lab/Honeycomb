@@ -102,15 +102,14 @@ public class HoneycombDatabase
         return AllCards.FirstOrDefault(c => c.Id == id);
     }
 
+    // Samples without replacement — every caller wants `count` distinct cards (a
+    // starter set, an opponent hand, a per-star rebuild); with-replacement sampling let
+    // a fresh install's starter draw collide and silently leave the Default deck short
+    // of cards.
     public List<HoneycombCardData> RandomCards(int stars, int count)
     {
         var tierPool = AllCards.Where(c => c.Stars == stars).ToList();
-        var result = new List<HoneycombCardData>(count);
-        for (int i = 0; i < count; i++)
-        {
-            result.Add(tierPool[Random.Shared.Next(tierPool.Count)]);
-        }
-        return result;
+        return tierPool.OrderBy(_ => Random.Shared.Next()).Take(count).ToList();
     }
 
     public List<HoneycombCardData> RulesAwareCards(int stars, int count, bool preferLowStats)

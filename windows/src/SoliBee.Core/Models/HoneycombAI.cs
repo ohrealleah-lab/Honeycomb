@@ -489,7 +489,10 @@ public static class HoneycombAI
                     int modifier = 0;
                     if (board.AscensionDescensionSuits.Contains(attacker.Data.Suit))
                     {
-                        int count = board.Cells.Count(c => !c.IsEmpty && c.Card!.Data.Suit == attacker.Data.Suit) + 1;
+                        // Matches the real modifier math (HoneycombBoard's SuitCount) —
+                        // face-down (Bomb Shelter) cards don't count toward Ascension/
+                        // Descension until revealed, so this simulation shouldn't either.
+                        int count = board.Cells.Count(c => !c.IsEmpty && !c.Card!.IsFaceDown && c.Card!.Data.Suit == attacker.Data.Suit) + 1;
                         if (ascension) modifier = count;
                         else if (descension) modifier = -count;
                     }
