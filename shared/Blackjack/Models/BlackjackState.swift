@@ -42,6 +42,9 @@ public struct BlackjackHand: Equatable, Codable {
     public var value: Int { BlackjackState.handValue(cards) }
     public var isBust: Bool { value > 21 }
     public var isBlackjack: Bool { cards.count == 2 && value == 21 }
+    // No further player action is possible on this hand — bust, a made 21 (no Hit could
+    // help), already doubled (forced stand), or a split Ace (one card only, per rule).
+    public var isComplete: Bool { isBust || value == 21 || isDoubled || isSplitAce }
 }
 
 public struct BlackjackState: Equatable, Codable {

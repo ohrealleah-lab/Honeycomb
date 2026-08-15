@@ -154,6 +154,17 @@ public final class BlackjackViewModel {
         && (isFreePlay || state.sessionCredits >= state.currentBet)
     }
 
+    // True during the delay window deal() schedules between detecting a concealed dealer
+    // blackjack (checked by raw rank, before the hole card is revealed) and actually
+    // resolving it. state.phase is already .playing by that point — the player's own
+    // cards need to render — so hit/stand/doubleDown/split must additionally check this,
+    // or a player could act (and wager more) against a hand that's already decided.
+    private var isDealerBlackjackPending: Bool {
+        guard state.phase == .playing, state.dealerCards.count == 2 else { return false }
+        let ranks = state.dealerCards.map { $0.rank }
+        return ranks.contains(1) && ranks.contains { $0 >= 10 }
+    }
+
     public var canDouble: Bool {
         guard state.activeHandIndex < state.playerHands.count else { return false }
         let hand = state.playerHands[state.activeHandIndex]
@@ -262,6 +273,7 @@ public final class BlackjackViewModel {
 
     public func hit() {
         guard state.phase == .playing else { return }
+        guard !isDealerBlackjackPending else { return }
         guard state.activeHandIndex < state.playerHands.count else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         guard !state.playerHands[state.activeHandIndex].isSplitAce else { return }
@@ -280,6 +292,7 @@ public final class BlackjackViewModel {
 
     public func stand() {
         guard state.phase == .playing else { return }
+        guard !isDealerBlackjackPending else { return }
         guard state.activeHandIndex < state.playerHands.count else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         guard !state.playerHands[state.activeHandIndex].isSplitAce else { return }
@@ -288,6 +301,7 @@ public final class BlackjackViewModel {
 
     public func doubleDown() {
         guard state.phase == .playing else { return }
+        guard !isDealerBlackjackPending else { return }
         guard canDouble else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         let hand = state.playerHands[state.activeHandIndex]
@@ -307,6 +321,7 @@ public final class BlackjackViewModel {
 
     public func split() {
         guard state.phase == .playing, canSplit else { return }
+        guard !isDealerBlackjackPending else { return }
         guard !(state.playerHands.count == 1 && state.playerHands[0].isBlackjack) else { return }
         let originalBet = state.playerHands[0].bet
         if !isFreePlay {
@@ -378,6 +393,12 @@ public final class BlackjackViewModel {
         let next = state.activeHandIndex + 1
         if next < state.playerHands.count {
             state.activeHandIndex = next
+            // A split hand can already be complete the moment it's dealt (e.g. drew to a
+            // made 21) without ever going through hit()/doubleDown()'s own auto-advance —
+            // recurse past it instead of leaving it sitting active with Hit/Stand enabled.
+            if state.playerHands[next].isComplete {
+                advanceHand()
+            }
         } else {
             executeDealerTurn()
         }
