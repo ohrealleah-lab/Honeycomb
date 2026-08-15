@@ -16,6 +16,13 @@ namespace SoliBee.Desktop.Views;
 
 public partial class FaceCardArtSectionView : UserControl
 {
+    // Same PointerPressed + async void + ShowDialog gotcha as PreferencesView's
+    // AdjustCardBack_Click: OnTileClickAsync awaits a file picker and a modal editor
+    // dialog, and without this guard a rapid double-click (or a click landing before the
+    // dialog visually captures input) could re-enter it, stacking a second file
+    // picker/editor on top of the first or racing two FaceCardArtService.Add/Update calls.
+    private bool _isEditorOpen;
+
     private static readonly FaceCardSlot[] SpadesSlots =
         { FaceCardSlot.BlackAce, FaceCardSlot.BlackJack, FaceCardSlot.BlackQueen, FaceCardSlot.BlackKing };
     private static readonly FaceCardSlot[] HeartsSlots =
@@ -204,6 +211,20 @@ public partial class FaceCardArtSectionView : UserControl
     }
 
     private async Task OnTileClickAsync(FaceCardSlot slot)
+    {
+        if (_isEditorOpen) return;
+        _isEditorOpen = true;
+        try
+        {
+            await OnTileClickCoreAsync(slot);
+        }
+        finally
+        {
+            _isEditorOpen = false;
+        }
+    }
+
+    private async Task OnTileClickCoreAsync(FaceCardSlot slot)
     {
         var existingArt = FaceCardArtService.GetArt(slot);
 
