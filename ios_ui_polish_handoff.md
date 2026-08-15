@@ -1,5 +1,12 @@
 # iOS UI polish handoff (for Gemini)
 
+## Status: done — implemented directly, not handed off
+All 8 items below were implemented directly in this session rather than handed to
+Gemini (see commits: face card letters/borders, top-bar buttons + flavor-text wiring,
+and the Themes tab additions). Left in place as a record of the investigation and
+reasoning behind each fix — the file:line references below describe the *pre-fix*
+state, not what's currently in the codebase.
+
 ## Context
 A round of manual iOS testing turned up 8 UI gaps between the iOS touch views (`ios/Honeycomb/`) and the mac reference implementation (`mac/src/`) they're meant to track. This handoff covers all 8. Two of them (#2, #5) turned out to have different scope than initially assumed once investigated — read those sections carefully before starting, since the actual work needed there isn't what the one-line description suggests.
 
