@@ -217,40 +217,28 @@ struct VideoPokerTouchView: View {
                 .foregroundStyle(.white)
                 .background(.black.opacity(0.35), in: Capsule())
 
-                Button(coordinator.L(.touchBetMaxButton)) {
+                casinoButton(coordinator.L(.touchBetMaxButton), systemImage: "dollarsign.circle", color: .orange.opacity(0.85)) {
                     viewModel.maxBet()
                 }
-                .buttonStyle(.bordered)
-                .tint(.white)
             }
 
             Spacer()
 
             if !canAffordBet && viewModel.state.phase != .holding {
-                Button {
+                casinoButton(coordinator.L(.rebuyButton), systemImage: "arrow.clockwise.circle", color: .red.opacity(0.8)) {
                     viewModel.rebuy()
-                } label: {
-                    Label(coordinator.L(.rebuyButton), systemImage: "arrow.clockwise.circle")
-                        .font(.headline)
-                        .padding(.horizontal, 12)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
-            } else {
-                Button {
-                    if viewModel.state.phase == .holding {
-                        viewModel.draw()
-                    } else {
-                        viewModel.deal()
-                    }
+            } else if viewModel.state.phase == .holding {
+                casinoButton(coordinator.L(.btnDraw), systemImage: "arrow.triangle.2.circlepath", color: .green.opacity(0.85)) {
+                    viewModel.draw()
                     dealHaptic.impactOccurred()
-                } label: {
-                    Text(viewModel.state.phase == .holding ? coordinator.L(.btnDraw) : coordinator.L(.dealButton))
-                        .font(.headline)
-                        .padding(.horizontal, 24)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.state.phase != .holding && !canAffordBet)
+            } else {
+                casinoButton(coordinator.L(.dealButton), systemImage: "play.fill", color: .yellow, textColor: .black,
+                             disabled: !canAffordBet) {
+                    viewModel.deal()
+                    dealHaptic.impactOccurred()
+                }
             }
         }
     }

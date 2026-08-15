@@ -281,66 +281,45 @@ struct BlackjackTouchView: View {
                 }
             }
 
-            Button {
+            casinoButton(coordinator.L(.dealButton), systemImage: "play.fill", color: .yellow,
+                         disabled: !canAffordBet || viewModel.state.currentBet == 0) {
                 viewModel.deal()
                 actionHaptic.impactOccurred()
-            } label: {
-                Text(coordinator.L(.dealButton))
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(!canAffordBet || viewModel.state.currentBet == 0)
         }
     }
 
     private var actionControls: some View {
         HStack(spacing: 10) {
-            actionButton(coordinator.L(.touchActionHit), systemImage: "plus.circle") {
+            casinoButton(coordinator.L(.touchActionHit), systemImage: "plus.circle", color: .green.opacity(0.85)) {
                 viewModel.hit()
+                actionHaptic.impactOccurred()
             }
-            actionButton(coordinator.L(.touchActionStand), systemImage: "hand.raised") {
+            casinoButton(coordinator.L(.touchActionStand), systemImage: "hand.raised", color: .red.opacity(0.75)) {
                 viewModel.stand()
+                actionHaptic.impactOccurred()
             }
             if viewModel.canDouble {
-                actionButton(coordinator.L(.touchActionDouble), systemImage: "multiply.circle") {
+                casinoButton(coordinator.L(.touchActionDouble), systemImage: "multiply.circle", color: .blue.opacity(0.75)) {
                     viewModel.doubleDown()
+                    actionHaptic.impactOccurred()
                 }
             }
             if viewModel.canSplit {
-                actionButton(coordinator.L(.touchActionSplit), systemImage: "arrow.triangle.branch") {
+                casinoButton(coordinator.L(.touchActionSplit), systemImage: "arrow.triangle.branch", color: .purple.opacity(0.75)) {
                     viewModel.split()
+                    actionHaptic.impactOccurred()
                 }
             }
         }
-    }
-
-    private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button {
-            action()
-            actionHaptic.impactOccurred()
-        } label: {
-            Label(title, systemImage: systemImage)
-                .font(.subheadline.weight(.bold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-        }
-        .buttonStyle(.borderedProminent)
     }
 
     private var rebuyControl: some View {
         HStack {
             Spacer()
-            Button {
+            casinoButton(coordinator.L(.rebuyButton), systemImage: "arrow.clockwise.circle", color: .red.opacity(0.8)) {
                 viewModel.rebuy()
-            } label: {
-                Label(coordinator.L(.rebuyButton), systemImage: "arrow.clockwise.circle")
-                    .font(.headline)
-                    .padding(.horizontal, 12)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.orange)
             Spacer()
         }
     }
