@@ -60,17 +60,7 @@ jobs:
           set -euo pipefail
           BUNDLE_ID="com.leah.Honeycomb"
 
-          UDID=$(xcrun simctl list devices available iOS --json \
-            | python3 -c "
-import json, sys
-data = json.load(sys.stdin)['devices']
-for runtime, devices in data.items():
-    if not devices:
-        continue
-    print(devices[0]['udid'])
-    sys.exit(0)
-sys.exit('No available iOS simulator found')
-")
+          UDID=$(xcrun simctl list devices available iOS --json | python3 -c 'import json, sys; data = json.load(sys.stdin)["devices"]; udids = [d[0]["udid"] for d in data.values() if d]; print(udids[0]) if udids else sys.exit("No available iOS simulator found")')
           echo "Using simulator $UDID"
 
           xcrun simctl boot "$UDID"
