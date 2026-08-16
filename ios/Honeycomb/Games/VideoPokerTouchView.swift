@@ -10,7 +10,7 @@ struct VideoPokerTouchView: View {
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
     @State private var isMenuOpen = false
-    @State private var menuTab: MenuTab = .games
+    @State private var showingOptions = false
     @State private var showingThemes = false
     @State private var showingStats = false
 
@@ -65,18 +65,19 @@ struct VideoPokerTouchView: View {
                     .frame(minHeight: geo.size.height)
                 }
 
-                SlideDownMenu(isOpen: $isMenuOpen, selectedTab: $menuTab, coordinator: coordinator) {
-                    showingStats = true
-                } gameSettings: {
-                    VideoPokerSettingsSection(viewModel: viewModel,
-                                              isMidHand: viewModel.state.phase == .holding)
-                }
+                SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator)
             }
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { VideoPokerStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
+        .sheet(isPresented: $showingOptions) {
+            OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
+                VideoPokerSettingsSection(viewModel: viewModel,
+                                          isMidHand: viewModel.state.phase == .holding)
+            }
+        }
         .queuedFlashBanner(
             trigger: viewModel.flashBannerTrigger,
             latestMessage: viewModel.flashBanner,
@@ -89,7 +90,7 @@ struct VideoPokerTouchView: View {
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, showingThemes: $showingThemes, coordinator: coordinator)
+            menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
 
             Spacer()
 

@@ -22,7 +22,7 @@ struct SpiderTouchView: View {
     @State private var dragOffset: CGSize = .zero
 
     @State private var isMenuOpen = false
-    @State private var menuTab: MenuTab = .games
+    @State private var showingOptions = false
     @State private var showingThemes = false
     @State private var showingStats = false
     @State private var dismissedStuckBanner = false
@@ -79,11 +79,7 @@ struct SpiderTouchView: View {
                     noHintsBanner
                 }
 
-                SlideDownMenu(isOpen: $isMenuOpen, selectedTab: $menuTab, coordinator: coordinator) {
-                    showingStats = true
-                } gameSettings: {
-                    SpiderSettingsSection(viewModel: viewModel)
-                }
+                SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator)
             }
             // Anchors boardSpace — every pileFrames GeometryReader and DragGesture
             // .named(Self.boardSpace) reference below depends on this exact container.
@@ -95,6 +91,11 @@ struct SpiderTouchView: View {
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { SpiderStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
+        .sheet(isPresented: $showingOptions) {
+            OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
+                SpiderSettingsSection(viewModel: viewModel)
+            }
+        }
         .onAppear { viewModel.startTimerIfNeeded() }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
         // Mirrors the mac view's NSWindow.didResignKeyNotification safety net: SwiftUI's
@@ -118,7 +119,7 @@ struct SpiderTouchView: View {
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, showingThemes: $showingThemes, coordinator: coordinator)
+            menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
 
             Spacer()
 

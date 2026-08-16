@@ -56,7 +56,7 @@ struct HoneycombTouchView: View {
     // to steal it straight into the card bank.
     @State private var isStealingCard = false
     @State private var isMenuOpen = false
-    @State private var menuTab: MenuTab = .games
+    @State private var showingOptions = false
     @State private var showingThemes = false
     @State private var showingStats = false
     @State private var showingDecks = false
@@ -141,20 +141,21 @@ struct HoneycombTouchView: View {
                 postGameOverlay
             }
 
-            SlideDownMenu(isOpen: $isMenuOpen, selectedTab: $menuTab, coordinator: coordinator) {
-                showingStats = true
-            } gameSettings: {
-                HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch) {
-                    isMenuOpen = false
-                    showingDecks = true
-                }
-            }
+            SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator)
         }
         .sheet(isPresented: $showingDecks) { HoneycombDecksSheet(viewModel: viewModel) }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { HoneycombStatsSheet(stats: viewModel.stats) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
+        .sheet(isPresented: $showingOptions) {
+            OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
+                HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch) {
+                    showingOptions = false
+                    showingDecks = true
+                }
+            }
+        }
         // Headless-testing hook: `simctl launch ... -honeycombAutostart 1` starts a match
         // immediately, so match-state rendering can be screenshotted without tap input.
         .onAppear {
@@ -221,15 +222,14 @@ struct HoneycombTouchView: View {
 
     private var topBar: some View {
         HStack(spacing: 12) {
-            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, showingThemes: $showingThemes, coordinator: coordinator)
+            menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
 
-            // Rules/ban-list editing lives in the Options tab's Match Rules/Ban List
+            // Rules/ban-list editing lives in the Options sheet's Match Rules/Ban List
             // disclosure groups (no dedicated full-screen Rules sheet exists on iOS the
             // way mac's HoneycombRulesView is one) — this jumps straight there instead
             // of making it two taps deep behind the generic Options button.
             topBarIconButton(systemImage: "checklist", accessibilityLabel: coordinator.L(.toolbarRules)) {
-                menuTab = .options
-                isMenuOpen = true
+                showingOptions = true
             }
 
             Spacer()

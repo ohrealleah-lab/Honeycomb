@@ -16,17 +16,15 @@ func topBarIconButton(systemImage: String, accessibilityLabel: String, action: @
 
 /// The three entry points every game's top bar exposes, replacing the single generic
 /// hamburger icon it used to be — matches mac's toolbar exposing Game Selection and
-/// Options as their own buttons. Themes opens its own full-screen sheet (not a
-/// SlideDownMenu tab — it outgrew that half-height layout) directly.
+/// Options as their own buttons. Options and Themes each open their own full-screen
+/// sheet (not a SlideDownMenu tab — both outgrew that half-height layout) directly.
 @ViewBuilder
-func menuBarButtons(menuTab: Binding<MenuTab>, isMenuOpen: Binding<Bool>, showingThemes: Binding<Bool>, coordinator: AppCoordinator) -> some View {
+func menuBarButtons(isMenuOpen: Binding<Bool>, showingOptions: Binding<Bool>, showingThemes: Binding<Bool>, coordinator: AppCoordinator) -> some View {
     topBarIconButton(systemImage: "square.grid.2x2", accessibilityLabel: coordinator.L(.menuTabGameSelection)) {
-        menuTab.wrappedValue = .games
         isMenuOpen.wrappedValue = true
     }
     topBarIconButton(systemImage: "gearshape", accessibilityLabel: coordinator.L(.options)) {
-        menuTab.wrappedValue = .options
-        isMenuOpen.wrappedValue = true
+        showingOptions.wrappedValue = true
     }
     topBarIconButton(systemImage: "paintpalette", accessibilityLabel: coordinator.L(.themesPanelTitle)) {
         showingThemes.wrappedValue = true
