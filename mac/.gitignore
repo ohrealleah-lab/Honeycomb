@@ -22,3 +22,6 @@ sim.sh
 sim_database.py
 sim_results.db
 list_models.py
+
+# Local convenience copy from tools/
+Run Honeycomb iOS.command
