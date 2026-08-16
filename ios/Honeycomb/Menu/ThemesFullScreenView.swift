@@ -366,8 +366,9 @@ struct ThemesFullScreenView: View {
                     // current selection at a glance.
                     ColorPicker("", selection: customFeltColorBinding)
                         .labelsHidden()
-                        .opacity(0.015)
+                        .opacity(0.02)
                         .frame(width: 70, height: 70)
+                        .contentShape(Rectangle())
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(coordinator.L(.customFeltColorLabel)).font(.subheadline.weight(.semibold))
@@ -488,8 +489,9 @@ struct ThemesFullScreenView: View {
                     .overlay(Circle().stroke(Color.primary.opacity(0.15), lineWidth: 1))
                 ColorPicker("", selection: binding)
                     .labelsHidden()
-                    .opacity(0.015)
+                    .opacity(0.02)
                     .frame(width: 54, height: 54)
+                    .contentShape(Rectangle())
             }
             Text(label).font(.caption2.weight(.semibold)).multilineTextAlignment(.center).lineLimit(2)
             Text(hexString(binding.wrappedValue)).font(.caption2.monospaced()).foregroundStyle(.secondary)
