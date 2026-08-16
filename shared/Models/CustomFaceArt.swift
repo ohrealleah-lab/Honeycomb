@@ -4,10 +4,10 @@ import Foundation
 // the NSImage-based manager that loads the actual art stays mac-side
 // (mac/src/Models/CustomFaceCardArtManager.swift).
 public enum FaceCardSlot: String, Codable, CaseIterable, Identifiable {
-    case spadeAce, clubAce, heartAce, diamondAce
-    case spadeJack, clubJack, heartJack, diamondJack
-    case spadeQueen, clubQueen, heartQueen, diamondQueen
-    case spadeKing, clubKing, heartKing, diamondKing
+    case spadeAce, spadeJack, spadeQueen, spadeKing
+    case clubAce, clubJack, clubQueen, clubKing
+    case heartAce, heartJack, heartQueen, heartKing
+    case diamondAce, diamondJack, diamondQueen, diamondKing
 
     public var id: String { rawValue }
 
