@@ -19,15 +19,13 @@ struct ThemesFullScreenView: View {
     @State private var themeToDelete: SoliBeeTheme? = nil
     @State private var themeSaveError: String? = nil
 
-    @State private var customCardBacks = IOSCustomCardBackManager.shared
-    @State private var showingImportSheet = false
-    @State private var entryPendingDelete: IOSCustomCardBackManager.Entry? = nil
-
     @State private var customBackgrounds = IOSCustomBackgroundManager.shared
     @State private var showingBackgroundImportSheet = false
     @State private var backgroundPendingDelete: IOSCustomBackgroundManager.Entry? = nil
 
     @State private var showingFaceArtSheet = false
+    @State private var showingCardBacksSheet = false
+    @State private var showingCardColorsSheet = false
 
     private let gridColumns = [GridItem(.adaptive(minimum: 74), spacing: 12)]
 
@@ -55,17 +53,14 @@ struct ThemesFullScreenView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingImportSheet) {
-            CustomCardBackImportSheet { name in
-                coordinator.cardBackTheme = name
-            }
-        }
         .sheet(isPresented: $showingBackgroundImportSheet) {
             CustomBackgroundImportSheet { name in
                 coordinator.customBackgroundName = name
             }
         }
         .sheet(isPresented: $showingFaceArtSheet) { CustomFaceCardArtSheet() }
+        .sheet(isPresented: $showingCardBacksSheet) { CardBacksSheet(coordinator: coordinator) }
+        .sheet(isPresented: $showingCardColorsSheet) { CustomCardColorsSheet(coordinator: coordinator) }
         .alert(coordinator.L(.themeNameFieldPlaceholder), isPresented: $showingSaveThemeAlert) {
             TextField(coordinator.L(.themeNameFieldPlaceholder), text: $newThemeName)
             Button(coordinator.L(.cancel), role: .cancel) { newThemeName = "" }
@@ -90,20 +85,6 @@ struct ThemesFullScreenView: View {
             Button(coordinator.L(.ok), role: .cancel) { themeSaveError = nil }
         } message: {
             Text(themeSaveError ?? "")
-        }
-        .alert(coordinator.L(.removeCardBackAlertTitle), isPresented: .init(
-            get: { entryPendingDelete != nil },
-            set: { if !$0 { entryPendingDelete = nil } }
-        )) {
-            Button(coordinator.L(.cancel), role: .cancel) {}
-            Button(coordinator.L(.remove), role: .destructive) {
-                if let entry = entryPendingDelete {
-                    if coordinator.cardBackTheme == entry.name { coordinator.cardBackTheme = "Solibee" }
-                    customCardBacks.removeCustomCardBack(entry)
-                }
-            }
-        } message: {
-            Text(coordinator.L(.removeImportedImageBody))
         }
         .alert(coordinator.L(.removeBackgroundAlertTitle), isPresented: .init(
             get: { backgroundPendingDelete != nil },
@@ -154,7 +135,7 @@ struct ThemesFullScreenView: View {
                     .fill(themeColor(theme))
                     .frame(width: 90, height: 120)
                     .overlay(
-                        cardBackThumbnail(theme.cardBackTheme)
+                        cardBackThumbnailView(theme.cardBackTheme)
                             .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                             .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.5), lineWidth: 1))
@@ -359,7 +340,7 @@ struct ThemesFullScreenView: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(coordinator.L(.customFeltColorLabel)).font(.subheadline.weight(.semibold))
-                    Text(hexString(customFeltColorBinding.wrappedValue))
+                    Text(themeHexString(customFeltColorBinding.wrappedValue))
                         .font(.caption.monospaced())
                         .foregroundStyle(.secondary)
                 }
@@ -384,64 +365,21 @@ struct ThemesFullScreenView: View {
     // MARK: Card Backs
 
     private var cardBacksSection: some View {
-        let allNames = BundledCardBackImage.allThemeNames + customCardBacks.customCardBacks.map(\.name)
-        return VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
             sectionHeading(coordinator.L(.menuSectionCardBack))
-            LazyVGrid(columns: gridColumns, spacing: 14) {
-                addCardBackTile
-                ForEach(allNames, id: \.self) { name in
-                    cardBackTile(name, isCustom: customCardBacks.customCardBacks.contains { $0.name == name })
+            Button {
+                showingCardBacksSheet = true
+            } label: {
+                HStack {
+                    Image(systemName: "rectangle.stack")
+                    Text(coordinator.L(.menuSectionCardBack))
+                    Spacer()
+                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
                 }
+                .padding(12)
+                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
             }
-        }
-    }
-
-    private func cardBackTile(_ name: String, isCustom: Bool) -> some View {
-        let isSelected = coordinator.cardBackTheme == name
-        return Button {
-            coordinator.cardBackTheme = name
-        } label: {
-            VStack(spacing: 4) {
-                cardBackThumbnail(name)
-                    .frame(width: 70, height: 70 * CardDimensions.aspectRatio)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
-                Text(name).font(.caption2).foregroundStyle(.primary).lineLimit(1)
-            }
-        }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.5).onEnded { _ in
-                guard isCustom else { return }
-                entryPendingDelete = customCardBacks.customCardBacks.first { $0.name == name }
-            }
-        )
-    }
-
-    private var addCardBackTile: some View {
-        Button {
-            showingImportSheet = true
-        } label: {
-            VStack(spacing: 4) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.black.opacity(0.15))
-                    .frame(width: 70, height: 70 * CardDimensions.aspectRatio)
-                    .overlay(Image(systemName: "plus").font(.title3.weight(.bold)).foregroundStyle(.secondary))
-                Text(coordinator.L(.addShort)).font(.caption2).foregroundStyle(.primary)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func cardBackThumbnail(_ name: String) -> some View {
-        if let image = BundledCardBackImage.uiImage(for: name) {
-            Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
-        } else if let entry = IOSCustomCardBackManager.shared.entry(named: name),
-                  let image = IOSCustomCardBackManager.shared.image(for: entry) {
-            CroppedCardBackImage(image: image, entry: entry)
-        } else {
-            Color.gray.opacity(0.3)
+            .buttonStyle(.plain)
         }
     }
 
@@ -449,36 +387,20 @@ struct ThemesFullScreenView: View {
 
     private var cardColorsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                sectionHeading(coordinator.L(.customCardColorHeading))
-                Spacer()
-                Button(coordinator.L(.reset)) {
-                    coordinator.customCardColors.reset()
+            sectionHeading(coordinator.L(.customCardColorHeading))
+            Button {
+                showingCardColorsSheet = true
+            } label: {
+                HStack {
+                    Image(systemName: "paintpalette")
+                    Text(coordinator.L(.customCardColorHeading))
+                    Spacer()
+                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
                 }
-                .font(.caption)
+                .padding(12)
+                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
             }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 16)], spacing: 16) {
-                cardColorSwatch(coordinator.L(.redSuitTextLabel), binding: $coordinator.customCardColors.redSuitColor)
-                cardColorSwatch(coordinator.L(.blackSuitTextLabel), binding: $coordinator.customCardColors.blackSuitColor)
-                cardColorSwatch(coordinator.L(.cardBackgroundLabel), binding: $coordinator.customCardColors.backgroundColor)
-                cardColorSwatch(coordinator.L(.hintHighlightLabel), binding: $coordinator.customCardColors.hintHighlightColor)
-            }
-        }
-    }
-
-    private func cardColorSwatch(_ label: String, binding: Binding<Color>) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle().fill(binding.wrappedValue).frame(width: 54, height: 54)
-                    .overlay(Circle().stroke(Color.primary.opacity(0.15), lineWidth: 1))
-                ColorPicker("", selection: binding)
-                    .labelsHidden()
-                    .opacity(0.02)
-                    .frame(width: 54, height: 54)
-                    .contentShape(Rectangle())
-            }
-            Text(label).font(.caption2.weight(.semibold)).multilineTextAlignment(.center).lineLimit(2)
-            Text(hexString(binding.wrappedValue)).font(.caption2.monospaced()).foregroundStyle(.secondary)
+            .buttonStyle(.plain)
         }
     }
 
@@ -516,13 +438,15 @@ struct ThemesFullScreenView: View {
         }
     }
 
-    private func hexString(_ color: Color) -> String {
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a)
-        return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
-    }
-
     private func sectionHeading(_ text: String) -> some View {
         Text(text).font(.title3.weight(.bold))
     }
+}
+
+/// Shared hex-string formatter for color swatches across the Themes sheet and its
+/// pushed sub-screens (Card Colors, Card Backs' theme previews).
+func themeHexString(_ color: Color) -> String {
+    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+    UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a)
+    return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
 }
