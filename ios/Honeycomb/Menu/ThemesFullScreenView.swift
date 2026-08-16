@@ -13,9 +13,6 @@ struct ThemesFullScreenView: View {
     @Bindable var coordinator: AppCoordinator
     @Environment(\.dismiss) private var dismiss
 
-    @State private var searchText = ""
-    @State private var isSearching = false
-
     @State private var isEditingSavedThemes = false
     @State private var showingSaveThemeAlert = false
     @State private var newThemeName = ""
@@ -52,21 +49,11 @@ struct ThemesFullScreenView: View {
             .navigationTitle(coordinator.L(.themesPanelTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        isSearching.toggle()
-                        if !isSearching { searchText = "" }
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                    }
-                    .accessibilityLabel(coordinator.L(.searchA11y))
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(coordinator.L(.done)) { dismiss() }
                         .fontWeight(.semibold)
                 }
             }
-            .searchable(text: $searchText, isPresented: $isSearching, prompt: coordinator.L(.menuSectionCardBack))
         }
         .sheet(isPresented: $showingImportSheet) {
             CustomCardBackImportSheet { name in
@@ -398,14 +385,11 @@ struct ThemesFullScreenView: View {
 
     private var cardBacksSection: some View {
         let allNames = BundledCardBackImage.allThemeNames + customCardBacks.customCardBacks.map(\.name)
-        let filtered = searchText.isEmpty ? allNames : allNames.filter { $0.localizedCaseInsensitiveContains(searchText) }
         return VStack(alignment: .leading, spacing: 10) {
             sectionHeading(coordinator.L(.menuSectionCardBack))
             LazyVGrid(columns: gridColumns, spacing: 14) {
-                if searchText.isEmpty {
-                    addCardBackTile
-                }
-                ForEach(filtered, id: \.self) { name in
+                addCardBackTile
+                ForEach(allNames, id: \.self) { name in
                     cardBackTile(name, isCustom: customCardBacks.customCardBacks.contains { $0.name == name })
                 }
             }

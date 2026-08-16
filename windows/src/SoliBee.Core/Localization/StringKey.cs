@@ -633,7 +633,6 @@ public enum StringKey
     RematchConfirmTitle,
     MenuTabGameSelection,
     MenuHeaderTitle,
-    SearchA11y,
     CloseMenuA11y,
     MenuSectionGame,
     MenuSectionTheme,
