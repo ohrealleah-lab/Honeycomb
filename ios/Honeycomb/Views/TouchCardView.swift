@@ -69,11 +69,9 @@ struct TouchCardView: View {
                         .frame(width: width * 0.7, height: height * 0.7)
                 } else if card.rank >= 11 || card.rank == 1 {
                     // Face cards (and Ace) show just the rank letter, centered — matches
-                    // mac's dark-mode letter art (dark_k_red.png etc.), which is a single
-                    // full-frame letter with no separate suit glyph; suit is conveyed by
-                    // color alone there, same as here.
+                    // mac's CardCenterSuitView, which renders J/Q/K in Apple Chancery.
                     Text(rankText)
-                        .font(.system(size: width * 0.56, weight: .black, design: .serif))
+                        .font(.custom("Apple Chancery", size: width * 0.56))
                         .foregroundStyle(suitColor)
                 } else {
                     Image(systemName: suitSymbol)
