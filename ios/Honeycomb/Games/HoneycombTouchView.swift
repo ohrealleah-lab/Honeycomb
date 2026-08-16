@@ -57,6 +57,7 @@ struct HoneycombTouchView: View {
     @State private var isStealingCard = false
     @State private var isMenuOpen = false
     @State private var menuTab: MenuTab = .games
+    @State private var showingThemes = false
     @State private var showingStats = false
     @State private var showingDecks = false
     @State private var showNoHintsBanner = false
@@ -153,6 +154,7 @@ struct HoneycombTouchView: View {
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { HoneycombStatsSheet(stats: viewModel.stats) }
+        .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         // Headless-testing hook: `simctl launch ... -honeycombAutostart 1` starts a match
         // immediately, so match-state rendering can be screenshotted without tap input.
         .onAppear {
@@ -219,7 +221,7 @@ struct HoneycombTouchView: View {
 
     private var topBar: some View {
         HStack(spacing: 12) {
-            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, coordinator: coordinator)
+            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, showingThemes: $showingThemes, coordinator: coordinator)
 
             // Rules/ban-list editing lives in the Options tab's Match Rules/Ban List
             // disclosure groups (no dedicated full-screen Rules sheet exists on iOS the

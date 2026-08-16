@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Which tab SlideDownMenu opens to. Hoisted out of SlideDownMenu (not nested/private)
 /// so a game's topBar buttons can pass a specific tab in — e.g. an Options button jumps
@@ -7,13 +6,11 @@ import UIKit
 enum MenuTab: String, CaseIterable {
     case games = "Game Selection"
     case options = "Options"
-    case themes = "Themes"
 
     func localizedLabel(_ coordinator: AppCoordinator) -> String {
         switch self {
         case .games:   return coordinator.L(.menuTabGameSelection)
         case .options: return coordinator.L(.options)
-        case .themes:  return coordinator.L(.themesPanelTitle)
         }
     }
 }
@@ -27,15 +24,6 @@ struct SlideDownMenu<GameSettings: View>: View {
     @Bindable var coordinator: AppCoordinator
     var onShowStats: () -> Void
     @ViewBuilder var gameSettings: () -> GameSettings
-
-    @State private var customCardBacks = IOSCustomCardBackManager.shared
-    @State private var showingImportSheet = false
-    @State private var entryPendingDelete: IOSCustomCardBackManager.Entry? = nil
-    @State private var showingFaceArtSheet = false
-
-    @State private var customBackgrounds = IOSCustomBackgroundManager.shared
-    @State private var showingBackgroundImportSheet = false
-    @State private var backgroundPendingDelete: IOSCustomBackgroundManager.Entry? = nil
 
     @State private var showingHelp = false
 
@@ -71,13 +59,6 @@ struct SlideDownMenu<GameSettings: View>: View {
                                     gameSettings()
                                     statsRow
                                     helpRow
-                                case .themes:
-                                    savedThemesSection
-                                    Divider().overlay(Color.white.opacity(0.2))
-                                    themeSection
-                                    faceCardArtRow
-                                    Divider().overlay(Color.white.opacity(0.2))
-                                    CustomCardColorSectionView(customCardColors: $coordinator.customCardColors)
                                 }
                             }
                             .padding(16)
@@ -142,290 +123,6 @@ struct SlideDownMenu<GameSettings: View>: View {
         }
     }
 
-    private var themeSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionTitle(coordinator.L(.menuSectionTheme))
-            HStack(spacing: 12) {
-                ForEach(FeltColorTheme.allCases.filter { $0 != .custom }, id: \.self) { theme in
-                    Button {
-                        coordinator.feltColor = theme
-                    } label: {
-                        Circle()
-                            .fill(theme.primaryColor)
-                            .frame(width: 34, height: 34)
-                            .overlay(
-                                Circle().stroke(Color.white,
-                                                lineWidth: coordinator.feltColor == theme ? 3 : 0)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(localizedFeltName(theme))
-                }
-
-                // Matches mac's "Custom Color" felt option — tapping just selects
-                // .custom (the ColorPicker to actually edit it appears below once
-                // selected, same as mac only showing its ColorPicker when
-                // feltColor == .custom).
-                Button {
-                    coordinator.feltColor = .custom
-                } label: {
-                    Circle()
-                        .fill(FeltColorTheme.custom.primaryColor)
-                        .frame(width: 34, height: 34)
-                        .overlay(
-                            Circle().stroke(Color.white, lineWidth: coordinator.feltColor == .custom ? 3 : 0)
-                        )
-                        .overlay(
-                            Image(systemName: "paintbrush.pointed.fill")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(.white)
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(coordinator.L(.feltCustomColor))
-            }
-
-            if coordinator.feltColor == .custom && coordinator.customBackgroundName == nil {
-                HStack(spacing: 8) {
-                    Text(coordinator.L(.customFeltColorLabel))
-                        .font(.system(.body).bold())
-                    ColorPicker("", selection: customFeltColorBinding)
-                        .labelsHidden()
-                    Spacer()
-                }
-            }
-
-            Toggle(coordinator.L(.feltVignetteToggle), isOn: $coordinator.showFeltVignette)
-
-            sectionTitle(coordinator.L(.menuSectionCardBack)).padding(.top, 4)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    // Leads the row (not trailing) so it's visible without scrolling —
-                    // buried at the end of 8 bundled themes, it was easy to miss entirely.
-                    addCardBackButton
-                    ForEach(BundledCardBackImage.allThemeNames, id: \.self) { name in
-                        cardBackButton(name, isCustom: false)
-                    }
-                    ForEach(customCardBacks.customCardBacks) { entry in
-                        cardBackButton(entry.name, isCustom: true)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-
-            sectionTitle(coordinator.L(.menuSectionBackground)).padding(.top, 4)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    addBackgroundButton
-                    // "None" clears back to the felt color — always available, not
-                    // removable, mirrors mac's default (no background) state.
-                    Button {
-                        coordinator.customBackgroundName = nil
-                    } label: {
-                        VStack(spacing: 4) {
-                            ZStack {
-                                Circle().fill(coordinator.currentFeltColor)
-                                Image(systemName: "xmark")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(.white)
-                            }
-                            .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 5)
-                                    .stroke(Color.accentColor, lineWidth: coordinator.customBackgroundName == nil ? 3 : 0)
-                            )
-                            Text(coordinator.L(.backgroundNoneOption)).font(.caption2).foregroundStyle(.primary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    ForEach(customBackgrounds.backgrounds) { entry in
-                        backgroundButton(entry)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-        }
-        .sheet(isPresented: $showingImportSheet) {
-            CustomCardBackImportSheet { name in
-                coordinator.cardBackTheme = name
-            }
-        }
-        .sheet(isPresented: $showingBackgroundImportSheet) {
-            CustomBackgroundImportSheet { name in
-                coordinator.customBackgroundName = name
-            }
-        }
-        .alert(coordinator.L(.removeCardBackAlertTitle), isPresented: .init(
-            get: { entryPendingDelete != nil },
-            set: { if !$0 { entryPendingDelete = nil } }
-        )) {
-            Button(coordinator.L(.cancel), role: .cancel) {}
-            Button(coordinator.L(.remove), role: .destructive) {
-                if let entry = entryPendingDelete {
-                    if coordinator.cardBackTheme == entry.name { coordinator.cardBackTheme = "Solibee" }
-                    customCardBacks.removeCustomCardBack(entry)
-                }
-            }
-        } message: {
-            Text(coordinator.L(.removeImportedImageBody))
-        }
-        .alert(coordinator.L(.removeBackgroundAlertTitle), isPresented: .init(
-            get: { backgroundPendingDelete != nil },
-            set: { if !$0 { backgroundPendingDelete = nil } }
-        )) {
-            Button(coordinator.L(.cancel), role: .cancel) {}
-            Button(coordinator.L(.remove), role: .destructive) {
-                if let entry = backgroundPendingDelete {
-                    if coordinator.customBackgroundName == entry.name { coordinator.customBackgroundName = nil }
-                    customBackgrounds.removeCustomBackground(entry)
-                }
-            }
-        } message: {
-            Text(coordinator.L(.removeImportedImageBody))
-        }
-    }
-
-    // ThemesSectionView (save/apply/rename/delete a whole named theme bundle) is
-    // designed for a fixed-height sidebar on mac; here it's embedded directly inside
-    // SlideDownMenu's own ScrollView, so it needs a finite height of its own to scroll
-    // within rather than an unconstrained maxHeight: .infinity, which is undefined
-    // inside another scroll container.
-    private var savedThemesSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ThemesSectionView()
-                .frame(height: 220)
-        }
-    }
-
-    // ColorPicker binds to a SwiftUI Color; extracting RGB components to persist into
-    // AppCoordinator's customFeltRed/Green/Blue needs UIColor on iOS (mac's equivalent,
-    // ThemesOptionsView.swift, uses NSColor — same idea, different platform type).
-    private var customFeltColorBinding: Binding<Color> {
-        Binding(
-            get: {
-                Color(red: coordinator.customFeltRed, green: coordinator.customFeltGreen, blue: coordinator.customFeltBlue)
-            },
-            set: { newColor in
-                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-                UIColor(newColor).getRed(&r, green: &g, blue: &b, alpha: &a)
-                coordinator.customFeltRed = Double(r)
-                coordinator.customFeltGreen = Double(g)
-                coordinator.customFeltBlue = Double(b)
-            }
-        )
-    }
-
-    private func backgroundButton(_ entry: IOSCustomBackgroundManager.Entry) -> some View {
-        Button {
-            coordinator.customBackgroundName = entry.name
-        } label: {
-            VStack(spacing: 4) {
-                Group {
-                    if let image = customBackgrounds.image(for: entry) {
-                        Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Color.gray.opacity(0.3)
-                    }
-                }
-                .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
-                .clipShape(RoundedRectangle(cornerRadius: 5))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color.accentColor, lineWidth: coordinator.customBackgroundName == entry.name ? 3 : 0)
-                )
-                Text(entry.name).font(.caption2).foregroundStyle(.primary).lineLimit(1)
-            }
-        }
-        .buttonStyle(.plain)
-        .onLongPressGesture {
-            backgroundPendingDelete = entry
-        }
-    }
-
-    private var addBackgroundButton: some View {
-        Button {
-            showingBackgroundImportSheet = true
-        } label: {
-            VStack(spacing: 4) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(Color.black.opacity(0.3))
-                    Image(systemName: "plus")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
-                Text(coordinator.L(.addShort)).font(.caption2).foregroundStyle(.primary)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func cardBackButton(_ name: String, isCustom: Bool) -> some View {
-        Button {
-            coordinator.cardBackTheme = name
-        } label: {
-            VStack(spacing: 4) {
-                cardBackThumbnail(name)
-                    .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color.accentColor,
-                                    lineWidth: coordinator.cardBackTheme == name ? 3 : 0)
-                    )
-                Text(name)
-                    .font(.caption2)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-            }
-        }
-        .buttonStyle(.plain)
-        // Custom (user-imported) card backs can be removed with a long-press;
-        // bundled themes are always available and aren't deletable.
-        .onLongPressGesture {
-            guard isCustom else { return }
-            entryPendingDelete = customCardBacks.customCardBacks.first { $0.name == name }
-        }
-    }
-
-    private var addCardBackButton: some View {
-        Button {
-            showingImportSheet = true
-        } label: {
-            VStack(spacing: 4) {
-                // Solid fill rather than a dashed/secondary-colored outline — the latter
-                // blended into the menu's translucent backdrop closely enough to be
-                // functionally invisible even though the button still worked.
-                ZStack {
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(Color.black.opacity(0.3))
-                    Image(systemName: "plus")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
-                Text(coordinator.L(.addShort))
-                    .font(.caption2)
-                    .foregroundStyle(.primary)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func cardBackThumbnail(_ name: String) -> some View {
-        if let image = BundledCardBackImage.uiImage(for: name) {
-            Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
-        } else if let entry = IOSCustomCardBackManager.shared.entry(named: name),
-                  let image = IOSCustomCardBackManager.shared.image(for: entry) {
-            CroppedCardBackImage(image: image, entry: entry)
-        } else {
-            Color.gray.opacity(0.3)
-        }
-    }
-
     private var statsRow: some View {
         Button {
             close()
@@ -470,39 +167,6 @@ struct SlideDownMenu<GameSettings: View>: View {
             case .honeycomb:
                 HoneycombHelpView()
             }
-        }
-    }
-
-    // Applies to the standard-card games (Klondike/BeeCell/Spider/Video Poker/
-    // Blackjack) via TouchCardView, not to Honeycomb's own card art — but kept
-    // reachable from every game's menu since it's a persistent global customization,
-    // same as the card-back theme above.
-    private var faceCardArtRow: some View {
-        Button {
-            showingFaceArtSheet = true
-        } label: {
-            HStack {
-                Label(coordinator.L(.faceCardArtNavRow), systemImage: "person.crop.rectangle")
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 8)
-        .sheet(isPresented: $showingFaceArtSheet) { CustomFaceCardArtSheet() }
-    }
-
-    // Mirrors Mac's per-case felt-name key usage (BackgroundSelectorView.swift) —
-    // .rawValue read out to VoiceOver was unlocalized/unformatted ("feltGreen").
-    private func localizedFeltName(_ theme: FeltColorTheme) -> String {
-        switch theme {
-        case .feltGreen:  return coordinator.L(.feltGreen)
-        case .crimson:    return coordinator.L(.feltCrimson)
-        case .royalBlue:  return coordinator.L(.feltRoyalBlue)
-        case .charcoal:   return coordinator.L(.feltCharcoal)
-        case .desert:     return coordinator.L(.feltDesert)
-        case .custom:     return coordinator.L(.feltCustomColor)
         }
     }
 

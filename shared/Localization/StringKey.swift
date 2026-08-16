@@ -1254,6 +1254,8 @@ public enum StringKey: String, CaseIterable {
     case menuTabGameSelection = "menu_tab_game_selection"
     /// iOS slide-down menu header title
     case menuHeaderTitle = "menu_header_title"
+    /// Accessibility label for the search icon in the iOS Themes full-screen sheet toolbar
+    case searchA11y = "search_a11y"
     /// iOS slide-down menu close-button accessibility label
     case closeMenuA11y = "close_menu_a11y"
     /// iOS slide-down menu Game Selection tab section header

@@ -14,12 +14,12 @@ func topBarIconButton(systemImage: String, accessibilityLabel: String, action: @
     .accessibilityLabel(accessibilityLabel)
 }
 
-/// The three entry points every game's top bar exposes into SlideDownMenu, replacing
-/// the single generic hamburger icon it used to be — matches mac's toolbar exposing
-/// Game Selection and Options as their own buttons (mac has no separate Themes button;
-/// iOS gets one anyway since Themes is otherwise two taps deep on a touch device).
+/// The three entry points every game's top bar exposes, replacing the single generic
+/// hamburger icon it used to be — matches mac's toolbar exposing Game Selection and
+/// Options as their own buttons. Themes opens its own full-screen sheet (not a
+/// SlideDownMenu tab — it outgrew that half-height layout) directly.
 @ViewBuilder
-func menuBarButtons(menuTab: Binding<MenuTab>, isMenuOpen: Binding<Bool>, coordinator: AppCoordinator) -> some View {
+func menuBarButtons(menuTab: Binding<MenuTab>, isMenuOpen: Binding<Bool>, showingThemes: Binding<Bool>, coordinator: AppCoordinator) -> some View {
     topBarIconButton(systemImage: "square.grid.2x2", accessibilityLabel: coordinator.L(.menuTabGameSelection)) {
         menuTab.wrappedValue = .games
         isMenuOpen.wrappedValue = true
@@ -29,7 +29,6 @@ func menuBarButtons(menuTab: Binding<MenuTab>, isMenuOpen: Binding<Bool>, coordi
         isMenuOpen.wrappedValue = true
     }
     topBarIconButton(systemImage: "paintpalette", accessibilityLabel: coordinator.L(.themesPanelTitle)) {
-        menuTab.wrappedValue = .themes
-        isMenuOpen.wrappedValue = true
+        showingThemes.wrappedValue = true
     }
 }

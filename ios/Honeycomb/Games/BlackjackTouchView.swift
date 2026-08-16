@@ -11,6 +11,7 @@ struct BlackjackTouchView: View {
 
     @State private var isMenuOpen = false
     @State private var menuTab: MenuTab = .games
+    @State private var showingThemes = false
     @State private var showingStats = false
 
     private let actionHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -65,6 +66,7 @@ struct BlackjackTouchView: View {
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { BlackjackStatsSheet(viewModel: viewModel) }
+        .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .queuedFlashBanner(
             trigger: viewModel.flashBannerTrigger,
             latestMessage: viewModel.flashBanner,
@@ -77,7 +79,7 @@ struct BlackjackTouchView: View {
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, coordinator: coordinator)
+            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, showingThemes: $showingThemes, coordinator: coordinator)
 
             Spacer()
 

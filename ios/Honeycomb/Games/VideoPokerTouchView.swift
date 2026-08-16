@@ -11,6 +11,7 @@ struct VideoPokerTouchView: View {
 
     @State private var isMenuOpen = false
     @State private var menuTab: MenuTab = .games
+    @State private var showingThemes = false
     @State private var showingStats = false
 
     private let holdHaptic = UIImpactFeedbackGenerator(style: .light)
@@ -75,6 +76,7 @@ struct VideoPokerTouchView: View {
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { VideoPokerStatsSheet(viewModel: viewModel) }
+        .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .queuedFlashBanner(
             trigger: viewModel.flashBannerTrigger,
             latestMessage: viewModel.flashBanner,
@@ -87,7 +89,7 @@ struct VideoPokerTouchView: View {
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, coordinator: coordinator)
+            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, showingThemes: $showingThemes, coordinator: coordinator)
 
             Spacer()
 

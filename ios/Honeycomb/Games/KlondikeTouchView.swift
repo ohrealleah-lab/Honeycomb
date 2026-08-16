@@ -24,6 +24,7 @@ struct KlondikeTouchView: View {
 
     @State private var isMenuOpen = false
     @State private var menuTab: MenuTab = .games
+    @State private var showingThemes = false
     @State private var showingStats = false
     @State private var dismissedStuckBanner = false
     @State private var isDrawInFlight = false
@@ -96,6 +97,7 @@ struct KlondikeTouchView: View {
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .sheet(isPresented: $showingStats) { KlondikeStatsSheet(stats: viewModel.statistics) }
+        .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .onAppear { viewModel.startTimerIfNeeded() }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
         // Mirrors the mac view's NSWindow.didResignKeyNotification safety net: SwiftUI's
@@ -119,7 +121,7 @@ struct KlondikeTouchView: View {
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, coordinator: coordinator)
+            menuBarButtons(menuTab: $menuTab, isMenuOpen: $isMenuOpen, showingThemes: $showingThemes, coordinator: coordinator)
 
             Spacer()
 

@@ -628,6 +628,7 @@ enum StringsEnglish {
         .rematchConfirmTitle: "Rematch? Your current match will end.",
         .menuTabGameSelection: "Game Selection",
         .menuHeaderTitle: "Menu",
+        .searchA11y: "Search",
         .closeMenuA11y: "Close menu",
         .menuSectionGame: "Game",
         .menuSectionTheme: "Theme",
