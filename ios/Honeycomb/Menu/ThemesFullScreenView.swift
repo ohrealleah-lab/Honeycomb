@@ -167,12 +167,10 @@ struct ThemesFullScreenView: View {
                     .fill(themeColor(theme))
                     .frame(width: 90, height: 120)
                     .overlay(
-                        // A pair of offset white slivers reads as "cards on felt" at a
-                        // glance without rendering an actual mini board layout.
-                        HStack(spacing: -18) {
-                            RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.85)).frame(width: 26, height: 36)
-                            RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.65)).frame(width: 26, height: 36).offset(y: 8)
-                        }
+                        cardBackThumbnail(theme.cardBackTheme)
+                            .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.5), lineWidth: 1))
                     )
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.3), lineWidth: 1))
 
@@ -427,10 +425,12 @@ struct ThemesFullScreenView: View {
             }
         }
         .buttonStyle(.plain)
-        .onLongPressGesture {
-            guard isCustom else { return }
-            entryPendingDelete = customCardBacks.customCardBacks.first { $0.name == name }
-        }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+                guard isCustom else { return }
+                entryPendingDelete = customCardBacks.customCardBacks.first { $0.name == name }
+            }
+        )
     }
 
     private var addCardBackTile: some View {
