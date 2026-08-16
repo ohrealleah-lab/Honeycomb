@@ -1364,4 +1364,6 @@ public enum StringKey: String, CaseIterable {
     case touchNameAlreadyTakenError = "touch_name_already_taken_error"
     /// iOS custom face-card-art import sheet: Enabled toggle label
     case touchEnabledToggle = "touch_enabled_toggle"
+    /// Auto-filled base name for a new custom card back before the user renames it (appended with ' N' for the 2nd, 3rd, ... duplicate)
+    case cardBackDefaultName = "card_back_default_name"
 }

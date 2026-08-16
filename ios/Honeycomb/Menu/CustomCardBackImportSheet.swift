@@ -18,7 +18,12 @@ struct CustomCardBackImportSheet: View {
     @State private var photoItem: PhotosPickerItem? = nil
     @State private var previewImage: UIImage? = nil
     @State private var name: String = ""
+    // True while `name` still holds the auto-generated "Default"/"Default N" value the
+    // field was seeded with — first tap into the field clears it so the player gets a
+    // blank space to type instead of having to select-all first.
+    @State private var isDefaultName = true
     @State private var errorMessage: String? = nil
+    @FocusState private var nameFieldFocused: Bool
 
     // Crop state, edited live by ImageCropEditor's pinch/drag gestures.
     @State private var scale: CGFloat = 1.0
@@ -30,6 +35,16 @@ struct CustomCardBackImportSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    TextField(coordinator.L(.touchNameFieldPlaceholder), text: $name)
+                        .focused($nameFieldFocused)
+                        .onChange(of: name) { errorMessage = nil }
+                        .onChange(of: nameFieldFocused) { _, focused in
+                            if focused && isDefaultName { name = "" }
+                            isDefaultName = false
+                        }
+                }
+
                 Section {
                     PhotosPicker(selection: $photoItem, matching: .images) {
                         Label(previewImage == nil ? coordinator.L(.touchChoosePhoto) : coordinator.L(.touchChooseDifferentPhoto),
@@ -61,16 +76,15 @@ struct CustomCardBackImportSheet: View {
                     }
                 }
 
-                Section {
-                    TextField(coordinator.L(.touchNameFieldPlaceholder), text: $name)
-                        .onChange(of: name) { errorMessage = nil }
-                }
-
                 if let errorMessage {
                     Section {
                         Text(errorMessage).foregroundStyle(.red).font(.footnote)
                     }
                 }
+            }
+            .onAppear {
+                name = Self.nextDefaultName(base: coordinator.L(.cardBackDefaultName),
+                                             existing: BundledCardBackImage.allThemeNames + manager.customCardBacks.map(\.name))
             }
             .navigationTitle(coordinator.L(.touchAddCardBackTitle))
             .navigationBarTitleDisplayMode(.inline)
@@ -84,6 +98,15 @@ struct CustomCardBackImportSheet: View {
                 }
             }
         }
+    }
+
+    /// First unused name of the form "Default", "Default 1", "Default 2", ... against
+    /// both bundled theme names and already-saved custom card backs.
+    private static func nextDefaultName(base: String, existing: [String]) -> String {
+        guard existing.contains(base) else { return base }
+        var n = 1
+        while existing.contains("\(base) \(n)") { n += 1 }
+        return "\(base) \(n)"
     }
 
     private func save() {

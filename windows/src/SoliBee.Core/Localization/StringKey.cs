@@ -688,4 +688,5 @@ public enum StringKey
     TouchNameFieldPlaceholder,
     TouchNameAlreadyTakenError,
     TouchEnabledToggle,
+    CardBackDefaultName,
 }

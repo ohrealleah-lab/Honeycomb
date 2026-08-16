@@ -699,6 +699,7 @@ public static class Strings
         [StringKey.TouchNameFieldPlaceholder] = "Name",
         [StringKey.TouchNameAlreadyTakenError] = "That name is already taken — pick another.",
         [StringKey.TouchEnabledToggle] = "Enabled",
+        [StringKey.CardBackDefaultName] = "Default",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1382,5 +1383,6 @@ public static class Strings
         [StringKey.TouchNameFieldPlaceholder] = "Nombre",
         [StringKey.TouchNameAlreadyTakenError] = "Ese nombre ya está en uso — elige otro.",
         [StringKey.TouchEnabledToggle] = "Activado",
+        [StringKey.CardBackDefaultName] = "Predeterminado",
     };
 }

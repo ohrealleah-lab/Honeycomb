@@ -683,5 +683,6 @@ enum StringsSpanish {
         .touchNameFieldPlaceholder: "Nombre",
         .touchNameAlreadyTakenError: "Ese nombre ya está en uso — elige otro.",
         .touchEnabledToggle: "Activado",
+        .cardBackDefaultName: "Predeterminado",
     ]
 }
