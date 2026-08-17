@@ -77,11 +77,21 @@ struct TouchCardView: View {
                     // on a card) — Savoye LET is another genuine iOS-bundled script font
                     // whose Q is an unambiguous loop-and-tail, so it replaces Snell
                     // Roundhand here entirely.
+                    //
+                    // The offset below isn't decorative — Savoye LET's declared line-height
+                    // box is much taller than its actual glyph ink (lots of unused
+                    // descender space baked into the font), so centering the raw Text
+                    // (which centers that whole box) visibly pushes every letter up and
+                    // left of the card's true center. Value found empirically: rendered
+                    // live in the simulator with a marker at the card's true center,
+                    // measured the pixel gap to each glyph's ink centroid across multiple
+                    // ranks (J/Q/K/A), and converged on this offset — not a guess.
                     Text(rankText)
                         .font(.custom("SavoyeLetPlain", size: width * 0.56))
                         .foregroundStyle(suitColor)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
+                        .offset(x: width * 0.01, y: width * 0.15)
                 } else {
                     Image(systemName: suitSymbol)
                         .resizable().aspectRatio(contentMode: .fit)
