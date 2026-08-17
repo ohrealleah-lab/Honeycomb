@@ -71,16 +71,14 @@ struct TouchCardView: View {
                     // Face cards (and Ace) show just the rank letter, centered — mac uses
                     // Apple Chancery here, but that font isn't actually part of iOS's
                     // bundled font catalog (confirmed live: it silently falls back to the
-                    // system font instead of erroring). Snell Roundhand is a genuine
-                    // cursive/calligraphic font Apple does ship on iOS, so it's the
-                    // closest same-spirit substitute without embedding a redistributed
-                    // copy of Apple's own mac-only font file. Sized down from the earlier
-                    // 0.62 — Snell Roundhand's glyphs run wider than a block font at the
-                    // same point size, and this ZStack has no clip, so an oversized glyph
-                    // bled past the card's edges into whatever sat behind/beside it
-                    // (looked like an oversized *card*, not an oversized letter).
+                    // system font instead of erroring). Snell Roundhand was tried first as
+                    // the closest same-spirit substitute, but its capital Q reads as "2"
+                    // (confirmed by rendering the actual font file, not just eyeballing it
+                    // on a card) — Savoye LET is another genuine iOS-bundled script font
+                    // whose Q is an unambiguous loop-and-tail, so it replaces Snell
+                    // Roundhand here entirely.
                     Text(rankText)
-                        .font(.custom("SnellRoundhand-Bold", size: width * 0.46))
+                        .font(.custom("SavoyeLetPlain", size: width * 0.56))
                         .foregroundStyle(suitColor)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
