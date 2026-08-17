@@ -23,6 +23,7 @@ struct BlackjackTouchView: View {
     var body: some View {
         GeometryReader { geo in
             let cardW = min((geo.size.width - 32) / 6, 90)
+            let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
                 IOSBackgroundLayer()
@@ -38,15 +39,29 @@ struct BlackjackTouchView: View {
                             .padding(.horizontal, 12)
                             .frame(height: 44)
 
-                        dealerArea(cardW: cardW)
+                        if isLandscape {
+                            // Landscape's width can't spare the height a vertical
+                            // dealer-then-player stack needs, but it has plenty of width
+                            // to spare — dealer left, player right instead.
+                            HStack(alignment: .top, spacing: 24) {
+                                dealerArea(cardW: cardW)
+                                    .frame(maxWidth: .infinity)
+                                playerHandsArea(cardW: cardW)
+                                    .frame(maxWidth: .infinity)
+                            }
 
-                        resultBanner
+                            resultBanner
+                        } else {
+                            dealerArea(cardW: cardW)
 
-                        Spacer(minLength: 4)
+                            resultBanner
 
-                        playerHandsArea(cardW: cardW)
+                            Spacer(minLength: 4)
 
-                        Spacer(minLength: 4)
+                            playerHandsArea(cardW: cardW)
+
+                            Spacer(minLength: 4)
+                        }
 
                         controls
                             .padding(.horizontal, 16)
