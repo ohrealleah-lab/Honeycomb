@@ -68,10 +68,15 @@ struct TouchCardView: View {
                     ImageCropDisplay(image: image, entry: entry)
                         .frame(width: width * 0.7, height: height * 0.7)
                 } else if card.rank >= 11 || card.rank == 1 {
-                    // Face cards (and Ace) show just the rank letter, centered — matches
-                    // mac's CardCenterSuitView, which renders J/Q/K in Apple Chancery.
+                    // Face cards (and Ace) show just the rank letter, centered — mac uses
+                    // Apple Chancery here, but that font isn't actually part of iOS's
+                    // bundled font catalog (confirmed live: it silently falls back to the
+                    // system font instead of erroring). Snell Roundhand is a genuine
+                    // cursive/calligraphic font Apple does ship on iOS, so it's the
+                    // closest same-spirit substitute without embedding a redistributed
+                    // copy of Apple's own mac-only font file.
                     Text(rankText)
-                        .font(.custom("Apple Chancery", size: width * 0.56))
+                        .font(.custom("SnellRoundhand-Bold", size: width * 0.62))
                         .foregroundStyle(suitColor)
                 } else {
                     Image(systemName: suitSymbol)
