@@ -57,15 +57,6 @@ struct TouchCardView: View {
             RoundedRectangle(cornerRadius: width * 0.07)
                 .fill(faceColor)
 
-            // Matches mac's CardView outline (`Color.black.opacity(0.85)` at lineWidth
-            // 0.75 by default, or the user's custom outline color when enabled), applied
-            // unconditionally like mac's — not just when face up. A face-down card in a
-            // deep tableau stack (Klondike's stock, Spider's initial deal) needs the same
-            // edge definition an overlapping face-up card does, or adjacent card
-            // boundaries disappear into each other.
-            RoundedRectangle(cornerRadius: width * 0.07)
-                .stroke(outlineColor, lineWidth: 0.75)
-
             if card.faceUp {
                 if let slot = FaceCardSlot.slot(rank: card.rank, suit: card.suit),
                    let entry = IOSCustomFaceArtManager.shared.enabledEntry(for: slot),
@@ -122,6 +113,20 @@ struct TouchCardView: View {
         // just being cut off, which in a tight tableau stack reads as a misshapen or
         // oversized card rather than clipped text.
         .clipShape(RoundedRectangle(cornerRadius: width * 0.07))
+        // Matches mac's CardView outline (`Color.black.opacity(0.85)` at lineWidth 0.75
+        // by default, or the user's custom outline color when enabled), applied
+        // unconditionally like mac's — not just when face up. Drawn as an overlay (on
+        // top of everything, not as a ZStack sibling underneath the content) because a
+        // face-down card's HoneycombSimpleCardBack fills the frame edge-to-edge and was
+        // completely burying the stroke drawn beneath it — face-up content is inset/
+        // centered and never had this problem, which is why only face-down cards showed
+        // a barely-visible border. A face-down card in a deep tableau stack (Klondike's
+        // stock, Spider's initial deal) needs the same edge definition an overlapping
+        // face-up card does, or adjacent card boundaries disappear into each other.
+        .overlay(
+            RoundedRectangle(cornerRadius: width * 0.07)
+                .stroke(outlineColor, lineWidth: 0.75)
+        )
         // Matches mac's CardView exactly — in a tightly overlapping tableau, this subtle
         // shadow (not just the thin 0.75pt stroke above) is what actually separates
         // adjacent card edges visually; without it stacked cards read as one flat block.
