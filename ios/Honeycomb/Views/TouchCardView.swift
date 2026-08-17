@@ -47,6 +47,20 @@ struct TouchCardView: View {
         }
     }
 
+    // Whether this card is showing a user-imported custom face art image — unlike the
+    // built-in letter/suit glyphs (which stay clear of the corner index by design), a
+    // custom photo fills its whole 70%-of-card window edge-to-edge, and that window's
+    // edge sits closer to the corner than the corner index's own inset, so the two
+    // regions genuinely overlap. Z-order alone (corner index drawn last, so it's never
+    // literally hidden) isn't enough when the photo behind it is busy/dark — a plain
+    // rank+suit index with no backing can still read as unreadable/"clipped" against it.
+    private var customFaceArtImage: (entry: IOSCustomFaceArtManager.Entry, image: UIImage)? {
+        guard let slot = FaceCardSlot.slot(rank: card.rank, suit: card.suit),
+              let entry = IOSCustomFaceArtManager.shared.enabledEntry(for: slot),
+              let image = IOSCustomFaceArtManager.shared.image(for: entry) else { return nil }
+        return (entry, image)
+    }
+
     var body: some View {
         ZStack {
             // White (or custom-color) backing behind BOTH faces, matching mac's
@@ -58,10 +72,8 @@ struct TouchCardView: View {
                 .fill(faceColor)
 
             if card.faceUp {
-                if let slot = FaceCardSlot.slot(rank: card.rank, suit: card.suit),
-                   let entry = IOSCustomFaceArtManager.shared.enabledEntry(for: slot),
-                   let image = IOSCustomFaceArtManager.shared.image(for: entry) {
-                    ImageCropDisplay(image: image, entry: entry)
+                if let art = customFaceArtImage {
+                    ImageCropDisplay(image: art.image, entry: art.entry)
                         .frame(width: width * 0.7, height: height * 0.7)
                 } else if card.rank >= 11 || card.rank == 1 {
                     // Face cards (and Ace) show just the rank letter, centered — mac uses
@@ -96,9 +108,13 @@ struct TouchCardView: View {
                 }
 
                 cornerIndex
+                    .padding(4)
+                    .background(customFaceArtImage != nil ? faceColor.opacity(0.85) : .clear, in: RoundedRectangle(cornerRadius: 4))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .padding(width * 0.06)
                 cornerIndex
+                    .padding(4)
+                    .background(customFaceArtImage != nil ? faceColor.opacity(0.85) : .clear, in: RoundedRectangle(cornerRadius: 4))
                     .rotationEffect(.degrees(180))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding(width * 0.06)
