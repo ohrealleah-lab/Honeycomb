@@ -145,6 +145,10 @@ struct VideoPokerTouchView: View {
                 ForEach(0..<5, id: \.self) { _ in
                     HoneycombSimpleCardBack()
                         .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cardW * 0.07)
+                                .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
+                        )
                 }
             } else {
                 ForEach(Array(viewModel.state.hand.enumerated()), id: \.element.id) { i, card in

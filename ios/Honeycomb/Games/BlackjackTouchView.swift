@@ -111,7 +111,12 @@ struct BlackjackTouchView: View {
             HStack(spacing: 6) {
                 if viewModel.state.dealerCards.isEmpty {
                     ForEach(0..<2, id: \.self) { _ in
-                        HoneycombSimpleCardBack().frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
+                        HoneycombSimpleCardBack()
+                            .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: cardW * 0.07)
+                                    .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
+                            )
                     }
                 } else {
                     ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { _, card in

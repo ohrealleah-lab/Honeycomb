@@ -16,24 +16,34 @@ struct HoneycombSimpleCardBack: View {
         Group {
             #if os(iOS)
             if let image = BundledCardBackImage.uiImage(for: theme) {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    // Some bundled art (e.g. Vulpera's priest.png) is a character
-                    // illustration on a mostly-transparent canvas, not a full-bleed card
-                    // back. That's invisible on a full card face, but in a tightly
-                    // overlapping tableau stack (Klondike's/Spider's face-down piles) only
-                    // a thin sliver of each card shows, and that sliver can land entirely
-                    // within the transparent margin, leaving it looking unfilled. An
-                    // explicit white backing (matching the card face's own white) keeps
-                    // every sliver looking like a solid card even where the art is
-                    // transparent, instead of relying on whatever's rendered behind it.
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                    )
+                // Explicit GeometryReader-driven sizing (matching CroppedCardBackImage
+                // below) rather than letting .background()/.clipShape() infer bounds from
+                // an unsized .resizable() image — that implicit chain let the white
+                // backing (and the card's own overlay stroke elsewhere) render larger than
+                // the visible card in some contexts, showing as stray whitespace/no
+                // border around the card instead of hugging its edges.
+                GeometryReader { geo in
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                        // Some bundled art (e.g. Vulpera's priest.png) is a character
+                        // illustration on a mostly-transparent canvas, not a full-bleed card
+                        // back. That's invisible on a full card face, but in a tightly
+                        // overlapping tableau stack (Klondike's/Spider's face-down piles) only
+                        // a thin sliver of each card shows, and that sliver can land entirely
+                        // within the transparent margin, leaving it looking unfilled. An
+                        // explicit white backing (matching the card face's own white) keeps
+                        // every sliver looking like a solid card even where the art is
+                        // transparent, instead of relying on whatever's rendered behind it.
+                        .background(Color.white)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                )
             } else if let entry = IOSCustomCardBackManager.shared.entry(named: theme),
                       let image = IOSCustomCardBackManager.shared.image(for: entry) {
                 CroppedCardBackImage(image: image, entry: entry)

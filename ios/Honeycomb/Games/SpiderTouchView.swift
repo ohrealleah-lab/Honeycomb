@@ -196,6 +196,10 @@ struct SpiderTouchView: View {
                 ForEach(0..<max(dealsLeft, 1), id: \.self) { i in
                     HoneycombSimpleCardBack()
                         .frame(width: cardW, height: cardH)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cardW * 0.07)
+                                .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
+                        )
                         .offset(x: CGFloat(i) * 6)
                 }
             }
