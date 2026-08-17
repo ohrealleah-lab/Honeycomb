@@ -146,12 +146,11 @@ struct HoneycombTouchView: View {
             if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner {
                 postGameOverlay
             }
-
-            SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator)
         }
         .sheet(isPresented: $showingDecks) { HoneycombDecksSheet(viewModel: viewModel) }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
+        .sheet(isPresented: $isMenuOpen) { GameSelectionFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingStats) { HoneycombStatsSheet(stats: viewModel.stats) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {

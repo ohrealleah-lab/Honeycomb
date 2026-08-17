@@ -81,8 +81,6 @@ struct KlondikeTouchView: View {
                 if showNoHintsBanner {
                     noHintsBanner
                 }
-
-                SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator)
             }
             // Anchors boardSpace — every pileFrames GeometryReader and DragGesture
             // .named(Self.boardSpace) reference below depends on this exact container.
@@ -92,6 +90,7 @@ struct KlondikeTouchView: View {
         .environment(\.feltColor, coordinator.feltColor)
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
+        .sheet(isPresented: $isMenuOpen) { GameSelectionFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingStats) { KlondikeStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {

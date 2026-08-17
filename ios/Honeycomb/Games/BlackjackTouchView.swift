@@ -54,12 +54,11 @@ struct BlackjackTouchView: View {
                     }
                     .frame(minHeight: geo.size.height)
                 }
-
-                SlideDownMenu(isOpen: $isMenuOpen, coordinator: coordinator)
             }
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
+        .sheet(isPresented: $isMenuOpen) { GameSelectionFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingStats) { BlackjackStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
