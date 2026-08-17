@@ -354,10 +354,6 @@ struct BlackjackSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(coordinator.L(.touchBlackjackBanner))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
             Group {
                 Stepper(coordinator.L(.startingCreditsFmt, viewModel.options.startingCredits),
                         value: $viewModel.options.startingCredits, in: 10...10000, step: 10)

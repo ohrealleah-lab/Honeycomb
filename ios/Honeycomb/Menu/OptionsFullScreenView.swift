@@ -17,8 +17,10 @@ struct OptionsFullScreenView<GameSettings: View>: View {
                 VStack(alignment: .leading, spacing: 24) {
                     languageSection
                     VStack(alignment: .leading, spacing: 10) {
-                        sectionHeading(coordinator.L(.options))
+                        sectionHeading(coordinator.gameMode.localizedDisplayName(language: coordinator.language))
                         gameSettings()
+                            .padding(12)
+                            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
                     }
                     statsRow
                     helpRow

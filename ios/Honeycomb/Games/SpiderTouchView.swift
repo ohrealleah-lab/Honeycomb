@@ -541,10 +541,6 @@ struct SpiderSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(coordinator.L(.touchSpiderBanner))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
             Picker(coordinator.L(.touchSuitsPickerLabel), selection: $viewModel.options.suitCount) {
                 Text(coordinator.L(.suitCount1)).tag(1)
                 Text(coordinator.L(.suitCount2)).tag(2)

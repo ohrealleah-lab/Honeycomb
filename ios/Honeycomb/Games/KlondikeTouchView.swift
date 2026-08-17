@@ -629,10 +629,6 @@ struct KlondikeSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(coordinator.L(.touchKlondikeBanner))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
             Picker(coordinator.L(.drawModeLabel), selection: $viewModel.options.drawMode) {
                 Text(coordinator.L(.drawOne)).tag(GameState.DrawMode.drawOne)
                 Text(coordinator.L(.drawThree)).tag(GameState.DrawMode.drawThree)

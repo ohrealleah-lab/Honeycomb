@@ -550,10 +550,6 @@ struct BeecellSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(coordinator.L(.touchBeecellBanner))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
             // Two-deck Beecell isn't offered on iOS — see the deckCount clamp in
             // BeecellTouchView's onAppear. Mac keeps its 1/2-deck picker; this section
             // is iOS-only.
