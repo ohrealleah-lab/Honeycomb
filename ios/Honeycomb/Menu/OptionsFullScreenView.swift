@@ -15,6 +15,7 @@ struct OptionsFullScreenView<GameSettings: View>: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    languageSection
                     VStack(alignment: .leading, spacing: 10) {
                         sectionHeading(coordinator.L(.options))
                         gameSettings()
@@ -42,6 +43,22 @@ struct OptionsFullScreenView<GameSettings: View>: View {
             case .blackjack:  BlackjackHelpView()
             case .honeycomb:  HoneycombHelpView()
             }
+        }
+    }
+
+    // Global setting (not per-game), so it's the same regardless of which game Options
+    // was opened from — matches mac's OptionsSheetShell placement/reasoning, which puts
+    // this above the per-game content for the same reason.
+    private var languageSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeading(coordinator.L(.language))
+            Picker(coordinator.L(.language), selection: $coordinator.language) {
+                ForEach(AppLanguage.allCases, id: \.self) { lang in
+                    Text(lang.displayName).tag(lang)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
         }
     }
 
