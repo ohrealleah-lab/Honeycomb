@@ -3,7 +3,9 @@ import PhotosUI
 
 /// Import flow for a custom table background: pick a photo, pinch/drag to position it
 /// (cropped to roughly the device's own aspect ratio so the preview matches what
-/// IOSBackgroundLayer will actually show full-screen), name it, save.
+/// IOSBackgroundLayer will actually show full-screen), save. No name field — unlike
+/// card backs, backgrounds are never shown with a label anywhere in the UI, so `Entry
+/// .name` only needs to be a unique lookup key internally; it's generated silently.
 struct CustomBackgroundImportSheet: View {
     var onImported: (String) -> Void
 
@@ -13,7 +15,6 @@ struct CustomBackgroundImportSheet: View {
 
     @State private var photoItem: PhotosPickerItem? = nil
     @State private var previewImage: UIImage? = nil
-    @State private var name: String = ""
     @State private var errorMessage: String? = nil
 
     @State private var scale: CGFloat = 1.0
@@ -55,11 +56,6 @@ struct CustomBackgroundImportSheet: View {
                     }
                 }
 
-                Section {
-                    TextField(coordinator.L(.touchNameFieldPlaceholder), text: $name)
-                        .onChange(of: name) { errorMessage = nil }
-                }
-
                 if let errorMessage {
                     Section {
                         Text(errorMessage).foregroundStyle(.red).font(.footnote)
@@ -74,7 +70,7 @@ struct CustomBackgroundImportSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(coordinator.L(.addShort)) { save() }
-                        .disabled(previewImage == nil || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(previewImage == nil)
                 }
             }
         }
@@ -82,10 +78,10 @@ struct CustomBackgroundImportSheet: View {
 
     private func save() {
         guard let previewImage else { return }
-        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if manager.addCustomBackground(name: cleaned, image: previewImage, scale: scale,
+        let generatedName = UUID().uuidString
+        if manager.addCustomBackground(name: generatedName, image: previewImage, scale: scale,
                                         offsetXFraction: offsetXFraction, offsetYFraction: offsetYFraction) {
-            onImported(cleaned)
+            onImported(generatedName)
             dismiss()
         } else {
             errorMessage = coordinator.L(.touchNameAlreadyTakenError)

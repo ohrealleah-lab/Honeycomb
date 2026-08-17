@@ -291,7 +291,10 @@ struct ThemesFullScreenView: View {
                 .frame(width: 70, height: 70)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
-                Text(entry.name).font(.caption2).foregroundStyle(.primary).lineLimit(1)
+                // No caption — unlike card backs, custom backgrounds are never shown
+                // with a name anywhere; this blank line just keeps row heights aligned
+                // with the felt-color tiles beside it, which do have captions.
+                Text(" ").font(.caption2)
             }
         }
         .buttonStyle(.plain)
