@@ -24,6 +24,10 @@ struct TouchCardView: View {
         customColors.isEnabled ? customColors.backgroundColor : .white
     }
 
+    private var outlineColor: Color {
+        customColors.isEnabled ? customColors.outlineColor : Color.black.opacity(0.85)
+    }
+
     private var rankText: String {
         switch card.rank {
         case 1: return "A"
@@ -54,12 +58,13 @@ struct TouchCardView: View {
                 .fill(faceColor)
 
             // Matches mac's CardView outline (`Color.black.opacity(0.85)` at lineWidth
-            // 0.75), applied unconditionally like mac's — not just when face up. A
-            // face-down card in a deep tableau stack (Klondike's stock, Spider's initial
-            // deal) needs the same edge definition an overlapping face-up card does, or
-            // adjacent card boundaries disappear into each other.
+            // 0.75 by default, or the user's custom outline color when enabled), applied
+            // unconditionally like mac's — not just when face up. A face-down card in a
+            // deep tableau stack (Klondike's stock, Spider's initial deal) needs the same
+            // edge definition an overlapping face-up card does, or adjacent card
+            // boundaries disappear into each other.
             RoundedRectangle(cornerRadius: width * 0.07)
-                .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
+                .stroke(outlineColor, lineWidth: 0.75)
 
             if card.faceUp {
                 if let slot = FaceCardSlot.slot(rank: card.rank, suit: card.suit),

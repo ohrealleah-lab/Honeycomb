@@ -11,9 +11,10 @@ struct CustomCardColorsSheet: View {
         NavigationStack {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 16)], spacing: 16) {
-                    cardColorSwatch(coordinator.L(.redSuitTextLabel), binding: $coordinator.customCardColors.redSuitColor)
-                    cardColorSwatch(coordinator.L(.blackSuitTextLabel), binding: $coordinator.customCardColors.blackSuitColor)
                     cardColorSwatch(coordinator.L(.cardBackgroundLabel), binding: $coordinator.customCardColors.backgroundColor)
+                    cardColorSwatch(coordinator.L(.cardOutlineLabel), binding: $coordinator.customCardColors.outlineColor)
+                    cardColorSwatch(coordinator.L(.blackSuitTextLabel), binding: $coordinator.customCardColors.blackSuitColor)
+                    cardColorSwatch(coordinator.L(.redSuitTextLabel), binding: $coordinator.customCardColors.redSuitColor)
                     cardColorSwatch(coordinator.L(.hintHighlightLabel), binding: $coordinator.customCardColors.hintHighlightColor)
                 }
                 .padding(16)
