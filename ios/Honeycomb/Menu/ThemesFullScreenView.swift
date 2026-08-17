@@ -38,9 +38,7 @@ struct ThemesFullScreenView: View {
                     if coordinator.feltColor == .custom && coordinator.customBackgroundName == nil {
                         feltColorSection
                     }
-                    cardBacksSection
-                    cardColorsSection
-                    faceCardArtSection
+                    customizationSection
                 }
                 .padding(16)
             }
@@ -107,7 +105,7 @@ struct ThemesFullScreenView: View {
     private var savedThemesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                sectionHeading(coordinator.L(.themesPanelTitle))
+                sectionHeading(coordinator.L(.savedThemesHeader))
                 Spacer()
                 Button {
                     isEditingSavedThemes.toggle()
@@ -225,18 +223,21 @@ struct ThemesFullScreenView: View {
     private var backgroundAndFeltSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeading(coordinator.L(.backgroundLabel))
-            LazyVGrid(columns: gridColumns, spacing: 14) {
-                ForEach(FeltColorTheme.allCases.filter { $0 != .custom }, id: \.self) { theme in
-                    feltTile(theme)
+            VStack(alignment: .leading, spacing: 10) {
+                LazyVGrid(columns: gridColumns, spacing: 14) {
+                    ForEach(FeltColorTheme.allCases.filter { $0 != .custom }, id: \.self) { theme in
+                        feltTile(theme)
+                    }
+                    customFeltTile
+                    ForEach(customBackgrounds.backgrounds) { entry in
+                        backgroundTile(entry)
+                    }
+                    addBackgroundTile
                 }
-                customFeltTile
-                ForEach(customBackgrounds.backgrounds) { entry in
-                    backgroundTile(entry)
-                }
-                addBackgroundTile
+                Toggle(coordinator.L(.feltVignetteToggle), isOn: $coordinator.showFeltVignette)
             }
-            Toggle(coordinator.L(.feltVignetteToggle), isOn: $coordinator.showFeltVignette)
-                .padding(.top, 4)
+            .padding(12)
+            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
         }
     }
 
@@ -365,67 +366,41 @@ struct ThemesFullScreenView: View {
         )
     }
 
-    // MARK: Card Backs
+    // MARK: Customization (Card Backs / Card Colors / Face Card Art)
 
-    private var cardBacksSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeading(coordinator.L(.menuSectionCardBack))
-            Button {
+    // One grouped card of nav rows instead of three sections each repeating their own
+    // row's label as a bold heading above it — the row's own text already says what it
+    // is, the same reasoning that dropped Options' per-game caption text (see
+    // OptionsFullScreenView).
+    private var customizationSection: some View {
+        VStack(spacing: 0) {
+            customizationRow(systemImage: "rectangle.stack", title: coordinator.L(.menuSectionCardBack)) {
                 showingCardBacksSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "rectangle.stack")
-                    Text(coordinator.L(.menuSectionCardBack))
-                    Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                }
-                .padding(12)
-                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
             }
-            .buttonStyle(.plain)
-        }
-    }
-
-    // MARK: Card Colors
-
-    private var cardColorsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeading(coordinator.L(.customCardColorHeading))
-            Button {
+            Divider().padding(.leading, 44)
+            customizationRow(systemImage: "paintpalette", title: coordinator.L(.customCardColorHeading)) {
                 showingCardColorsSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "paintpalette")
-                    Text(coordinator.L(.customCardColorHeading))
-                    Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                }
-                .padding(12)
-                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
             }
-            .buttonStyle(.plain)
+            Divider().padding(.leading, 44)
+            customizationRow(systemImage: "person.crop.rectangle", title: coordinator.L(.faceCardArtNavRow)) {
+                showingFaceArtSheet = true
+            }
         }
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
     }
 
-    // MARK: Face Card Art
-
-    private var faceCardArtSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeading(coordinator.L(.faceCardArtNavRow))
-            Button {
-                showingFaceArtSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "person.crop.rectangle")
-                    Text(coordinator.L(.faceCardArtNavRow))
-                    Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                }
-                .padding(12)
-                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+    private func customizationRow(systemImage: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: systemImage).frame(width: 24)
+                Text(title)
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
+            .padding(12)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: Shared helpers
