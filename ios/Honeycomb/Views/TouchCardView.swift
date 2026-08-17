@@ -47,13 +47,7 @@ struct TouchCardView: View {
         }
     }
 
-    // Whether this card is showing a user-imported custom face art image — unlike the
-    // built-in letter/suit glyphs (which stay clear of the corner index by design), a
-    // custom photo fills its whole 70%-of-card window edge-to-edge, and that window's
-    // edge sits closer to the corner than the corner index's own inset, so the two
-    // regions genuinely overlap. Z-order alone (corner index drawn last, so it's never
-    // literally hidden) isn't enough when the photo behind it is busy/dark — a plain
-    // rank+suit index with no backing can still read as unreadable/"clipped" against it.
+    // Whether this card is showing a user-imported custom face art image.
     private var customFaceArtImage: (entry: IOSCustomFaceArtManager.Entry, image: UIImage)? {
         guard let slot = FaceCardSlot.slot(rank: card.rank, suit: card.suit),
               let entry = IOSCustomFaceArtManager.shared.enabledEntry(for: slot),
@@ -73,8 +67,20 @@ struct TouchCardView: View {
 
             if card.faceUp {
                 if let art = customFaceArtImage {
+                    // Inset well clear of the corner rank/suit index rather than relying on
+                    // z-order — the corner index (padded 6% from the edge, sized ~12% of
+                    // card width for the suit icon, ~29% of card height once the rank text
+                    // above it is included) previously overlapped a centered 70%-of-card art
+                    // window by several percent of the card's width/height. That's a small
+                    // fraction of the *card*, but a large fraction of the tiny corner icon
+                    // itself, which is why a busy photo visibly ate into the suit glyph.
+                    // These fractions keep the art's bounding box outside that zone on all
+                    // four corners (both index copies), with a bit of safety margin since a
+                    // fresh contrast/backing attempt at the corner (rather than shrinking
+                    // the art) made the overlap look worse, not better — a visible white box
+                    // seam instead of a slightly-crowded corner.
                     ImageCropDisplay(image: art.image, entry: art.entry)
-                        .frame(width: width * 0.7, height: height * 0.7)
+                        .frame(width: width * 0.56, height: height * 0.42)
                 } else if card.rank >= 11 || card.rank == 1 {
                     // Face cards (and Ace) show just the rank letter, centered — mac uses
                     // Apple Chancery here, but that font isn't actually part of iOS's
@@ -108,13 +114,9 @@ struct TouchCardView: View {
                 }
 
                 cornerIndex
-                    .padding(4)
-                    .background(customFaceArtImage != nil ? faceColor.opacity(0.85) : .clear, in: RoundedRectangle(cornerRadius: 4))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .padding(width * 0.06)
                 cornerIndex
-                    .padding(4)
-                    .background(customFaceArtImage != nil ? faceColor.opacity(0.85) : .clear, in: RoundedRectangle(cornerRadius: 4))
                     .rotationEffect(.degrees(180))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding(width * 0.06)
