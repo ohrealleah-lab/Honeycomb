@@ -92,7 +92,7 @@ struct KlondikeTouchView: View {
         .environment(\.feltColor, coordinator.feltColor)
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
-        .sheet(isPresented: $showingStats) { KlondikeStatsSheet(stats: viewModel.statistics) }
+        .sheet(isPresented: $showingStats) { KlondikeStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
             OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
@@ -655,18 +655,23 @@ struct KlondikeSettingsSection: View {
 // MARK: - Stats sheet
 
 struct KlondikeStatsSheet: View {
-    let stats: GameStatistics
+    let viewModel: GameViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
+        let stats = viewModel.statistics
         NavigationStack {
             List {
                 row(coordinator.L(.gamesPlayed), "\(stats.gamesPlayed)")
                 row(coordinator.L(.gamesWon), "\(stats.gamesWon)")
+                row(coordinator.L(.highScoreColon), viewModel.highScoreString)
                 row(coordinator.L(.winRate), String(format: "%.0f%%", stats.winPercentage))
                 row(coordinator.L(.currentStreak), "\(stats.currentStreak)")
                 row(coordinator.L(.longestStreak), "\(stats.longestStreak)")
+                if stats.winningGamesCount > 0 {
+                    row(coordinator.L(.avgWinningTimeColon), String(format: "%02d:%02d", Int(stats.averageWinningTime) / 60, Int(stats.averageWinningTime) % 60))
+                }
                 if stats.shortestWinTime > 0 {
                     row(coordinator.L(.fastestWin), String(format: "%02d:%02d", stats.shortestWinTime / 60, stats.shortestWinTime % 60))
                 }

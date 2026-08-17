@@ -1380,4 +1380,8 @@ public enum StringKey: String, CaseIterable {
     case statPositionRight = "stat_position_right"
     /// Default/unset option in each iOS Card Bank stat-filter dropdown (matches any value)
     case statFilterAny = "stat_filter_any"
+    /// iOS Honeycomb stats sheet label for suddenDeathCount — plainer than mac's thematic "Most Swarms to the Death", matching iOS's literal stat-label style
+    case statSuddenDeathCountIos = "stat_sudden_death_count_ios"
+    /// iOS Honeycomb stats sheet label for fallenAces — plainer than mac's thematic "Queen's Falls", matching iOS's literal stat-label style
+    case statFallenAcesIos = "stat_fallen_aces_ios"
 }

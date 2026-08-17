@@ -707,6 +707,8 @@ public static class Strings
         [StringKey.StatPositionLeft] = "Left",
         [StringKey.StatPositionRight] = "Right",
         [StringKey.StatFilterAny] = "Any",
+        [StringKey.StatSuddenDeathCountIos] = "Sudden Deaths",
+        [StringKey.StatFallenAcesIos] = "Fallen Aces",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1398,5 +1400,7 @@ public static class Strings
         [StringKey.StatPositionLeft] = "Izquierda",
         [StringKey.StatPositionRight] = "Derecha",
         [StringKey.StatFilterAny] = "Cualquiera",
+        [StringKey.StatSuddenDeathCountIos] = "Muertes Súbitas",
+        [StringKey.StatFallenAcesIos] = "Ases Caídos",
     };
 }

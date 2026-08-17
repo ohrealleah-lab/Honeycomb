@@ -696,4 +696,6 @@ public enum StringKey
     StatPositionLeft,
     StatPositionRight,
     StatFilterAny,
+    StatSuddenDeathCountIos,
+    StatFallenAcesIos,
 }

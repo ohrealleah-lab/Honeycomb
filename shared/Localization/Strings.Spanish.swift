@@ -691,5 +691,7 @@ enum StringsSpanish {
         .statPositionLeft: "Izquierda",
         .statPositionRight: "Derecha",
         .statFilterAny: "Cualquiera",
+        .statSuddenDeathCountIos: "Muertes Súbitas",
+        .statFallenAcesIos: "Ases Caídos",
     ]
 }

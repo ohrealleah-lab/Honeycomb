@@ -921,6 +921,11 @@ struct HoneycombStatsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppCoordinator.self) private var coordinator
 
+    private var winRate: Double {
+        let decisiveGames = stats.gamesPlayed - stats.matchesDrawn
+        return decisiveGames > 0 ? Double(stats.matchesWon) / Double(decisiveGames) * 100 : 0
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -928,12 +933,20 @@ struct HoneycombStatsSheet: View {
                 statRow(coordinator.L(.statMatchesWon), stats.matchesWon)
                 statRow(coordinator.L(.statMatchesLost), stats.matchesLost)
                 statRow(coordinator.L(.statMatchesDrawn), stats.matchesDrawn)
+                HStack {
+                    Text(coordinator.L(.winRate))
+                    Spacer()
+                    Text(String(format: "%.1f%%", winRate)).foregroundStyle(.secondary)
+                }
                 statRow(coordinator.L(.statCardsCaptured), stats.cardsCaptured)
                 statRow(coordinator.L(.statCardsStolen), stats.cardsStolen)
+                statRow(coordinator.L(.statFallenAcesIos), stats.fallenAces)
                 statRow(coordinator.L(.statCurrentWinStreak), stats.currentWinStreak)
                 statRow(coordinator.L(.statLongestWinStreak), stats.longestWinStreak)
                 statRow(coordinator.L(.statFlawlessVictoriesIos), stats.flawlessVictories)
                 statRow(coordinator.L(.statSamePlusTriggers), stats.samePlusTriggers)
+                statRow(coordinator.L(.statSuddenDeathCountIos), stats.suddenDeathCount)
+                statRow(coordinator.L(.statTimesStartedOver), stats.timesStartedOver)
                 Section(coordinator.L(.statWinsByDifficultySection)) {
                     statRow(coordinator.L(.statBabyBee), stats.easyWins)
                     statRow(coordinator.L(.statHoneyBee), stats.mediumWins)

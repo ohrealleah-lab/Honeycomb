@@ -306,21 +306,19 @@ struct VideoPokerStatsSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                HStack {
-                    Text(coordinator.L(.touchHandsDealtStat))
-                    Spacer()
-                    Text("\(viewModel.state.handsDealt)").foregroundStyle(.secondary)
-                }
-                HStack {
-                    Text(coordinator.L(.royalFlushes))
-                    Spacer()
-                    Text("\(viewModel.statistics.royalFlushCount)").foregroundStyle(.secondary)
-                }
-                HStack {
-                    Text(coordinator.L(.touchSessionCreditsStat))
-                    Spacer()
-                    Text("\(viewModel.state.sessionCredits)").foregroundStyle(.secondary)
-                }
+                row(coordinator.L(.handsPlayed), "\(viewModel.statistics.handsPlayed)")
+                row(coordinator.L(.handsWon), "\(viewModel.statistics.handsWon)")
+                row(coordinator.L(.winRate), String(format: "%.1f%%", viewModel.statistics.winRate * 100))
+                row(coordinator.L(.statCurStreakShort), "\(viewModel.statistics.currentStreak)")
+                row(coordinator.L(.statBestStreak), "\(viewModel.statistics.longestStreak)")
+                row(coordinator.L(.biggestPay), "\(viewModel.statistics.biggestPayout)")
+                row(coordinator.L(.totalWagered), "\(viewModel.statistics.totalWagered)")
+                row(coordinator.L(.totalPaid), "\(viewModel.statistics.totalPaidOut)")
+                row(coordinator.L(.rtpStat), String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100))
+                row(coordinator.L(.royalFlushes), "\(viewModel.statistics.royalFlushCount)")
+                row(coordinator.L(.rebuysStat), "\(viewModel.statistics.rebuyCount)")
+                row(coordinator.L(.touchHandsDealtStat), "\(viewModel.state.handsDealt)")
+                row(coordinator.L(.touchSessionCreditsStat), "\(viewModel.state.sessionCredits)")
             }
             .navigationTitle(coordinator.L(.videoPokerStatistics))
             .navigationBarTitleDisplayMode(.inline)
@@ -329,6 +327,14 @@ struct VideoPokerStatsSheet: View {
                     Button(coordinator.L(.done)) { dismiss() }
                 }
             }
+        }
+    }
+
+    private func row(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(value).foregroundStyle(.secondary)
         }
     }
 }

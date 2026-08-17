@@ -572,11 +572,19 @@ struct BeecellStatsSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                row(coordinator.L(.gamesPlayed), "\(viewModel.currentModeStats.gamesPlayed)")
-                row(coordinator.L(.gamesWon), "\(viewModel.currentModeStats.gamesWon)")
-                row(coordinator.L(.currentStreak), "\(viewModel.currentModeStats.currentStreak)")
-                row(coordinator.L(.longestStreak), "\(viewModel.currentModeStats.longestStreak)")
+                let stats = viewModel.currentModeStats
+                row(coordinator.L(.gamesPlayed), "\(stats.gamesPlayed)")
+                row(coordinator.L(.gamesWon), "\(stats.gamesWon)")
                 row(coordinator.L(.highScore), viewModel.highScoreString)
+                row(coordinator.L(.winRate), String(format: "%.0f%%", stats.winPercentage))
+                row(coordinator.L(.currentStreak), "\(stats.currentStreak)")
+                row(coordinator.L(.longestStreak), "\(stats.longestStreak)")
+                if stats.winningGamesCount > 0 {
+                    row(coordinator.L(.avgWinningTimeColon), String(format: "%02d:%02d", Int(stats.averageWinningTime) / 60, Int(stats.averageWinningTime) % 60))
+                }
+                if stats.shortestWinTime > 0 {
+                    row(coordinator.L(.fastestWin), String(format: "%02d:%02d", stats.shortestWinTime / 60, stats.shortestWinTime % 60))
+                }
             }
             .navigationTitle(coordinator.L(.freecellStatisticsFmt, viewModel.options.deckCount == 1 ? coordinator.L(.deckCount1) : coordinator.L(.deckCount2)))
             .navigationBarTitleDisplayMode(.inline)

@@ -570,11 +570,15 @@ struct SpiderStatsSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                let stats = viewModel.currentModeStats
                 row(coordinator.L(.gamesPlayed), "\(viewModel.gamesPlayed)")
                 row(coordinator.L(.gamesWon), "\(viewModel.gamesWon)")
                 row(coordinator.L(.highScore), viewModel.highScoreString)
-                row(coordinator.L(.fastestWin), formatTime(viewModel.shortestWinTime))
+                row(coordinator.L(.winRate), String(format: "%.0f%%", stats.winPercentage))
+                row(coordinator.L(.currentStreak), "\(stats.currentStreak)")
+                row(coordinator.L(.longestStreak), "\(stats.longestStreak)")
                 row(coordinator.L(.statAverageWinTime), formatTime(Int(viewModel.averageWinningTime)))
+                row(coordinator.L(.fastestWin), formatTime(viewModel.shortestWinTime))
             }
             .navigationTitle(coordinator.L(.spiderStatisticsFmt, viewModel.options.suitCount, viewModel.options.suitCount == 1 ? coordinator.L(.labelSuitSingular) : coordinator.L(.labelSuitPlural)))
             .navigationBarTitleDisplayMode(.inline)
