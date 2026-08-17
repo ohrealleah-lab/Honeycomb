@@ -14,6 +14,10 @@ struct HoneycombRulesSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    opponentSection
+                        .disabled(isMidMatch)
+                        .opacity(isMidMatch ? 0.5 : 1)
+
                     VStack(alignment: .leading, spacing: 24) {
                         matchRulesSection
                         banListSection
@@ -40,12 +44,36 @@ struct HoneycombRulesSheet: View {
         }
     }
 
+    private var opponentSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeading(coordinator.L(.opponentPickerLabel))
+            Picker(coordinator.L(.opponentPickerLabel), selection: $viewModel.options.difficulty) {
+                ForEach(HoneycombDifficulty.allCases, id: \.self) { d in
+                    Text(honeycombLocalizedDifficultyName(d, language: coordinator.language)).tag(d)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+        }
+    }
+
     private var matchRulesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeading(coordinator.L(.matchRulesDisclosure))
             Text(coordinator.L(.matchRulesHint))
                 .font(.caption)
                 .foregroundColor(.secondary)
+
+            // Mirrors mac: forcing Normal Rules clears any selected rules, and picking
+            // a rule turns Force Normal back off — the two are mutually exclusive, not
+            // independent toggles.
+            Toggle(coordinator.L(.forceNormalRulesToggle), isOn: .init(
+                get: { viewModel.options.forceNormalMode },
+                set: { on in
+                    viewModel.options.forceNormalMode = on
+                    if on { viewModel.options.selectedRules.removeAll() }
+                }
+            ))
 
             ForEach(HoneycombRule.allCases.filter { $0 != .reverse }, id: \.self) { rule in
                 Toggle(honeycombLocalizedRuleName(rule.rawValue, language: coordinator.language), isOn: .init(
@@ -71,11 +99,13 @@ struct HoneycombRulesSheet: View {
                             guard updated.count < 4 else { return }
                             updated.insert(rule)
                             viewModel.options.selectedRules = updated
+                            viewModel.options.forceNormalMode = false
                         } else {
                             viewModel.options.selectedRules.remove(rule)
                         }
                     }
                 ))
+                .disabled(viewModel.options.forceNormalMode)
             }
         }
     }

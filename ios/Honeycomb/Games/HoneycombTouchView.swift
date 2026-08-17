@@ -156,10 +156,7 @@ struct HoneycombTouchView: View {
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
             OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
-                HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch) {
-                    showingOptions = false
-                    showingDecks = true
-                }
+                HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch)
             }
         }
         .sheet(isPresented: $showingRulesSheet) {
@@ -236,6 +233,11 @@ struct HoneycombTouchView: View {
             topBarIconButton(systemImage: "checklist", accessibilityLabel: coordinator.L(.toolbarRules)) {
                 showingRulesSheet = true
             }
+
+            topBarIconButton(systemImage: "rectangle.stack", accessibilityLabel: coordinator.L(.manageDecks)) {
+                showingDecks = true
+            }
+            .disabled(isMidMatch)
 
             Spacer()
 
@@ -883,7 +885,6 @@ struct HoneycombTouchView: View {
 struct HoneycombSettingsSection: View {
     @Bindable var viewModel: HoneycombViewModel
     let isMidMatch: Bool
-    var onManageDecks: () -> Void
     @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
@@ -892,12 +893,6 @@ struct HoneycombSettingsSection: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            Button(action: onManageDecks) {
-                Label(coordinator.L(.manageDecks), systemImage: "square.grid.2x2")
-            }
-            .buttonStyle(.bordered)
-            .disabled(isMidMatch)
-
             Group {
                 Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
                 Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
@@ -905,15 +900,6 @@ struct HoneycombSettingsSection: View {
                 Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
                 Toggle(coordinator.L(.hideHintButton), isOn: $viewModel.options.hideHintButton)
                 Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
-
-                Picker(coordinator.L(.opponentPickerLabel), selection: $viewModel.options.difficulty) {
-                    ForEach(HoneycombDifficulty.allCases, id: \.self) { d in
-                        Text(honeycombLocalizedDifficultyName(d, language: coordinator.language)).tag(d)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                Toggle(coordinator.L(.forceNormalRulesToggle), isOn: $viewModel.options.forceNormalMode)
             }
             // Options only take effect on the next match — same mid-match gate as mac.
             .disabled(isMidMatch)
