@@ -23,7 +23,20 @@ struct VideoPokerTouchView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let cardW = min((geo.size.width - 24 - 4 * 8) / 5, 110)
+            // Matches mac's hand-area sizing philosophy: cards are their own generous,
+            // near-fixed size (mac: 77x122 scaled 1.4x ≈ 108x171) rather than shrinking
+            // to whatever fits 5-across at a fixed positive gap. A phone's width can't
+            // fit 5 cards that size with room to spare the way mac's window can, so once
+            // the natural (cardW * 5) row would overflow, the gap between cards goes
+            // negative — cards overlap like a fanned hand instead of shrinking — until it
+            // hits room to spare again (iPad, landscape), where it falls back to a normal
+            // positive gap.
+            let cardW = min(geo.size.width * 0.26, 120)
+            let naturalRowWidth = cardW * 5
+            let availableRowWidth = geo.size.width - 24
+            let handSpacing: CGFloat = naturalRowWidth > availableRowWidth
+                ? (availableRowWidth - naturalRowWidth) / 4
+                : 8
             let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
@@ -53,7 +66,7 @@ struct VideoPokerTouchView: View {
 
                         resultBanner
 
-                        handRow(cardW: cardW)
+                        handRow(cardW: cardW, spacing: handSpacing)
                             .padding(.horizontal, 12)
 
                         Spacer(minLength: 4)
@@ -139,16 +152,21 @@ struct VideoPokerTouchView: View {
 
     // MARK: Hand
 
-    private func handRow(cardW: CGFloat) -> some View {
-        HStack(spacing: 8) {
+    private func handRow(cardW: CGFloat, spacing: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: spacing) {
             if viewModel.state.hand.isEmpty {
-                ForEach(0..<5, id: \.self) { _ in
+                ForEach(0..<5, id: \.self) { i in
                     HoneycombSimpleCardBack()
                         .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
                         .overlay(
                             RoundedRectangle(cornerRadius: cardW * 0.07)
                                 .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
                         )
+                        // Later HStack children draw on top; when spacing goes negative
+                        // (overlap) each card's left edge — where the corner rank/suit
+                        // index lives — stays uncovered by its left neighbor, same as a
+                        // fanned hand of real cards.
+                        .zIndex(Double(i))
                 }
             } else {
                 ForEach(Array(viewModel.state.hand.enumerated()), id: \.element.id) { i, card in
@@ -169,6 +187,7 @@ struct VideoPokerTouchView: View {
                                 holdHaptic.impactOccurred()
                             }
                     }
+                    .zIndex(Double(i))
                 }
             }
         }
