@@ -100,7 +100,17 @@ struct BeecellTouchView: View {
                 BeecellSettingsSection(viewModel: viewModel)
             }
         }
-        .onAppear { viewModel.startTimerIfNeeded() }
+        .onAppear {
+            // Two-deck Beecell is mac-only — 104 cards across 10 tableau columns don't
+            // fit a phone/tablet screen at a readable size. If a synced options value
+            // ever comes in as 2 (e.g. from mac), fall back to a fresh 1-deck game
+            // rather than trying to render an unsupported board.
+            if viewModel.options.deckCount != 1 {
+                viewModel.options.deckCount = 1
+                viewModel.startNewGame()
+            }
+            viewModel.startTimerIfNeeded()
+        }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
         // Mirrors the mac view's NSWindow.didResignKeyNotification safety net: SwiftUI's
         // DragGesture has no "cancelled" callback, so a drag interrupted by the app
@@ -544,12 +554,9 @@ struct BeecellSettingsSection: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            Picker(coordinator.L(.touchDecksPickerLabel), selection: $viewModel.options.deckCount) {
-                Text(coordinator.L(.touchSingleDeckOption)).tag(1)
-                Text(coordinator.L(.touchDoubleDeckOption)).tag(2)
-            }
-            .pickerStyle(.segmented)
-
+            // Two-deck Beecell isn't offered on iOS — see the deckCount clamp in
+            // BeecellTouchView's onAppear. Mac keeps its 1/2-deck picker; this section
+            // is iOS-only.
             Toggle(coordinator.L(.timed), isOn: $viewModel.options.isTimed)
             Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
             Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
