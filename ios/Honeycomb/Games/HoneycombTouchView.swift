@@ -109,6 +109,14 @@ struct HoneycombTouchView: View {
                     .coordinateSpace(name: Self.dragSpace)
                     .scaleEffect(scale)
                     .frame(width: geo.size.width, height: geo.size.height)
+                    // Neither GeometryReader nor .frame() clip overflowing content by
+                    // default — if the pre-game placeholder hand's actual rendered size
+                    // doesn't perfectly match intrinsicSize's assumption, the scaled
+                    // content can bleed outside this box in any direction, including
+                    // upward into the topBar above (same root cause as the "Start"
+                    // button overflow fixed earlier). Clip so the board never visually
+                    // escapes its allocated space regardless of scale-math precision.
+                    .clipped()
                 }
             }
 
