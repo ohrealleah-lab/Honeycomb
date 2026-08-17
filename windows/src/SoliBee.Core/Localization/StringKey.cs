@@ -691,4 +691,9 @@ public enum StringKey
     CardBackDefaultName,
     AddPhotoShort,
     FeltCustomShort,
+    StatPositionTop,
+    StatPositionBottom,
+    StatPositionLeft,
+    StatPositionRight,
+    StatFilterAny,
 }

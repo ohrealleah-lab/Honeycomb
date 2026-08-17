@@ -686,5 +686,10 @@ enum StringsEnglish {
         .cardBackDefaultName: "Default",
         .addPhotoShort: "Add Photo",
         .feltCustomShort: "Custom Felt",
+        .statPositionTop: "Top",
+        .statPositionBottom: "Bottom",
+        .statPositionLeft: "Left",
+        .statPositionRight: "Right",
+        .statFilterAny: "Any",
     ]
 }

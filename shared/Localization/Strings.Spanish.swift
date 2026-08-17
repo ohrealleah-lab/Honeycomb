@@ -686,5 +686,10 @@ enum StringsSpanish {
         .cardBackDefaultName: "Predeterminado",
         .addPhotoShort: "Añadir Foto",
         .feltCustomShort: "Fieltro Personalizado",
+        .statPositionTop: "Arriba",
+        .statPositionBottom: "Abajo",
+        .statPositionLeft: "Izquierda",
+        .statPositionRight: "Derecha",
+        .statFilterAny: "Cualquiera",
     ]
 }

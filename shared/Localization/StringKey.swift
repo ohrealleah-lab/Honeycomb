@@ -1370,4 +1370,14 @@ public enum StringKey: String, CaseIterable {
     case addPhotoShort = "add_photo_short"
     /// Caption on the iOS Themes sheet Background grid's Custom Felt tile — shorter than feltCustomColor ("Custom Felt Color") so it fits the narrow tile without truncating
     case feltCustomShort = "felt_custom_short"
+    /// Label on the iOS Card Bank stat-filter dropdown for a card's top corner value
+    case statPositionTop = "stat_position_top"
+    /// Label on the iOS Card Bank stat-filter dropdown for a card's bottom corner value
+    case statPositionBottom = "stat_position_bottom"
+    /// Label on the iOS Card Bank stat-filter dropdown for a card's left corner value
+    case statPositionLeft = "stat_position_left"
+    /// Label on the iOS Card Bank stat-filter dropdown for a card's right corner value
+    case statPositionRight = "stat_position_right"
+    /// Default/unset option in each iOS Card Bank stat-filter dropdown (matches any value)
+    case statFilterAny = "stat_filter_any"
 }

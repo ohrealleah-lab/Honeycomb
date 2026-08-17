@@ -20,6 +20,16 @@ struct HoneycombDecksSheet: View {
     @State private var filterSuit: String? = nil
     @State private var filterFavoritesOnly = false
 
+    // Mobile counterpart to mac's freeform stat search (type a value onto a mini card
+    // graphic) — no room for that here, so four dropdowns instead. nil = "Any"/don't
+    // filter that side; 1-9 direct, 10 = "A". Only ever read by statSearchedCardBank
+    // below, which backs just the main Card Bank browse grid — Deck Builder's embedded
+    // grid keeps using plain filteredCardBank, matching mac's separation.
+    @State private var filterStatTop: Int? = nil
+    @State private var filterStatRight: Int? = nil
+    @State private var filterStatBottom: Int? = nil
+    @State private var filterStatLeft: Int? = nil
+
     enum Tab: String, CaseIterable {
         case decks = "Saved Decks"
         case bank = "Card Bank"
@@ -34,6 +44,43 @@ struct HoneycombDecksSheet: View {
             if filterFavoritesOnly && !profile.favoriteCardIds.contains(id) { return false }
             return true
         }
+    }
+
+    // Index order [Top, Right, Bottom, Left] matches HoneycombCardData.stats
+    // (see HoneycombCardView's stats[0]/[1]/[2]/[3] usage) — same order mac's
+    // statFilters uses, independent of whatever order the dropdowns are laid out in.
+    private var statFilters: [Int?] {
+        [filterStatTop, filterStatRight, filterStatBottom, filterStatLeft]
+    }
+
+    // AND across every filled-in side: a card survives only if each filled side is
+    // within ±2 of its stat (exact or near). Exact-only matches (every filled side
+    // dead-on) sort first; anything relying on the ±2 tolerance sorts after and is
+    // reported in `near` so the grid can render it dimmed. Mirrors mac's
+    // statSearchedCardBank exactly.
+    private var statSearchedCardBank: (ids: [Int], near: Set<Int>) {
+        let filters = statFilters
+        guard filters.contains(where: { $0 != nil }) else { return (filteredCardBank, []) }
+
+        let db = HoneycombDatabase.shared
+        var exact: [Int] = []
+        var near: [Int] = []
+        for id in filteredCardBank {
+            guard let card = db.card(id: id) else { continue }
+            var isNear = false
+            var matches = true
+            for (i, target) in filters.enumerated() {
+                guard let target else { continue }
+                let diff = abs(card.stats[i] - target)
+                if diff == 0 { continue }
+                if diff <= 2 { isNear = true; continue }
+                matches = false
+                break
+            }
+            if !matches { continue }
+            if isNear { near.append(id) } else { exact.append(id) }
+        }
+        return (exact + near, Set(near))
     }
 
     var body: some View {
@@ -180,9 +227,13 @@ struct HoneycombDecksSheet: View {
             CardBankFilterBar(filterStar: $filterStar, filterSuit: $filterSuit, filterFavoritesOnly: $filterFavoritesOnly)
                 .padding(.horizontal)
 
+            statFilterRow
+                .padding(.horizontal)
+
             ScrollView {
+                let searched = statSearchedCardBank
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 12)], spacing: 12) {
-                    ForEach(filteredCardBank, id: \.self) { cardId in
+                    ForEach(searched.ids, id: \.self) { cardId in
                         if let cardData = HoneycombDatabase.shared.card(id: cardId) {
                             Button {
                                 profile.toggleFavorite(id: cardId)
@@ -198,6 +249,10 @@ struct HoneycombDecksSheet: View {
                                             .shadow(color: .white, radius: 2)
                                             .opacity(profile.favoriteCardIds.contains(cardId) ? 1 : 0)
                                     }
+                                    // Cards that only matched via the ±2 tolerance (not an
+                                    // exact hit on every filled dropdown) render dimmed —
+                                    // mirrors mac's freeform stat search.
+                                    .opacity(searched.near.contains(cardId) ? 0.4 : 1.0)
                             }
                             .buttonStyle(.plain)
                         }
@@ -206,6 +261,38 @@ struct HoneycombDecksSheet: View {
                 .padding()
             }
         }
+    }
+
+    private var statFilterRow: some View {
+        HStack(spacing: 10) {
+            statDropdown(coordinator.L(.statPositionTop), value: $filterStatTop)
+            statDropdown(coordinator.L(.statPositionBottom), value: $filterStatBottom)
+            statDropdown(coordinator.L(.statPositionLeft), value: $filterStatLeft)
+            statDropdown(coordinator.L(.statPositionRight), value: $filterStatRight)
+            Spacer()
+        }
+    }
+
+    private func statDropdown(_ label: String, value: Binding<Int?>) -> some View {
+        Menu {
+            Button(coordinator.L(.statFilterAny)) { value.wrappedValue = nil }
+            ForEach(1...10, id: \.self) { v in
+                Button(statValueLabel(v)) { value.wrappedValue = v }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(label).font(.caption2).foregroundStyle(.secondary)
+                Text(value.wrappedValue.map(statValueLabel) ?? coordinator.L(.statFilterAny))
+                    .font(.caption.bold())
+                Image(systemName: "chevron.down").font(.system(size: 9))
+            }
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            .background(Color.black.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
+    private func statValueLabel(_ value: Int) -> String {
+        value >= 10 ? "A" : "\(value)"
     }
 
     struct DeckEditWrapper: Identifiable {

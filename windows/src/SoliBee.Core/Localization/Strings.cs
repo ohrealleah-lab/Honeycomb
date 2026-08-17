@@ -702,6 +702,11 @@ public static class Strings
         [StringKey.CardBackDefaultName] = "Default",
         [StringKey.AddPhotoShort] = "Add Photo",
         [StringKey.FeltCustomShort] = "Custom Felt",
+        [StringKey.StatPositionTop] = "Top",
+        [StringKey.StatPositionBottom] = "Bottom",
+        [StringKey.StatPositionLeft] = "Left",
+        [StringKey.StatPositionRight] = "Right",
+        [StringKey.StatFilterAny] = "Any",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1388,5 +1393,10 @@ public static class Strings
         [StringKey.CardBackDefaultName] = "Predeterminado",
         [StringKey.AddPhotoShort] = "Añadir Foto",
         [StringKey.FeltCustomShort] = "Fieltro Personalizado",
+        [StringKey.StatPositionTop] = "Arriba",
+        [StringKey.StatPositionBottom] = "Abajo",
+        [StringKey.StatPositionLeft] = "Izquierda",
+        [StringKey.StatPositionRight] = "Derecha",
+        [StringKey.StatFilterAny] = "Cualquiera",
     };
 }
