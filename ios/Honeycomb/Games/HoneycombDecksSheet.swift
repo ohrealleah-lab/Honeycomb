@@ -114,23 +114,25 @@ struct HoneycombDecksSheet: View {
                     Text(coordinator.L(.deckActiveBadge)).font(.caption.bold()).foregroundStyle(.green)
                 }
                 Spacer()
+                if !deck.name.isEmpty {
+                    Button(coordinator.L(.deckSetActive)) {
+                        viewModel.options.activeDeckIndex = index
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(isActive)
+                }
                 Button(deck.name.isEmpty ? coordinator.L(.deckCreate) : coordinator.L(.edit)) {
                     editingDeckIndex = index
                 }
                 .buttonStyle(.bordered)
             }
-            if !isActive && !deck.name.isEmpty {
-                Button(coordinator.L(.deckSetActive)) {
-                    viewModel.options.activeDeckIndex = index
-                }
-                .buttonStyle(.borderless)
-                .font(.caption)
-            }
-            HStack(spacing: 4) {
+            // Doubled from 44x62 — on a phone screen these were too small to read the
+            // rank/suit at a glance, especially for the active deck a player checks most.
+            HStack(spacing: 8) {
                 ForEach(deck.cardIds, id: \.self) { cardId in
                     if let cardData = HoneycombDatabase.shared.card(id: cardId) {
                         HoneycombCardView(card: HoneycombCard(data: cardData, owner: .player),
-                                          size: CGSize(width: 44, height: 62), isFlipped: false,
+                                          size: CGSize(width: 88, height: 124), isFlipped: false,
                                           useOwnershipColoring: false)
                     }
                 }
