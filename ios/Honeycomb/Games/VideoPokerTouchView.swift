@@ -23,20 +23,22 @@ struct VideoPokerTouchView: View {
 
     var body: some View {
         GeometryReader { geo in
-            // Matches mac's hand-area sizing philosophy: cards are their own generous,
-            // near-fixed size (mac: 77x122 scaled 1.4x ≈ 108x171) rather than shrinking
-            // to whatever fits 5-across at a fixed positive gap. A phone's width can't
-            // fit 5 cards that size with room to spare the way mac's window can, so once
-            // the natural (cardW * 5) row would overflow, the gap between cards goes
-            // negative — cards overlap like a fanned hand instead of shrinking — until it
-            // hits room to spare again (iPad, landscape), where it falls back to a normal
-            // positive gap.
-            let cardW = min(geo.size.width * 0.26, 120)
-            let naturalRowWidth = cardW * 5
+            // Matches mac's hand-area sizing philosophy: cards are their own generous
+            // size (mac: 77x122 scaled 1.4x ≈ 108x171) rather than shrinking to whatever
+            // fits 5-across at a fixed positive gap. The old 120pt width cap was hit on
+            // every iPad-sized screen regardless of how much room was actually available,
+            // leaving cards small with a lot of dead space below/beside them — raised
+            // considerably so cards keep growing on bigger screens. Overlap is now the
+            // *default* look (a fanned hand), not just a narrow-screen fallback: an
+            // 18%-of-card-width negative gap on every screen, growing more negative only
+            // if that's still not enough room to fit all 5.
+            let cardW = min(geo.size.width * 0.32, 190)
+            let overlapSpacing = -cardW * 0.18
+            let overlappedRowWidth = cardW * 5 + overlapSpacing * 4
             let availableRowWidth = geo.size.width - 24
-            let handSpacing: CGFloat = naturalRowWidth > availableRowWidth
-                ? (availableRowWidth - naturalRowWidth) / 4
-                : 8
+            let handSpacing: CGFloat = overlappedRowWidth > availableRowWidth
+                ? (availableRowWidth - cardW * 5) / 4
+                : overlapSpacing
             let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
