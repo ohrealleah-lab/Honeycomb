@@ -285,20 +285,34 @@ struct HoneycombTouchView: View {
 
     // MARK: Scaled game content
 
+    // These formulas mirror gameContent(landscape:)'s actual view tree (spacing,
+    // padding, bannerRow's fixed 38pt, boardGrid's own .padding(.vertical, 4)) term
+    // for term, rather than approximating — a computed scale even a few points too
+    // generous makes the *real* rendered content taller than the box it's fit into,
+    // and since the GeometryReader below now clips to that box (so the overflow
+    // can't bleed into the topBar above it), an underestimate here means real
+    // content — the pre-game placeholder hand, most visibly — gets its top cropped
+    // instead. The 1.04x pads against anything not perfectly predictable from this
+    // static formula (SwiftUI's own text line-height rounding, etc.) by leaving a
+    // little unused margin instead of risking that same crop.
     private func intrinsicSize(landscape: Bool) -> CGSize {
         if landscape {
             let handColumnWidth = 2 * Self.playerCardSize.width + Self.handSpacing
             let boardWidth = 3 * Self.boardCardSize.width + 2 * Self.boardSpacing
             let width = handColumnWidth * 2 + boardWidth + 2 * 24 + 32
             let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
-            return CGSize(width: width, height: boardHeight + 46 + 24)
+            // Board column: VStack(spacing: 8) { bannerRow(38); boardGrid } = boardHeight + 46,
+            // plus the outer HStack's .padding(16) top+bottom = 32.
+            let height = boardHeight + 46 + 32
+            return CGSize(width: width * 1.02, height: height * 1.04)
         } else {
             let width = 5 * Self.playerCardSize.width + 4 * Self.handSpacing + 16
-            let height = Self.opponentCardSize.height + 8
-                + 38 + 8
-                + 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
-                + 12 + Self.playerCardSize.height + 16
-            return CGSize(width: width, height: height)
+            let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
+            // VStack(spacing: 8) { oppRow; bannerRow(38); boardGrid.padding(.vertical,4); playerRow }
+            // .padding(8) = oppRow + boardHeight + playerRow + (3 gaps*8 + bannerRow 38 +
+            // boardGrid's own vertical padding 8 + outer padding 16).
+            let height = Self.opponentCardSize.height + Self.playerCardSize.height + boardHeight + 86
+            return CGSize(width: width * 1.02, height: height * 1.04)
         }
     }
 
