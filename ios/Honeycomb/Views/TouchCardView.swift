@@ -74,10 +74,16 @@ struct TouchCardView: View {
                     // system font instead of erroring). Snell Roundhand is a genuine
                     // cursive/calligraphic font Apple does ship on iOS, so it's the
                     // closest same-spirit substitute without embedding a redistributed
-                    // copy of Apple's own mac-only font file.
+                    // copy of Apple's own mac-only font file. Sized down from the earlier
+                    // 0.62 — Snell Roundhand's glyphs run wider than a block font at the
+                    // same point size, and this ZStack has no clip, so an oversized glyph
+                    // bled past the card's edges into whatever sat behind/beside it
+                    // (looked like an oversized *card*, not an oversized letter).
                     Text(rankText)
-                        .font(.custom("SnellRoundhand-Bold", size: width * 0.62))
+                        .font(.custom("SnellRoundhand-Bold", size: width * 0.46))
                         .foregroundStyle(suitColor)
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
                 } else {
                     Image(systemName: suitSymbol)
                         .resizable().aspectRatio(contentMode: .fit)
@@ -97,6 +103,12 @@ struct TouchCardView: View {
             }
         }
         .frame(width: width, height: height)
+        // A ZStack doesn't clip its children by default — without this, an oversized
+        // face-card letter (or any other content that overflows its nominal size) bleeds
+        // past the card's rounded-rect edge into whatever's behind/beside it instead of
+        // just being cut off, which in a tight tableau stack reads as a misshapen or
+        // oversized card rather than clipped text.
+        .clipShape(RoundedRectangle(cornerRadius: width * 0.07))
         // Matches mac's CardView exactly — in a tightly overlapping tableau, this subtle
         // shadow (not just the thin 0.75pt stroke above) is what actually separates
         // adjacent card edges visually; without it stacked cards read as one flat block.
