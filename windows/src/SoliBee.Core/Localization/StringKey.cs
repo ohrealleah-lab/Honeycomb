@@ -689,4 +689,6 @@ public enum StringKey
     TouchNameAlreadyTakenError,
     TouchEnabledToggle,
     CardBackDefaultName,
+    AddPhotoShort,
+    FeltCustomShort,
 }

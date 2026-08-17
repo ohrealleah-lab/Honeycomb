@@ -1366,4 +1366,8 @@ public enum StringKey: String, CaseIterable {
     case touchEnabledToggle = "touch_enabled_toggle"
     /// Auto-filled base name for a new custom card back before the user renames it (appended with ' N' for the 2nd, 3rd, ... duplicate)
     case cardBackDefaultName = "card_back_default_name"
+    /// Caption on the iOS Themes sheet Background grid's Add tile (imports a photo, unlike Card Back/Face Art's plain "Add")
+    case addPhotoShort = "add_photo_short"
+    /// Caption on the iOS Themes sheet Background grid's Custom Felt tile — shorter than feltCustomColor ("Custom Felt Color") so it fits the narrow tile without truncating
+    case feltCustomShort = "felt_custom_short"
 }

@@ -700,6 +700,8 @@ public static class Strings
         [StringKey.TouchNameAlreadyTakenError] = "That name is already taken — pick another.",
         [StringKey.TouchEnabledToggle] = "Enabled",
         [StringKey.CardBackDefaultName] = "Default",
+        [StringKey.AddPhotoShort] = "Add Photo",
+        [StringKey.FeltCustomShort] = "Custom Felt",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1384,5 +1386,7 @@ public static class Strings
         [StringKey.TouchNameAlreadyTakenError] = "Ese nombre ya está en uso — elige otro.",
         [StringKey.TouchEnabledToggle] = "Activado",
         [StringKey.CardBackDefaultName] = "Predeterminado",
+        [StringKey.AddPhotoShort] = "Añadir Foto",
+        [StringKey.FeltCustomShort] = "Fieltro Personalizado",
     };
 }

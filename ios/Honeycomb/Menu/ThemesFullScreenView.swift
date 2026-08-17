@@ -269,7 +269,7 @@ struct ThemesFullScreenView: View {
                     .frame(width: 70, height: 70)
                     .overlay(Image(systemName: "paintbrush.pointed.fill").foregroundStyle(.white))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
-                Text(coordinator.L(.feltCustomColor)).font(.caption2).foregroundStyle(.primary).lineLimit(1)
+                Text(coordinator.L(.feltCustomShort)).font(.caption2).foregroundStyle(.primary).lineLimit(1)
             }
         }
         .buttonStyle(.plain)
@@ -310,7 +310,7 @@ struct ThemesFullScreenView: View {
                     .fill(Color.black.opacity(0.15))
                     .frame(width: 70, height: 70)
                     .overlay(Image(systemName: "plus").font(.title3.weight(.bold)).foregroundStyle(.secondary))
-                Text(coordinator.L(.addShort)).font(.caption2).foregroundStyle(.primary)
+                Text(coordinator.L(.addPhotoShort)).font(.caption2).foregroundStyle(.primary)
             }
         }
         .buttonStyle(.plain)

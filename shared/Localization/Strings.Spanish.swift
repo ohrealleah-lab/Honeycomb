@@ -684,5 +684,7 @@ enum StringsSpanish {
         .touchNameAlreadyTakenError: "Ese nombre ya está en uso — elige otro.",
         .touchEnabledToggle: "Activado",
         .cardBackDefaultName: "Predeterminado",
+        .addPhotoShort: "Añadir Foto",
+        .feltCustomShort: "Fieltro Personalizado",
     ]
 }
