@@ -19,6 +19,16 @@ struct HoneycombSimpleCardBack: View {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+                    // Some bundled art (e.g. Vulpera's priest.png) is a character
+                    // illustration on a mostly-transparent canvas, not a full-bleed card
+                    // back. That's invisible on a full card face, but in a tightly
+                    // overlapping tableau stack (Klondike's/Spider's face-down piles) only
+                    // a thin sliver of each card shows, and that sliver can land entirely
+                    // within the transparent margin — reading as "no card back at all"
+                    // instead of the intended art. A dark backing behind the image (rather
+                    // than relying on TouchCardView's white card-face fill showing through)
+                    // keeps every sliver reading as "this is a themed card back," not blank.
+                    .background(Color.black.opacity(0.85))
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
@@ -27,6 +37,7 @@ struct HoneycombSimpleCardBack: View {
             } else if let entry = IOSCustomCardBackManager.shared.entry(named: theme),
                       let image = IOSCustomCardBackManager.shared.image(for: entry) {
                 CroppedCardBackImage(image: image, entry: entry)
+                    .background(Color.black.opacity(0.85))
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
