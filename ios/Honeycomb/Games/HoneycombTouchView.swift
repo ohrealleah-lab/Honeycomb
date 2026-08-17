@@ -85,6 +85,11 @@ struct HoneycombTouchView: View {
                 topBar
                     .padding(.horizontal, 12)
                     .frame(height: 44)
+                    // The pre-game "Start" button (borderedProminent + icon label) is
+                    // taller than the other topBar controls, so left unclipped it
+                    // overflows this fixed frame and bleeds into the board below —
+                    // clip so every topBar state stays confined to its 44pt band.
+                    .clipped()
 
                 GeometryReader { geo in
                     let isLandscape = geo.size.width > geo.size.height
