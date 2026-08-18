@@ -298,40 +298,47 @@ struct BlackjackTouchView: View {
                         }
                     }
                 }
-            }
-            ForEach(Array(viewModel.state.playerHands.enumerated()), id: \.offset) { i, hand in
-                VStack(spacing: 6) {
-                    HStack(spacing: 8) {
-                        if viewModel.state.playerHands.count > 1 {
-                            Circle()
-                                .fill(i == viewModel.state.activeHandIndex && viewModel.state.phase == .playing
-                                      ? Color.yellow : Color.white.opacity(0.3))
-                                .frame(width: 8, height: 8)
+            } else {
+                // showCardBackPlaceholders can be true while playerHands still holds
+                // the just-finished hand (it only clears on the next deal) — without
+                // this else, the placeholder above and this ForEach rendered at the
+                // same time during the post-result reset pause, showing the old played
+                // cards stacked directly under the fresh face-down placeholders instead
+                // of them disappearing.
+                ForEach(Array(viewModel.state.playerHands.enumerated()), id: \.offset) { i, hand in
+                    VStack(spacing: 6) {
+                        HStack(spacing: 8) {
+                            if viewModel.state.playerHands.count > 1 {
+                                Circle()
+                                    .fill(i == viewModel.state.activeHandIndex && viewModel.state.phase == .playing
+                                          ? Color.yellow : Color.white.opacity(0.3))
+                                    .frame(width: 8, height: 8)
+                            }
+                            // No inline per-hand result tag here — matches mac's playerArea
+                            // (BlackjackView.swift), which only ever shows the hand value,
+                            // never a WIN/LOSS/PUSH label beside it; the result is
+                            // communicated once, by the big resultBanner below.
+                            Text("\(handLabel(hand, index: i))  \(hand.value)\(hand.isBust ? coordinator.L(.touchBustSuffix) : "")")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(hand.isBust ? .red : .white)
                         }
-                        // No inline per-hand result tag here — matches mac's playerArea
-                        // (BlackjackView.swift), which only ever shows the hand value,
-                        // never a WIN/LOSS/PUSH label beside it; the result is
-                        // communicated once, by the big resultBanner below.
-                        Text("\(handLabel(hand, index: i))  \(hand.value)\(hand.isBust ? coordinator.L(.touchBustSuffix) : "")")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(hand.isBust ? .red : .white)
-                    }
-                    HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, isSplit: viewModel.state.playerHands.count > 1)) {
-                        ForEach(Array(hand.cards.enumerated()), id: \.offset) { i, card in
-                            TouchCardView(card: card, width: cardW)
-                                .opacity(cardsVisible ? 1 : 0)
-                                .animation(.easeIn(duration: 0.15).delay(Double(i) * 0.08), value: cardsVisible)
-                                .zIndex(Double(i))
+                        HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, isSplit: viewModel.state.playerHands.count > 1)) {
+                            ForEach(Array(hand.cards.enumerated()), id: \.offset) { i, card in
+                                TouchCardView(card: card, width: cardW)
+                                    .opacity(cardsVisible ? 1 : 0)
+                                    .animation(.easeIn(duration: 0.15).delay(Double(i) * 0.08), value: cardsVisible)
+                                    .zIndex(Double(i))
+                            }
                         }
                     }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(
+                        (i == viewModel.state.activeHandIndex && viewModel.state.phase == .playing && viewModel.state.playerHands.count > 1)
+                            ? Color.black.opacity(0.25) : .clear,
+                        in: RoundedRectangle(cornerRadius: 12)
+                    )
                 }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 10)
-                .background(
-                    (i == viewModel.state.activeHandIndex && viewModel.state.phase == .playing && viewModel.state.playerHands.count > 1)
-                        ? Color.black.opacity(0.25) : .clear,
-                    in: RoundedRectangle(cornerRadius: 12)
-                )
             }
         }
     }
