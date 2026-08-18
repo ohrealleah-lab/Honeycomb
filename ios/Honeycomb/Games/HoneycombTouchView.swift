@@ -926,12 +926,20 @@ struct HoneycombSettingsSection: View {
             // gone, and the rules banner's own tap-for-explanation popover (unaffected by
             // this move) is still how a mid-match player reads the active rules, without
             // needing to come into Options at all.
-            Picker(coordinator.L(.opponentPickerLabel), selection: $viewModel.options.difficulty) {
-                ForEach(HoneycombDifficulty.allCases, id: \.self) { d in
-                    Text(honeycombLocalizedDifficultyName(d, language: coordinator.language)).tag(d)
+            // .pickerStyle(.menu) outside a Form/List only renders the selected value
+            // + chevron as a button — the Picker's own label text is silently dropped
+            // (same issue found and fixed in Video Poker's Variant/Default Bet pickers).
+            HStack {
+                Text(coordinator.L(.opponentPickerLabel))
+                Spacer()
+                Picker(coordinator.L(.opponentPickerLabel), selection: $viewModel.options.difficulty) {
+                    ForEach(HoneycombDifficulty.allCases, id: \.self) { d in
+                        Text(honeycombLocalizedDifficultyName(d, language: coordinator.language)).tag(d)
+                    }
                 }
+                .pickerStyle(.menu)
+                .labelsHidden()
             }
-            .pickerStyle(.menu)
             .disabled(isMidMatch)
             .opacity(isMidMatch ? 0.5 : 1)
 
