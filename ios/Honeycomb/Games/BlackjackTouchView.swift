@@ -20,9 +20,29 @@ struct BlackjackTouchView: View {
         viewModel.isFreePlay || viewModel.state.sessionCredits >= max(viewModel.state.currentBet, 1)
     }
 
+    // Matches mac's BlackjackView overlap tiers exactly (lightOverlapFraction/
+    // tightOverlapFraction/tightestOverlapFraction) — cards overlap by default (a
+    // fanned hand) rather than card width shrinking to fit N-across at a fixed gap.
+    // The old (geo.width - 32) / 6 sizing assumed a worst-case 6-card hand needed to
+    // fit with zero overlap, which capped every card at 90pt regardless of how much
+    // room was actually available for the common 2-3 card case.
+    private let lightOverlapFraction: CGFloat = 0.3
+    private let tightOverlapFraction: CGFloat = 0.55
+    private let tightestOverlapFraction: CGFloat = 0.75
+
+    private func handSpacing(cardW: CGFloat, count: Int, isSplit: Bool) -> CGFloat {
+        let fraction: CGFloat
+        if isSplit {
+            fraction = count >= 4 ? tightestOverlapFraction : tightOverlapFraction
+        } else {
+            fraction = count >= 6 ? tightOverlapFraction : lightOverlapFraction
+        }
+        return -cardW * fraction
+    }
+
     var body: some View {
         GeometryReader { geo in
-            let cardW = min((geo.size.width - 32) / 6, 90)
+            let cardW = min(geo.size.width * 0.28, 150)
             let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
@@ -123,19 +143,21 @@ struct BlackjackTouchView: View {
             Text(dealerLabel)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 6) {
+            HStack(spacing: handSpacing(cardW: cardW, count: max(viewModel.state.dealerCards.count, 2), isSplit: false)) {
                 if viewModel.state.dealerCards.isEmpty {
-                    ForEach(0..<2, id: \.self) { _ in
+                    ForEach(0..<2, id: \.self) { i in
                         HoneycombSimpleCardBack()
                             .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
                             .overlay(
                                 RoundedRectangle(cornerRadius: cardW * 0.07)
                                     .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
                             )
+                            .zIndex(Double(i))
                     }
                 } else {
-                    ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { _, card in
+                    ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { i, card in
                         TouchCardView(card: card, width: cardW)
+                            .zIndex(Double(i))
                     }
                 }
             }
@@ -170,9 +192,10 @@ struct BlackjackTouchView: View {
                                 .foregroundStyle(resultColor(result))
                         }
                     }
-                    HStack(spacing: 6) {
-                        ForEach(Array(hand.cards.enumerated()), id: \.offset) { _, card in
+                    HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, isSplit: viewModel.state.playerHands.count > 1)) {
+                        ForEach(Array(hand.cards.enumerated()), id: \.offset) { i, card in
                             TouchCardView(card: card, width: cardW)
+                                .zIndex(Double(i))
                         }
                     }
                 }
