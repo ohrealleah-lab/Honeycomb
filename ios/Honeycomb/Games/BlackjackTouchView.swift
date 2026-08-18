@@ -59,6 +59,10 @@ struct BlackjackTouchView: View {
                             .padding(.horizontal, 12)
                             .frame(height: 44)
 
+                        if !viewModel.isFreePlay {
+                            creditDisplay
+                        }
+
                         if isLandscape {
                             // Landscape's width can't spare the height a vertical
                             // dealer-then-player stack needs, but it has plenty of width
@@ -118,21 +122,46 @@ struct BlackjackTouchView: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
-                Image(systemName: "creditcard")
-                Text(viewModel.isFreePlay ? coordinator.L(.freePlayLabel) : "\(viewModel.state.sessionCredits)")
-            }
-            .font(.subheadline.weight(.bold).monospacedDigit())
-            .foregroundStyle(.yellow)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(.black.opacity(0.35), in: Capsule())
-
-            Spacer()
-
             Text(coordinator.L(.touchBlackjackTitle))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.8))
+        }
+    }
+
+    // MARK: Credit display
+
+    // Matches mac's BlackjackView creditDisplay (CREDITS/BET/HANDS panel) — iOS
+    // previously only had a small credit-card capsule tucked into the top bar showing
+    // the raw credits number, with no bet or hand-count readout and no visual parity
+    // with mac's dedicated panel. Sizes are scaled down from mac's literal 10pt labels
+    // / 28pt values for the smaller screen, but the structure is a direct port.
+    private var creditDisplay: some View {
+        HStack(spacing: 24) {
+            creditStat(coordinator.L(.creditsLabel), "\(viewModel.state.sessionCredits)", .yellow)
+            creditStat(coordinator.L(.betLabel), "\(viewModel.state.currentBet)",
+                       viewModel.state.currentBet == viewModel.state.sessionCredits ? .orange : .white)
+            creditStat(coordinator.L(.handsLabel), "\(viewModel.state.handsDealt)", .white)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.black.opacity(0.35))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+        )
+    }
+
+    private func creditStat(_ label: String, _ value: String, _ color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(label)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.6))
+            Text(value)
+                .font(.system(size: 22, weight: .black))
+                .foregroundStyle(color)
         }
     }
 
