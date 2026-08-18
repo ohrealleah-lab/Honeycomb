@@ -110,6 +110,7 @@ struct BeecellTouchView: View {
                 viewModel.startNewGame()
             }
             viewModel.startTimerIfNeeded()
+            viewModel.checkLoadingBanner()
         }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
         // Mirrors the mac view's NSWindow.didResignKeyNotification safety net: SwiftUI's

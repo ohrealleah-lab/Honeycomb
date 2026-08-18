@@ -95,7 +95,10 @@ struct SpiderTouchView: View {
                 SpiderSettingsSection(viewModel: viewModel)
             }
         }
-        .onAppear { viewModel.startTimerIfNeeded() }
+        .onAppear {
+            viewModel.startTimerIfNeeded()
+            viewModel.checkLoadingBanner()
+        }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
         // Mirrors the mac view's NSWindow.didResignKeyNotification safety net: SwiftUI's
         // DragGesture has no "cancelled" callback, so a drag interrupted by the app

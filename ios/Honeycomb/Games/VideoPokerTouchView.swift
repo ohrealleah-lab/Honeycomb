@@ -125,6 +125,7 @@ struct VideoPokerTouchView: View {
             manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
+        .onAppear { viewModel.checkLoadingBanner() }
         .onChange(of: viewModel.state.phase) { _, newPhase in
             if newPhase == .result {
                 // Cancel any leftover tasks just in case.

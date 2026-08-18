@@ -172,6 +172,7 @@ struct HoneycombTouchView: View {
                viewModel.gameState == .setup {
                 viewModel.startNewGame()
             }
+            viewModel.checkLoadingBanner()
         }
         .onChange(of: viewModel.gameState) { oldValue, newValue in
             if newValue == .setup {

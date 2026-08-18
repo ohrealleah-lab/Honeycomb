@@ -132,6 +132,7 @@ struct BlackjackTouchView: View {
             manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
+        .onAppear { viewModel.checkLoadingBanner() }
         .onChange(of: viewModel.state.phase) { _, newPhase in
             if newPhase == .result {
                 idlePromptTask?.cancel()
