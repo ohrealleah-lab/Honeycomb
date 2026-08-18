@@ -378,11 +378,11 @@ struct VideoPokerTouchView: View {
 
     // MARK: Controls
 
-    // Matches mac's BetMinus/BetMax/BetPlus trio (VideoPokerView.swift:768-770) — three
-    // individual casinoButtons in the same branded button family, instead of a dark
-    // capsule minus/bet-text/plus stepper with a totally different visual language.
-    // The bet amount itself isn't duplicated here, same as mac — it's already shown in
-    // creditDisplay's BET stat above.
+    // Matches mac's actionButtons exactly (VideoPokerView.swift:763-793): one
+    // continuous, natural-width HStack — bet trio, a Divider, then the phase button —
+    // centered under the cards by the parent VStack's default alignment, instead of a
+    // full-width bar with the bet trio pinned left and the phase button pushed to the
+    // far right by a Spacer.
     private var controls: some View {
         HStack(spacing: 12) {
             if viewModel.state.phase != .holding {
@@ -395,9 +395,8 @@ struct VideoPokerTouchView: View {
                 casinoButton(coordinator.L(.btnBetPlus), color: .white.opacity(0.2)) {
                     viewModel.increaseBet()
                 }
+                Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
             }
-
-            Spacer()
 
             if !canAffordBet && viewModel.state.phase != .holding {
                 casinoButton(coordinator.L(.rebuyButton), systemImage: "arrow.clockwise.circle", color: .red.opacity(0.8)) {

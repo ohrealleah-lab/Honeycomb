@@ -42,7 +42,11 @@ func casinoButton(
         .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
+        // No .frame(maxWidth: .infinity) — matches mac's casinoButton, which sizes to
+        // its own content rather than stretching to fill its row. The row itself then
+        // reads as one natural-width control cluster centered under the cards (its
+        // parent VStack's default center alignment), same as mac, instead of a full-
+        // width bar with buttons spread apart by Spacers.
         .background(disabled ? Color.gray.opacity(0.3) : color)
         .cornerRadius(6)
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.3), lineWidth: 1))
