@@ -108,7 +108,14 @@ struct HoneycombTouchView: View {
                     // to never affect the base view's reported size, unlike a plain
                     // ZStack sibling, which removes that risk entirely.
                     gameContent(landscape: isLandscape)
-                        .frame(width: intrinsic.width, height: intrinsic.height, alignment: .topLeading)
+                        // No explicit alignment — matches the original ZStack's default
+                        // (.center) exactly. An earlier version of this fix added
+                        // alignment: .topLeading here, which changed how any mismatch
+                        // between gameContent's actual rendered size and intrinsicSize()'s
+                        // formula-based estimate gets distributed (all to bottom/right
+                        // instead of split evenly) — that's what pushed the setup screen's
+                        // placeholder hand up into the topBar after quitting a match.
+                        .frame(width: intrinsic.width, height: intrinsic.height)
                         .overlay(dragGhost)
                     // Anchors dragSpace — every cellFrames GeometryReader and DragGesture
                     // .named(Self.dragSpace) reference (see dropCellIndex() below) depends
