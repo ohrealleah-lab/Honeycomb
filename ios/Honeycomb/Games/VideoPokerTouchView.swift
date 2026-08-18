@@ -55,10 +55,6 @@ struct VideoPokerTouchView: View {
                             .padding(.horizontal, 12)
                             .frame(height: 44)
 
-                        if !viewModel.isFreePlay {
-                            creditDisplay
-                        }
-
                         // Landscape auto-hides the pay table, same idea as mac's existing
                         // hideBetBoard/noStressMode/Triple-Play conditions — landscape's
                         // shorter height has the least room to spare, so it always wins
@@ -69,6 +65,13 @@ struct VideoPokerTouchView: View {
                         }
 
                         Spacer(minLength: 4)
+
+                        // Between the pay table and the cards, not above the pay table —
+                        // sits in the same "breathing room" gap as resultBanner rather
+                        // than crowding the top bar.
+                        if !viewModel.isFreePlay {
+                            creditDisplay
+                        }
 
                         resultBanner
 
