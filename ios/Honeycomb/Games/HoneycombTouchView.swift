@@ -60,7 +60,6 @@ struct HoneycombTouchView: View {
     @State private var showingThemes = false
     @State private var showingStats = false
     @State private var showingDecks = false
-    @State private var showingRulesSheet = false
     @State private var showNoHintsBanner = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
     @State private var showingRuleBanner = false
@@ -166,9 +165,6 @@ struct HoneycombTouchView: View {
                 HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch)
             }
         }
-        .sheet(isPresented: $showingRulesSheet) {
-            HoneycombRulesSheet(viewModel: viewModel, isMidMatch: isMidMatch)
-        }
         // Headless-testing hook: `simctl launch ... -honeycombAutostart 1` starts a match
         // immediately, so match-state rendering can be screenshotted without tap input.
         .onAppear {
@@ -236,11 +232,6 @@ struct HoneycombTouchView: View {
     private var topBar: some View {
         HStack(spacing: 12) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
-
-            topBarIconButton(systemImage: "checklist", accessibilityLabel: coordinator.L(.toolbarRules)) {
-                showingRulesSheet = true
-            }
-            .disabled(isMidMatch)
 
             topBarIconButton(systemImage: "rectangle.stack", accessibilityLabel: coordinator.L(.manageDecks)) {
                 showingDecks = true
@@ -923,11 +914,25 @@ struct HoneycombSettingsSection: View {
     let isMidMatch: Bool
     @Environment(AppCoordinator.self) private var coordinator
 
+    @State private var showingMatchRules = false
+    @State private var showingBanList = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(coordinator.L(.settingsHeader))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+            // Opponent, Match Rules, and Ban List used to live in their own sheet behind
+            // a dedicated top-bar "Rules" icon. They're game options like any other
+            // per-game setting, so they moved into Options instead — the top-bar icon is
+            // gone, and the rules banner's own tap-for-explanation popover (unaffected by
+            // this move) is still how a mid-match player reads the active rules, without
+            // needing to come into Options at all.
+            Picker(coordinator.L(.opponentPickerLabel), selection: $viewModel.options.difficulty) {
+                ForEach(HoneycombDifficulty.allCases, id: \.self) { d in
+                    Text(honeycombLocalizedDifficultyName(d, language: coordinator.language)).tag(d)
+                }
+            }
+            .pickerStyle(.menu)
+            .disabled(isMidMatch)
+            .opacity(isMidMatch ? 0.5 : 1)
 
             Group {
                 Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
@@ -941,12 +946,51 @@ struct HoneycombSettingsSection: View {
             .disabled(isMidMatch)
             .opacity(isMidMatch ? 0.5 : 1)
 
+            matchRulesNavRow
+                .disabled(isMidMatch)
+                .opacity(isMidMatch ? 0.5 : 1)
+            banListNavRow
+                .disabled(isMidMatch)
+                .opacity(isMidMatch ? 0.5 : 1)
+
             if isMidMatch {
                 Text(coordinator.L(.settingsUnlockNote))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
         }
+        .sheet(isPresented: $showingMatchRules) { HoneycombMatchRulesSheet(viewModel: viewModel) }
+        .sheet(isPresented: $showingBanList) { HoneycombBanListSheet(viewModel: viewModel) }
+    }
+
+    private var matchRulesNavRow: some View {
+        Button {
+            showingMatchRules = true
+        } label: {
+            HStack {
+                Image(systemName: "list.bullet.clipboard").frame(width: 24)
+                Text(coordinator.L(.matchRulesDisclosure))
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var banListNavRow: some View {
+        Button {
+            showingBanList = true
+        } label: {
+            HStack {
+                Image(systemName: "nosign").frame(width: 24)
+                Text(coordinator.L(.banListDisclosure))
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
