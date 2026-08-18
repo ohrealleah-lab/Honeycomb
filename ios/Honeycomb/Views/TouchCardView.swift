@@ -121,12 +121,16 @@ struct TouchCardView: View {
                     // mac renders each pip as `Text(suit.symbol)` at that font size, whose
                     // glyph ink sits well inside its em-box, while `Image(systemName:)
                     // .resizable()` fills its given frame edge-to-edge — the same frame
-                    // width reads visibly larger with the Image approach, enough to risk
-                    // adjacent pips touching in the denser 8/9/10 layouts if ported as-is.
+                    // width reads visibly larger with the Image approach. The tightest
+                    // constraint isn't the horizontal gap between columns (52pt apart in
+                    // mac's space, plenty of room) but the vertical gap between the two
+                    // inner rows on 9s/10s (only 28pt apart, ≈0.22 of card width) — 0.22
+                    // was still tall enough for those pips to touch top-to-bottom, so
+                    // dropped further to leave real clearance under that spacing.
                     ForEach(Array((Self.suitPositions[card.rank] ?? []).enumerated()), id: \.offset) { _, pos in
                         Image(systemName: suitSymbol)
                             .resizable().aspectRatio(contentMode: .fit)
-                            .frame(width: width * 0.22)
+                            .frame(width: width * 0.16)
                             .foregroundStyle(suitColor)
                             .rotationEffect(.degrees(pos.isUpsideDown ? 180 : 0))
                             .position(x: width / 2 + pos.x / 128 * width,
