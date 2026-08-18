@@ -352,17 +352,51 @@ struct VideoPokerTouchView: View {
         }
     }
 
+    // Matches mac's resultBanner overlay (VideoPokerView.swift:521-576) — mac's
+    // headline is unconditionally yellow for both a win *and* a loss (only the
+    // wording and the win-only streak/shadow differ), not white-for-loss the way
+    // this read before. Also gives the banner mac's dark boxed background/corner
+    // radius, which was missing entirely (bare floating text), and substitutes
+    // mac's "Not today, partner!" copy for a zero-payout hand instead of just
+    // repeating the hand name a second time.
     private var resultBanner: some View {
         Group {
             if showResultBanner, viewModel.state.phase == .result, !viewModel.state.lastHandName.isEmpty {
-                let localizedName = localizedHandName(viewModel.state.lastHandName, language: coordinator.language)
-                Text(viewModel.state.lastPayout > 0
-                     ? coordinator.L(.payoutResultFmt, localizedName, viewModel.state.lastPayout)
-                     : localizedName)
-                    .font(.title3.weight(.black))
-                    .foregroundStyle(viewModel.state.lastPayout > 0 ? .yellow : .white.opacity(0.8))
-                    .scaleEffect(viewModel.state.lastPayout > 0 && winFlash ? 1.1 : 1.0)
-                    .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
+                if viewModel.state.lastPayout > 0 {
+                    let localizedName = localizedHandName(viewModel.state.lastHandName, language: coordinator.language)
+                    VStack(spacing: 4) {
+                        Text(coordinator.L(.resultHandNameFmt, localizedName))
+                            .font(.title3.weight(.black))
+                            .foregroundStyle(.yellow)
+                            .scaleEffect(winFlash ? 1.1 : 1.0)
+                            .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
+                        if !viewModel.isFreePlay {
+                            Text(coordinator.L(.resultCreditsWonFmt, viewModel.state.lastPayout))
+                                .font(.subheadline)
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(12)
+                    .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 12)
+                } else {
+                    VStack(spacing: 4) {
+                        Text(coordinator.L(.notTodayPartner))
+                            .font(.title3.weight(.black))
+                            .foregroundStyle(.yellow)
+                        if !viewModel.isFreePlay {
+                            Text(coordinator.L(.resultCreditsLostFmt, viewModel.state.currentBet))
+                                .font(.subheadline)
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(12)
+                }
             } else if viewModel.state.phase == .holding {
                 Text(coordinator.L(.tapHoldDrawHint))
                     .font(.footnote.weight(.semibold))
@@ -371,7 +405,9 @@ struct VideoPokerTouchView: View {
                 Text(" ").font(.title3.weight(.black))
             }
         }
-        .frame(height: 28)
+        // Bumped from 28 — the boxed background/padding above makes the shown
+        // banner taller than the old bare-text reservation.
+        .frame(height: viewModel.isFreePlay ? 44 : 64)
     }
 
     // MARK: Controls

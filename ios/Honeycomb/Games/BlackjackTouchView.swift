@@ -353,14 +353,18 @@ struct BlackjackTouchView: View {
                 let (headline, subline) = localizedBlackjackResult(viewModel.state, language: coordinator.language)
                 let isWin = viewModel.state.isWinRound
                 VStack(spacing: 2) {
+                    // Matches mac (BlackjackView.swift:554-556) — the headline is
+                    // unconditionally yellow for every outcome, win or loss; only the
+                    // wording and the win-only glow/pulse below differ. Was
+                    // conditionally white for a loss, which doesn't match mac at all.
                     Text(headline)
                         .font(.title3.weight(.black))
-                        .foregroundStyle(isWin ? .yellow : .white)
+                        .foregroundStyle(.yellow)
 
                     if !viewModel.isFreePlay {
                         Text(subline)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(.white)
                     }
                 }
                 .padding(.horizontal, 20)
