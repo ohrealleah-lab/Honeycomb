@@ -45,6 +45,7 @@ public struct SpiderView: View {
     @State private var isShowingOptions: Bool = false
     @State private var isShowingStats: Bool = false
     @State private var isShowingEmptyStockWarning: Bool = false
+    @State private var emptyStockWarningTask: DispatchWorkItem? = nil
     @State private var isShowingNewGameConfirm: Bool = false
     @State private var dismissedAutocompleteBanner: Bool = false
     @State private var dismissedStuckBanner: Bool = false
@@ -247,36 +248,14 @@ public struct SpiderView: View {
                     }
                     .padding(.top, 20)
                     
-                    // Empty column Stock deal warning
+// Empty column Stock deal warning — short auto-dismissing toast, same
+                    // shape as the "no hints" flash banner below, not a modal the player
+                    // has to click through.
                     if isShowingEmptyStockWarning {
-                        VStack(spacing: 12) {
-                            Text(coordinator.L(.emptyColumnWarningTitle))
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.white)
-                            Text(coordinator.L(.emptyColumnWarningBody))
-                                .font(.system(.body))
-                                .foregroundColor(.white.opacity(0.8))
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 20)
-
-                            Button(coordinator.L(.ok)) {
-                                isShowingEmptyStockWarning = false
-                            }
-                            .font(.system(.body))
-                            .fontWeight(.bold)
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                            .background(Color.yellow)
-                            .cornerRadius(6)
-                            .buttonStyle(.plain)
+                        FlashBannerView(message: coordinator.L(.emptyColumnDrawToast)) {
+                            emptyStockWarningTask?.cancel()
+                            isShowingEmptyStockWarning = false
                         }
-                        .padding(.horizontal, 12)
-                    .padding(.vertical, 24)
-                        .background(Color.black.opacity(0.85))
-                        .cornerRadius(12)
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow, lineWidth: 1.5))
-                        .frame(width: 440)
                     }
                     
                     // Stuck overlay — centered
@@ -563,6 +542,8 @@ public struct SpiderView: View {
             }
             noHintsBannerTask?.cancel()
             noHintsBannerTask = nil
+            emptyStockWarningTask?.cancel()
+            emptyStockWarningTask = nil
         }
         .frame(minWidth: Self.minWindowSize.width,
                maxWidth: .infinity,
@@ -648,10 +629,26 @@ public struct SpiderView: View {
         viewModel.clearHint()
         guard !viewModel.state.stock.isEmpty else { return }
         if viewModel.hasEmptyTableauColumn {
-            isShowingEmptyStockWarning = true
+            flashEmptyStockWarning()
         } else {
             viewModel.drawFromStock()
         }
+    }
+
+    private func flashEmptyStockWarning() {
+        emptyStockWarningTask?.cancel()
+        withAnimation(.easeIn(duration: 0.15)) { isShowingEmptyStockWarning = true }
+        // Same gate as flashQueuedBanner's manuallyDismissBanners handling — when the
+        // option is on, the toast stays up until clicked instead of timing out.
+        guard !viewModel.options.manuallyDismissBanners else {
+            emptyStockWarningTask = nil
+            return
+        }
+        let task = DispatchWorkItem {
+            withAnimation(.easeOut(duration: 0.3)) { isShowingEmptyStockWarning = false }
+        }
+        emptyStockWarningTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
     }
 
     // Continuously refits the board's scale to the window's current content size — called

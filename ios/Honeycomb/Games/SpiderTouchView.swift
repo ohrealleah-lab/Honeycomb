@@ -29,6 +29,8 @@ struct SpiderTouchView: View {
     @State private var isDealInFlight = false
     @State private var showNoHintsBanner = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
+    @State private var showEmptyStockWarning = false
+    @State private var emptyStockWarningTask: DispatchWorkItem? = nil
 
     private let placementHaptic = UIImpactFeedbackGenerator(style: .medium)
 
@@ -77,6 +79,10 @@ struct SpiderTouchView: View {
 
                 if showNoHintsBanner {
                     noHintsBanner
+                }
+
+                if showEmptyStockWarning {
+                    emptyStockWarningBanner
                 }
             }
             // Anchors boardSpace — every pileFrames GeometryReader and DragGesture
@@ -428,6 +434,10 @@ struct SpiderTouchView: View {
     private func performDeal() {
         guard !viewModel.state.stock.isEmpty, !isDealInFlight, !viewModel.state.hasWon else { return }
         viewModel.clearHint()
+        if viewModel.hasEmptyTableauColumn {
+            flashEmptyStockWarning()
+            return
+        }
         isDealInFlight = true
         withAnimation(.easeInOut(duration: 0.25)) {
             viewModel.drawFromStock()
@@ -521,6 +531,46 @@ struct SpiderTouchView: View {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
         noHintsBannerTask = task
+    }
+
+    private var emptyStockWarningBanner: some View {
+        VStack {
+            Text(coordinator.L(.emptyColumnDrawToast))
+                .font(.subheadline.weight(.black))
+                .foregroundStyle(Color.yellow)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 300)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 16))
+                .contentShape(Rectangle())
+                .onTapGesture { dismissEmptyStockWarning() }
+                .transition(.scale.combined(with: .opacity))
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(.top, 60)
+        .allowsHitTesting(viewModel.options.manuallyDismissBanners)
+    }
+
+    private func dismissEmptyStockWarning() {
+        emptyStockWarningTask?.cancel()
+        emptyStockWarningTask = nil
+        withAnimation(.easeOut(duration: 0.3)) { showEmptyStockWarning = false }
+    }
+
+    private func flashEmptyStockWarning() {
+        emptyStockWarningTask?.cancel()
+        withAnimation(.easeIn(duration: 0.15)) { showEmptyStockWarning = true }
+        // Same gate as the queued/milestone banner (.queuedFlashBanner's own
+        // manuallyDismissBanners handling) — when the option is on, the toast
+        // stays up until tapped instead of timing out underneath the player.
+        guard !viewModel.options.manuallyDismissBanners else {
+            emptyStockWarningTask = nil
+            return
+        }
+        let task = DispatchWorkItem { dismissEmptyStockWarning() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
+        emptyStockWarningTask = task
     }
 
     private var stuckOverlay: some View {

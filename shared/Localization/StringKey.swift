@@ -610,10 +610,8 @@ public enum StringKey: String, CaseIterable {
     case statBestStreak = "stat_best_streak"
     /// Alert message, Blackjack-specific wording
     case msgResetStatsBlackjack = "msg_reset_stats_blackjack"
-    /// Warning headline, reused Mac/Windows
-    case emptyColumnWarningTitle = "empty_column_warning_title"
-    /// Warning body, reused Mac/Windows
-    case emptyColumnWarningBody = "empty_column_warning_body"
+    /// Short toast, reused Mac/Windows/iOS
+    case emptyColumnDrawToast = "empty_column_draw_toast"
     /// Options Picker label
     case pickerSuitsLabel = "picker_suits_label"
     /// Picker option

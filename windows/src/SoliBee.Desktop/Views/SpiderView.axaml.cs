@@ -97,8 +97,6 @@ public partial class SpiderView : CardGameView
     // the registration in SpiderView_Loaded), matching MainWindow's ApplyLocalization pattern.
     private void ApplyLocalization()
     {
-        DealBlockedTitleText.Text = Strings.Get(StringKey.EmptyColumnWarningTitle, _language);
-        DealBlockedBodyText.Text  = Strings.Get(StringKey.EmptyColumnWarningBody, _language);
         ApplyBannerLocalization(_language);
     }
 
@@ -127,6 +125,7 @@ public partial class SpiderView : CardGameView
             vm.CheckLoadingBanner();
         }
         HintToast.OnDismissed += HintToast_OnDismissed;
+        DealBlockedToast.OnDismissed += DealBlockedToast_OnDismissed;
         VictoryOverlay.PlayAgainRequested += VictoryOverlay_PlayAgainRequested;
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
@@ -154,7 +153,7 @@ public partial class SpiderView : CardGameView
         Dispatcher.UIThread.Post(() =>
         {
             HintToast.Flash(message, duration, manualDismiss);
-            BannerTapCatcher.IsHitTestVisible = true;
+            RefreshBannerTapCatcher();
         });
     }
 
@@ -164,12 +163,29 @@ public partial class SpiderView : CardGameView
     private void BannerTapCatcher_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (HintToast.IsVisible) HintToast.Dismiss();
+        if (DealBlockedToast.IsVisible) DealBlockedToast.Dismiss();
     }
 
     private void HintToast_OnDismissed()
     {
-        BannerTapCatcher.IsHitTestVisible = false;
+        RefreshBannerTapCatcher();
         (DataContext as SpiderViewModel)?.AdvanceBannerQueue();
+    }
+
+    // Deal-blocked toast is a standalone ephemeral notice, not part of the
+    // milestone/loading banner queue — dismissing it must NOT call AdvanceBannerQueue
+    // (that would incorrectly skip a real queued banner if one happened to be pending).
+    private void DealBlockedToast_OnDismissed()
+    {
+        RefreshBannerTapCatcher();
+    }
+
+    // Only two toasts can ever be up at once (HintToast for the milestone/loading queue,
+    // DealBlockedToast for this warning) — the catcher must stay active as long as
+    // either one is, so a dismiss on one doesn't blind the other's manual-dismiss tap.
+    private void RefreshBannerTapCatcher()
+    {
+        BannerTapCatcher.IsHitTestVisible = HintToast.IsVisible || DealBlockedToast.IsVisible;
     }
 
     private void SpiderView_Unloaded(object? sender, RoutedEventArgs e)
@@ -180,6 +196,7 @@ public partial class SpiderView : CardGameView
             vm.OnFlashBanner -= Vm_OnFlashBanner;
         }
         HintToast.OnDismissed -= HintToast_OnDismissed;
+        DealBlockedToast.OnDismissed -= DealBlockedToast_OnDismissed;
         VictoryOverlay.PlayAgainRequested -= VictoryOverlay_PlayAgainRequested;
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
@@ -250,24 +267,11 @@ public partial class SpiderView : CardGameView
             ShowDealBlockedWarning();
     }
 
-    private DispatcherTimer? _dealBlockedDismissTimer;
-
     private void ShowDealBlockedWarning()
     {
-        DealBlockedBanner.IsVisible = true;
-        _dealBlockedDismissTimer = ArmOneShotTimer(_dealBlockedDismissTimer, TimeSpan.FromSeconds(3), () =>
-        {
-            _dealBlockedDismissTimer = null;
-            DealBlockedBanner.IsVisible = false;
-        });
-    }
-
-    private void DealBlockedDismiss_Click(object? sender, RoutedEventArgs e)
-    {
-        _dealBlockedDismissTimer?.Stop();
-        _dealBlockedDismissTimer = null;
-        DealBlockedBanner.IsVisible = false;
-        e.Handled = true;
+        var manualDismiss = SettingsService.LoadOptions().ManuallyDismissBanners;
+        DealBlockedToast.Flash(Strings.Get(StringKey.EmptyColumnDrawToast, _language), TimeSpan.FromSeconds(2.0), manualDismiss);
+        RefreshBannerTapCatcher();
     }
 
     private void VictoryOverlay_PlayAgainRequested(object? sender, EventArgs e)
