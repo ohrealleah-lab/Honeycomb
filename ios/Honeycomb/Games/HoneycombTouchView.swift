@@ -361,7 +361,9 @@ struct HoneycombTouchView: View {
                 }
 
                 VStack(spacing: 6) {
-                    handLabel(coordinator.L(.dealerLabel))
+                    // Not "Dealer" — Honeycomb's opponent is a named AI difficulty
+                    // (e.g. "Baby Bee"), not a card-game dealer role like Blackjack's.
+                    handLabel(honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language))
                     pyramidHand(cards: opponentDisplayHand, size: Self.playerCardSize) { i, card in
                         HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
                             HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)

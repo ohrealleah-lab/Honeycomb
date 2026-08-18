@@ -421,7 +421,9 @@ public struct HoneycombView: View {
                     // Opponent Hand (Right) — same top offset as the player's hand.
                     let opponentDisplayHand = viewModel.gameState == .setup ? Self.placeholderHand : viewModel.opponentHand
                     VStack(spacing: 6) {
-                        handSideLabel(coordinator.L(.dealerLabel))
+                        // Not "Dealer" — Honeycomb's opponent is a named AI difficulty
+                        // (e.g. "Baby Bee"), not a card-game dealer role like Blackjack's.
+                        handSideLabel(honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language))
                         handGrid(hand: opponentDisplayHand) { i, card in
                             HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)

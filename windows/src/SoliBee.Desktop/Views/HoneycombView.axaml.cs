@@ -175,7 +175,8 @@ public partial class HoneycombView : UserControl
     private void ApplyLocalization()
     {
         PlayerHandLabel.Text   = Strings.Get(StringKey.PlayerLabel, _language);
-        OpponentHandLabel.Text = Strings.Get(StringKey.DealerLabel, _language);
+        // OpponentHandLabel is driven by RefreshCore (vm.OpponentNameDisplay), not a
+        // static localized string — see the comment there.
 
         RulesTitle.Text          = Strings.Get(StringKey.RulesBannerTitle, _language);
         StealInstructionText.Text = Strings.Get(StringKey.StealInstruction, _language);
@@ -479,7 +480,15 @@ public partial class HoneycombView : UserControl
     private async Task RefreshCore(HoneycombViewModel vm)
     {
         var state = vm.State;
-        
+
+        // Not "Dealer" — Honeycomb's opponent is a named AI difficulty (e.g. "Baby
+        // Bee"), not a card-game dealer role like Blackjack's. Refreshed here (every
+        // Refresh() pass) rather than only in ApplyLocalization, since the opponent can
+        // change (a different difficulty picked in Options) without the language
+        // changing — OpponentNameDisplay's own PropertyChanged notification is what
+        // drives Vm_PropertyChanged -> Refresh() in that case.
+        OpponentHandLabel.Text = vm.OpponentNameDisplay;
+
         if (vm.IsPlaying) 
         {
             _overlayDismissed = false;
