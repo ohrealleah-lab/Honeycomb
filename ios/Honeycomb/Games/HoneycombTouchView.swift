@@ -967,6 +967,16 @@ struct HoneycombSettingsSection: View {
             .disabled(isMidMatch)
             .opacity(isMidMatch ? 0.5 : 1)
 
+            // Match Rules/Ban List sit directly under Opponent — they're the other
+            // game-relevant settings, and should read together above the general
+            // toggles (Sound, No Stress Mode, etc.).
+            matchRulesNavRow
+                .disabled(isMidMatch)
+                .opacity(isMidMatch ? 0.5 : 1)
+            banListNavRow
+                .disabled(isMidMatch)
+                .opacity(isMidMatch ? 0.5 : 1)
+
             Group {
                 Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
                 Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
@@ -978,13 +988,6 @@ struct HoneycombSettingsSection: View {
             // Options only take effect on the next match — same mid-match gate as mac.
             .disabled(isMidMatch)
             .opacity(isMidMatch ? 0.5 : 1)
-
-            matchRulesNavRow
-                .disabled(isMidMatch)
-                .opacity(isMidMatch ? 0.5 : 1)
-            banListNavRow
-                .disabled(isMidMatch)
-                .opacity(isMidMatch ? 0.5 : 1)
 
             if isMidMatch {
                 Text(coordinator.L(.settingsUnlockNote))
