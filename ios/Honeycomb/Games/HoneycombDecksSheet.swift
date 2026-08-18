@@ -157,12 +157,9 @@ struct HoneycombDecksSheet: View {
                 } else {
                     Text(deck.name).bold()
                 }
-                if isActive {
-                    Text(coordinator.L(.deckActiveBadge)).font(.caption.bold()).foregroundStyle(.green)
-                }
                 Spacer()
                 if !deck.name.isEmpty {
-                    Button(coordinator.L(.deckSetActive)) {
+                    Button(isActive ? coordinator.L(.deckActiveBadge) : coordinator.L(.deckSetActive)) {
                         viewModel.options.activeDeckIndex = index
                     }
                     .buttonStyle(.bordered)
