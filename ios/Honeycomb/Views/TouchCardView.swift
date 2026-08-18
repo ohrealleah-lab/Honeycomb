@@ -107,10 +107,31 @@ struct TouchCardView: View {
                         .lineLimit(1)
                         .offset(x: width * 0.01, y: width * 0.15)
                 } else {
-                    Image(systemName: suitSymbol)
-                        .resizable().aspectRatio(contentMode: .fit)
-                        .frame(width: width * 0.4)
-                        .foregroundStyle(suitColor)
+                    // Numbered cards (2-10): mac's CardCenterSuitView lays out rank-many
+                    // small pips in the traditional card pattern (Self.suitPositions,
+                    // ported below) rather than one big centered icon — this used to just
+                    // show a single suit.symbol at width*0.4, which read as oversized next
+                    // to the corner index (a 3.3x center:corner ratio vs mac's ~2.3x single-
+                    // pip:corner ratio, on top of mac showing several small pips instead of
+                    // one large one at all). Every position/size below is mac's own literal
+                    // point value divided by 128 (mac's base card width, the reference
+                    // frame CardView.swift's pip layout and font size 32 are authored
+                    // against) so it carries over as a fraction of iOS's `width` unchanged.
+                    // Pip size uses a smaller fraction than mac's literal 32/128 = 0.25:
+                    // mac renders each pip as `Text(suit.symbol)` at that font size, whose
+                    // glyph ink sits well inside its em-box, while `Image(systemName:)
+                    // .resizable()` fills its given frame edge-to-edge — the same frame
+                    // width reads visibly larger with the Image approach, enough to risk
+                    // adjacent pips touching in the denser 8/9/10 layouts if ported as-is.
+                    ForEach(Array((Self.suitPositions[card.rank] ?? []).enumerated()), id: \.offset) { _, pos in
+                        Image(systemName: suitSymbol)
+                            .resizable().aspectRatio(contentMode: .fit)
+                            .frame(width: width * 0.22)
+                            .foregroundStyle(suitColor)
+                            .rotationEffect(.degrees(pos.isUpsideDown ? 180 : 0))
+                            .position(x: width / 2 + pos.x / 128 * width,
+                                      y: height / 2 + pos.y / 128 * width)
+                    }
                 }
 
                 cornerIndex
@@ -162,6 +183,28 @@ struct TouchCardView: View {
         .foregroundStyle(suitColor)
         .fixedSize()
     }
+
+    // Ported directly from mac's CardView.swift (CardCenterSuitView.suitPositions) —
+    // every x/y here is mac's own literal point value, authored against mac's 128pt-
+    // wide base card, and divided by 128 at the call site above rather than re-derived,
+    // so both platforms lay out the same rank the same way.
+    private struct SuitPosition {
+        let x: CGFloat
+        let y: CGFloat
+        let isUpsideDown: Bool
+    }
+
+    private static let suitPositions: [Int: [SuitPosition]] = [
+        2: [SuitPosition(x: 0, y: -42, isUpsideDown: false), SuitPosition(x: 0, y: 42, isUpsideDown: true)],
+        3: [SuitPosition(x: 0, y: -42, isUpsideDown: false), SuitPosition(x: 0, y: 0, isUpsideDown: false), SuitPosition(x: 0, y: 42, isUpsideDown: true)],
+        4: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true)],
+        5: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: 0, y: 0, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true)],
+        6: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: 0, isUpsideDown: false), SuitPosition(x: 26, y: 0, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true)],
+        7: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: 0, isUpsideDown: false), SuitPosition(x: 26, y: 0, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true), SuitPosition(x: 0, y: -21, isUpsideDown: false)],
+        8: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: 0, isUpsideDown: false), SuitPosition(x: 26, y: 0, isUpsideDown: false), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true), SuitPosition(x: 0, y: -21, isUpsideDown: false), SuitPosition(x: 0, y: 21, isUpsideDown: true)],
+        9: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: -14, isUpsideDown: false), SuitPosition(x: 26, y: -14, isUpsideDown: false), SuitPosition(x: -26, y: 14, isUpsideDown: true), SuitPosition(x: 26, y: 14, isUpsideDown: true), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true), SuitPosition(x: 0, y: 0, isUpsideDown: false)],
+        10: [SuitPosition(x: -26, y: -42, isUpsideDown: false), SuitPosition(x: 26, y: -42, isUpsideDown: false), SuitPosition(x: -26, y: -14, isUpsideDown: false), SuitPosition(x: 26, y: -14, isUpsideDown: false), SuitPosition(x: -26, y: 14, isUpsideDown: true), SuitPosition(x: 26, y: 14, isUpsideDown: true), SuitPosition(x: -26, y: 42, isUpsideDown: true), SuitPosition(x: 26, y: 42, isUpsideDown: true), SuitPosition(x: 0, y: -27, isUpsideDown: false), SuitPosition(x: 0, y: 27, isUpsideDown: true)]
+    ]
 }
 
 /// Pulsing yellow hint outline shared by the iOS game views.
