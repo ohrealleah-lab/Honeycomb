@@ -102,6 +102,11 @@ struct KlondikeTouchView: View {
             viewModel.startTimerIfNeeded()
             viewModel.checkLoadingBanner()
         }
+        // Re-arms the idle-nudge timer on every move, matching mac
+        // (GameView.swift:690-692) — previously only armed once via startNewGame().
+        .onChange(of: viewModel.state.movesCount) {
+            viewModel.scheduleIdleActionCheck()
+        }
         .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
         // Mirrors the mac view's NSWindow.didResignKeyNotification safety net: SwiftUI's
         // DragGesture has no "cancelled" callback, so a drag interrupted by the app

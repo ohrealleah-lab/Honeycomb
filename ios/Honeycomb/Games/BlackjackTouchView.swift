@@ -134,6 +134,11 @@ struct BlackjackTouchView: View {
         )
         .onAppear { viewModel.checkLoadingBanner() }
         .onChange(of: viewModel.state.phase) { _, newPhase in
+            // Re-arms the idle-nudge timer on every phase change, matching mac
+            // (BlackjackView.swift:211) — previously only armed once via
+            // startNewGame(), so it could misfire near game start and then never
+            // fire again for genuinely idle stretches later in the same session.
+            viewModel.scheduleIdleActionCheck()
             if newPhase == .result {
                 idlePromptTask?.cancel()
                 withAnimation(.easeInOut(duration: 0.4)) { showIdlePrompt = false }

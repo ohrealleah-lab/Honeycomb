@@ -127,6 +127,11 @@ struct VideoPokerTouchView: View {
         )
         .onAppear { viewModel.checkLoadingBanner() }
         .onChange(of: viewModel.state.phase) { _, newPhase in
+            // Re-arms the idle-nudge timer on every phase change, matching mac
+            // (VideoPokerView.swift:235) — previously only armed once via
+            // startNewGame(), so it could misfire near game start and then never
+            // fire again for genuinely idle stretches later in the same session.
+            viewModel.scheduleIdleActionCheck()
             if newPhase == .result {
                 // Cancel any leftover tasks just in case.
                 resultBannerShowTask?.cancel()
