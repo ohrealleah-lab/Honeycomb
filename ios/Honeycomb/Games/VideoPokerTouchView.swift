@@ -84,8 +84,6 @@ struct VideoPokerTouchView: View {
                                 .padding(.horizontal, 16)
                         }
 
-                        Spacer(minLength: 4)
-
                         // Between the pay table and the cards, not above the pay table —
                         // sits in the same "breathing room" gap as resultBanner rather
                         // than crowding the top bar.
@@ -98,13 +96,18 @@ struct VideoPokerTouchView: View {
                         handRow(cardW: cardW, spacing: handSpacing)
                             .padding(.horizontal, 12)
 
-                        Spacer(minLength: 4)
-
                         controls
                             .padding(.horizontal, 16)
                             .padding(.bottom, 12)
                     }
-                    .frame(minHeight: geo.size.height)
+                    // Flexible Spacers used to sit around the cards, which combined
+                    // with this enforced min-height stretched them apart into a large
+                    // gap between the cards and the controls at every screen size —
+                    // top-aligning instead lets the content hug together at its natural
+                    // height (buttons directly under the cards, matching mac) and
+                    // pushes any leftover space below the controls instead of between
+                    // the cards and them.
+                    .frame(minHeight: geo.size.height, alignment: .top)
                 }
             }
         }

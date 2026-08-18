@@ -100,18 +100,20 @@ struct BlackjackTouchView: View {
 
                             resultBanner
 
-                            Spacer(minLength: 4)
-
                             playerHandsArea(cardW: cardW)
-
-                            Spacer(minLength: 4)
                         }
 
                         controls
                             .padding(.horizontal, 16)
                             .padding(.bottom, 12)
                     }
-                    .frame(minHeight: geo.size.height)
+                    // Flexible Spacers used to sit between the cards and controls,
+                    // which combined with this enforced min-height stretched them apart
+                    // into a large gap at every screen size — top-aligning instead lets
+                    // the content hug together at its natural height (buttons directly
+                    // under the cards, matching mac) and pushes any leftover space below
+                    // the controls instead of between them.
+                    .frame(minHeight: geo.size.height, alignment: .top)
                 }
             }
         }
