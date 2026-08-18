@@ -559,7 +559,6 @@ struct BeecellSettingsSection: View {
             // Two-deck Beecell isn't offered on iOS — see the deckCount clamp in
             // BeecellTouchView's onAppear. Mac keeps its 1/2-deck picker; this section
             // is iOS-only.
-            Toggle(coordinator.L(.timed), isOn: $viewModel.options.isTimed)
             Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
             Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
                 .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }

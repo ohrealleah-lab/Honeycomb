@@ -439,10 +439,6 @@ struct VideoPokerSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(coordinator.L(.settingsHeaderVideopoker))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
             Group {
                 Picker(coordinator.L(.pickerVariantLabel), selection: $viewModel.options.variant) {
                     ForEach(VideoPokerVariant.allCases, id: \.self) { v in
@@ -469,6 +465,8 @@ struct VideoPokerSettingsSection: View {
                 Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
                     .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
                 Toggle(coordinator.L(.hideBetBoard), isOn: $viewModel.options.hideBetBoard)
+                Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
+                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
             }
             .disabledDuringGameplay(isMidHand)
 

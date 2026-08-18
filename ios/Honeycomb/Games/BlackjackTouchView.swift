@@ -521,6 +521,8 @@ struct BlackjackSettingsSection: View {
                 // on the next deal on its own; calling startNewGame() here only served to
                 // unconditionally wipe the win streak on a benign settings change.
                 Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
+                Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
+                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
             }
             .disabledDuringGameplay(!canOpenOptions)
 

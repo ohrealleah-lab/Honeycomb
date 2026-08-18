@@ -556,7 +556,6 @@ struct SpiderSettingsSection: View {
             }
             .pickerStyle(.segmented)
 
-            Toggle(coordinator.L(.timed), isOn: $viewModel.options.isTimed)
             Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
             Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
                 .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
