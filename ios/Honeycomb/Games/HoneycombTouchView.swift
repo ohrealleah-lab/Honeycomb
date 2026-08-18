@@ -240,6 +240,11 @@ struct HoneycombTouchView: View {
     // MARK: Top bar
 
     private var topBar: some View {
+        // scoreBadge is an overlay, not a third HStack element flanked by Spacers —
+        // the leading (menu/decks) and trailing (Quit/Start) button groups aren't the
+        // same width, so centering it "between" two Spacers actually centered it in
+        // whatever space was left over, not on the bar itself. An overlay centers it
+        // on the full bar width regardless of how wide either button group is.
         HStack(spacing: 12) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
 
@@ -247,12 +252,6 @@ struct HoneycombTouchView: View {
                 showingDecks = true
             }
             .disabled(isMidMatch)
-
-            Spacer()
-
-            if viewModel.gameState != .setup {
-                scoreBadge
-            }
 
             Spacer()
 
@@ -269,19 +268,25 @@ struct HoneycombTouchView: View {
                 .buttonStyle(.borderedProminent)
             }
         }
+        .overlay {
+            if viewModel.gameState != .setup {
+                scoreBadge
+            }
+        }
     }
 
     private var scoreBadge: some View {
+        // Matches the rules banner's yellow-on-black styling instead of cyan/pink —
+        // consistent with every other Honeycomb banner in the app.
         HStack(spacing: 10) {
             Text(coordinator.L(.scoreYouFmt, viewModel.board.playerScore + viewModel.playerHand.count))
-                .foregroundStyle(.cyan)
-            Text("–").foregroundStyle(.white.opacity(0.6))
+            Text("–")
             // Not "DEALER" — shows the opponent's actual name (e.g. "Baby Bee"), same
             // fix as the hand-side label above the opponent's cards.
             Text(coordinator.L(.scoreDealerFmt, viewModel.board.opponentScore + viewModel.opponentHand.count,
                                 honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language)))
-                .foregroundStyle(.pink)
         }
+        .foregroundStyle(.yellow)
         .font(.subheadline.weight(.bold))
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
