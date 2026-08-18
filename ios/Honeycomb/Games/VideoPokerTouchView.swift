@@ -473,12 +473,22 @@ struct VideoPokerSettingsSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Group {
-                Picker(coordinator.L(.pickerVariantLabel), selection: $viewModel.options.variant) {
-                    ForEach(VideoPokerVariant.allCases, id: \.self) { v in
-                        Text(localizedVariantName(v, language: coordinator.language)).tag(v)
+                // .pickerStyle(.menu) outside a Form/List only renders the selected
+                // value + chevron as a button — the Picker's own label text (passed
+                // as its first argument) is silently dropped, unlike a Toggle, whose
+                // label always shows inline. Wrapping in an explicit label + Spacer
+                // row surfaces it instead of relying on the Picker to show it itself.
+                HStack {
+                    Text(coordinator.L(.pickerVariantLabel))
+                    Spacer()
+                    Picker(coordinator.L(.pickerVariantLabel), selection: $viewModel.options.variant) {
+                        ForEach(VideoPokerVariant.allCases, id: \.self) { v in
+                            Text(localizedVariantName(v, language: coordinator.language)).tag(v)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
                 }
-                .pickerStyle(.menu)
 
                 // Play Mode (Single/Triple) intentionally left out — Triple Play's
                 // three-hand layout isn't built on iOS yet, so exposing the toggle
@@ -487,12 +497,17 @@ struct VideoPokerSettingsSection: View {
                 Stepper(coordinator.L(.startingCreditsFmt, viewModel.options.startingCredits),
                         value: $viewModel.options.startingCredits, in: 100...10000, step: 100)
 
-                Picker(coordinator.L(.pickerDefaultBetLabel), selection: $viewModel.options.betPerHand) {
-                    ForEach(1...5, id: \.self) { bet in
-                        Text("\(bet)").tag(bet)
+                HStack {
+                    Text(coordinator.L(.pickerDefaultBetLabel))
+                    Spacer()
+                    Picker(coordinator.L(.pickerDefaultBetLabel), selection: $viewModel.options.betPerHand) {
+                        ForEach(1...5, id: \.self) { bet in
+                            Text("\(bet)").tag(bet)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
                 }
-                .pickerStyle(.menu)
 
                 Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
                 Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
