@@ -14,7 +14,7 @@ struct OptionsFullScreenView<GameSettings: View>: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 16) {
                     languageSection
                     VStack(alignment: .leading, spacing: 10) {
                         sectionHeading(coordinator.gameMode.localizedDisplayName(language: coordinator.language))
@@ -22,8 +22,7 @@ struct OptionsFullScreenView<GameSettings: View>: View {
                             .padding(12)
                             .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
                     }
-                    statsRow
-                    helpRow
+                    navigationSection
                 }
                 .padding(16)
             }
@@ -64,35 +63,34 @@ struct OptionsFullScreenView<GameSettings: View>: View {
         }
     }
 
-    private var statsRow: some View {
-        Button {
-            dismiss()
-            onShowStats()
-        } label: {
-            HStack {
-                Image(systemName: "chart.bar")
-                Text(coordinator.L(.statisticsNavRow))
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+    // One grouped card (matching ThemesFullScreenView's customizationSection pattern)
+    // instead of two separately-spaced cards — keeps Statistics and How to Play
+    // visually and physically close together, and cuts the extra padding/gap between
+    // them so the whole sheet fits without scrolling on most screens.
+    private var navigationSection: some View {
+        VStack(spacing: 0) {
+            navigationRow(systemImage: "chart.bar", title: coordinator.L(.statisticsNavRow)) {
+                dismiss()
+                onShowStats()
             }
-            .padding(12)
-            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+            Divider().padding(.leading, 44)
+            navigationRow(systemImage: "questionmark.circle", title: coordinator.L(.howToPlayNavRow)) {
+                showingHelp = true
+            }
         }
-        .buttonStyle(.plain)
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
     }
 
-    private var helpRow: some View {
-        Button {
-            showingHelp = true
-        } label: {
+    private func navigationRow(systemImage: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack {
-                Image(systemName: "questionmark.circle")
-                Text(coordinator.L(.howToPlayNavRow))
+                Image(systemName: systemImage).frame(width: 24)
+                Text(title)
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }
             .padding(12)
-            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
