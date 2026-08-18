@@ -46,6 +46,19 @@ struct HoneycombTouchView: View {
 
     @State private var selectedHandCardId: String? = nil
 
+    // Forces one fresh layout pass shortly after the view first appears — the board's
+    // scale-to-fit GeometryReader has been observed to report a slightly-off geo.size
+    // on its very first layout pass (before the view hierarchy has fully settled),
+    // which gets baked into the scale/position used for that render. Nothing corrects
+    // it until something else forces a re-render, which is why the whole board would
+    // visibly "jump" to its correct position the first time a player dragged a card —
+    // the drag gesture's constant @State updates were incidentally the first thing to
+    // trigger a fresh render pass. Changing this GeometryReader's .id() below discards
+    // any stale internal state and forces it to re-measure from scratch, so the
+    // correction happens once, invisibly, before the player ever touches anything.
+    @State private var boardLayoutGeneration = 0
+    @State private var hasScheduledLayoutRefresh = false
+
     // Deal-flip and Nectar Exchange animation state
     @State private var isPlayerCardRevealed = [Bool](repeating: false, count: 5)
     @State private var isOpponentCardRevealed = [Bool](repeating: false, count: 5)
@@ -116,6 +129,17 @@ struct HoneycombTouchView: View {
                     // button overflow fixed earlier). Clip so the board never visually
                     // escapes its allocated space regardless of scale-math precision.
                     .clipped()
+                }
+                .id(boardLayoutGeneration)
+                .onAppear {
+                    // .id() changing recreates this GeometryReader, which would re-fire
+                    // .onAppear — guarded so the refresh only ever happens once, not on
+                    // a repeating 50ms loop.
+                    guard !hasScheduledLayoutRefresh else { return }
+                    hasScheduledLayoutRefresh = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        boardLayoutGeneration += 1
+                    }
                 }
             }
 
