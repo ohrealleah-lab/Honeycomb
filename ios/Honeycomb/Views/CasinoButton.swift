@@ -34,7 +34,11 @@ func casinoButton(
                 Text(label)
             }
         }
-        .font(.system(size: 14, weight: .black))
+        // Matches mac's Font.display(14, weight: .black) exactly — mac's helper adds
+        // .width(.condensed) on top of the same size/weight, which iOS's plain
+        // .system(size:weight:) was missing, making iOS button labels read visibly
+        // wider/looser than mac's at the same size.
+        .font(.system(size: 14, weight: .black, design: .default).width(.condensed))
         .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

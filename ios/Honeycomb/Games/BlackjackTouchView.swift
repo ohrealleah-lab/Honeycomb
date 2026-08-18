@@ -417,50 +417,36 @@ struct BlackjackTouchView: View {
         }
     }
 
+    // Matches mac's actionButtons betting/result case (BlackjackView.swift:600-626)
+    // exactly: Clear (hidden in free play, mac's own gate) + Deal in one row, then a
+    // row of five colored chip buttons (1/5/10/25/2x) — was a dark capsule reset+bet-
+    // text+double control plus only 3 plain-bordered chips (missing the 10 chip
+    // entirely, no color coding, no relation to the rest of the button system). The
+    // bet amount itself isn't duplicated here, same as mac — it's already shown in
+    // creditDisplay's BET stat above.
     private var bettingControls: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
-                HStack(spacing: 0) {
-                    Button {
+                if !viewModel.isFreePlay {
+                    casinoButton(coordinator.L(.btnClearBet), systemImage: "xmark", color: Color(white: 0.25)) {
                         viewModel.clearBet()
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .frame(width: 36, height: 36)
-                            .contentShape(Rectangle())
-                    }
-                    Text("\(coordinator.L(.betLabel)) \(viewModel.state.currentBet)")
-                        .font(.subheadline.weight(.bold).monospacedDigit())
-                        .frame(minWidth: 60)
-                    Button {
-                        viewModel.doubleBet()
-                    } label: {
-                        Image(systemName: "multiply")
-                            .frame(width: 36, height: 36)
-                            .contentShape(Rectangle())
                     }
                 }
-                .foregroundStyle(.white)
-                .background(.black.opacity(0.35), in: Capsule())
-
-                Spacer()
-
-                ForEach([1, 5, 25], id: \.self) { chip in
-                    Button {
-                        viewModel.addToBet(chip)
-                    } label: {
-                        Text("+\(chip)")
-                            .font(.caption.weight(.bold))
-                            .frame(width: 42, height: 30)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.white)
+                casinoButton(coordinator.L(.dealButton), systemImage: "play.fill", color: .yellow,
+                             disabled: !canAffordBet || viewModel.state.currentBet == 0) {
+                    viewModel.deal()
+                    actionHaptic.impactOccurred()
                 }
             }
 
-            casinoButton(coordinator.L(.dealButton), systemImage: "play.fill", color: .yellow,
-                         disabled: !canAffordBet || viewModel.state.currentBet == 0) {
-                viewModel.deal()
-                actionHaptic.impactOccurred()
+            if !viewModel.isFreePlay {
+                HStack(spacing: 10) {
+                    casinoButton(coordinator.L(.chip1), color: .white, textColor: .black) { viewModel.addToBet(1) }
+                    casinoButton(coordinator.L(.chip5), color: .red.opacity(0.85)) { viewModel.addToBet(5) }
+                    casinoButton(coordinator.L(.chip10), color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
+                    casinoButton(coordinator.L(.chip25), color: .green.opacity(0.75)) { viewModel.addToBet(25) }
+                    casinoButton(coordinator.L(.chip2x), color: .orange.opacity(0.85)) { viewModel.doubleBet() }
+                }
             }
         }
     }

@@ -378,33 +378,22 @@ struct VideoPokerTouchView: View {
 
     // MARK: Controls
 
+    // Matches mac's BetMinus/BetMax/BetPlus trio (VideoPokerView.swift:768-770) — three
+    // individual casinoButtons in the same branded button family, instead of a dark
+    // capsule minus/bet-text/plus stepper with a totally different visual language.
+    // The bet amount itself isn't duplicated here, same as mac — it's already shown in
+    // creditDisplay's BET stat above.
     private var controls: some View {
         HStack(spacing: 12) {
             if viewModel.state.phase != .holding {
-                HStack(spacing: 0) {
-                    Button {
-                        viewModel.decreaseBet()
-                    } label: {
-                        Image(systemName: "minus")
-                            .frame(width: 40, height: 40)
-                            .contentShape(Rectangle())
-                    }
-                    Text("\(coordinator.L(.betLabel)) \(viewModel.state.currentBet)")
-                        .font(.subheadline.weight(.bold).monospacedDigit())
-                        .frame(minWidth: 60)
-                    Button {
-                        viewModel.increaseBet()
-                    } label: {
-                        Image(systemName: "plus")
-                            .frame(width: 40, height: 40)
-                            .contentShape(Rectangle())
-                    }
+                casinoButton(coordinator.L(.btnBetMinus), color: .white.opacity(0.2)) {
+                    viewModel.decreaseBet()
                 }
-                .foregroundStyle(.white)
-                .background(.black.opacity(0.35), in: Capsule())
-
                 casinoButton(coordinator.L(.touchBetMaxButton), systemImage: "dollarsign.circle", color: .orange.opacity(0.85)) {
                     viewModel.maxBet()
+                }
+                casinoButton(coordinator.L(.btnBetPlus), color: .white.opacity(0.2)) {
+                    viewModel.increaseBet()
                 }
             }
 
