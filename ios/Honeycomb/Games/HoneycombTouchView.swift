@@ -811,7 +811,10 @@ struct HoneycombTouchView: View {
                         ? coordinator.L(.cardAddedToBank) : viewModel.matchResult
                     Text(title)
                         .font(.system(size: 44, weight: .bold))
-                        .foregroundColor(viewModel.matchOutcome == .win ? .yellow : .white)
+                        // Tie is styled exactly like a win on mac (a final result, not a
+                        // lesser outcome) — this used to fall through to the else branch's
+                        // white text since only .win was checked here.
+                        .foregroundColor(viewModel.matchOutcome == .win || viewModel.matchOutcome == .tie ? .yellow : .white)
                 }
 
                 if viewModel.matchOutcome == .win && !viewModel.options.noStressMode {
@@ -871,7 +874,13 @@ struct HoneycombTouchView: View {
             }
             .padding(28)
             .padding(.top, 8)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            // Matches mac's HoneycombView post-game overlay exactly (solid dark card +
+            // shadow) rather than the frosted .ultraThinMaterial look this had before —
+            // that translucent glass let the board show through and didn't match any
+            // other banner in the app.
+            .background(Color.black.opacity(0.8))
+            .cornerRadius(16)
+            .shadow(radius: 20)
             // Dismiss lives on the overlay card itself (not the screen corner) so it
             // never stacks on top of the top bar's Start/Quit button.
             .overlay(alignment: .topTrailing) {
@@ -879,10 +888,11 @@ struct HoneycombTouchView: View {
                     viewModel.showPostGamePrompt = false
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 22))
+                        .foregroundColor(.white.opacity(0.8))
                 }
-                .padding(10)
+                .buttonStyle(.plain)
+                .padding(12)
                 .accessibilityLabel(coordinator.L(.dismissA11y))
             }
             .padding(24)
