@@ -300,7 +300,11 @@ struct HoneycombTouchView: View {
         .font(.subheadline.weight(.bold))
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(.black.opacity(0.35), in: Capsule())
+        // Matches the rules banner's card styling (solid black.opacity(0.75) +
+        // cornerRadius 16) instead of the lighter, more-transparent capsule this had
+        // before, so the two banners read as a consistent pair.
+        .background(Color.black.opacity(0.75))
+        .cornerRadius(16)
     }
 
     // MARK: Scaled game content
