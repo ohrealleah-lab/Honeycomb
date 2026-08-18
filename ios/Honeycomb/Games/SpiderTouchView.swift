@@ -145,16 +145,13 @@ struct SpiderTouchView: View {
     }
 
     private var statusCapsule: some View {
-        HStack(spacing: 10) {
-            Text(viewModel.scoreString)
-                .foregroundStyle(.yellow)
+        HStack(spacing: 14) {
+            statusStat(coordinator.L(.scoreLabel), viewModel.scoreString, color: .yellow)
             if viewModel.options.isTimed && !viewModel.options.noStressMode {
-                Text(formatTime(viewModel.state.timerSeconds))
-                    .foregroundStyle(.white.opacity(0.85))
+                statusStat(coordinator.L(.timeLabel), formatTime(viewModel.state.timerSeconds), color: .white.opacity(0.85))
             }
         }
-        .font(.subheadline.weight(.bold).monospacedDigit())
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
         .padding(.vertical, 6)
         .background(.black.opacity(0.35), in: Capsule())
     }
@@ -443,6 +440,20 @@ struct SpiderTouchView: View {
 
     private func formatTime(_ totalSeconds: Int) -> String {
         String(format: "%02d:%02d", totalSeconds / 60, totalSeconds % 60)
+    }
+
+    // Matches mac's StatusItemView (label above, value below) rather than an unlabeled
+    // capsule of raw numbers — a player glancing at "-$52.00  00:00" has no way to tell
+    // which is score/bankroll and which is the timer without already knowing the format.
+    private func statusStat(_ label: String, _ value: String, color: Color) -> some View {
+        VStack(spacing: 0) {
+            Text(label)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.55))
+            Text(value)
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(color)
+        }
     }
 
     // MARK: Overlays
