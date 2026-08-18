@@ -46,19 +46,6 @@ struct HoneycombTouchView: View {
 
     @State private var selectedHandCardId: String? = nil
 
-    // Forces one fresh layout pass shortly after the view first appears — the board's
-    // scale-to-fit GeometryReader has been observed to report a slightly-off geo.size
-    // on its very first layout pass (before the view hierarchy has fully settled),
-    // which gets baked into the scale/position used for that render. Nothing corrects
-    // it until something else forces a re-render, which is why the whole board would
-    // visibly "jump" to its correct position the first time a player dragged a card —
-    // the drag gesture's constant @State updates were incidentally the first thing to
-    // trigger a fresh render pass. Changing this GeometryReader's .id() below discards
-    // any stale internal state and forces it to re-measure from scratch, so the
-    // correction happens once, invisibly, before the player ever touches anything.
-    @State private var boardLayoutGeneration = 0
-    @State private var hasScheduledLayoutRefresh = false
-
     // Deal-flip and Nectar Exchange animation state
     @State private var isPlayerCardRevealed = [Bool](repeating: false, count: 5)
     @State private var isOpponentCardRevealed = [Bool](repeating: false, count: 5)
@@ -109,11 +96,20 @@ struct HoneycombTouchView: View {
                     let scale = min(2.0, max(0.2, min(geo.size.width / intrinsic.width,
                                                       geo.size.height / intrinsic.height)))
 
-                    ZStack(alignment: .topLeading) {
-                        gameContent(landscape: isLandscape)
-                        dragGhost
-                    }
-                    .frame(width: intrinsic.width, height: intrinsic.height)
+                    // dragGhost is rendered via .overlay(), not as a ZStack sibling —
+                    // its .position() modifier's absolute placement, computed from live
+                    // touch coordinates, was found to transiently perturb the ZStack's
+                    // own size negotiation for the render that introduces the ghost
+                    // (confirmed via a video showing the whole board's scaled content
+                    // jump by a fixed vertical offset for the exact duration a drag was
+                    // active, snapping back the instant the finger lifted — isolated to
+                    // dragHandCard becoming non-nil, since a same-frame tap-select with
+                    // no drag never reproduced it). .overlay()'s content is documented
+                    // to never affect the base view's reported size, unlike a plain
+                    // ZStack sibling, which removes that risk entirely.
+                    gameContent(landscape: isLandscape)
+                        .frame(width: intrinsic.width, height: intrinsic.height, alignment: .topLeading)
+                        .overlay(dragGhost)
                     // Anchors dragSpace — every cellFrames GeometryReader and DragGesture
                     // .named(Self.dragSpace) reference (see dropCellIndex() below) depends
                     // on this exact container. Moving this modifier elsewhere, or applying
@@ -129,17 +125,6 @@ struct HoneycombTouchView: View {
                     // button overflow fixed earlier). Clip so the board never visually
                     // escapes its allocated space regardless of scale-math precision.
                     .clipped()
-                }
-                .id(boardLayoutGeneration)
-                .onAppear {
-                    // .id() changing recreates this GeometryReader, which would re-fire
-                    // .onAppear — guarded so the refresh only ever happens once, not on
-                    // a repeating 50ms loop.
-                    guard !hasScheduledLayoutRefresh else { return }
-                    hasScheduledLayoutRefresh = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                        boardLayoutGeneration += 1
-                    }
                 }
             }
 
