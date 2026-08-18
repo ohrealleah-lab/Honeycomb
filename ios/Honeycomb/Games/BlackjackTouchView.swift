@@ -29,7 +29,6 @@ struct BlackjackTouchView: View {
     @State private var showCardBackPlaceholders = false
     @State private var dealerFlipped = false
     @State private var showIdlePrompt = false
-    @State private var resultBannerShowTask: DispatchWorkItem? = nil
     @State private var resultHideTask: DispatchWorkItem? = nil
     @State private var resultCardHideTask: DispatchWorkItem? = nil
     @State private var idlePromptTask: DispatchWorkItem? = nil
@@ -147,9 +146,10 @@ struct BlackjackTouchView: View {
                 dealerFlipped = true
                 withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
 
-                let bannerShowTask = DispatchWorkItem { showResultBanner = true }
-                resultBannerShowTask = bannerShowTask
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: bannerShowTask)
+                // Shows synchronously rather than through a delayed DispatchWorkItem
+                // (mac waits 1.0s first) — a plain, directly-verifiable SwiftUI
+                // condition instead of depending on an async task actually firing.
+                showResultBanner = true
 
                 let bannerTask = DispatchWorkItem {
                     let hideTask = DispatchWorkItem {
@@ -169,7 +169,6 @@ struct BlackjackTouchView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: bannerTask)
             }
             if newPhase == .betting || newPhase == .playing {
-                resultBannerShowTask?.cancel(); resultBannerShowTask = nil
                 resultHideTask?.cancel(); resultHideTask = nil
                 resultCardHideTask?.cancel(); resultCardHideTask = nil
                 idlePromptTask?.cancel(); idlePromptTask = nil

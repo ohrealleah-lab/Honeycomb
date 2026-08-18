@@ -28,7 +28,6 @@ struct VideoPokerTouchView: View {
     @State private var cardsVisible = true
     @State private var showCardBackPlaceholders = true
     @State private var showIdlePrompt = false
-    @State private var resultBannerShowTask: DispatchWorkItem? = nil
     @State private var resultWinFlashTask: DispatchWorkItem? = nil
     @State private var resultAnimationTask: DispatchWorkItem? = nil
     @State private var resultHideTask: DispatchWorkItem? = nil
@@ -137,15 +136,15 @@ struct VideoPokerTouchView: View {
             viewModel.scheduleIdleActionCheck()
             if newPhase == .result {
                 // Cancel any leftover tasks just in case.
-                resultBannerShowTask?.cancel()
                 resultWinFlashTask?.cancel()
                 resultAnimationTask?.cancel()
                 resultHideTask?.cancel()
                 idlePromptTask?.cancel()
 
-                let bannerShowTask = DispatchWorkItem { showResultBanner = true }
-                resultBannerShowTask = bannerShowTask
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: bannerShowTask)
+                // Shows synchronously rather than through a delayed DispatchWorkItem
+                // (mac waits 1.0s first) — a plain, directly-verifiable SwiftUI
+                // condition instead of depending on an async task actually firing.
+                showResultBanner = true
 
                 let animationTask = DispatchWorkItem {
                     let hideTask = DispatchWorkItem {
@@ -165,18 +164,15 @@ struct VideoPokerTouchView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: animationTask)
 
                 if viewModel.state.lastPayout > 0 {
-                    let winFlashTask = DispatchWorkItem {
-                        winFlash = true
-                        showParticles = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { winFlash = false }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
-                    }
-                    resultWinFlashTask = winFlashTask
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: winFlashTask)
+                    winFlash = true
+                    showParticles = true
+                    let winFlashOffTask = DispatchWorkItem { winFlash = false }
+                    resultWinFlashTask = winFlashOffTask
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: winFlashOffTask)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
                 }
             }
             if newPhase == .holding {
-                resultBannerShowTask?.cancel(); resultBannerShowTask = nil
                 resultWinFlashTask?.cancel(); resultWinFlashTask = nil
                 resultAnimationTask?.cancel(); resultAnimationTask = nil
                 resultHideTask?.cancel(); resultHideTask = nil
@@ -189,7 +185,6 @@ struct VideoPokerTouchView: View {
                 animateDeal()
             }
             if newPhase == .deal {
-                resultBannerShowTask?.cancel(); resultBannerShowTask = nil
                 resultWinFlashTask?.cancel(); resultWinFlashTask = nil
                 resultAnimationTask?.cancel(); resultAnimationTask = nil
                 resultHideTask?.cancel(); resultHideTask = nil
