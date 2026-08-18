@@ -275,13 +275,20 @@ struct BeecellTouchView: View {
             // landing above the actual hinted card instead of tightly bordering it,
             // which this sidesteps entirely by computing the ring's position
             // independently, from the same source of truth.
-            if let hintIndex {
-                Color.clear
-                    .frame(width: cardW, height: cardH)
-                    .offset(y: CGFloat(hintIndex) * upStep)
-                    .modifier(TouchHintHighlight(isHighlighted: true))
-                    .allowsHitTesting(false)
-            }
+            //
+            // Always mounted (not `if let hintIndex { ... }`) — TouchHintHighlight's
+            // pulse only starts on an isHighlighted false->true *transition* (it's
+            // driven by .onChange). A conditionally-inserted view is born with
+            // isHighlighted already true, so there's no transition to observe: phase
+            // never leaves 0 and the ring's opacity formula ((1-cos(phase*pi*4))/2)
+            // stays permanently 0 — invisible. Foundation/free-cell rings never hit
+            // this because they're unconditional siblings that see the real
+            // false->true edge when a hint lands on them.
+            Color.clear
+                .frame(width: cardW, height: cardH)
+                .offset(y: CGFloat(hintIndex ?? 0) * upStep)
+                .modifier(TouchHintHighlight(isHighlighted: hintIndex != nil))
+                .allowsHitTesting(false)
         }
         .frame(width: cardW, height: columnHeight, alignment: .top)
         .modifier(TouchHintHighlight(isHighlighted: pile.cards.isEmpty && hintTouches(pile.id)))
