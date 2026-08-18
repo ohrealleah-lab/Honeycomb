@@ -138,20 +138,13 @@ struct BeecellTouchView: View {
     // MARK: Top bar
 
     private var topBar: some View {
+        // statusCapsule is an overlay, not a third HStack element flanked by
+        // Spacers — the leading (menu) and trailing (New Deal) content aren't the
+        // same width, so centering it "between" two Spacers actually centered it in
+        // whatever space was left over, not on the bar itself. An overlay centers it
+        // on the full bar width regardless of how wide either side is.
         HStack(spacing: 10) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
-
-            Spacer()
-
-            HStack(spacing: 14) {
-                statusStat(coordinator.L(.scoreLabel), viewModel.scoreString, color: .yellow)
-                if viewModel.options.isTimed && !viewModel.options.noStressMode {
-                    statusStat(coordinator.L(.timeLabel), formatTime(viewModel.state.timerSeconds), color: .white.opacity(0.85))
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-            .background(.black.opacity(0.35), in: Capsule())
 
             Spacer()
 
@@ -163,6 +156,19 @@ struct BeecellTouchView: View {
             }
             .buttonStyle(.borderedProminent)
         }
+        .overlay { statusCapsule }
+    }
+
+    private var statusCapsule: some View {
+        HStack(spacing: 14) {
+            statusStat(coordinator.L(.scoreLabel), viewModel.scoreString, color: .yellow)
+            if viewModel.options.isTimed && !viewModel.options.noStressMode {
+                statusStat(coordinator.L(.timeLabel), formatTime(viewModel.state.timerSeconds), color: .white.opacity(0.85))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        .background(.black.opacity(0.35), in: Capsule())
     }
 
     // MARK: Top row: free cells | undo/hint | foundations

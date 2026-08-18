@@ -131,7 +131,7 @@ enum StringsSpanish {
         .hitSpaceToDeal: "Presiona Espacio para Repartir",
         .holdAll: "Retener Todas",
         .betMax: "Apuesta Máxima",
-        .scoreYouFmt: "TÚ %d",
+        .scoreYouFmt: "Tú %d",
         .scoreDealerFmt: "%d %@",
         .appNavigationTitle: "Honeycomb: Suite de Cartas",
         .resetDefaultCardBacks: "Restablecer Reversos de Carta Predeterminados",

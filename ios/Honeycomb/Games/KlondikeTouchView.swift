@@ -128,12 +128,13 @@ struct KlondikeTouchView: View {
     // MARK: Top bar
 
     private var topBar: some View {
+        // statusCapsule is an overlay, not a third HStack element flanked by
+        // Spacers — the leading (menu) and trailing (New Deal) content aren't the
+        // same width, so centering it "between" two Spacers actually centered it in
+        // whatever space was left over, not on the bar itself. An overlay centers it
+        // on the full bar width regardless of how wide either side is.
         HStack(spacing: 10) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
-
-            Spacer()
-
-            statusCapsule
 
             Spacer()
 
@@ -145,6 +146,7 @@ struct KlondikeTouchView: View {
             }
             .buttonStyle(.borderedProminent)
         }
+        .overlay { statusCapsule }
     }
 
     private var statusCapsule: some View {
