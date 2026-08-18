@@ -501,7 +501,12 @@ struct BeecellTouchView: View {
                 .frame(maxWidth: 240)
             }
             .padding(28)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            // Matches mac's BeecellView win overlay exactly (solid dark card + yellow-
+            // glow shadow) rather than the frosted .ultraThinMaterial look this had
+            // before, which let the board show through and didn't match any other banner.
+            .background(Color.black.opacity(0.75))
+            .cornerRadius(12)
+            .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
         }
     }
 
@@ -559,14 +564,17 @@ struct BeecellTouchView: View {
             }
             .frame(maxWidth: 260)
             .padding(24)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            // Matches mac's BeecellView stuck overlay exactly — see winOverlay above.
+            .background(Color.black.opacity(0.75))
+            .cornerRadius(12)
+            .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
             .overlay(alignment: .topTrailing) {
                 Button {
                     dismissedStuckBanner = true
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.7))
                 }
                 .padding(8)
             }
