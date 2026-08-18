@@ -59,9 +59,30 @@ struct BlackjackTouchView: View {
         return -cardW * fraction
     }
 
+    // Widest hand currently on screen (dealer or any player hand) — drives the
+    // shrink-by-count tiering below. Mac's own equivalent (playerCardScale) is
+    // actually disabled today in favor of overlap alone, but Blackjack hands can
+    // grow past 5 cards in a way Video Poker's fixed-5 hand never does, and overlap
+    // alone eventually reads as illegible rather than just tightly fanned.
+    private var maxHandCardCount: Int {
+        let playerMax = viewModel.state.playerHands.map { $0.cards.count }.max() ?? 0
+        return max(viewModel.state.dealerCards.count, playerMax, 2)
+    }
+
+    private func sizeScale(for count: Int) -> CGFloat {
+        switch count {
+        case ..<6: return 1.0
+        case 6: return 0.85
+        default: return 0.7
+        }
+    }
+
     var body: some View {
         GeometryReader { geo in
-            let cardW = min(geo.size.width * 0.28, 150)
+            // Same base size/cap as Video Poker (cardW = min(width * 0.32, 190)) so
+            // the two games' cards read as the same size, then scaled down once a
+            // hand grows past 5 cards.
+            let cardW = min(geo.size.width * 0.32, 190) * sizeScale(for: maxHandCardCount)
             let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
