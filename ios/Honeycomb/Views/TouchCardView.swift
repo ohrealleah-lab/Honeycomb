@@ -177,12 +177,16 @@ struct TouchCardView: View {
     }
 
     private var cornerIndex: some View {
-        VStack(spacing: 1) {
+        // Matches mac's CardFrontView corner index exactly — an HStack (rank, then a
+        // smaller suit symbol beside it), not stacked vertically. Was a VStack with the
+        // suit below the rank, which reads as a completely different card layout next
+        // to mac's side-by-side rank+suit.
+        HStack(alignment: .center, spacing: 1) {
             Text(rankText)
                 .font(.system(size: width * 0.17, weight: .bold, design: .monospaced))
             Image(systemName: suitSymbol)
                 .resizable().aspectRatio(contentMode: .fit)
-                .frame(width: width * 0.12)
+                .frame(width: width * 0.1)
         }
         .foregroundStyle(suitColor)
         .fixedSize()
