@@ -319,11 +319,10 @@ struct VideoPokerTouchView: View {
                     let lifting = isHeld && viewModel.state.phase == .holding
                     let visible = i < cardVisible.count && cardVisible[i]
                     let wobble = i < cardRotation.count ? cardRotation[i] : 0.0
-                    VStack(spacing: 4) {
-                        Text(coordinator.L(.heldLabel))
-                            .font(.caption2.weight(.black))
-                            .foregroundStyle(.yellow)
-                            .opacity(isHeld ? 1 : 0)
+                    // No "HELD" text label — matches mac, which conveys a held card
+                    // purely through the lift (and here, the yellow border), not a
+                    // separate text caption above it.
+                    Group {
                         TouchCardView(card: card, width: cardW)
                             .overlay(
                                 RoundedRectangle(cornerRadius: cardW * 0.07)
