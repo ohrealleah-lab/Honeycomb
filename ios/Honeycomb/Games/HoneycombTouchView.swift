@@ -291,7 +291,10 @@ struct HoneycombTouchView: View {
             Text(coordinator.L(.scoreYouFmt, viewModel.board.playerScore + viewModel.playerHand.count))
                 .foregroundStyle(.cyan)
             Text("–").foregroundStyle(.white.opacity(0.6))
-            Text(coordinator.L(.scoreDealerFmt, viewModel.board.opponentScore + viewModel.opponentHand.count))
+            // Not "DEALER" — shows the opponent's actual name (e.g. "Baby Bee"), same
+            // fix as the hand-side label above the opponent's cards.
+            Text(coordinator.L(.scoreDealerFmt, viewModel.board.opponentScore + viewModel.opponentHand.count,
+                                honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language)))
                 .foregroundStyle(.pink)
         }
         .font(.subheadline.weight(.bold))
@@ -464,23 +467,29 @@ struct HoneycombTouchView: View {
         // substitute, since it only shrinks as a last resort and can't be relied on
         // alone to keep 3-4 rule names legible within 2 lines.
         let isDense = rulesBannerLines.count > 2
-        // Matches mac's HoneycombView rules banner treatment (yellow, .black font
-        // weight) instead of the previous white/semibold caption text, which read as
-        // much smaller/quieter than mac's bold yellow banner and was hard to read at a
-        // glance. Sizes are smaller than mac's literal 20-28pt titles/16-22pt lines
-        // since mac has a dedicated floating box while this sits in a single compact
-        // row alongside the hint/undo buttons, but considerably bigger than the old
-        // caption2/footnote (11-13pt).
+        // Matches mac's HoneycombView rules banner treatment exactly: a "Rules:" title
+        // over the rule name(s), yellow/.black weight, on a solid black.opacity(0.75)
+        // rounded card — not bare text floating in the row. Sizes are smaller than
+        // mac's literal 20-28pt titles/16-22pt lines since mac has a dedicated floating
+        // box while this sits in a compact row alongside the hint/undo buttons.
         return HStack(spacing: 10) {
             hintButton
-            Text(rulesBannerLines.joined(separator: "  •  "))
-                .font(.system(size: isDense ? 14 : 17, weight: .black))
-                .foregroundStyle(.yellow)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle()) // Make the whole area tappable
+            VStack(spacing: isDense ? 1 : 2) {
+                Text(coordinator.L(.rulesBannerTitle))
+                    .font(.system(size: isDense ? 10 : 12, weight: .black))
+                Text(rulesBannerLines.joined(separator: "  •  "))
+                    .font(.system(size: isDense ? 13 : 16, weight: .black))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
+            }
+            .foregroundStyle(.yellow)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Color.black.opacity(0.75))
+            .cornerRadius(16)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle()) // Make the whole area tappable
                 .onTapGesture {
                     isShowingRulesTooltip = true
                 }
@@ -497,10 +506,10 @@ struct HoneycombTouchView: View {
         .padding(.horizontal, 4)
     }
 
-    // Bumped from 38 to fit the larger rules text above — intrinsicSize(landscape:)
-    // below references this same constant rather than a second hardcoded "38"/"46", so
-    // the two can't drift out of sync the way a literal duplicate number risks.
-    private static let bannerRowHeight: CGFloat = 46
+    // Bumped to fit the boxed title+value rules banner above (was 46, a single text
+    // line) — intrinsicSize(landscape:) below references this same constant rather
+    // than a second hardcoded copy, so the two can't drift out of sync.
+    private static let bannerRowHeight: CGFloat = 58
 
     @ViewBuilder
     private var hintButton: some View {
