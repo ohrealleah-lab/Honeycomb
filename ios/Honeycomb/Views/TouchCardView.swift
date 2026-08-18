@@ -266,3 +266,36 @@ struct TouchHintAnimatable: AnimatableModifier {
             )
     }
 }
+
+/// Small, fixed-size pulsing badge marking exactly one card in a tableau — unlike
+/// TouchHintHighlight's full-card ring, this doesn't scale with the card's own frame.
+/// In a short, tightly-overlapping column (each card peeking only ~24% of a card's
+/// height above the one below it), a full-height ring around the correctly-hinted
+/// bottom card can span 4+ cards' worth of peek slivers purely from card-height math —
+/// technically outlining just that one card, but reading as "the whole stack is
+/// selected." A small badge pinned to the card's corner stays unambiguous regardless
+/// of how tall the card underneath it is.
+struct TouchHintCornerBadge: View {
+    @Environment(AppCoordinator.self) private var coordinator
+    let isHighlighted: Bool
+    @State private var pulse = false
+
+    var body: some View {
+        Group {
+            if isHighlighted {
+                Image(systemName: "hand.point.up.left.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.black)
+                    .frame(width: 26, height: 26)
+                    .background(coordinator.customCardColors.hintHighlightColor, in: Circle())
+                    .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                    .shadow(color: .black.opacity(0.4), radius: 3)
+                    .scaleEffect(pulse ? 1.12 : 0.92)
+                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: pulse)
+                    .onAppear { pulse = true }
+                    .onDisappear { pulse = false }
+                    .offset(x: -8, y: -8)
+            }
+        }
+    }
+}

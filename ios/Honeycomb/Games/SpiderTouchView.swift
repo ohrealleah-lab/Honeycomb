@@ -284,6 +284,9 @@ struct SpiderTouchView: View {
                     .offset(y: offsets[i])
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
                     .modifier(TouchHintHighlight(isHighlighted: hintTouches(pile.id) && viewModel.activeHint?.card.id == card.id))
+                    .overlay(alignment: .topLeading) {
+                        TouchHintCornerBadge(isHighlighted: hintTouches(pile.id) && viewModel.activeHint?.card.id == card.id)
+                    }
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMove(card: card, from: pile)
                     }
