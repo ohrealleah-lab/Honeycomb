@@ -434,7 +434,7 @@ struct VideoPokerTouchView: View {
                 casinoButton(coordinator.L(.btnBetMinus), color: .white.opacity(0.2)) {
                     viewModel.decreaseBet()
                 }
-                casinoButton(coordinator.L(.touchBetMaxButton), systemImage: "dollarsign.circle", color: .orange.opacity(0.85)) {
+                casinoButton(coordinator.L(.touchBetMaxButton), color: .orange.opacity(0.85)) {
                     viewModel.maxBet()
                 }
                 casinoButton(coordinator.L(.btnBetPlus), color: .white.opacity(0.2)) {
@@ -444,16 +444,16 @@ struct VideoPokerTouchView: View {
             }
 
             if !canAffordBet && viewModel.state.phase != .holding {
-                casinoButton(coordinator.L(.rebuyButton), systemImage: "arrow.clockwise.circle", color: .red.opacity(0.8)) {
+                casinoButton(coordinator.L(.rebuyButton), color: .red.opacity(0.8)) {
                     viewModel.rebuy()
                 }
             } else if viewModel.state.phase == .holding {
-                casinoButton(coordinator.L(.btnDraw), systemImage: "arrow.triangle.2.circlepath", color: .green.opacity(0.85)) {
+                casinoButton(coordinator.L(.btnDraw), color: .green.opacity(0.85)) {
                     viewModel.draw()
                     dealHaptic.impactOccurred()
                 }
             } else {
-                casinoButton(coordinator.L(.dealButton), systemImage: "play.fill", color: .yellow, textColor: .black,
+                casinoButton(coordinator.L(.dealButton), color: .yellow, textColor: .black,
                              disabled: !canAffordBet) {
                     viewModel.deal()
                     dealHaptic.impactOccurred()

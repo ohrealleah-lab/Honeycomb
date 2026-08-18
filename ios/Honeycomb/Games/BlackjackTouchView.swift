@@ -459,11 +459,11 @@ struct BlackjackTouchView: View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
                 if !viewModel.isFreePlay {
-                    casinoButton(coordinator.L(.btnClearBet), systemImage: "xmark", color: Color(white: 0.25)) {
+                    casinoButton(coordinator.L(.btnClearBet), color: Color(white: 0.25)) {
                         viewModel.clearBet()
                     }
                 }
-                casinoButton(coordinator.L(.dealButton), systemImage: "play.fill", color: .yellow,
+                casinoButton(coordinator.L(.dealButton), color: .yellow,
                              disabled: !canAffordBet || viewModel.state.currentBet == 0) {
                     viewModel.deal()
                     actionHaptic.impactOccurred()
@@ -484,22 +484,22 @@ struct BlackjackTouchView: View {
 
     private var actionControls: some View {
         HStack(spacing: 10) {
-            casinoButton(coordinator.L(.touchActionHit), systemImage: "plus.circle", color: .green.opacity(0.85)) {
+            casinoButton(coordinator.L(.touchActionHit), color: .green.opacity(0.85)) {
                 viewModel.hit()
                 actionHaptic.impactOccurred()
             }
-            casinoButton(coordinator.L(.touchActionStand), systemImage: "hand.raised", color: .red.opacity(0.75)) {
+            casinoButton(coordinator.L(.touchActionStand), color: .red.opacity(0.75)) {
                 viewModel.stand()
                 actionHaptic.impactOccurred()
             }
             if viewModel.canDouble {
-                casinoButton(coordinator.L(.touchActionDouble), systemImage: "multiply.circle", color: .blue.opacity(0.75)) {
+                casinoButton(coordinator.L(.touchActionDouble), color: .blue.opacity(0.75)) {
                     viewModel.doubleDown()
                     actionHaptic.impactOccurred()
                 }
             }
             if viewModel.canSplit {
-                casinoButton(coordinator.L(.touchActionSplit), systemImage: "arrow.triangle.branch", color: .purple.opacity(0.75)) {
+                casinoButton(coordinator.L(.touchActionSplit), color: .purple.opacity(0.75)) {
                     viewModel.split()
                     actionHaptic.impactOccurred()
                 }
@@ -510,7 +510,7 @@ struct BlackjackTouchView: View {
     private var rebuyControl: some View {
         HStack {
             Spacer()
-            casinoButton(coordinator.L(.rebuyButton), systemImage: "arrow.clockwise.circle", color: .red.opacity(0.8)) {
+            casinoButton(coordinator.L(.rebuyButton), color: .red.opacity(0.8)) {
                 viewModel.rebuy()
             }
             Spacer()
