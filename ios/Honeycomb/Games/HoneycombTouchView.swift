@@ -24,14 +24,24 @@ struct HoneycombTouchView: View {
     private static let dealFlipStagger: Double = HoneycombFlipTiming.duration
 
     // Face-down placeholders shown pre-match, same trick as the mac view: fixed ids so
-    // ForEach identity stays stable across re-renders.
-    private static let placeholderHand: [HoneycombCard] = (0..<5).map { i in
-        HoneycombCard(
-            data: HoneycombCardData(id: -1, name: "", stars: 1, stats: [1, 1, 1, 1], suit: "S"),
-            owner: .player,
-            id: "placeholder-\(i)"
-        )
+    // ForEach identity stays stable across re-renders. Player and opponent get their
+    // own id namespace (was one shared array before) — every hand card here also
+    // carries .matchedGeometryEffect(id: card.id, in: animationSpace), and reusing the
+    // same ids for both rows put two views in that Namespace under the same (id,
+    // namespace) pair simultaneously, both marked isSource: true. SwiftUI logs that as
+    // "results are undefined" and it manifested as the placeholder cards rendering at
+    // an inconsistent, wrong size compared to the real dealt hand.
+    private static func placeholderHand(prefix: String) -> [HoneycombCard] {
+        (0..<5).map { i in
+            HoneycombCard(
+                data: HoneycombCardData(id: -1, name: "", stars: 1, stats: [1, 1, 1, 1], suit: "S"),
+                owner: .player,
+                id: "placeholder-\(prefix)-\(i)"
+            )
+        }
     }
+    private static let playerPlaceholderHand = placeholderHand(prefix: "player")
+    private static let opponentPlaceholderHand = placeholderHand(prefix: "opponent")
 
     // MARK: Interaction state
 
@@ -421,12 +431,12 @@ struct HoneycombTouchView: View {
     }
 
     private var playerDisplayHand: [HoneycombCard] {
-        viewModel.gameState == .setup ? Self.placeholderHand
+        viewModel.gameState == .setup ? Self.playerPlaceholderHand
             : (viewModel.gameState == .gameOver ? viewModel.playerStartingDeck : viewModel.playerHand)
     }
 
     private var opponentDisplayHand: [HoneycombCard] {
-        viewModel.gameState == .setup ? Self.placeholderHand : viewModel.opponentHand
+        viewModel.gameState == .setup ? Self.opponentPlaceholderHand : viewModel.opponentHand
     }
 
     private func handLabel(_ text: String) -> some View {
