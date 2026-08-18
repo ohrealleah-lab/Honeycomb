@@ -308,14 +308,13 @@ struct BlackjackTouchView: View {
                                       ? Color.yellow : Color.white.opacity(0.3))
                                 .frame(width: 8, height: 8)
                         }
+                        // No inline per-hand result tag here — matches mac's playerArea
+                        // (BlackjackView.swift), which only ever shows the hand value,
+                        // never a WIN/LOSS/PUSH label beside it; the result is
+                        // communicated once, by the big resultBanner below.
                         Text("\(handLabel(hand, index: i))  \(hand.value)\(hand.isBust ? coordinator.L(.touchBustSuffix) : "")")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(hand.isBust ? .red : .white)
-                        if let result = hand.result {
-                            Text(resultText(result))
-                                .font(.caption.weight(.black))
-                                .foregroundStyle(resultColor(result))
-                        }
                     }
                     HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, isSplit: viewModel.state.playerHands.count > 1)) {
                         ForEach(Array(hand.cards.enumerated()), id: \.offset) { i, card in
@@ -341,24 +340,6 @@ struct BlackjackTouchView: View {
         viewModel.state.playerHands.count > 1 ? coordinator.L(.touchHandLabelFmt, index + 1) : coordinator.L(.touchYouLabel)
     }
 
-    private func resultText(_ result: BlackjackHandResult) -> String {
-        switch result {
-        case .win: return coordinator.L(.touchResultWin)
-        case .loss: return coordinator.L(.touchResultLoss)
-        case .push: return coordinator.L(.touchResultPush)
-        case .blackjack: return coordinator.L(.touchResultBlackjack)
-        case .bust: return coordinator.L(.touchResultBust)
-        }
-    }
-
-    private func resultColor(_ result: BlackjackHandResult) -> Color {
-        switch result {
-        case .win, .blackjack: return .yellow
-        case .push: return .white
-        case .loss, .bust: return .red.opacity(0.9)
-        }
-    }
-
     private var resultBanner: some View {
         Group {
             if showResultBanner, viewModel.state.phase == .result, viewModel.state.resultOutcome != .none {
@@ -375,6 +356,14 @@ struct BlackjackTouchView: View {
                             .foregroundStyle(.white.opacity(0.85))
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                // Matches mac's resultBanner background/shadow (BlackjackView.swift:
+                // 585-591) — was missing here, so the banner text floated directly on
+                // the felt with nothing to separate it from the cards behind it.
+                .background(Color.black.opacity(0.75))
+                .cornerRadius(12)
+                .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5) : .clear, radius: 16)
                 // Matches mac's bannerWinFlash — a slow repeating pulse for the
                 // duration the win banner is visible, not a one-shot flash.
                 .scaleEffect(isWin && bannerWinFlash ? 1.06 : 1.0)
@@ -390,7 +379,10 @@ struct BlackjackTouchView: View {
                 }
             }
         }
-        .frame(height: viewModel.isFreePlay ? 28 : 48)
+        // Bumped from 28/48 — the new boxed background/padding above makes the shown
+        // banner taller than the old bare-text reservation, which would otherwise
+        // compress/clip it against this fixed frame.
+        .frame(height: viewModel.isFreePlay ? 60 : 84)
     }
 
     // MARK: Controls
