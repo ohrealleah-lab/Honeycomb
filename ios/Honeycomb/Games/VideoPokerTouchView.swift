@@ -363,38 +363,46 @@ struct VideoPokerTouchView: View {
             if showResultBanner, viewModel.state.phase == .result, !viewModel.state.lastHandName.isEmpty {
                 if viewModel.state.lastPayout > 0 {
                     let localizedName = localizedHandName(viewModel.state.lastHandName, language: coordinator.language)
-                    VStack(spacing: 4) {
+                    VStack(spacing: 6) {
                         Text(coordinator.L(.resultHandNameFmt, localizedName))
-                            .font(.title3.weight(.black))
+                            .font(.system(size: 32, weight: .black))
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
                             .foregroundStyle(.yellow)
                             .scaleEffect(winFlash ? 1.1 : 1.0)
                             .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
                         if !viewModel.isFreePlay {
                             Text(coordinator.L(.resultCreditsWonFmt, viewModel.state.lastPayout))
-                                .font(.subheadline)
+                                .font(.title3)
                                 .foregroundStyle(.white)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
                     .background(Color.black.opacity(0.75))
-                    .cornerRadius(12)
+                    .cornerRadius(14)
                     .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 12)
                 } else {
-                    VStack(spacing: 4) {
+                    VStack(spacing: 6) {
                         Text(coordinator.L(.notTodayPartner))
-                            .font(.title3.weight(.black))
+                            .font(.system(size: 32, weight: .black))
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
                             .foregroundStyle(.yellow)
                         if !viewModel.isFreePlay {
                             Text(coordinator.L(.resultCreditsLostFmt, viewModel.state.currentBet))
-                                .font(.subheadline)
+                                .font(.title3)
                                 .foregroundStyle(.white)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
                     .background(Color.black.opacity(0.75))
-                    .cornerRadius(12)
+                    .cornerRadius(14)
                 }
             } else if viewModel.state.phase == .holding {
                 Text(coordinator.L(.tapHoldDrawHint))
@@ -404,8 +412,12 @@ struct VideoPokerTouchView: View {
                 Text(" ").font(.title3.weight(.black))
             }
         }
-        // Bumped from 28 — the boxed background/padding above makes the shown
-        // banner taller than the old bare-text reservation.
+        .padding(.horizontal, 16)
+        // Bumped considerably — headline text was reading as small/hard to read at
+        // .title3; now sized much closer to mac's own literal 36pt (32pt here, with
+        // minimumScaleFactor as a safety net on narrow phones), and the reserved
+        // height grown to match. .frame(maxWidth: .infinity) above centers the box
+        // itself under the cards, not just the text within it.
         .frame(height: viewModel.isFreePlay ? 44 : 64)
     }
 

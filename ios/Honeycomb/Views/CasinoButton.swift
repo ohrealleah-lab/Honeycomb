@@ -34,22 +34,21 @@ func casinoButton(
                 Text(label)
             }
         }
-        // Matches mac's Font.display(14, weight: .black) exactly — mac's helper adds
-        // .width(.condensed) on top of the same size/weight, which iOS's plain
-        // .system(size:weight:) was missing, making iOS button labels read visibly
-        // wider/looser than mac's at the same size.
-        .font(.system(size: 14, weight: .black, design: .default).width(.condensed))
+        // Doubled from mac's literal 14pt/condensed — touch targets read small/hard to
+        // tap at the mac-matched size, so this deliberately diverges from mac's own
+        // scale (still .width(.condensed), same font identity, just twice as large).
+        .font(.system(size: 28, weight: .black, design: .default).width(.condensed))
         .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 20)
         // No .frame(maxWidth: .infinity) — matches mac's casinoButton, which sizes to
         // its own content rather than stretching to fill its row. The row itself then
         // reads as one natural-width control cluster centered under the cards (its
         // parent VStack's default center alignment), same as mac, instead of a full-
         // width bar with buttons spread apart by Spacers.
         .background(disabled ? Color.gray.opacity(0.3) : color)
-        .cornerRadius(6)
-        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.3), lineWidth: 1))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.3), lineWidth: 1))
     }
     .buttonStyle(CasinoButtonPressStyle())
     .disabled(disabled)

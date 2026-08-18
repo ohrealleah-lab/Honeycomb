@@ -314,13 +314,14 @@ struct BlackjackTouchView: View {
                                           ? Color.yellow : Color.white.opacity(0.3))
                                     .frame(width: 8, height: 8)
                             }
-                            // No inline per-hand result tag here — matches mac's playerArea
-                            // (BlackjackView.swift), which only ever shows the hand value,
-                            // never a WIN/LOSS/PUSH label beside it; the result is
-                            // communicated once, by the big resultBanner below.
-                            Text("\(handLabel(hand, index: i))  \(hand.value)\(hand.isBust ? coordinator.L(.touchBustSuffix) : "")")
+                            // No inline per-hand result tag or "BUST" suffix here —
+                            // matches mac's playerArea (BlackjackView.swift), which
+                            // only ever shows the hand value, never a WIN/LOSS/PUSH/
+                            // BUST label beside it; the result is communicated once,
+                            // by the big resultBanner below.
+                            Text("\(handLabel(hand, index: i))  \(hand.value)")
                                 .font(.subheadline.weight(.bold))
-                                .foregroundStyle(hand.isBust ? .red : .white)
+                                .foregroundStyle(.white)
                         }
                         HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, isSplit: viewModel.state.playerHands.count > 1)) {
                             ForEach(Array(hand.cards.enumerated()), id: \.offset) { i, card in
@@ -352,23 +353,29 @@ struct BlackjackTouchView: View {
             if showResultBanner, viewModel.state.phase == .result, viewModel.state.resultOutcome != .none {
                 let (headline, subline) = localizedBlackjackResult(viewModel.state, language: coordinator.language)
                 let isWin = viewModel.state.isWinRound
-                VStack(spacing: 2) {
+                VStack(spacing: 6) {
                     // Matches mac (BlackjackView.swift:554-556) — the headline is
                     // unconditionally yellow for every outcome, win or loss; only the
                     // wording and the win-only glow/pulse below differ. Was
                     // conditionally white for a loss, which doesn't match mac at all.
+                    // Size bumped considerably (was .title3, hard to read) — closer to
+                    // mac's own literal 36pt, with minimumScaleFactor as a safety net.
                     Text(headline)
-                        .font(.title3.weight(.black))
+                        .font(.system(size: 32, weight: .black))
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
                         .foregroundStyle(.yellow)
 
                     if !viewModel.isFreePlay {
                         Text(subline)
-                            .font(.subheadline)
+                            .font(.title3)
                             .foregroundStyle(.white)
                     }
                 }
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 20)
-                .padding(.vertical, 14)
+                .padding(.vertical, 18)
                 // Matches mac's resultBanner background/shadow (BlackjackView.swift:
                 // 585-591) — was missing here, so the banner text floated directly on
                 // the felt with nothing to separate it from the cards behind it.
@@ -390,10 +397,9 @@ struct BlackjackTouchView: View {
                 }
             }
         }
-        // Bumped from 28/48 — the new boxed background/padding above makes the shown
-        // banner taller than the old bare-text reservation, which would otherwise
-        // compress/clip it against this fixed frame.
-        .frame(height: viewModel.isFreePlay ? 60 : 84)
+        .padding(.horizontal, 16)
+        // Bumped again for the larger headline text above.
+        .frame(height: viewModel.isFreePlay ? 76 : 100)
     }
 
     // MARK: Controls
