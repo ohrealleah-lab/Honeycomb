@@ -203,6 +203,28 @@ struct BlackjackTouchView: View {
 
     private func playerHandsArea(cardW: CGFloat) -> some View {
         VStack(spacing: 18) {
+            if viewModel.state.playerHands.isEmpty {
+                // Pre-deal placeholder — matches dealerArea's own empty-state branch
+                // (two face-down HoneycombSimpleCardBack placeholders), which the player
+                // side was missing entirely, leaving it blank instead of showing a
+                // matching pair of face-down cards before the first deal.
+                VStack(spacing: 6) {
+                    Text(coordinator.L(.touchYouLabel))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                    HStack(spacing: handSpacing(cardW: cardW, count: 2, isSplit: false)) {
+                        ForEach(0..<2, id: \.self) { i in
+                            HoneycombSimpleCardBack()
+                                .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: cardW * 0.07)
+                                        .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
+                                )
+                                .zIndex(Double(i))
+                        }
+                    }
+                }
+            }
             ForEach(Array(viewModel.state.playerHands.enumerated()), id: \.offset) { i, hand in
                 VStack(spacing: 6) {
                     HStack(spacing: 8) {
