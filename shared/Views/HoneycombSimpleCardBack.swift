@@ -23,6 +23,12 @@ struct HoneycombSimpleCardBack: View {
                 // the visible card in some contexts, showing as stray whitespace/no
                 // border around the card instead of hugging its edges.
                 GeometryReader { geo in
+                    // Matches mac's CardBackView (size.width * 10/128) instead of a flat
+                    // 6pt — a fixed radius looks correct at mac's default size but reads
+                    // as barely-rounded on the larger cards iOS renders (Honeycomb's
+                    // 150pt board cards, Video Poker's fanned hand) since it doesn't grow
+                    // with the card the way mac's does.
+                    let cornerRadius = geo.size.width * (10.0 / 128.0)
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -38,21 +44,24 @@ struct HoneycombSimpleCardBack: View {
                         // every sliver looking like a solid card even where the art is
                         // transparent, instead of relying on whatever's rendered behind it.
                         .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                        )
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                )
             } else if let entry = IOSCustomCardBackManager.shared.entry(named: theme),
                       let image = IOSCustomCardBackManager.shared.image(for: entry) {
-                CroppedCardBackImage(image: image, entry: entry)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                    )
+                GeometryReader { geo in
+                    let cornerRadius = geo.size.width * (10.0 / 128.0)
+                    CroppedCardBackImage(image: image, entry: entry)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                        )
+                }
             } else {
                 ProceduralHoneycombCardBack()
             }
@@ -240,15 +249,19 @@ private struct ProceduralHoneycombCardBack: View {
     private static let honey = Color(red: 0.94, green: 0.75, blue: 0.27)
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(
-                    LinearGradient(colors: [Color(red: 0.13, green: 0.11, blue: 0.32),
-                                            Color(red: 0.06, green: 0.05, blue: 0.17)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
+        GeometryReader { geo in
+            // Matches mac's CardBackView radius formula (size.width * 10/128) instead
+            // of a flat 6pt/4pt, same reasoning as the bundled/custom-image branches
+            // above — a fixed radius doesn't grow with the card the way mac's does.
+            let cornerRadius = geo.size.width * (10.0 / 128.0)
+            ZStack {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(
+                        LinearGradient(colors: [Color(red: 0.13, green: 0.11, blue: 0.32),
+                                                Color(red: 0.06, green: 0.05, blue: 0.17)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
 
-            GeometryReader { geo in
                 let w = geo.size.width
                 let cell = w * 0.24
                 let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
@@ -271,14 +284,14 @@ private struct ProceduralHoneycombCardBack: View {
                                       y: center.y + sin(angle) * cell * 0.92)
                     }
                 }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
 
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Self.honey.opacity(0.55), lineWidth: 1.5)
-            RoundedRectangle(cornerRadius: 4)
-                .inset(by: 3)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(Self.honey.opacity(0.55), lineWidth: 1.5)
+                RoundedRectangle(cornerRadius: max(0, cornerRadius - 2))
+                    .inset(by: 3)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            }
         }
     }
 }

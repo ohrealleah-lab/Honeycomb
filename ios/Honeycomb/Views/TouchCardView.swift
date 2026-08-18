@@ -62,7 +62,7 @@ struct TouchCardView: View {
             // faceUp/faceDown branch) — without this, any card back or face-art image
             // with transparency (e.g. the Vulpera theme's priest.png) let whatever's
             // behind the card bleed through instead of showing a solid card.
-            RoundedRectangle(cornerRadius: width * 0.07)
+            RoundedRectangle(cornerRadius: width * (10.0 / 128.0))
                 .fill(faceColor)
 
             if card.faceUp {
@@ -155,7 +155,7 @@ struct TouchCardView: View {
         // past the card's rounded-rect edge into whatever's behind/beside it instead of
         // just being cut off, which in a tight tableau stack reads as a misshapen or
         // oversized card rather than clipped text.
-        .clipShape(RoundedRectangle(cornerRadius: width * 0.07))
+        .clipShape(RoundedRectangle(cornerRadius: width * (10.0 / 128.0)))
         // Matches mac's CardView outline (`Color.black.opacity(0.85)` at lineWidth 0.75
         // by default, or the user's custom outline color when enabled), applied
         // unconditionally like mac's — not just when face up. Drawn as an overlay (on
@@ -167,7 +167,7 @@ struct TouchCardView: View {
         // stock, Spider's initial deal) needs the same edge definition an overlapping
         // face-up card does, or adjacent card boundaries disappear into each other.
         .overlay(
-            RoundedRectangle(cornerRadius: width * 0.07)
+            RoundedRectangle(cornerRadius: width * (10.0 / 128.0))
                 .stroke(outlineColor, lineWidth: 0.75)
         )
         // Matches mac's CardView exactly — in a tightly overlapping tableau, this subtle
