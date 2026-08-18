@@ -24,6 +24,12 @@ public struct RuleExplanationPopover: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.white)
                 }
+                // Without this, the popover's own sizing pass measures concatenated Text
+                // (built with `+`, which loses the normal per-Text line-wrapping info a
+                // popover uses to compute its content height) as if it fit on one line,
+                // then truncates whatever doesn't — forcing an explicit wrap-to-width
+                // height calculation here instead of leaving it to the popover's default.
+                .fixedSize(horizontal: false, vertical: true)
             } else {
                 ForEach(effectiveRules, id: \.self) { rule in
                     Group {
@@ -35,6 +41,7 @@ public struct RuleExplanationPopover: View {
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.white)
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
