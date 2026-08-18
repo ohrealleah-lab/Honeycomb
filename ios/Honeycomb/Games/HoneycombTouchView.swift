@@ -240,6 +240,7 @@ struct HoneycombTouchView: View {
             topBarIconButton(systemImage: "checklist", accessibilityLabel: coordinator.L(.toolbarRules)) {
                 showingRulesSheet = true
             }
+            .disabled(isMidMatch)
 
             topBarIconButton(systemImage: "rectangle.stack", accessibilityLabel: coordinator.L(.manageDecks)) {
                 showingDecks = true
