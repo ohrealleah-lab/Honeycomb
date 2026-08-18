@@ -273,6 +273,9 @@ struct SpiderTouchView: View {
             running += card.faceUp ? upStep : downStep
         }
         let columnHeight = (pile.cards.isEmpty ? cardH : (offsets.last ?? 0) + cardH)
+        let hintIndex = hintTouches(pile.id)
+            ? pile.cards.firstIndex(where: { $0.id == viewModel.activeHint?.card.id })
+            : nil
 
         return ZStack(alignment: .top) {
             RoundedRectangle(cornerRadius: cardW * 0.07)
@@ -283,10 +286,6 @@ struct SpiderTouchView: View {
                 TouchCardView(card: card, width: cardW)
                     .offset(y: offsets[i])
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
-                    .modifier(TouchHintHighlight(isHighlighted: hintTouches(pile.id) && viewModel.activeHint?.card.id == card.id))
-                    .overlay(alignment: .topLeading) {
-                        TouchHintCornerBadge(isHighlighted: hintTouches(pile.id) && viewModel.activeHint?.card.id == card.id)
-                    }
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMove(card: card, from: pile)
                     }
@@ -294,6 +293,19 @@ struct SpiderTouchView: View {
                         (card.faceUp && viewModel.isValidDragSequence(stack))
                             ? cardDragGesture(pile: pile, stack: stack) : nil
                     )
+            }
+            // Drawn as its own sibling, positioned with the exact same offsets[]
+            // value as the matched card, rather than attached via modifier chaining
+            // on the card itself — the per-card modifier version was reported
+            // visually landing above the actual hinted card instead of tightly
+            // bordering it, which this sidesteps entirely by computing the ring's
+            // position independently, from the same source of truth.
+            if let hintIndex {
+                Color.clear
+                    .frame(width: cardW, height: cardH)
+                    .offset(y: offsets[hintIndex])
+                    .modifier(TouchHintHighlight(isHighlighted: true))
+                    .allowsHitTesting(false)
             }
         }
         .frame(width: cardW, height: columnHeight, alignment: .top)
