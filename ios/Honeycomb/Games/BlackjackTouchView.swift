@@ -14,6 +14,26 @@ struct BlackjackTouchView: View {
     @State private var showingThemes = false
     @State private var showingStats = false
 
+    // Post-result pacing/reset choreography — ported from mac's BlackjackView
+    // (.onChange(of: viewModel.state.phase) + chained DispatchWorkItem/asyncAfter), for
+    // the same reason as Video Poker's equivalent block: the shared BlackjackViewModel
+    // just sits on state.phase == .result forever on its own, so without this iOS had
+    // no pause/reset — the result banner appeared instantly and cards stayed revealed
+    // until Deal was tapped again. dealerFlipped mirrors mac's own state var 1:1 for
+    // timing parity even though — like on mac — nothing here currently reads it for a
+    // visual flip; the hole-card reveal is actually driven by the model's card.faceUp
+    // data changing synchronously, which TouchCardView's own flip already animates.
+    @State private var showResultBanner = false
+    @State private var bannerWinFlash = false
+    @State private var cardsVisible = true
+    @State private var showCardBackPlaceholders = false
+    @State private var dealerFlipped = false
+    @State private var showIdlePrompt = false
+    @State private var resultBannerShowTask: DispatchWorkItem? = nil
+    @State private var resultHideTask: DispatchWorkItem? = nil
+    @State private var resultCardHideTask: DispatchWorkItem? = nil
+    @State private var idlePromptTask: DispatchWorkItem? = nil
+
     private let actionHaptic = UIImpactFeedbackGenerator(style: .medium)
 
     private var canAffordBet: Bool {
@@ -112,6 +132,50 @@ struct BlackjackTouchView: View {
             manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
+        .onChange(of: viewModel.state.phase) { _, newPhase in
+            if newPhase == .result {
+                idlePromptTask?.cancel()
+                withAnimation(.easeInOut(duration: 0.4)) { showIdlePrompt = false }
+                dealerFlipped = true
+                withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
+
+                let bannerShowTask = DispatchWorkItem { showResultBanner = true }
+                resultBannerShowTask = bannerShowTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: bannerShowTask)
+
+                let bannerTask = DispatchWorkItem {
+                    let hideTask = DispatchWorkItem {
+                        withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false; showResultBanner = false }
+                        let promptTask = DispatchWorkItem {
+                            showCardBackPlaceholders = true
+                            withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
+                            withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
+                        }
+                        idlePromptTask = promptTask
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: promptTask)
+                    }
+                    resultCardHideTask = hideTask
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: hideTask)
+                }
+                resultHideTask = bannerTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: bannerTask)
+            }
+            if newPhase == .betting || newPhase == .playing {
+                resultBannerShowTask?.cancel(); resultBannerShowTask = nil
+                resultHideTask?.cancel(); resultHideTask = nil
+                resultCardHideTask?.cancel(); resultCardHideTask = nil
+                idlePromptTask?.cancel(); idlePromptTask = nil
+
+                withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
+                dealerFlipped = false
+                showResultBanner = false
+                showCardBackPlaceholders = false
+                withAnimation(.easeIn(duration: 0.2)) { cardsVisible = true }
+            }
+            if newPhase == .dealerTurn {
+                dealerFlipped = true
+            }
+        }
     }
 
     // MARK: Top bar
@@ -173,7 +237,7 @@ struct BlackjackTouchView: View {
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.white.opacity(0.7))
             HStack(spacing: handSpacing(cardW: cardW, count: max(viewModel.state.dealerCards.count, 2), isSplit: false)) {
-                if viewModel.state.dealerCards.isEmpty {
+                if viewModel.state.dealerCards.isEmpty || showCardBackPlaceholders {
                     ForEach(0..<2, id: \.self) { i in
                         HoneycombSimpleCardBack()
                             .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
@@ -186,6 +250,8 @@ struct BlackjackTouchView: View {
                 } else {
                     ForEach(Array(viewModel.state.dealerCards.enumerated()), id: \.offset) { i, card in
                         TouchCardView(card: card, width: cardW)
+                            .opacity(cardsVisible ? 1 : 0)
+                            .animation(.easeIn(duration: 0.15).delay(Double(i) * 0.08), value: cardsVisible)
                             .zIndex(Double(i))
                     }
                 }
@@ -203,11 +269,12 @@ struct BlackjackTouchView: View {
 
     private func playerHandsArea(cardW: CGFloat) -> some View {
         VStack(spacing: 18) {
-            if viewModel.state.playerHands.isEmpty {
+            if viewModel.state.playerHands.isEmpty || showCardBackPlaceholders {
                 // Pre-deal placeholder — matches dealerArea's own empty-state branch
                 // (two face-down HoneycombSimpleCardBack placeholders), which the player
                 // side was missing entirely, leaving it blank instead of showing a
-                // matching pair of face-down cards before the first deal.
+                // matching pair of face-down cards before the first deal. Also reused
+                // as the post-result reset state via showCardBackPlaceholders.
                 VStack(spacing: 6) {
                     Text(coordinator.L(.touchYouLabel))
                         .font(.subheadline.weight(.bold))
@@ -246,6 +313,8 @@ struct BlackjackTouchView: View {
                     HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, isSplit: viewModel.state.playerHands.count > 1)) {
                         ForEach(Array(hand.cards.enumerated()), id: \.offset) { i, card in
                             TouchCardView(card: card, width: cardW)
+                                .opacity(cardsVisible ? 1 : 0)
+                                .animation(.easeIn(duration: 0.15).delay(Double(i) * 0.08), value: cardsVisible)
                                 .zIndex(Double(i))
                         }
                     }
@@ -285,12 +354,13 @@ struct BlackjackTouchView: View {
 
     private var resultBanner: some View {
         Group {
-            if viewModel.state.phase == .result, viewModel.state.resultOutcome != .none {
+            if showResultBanner, viewModel.state.phase == .result, viewModel.state.resultOutcome != .none {
                 let (headline, subline) = localizedBlackjackResult(viewModel.state, language: coordinator.language)
+                let isWin = viewModel.state.isWinRound
                 VStack(spacing: 2) {
                     Text(headline)
                         .font(.title3.weight(.black))
-                        .foregroundStyle(viewModel.state.isWinRound ? .yellow : .white)
+                        .foregroundStyle(isWin ? .yellow : .white)
 
                     if !viewModel.isFreePlay {
                         Text(subline)
@@ -298,6 +368,12 @@ struct BlackjackTouchView: View {
                             .foregroundStyle(.white.opacity(0.85))
                     }
                 }
+                // Matches mac's bannerWinFlash — a slow repeating pulse for the
+                // duration the win banner is visible, not a one-shot flash.
+                .scaleEffect(isWin && bannerWinFlash ? 1.06 : 1.0)
+                .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: bannerWinFlash)
+                .onAppear { if isWin { bannerWinFlash = true } }
+                .onDisappear { bannerWinFlash = false }
             } else {
                 VStack(spacing: 2) {
                     Text(" ").font(.title3.weight(.black))

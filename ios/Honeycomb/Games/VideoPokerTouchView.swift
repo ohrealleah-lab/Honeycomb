@@ -14,6 +14,26 @@ struct VideoPokerTouchView: View {
     @State private var showingThemes = false
     @State private var showingStats = false
 
+    // Post-result pacing/reset choreography — ported from mac's VideoPokerView
+    // (.onChange(of: viewModel.state.phase) + chained DispatchWorkItem/asyncAfter),
+    // which the shared VideoPokerViewModel doesn't do on its own: state.phase moves to
+    // .result and just sits there. Without this, iOS had no pause/reset at all — the
+    // result banner appeared instantly and stale revealed cards just stayed on screen
+    // until the player manually tapped Deal again.
+    @State private var winFlash = false
+    @State private var cardVisible: [Bool] = Array(repeating: false, count: 5)
+    @State private var cardRotation: [Double] = Array(repeating: 0, count: 5)
+    @State private var showParticles = false
+    @State private var showResultBanner = false
+    @State private var cardsVisible = true
+    @State private var showCardBackPlaceholders = true
+    @State private var showIdlePrompt = false
+    @State private var resultBannerShowTask: DispatchWorkItem? = nil
+    @State private var resultWinFlashTask: DispatchWorkItem? = nil
+    @State private var resultAnimationTask: DispatchWorkItem? = nil
+    @State private var resultHideTask: DispatchWorkItem? = nil
+    @State private var idlePromptTask: DispatchWorkItem? = nil
+
     private let holdHaptic = UIImpactFeedbackGenerator(style: .light)
     private let dealHaptic = UIImpactFeedbackGenerator(style: .medium)
 
@@ -105,6 +125,86 @@ struct VideoPokerTouchView: View {
             manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
+        .onChange(of: viewModel.state.phase) { _, newPhase in
+            if newPhase == .result {
+                // Cancel any leftover tasks just in case.
+                resultBannerShowTask?.cancel()
+                resultWinFlashTask?.cancel()
+                resultAnimationTask?.cancel()
+                resultHideTask?.cancel()
+                idlePromptTask?.cancel()
+
+                let bannerShowTask = DispatchWorkItem { showResultBanner = true }
+                resultBannerShowTask = bannerShowTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: bannerShowTask)
+
+                let animationTask = DispatchWorkItem {
+                    let hideTask = DispatchWorkItem {
+                        withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false; showResultBanner = false }
+                        let promptTask = DispatchWorkItem {
+                            showCardBackPlaceholders = true
+                            withAnimation(.easeInOut(duration: 0.4)) { cardsVisible = true }
+                            withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
+                        }
+                        idlePromptTask = promptTask
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: promptTask)
+                    }
+                    resultHideTask = hideTask
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: hideTask)
+                }
+                resultAnimationTask = animationTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: animationTask)
+
+                if viewModel.state.lastPayout > 0 {
+                    let winFlashTask = DispatchWorkItem {
+                        winFlash = true
+                        showParticles = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { winFlash = false }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+                    }
+                    resultWinFlashTask = winFlashTask
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: winFlashTask)
+                }
+            }
+            if newPhase == .holding {
+                resultBannerShowTask?.cancel(); resultBannerShowTask = nil
+                resultWinFlashTask?.cancel(); resultWinFlashTask = nil
+                resultAnimationTask?.cancel(); resultAnimationTask = nil
+                resultHideTask?.cancel(); resultHideTask = nil
+                idlePromptTask?.cancel(); idlePromptTask = nil
+
+                withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
+                showResultBanner = false
+                showCardBackPlaceholders = false
+                cardsVisible = true
+                animateDeal()
+            }
+            if newPhase == .deal {
+                resultBannerShowTask?.cancel(); resultBannerShowTask = nil
+                resultWinFlashTask?.cancel(); resultWinFlashTask = nil
+                resultAnimationTask?.cancel(); resultAnimationTask = nil
+                resultHideTask?.cancel(); resultHideTask = nil
+                idlePromptTask?.cancel(); idlePromptTask = nil
+
+                showCardBackPlaceholders = true
+                cardsVisible = true
+                withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
+            }
+        }
+    }
+
+    // Mirrors mac's animateDeal(): each of the 5 cards reveals staggered 0.06s apart,
+    // settling from a small starting rotation rather than all popping in at once.
+    private func animateDeal() {
+        let startAngles: [Double] = [-8, -5, 0, 5, 8]
+        cardVisible = Array(repeating: false, count: 5)
+        cardRotation = startAngles
+        for i in 0..<5 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.06) {
+                cardVisible[i] = true
+                cardRotation[i] = 0
+            }
+        }
     }
 
     // MARK: Top bar
@@ -178,7 +278,8 @@ struct VideoPokerTouchView: View {
                 .foregroundStyle(isHit ? .yellow : .white.opacity(0.85))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 1)
-                .background(isHit ? Color.black.opacity(0.4) : .clear)
+                .background(isHit ? Color.yellow.opacity(winFlash ? 0.9 : 0.4) : .clear)
+                .animation(isHit ? .easeInOut(duration: 0.3).repeatForever(autoreverses: true) : .default, value: winFlash)
             }
         }
         .padding(.vertical, 6)
@@ -189,7 +290,10 @@ struct VideoPokerTouchView: View {
 
     private func handRow(cardW: CGFloat, spacing: CGFloat) -> some View {
         HStack(alignment: .top, spacing: spacing) {
-            if viewModel.state.hand.isEmpty {
+            // showCardBackPlaceholders also gates this branch — it flips true during
+            // the post-result reset tail so the table visibly returns to face-down
+            // cards instead of just sitting on the stale revealed hand.
+            if viewModel.state.hand.isEmpty || showCardBackPlaceholders {
                 ForEach(0..<5, id: \.self) { i in
                     HoneycombSimpleCardBack()
                         .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
@@ -205,16 +309,21 @@ struct VideoPokerTouchView: View {
                 }
             } else {
                 ForEach(Array(viewModel.state.hand.enumerated()), id: \.element.id) { i, card in
+                    // Mirrors mac's animateDeal() stagger: each card lifts/fades in
+                    // 0.06s after the last, settling from a small starting rotation.
+                    let isHeld = viewModel.state.heldIndices.contains(i)
+                    let lifting = isHeld && viewModel.state.phase == .holding
+                    let visible = i < cardVisible.count && cardVisible[i]
+                    let wobble = i < cardRotation.count ? cardRotation[i] : 0.0
                     VStack(spacing: 4) {
                         Text(coordinator.L(.heldLabel))
                             .font(.caption2.weight(.black))
                             .foregroundStyle(.yellow)
-                            .opacity(viewModel.state.heldIndices.contains(i) ? 1 : 0)
+                            .opacity(isHeld ? 1 : 0)
                         TouchCardView(card: card, width: cardW)
                             .overlay(
                                 RoundedRectangle(cornerRadius: cardW * 0.07)
-                                    .stroke(Color.yellow,
-                                            lineWidth: viewModel.state.heldIndices.contains(i) ? 3 : 0)
+                                    .stroke(Color.yellow, lineWidth: isHeld ? 3 : 0)
                             )
                             .onTapGesture {
                                 guard viewModel.state.phase == .holding else { return }
@@ -222,21 +331,34 @@ struct VideoPokerTouchView: View {
                                 holdHaptic.impactOccurred()
                             }
                     }
+                    .rotationEffect(.degrees(wobble))
+                    .offset(y: lifting ? -18 : (visible ? 0 : 40))
+                    .opacity(visible ? 1 : 0)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.5).delay(Double(i) * 0.06), value: visible)
+                    .animation(.spring(response: 0.2, dampingFraction: 0.4).delay(Double(i) * 0.06), value: wobble)
+                    .animation(.easeInOut(duration: 0.15), value: lifting)
                     .zIndex(Double(i))
                 }
             }
+        }
+        .opacity(cardsVisible ? 1 : 0)
+        .overlay {
+            WinParticleView(active: showParticles)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
     private var resultBanner: some View {
         Group {
-            if viewModel.state.phase == .result, !viewModel.state.lastHandName.isEmpty {
+            if showResultBanner, viewModel.state.phase == .result, !viewModel.state.lastHandName.isEmpty {
                 let localizedName = localizedHandName(viewModel.state.lastHandName, language: coordinator.language)
                 Text(viewModel.state.lastPayout > 0
                      ? coordinator.L(.payoutResultFmt, localizedName, viewModel.state.lastPayout)
                      : localizedName)
                     .font(.title3.weight(.black))
                     .foregroundStyle(viewModel.state.lastPayout > 0 ? .yellow : .white.opacity(0.8))
+                    .scaleEffect(viewModel.state.lastPayout > 0 && winFlash ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
             } else if viewModel.state.phase == .holding {
                 Text(coordinator.L(.tapHoldDrawHint))
                     .font(.footnote.weight(.semibold))
