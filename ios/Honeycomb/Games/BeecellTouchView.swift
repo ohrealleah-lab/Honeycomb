@@ -286,8 +286,21 @@ struct BeecellTouchView: View {
             // false->true edge when a hint lands on them.
             Color.clear
                 .frame(width: cardW, height: cardH)
-                .offset(y: CGFloat(hintIndex ?? 0) * upStep)
+                // TouchHintHighlight's pulse modifier conforms to AnimatableModifier —
+                // it receives its content as an opaque view and animates only its own
+                // `phase` property. Proven via direct instrumentation that the offset
+                // math itself is correct (computedOffset lands exactly on the hinted
+                // card's position every time) while the ring still rendered at the
+                // wrong screen position, matching a known AnimatableModifier pitfall:
+                // once its animation is running, it can keep presenting geometry from
+                // whenever that animation started rather than picking up a same-frame
+                // change to *content* (here, a new .offset() from hintIndex changing).
+                // Moving .offset() to apply AFTER (outside) the animated modifier,
+                // instead of before/inside it, means it's shifting the whole already-
+                // rendered bordered box from the outside every frame — nothing for the
+                // animator to cache stale.
                 .modifier(TouchHintHighlight(isHighlighted: hintIndex != nil))
+                .offset(y: CGFloat(hintIndex ?? 0) * upStep)
                 .allowsHitTesting(false)
         }
         .frame(width: cardW, height: columnHeight, alignment: .top)
