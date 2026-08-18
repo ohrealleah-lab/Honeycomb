@@ -287,32 +287,34 @@ struct HoneycombTouchView: View {
     // MARK: Scaled game content
 
     // These formulas mirror gameContent(landscape:)'s actual view tree (spacing,
-    // padding, bannerRow's fixed 38pt, boardGrid's own .padding(.vertical, 4)) term
-    // for term, rather than approximating — a computed scale even a few points too
+    // padding, bannerRow's height, boardGrid's own .padding(.vertical, 4)) term for
+    // term, rather than approximating — a computed scale even a few points too
     // generous makes the *real* rendered content taller than the box it's fit into,
     // and since the GeometryReader below now clips to that box (so the overflow
     // can't bleed into the topBar above it), an underestimate here means real
     // content — the pre-game placeholder hand, most visibly — gets its top cropped
     // instead. The 1.04x pads against anything not perfectly predictable from this
     // static formula (SwiftUI's own text line-height rounding, etc.) by leaving a
-    // little unused margin instead of risking that same crop.
+    // little unused margin instead of risking that same crop. Both branches reference
+    // Self.bannerRowHeight rather than a hardcoded copy of bannerRow's own .frame
+    // height, so the two can't silently drift apart the way two literal numbers would.
     private func intrinsicSize(landscape: Bool) -> CGSize {
         if landscape {
             let handColumnWidth = 2 * Self.playerCardSize.width + Self.handSpacing
             let boardWidth = 3 * Self.boardCardSize.width + 2 * Self.boardSpacing
             let width = handColumnWidth * 2 + boardWidth + 2 * 24 + 32
             let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
-            // Board column: VStack(spacing: 8) { bannerRow(38); boardGrid } = boardHeight + 46,
+            // Board column: VStack(spacing: 8) { bannerRow; boardGrid } = boardHeight + 8 + bannerRowHeight,
             // plus the outer HStack's .padding(16) top+bottom = 32.
-            let height = boardHeight + 46 + 32
+            let height = boardHeight + 8 + Self.bannerRowHeight + 32
             return CGSize(width: width * 1.02, height: height * 1.04)
         } else {
             let width = 5 * Self.playerCardSize.width + 4 * Self.handSpacing + 16
             let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
-            // VStack(spacing: 8) { oppRow; bannerRow(38); boardGrid.padding(.vertical,4); playerRow }
-            // .padding(8) = oppRow + boardHeight + playerRow + (3 gaps*8 + bannerRow 38 +
+            // VStack(spacing: 8) { oppRow; bannerRow; boardGrid.padding(.vertical,4); playerRow }
+            // .padding(8) = oppRow + boardHeight + playerRow + (3 gaps*8 + bannerRowHeight +
             // boardGrid's own vertical padding 8 + outer padding 16).
-            let height = Self.opponentCardSize.height + Self.playerCardSize.height + boardHeight + 86
+            let height = Self.opponentCardSize.height + Self.playerCardSize.height + boardHeight + 48 + Self.bannerRowHeight
             return CGSize(width: width * 1.02, height: height * 1.04)
         }
     }
@@ -444,11 +446,18 @@ struct HoneycombTouchView: View {
         // substitute, since it only shrinks as a last resort and can't be relied on
         // alone to keep 3-4 rule names legible within 2 lines.
         let isDense = rulesBannerLines.count > 2
+        // Matches mac's HoneycombView rules banner treatment (yellow, .black font
+        // weight) instead of the previous white/semibold caption text, which read as
+        // much smaller/quieter than mac's bold yellow banner and was hard to read at a
+        // glance. Sizes are smaller than mac's literal 20-28pt titles/16-22pt lines
+        // since mac has a dedicated floating box while this sits in a single compact
+        // row alongside the hint/undo buttons, but considerably bigger than the old
+        // caption2/footnote (11-13pt).
         return HStack(spacing: 10) {
             hintButton
             Text(rulesBannerLines.joined(separator: "  •  "))
-                .font((isDense ? Font.caption2 : Font.footnote).weight(.semibold))
-                .foregroundStyle(.white.opacity(0.85))
+                .font(.system(size: isDense ? 14 : 17, weight: .black))
+                .foregroundStyle(.yellow)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.center)
@@ -466,9 +475,14 @@ struct HoneycombTouchView: View {
                 }
             undoButton
         }
-        .frame(height: 38)
+        .frame(height: Self.bannerRowHeight)
         .padding(.horizontal, 4)
     }
+
+    // Bumped from 38 to fit the larger rules text above — intrinsicSize(landscape:)
+    // below references this same constant rather than a second hardcoded "38"/"46", so
+    // the two can't drift out of sync the way a literal duplicate number risks.
+    private static let bannerRowHeight: CGFloat = 46
 
     @ViewBuilder
     private var hintButton: some View {
