@@ -14,7 +14,9 @@ struct HoneycombMatchRulesSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 0) {
+                    // A little breathing room between rows — spacing: 0 packed each
+                    // toggle's tap target flush against its neighbor's.
+                    VStack(alignment: .leading, spacing: 8) {
                         // Mirrors mac: forcing Normal Rules clears any selected rules, and
                         // picking a rule turns Force Normal back off — the two are
                         // mutually exclusive, not independent toggles.
@@ -93,7 +95,9 @@ struct HoneycombBanListSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 0) {
+                    // A little breathing room between rows — spacing: 0 packed each
+                    // toggle's tap target flush against its neighbor's.
+                    VStack(alignment: .leading, spacing: 8) {
                         ForEach(allBanItems, id: \.self) { ruleName in
                             Toggle(honeycombLocalizedRuleName(ruleName, language: coordinator.language), isOn: .init(
                                 get: { viewModel.options.bannedRules.contains(ruleName) },
