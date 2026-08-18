@@ -442,6 +442,13 @@ public final class BeecellViewModel {
     
     public func moveCards(_ cards: [Card], from sourcePile: Pile, to targetPile: Pile) {
         guard isValidMove(cards: cards, to: targetPile) else { return }
+        // Any move can change which card is actually on top of a pile — an active hint
+        // (still showing, not yet auto-cleared) may reference a card that's no longer
+        // that pile's accessible top card once this move lands, e.g. a card that used
+        // to be a valid hint target getting buried by a different card the player just
+        // placed on top of it. Matches undoLastAction/startNewGame's own unconditional
+        // clearHint() for the same reason (board state changed under the hint).
+        clearHint()
         lastMoveSourceId = sourcePile.id
         lastMoveTargetId = targetPile.id
         saveStateForUndo()
