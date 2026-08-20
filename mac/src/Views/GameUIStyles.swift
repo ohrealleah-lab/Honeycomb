@@ -135,12 +135,21 @@ struct WinParticleView: View {
     @State private var spread = false
     @State private var opacity: Double = 0
 
+    enum ParticleShape {
+        case rectangle
+        case circle
+        case thinRibbon
+        case star
+    }
+
     struct Particle: Identifiable {
         let id = UUID()
         let angle: Double
         let speed: CGFloat
         let color: Color
         let scale: CGFloat
+        let shape: ParticleShape
+        let blur: CGFloat
     }
 
     private let colors: [Color] = [.yellow, .orange, .white, .cyan, Color(red: 1, green: 0.84, blue: 0)]
@@ -154,12 +163,32 @@ struct WinParticleView: View {
                     let rad = p.angle * .pi / 180
                     let tx = spread ? cx + cos(rad) * p.speed : cx
                     let ty = spread ? cy + sin(rad) * p.speed : cy
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(p.color)
-                        .frame(width: 7 * p.scale, height: 3 * p.scale)
-                        .rotationEffect(.degrees(p.angle))
-                        .position(x: tx, y: ty)
-                        .animation(.easeOut(duration: 0.66), value: spread)
+                    
+                    Group {
+                        switch p.shape {
+                        case .rectangle:
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(p.color)
+                                .frame(width: 7 * p.scale, height: 3 * p.scale)
+                        case .circle:
+                            Circle()
+                                .fill(p.color)
+                                .frame(width: 5 * p.scale, height: 5 * p.scale)
+                        case .thinRibbon:
+                            RoundedRectangle(cornerRadius: 1)
+                                .fill(p.color)
+                                .frame(width: 9 * p.scale, height: 2 * p.scale)
+                        case .star:
+                            Image(systemName: "star.fill")
+                                .resizable()
+                                .foregroundColor(p.color)
+                                .frame(width: 6 * p.scale, height: 6 * p.scale)
+                        }
+                    }
+                    .rotationEffect(.degrees(p.angle))
+                    .position(x: tx, y: ty)
+                    .blur(radius: p.blur)
+                    .animation(.easeOut(duration: 0.66), value: spread)
                 }
             }
         }
@@ -177,11 +206,18 @@ struct WinParticleView: View {
     private func burst() {
         let count = 72
         particles = (0..<count).map { i in
-            Particle(
+            let isBackground = Bool.random()
+            let scale = CGFloat.random(in: 0.7...1.6) * (isBackground ? 0.7 : 1.0)
+            let blur: CGFloat = isBackground ? CGFloat.random(in: 0.5...1.5) : 0
+            let shape: ParticleShape = [.rectangle, .rectangle, .circle, .thinRibbon, .star].randomElement()!
+            
+            return Particle(
                 angle: Double(i) / Double(count) * 360,
-                speed: CGFloat.random(in: 70...170),
+                speed: CGFloat.random(in: 70...170) * (isBackground ? 0.8 : 1.0),
                 color: colors.randomElement()!,
-                scale: CGFloat.random(in: 0.7...1.6)
+                scale: scale,
+                shape: shape,
+                blur: blur
             )
         }
         spread  = false
