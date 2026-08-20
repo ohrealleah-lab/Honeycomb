@@ -48,7 +48,10 @@
             <Setter Property="Background" Value="#007AFF" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="8" />
+            <!-- Fully rounds into a capsule/pill (roughly half the button's rendered
+                 height, given 10pt vertical padding + a 16pt Bold line) rather than the
+                 previous rounded-rect look. -->
+            <Setter Property="CornerRadius" Value="20" />
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="FontSize" Value="16" />

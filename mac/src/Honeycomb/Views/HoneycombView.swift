@@ -540,7 +540,9 @@ public struct HoneycombView: View {
                         HStack {
                             Button(coordinator.L(.newGame)) {
                                 viewModel.startNewGame()
-                            }.buttonStyle(.borderedProminent)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .buttonBorderShape(.capsule)
 
                             // Only available once a match has actually started this
                             // session — nothing to replay before that.
@@ -550,6 +552,7 @@ public struct HoneycombView: View {
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .tint(.blue)
+                                .buttonBorderShape(.capsule)
                             }
 
                             // No Stress Mode always deals a fresh random overpowered
@@ -568,6 +571,7 @@ public struct HoneycombView: View {
                                 .buttonStyle(.borderedProminent)
                                 .tint(.yellow)
                                 .foregroundColor(.black)
+                                .buttonBorderShape(.capsule)
                             }
                         }
                     }

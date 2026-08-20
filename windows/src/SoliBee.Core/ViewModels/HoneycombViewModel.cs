@@ -892,11 +892,16 @@ public partial class HoneycombViewModel : ObservableObject
 
         ActiveHint = null;
 
+        // Only seeds the very first roll of the match for whichever side goes first —
+        // every later turn's index is already primed by FinishPlacementTail (rerolled
+        // the instant that side finished their *previous* move, against their
+        // post-play hand) so it stays lit continuously through the other side's turn
+        // instead of blinking out here and back in.
         if (State.ActiveRules.Contains(HoneycombRule.Chaos))
         {
-            if (State.CurrentTurn == 1)
+            if (State.CurrentTurn == 1 && State.PlayerChaosIndex == null)
                 State.PlayerChaosIndex = State.PlayerHand.Count > 0 ? Random.Shared.Next(State.PlayerHand.Count) : null;
-            else
+            else if (State.CurrentTurn == -1 && State.OpponentChaosIndex == null)
                 State.OpponentChaosIndex = State.OpponentHand.Count > 0 ? Random.Shared.Next(State.OpponentHand.Count) : null;
         }
 
@@ -1363,15 +1368,18 @@ public partial class HoneycombViewModel : ObservableObject
 
     private void FinishPlacementTail(int cellIndex, List<HoneycombCard> hand, int preScore)
     {
-        // Chaos's locked-card index is only re-rolled in StartTurn when it becomes this
-        // side's turn again — left stale here, it would keep pointing at whatever index
-        // the just-played card's removal shifted into, highlighting the wrong card (and
-        // rejecting plays against it) for the rest of the opponent's turn instead of
-        // clearing until StartTurn recomputes it fresh.
+        // Chaos's locked-card index is rerolled here, right after this side's card
+        // leaves their hand, rather than left stale (which would point at whatever
+        // index the just-played card's removal shifted into, highlighting the wrong
+        // card) or simply cleared (which would leave the highlight dark for the whole
+        // of the other side's turn, only reappearing once StartTurn recomputes it on
+        // this side's next turn). Rerolling now — against `hand`, which already
+        // reflects the RemoveAt above — previews this side's *next* mandated card
+        // immediately, so it stays lit continuously instead of blinking out.
         if (State.ActiveRules.Contains(HoneycombRule.Chaos))
         {
-            if (State.CurrentTurn == 1) State.PlayerChaosIndex = null;
-            else State.OpponentChaosIndex = null;
+            if (State.CurrentTurn == 1) State.PlayerChaosIndex = hand.Count > 0 ? Random.Shared.Next(hand.Count) : null;
+            else State.OpponentChaosIndex = hand.Count > 0 ? Random.Shared.Next(hand.Count) : null;
         }
 
         // Score tracking runs eagerly, unconditionally — same as the Swift port's

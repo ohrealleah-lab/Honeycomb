@@ -393,26 +393,16 @@ public struct GameView: View {
                                 Button(coordinator.L(.newGame)) {
                                     viewModel.startNewGame()
                                 }
-                                .font(.system(.body))
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.blue)
-                                .cornerRadius(6)
-                                .buttonStyle(.plain)
+                                .buttonStyle(.borderedProminent)
+                                .tint(.blue)
+                                .buttonBorderShape(.capsule)
 
                                 Button(coordinator.L(.restartGame)) {
                                     viewModel.restartCurrentGame()
                                 }
-                                .font(.system(.body))
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.blue)
-                                .cornerRadius(6)
-                                .buttonStyle(.plain)
+                                .buttonStyle(.borderedProminent)
+                                .tint(.blue)
+                                .buttonBorderShape(.capsule)
                             }
                         }
                         .padding(.horizontal, 12)
@@ -453,14 +443,9 @@ public struct GameView: View {
                             Button(coordinator.L(.autocompleteGame)) {
                                 viewModel.runAutocomplete()
                             }
-                            .font(.system(.body))
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.blue)
-                            .cornerRadius(6)
-                            .buttonStyle(.plain)
+                            .buttonStyle(.borderedProminent)
+                            .tint(.blue)
+                            .buttonBorderShape(.capsule)
                         }
                         .padding(.horizontal, 12)
                     .padding(.vertical, 24)
@@ -526,17 +511,12 @@ public struct GameView: View {
                                     .font(.system(.body))
                                     .foregroundColor(.white)
 
-                                Text(coordinator.L(.playAgain))
-                                    .font(.system(.body))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 10)
-                                    .background(Color.blue)
-                                    .cornerRadius(6)
-                                    .onTapGesture {
-                                        viewModel.startNewGame()
-                                    }
+                                Button(coordinator.L(.playAgain)) {
+                                    viewModel.startNewGame()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.blue)
+                                .buttonBorderShape(.capsule)
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 24)
