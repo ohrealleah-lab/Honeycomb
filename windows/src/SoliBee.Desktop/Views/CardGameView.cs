@@ -96,6 +96,10 @@ public abstract class CardGameView : UserControl
     // Overridden true only by GameView (Klondike).
     protected virtual bool IsKlondikeAutocompleteWording => false;
 
+    // Whether a win shows the classic bouncing-card cascade in addition to the banner +
+    // confetti. Overridden false by SpiderView — it just gets the banner + confetti.
+    protected virtual bool ShowsVictoryCascade => true;
+
     // Localizes the three shared inline banners (win/stuck/autocomplete) — call on load
     // and whenever OptionsChangedMessage fires with a new language, same as every other
     // view's ApplyLocalization.
@@ -132,7 +136,7 @@ public abstract class CardGameView : UserControl
             string timeDisplay = vm.Options.IsNoStressMode ? "" : vm.TimeDisplay;
             Dispatcher.UIThread.Post(() =>
             {
-                overlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, timeDisplay);
+                overlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, timeDisplay, ShowsVictoryCascade);
             }, DispatcherPriority.Loaded);
         }
         else

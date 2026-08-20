@@ -16,10 +16,15 @@ struct BouncingCard: Identifiable {
     var age: TimeInterval = 0
 }
 
-public struct WinAnimationView: View {
+/// Victory "Classic Bouncing Card Cascade" — ported from mac's WinAnimationView
+/// (mac/src/Views/WinAnimationView.swift). Two differences from mac: TouchCardView
+/// instead of CardView for card rendering, and a plain `cardWidth` (whatever the
+/// caller's board already computed for its own layout) instead of mac's `zoomScale`
+/// (a user-adjustable desktop board zoom with no iOS equivalent).
+struct WinAnimationView: View {
     let foundations: [Pile]
     let pileFrames: [String: CGRect]
-    let zoomScale: CGFloat
+    let cardWidth: CGFloat
     let onFinished: () -> Void
 
     @State private var activeCards: [BouncingCard] = []
@@ -31,14 +36,7 @@ public struct WinAnimationView: View {
     // original 9s to 15s — 9 cut cards off mid-bounce too eagerly).
     private static let maxCardLifetime: TimeInterval = 15
 
-    public init(foundations: [Pile], pileFrames: [String: CGRect], zoomScale: CGFloat, onFinished: @escaping () -> Void) {
-        self.foundations = foundations
-        self.pileFrames = pileFrames
-        self.zoomScale = zoomScale
-        self.onFinished = onFinished
-    }
-
-    public var body: some View {
+    var body: some View {
         GeometryReader { geo in
             TimelineView(.animation) { timeline in
                 Canvas { context, size in
@@ -56,8 +54,7 @@ public struct WinAnimationView: View {
                     }
                 } symbols: {
                     ForEach(activeCards) { bouncing in
-                        CardView(card: bouncing.card)
-                            .scaleEffect(zoomScale)
+                        TouchCardView(card: bouncing.card, width: cardWidth)
                             .tag(bouncing.id)
                     }
                 }
@@ -102,10 +99,10 @@ public struct WinAnimationView: View {
         }
         lastFrameDate = currentDate
 
-        // Spawn a new card from the queue if interval elapsed. 0.6s rather than the
-        // original 0.4s — 50% slower so each card has time to bounce off-screen before
-        // the next one launches, instead of crowding the board with overlapping cards.
-        if !cardsQueue.isEmpty && currentDate.timeIntervalSince(lastSpawnTime) > 0.6 {
+        // Spawn a new card from the queue if interval elapsed. Kept at the original
+        // 0.4s on iOS (unlike mac's 0.6s) — iOS renders/processes the cascade fast
+        // enough that the original pace already clears cards fine here.
+        if !cardsQueue.isEmpty && currentDate.timeIntervalSince(lastSpawnTime) > 0.4 {
             let nextCard = cardsQueue.removeFirst()
 
             let foundationIndex = foundations.firstIndex { pile in
@@ -134,8 +131,8 @@ public struct WinAnimationView: View {
         // Physics constants (pixels/s and pixels/s²)
         let gravity: CGFloat = 980     // ≈ 0.28 px/frame² × 60² fps
         let elasticity: CGFloat = 0.85
-        let cardWidth: CGFloat = 128 * zoomScale
-        let cardHeight: CGFloat = 181 * zoomScale
+        let cardW: CGFloat = cardWidth
+        let cardH: CGFloat = cardWidth * CardDimensions.aspectRatio
 
         var remainingCards: [BouncingCard] = []
 
@@ -152,15 +149,15 @@ public struct WinAnimationView: View {
             bouncing.age += dt
 
             // Floor bounce
-            let floorLimit = screenSize.height - cardHeight * 0.5
+            let floorLimit = screenSize.height - cardH * 0.5
             if bouncing.y >= floorLimit {
                 bouncing.y = floorLimit
                 bouncing.vy = -abs(bouncing.vy) * elasticity
                 bouncing.vx *= 0.97
             }
 
-            let leftLimit = -cardWidth
-            let rightLimit = screenSize.width + cardWidth
+            let leftLimit = -cardW
+            let rightLimit = screenSize.width + cardW
             let isOffScreen = bouncing.x <= leftLimit || bouncing.x >= rightLimit
             if !isOffScreen && bouncing.age < Self.maxCardLifetime {
                 remainingCards.append(bouncing)

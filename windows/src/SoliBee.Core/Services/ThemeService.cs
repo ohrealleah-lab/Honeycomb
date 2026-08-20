@@ -223,6 +223,53 @@ public static class ThemeService
         SaveThemes(themes);
     }
 
+    // Deletion of a custom background/card back/face art always succeeds immediately —
+    // any saved theme that references the deleted asset gets that one field patched back
+    // to a default (background/card back) or that entry removed from FaceArts (face art),
+    // rather than the deletion being blocked. These three are called from each manager's
+    // remove path, right alongside the actual file deletion.
+    public static void ClearBackgroundReferences(string name)
+    {
+        var themes = LoadThemes();
+        bool changed = false;
+        foreach (var theme in themes)
+        {
+            if (theme.BackgroundName == name)
+            {
+                theme.BackgroundName = null;
+                changed = true;
+            }
+        }
+        if (changed) SaveThemes(themes);
+    }
+
+    public static void ClearCardBackReferences(string name, string fallback)
+    {
+        var themes = LoadThemes();
+        bool changed = false;
+        foreach (var theme in themes)
+        {
+            if (theme.CardBackTheme == name)
+            {
+                theme.CardBackTheme = fallback;
+                changed = true;
+            }
+        }
+        if (changed) SaveThemes(themes);
+    }
+
+    public static void ClearFaceArtReferences(string relativePath)
+    {
+        var themes = LoadThemes();
+        bool changed = false;
+        foreach (var theme in themes)
+        {
+            int removed = theme.FaceArts.RemoveAll(a => a.RelativePath == relativePath);
+            if (removed > 0) changed = true;
+        }
+        if (changed) SaveThemes(themes);
+    }
+
     public static SoliBeeTheme SnapshotFromOptions(string name, GameOptions options)
     {
         var theme = new SoliBeeTheme

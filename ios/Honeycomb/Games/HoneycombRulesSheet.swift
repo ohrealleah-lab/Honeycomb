@@ -77,6 +77,7 @@ struct HoneycombMatchRulesSheet: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(coordinator.L(.done)) { dismiss() }
                         .fontWeight(.semibold)
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }
@@ -134,6 +135,7 @@ struct HoneycombBanListSheet: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(coordinator.L(.done)) { dismiss() }
                         .fontWeight(.semibold)
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }

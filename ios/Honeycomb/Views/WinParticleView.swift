@@ -35,12 +35,16 @@ struct WinParticleView: View {
                         .frame(width: 7 * p.scale, height: 3 * p.scale)
                         .rotationEffect(.degrees(p.angle))
                         .position(x: tx, y: ty)
-                        .animation(.easeOut(duration: 0.45), value: spread)
+                        .animation(.easeOut(duration: 0.66), value: spread)
                 }
             }
         }
         .opacity(opacity)
-        .animation(.easeIn(duration: 0.35).delay(0.3), value: opacity)
+        // Same burst mechanic as always (radial fly-out + fade), just retimed —
+        // scaled ~1.47x from the original 0.05/0.45/0.3/0.35 timings so the whole
+        // burst lasts ~1.4s, matching Windows' WinParticleSystem duration (and mac's
+        // matching retime in GameUIStyles.swift).
+        .animation(.easeIn(duration: 0.52).delay(0.44), value: opacity)
         .onChange(of: active) { _, on in
             if on { burst() }
         }
@@ -48,7 +52,7 @@ struct WinParticleView: View {
     }
 
     private func burst() {
-        let count = 36
+        let count = 72
         particles = (0..<count).map { i in
             Particle(
                 angle: Double(i) / Double(count) * 360,
@@ -62,7 +66,7 @@ struct WinParticleView: View {
         }
         spread = false
         opacity = 1
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { spread = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { opacity = 0 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.07) { spread = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.44) { opacity = 0 }
     }
 }

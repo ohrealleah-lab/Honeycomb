@@ -83,10 +83,16 @@ struct CroppedCardBackImage: View {
 
     var body: some View {
         GeometryReader { geo in
+            // max(entry.scale, 1.0) — see IOSCustomBackground.swift's matching clamp:
+            // .aspectRatio(.fill) already covers geo.size at scale 1.0, so a saved
+            // scale below that (this same crop renders at both a 44pt thumbnail and a
+            // 150pt board card, per this type's own doc comment above) reopens a gap
+            // at whichever size/aspect ratio wasn't the one it was originally cropped
+            // against.
             Image(uiImage: image)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .scaleEffect(entry.scale)
+                .scaleEffect(max(entry.scale, 1.0))
                 .offset(x: entry.offsetXFraction * geo.size.width,
                         y: entry.offsetYFraction * geo.size.height)
                 .frame(width: geo.size.width, height: geo.size.height)
@@ -217,6 +223,9 @@ public final class IOSCustomCardBackManager {
     }
 
     public func removeCustomCardBack(_ entry: Entry) {
+        // Deletion always succeeds — any saved theme still referencing this card back
+        // by name gets reset to the default card back rather than being left dangling.
+        ThemeManager.shared.clearCardBackReferences(named: entry.name, fallback: "Solibee")
         let url = storageDirectory.appendingPathComponent(entry.relativePath)
         try? FileManager.default.removeItem(at: url)
         imageCache.removeValue(forKey: entry.relativePath)

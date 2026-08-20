@@ -88,7 +88,7 @@ struct HoneycombTouchView: View {
 
     var body: some View {
         ZStack {
-            IOSBackgroundLayer()
+            IOSBackgroundLayer(intensity: 0.45)
 
             VStack(spacing: 0) {
                 topBar
@@ -188,7 +188,7 @@ struct HoneycombTouchView: View {
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
             OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
-                HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch)
+                HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch, coordinator: coordinator)
             }
         }
         // Headless-testing hook: `simctl launch ... -honeycombAutostart 1` starts a match
@@ -269,6 +269,20 @@ struct HoneycombTouchView: View {
                 showingDecks = true
             }
             .disabled(isMidMatch)
+
+            // No onChange(of: viewModel.debugBannerRequest) needed here — unlike the
+            // other five games, HoneycombViewModel's debugBannerRequest didSet (shared/
+            // Honeycomb/ViewModels/HoneycombViewModel.swift) is fully self-contained and
+            // already fires on iOS for free.
+            debugMenuButton(
+                items: [
+                    ("Win", .win), ("Loss", .loss),
+                    ("Same", .same), ("Plus", .plus), ("Sudden Death", .suddenDeath)
+                ],
+                catalogSections: DebugBannerCatalogMenu.sections,
+                onSelect: { viewModel.debugBannerRequest = $0 },
+                onSelectCatalog: { viewModel.debugFireCatalogBanner($0) }
+            )
 
             Spacer()
 
@@ -855,7 +869,13 @@ struct HoneycombTouchView: View {
                         Text(coordinator.L(.rematchToTakeAnother))
                             .font(.footnote).foregroundColor(.white)
                             .multilineTextAlignment(.center)
-                    } else if viewModel.stealProtectionActive {
+                    } else if viewModel.stealProtectionActive && viewModel.hasStealableCard {
+                        // Matches mac's own guard (HoneycombView.swift) — only claims a
+                        // card is available when one actually is. stealProtectionActive
+                        // alone doesn't guarantee that (it widens eligibility to any
+                        // not-yet-unlocked board card, but if every card left on this
+                        // board is already unlocked, there's still nothing to offer).
+                        // iOS was missing this second half of the check.
                         Text(coordinator.L(.stealProtectionLine))
                             .font(.footnote).foregroundColor(.white)
                             .multilineTextAlignment(.center)
@@ -867,7 +887,7 @@ struct HoneycombTouchView: View {
                         Button {
                             isStealingCard = true
                         } label: {
-                            Label(coordinator.L(.takeACardButton), systemImage: "hand.point.up.left")
+                            Label(coordinator.L(.stealCard), systemImage: "hand.point.up.left")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
@@ -969,7 +989,11 @@ struct HoneycombTouchView: View {
 struct HoneycombSettingsSection: View {
     @Bindable var viewModel: HoneycombViewModel
     let isMidMatch: Bool
-    @Environment(AppCoordinator.self) private var coordinator
+    // @Bindable, not @Environment — Sound/No Stress Mode/Honey Mode/Manually Dismiss
+    // Banners bind directly to the coordinator (see AppCoordinator's "single source of
+    // truth" fields) so a change here live-propagates to every other game via their
+    // own didSet, instead of only updating this one game's local options copy.
+    @Bindable var coordinator: AppCoordinator
 
     @State private var showingMatchRules = false
     @State private var showingBanList = false
@@ -985,6 +1009,12 @@ struct HoneycombSettingsSection: View {
             // .pickerStyle(.menu) outside a Form/List only renders the selected value
             // + chevron as a button — the Picker's own label text is silently dropped
             // (same issue found and fixed in Video Poker's Variant/Default Bet pickers).
+            //
+            // Extra .padding(.bottom, 8) on this row and the two nav rows below it (on
+            // top of the VStack's own spacing: 8) — Toggle's default style carries its
+            // own built-in vertical padding that these plain HStack/Button rows don't
+            // have, so matching Toggle's visual row-to-row gap needs more than the flat
+            // 8 that's already correct between the toggles themselves.
             HStack {
                 Text(coordinator.L(.opponentPickerLabel))
                 Spacer()
@@ -998,6 +1028,7 @@ struct HoneycombSettingsSection: View {
             }
             .disabled(isMidMatch)
             .opacity(isMidMatch ? 0.5 : 1)
+            .padding(.bottom, 8)
 
             // Match Rules/Ban List sit directly under Opponent — they're the other
             // game-relevant settings, and should read together above the general
@@ -1005,17 +1036,19 @@ struct HoneycombSettingsSection: View {
             matchRulesNavRow
                 .disabled(isMidMatch)
                 .opacity(isMidMatch ? 0.5 : 1)
+                .padding(.bottom, 8)
             banListNavRow
                 .disabled(isMidMatch)
                 .opacity(isMidMatch ? 0.5 : 1)
+                .padding(.bottom, 8)
 
             Group {
-                Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
-                Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
+                Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
+                Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
                     .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
-                Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
+                Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
                 Toggle(coordinator.L(.hideHintButton), isOn: $viewModel.options.hideHintButton)
-                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
+                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
             }
             // Options only take effect on the next match — same mid-match gate as mac.
             .disabled(isMidMatch)
@@ -1036,7 +1069,6 @@ struct HoneycombSettingsSection: View {
             showingMatchRules = true
         } label: {
             HStack {
-                Image(systemName: "list.bullet.clipboard").frame(width: 24)
                 Text(coordinator.L(.matchRulesDisclosure))
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
@@ -1051,7 +1083,6 @@ struct HoneycombSettingsSection: View {
             showingBanList = true
         } label: {
             HStack {
-                Image(systemName: "nosign").frame(width: 24)
                 Text(coordinator.L(.banListDisclosure))
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
@@ -1107,6 +1138,7 @@ struct HoneycombStatsSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(coordinator.L(.done)) { dismiss() }
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }

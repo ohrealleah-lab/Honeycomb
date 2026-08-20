@@ -328,7 +328,10 @@ public partial class FaceCardArtSectionView : UserControl
         if (_pendingDeleteSlot is { } slot)
         {
             _pendingDeleteSlot = null;
+            var relativePath = FaceCardArtService.GetArt(slot)?.RelativePath;
             FaceCardArtService.Remove(slot);
+            if (relativePath != null)
+                ThemeService.ClearFaceArtReferences(relativePath);
             CardView.InvalidateFaceArtCache();
             Refresh();
         }

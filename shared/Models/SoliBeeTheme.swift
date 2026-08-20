@@ -237,22 +237,45 @@ public final class ThemeManager {
         return true
     }
 
-    // MARK: - Asset reference lookups
+    // MARK: - Orphan-reference cleanup on asset delete
     //
-    // Shared by the custom card back / face art / background managers' delete
-    // safeguards (and their selector views' pre-delete "in use" alerts) so "is this
-    // asset referenced by a saved Theme" is defined once instead of as a near-identical
-    // inline closure at each call site.
+    // Deleting a custom background/card back/face art image used to be blocked
+    // outright when a saved theme referenced it (a "this image is used by theme X"
+    // alert). That made deletion a two-step chore — find and edit the theme first.
+    // Instead, deletion always succeeds immediately and every saved theme referencing
+    // the deleted asset (not just the currently active one) is patched back to its
+    // default in place, same as the live/current selection already falls back to felt.
 
-    public func themeReferencingCardBack(named name: String) -> SoliBeeTheme? {
-        themes.first { $0.cardBackTheme == name }
+    /// Clears `customBackgroundName` on every saved theme referencing it (falls back
+    /// to felt color when that theme is next applied).
+    public func clearBackgroundReferences(named name: String) {
+        var changed = false
+        for i in themes.indices where themes[i].customBackgroundName == name {
+            themes[i].customBackgroundName = nil
+            changed = true
+        }
+        if changed { save() }
     }
 
-    public func themeReferencingBackground(named name: String) -> SoliBeeTheme? {
-        themes.first { $0.customBackgroundName == name }
+    /// Clears `cardBackTheme` on every saved theme referencing it, resetting to
+    /// `fallback` (the default bundled card back).
+    public func clearCardBackReferences(named name: String, fallback: String) {
+        var changed = false
+        for i in themes.indices where themes[i].cardBackTheme == name {
+            themes[i].cardBackTheme = fallback
+            changed = true
+        }
+        if changed { save() }
     }
 
-    public func themeReferencingFaceArt(relativePath: String) -> SoliBeeTheme? {
-        themes.first { $0.faceArts.contains { $0.relativePath == relativePath } }
+    /// Removes the matching entry from `faceArts` on every saved theme referencing it.
+    public func clearFaceArtReferences(relativePath: String) {
+        var changed = false
+        for i in themes.indices {
+            let before = themes[i].faceArts.count
+            themes[i].faceArts.removeAll { $0.relativePath == relativePath }
+            if themes[i].faceArts.count != before { changed = true }
+        }
+        if changed { save() }
     }
 }

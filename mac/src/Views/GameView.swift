@@ -65,6 +65,7 @@ public struct GameView: View {
     @State private var dismissedStuckBanner: Bool = false
     @State private var dismissedWinBanner: Bool = false
     @State private var winPulse: Bool = false
+    @State private var showParticles: Bool = false
     @State private var pendingDrawMode: GameState.DrawMode? = nil
     @State private var hostingWindow: NSWindow? = nil
     @State private var zoomController: WindowZoomController? = nil
@@ -557,6 +558,12 @@ public struct GameView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+
+                // On top of the banner (not behind it) — matches the Blackjack/Video
+                // Poker confetti ordering.
+                WinParticleView(active: showParticles)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
             }
 
             if showNoHintsBanner {
@@ -730,7 +737,13 @@ public struct GameView: View {
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
-        .onChange(of: viewModel.state.hasWon) { _, newVal in if newVal { dismissedWinBanner = false } }
+        .onChange(of: viewModel.state.hasWon) { _, newVal in
+            if newVal {
+                dismissedWinBanner = false
+                showParticles = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+            }
+        }
         .onChange(of: viewModel.debugBannerRequest) { _, kind in
             guard let kind else { return }
             viewModel.debugBannerRequest = nil

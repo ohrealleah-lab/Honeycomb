@@ -235,14 +235,11 @@ public final class CustomCardBackManager {
     }
 
     public func removeCustomCardBack(_ customBack: CustomCardBack) {
-        // Don't delete the underlying file if any saved theme still references this deck
-        // by name — otherwise applying that theme later silently falls back to a
-        // different look with no indication the deck it wanted is gone.
-        let stillReferencedBySavedTheme = ThemeManager.shared.themeReferencingCardBack(named: customBack.name) != nil
-        if !stillReferencedBySavedTheme {
-            let fileURL = appSupportDirectory.appendingPathComponent(customBack.relativePath)
-            try? FileManager.default.removeItem(at: fileURL)
-        }
+        // Deletion always succeeds — any saved theme still referencing this deck by
+        // name gets reset to the default card back rather than blocking the delete.
+        ThemeManager.shared.clearCardBackReferences(named: customBack.name, fallback: "Solibee")
+        let fileURL = appSupportDirectory.appendingPathComponent(customBack.relativePath)
+        try? FileManager.default.removeItem(at: fileURL)
         invalidateCache(for: customBack.relativePath)
         customCardBacks.removeAll { $0.id == customBack.id }
         saveCustomCardBacks()

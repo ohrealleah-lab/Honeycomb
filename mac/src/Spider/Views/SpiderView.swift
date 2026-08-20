@@ -50,6 +50,7 @@ public struct SpiderView: View {
     @State private var dismissedAutocompleteBanner: Bool = false
     @State private var dismissedStuckBanner: Bool = false
     @State private var winPulse: Bool = false
+    @State private var showParticles: Bool = false
     @State private var showNoHintsBanner: Bool = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
     // Milestone/loading banners (viewModel.bannerQueue) — separate state from the
@@ -383,15 +384,12 @@ public struct SpiderView: View {
             .frame(minWidth: boardWidth * viewModel.zoomScale, maxHeight: .infinity, alignment: .topLeading)
                 } // ScrollView
 
-            // Victory Cascade Overlay — a top-level sibling (not nested inside the scaled
-            // board area or its horizontal ScrollView) so it spans the whole window rather
-            // than being confined to the board's own reserved/scrollable bounds.
+            // Victory overlay — a top-level sibling (not nested inside the scaled board
+            // area or its horizontal ScrollView) so it spans the whole window rather than
+            // being confined to the board's own reserved/scrollable bounds. Unlike
+            // Klondike/Beecell, Spider intentionally skips the bouncing-card cascade and
+            // just shows the banner + confetti below.
             if viewModel.state.hasWon {
-                WinAnimationView(foundations: viewModel.state.foundations, pileFrames: pileFrames, zoomScale: viewModel.zoomScale) {
-                    // finish win
-                }
-                .ignoresSafeArea()
-
                 VStack {
                     Spacer(minLength: 8)
                     VStack(spacing: 12) {
@@ -429,6 +427,12 @@ public struct SpiderView: View {
                     Spacer(minLength: 8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // On top of the banner (not behind it) — matches the Blackjack/Video
+                // Poker confetti ordering.
+                WinParticleView(active: showParticles)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
             }
 
             if showNoHintsBanner {
@@ -572,6 +576,12 @@ public struct SpiderView: View {
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
+        .onChange(of: viewModel.state.hasWon) { _, newVal in
+            if newVal {
+                showParticles = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+            }
+        }
         .onChange(of: viewModel.debugBannerRequest) { _, kind in
             guard let kind else { return }
             viewModel.debugBannerRequest = nil

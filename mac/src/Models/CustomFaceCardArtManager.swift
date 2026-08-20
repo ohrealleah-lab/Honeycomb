@@ -149,11 +149,11 @@ public final class CustomFaceCardArtManager {
 
     public func remove(slot: FaceCardSlot, deleteFile: Bool = true) {
         if let existing = art(for: slot) {
-            // Don't delete the underlying file if any saved theme still references this
-            // exact art — otherwise applying that theme later silently drops the slot
-            // with no indication anything went wrong.
-            let stillReferencedBySavedTheme = ThemeManager.shared.themeReferencingFaceArt(relativePath: existing.relativePath) != nil
-            if deleteFile && !stillReferencedBySavedTheme {
+            // Deletion always succeeds — any saved theme still referencing this exact
+            // art gets that slot's entry cleared rather than leaving the file (and the
+            // theme's dangling reference to it) behind.
+            ThemeManager.shared.clearFaceArtReferences(relativePath: existing.relativePath)
+            if deleteFile {
                 let fileURL = appSupportDirectory.appendingPathComponent(existing.relativePath)
                 try? FileManager.default.removeItem(at: fileURL)
             }

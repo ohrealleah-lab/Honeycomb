@@ -138,6 +138,18 @@ public final class BannerCatalog {
         return eligible.randomElement()
     }
 
+    // Debug-only: returns a representative message for `id`, bypassing the gate/honey-
+    // mode roll entirely (fire() can return .fallback or .none depending on those) so a
+    // debug menu always shows real catalog content instead of occasionally doing
+    // nothing or showing the plain fallback text. Falls back to the id's own raw value
+    // if the catalog has no messages for it (shouldn't happen for a valid catalog).
+    public func debugPreviewText(for id: BannerID, tokens: [String: String] = [:]) -> String {
+        guard let def = entries[id], let message = def.messages.randomElement() else {
+            return id.rawValue
+        }
+        return Self.substitute(message, tokens: tokens)
+    }
+
     private static func substitute(_ text: String, tokens: [String: String]) -> String {
         guard !tokens.isEmpty else { return text }
         var result = text

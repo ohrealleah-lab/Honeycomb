@@ -12,6 +12,13 @@ public struct RuleExplanationPopover: View {
         self.effectiveRules = effectiveRules
     }
 
+    // The system .yellow used by the rules banner behind this popover is a dynamic
+    // color that resolves darker under the .dark colorScheme this popover forces
+    // below (for the black presentationBackground). A fixed RGB value renders
+    // identically regardless of colorScheme, matching the banner's actual on-screen
+    // color instead of just its name.
+    private static let ruleNameYellow = Color(red: 1.0, green: 0.8, blue: 0.0)
+
     public var body: some View {
         // With 3-4 active rules, the stacked explanations can exceed the popover's
         // available height — a bare VStack has no scroll fallback, so the system
@@ -23,7 +30,7 @@ public struct RuleExplanationPopover: View {
                     Group {
                         Text(coordinator.L(.rouletteColonPrefix))
                             .font(.system(size: 14, weight: .black))
-                            .foregroundColor(.yellow)
+                            .foregroundColor(Self.ruleNameYellow)
                         +
                         Text(coordinator.L(.rulesRandomizedAtStart))
                             .font(.system(size: 14, weight: .medium))
@@ -40,7 +47,7 @@ public struct RuleExplanationPopover: View {
                         Group {
                             Text(coordinator.L(.ruleNameColonFmt, honeycombLocalizedRuleName(rule.rawValue, language: coordinator.language)))
                                 .font(.system(size: 14, weight: .black))
-                                .foregroundColor(.yellow)
+                                .foregroundColor(Self.ruleNameYellow)
                             +
                             Text(honeycombLocalizedRuleExplanation(rule, activeSuits: viewModel.ascensionDescensionSuits, language: coordinator.language))
                                 .font(.system(size: 14, weight: .medium))

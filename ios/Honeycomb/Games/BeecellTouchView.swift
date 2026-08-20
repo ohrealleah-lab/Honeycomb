@@ -25,6 +25,7 @@ struct BeecellTouchView: View {
     @State private var showingThemes = false
     @State private var showingStats = false
     @State private var dismissedStuckBanner = false
+    @State private var showParticles = false
     @State private var showNoHintsBanner = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
 
@@ -50,7 +51,7 @@ struct BeecellTouchView: View {
             let topCardH = topCardW * CardDimensions.aspectRatio
 
             ZStack {
-                IOSBackgroundLayer()
+                IOSBackgroundLayer(intensity: 0.45)
 
                 VStack(spacing: 10) {
                     topBar
@@ -73,7 +74,14 @@ struct BeecellTouchView: View {
                 }
 
                 if viewModel.state.hasWon {
+                    WinAnimationView(foundations: viewModel.state.foundations, pileFrames: pileFrames, cardWidth: cardW) {}
                     winOverlay
+
+                    // On top of the banner (not behind it) — matches the Blackjack/
+                    // Video Poker confetti ordering.
+                    WinParticleView(active: showParticles)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .allowsHitTesting(false)
                 }
 
                 if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
@@ -97,7 +105,7 @@ struct BeecellTouchView: View {
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
             OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
-                BeecellSettingsSection(viewModel: viewModel)
+                BeecellSettingsSection(viewModel: viewModel, coordinator: coordinator)
             }
         }
         .onAppear {
@@ -117,7 +125,41 @@ struct BeecellTouchView: View {
         .onChange(of: viewModel.state.movesCount) {
             viewModel.scheduleIdleActionCheck()
         }
-        .onChange(of: viewModel.state.hasWon) { dismissedStuckBanner = false }
+        .onChange(of: viewModel.state.hasWon) { _, newVal in
+            dismissedStuckBanner = false
+            if newVal {
+                showParticles = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+            }
+        }
+        // Debug-only trigger handler — mirrors mac's BeecellView.swift onChange(of:
+        // viewModel.debugBannerRequest), minus dismissedWinBanner/dismissedAutocompleteBanner
+        // resets (this view doesn't have those flags — its win/autocomplete UI shows
+        // unconditionally off hasWon/isAutocompleteAvailable, no separate dismiss state).
+        .onChange(of: viewModel.debugBannerRequest) { _, kind in
+            guard let kind else { return }
+            viewModel.debugBannerRequest = nil
+            switch kind {
+            case .win:
+                let suits: [Card.Suit] = [.spades, .clubs, .diamonds, .hearts]
+                let count = max(viewModel.state.foundations.count, 4)
+                viewModel.state.foundations = (0..<count).map { i in
+                    let suit = suits[i % suits.count]
+                    let cards = (1...13).map { Card(suit: suit, rank: $0, faceUp: true) }
+                    return Pile(id: "foundation_\(i)", type: .foundation, cards: cards)
+                }
+                viewModel.state.hasWon = true
+            case .stuck:
+                viewModel.state.hasWon = false
+                dismissedStuckBanner = false
+                viewModel.isStuck = true
+            case .autocomplete:
+                viewModel.state.hasWon = false
+                viewModel.isAutocompleteAvailable = true
+            case .loss, .same, .plus, .suddenDeath:
+                break
+            }
+        }
         // Mirrors the mac view's NSWindow.didResignKeyNotification safety net: SwiftUI's
         // DragGesture has no "cancelled" callback, so a drag interrupted by the app
         // backgrounding (Control Center, an incoming call, the home gesture, etc.) never
@@ -145,6 +187,9 @@ struct BeecellTouchView: View {
         // on the full bar width regardless of how wide either side is.
         HStack(spacing: 10) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
+            debugMenuButton(items: [("Win", .win), ("Loss (Stuck)", .stuck), ("Autocomplete", .autocomplete)]) {
+                viewModel.debugBannerRequest = $0
+            }
 
             Spacer()
 
@@ -572,9 +617,9 @@ struct BeecellTouchView: View {
                     .foregroundColor(.white)
                 Button {
                     dismissedStuckBanner = true
-                    viewModel.undoLastAction()
+                    viewModel.restartCurrentGame()
                 } label: {
-                    Label(coordinator.L(.touchUndoLastMoveLabel), systemImage: "arrow.uturn.backward")
+                    Label(coordinator.L(.restartGame), systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -612,19 +657,23 @@ struct BeecellTouchView: View {
 
 struct BeecellSettingsSection: View {
     @Bindable var viewModel: BeecellViewModel
-    @Environment(AppCoordinator.self) private var coordinator
+    // @Bindable, not @Environment — Sound/No Stress Mode/Honey Mode/Manually Dismiss
+    // Banners bind directly to the coordinator (see AppCoordinator's "single source of
+    // truth" fields) so a change here live-propagates to every other game via their
+    // own didSet, instead of only updating this one game's local options copy.
+    @Bindable var coordinator: AppCoordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Two-deck Beecell isn't offered on iOS — see the deckCount clamp in
             // BeecellTouchView's onAppear. Mac keeps its 1/2-deck picker; this section
             // is iOS-only.
-            Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
-            Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
+            Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
+            Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
                 .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
             Toggle(coordinator.L(.hideHintButton), isOn: $viewModel.options.hideHintButton)
-            Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
-            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
+            Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
         }
     }
 }
@@ -658,6 +707,7 @@ struct BeecellStatsSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(coordinator.L(.done)) { dismiss() }
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }

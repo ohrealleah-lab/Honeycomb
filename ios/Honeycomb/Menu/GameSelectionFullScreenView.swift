@@ -24,6 +24,7 @@ struct GameSelectionFullScreenView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(coordinator.L(.done)) { dismiss() }
                         .fontWeight(.semibold)
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }

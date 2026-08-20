@@ -654,7 +654,11 @@ public partial class PreferencesView : UserControl
         CancelDeleteCardBackButton.Content = Strings.Get(StringKey.Cancel, language);
         ConfirmDeleteCardBackButton.Content = Strings.Get(StringKey.Delete, language);
 
-        CardBackInUseTitleText.Text = Strings.Get(StringKey.CardBackInUseTitle, language);
+        // This overlay is now only triggered by the "must keep at least one card back"
+        // guard (the "in use by a saved theme" trigger was removed — that deletion path
+        // no longer blocks, see DeleteCustomCardBack_Click), so its title uses the
+        // generic error title rather than the now-deleted CardBackInUseTitle key.
+        CardBackInUseTitleText.Text = Strings.Get(StringKey.ErrorTitle, language);
         CardBackInUseOkButton.Content = Strings.Get(StringKey.Ok, language);
 
         ConfirmDeleteBackgroundTitleText.Text = Strings.Get(StringKey.DeleteBackgroundTitle, language);
@@ -1346,25 +1350,7 @@ public partial class PreferencesView : UserControl
         var cardBackName = selectedItem?.Tag?.ToString();
         if (cardBackName == null) return;
 
-        // Themes store their card back by name (SoliBeeTheme.CardBackTheme), not by a
-        // reference to the CustomCardBack object — deleting the file out from under a
-        // saved theme would silently leave that theme pointing at nothing, so block it.
-        var themeNames = ThemeService.LoadThemes()
-            .Where(t => t.CardBackTheme == cardBackName)
-            .Select(t => t.Name)
-            .ToList();
-
         var language = SettingsService.LoadOptions().Language;
-
-        if (themeNames.Count > 0)
-        {
-            CardBackInUseText.Text = string.Format(
-                Strings.Get(StringKey.CardBackInUseMultiThemeFmt, language),
-                string.Join(", ", themeNames),
-                themeNames.Count > 1 ? "s" : "");
-            CardBackInUseOverlay.IsVisible = true;
-            return;
-        }
 
         // There must always be at least one card deck design to choose from — built-in
         // or custom — so the last remaining one (of either kind) can't be removed.
@@ -1410,6 +1396,7 @@ public partial class PreferencesView : UserControl
                 try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
             }
             options.CustomCardBacks.Remove(customBack);
+            ThemeService.ClearCardBackReferences(nameToDelete, "Vulpera");
         }
         else if (IsBuiltInCardBack(nameToDelete))
         {
@@ -1892,22 +1879,6 @@ public partial class PreferencesView : UserControl
         var backgroundName = selectedTag.Substring("bg:".Length);
         if (string.IsNullOrEmpty(backgroundName)) return;
 
-        // Themes store their background by name (SoliBeeTheme.BackgroundName), not by a
-        // reference to the CustomBackground object — deleting the file out from under a
-        // saved theme would silently leave that theme pointing at nothing, so block it.
-        var themeNames = ThemeService.LoadThemes()
-            .Where(t => t.BackgroundName == backgroundName)
-            .Select(t => t.Name)
-            .ToList();
-
-        if (themeNames.Count > 0)
-        {
-            BackgroundAlertText.Text = $"This background is used by \"{themeNames[0]}\". " +
-                "Please delete the theme first.";
-            BackgroundAlertOverlay.IsVisible = true;
-            return;
-        }
-
         _backgroundToDelete = backgroundName;
         ConfirmDeleteBackgroundOverlay.IsVisible = true;
     }
@@ -1939,6 +1910,7 @@ public partial class PreferencesView : UserControl
                 CardView.InvalidateFaceArtCache(filePath);
             }
             options.CustomBackgrounds.Remove(bg);
+            ThemeService.ClearBackgroundReferences(_backgroundToDelete);
         }
 
         if (options.BackgroundName == _backgroundToDelete)

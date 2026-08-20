@@ -25,6 +25,7 @@ struct BlackjackTouchView: View {
     // data changing synchronously, which TouchCardView's own flip already animates.
     @State private var showResultBanner = false
     @State private var bannerWinFlash = false
+    @State private var showParticles = false
     @State private var cardsVisible = true
     @State private var showCardBackPlaceholders = false
     @State private var dealerFlipped = false
@@ -32,6 +33,20 @@ struct BlackjackTouchView: View {
     @State private var resultHideTask: DispatchWorkItem? = nil
     @State private var resultCardHideTask: DispatchWorkItem? = nil
     @State private var idlePromptTask: DispatchWorkItem? = nil
+
+    // Measured live via controls' own .onGeometryChange below (its height varies by
+    // phase — a single action-button row vs. betting's two rows of chips) rather than
+    // a hardcoded guess, so the scrollable content's reserved bottom padding always
+    // matches exactly, in both orientations.
+    @State private var controlsHeight: CGFloat = 0
+
+    // Height of bettingControls' chip row (Clear Bet/Deal sits above it) — reserved as
+    // an invisible placeholder under every other phase's single-row controls (Hit/
+    // Stand, the dealer-turn spinner, Rebuy) so that row always lands at the same
+    // height Clear Bet/Deal sits at, instead of sinking to the very bottom of the
+    // screen the way a genuinely shorter block naturally would in this fixed-bottom-
+    // bar layout. No-op in free play, where bettingControls itself has no chip row.
+    @State private var chipRowHeight: CGFloat = 74
 
     private let actionHaptic = UIImpactFeedbackGenerator(style: .medium)
 
@@ -71,8 +86,8 @@ struct BlackjackTouchView: View {
 
     private func sizeScale(for count: Int) -> CGFloat {
         switch count {
-        case ..<6: return 1.0
-        case 6: return 0.85
+        case ..<5: return 1.0
+        case 5, 6: return 0.85
         default: return 0.7
         }
     }
@@ -85,14 +100,15 @@ struct BlackjackTouchView: View {
             let cardW = min(geo.size.width * 0.32, 190) * sizeScale(for: maxHandCardCount)
             let isLandscape = geo.size.width > geo.size.height
 
-            ZStack {
-                IOSBackgroundLayer()
+            ZStack(alignment: .bottom) {
+                IOSBackgroundLayer(intensity: 0.6)
 
                 // ScrollView fallback rather than a computed shrink factor — a split
-                // stacks a second hand below the first, and landscape's shorter height
-                // can't always fit dealer + two hands + controls. Scrolling beats
-                // clipping the action buttons off the bottom; portrait already fits
-                // without scrolling in the common case.
+                // stacks a second hand below the first, and this can't always fit
+                // dealer + two hands + controls in either orientation. controls itself
+                // is pinned below as a fixed bottom bar (not part of this scrolling
+                // content) so it's never what gets pushed off screen — only the cards
+                // scroll.
                 ScrollView {
                     VStack(spacing: 16) {
                         topBar
@@ -108,25 +124,21 @@ struct BlackjackTouchView: View {
                             // dealer-then-player stack needs, but it has plenty of width
                             // to spare — dealer left, player right instead.
                             HStack(alignment: .top, spacing: 24) {
-                                dealerArea(cardW: cardW)
-                                    .frame(maxWidth: .infinity)
                                 playerHandsArea(cardW: cardW)
                                     .frame(maxWidth: .infinity)
+                                dealerArea(cardW: cardW)
+                                    .frame(maxWidth: .infinity)
                             }
-
-                            resultBanner
                         } else {
                             dealerArea(cardW: cardW)
 
-                            resultBanner
-
                             playerHandsArea(cardW: cardW)
                         }
-
-                        controls
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 12)
                     }
+                    // Reserves exactly enough room at the bottom for the fixed controls
+                    // bar (measured live below) so the last card/banner content never
+                    // ends up scrolled underneath it.
+                    .padding(.bottom, controlsHeight)
                     // Flexible Spacers used to sit between the cards and controls,
                     // which combined with this enforced min-height stretched them apart
                     // into a large gap at every screen size — top-aligning instead lets
@@ -135,6 +147,36 @@ struct BlackjackTouchView: View {
                     // the controls instead of between them.
                     .frame(minHeight: geo.size.height, alignment: .top)
                 }
+
+                // Overlay, not part of the ScrollView's flow — centers on the whole
+                // screen regardless of scroll position or how tall the dealer/player
+                // areas are, rather than wherever it happened to sit between them.
+                resultOverlay
+
+                // Listed after resultOverlay so the burst renders in front of the
+                // banner, not behind it — matches Windows' BlackjackView, where
+                // ParticleCanvas sits at a higher ZIndex than the result overlay, and
+                // Video Poker's own confetti/banner ordering here on iOS.
+                WinParticleView(active: showParticles)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+
+                // Fixed bottom bar, outside the ScrollView above — a split's second
+                // hand (or, in portrait, the dealer+hands all stacking vertically with
+                // no side-by-side room to spare) could grow tall enough to push these
+                // action buttons below the visible screen, right when they're needed
+                // most. Pinning them here means only the cards ever scroll; the buttons
+                // that act on them stay in the same place at every hand size, in both
+                // orientations.
+                controls
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.size.height
+                    } action: { newHeight in
+                        controlsHeight = newHeight
+                    }
             }
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
@@ -145,7 +187,8 @@ struct BlackjackTouchView: View {
         .sheet(isPresented: $showingOptions) {
             OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
                 BlackjackSettingsSection(viewModel: viewModel,
-                                         canOpenOptions: viewModel.canOpenOptions)
+                                         canOpenOptions: viewModel.canOpenOptions,
+                                         coordinator: coordinator)
             }
         }
         .queuedFlashBanner(
@@ -155,6 +198,23 @@ struct BlackjackTouchView: View {
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
         .onAppear { viewModel.checkLoadingBanner() }
+        // Debug-only trigger handler — mirrors mac's BlackjackView.swift onChange(of:
+        // viewModel.debugBannerRequest), minus resultBannerShowTask (this view doesn't
+        // have that task var). viewModel.debugSetupBannerState(kind) is shared code that
+        // builds the actual hand/result state; this just resets the transient result-
+        // banner/card UI state around it.
+        .onChange(of: viewModel.debugBannerRequest) { _, kind in
+            guard let kind else { return }
+            viewModel.debugBannerRequest = nil
+            resultHideTask?.cancel()
+            resultCardHideTask?.cancel()
+            showResultBanner = false
+            cardsVisible = true
+            showCardBackPlaceholders = false
+            dealerFlipped = true
+            viewModel.debugSetupBannerState(kind)
+            showResultBanner = true
+        }
         .onChange(of: viewModel.state.phase) { _, newPhase in
             // Re-arms the idle-nudge timer on every phase change, matching mac
             // (BlackjackView.swift:211) — previously only armed once via
@@ -171,6 +231,10 @@ struct BlackjackTouchView: View {
                 // (mac waits 1.0s first) — a plain, directly-verifiable SwiftUI
                 // condition instead of depending on an async task actually firing.
                 showResultBanner = true
+                if viewModel.state.isWinRound {
+                    showParticles = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+                }
 
                 let bannerTask = DispatchWorkItem {
                     let hideTask = DispatchWorkItem {
@@ -197,6 +261,7 @@ struct BlackjackTouchView: View {
                 withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
                 dealerFlipped = false
                 showResultBanner = false
+                showParticles = false
                 showCardBackPlaceholders = false
                 withAnimation(.easeIn(duration: 0.2)) { cardsVisible = true }
             }
@@ -211,6 +276,9 @@ struct BlackjackTouchView: View {
     private var topBar: some View {
         HStack(spacing: 10) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
+            debugMenuButton(items: [("Win", .win), ("Loss", .loss)]) {
+                viewModel.debugBannerRequest = $0
+            }
 
             Spacer()
 
@@ -369,58 +437,46 @@ struct BlackjackTouchView: View {
         viewModel.state.playerHands.count > 1 ? coordinator.L(.touchHandLabelFmt, index + 1) : coordinator.L(.touchYouLabel)
     }
 
-    private var resultBanner: some View {
+    // Diverges from mac's resultBanner in presentation (mac: BlackjackView.swift:
+    // 554-591) — doubled in size and centered on the whole screen (an overlay outside
+    // the ScrollView's flow, see body) rather than inline between the dealer and
+    // player hands, matching mac's own actual pop-up placement more closely than the
+    // inline spot this used to occupy did. Content/behavior otherwise unchanged.
+    private var resultOverlay: some View {
         Group {
             if showResultBanner, viewModel.state.phase == .result, viewModel.state.resultOutcome != .none {
                 let (headline, subline) = localizedBlackjackResult(viewModel.state, language: coordinator.language)
                 let isWin = viewModel.state.isWinRound
-                VStack(spacing: 6) {
-                    // Matches mac (BlackjackView.swift:554-556) — the headline is
-                    // unconditionally yellow for every outcome, win or loss; only the
-                    // wording and the win-only glow/pulse below differ. Was
-                    // conditionally white for a loss, which doesn't match mac at all.
-                    // Size bumped considerably (was .title3, hard to read) — closer to
-                    // mac's own literal 36pt, with minimumScaleFactor as a safety net.
+                VStack(spacing: 12) {
                     Text(headline)
-                        .font(.system(size: 32, weight: .black))
-                        .minimumScaleFactor(0.6)
+                        .font(.system(size: 64, weight: .black))
+                        .minimumScaleFactor(0.5)
                         .lineLimit(1)
                         .foregroundStyle(.yellow)
 
                     if !viewModel.isFreePlay {
                         Text(subline)
-                            .font(.title3)
+                            .font(.title)
                             .foregroundStyle(.white)
                     }
                 }
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 18)
-                // Matches mac's resultBanner background/shadow (BlackjackView.swift:
-                // 585-591) — was missing here, so the banner text floated directly on
-                // the felt with nothing to separate it from the cards behind it.
+                .padding(.horizontal, 40)
+                .padding(.vertical, 36)
                 .background(Color.black.opacity(0.75))
-                .cornerRadius(12)
-                .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5) : .clear, radius: 16)
+                .cornerRadius(24)
+                .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5) : .clear, radius: 32)
                 // Matches mac's bannerWinFlash — a slow repeating pulse for the
                 // duration the win banner is visible, not a one-shot flash.
                 .scaleEffect(isWin && bannerWinFlash ? 1.06 : 1.0)
                 .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: bannerWinFlash)
                 .onAppear { if isWin { bannerWinFlash = true } }
                 .onDisappear { bannerWinFlash = false }
-            } else {
-                VStack(spacing: 2) {
-                    Text(" ").font(.title3.weight(.black))
-                    if !viewModel.isFreePlay {
-                        Text(" ").font(.subheadline)
-                    }
-                }
             }
         }
         .padding(.horizontal, 16)
-        // Bumped again for the larger headline text above.
-        .frame(height: viewModel.isFreePlay ? 76 : 100)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
     }
 
     // MARK: Controls
@@ -431,19 +487,33 @@ struct BlackjackTouchView: View {
             case .betting:
                 bettingControls
             case .playing:
-                actionControls
+                actionRow(actionControls)
             case .dealerTurn:
-                HStack {
-                    Spacer()
-                    ProgressView().tint(.white)
-                    Spacer()
-                }
+                actionRow(
+                    HStack {
+                        Spacer()
+                        ProgressView().tint(.white)
+                        Spacer()
+                    }
+                )
             case .result:
                 if viewModel.canRebuy {
-                    rebuyControl
+                    actionRow(rebuyControl)
                 } else {
                     bettingControls
                 }
+            }
+        }
+    }
+
+    // Pads a single-row control block with an invisible placeholder matching the chip
+    // row's height (see chipRowHeight) so its one real row lands at the same height
+    // Clear Bet/Deal sits at in bettingControls, not bottom-anchored lower on its own.
+    private func actionRow(_ row: some View) -> some View {
+        VStack(spacing: 10) {
+            row
+            if !viewModel.isFreePlay {
+                Color.clear.frame(height: chipRowHeight)
             }
         }
     }
@@ -477,6 +547,11 @@ struct BlackjackTouchView: View {
                     casinoButton(coordinator.L(.chip10), color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
                     casinoButton(coordinator.L(.chip25), color: .green.opacity(0.75)) { viewModel.addToBet(25) }
                     casinoButton(coordinator.L(.chip2x), color: .orange.opacity(0.85)) { viewModel.doubleBet() }
+                }
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.size.height
+                } action: { newHeight in
+                    chipRowHeight = newHeight
                 }
             }
         }
@@ -523,23 +598,27 @@ struct BlackjackTouchView: View {
 struct BlackjackSettingsSection: View {
     @Bindable var viewModel: BlackjackViewModel
     let canOpenOptions: Bool
-    @Environment(AppCoordinator.self) private var coordinator
+    // @Bindable, not @Environment — Sound/No Stress Mode/Honey Mode/Manually Dismiss
+    // Banners bind directly to the coordinator (see AppCoordinator's "single source of
+    // truth" fields) so a change here live-propagates to every other game via their
+    // own didSet, instead of only updating this one game's local options copy.
+    @Bindable var coordinator: AppCoordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Group {
                 Stepper(coordinator.L(.startingCreditsFmt, viewModel.options.startingCredits),
                         value: $viewModel.options.startingCredits, in: 10...10000, step: 10)
-                Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
+                Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
                 // No startNewGame() call here, unlike mac's equivalent — this Toggle is
                 // disabled during gameplay (.disabledDuringGameplay below), so it can only
                 // ever fire between hands, when there's no in-progress hand to interrupt.
                 // isFreePlay reads options.noStressMode live, so the change takes effect
                 // on the next deal on its own; calling startNewGame() here only served to
                 // unconditionally wipe the win streak on a benign settings change.
-                Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
-                Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
-                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
+                Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
+                Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
+                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
             }
             .disabledDuringGameplay(!canOpenOptions)
 
@@ -583,6 +662,7 @@ struct BlackjackStatsSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(coordinator.L(.done)) { dismiss() }
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }

@@ -10,6 +10,8 @@ struct CustomFaceCardArtSheet: View {
     @Environment(AppCoordinator.self) private var coordinator
     @State private var manager = IOSCustomFaceArtManager.shared
     @State private var editingSlot: FaceCardSlot? = nil
+    @State private var isEditingFaceArt = false
+    @State private var slotPendingDelete: FaceCardSlot? = nil
 
     private static let columns = [GridItem(.adaptive(minimum: 80), spacing: 12)]
 
@@ -26,44 +28,77 @@ struct CustomFaceCardArtSheet: View {
             .navigationTitle(coordinator.L(.faceCardArtNavRow))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(coordinator.L(.back)) { dismiss() }
+                        .buttonStyle(.borderedProminent)
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(coordinator.L(.done)) { dismiss() }
+                    Button {
+                        isEditingFaceArt.toggle()
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
                 }
             }
             .sheet(item: $editingSlot) { slot in
                 FaceArtImportSheet(slot: slot)
+            }
+            .alert(coordinator.L(.removeFaceArtAlertTitle), isPresented: .init(
+                get: { slotPendingDelete != nil },
+                set: { if !$0 { slotPendingDelete = nil } }
+            )) {
+                Button(coordinator.L(.cancel), role: .cancel) {}
+                Button(coordinator.L(.remove), role: .destructive) {
+                    if let slot = slotPendingDelete { manager.removeArt(for: slot) }
+                    slotPendingDelete = nil
+                }
+            } message: {
+                Text(coordinator.L(.removeImportedImageBody))
             }
         }
     }
 
     private func slotTile(_ slot: FaceCardSlot) -> some View {
         let entry = manager.entry(for: slot)
-        return Button {
-            editingSlot = slot
-        } label: {
-            VStack(spacing: 4) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.white)
-                        .aspectRatio((1.0 / CardDimensions.aspectRatio), contentMode: .fit)
-                    if let entry, let image = manager.image(for: entry) {
-                        ImageCropDisplay(image: image, entry: entry)
+        return VStack(spacing: 4) {
+            ZStack(alignment: .topTrailing) {
+                Button {
+                    editingSlot = slot
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.white)
                             .aspectRatio((1.0 / CardDimensions.aspectRatio), contentMode: .fit)
-                            .opacity(entry.isEnabled ? 1 : 0.3)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    } else {
-                        VStack(spacing: 2) {
-                            Text(slot.rankLabel).font(.title3.bold())
-                            Text(slot.suitSymbol).font(.title3)
+                        if let entry, let image = manager.image(for: entry) {
+                            ImageCropDisplay(image: image, entry: entry)
+                                .aspectRatio((1.0 / CardDimensions.aspectRatio), contentMode: .fit)
+                                .opacity(entry.isEnabled ? 1 : 0.3)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        } else {
+                            VStack(spacing: 2) {
+                                Text(slot.rankLabel).font(.title3.bold())
+                                Text(slot.suitSymbol).font(.title3)
+                            }
+                            .foregroundStyle(slot.isRed ? .red : .black)
                         }
-                        .foregroundStyle(slot.isRed ? .red : .black)
                     }
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.3), lineWidth: 1))
                 }
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.3), lineWidth: 1))
-                Text(slot.displayName).font(.caption2).foregroundStyle(.primary)
+                .buttonStyle(.plain)
+
+                if isEditingFaceArt && entry != nil {
+                    Button {
+                        slotPendingDelete = slot
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundStyle(.white, .red)
+                            .font(.title3)
+                    }
+                    .padding(4)
+                }
             }
+            Text(slot.displayName).font(.caption2).foregroundStyle(.primary)
         }
-        .buttonStyle(.plain)
     }
 }
 

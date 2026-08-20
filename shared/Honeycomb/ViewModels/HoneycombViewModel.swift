@@ -97,6 +97,7 @@ public final class HoneycombViewModel {
     }
 
     public func debugSetupBannerState(_ kind: DebugBannerKind) {
+        let language = BannerCatalog.currentLanguage
         switch kind {
         case .win:
             gameState = .gameOver
@@ -108,6 +109,13 @@ public final class HoneycombViewModel {
                     board.cells[i].card?.owner = .player
                 }
             }
+            // matchOutcome drives the post-game overlay's entire branch (title color,
+            // "You Win!" vs the fallback white/blank text, steal/card-bank flavor
+            // lines) — added after this debug path was first written, so it was never
+            // set here and the simulated win rendered with none of that.
+            matchOutcome = .win
+            matchResult = L(.youWin, language: language)
+            matchResultFlavorText = nil
             showPostGamePrompt = true
         case .loss, .stuck:
             gameState = .gameOver
@@ -119,16 +127,37 @@ public final class HoneycombViewModel {
                     board.cells[i].card?.owner = .opponent
                 }
             }
+            matchOutcome = .loss
+            matchResult = L(.youLose, language: language)
+            matchResultFlavorText = nil
             showPostGamePrompt = true
         case .autocomplete:
             break
         case .same:
-            enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.same.rawValue, language: BannerCatalog.currentLanguage).uppercased())!")
+            // No .uppercased() — matches settleMatch()'s real Same/Plus/Sudden Death
+            // banner text (comboBannerText/settleMatch below), which stopped
+            // uppercasing these after this debug path was written.
+            enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.same.rawValue, language: language))!")
         case .plus:
-            enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.plus.rawValue, language: BannerCatalog.currentLanguage).uppercased())!")
+            enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.plus.rawValue, language: language))!")
         case .suddenDeath:
-            enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.suddenDeath.rawValue, language: BannerCatalog.currentLanguage).uppercased())!")
+            enqueueBanner("\(honeycombLocalizedRuleName(HoneycombRule.suddenDeath.rawValue, language: language))!")
         }
+    }
+
+    // Debug-only: fires one entry from BannerCatalog's full flavor-text catalog (see
+    // DebugBannerCatalogMenu — Loading/Milestones/Idle Action/Gameplay/Rule-Specific,
+    // 65 entries total) through the same enqueueBanner queue as every real banner,
+    // rather than DebugBannerKind's fixed win/loss/same/plus/suddenDeath set above.
+    // {OpponentName}/{AscensionSuit} are the only two token placeholders used across
+    // the whole catalog (verified against the spreadsheet) — dummy values here, not
+    // real match state, since this can fire outside of an actual match.
+    public func debugFireCatalogBanner(_ id: BannerID) {
+        let text = BannerCatalog.shared.debugPreviewText(for: id, tokens: [
+            "OpponentName": "Baby Bee",
+            "AscensionSuit": "Spades"
+        ])
+        enqueueBanner(text)
     }
     public var zoomScale: CGFloat = 1.0
 
@@ -704,6 +733,8 @@ public final class HoneycombViewModel {
             }
             if !isPlayerTurn {
                 self.aiPlayTurn()
+            } else {
+                self.prewarmHint()
             }
         }
 
@@ -717,6 +748,11 @@ public final class HoneycombViewModel {
                     startFirstMove()
                 }
             }
+        } else {
+            // Player opens with no swap animation pending — the board is immediately
+            // actionable, so start warming the first hint now instead of waiting for
+            // startFirstMove() (which only runs in the two branches above).
+            prewarmHint()
         }
     }
 
@@ -1273,8 +1309,21 @@ public final class HoneycombViewModel {
     // background minimax search below (up to ~2.6s at Ultra Hard's 6-ply depth, same
     // cost as aiPlayTurn's own worst case) from landing after the board it was computed
     // against no longer matches reality, e.g. the player played a card by hand while a
-    // hint was still computing.
+    // hint was still computing. Doubles as the "board state" token for precomputedHint
+    // below: since it only bumps when the board actually changes (or a fresh on-demand
+    // search is kicked off), a precomputed result tagged with the current generation is
+    // guaranteed to still be exactly what a fresh search would return.
     private var hintGeneration: Int = 0
+
+    // A hint speculatively computed while it was becoming the player's turn (see
+    // prewarmHint(), called from finishMatchSetup and applyAIMove), before they've
+    // actually tapped the hint button. Nothing can change the board between the start
+    // of the player's turn and their first hint press, so this is safe to serve as-is
+    // — it exists purely to hide the ~2.6s worst-case search latency (especially
+    // painful on iPad's weaker CPU) behind the time the player spends looking at the
+    // board before reaching for Hint.
+    private var precomputedHint: HintMove?
+    private var precomputedHintGeneration: Int = -1
 
     // Cheap synchronous check for whether a hint is even possible right now — doesn't
     // run the actual search, just whether there's a legal card+cell to suggest.
@@ -1292,19 +1341,20 @@ public final class HoneycombViewModel {
     // not "count >= 3", which would fire on every hint after that too.
     private var hintUsageCountThisMatch = 0
 
-    public func findHint() {
-        hintClearTask?.cancel()
-        activeHint = nil
-        guard hasHintsAvailable else { return }
+    // Pure snapshot of everything a hint search needs, captured on the main actor so
+    // the background search itself never touches `self`/mutable state. Shared by
+    // findHint() and prewarmHint() so the two can't drift.
+    private struct HintSearchInputs {
+        let board: HoneycombBoard
+        let eligibleHands: [Int]
+        let empties: [Int]
+        let playerDeck: [HoneycombCardData]
+        let opponentDeck: [HoneycombCardData]
+        let unknownOpponentCardCount: Int
+        let rules: [HoneycombRule]
+    }
 
-        hintUsageCountThisMatch += 1
-        if hintUsageCountThisMatch == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3HintsUsedInOneMatch) {
-            enqueueBanner(text, longDuration: true)
-        }
-
-        hintGeneration += 1
-        let generation = hintGeneration
-
+    private func snapshotHintInputs() -> HintSearchInputs {
         let boardSnapshot = board
         let empties = HoneycombAI.emptyBoardIndices(board: boardSnapshot)
         let eligibleHands: [Int]
@@ -1317,37 +1367,92 @@ public final class HoneycombViewModel {
         let visibleOpponentCards = opponentHand.filter { isOpponentCardVisible(cardId: $0.id) }
         let opponentDeckData = visibleOpponentCards.map { $0.data }
         let unknownOpponentCardCount = opponentHand.count - visibleOpponentCards.count
-        let rules = activeRules
+        return HintSearchInputs(
+            board: boardSnapshot,
+            eligibleHands: eligibleHands,
+            empties: empties,
+            playerDeck: playerDeckData,
+            opponentDeck: opponentDeckData,
+            unknownOpponentCardCount: unknownOpponentCardCount,
+            rules: activeRules
+        )
+    }
 
-        func compute() -> HintMove? {
-            if let move = HoneycombAI.computeHint(
-                board: boardSnapshot,
-                playerDeck: playerDeckData,
-                opponentDeck: opponentDeckData,
-                unknownOpponentCardCount: unknownOpponentCardCount,
-                eligibleHands: eligibleHands,
-                empties: empties,
-                rules: rules
-            ) {
-                return HintMove(handIndex: move.handIndex, boardIndex: move.boardIndex)
+    private static func computeHintMove(_ inputs: HintSearchInputs) -> HintMove? {
+        if let move = HoneycombAI.computeHint(
+            board: inputs.board,
+            playerDeck: inputs.playerDeck,
+            opponentDeck: inputs.opponentDeck,
+            unknownOpponentCardCount: inputs.unknownOpponentCardCount,
+            eligibleHands: inputs.eligibleHands,
+            empties: inputs.empties,
+            rules: inputs.rules
+        ) {
+            return HintMove(handIndex: move.handIndex, boardIndex: move.boardIndex)
+        }
+        // The minimax search should never actually come back empty here — hasHintsAvailable
+        // already guarantees eligibleHands/empties are both non-empty, which is all
+        // computeHint needs to produce a candidate. But if it ever does (an
+        // unanticipated edge case), still surface *some* legal placement rather than
+        // silently showing nothing — a non-optimal suggestion beats none at all.
+        guard let fallbackHand = inputs.eligibleHands.first, let fallbackCell = inputs.empties.first else { return nil }
+        return HintMove(handIndex: fallbackHand, boardIndex: fallbackCell)
+    }
+
+    // Kicks off a hint search speculatively as soon as it becomes the player's turn
+    // (finishMatchSetup when the player opens, applyAIMove once the opponent's move
+    // lands), well before they've had a chance to tap Hint. The board can't change
+    // again until the player acts, so by the time they actually press the button the
+    // result above is almost always already sitting in precomputedHint — see
+    // findHint()'s fast path.
+    private func prewarmHint() {
+        guard !UISound.isHeadlessMode, hasHintsAvailable else { return }
+
+        let inputs = snapshotHintInputs()
+        let generation = hintGeneration
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let hint = Self.computeHintMove(inputs)
+            DispatchQueue.main.async {
+                guard let self, self.hintGeneration == generation else { return }
+                self.precomputedHint = hint
+                self.precomputedHintGeneration = generation
             }
-            // The minimax search should never actually come back empty here — hasHintsAvailable
-            // already guarantees eligibleHands/empties are both non-empty, which is all
-            // computeHint needs to produce a candidate. But if it ever does (an
-            // unanticipated edge case), still surface *some* legal placement rather than
-            // silently showing nothing — a non-optimal suggestion beats none at all.
-            guard let fallbackHand = eligibleHands.first, let fallbackCell = empties.first else { return nil }
-            return HintMove(handIndex: fallbackHand, boardIndex: fallbackCell)
+        }
+    }
+
+    public func findHint() {
+        hintClearTask?.cancel()
+        activeHint = nil
+        guard hasHintsAvailable else { return }
+
+        hintUsageCountThisMatch += 1
+        if hintUsageCountThisMatch == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3HintsUsedInOneMatch) {
+            enqueueBanner(text, longDuration: true)
         }
 
+        // Fast path: a prewarmed result for this exact board state is already sitting
+        // in precomputedHint — reuse it instead of paying the search cost live. This is
+        // what actually fixes the visible delay; everything below is the fallback for
+        // whenever the precompute hasn't landed yet (e.g. the player taps Hint the
+        // instant their turn starts, before the background search finishes).
+        if let precomputedHint, precomputedHintGeneration == hintGeneration {
+            activeHint = precomputedHint
+            scheduleHintClear()
+            return
+        }
+
+        hintGeneration += 1
+        let generation = hintGeneration
+        let inputs = snapshotHintInputs()
+
         if UISound.isHeadlessMode {
-            activeHint = compute()
+            activeHint = Self.computeHintMove(inputs)
             if activeHint != nil { scheduleHintClear() }
             return
         }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let hint = compute()
+            let hint = Self.computeHintMove(inputs)
             DispatchQueue.main.async {
                 guard let self, self.hintGeneration == generation else { return }
                 self.activeHint = hint
@@ -1959,6 +2064,7 @@ public final class HoneycombViewModel {
             // the instant it becomes their turn, not lazily on their first tap.
             self.rerollChaosIndexIfNeeded(forPlayerSide: true)
             self.scheduleIdleCheck()
+            self.prewarmHint()
         }
     }
 

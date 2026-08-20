@@ -326,7 +326,6 @@ public struct CardDeckSelectorView: View {
     @State private var selectedImageItem: IdentifiableImage? = nil
     @State private var showingDeleteConfirmation = false
     @State private var deckToDelete: String? = nil
-    @State private var deckInUseByTheme: (deckName: String, themeName: String)? = nil
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
@@ -437,16 +436,6 @@ public struct CardDeckSelectorView: View {
         } message: {
             Text(coordinator.L(.deleteCardBackBody))
         }
-        .alert(coordinator.L(.cardBackInUseTitle), isPresented: Binding(
-            get: { deckInUseByTheme != nil },
-            set: { if !$0 { deckInUseByTheme = nil } }
-        )) {
-            Button(coordinator.L(.ok), role: .cancel) { deckInUseByTheme = nil }
-        } message: {
-            if let info = deckInUseByTheme {
-                Text(coordinator.L(.cardBackInUseFmt, info.themeName))
-            }
-        }
     }
     
     private func feltColorName(_ theme: FeltColorTheme) -> String {
@@ -496,11 +485,6 @@ public struct CardDeckSelectorView: View {
     }
     
     private func deleteDeckByName(_ name: String) {
-        if let usedByTheme = ThemeManager.shared.themeReferencingCardBack(named: name) {
-            deckInUseByTheme = (deckName: name, themeName: usedByTheme.name)
-            return
-        }
-
         let currentActive = CustomCardBackManager.shared.activeDecks
         guard currentActive.count > 1 else { return }
 

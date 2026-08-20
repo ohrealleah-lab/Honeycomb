@@ -61,7 +61,7 @@ struct VideoPokerTouchView: View {
             let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
-                IOSBackgroundLayer()
+                IOSBackgroundLayer(intensity: 0.6)
 
                 // ScrollView fallback rather than a computed shrink factor: unlike the
                 // tableau games, most of this view's height is fixed-size text (the pay
@@ -90,7 +90,7 @@ struct VideoPokerTouchView: View {
                             creditDisplay
                         }
 
-                        resultBanner
+                        holdHint
 
                         handRow(cardW: cardW, spacing: handSpacing)
                             .padding(.horizontal, 12)
@@ -108,6 +108,23 @@ struct VideoPokerTouchView: View {
                     // the cards and them.
                     .frame(minHeight: geo.size.height, alignment: .top)
                 }
+
+                // Overlay, not part of the ScrollView's flow — centers on the whole
+                // screen regardless of scroll position or how tall the content above it
+                // is, rather than wherever it happened to sit between the pay table and
+                // the cards.
+                resultOverlay
+
+                // Listed after resultOverlay so the burst renders in front of the
+                // banner, not behind it — matches Windows, where ParticleCanvas sits at
+                // a higher ZIndex than the result overlay. Previously lived as a
+                // same-frame .overlay on handRow itself, which put it behind
+                // resultOverlay (a ZStack sibling added later) and also meant it only
+                // burst from the card row's on-screen position rather than centering
+                // with the (screen-centered) banner it's paired with.
+                WinParticleView(active: showParticles)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
             }
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
@@ -118,7 +135,8 @@ struct VideoPokerTouchView: View {
         .sheet(isPresented: $showingOptions) {
             OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
                 VideoPokerSettingsSection(viewModel: viewModel,
-                                          isMidHand: viewModel.state.phase == .holding)
+                                          isMidHand: viewModel.state.phase == .holding,
+                                          coordinator: coordinator)
             }
         }
         .queuedFlashBanner(
@@ -128,6 +146,22 @@ struct VideoPokerTouchView: View {
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
         .onAppear { viewModel.checkLoadingBanner() }
+        // Debug-only trigger handler — mirrors mac's VideoPokerView.swift onChange(of:
+        // viewModel.debugBannerRequest), minus resultBannerShowTask (this view doesn't
+        // have that task var). viewModel.debugSetupBannerState(kind) is shared code that
+        // builds the actual hand/result state; this just resets the transient result-
+        // banner UI state around it, same as the phase == .result branch below does.
+        .onChange(of: viewModel.debugBannerRequest) { _, kind in
+            guard let kind else { return }
+            viewModel.debugBannerRequest = nil
+            resultWinFlashTask?.cancel()
+            resultAnimationTask?.cancel()
+            resultHideTask?.cancel()
+            showResultBanner = false
+            winFlash = false
+            viewModel.debugSetupBannerState(kind)
+            showResultBanner = true
+        }
         .onChange(of: viewModel.state.phase) { _, newPhase in
             // Re-arms the idle-nudge timer on every phase change, matching mac
             // (VideoPokerView.swift:235) — previously only armed once via
@@ -216,6 +250,9 @@ struct VideoPokerTouchView: View {
     private var topBar: some View {
         HStack(spacing: 10) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
+            debugMenuButton(items: [("Win", .win), ("Loss", .loss)]) {
+                viewModel.debugBannerRequest = $0
+            }
 
             Spacer()
 
@@ -345,80 +382,82 @@ struct VideoPokerTouchView: View {
             }
         }
         .opacity(cardsVisible ? 1 : 0)
-        .overlay {
-            WinParticleView(active: showParticles)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
     }
 
-    // Matches mac's resultBanner overlay (VideoPokerView.swift:521-576) — mac's
-    // headline is unconditionally yellow for both a win *and* a loss (only the
-    // wording and the win-only streak/shadow differ), not white-for-loss the way
-    // this read before. Also gives the banner mac's dark boxed background/corner
-    // radius, which was missing entirely (bare floating text), and substitutes
-    // mac's "Not today, partner!" copy for a zero-payout hand instead of just
-    // repeating the hand name a second time.
-    private var resultBanner: some View {
+    // Small in-flow hint during the holding phase — split out from the old
+    // resultBanner (see resultOverlay below), which used to occupy this same spot in
+    // the layout for both this hint AND the win/loss banner. The banner is now a
+    // screen-centered overlay instead, so this only needs to reserve its own small
+    // height, not the banner's.
+    private var holdHint: some View {
+        Group {
+            if viewModel.state.phase == .holding {
+                Text(coordinator.L(.tapHoldDrawHint))
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+            } else {
+                Text(" ").font(.footnote.weight(.semibold))
+            }
+        }
+        .frame(height: 20)
+    }
+
+    // Matches mac's resultBanner overlay (VideoPokerView.swift:521-576) in content —
+    // mac's headline is unconditionally yellow for both a win *and* a loss (only the
+    // wording and the win-only streak/shadow differ), not white-for-loss the way this
+    // read before. Diverges from mac in presentation: doubled in size and centered on
+    // the whole screen (an overlay outside the ScrollView's flow, see body) rather than
+    // inline between the pay table and the cards, matching mac's own actual pop-up
+    // placement more closely than the inline spot this used to occupy did.
+    private var resultOverlay: some View {
         Group {
             if showResultBanner, viewModel.state.phase == .result, !viewModel.state.lastHandName.isEmpty {
                 if viewModel.state.lastPayout > 0 {
                     let localizedName = localizedHandName(viewModel.state.lastHandName, language: coordinator.language)
-                    VStack(spacing: 6) {
+                    VStack(spacing: 12) {
                         Text(coordinator.L(.resultHandNameFmt, localizedName))
-                            .font(.system(size: 32, weight: .black))
-                            .minimumScaleFactor(0.6)
+                            .font(.system(size: 64, weight: .black))
+                            .minimumScaleFactor(0.5)
                             .lineLimit(1)
                             .foregroundStyle(.yellow)
                             .scaleEffect(winFlash ? 1.1 : 1.0)
                             .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
                         if !viewModel.isFreePlay {
                             Text(coordinator.L(.resultCreditsWonFmt, viewModel.state.lastPayout))
-                                .font(.title3)
+                                .font(.title)
                                 .foregroundStyle(.white)
                         }
                     }
                     .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 32)
                     .background(Color.black.opacity(0.75))
-                    .cornerRadius(14)
-                    .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 12)
+                    .cornerRadius(28)
+                    .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 24)
                 } else {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 12) {
                         Text(coordinator.L(.notTodayPartner))
-                            .font(.system(size: 32, weight: .black))
-                            .minimumScaleFactor(0.6)
+                            .font(.system(size: 64, weight: .black))
+                            .minimumScaleFactor(0.5)
                             .lineLimit(1)
                             .foregroundStyle(.yellow)
                         if !viewModel.isFreePlay {
                             Text(coordinator.L(.resultCreditsLostFmt, viewModel.state.currentBet))
-                                .font(.title3)
+                                .font(.title)
                                 .foregroundStyle(.white)
                         }
                     }
                     .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 32)
                     .background(Color.black.opacity(0.75))
-                    .cornerRadius(14)
+                    .cornerRadius(28)
                 }
-            } else if viewModel.state.phase == .holding {
-                Text(coordinator.L(.tapHoldDrawHint))
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.7))
-            } else {
-                Text(" ").font(.title3.weight(.black))
             }
         }
         .padding(.horizontal, 16)
-        // Bumped considerably — headline text was reading as small/hard to read at
-        // .title3; now sized much closer to mac's own literal 36pt (32pt here, with
-        // minimumScaleFactor as a safety net on narrow phones), and the reserved
-        // height grown to match. .frame(maxWidth: .infinity) above centers the box
-        // itself under the cards, not just the text within it.
-        .frame(height: viewModel.isFreePlay ? 44 : 64)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
     }
 
     // MARK: Controls
@@ -468,7 +507,11 @@ struct VideoPokerTouchView: View {
 struct VideoPokerSettingsSection: View {
     @Bindable var viewModel: VideoPokerViewModel
     let isMidHand: Bool
-    @Environment(AppCoordinator.self) private var coordinator
+    // @Bindable, not @Environment — Sound/No Stress Mode/Honey Mode/Manually Dismiss
+    // Banners bind directly to the coordinator (see AppCoordinator's "single source of
+    // truth" fields) so a change here live-propagates to every other game via their
+    // own didSet, instead of only updating this one game's local options copy.
+    @Bindable var coordinator: AppCoordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -509,12 +552,12 @@ struct VideoPokerSettingsSection: View {
                     .labelsHidden()
                 }
 
-                Toggle(coordinator.L(.soundShort), isOn: $viewModel.options.isSoundEnabled)
-                Toggle(coordinator.L(.noStressMode), isOn: $viewModel.options.noStressMode)
-                    .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
                 Toggle(coordinator.L(.hideBetBoard), isOn: $viewModel.options.hideBetBoard)
-                Toggle(coordinator.L(.honeyMode), isOn: $viewModel.options.honeyMode)
-                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $viewModel.options.manuallyDismissBanners)
+                Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
+                Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
+                    .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
+                Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
+                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
             }
             .disabledDuringGameplay(isMidHand)
 
@@ -556,6 +599,7 @@ struct VideoPokerStatsSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(coordinator.L(.done)) { dismiss() }
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }

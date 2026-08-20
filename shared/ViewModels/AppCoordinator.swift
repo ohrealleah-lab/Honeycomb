@@ -592,4 +592,17 @@ public final class AppCoordinator {
             }
         }
     }
+
+    // Honeycomb-only counterpart to debugFireBanner above, for BannerCatalog's full
+    // flavor-text catalog (DebugBannerCatalogMenu) rather than the fixed
+    // win/loss/same/plus/suddenDeath DebugBannerKind set — same switch-game-mode-first
+    // pattern so it can be fired from Mac's always-visible menu bar regardless of which
+    // game is currently on screen.
+    public func debugFireCatalogBanner(_ id: BannerID) {
+        let delay: Double = (gameMode != .honeycomb) ? 0.35 : 0
+        if gameMode != .honeycomb { gameMode = .honeycomb }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            self.honeycombViewModel.debugFireCatalogBanner(id)
+        }
+    }
 }

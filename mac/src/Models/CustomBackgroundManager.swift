@@ -140,26 +140,16 @@ public final class CustomBackgroundManager {
         saveCustomBackgrounds()
     }
 
-    /// Returns `true` on success. Returns `false` (without touching anything) if a saved
-    /// theme still references this background — the UI layer is expected to have already
-    /// blocked this path with an alert, but a manager-level guard ensures correctness
-    /// even for any future direct callers that bypass the UI.
-    @discardableResult
-    public func removeCustomBackground(_ background: CustomBackground) -> Bool {
-        // Block deletion entirely when a theme references this background by name.
-        // Unlike the previous approach (skip file delete but always remove list entry),
-        // we leave both the file and the list entry intact so the theme reference never
-        // dangles — the UI already surfaces the friendly "please delete the theme first"
-        // alert before reaching this point, so in practice this guard is a safety net.
-        guard ThemeManager.shared.themeReferencingBackground(named: background.name) == nil else {
-            return false
-        }
+    /// Deletion always succeeds — any saved theme still referencing this background by
+    /// name gets its reference cleared (falls back to felt) rather than blocking the
+    /// delete.
+    public func removeCustomBackground(_ background: CustomBackground) {
+        ThemeManager.shared.clearBackgroundReferences(named: background.name)
         let fileURL = appSupportDirectory.appendingPathComponent(background.relativePath)
         try? FileManager.default.removeItem(at: fileURL)
         invalidateCache(for: background.relativePath)
         customBackgrounds.removeAll { $0.id == background.id }
         saveCustomBackgrounds()
-        return true
     }
 
     public func getFileURL(for relativePath: String) -> URL {

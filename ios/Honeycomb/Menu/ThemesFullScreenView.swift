@@ -22,6 +22,7 @@ struct ThemesFullScreenView: View {
     @State private var customBackgrounds = IOSCustomBackgroundManager.shared
     @State private var showingBackgroundImportSheet = false
     @State private var backgroundPendingDelete: IOSCustomBackgroundManager.Entry? = nil
+    @State private var isEditingBackgrounds = false
 
     @State private var showingFaceArtSheet = false
     @State private var showingCardBacksSheet = false
@@ -34,11 +35,11 @@ struct ThemesFullScreenView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     savedThemesSection
+                    customizationSection
                     backgroundAndFeltSection
                     if coordinator.feltColor == .custom && coordinator.customBackgroundName == nil {
                         feltColorSection
                     }
-                    customizationSection
                 }
                 .padding(16)
             }
@@ -48,6 +49,7 @@ struct ThemesFullScreenView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(coordinator.L(.done)) { dismiss() }
                         .fontWeight(.semibold)
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }
@@ -129,9 +131,7 @@ struct ThemesFullScreenView: View {
         let isActive = ThemeManager.shared.activeThemeId == theme.id
         return VStack(spacing: 6) {
             ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(themeColor(theme))
-                    .frame(width: 90, height: 120)
+                themeBackgroundView(theme)
                     .overlay(
                         cardBackThumbnailView(theme.cardBackTheme)
                             .frame(width: 44, height: 44 * CardDimensions.aspectRatio)
@@ -196,6 +196,23 @@ struct ThemesFullScreenView: View {
             : theme.feltColor.primaryColor
     }
 
+    // Saved-theme swatch needs to show the theme's actual background, not just its felt
+    // color — a theme saved with a custom photo background should preview that photo,
+    // mirroring how backgroundTile below renders custom backgrounds.
+    private func themeBackgroundView(_ theme: SoliBeeTheme) -> some View {
+        Group {
+            if let name = theme.customBackgroundName,
+               let entry = customBackgrounds.entry(named: name),
+               let image = customBackgrounds.image(for: entry) {
+                Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+            } else {
+                themeColor(theme)
+            }
+        }
+        .frame(width: 90, height: 120)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
     private func saveCurrentAsTheme() {
         let name = newThemeName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
@@ -222,7 +239,15 @@ struct ThemesFullScreenView: View {
 
     private var backgroundAndFeltSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeading(coordinator.L(.backgroundLabel))
+            HStack {
+                sectionHeading(coordinator.L(.backgroundLabel))
+                Spacer()
+                Button {
+                    isEditingBackgrounds.toggle()
+                } label: {
+                    Image(systemName: "pencil")
+                }
+            }
             VStack(alignment: .leading, spacing: 10) {
                 LazyVGrid(columns: gridColumns, spacing: 14) {
                     ForEach(FeltColorTheme.allCases.filter { $0 != .custom }, id: \.self) { theme in
@@ -278,28 +303,40 @@ struct ThemesFullScreenView: View {
 
     private func backgroundTile(_ entry: IOSCustomBackgroundManager.Entry) -> some View {
         let isSelected = coordinator.customBackgroundName == entry.name
-        return Button {
-            coordinator.customBackgroundName = entry.name
-        } label: {
-            VStack(spacing: 4) {
-                Group {
-                    if let image = customBackgrounds.image(for: entry) {
-                        Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Color.gray.opacity(0.3)
+        return VStack(spacing: 4) {
+            ZStack(alignment: .topTrailing) {
+                Button {
+                    coordinator.customBackgroundName = entry.name
+                } label: {
+                    Group {
+                        if let image = customBackgrounds.image(for: entry) {
+                            Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+                        } else {
+                            Color.gray.opacity(0.3)
+                        }
                     }
+                    .frame(width: 70, height: 70)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
                 }
-                .frame(width: 70, height: 70)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
-                // No caption — unlike card backs, custom backgrounds are never shown
-                // with a name anywhere; this blank line just keeps row heights aligned
-                // with the felt-color tiles beside it, which do have captions.
-                Text(" ").font(.caption2)
+                .buttonStyle(.plain)
+
+                if isEditingBackgrounds {
+                    Button {
+                        backgroundPendingDelete = entry
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundStyle(.white, .red)
+                            .font(.title3)
+                    }
+                    .padding(4)
+                }
             }
+            // No caption — unlike card backs, custom backgrounds are never shown
+            // with a name anywhere; this blank line just keeps row heights aligned
+            // with the felt-color tiles beside it, which do have captions.
+            Text(" ").font(.caption2)
         }
-        .buttonStyle(.plain)
-        .onLongPressGesture { backgroundPendingDelete = entry }
     }
 
     private var addBackgroundTile: some View {

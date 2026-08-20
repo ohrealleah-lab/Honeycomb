@@ -28,7 +28,8 @@ struct CustomCardColorsSheet: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(coordinator.L(.done)) { dismiss() }
+                    Button(coordinator.L(.back)) { dismiss() }
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }

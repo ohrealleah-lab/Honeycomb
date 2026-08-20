@@ -59,11 +59,12 @@ public partial class WinAnimationView : UserControl
     // never speeds up again. An unlucky low-Vx card could occupy a slot for a very long
     // time, and once all MaxActiveCards slots are stuck like that the whole queue stalls.
     // This hard cap guarantees every card frees its slot in bounded time regardless of
-    // its Vx draw — set generously (~6-7 real bounces at Elasticity=0.85 before this
-    // fires) so cards actually reach the floor and visibly bounce several times, like
-    // the classic Windows Solitaire cascade, and so the whole cascade takes a while to
-    // finish (matching the Mac original's pace) instead of feeling rushed.
-    private const double MaxCardLifetimeSeconds = 9.0;
+    // its Vx draw — set generously so cards actually reach the floor and visibly bounce
+    // several times, like the classic Windows Solitaire cascade, and so the whole
+    // cascade takes a while to finish (matching Mac/iOS's own matching cap) instead of
+    // feeling rushed. Raised from the original 9.0 — that cut cards off mid-bounce too
+    // eagerly.
+    private const double MaxCardLifetimeSeconds = 15.0;
 
     // Each queued entry remembers which foundation pile it came from, so a card spawns
     // above that pile's own screen column instead of a single shared point — cards
@@ -115,7 +116,7 @@ public partial class WinAnimationView : UserControl
     }
 
     public void StartAnimation(IEnumerable<Pile> foundations, IReadOnlyList<Point>? foundationPoints = null,
-        string scoreText = "", string timeText = "")
+        string scoreText = "", string timeText = "", bool showCascade = true)
     {
         // This overlay was just flipped IsVisible=true by the caller, and the responsive
         // auto-scaling system (MainWindow.UpdateResponsiveLayout) forces its own explicit
@@ -148,18 +149,18 @@ public partial class WinAnimationView : UserControl
         // _maxActiveCards must stay >= MaxCardLifetimeSeconds / _spawnInterval, or the queue
         // stalls into strict one-out-one-in once every slot is occupied by a still-living
         // card (visibly "cards stop coming out, only one at a time" partway through the
-        // cascade). At 9s lifetime that's ~22.5 for a 0.4s interval and ~45 for a 0.2s
+        // cascade). At 15s lifetime that's ~37.5 for a 0.4s interval and ~75 for a 0.2s
         // interval — the trail ghosts are cheap shared-bitmap Images now (see Timer_Tick),
         // so this many concurrent cards is affordable.
         if (numFoundations > 4)
         {
             _spawnInterval = 0.2;
-            _maxActiveCards = 48;
+            _maxActiveCards = 80;
         }
         else
         {
             _spawnInterval = 0.4;
-            _maxActiveCards = 24;
+            _maxActiveCards = 40;
         }
 
         // Show win info panel with score and time
@@ -169,6 +170,12 @@ public partial class WinAnimationView : UserControl
         // once the player dismisses the banner (see Close_Click).
         AnimationCanvas.IsHitTestVisible = true;
         WinParticleSystem.Burst(ParticleCanvas);
+
+        // Spider intentionally skips the bouncing-card cascade (showCascade == false,
+        // see CardGameView.ShowsVictoryCascade) — it just gets the banner + confetti
+        // above/below. Everything above this point (banner text, confetti) still runs
+        // regardless.
+        if (!showCascade) return;
 
         // Highest rank first, one per pile per pass — an interleaved wave (all four
         // Kings, then all four Queens, ...) rather than draining one whole foundation

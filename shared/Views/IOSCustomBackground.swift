@@ -72,6 +72,10 @@ public final class IOSCustomBackgroundManager {
     }
 
     public func removeCustomBackground(_ entry: Entry) {
+        // Deletion always succeeds — any saved theme still referencing this background
+        // by name gets that reference cleared (falls back to felt) rather than being
+        // left dangling.
+        ThemeManager.shared.clearBackgroundReferences(named: entry.name)
         let url = storageDirectory.appendingPathComponent(entry.relativePath)
         try? FileManager.default.removeItem(at: url)
         imageCache.removeValue(forKey: entry.relativePath)
@@ -100,7 +104,15 @@ public final class IOSCustomBackgroundManager {
 public struct IOSBackgroundLayer: View {
     @Environment(AppCoordinator.self) private var coordinator
 
-    public init() {}
+    // Matches mac's FeltVignetteView(intensity:) — Video Poker/Blackjack pass 0.45
+    // (mac's FeltVignetteView() default) since their single-hand, more contained board
+    // benefits from a stronger vignette than the wider solitaire tableaus, which use
+    // mac's explicit 0.34.
+    private let intensity: Double
+
+    public init(intensity: Double = 0.34) {
+        self.intensity = intensity
+    }
 
     public var body: some View {
         ZStack {
@@ -108,10 +120,24 @@ public struct IOSBackgroundLayer: View {
                 if let name = coordinator.customBackgroundName,
                    let entry = IOSCustomBackgroundManager.shared.entry(named: name),
                    let image = IOSCustomBackgroundManager.shared.image(for: entry) {
+                    // .aspectRatio(.fill) below always scales the image to fully cover
+                    // whatever geo.size currently is (recomputed fresh on every render,
+                    // so it's already correct for the device's current orientation) —
+                    // but .scaleEffect(entry.scale) is a flat multiplier applied on top of
+                    // that fresh cover-fit, so any saved scale below 1.0 (the crop editor
+                    // allows zooming out to 0.5) shrinks the image back below full
+                    // coverage. That's invisible in whatever orientation the background
+                    // was originally framed in if the slack happened to land in the
+                    // dimension that's on-screen edges anyway, but switching to a very
+                    // different aspect ratio (e.g. portrait → landscape) can expose it as
+                    // a gap on the now-tight dimension, showing the felt color underneath
+                    // instead of the image. Clamping to a 1.0 floor here — rather than
+                    // only in the crop editor's pinch handler — also self-heals any
+                    // background saved before this fix, with no re-crop needed.
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .scaleEffect(entry.scale)
+                        .scaleEffect(max(entry.scale, 1.0))
                         .offset(x: entry.offsetXFraction * geo.size.width, y: entry.offsetYFraction * geo.size.height)
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
@@ -121,10 +147,22 @@ public struct IOSBackgroundLayer: View {
             }
 
             if coordinator.showFeltVignette {
-                RadialGradient(
-                    gradient: Gradient(colors: [Color.clear, Color.black.opacity(0.34)]),
-                    center: .center, startRadius: 100, endRadius: 680
-                )
+                // Mac's FeltVignetteView uses fixed startRadius/endRadius (100/680) that
+                // happen to roughly match its typical desktop window size. iOS screens
+                // vary far more (iPhone portrait vs. iPad landscape can differ by 3x+ in
+                // diagonal), so those same fixed points either barely show on a small
+                // phone or, on larger screens, put almost the whole board past endRadius
+                // — past that point a RadialGradient just holds its last color flat, so
+                // it reads as a uniform dark overlay instead of a falloff. Scaling both
+                // radii to the actual rendered half-diagonal keeps a true bright-center/
+                // dark-corner vignette at any device size.
+                GeometryReader { geo in
+                    let radius = (geo.size.width * geo.size.width + geo.size.height * geo.size.height).squareRoot() / 2
+                    RadialGradient(
+                        gradient: Gradient(colors: [Color.clear, Color.black.opacity(intensity)]),
+                        center: .center, startRadius: radius * 0.35, endRadius: radius * 1.05
+                    )
+                }
                 .allowsHitTesting(false)
             }
         }

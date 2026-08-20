@@ -52,6 +52,7 @@ public struct BeecellView: View {
     @State private var dismissedStuckBanner: Bool = false
     @State private var dismissedWinBanner: Bool = false
     @State private var winPulse: Bool = false
+    @State private var showParticles: Bool = false
     @State private var showNoHintsBanner: Bool = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
     // Milestone/loading banners (viewModel.bannerQueue) — separate state from the
@@ -592,6 +593,12 @@ public struct BeecellView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+
+                // On top of the banner (not behind it) — matches the Blackjack/Video
+                // Poker confetti ordering.
+                WinParticleView(active: showParticles)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
             }
 
             if showNoHintsBanner {
@@ -733,7 +740,13 @@ public struct BeecellView: View {
         }
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
-        .onChange(of: viewModel.state.hasWon) { _, newVal in if newVal { dismissedWinBanner = false } }
+        .onChange(of: viewModel.state.hasWon) { _, newVal in
+            if newVal {
+                dismissedWinBanner = false
+                showParticles = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+            }
+        }
         .onChange(of: viewModel.debugBannerRequest) { _, kind in
             guard let kind else { return }
             viewModel.debugBannerRequest = nil

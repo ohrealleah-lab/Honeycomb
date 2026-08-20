@@ -11,6 +11,7 @@ struct CardBacksSheet: View {
     @State private var customCardBacks = IOSCustomCardBackManager.shared
     @State private var showingImportSheet = false
     @State private var entryPendingDelete: IOSCustomCardBackManager.Entry? = nil
+    @State private var isEditingCardBacks = false
 
     private let gridColumns = [GridItem(.adaptive(minimum: 74), spacing: 12)]
 
@@ -29,8 +30,16 @@ struct CardBacksSheet: View {
             .navigationTitle(coordinator.L(.menuSectionCardBack))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(coordinator.L(.back)) { dismiss() }
+                        .buttonStyle(.borderedProminent)
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(coordinator.L(.done)) { dismiss() }
+                    Button {
+                        isEditingCardBacks.toggle()
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
                 }
             }
         }
@@ -57,24 +66,31 @@ struct CardBacksSheet: View {
 
     private func cardBackTile(_ name: String, isCustom: Bool) -> some View {
         let isSelected = coordinator.cardBackTheme == name
-        return Button {
-            coordinator.cardBackTheme = name
-        } label: {
-            VStack(spacing: 4) {
-                cardBackThumbnailView(name)
-                    .frame(width: 70, height: 70 * CardDimensions.aspectRatio)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
-                Text(name).font(.caption2).foregroundStyle(.primary).lineLimit(1)
+        return VStack(spacing: 4) {
+            ZStack(alignment: .topTrailing) {
+                Button {
+                    coordinator.cardBackTheme = name
+                } label: {
+                    cardBackThumbnailView(name)
+                        .frame(width: 70, height: 70 * CardDimensions.aspectRatio)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
+                }
+                .buttonStyle(.plain)
+
+                if isEditingCardBacks && isCustom {
+                    Button {
+                        entryPendingDelete = customCardBacks.customCardBacks.first { $0.name == name }
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundStyle(.white, .red)
+                            .font(.title3)
+                    }
+                    .padding(4)
+                }
             }
+            Text(name).font(.caption2).foregroundStyle(.primary).lineLimit(1)
         }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.5).onEnded { _ in
-                guard isCustom else { return }
-                entryPendingDelete = customCardBacks.customCardBacks.first { $0.name == name }
-            }
-        )
     }
 
     private var addCardBackTile: some View {

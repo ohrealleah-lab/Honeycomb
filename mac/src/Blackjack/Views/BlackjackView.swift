@@ -8,6 +8,7 @@ public struct BlackjackView: View {
     @State private var isShowingNewGameConfirm = false
     @State private var showResultBanner  = false
     @State private var bannerWinFlash    = false
+    @State private var showParticles     = false
     @State private var cardsVisible           = true
     @State private var showCardBackPlaceholders = false
     @State private var dealerFlipped          = false  // triggers hole-card flip animation
@@ -141,6 +142,13 @@ public struct BlackjackView: View {
                 resultBanner
             }
 
+            // On top of the banner (not behind it) — matches Windows' BlackjackView,
+            // where ParticleCanvas sits at a higher ZIndex than the result overlay, and
+            // VideoPokerView's own confetti/banner ordering here on Mac.
+            WinParticleView(active: showParticles)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
+
             // Keyboard shortcuts
             keyboardShortcuts
                 .opacity(0)
@@ -214,7 +222,13 @@ public struct BlackjackView: View {
                 withAnimation(.easeInOut(duration: 0.4)) { showIdlePrompt = false }
                 dealerFlipped = true
                 withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
-                let bannerShowTask = DispatchWorkItem { showResultBanner = true }
+                let bannerShowTask = DispatchWorkItem {
+                    showResultBanner = true
+                    if viewModel.state.isWinRound {
+                        showParticles = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+                    }
+                }
                 resultBannerShowTask = bannerShowTask
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: bannerShowTask)
                 let bannerTask = DispatchWorkItem {
@@ -247,6 +261,7 @@ public struct BlackjackView: View {
                 withAnimation(.easeInOut(duration: 0.3)) { showIdlePrompt = false }
                 dealerFlipped = false
                 showResultBanner = false
+                showParticles = false
                 showCardBackPlaceholders = false
                 withAnimation(.easeIn(duration: 0.2)) { cardsVisible = true }
             }

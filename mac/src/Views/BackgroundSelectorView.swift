@@ -52,7 +52,6 @@ public struct BackgroundSelectorView: View {
 
     @State private var showingDeleteConfirmation = false
     @State private var backgroundToDelete: String? = nil
-    @State private var backgroundInUseByTheme: (backgroundName: String, themeName: String)? = nil
     @State private var showSaveError = false
 
     public init(customBackgroundName: Binding<String?>, feltColor: Binding<FeltColorTheme>, showFeltVignette: Binding<Bool>, editorMode: Binding<BackgroundEditorMode?>) {
@@ -186,26 +185,12 @@ public struct BackgroundSelectorView: View {
         } message: {
             Text(coordinator.L(.deleteBackgroundBody))
         }
-        .alert(coordinator.L(.backgroundInUseTitle), isPresented: Binding(
-            get: { backgroundInUseByTheme != nil },
-            set: { if !$0 { backgroundInUseByTheme = nil } }
-        )) {
-            Button(coordinator.L(.ok), role: .cancel) { backgroundInUseByTheme = nil }
-        } message: {
-            if let info = backgroundInUseByTheme {
-                Text(coordinator.L(.backgroundInUseFmt, info.themeName))
-            }
-        }
     }
 
-    // Two-step delete: first tap checks for theme references and either shows the
-    // in-use alert (blocking deletion) or arms backgroundToDelete + shows the
-    // confirmation alert. The confirmation alert's Delete button calls confirmDelete(_:).
+    // Arms backgroundToDelete + shows the confirmation alert. The confirmation alert's
+    // Delete button calls confirmDelete(_:), which also clears any saved theme's
+    // reference to this background (see ThemeManager.clearBackgroundReferences).
     private func deleteBackgroundByName(_ name: String) {
-        if let usedByTheme = ThemeManager.shared.themeReferencingBackground(named: name) {
-            backgroundInUseByTheme = (backgroundName: name, themeName: usedByTheme.name)
-            return
-        }
         backgroundToDelete = name
         showingDeleteConfirmation = true
     }

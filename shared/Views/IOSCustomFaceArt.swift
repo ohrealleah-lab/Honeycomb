@@ -86,6 +86,11 @@ public final class IOSCustomFaceArtManager {
 
     public func removeArt(for slot: FaceCardSlot) {
         guard let existing = entry(for: slot) else { return }
+        // iOS themes don't currently snapshot face art (see ThemesFullScreenView's
+        // saveCurrentAsTheme, which always saves faceArts: []), so this is a no-op
+        // today — kept for parity with the background/card-back cleanup in case that
+        // changes.
+        ThemeManager.shared.clearFaceArtReferences(relativePath: existing.relativePath)
         let url = storageDirectory.appendingPathComponent(existing.relativePath)
         try? FileManager.default.removeItem(at: url)
         imageCache.removeValue(forKey: existing.relativePath)
@@ -126,7 +131,11 @@ struct ImageCropDisplay: View {
                 // face-art image displayed smaller/letterboxed than what the player
                 // saw and framed while cropping it.
                 .aspectRatio(contentMode: .fill)
-                .scaleEffect(scale)
+                // max(scale, 1.0) — see IOSCustomBackground.swift's matching clamp:
+                // .aspectRatio(.fill) already covers geo.size at scale 1.0, so a saved
+                // scale below that reopens a gap wherever this renders at a different
+                // size/aspect ratio than it was originally cropped against.
+                .scaleEffect(max(scale, 1.0))
                 .offset(x: offsetXFraction * geo.size.width,
                         y: offsetYFraction * geo.size.height)
                 .frame(width: geo.size.width, height: geo.size.height)

@@ -188,7 +188,7 @@ public enum StringKey: String, CaseIterable {
     case rematchToTakeAnother = "rematch_to_take_another"
     /// Post-game overlay flavor line, reused Mac/iOS/Windows Honeycomb
     case stealProtectionLine = "steal_protection_line"
-    /// Post-game action button, reused Mac/Windows Honeycomb
+    /// Post-game action button, shared Mac/Windows/iOS
     case stealCard = "steal_card"
     /// Steal-confirmation alert/panel title, reused Mac/iOS/Windows Honeycomb
     case confirmStealTitle = "confirm_steal_title"
@@ -398,8 +398,6 @@ public enum StringKey: String, CaseIterable {
     case deleteBackgroundTitle = "delete_background_title"
     /// Alert body, reused Mac/Windows
     case deleteBackgroundBody = "delete_background_body"
-    /// Alert title, reused Mac/Windows
-    case backgroundInUseTitle = "background_in_use_title"
     /// NSAlert message, reused twice on Mac
     case couldNotLoadSelectedImageFileError = "could_not_load_selected_image_file_error"
     /// NSAlert message for bad file type on background import
@@ -410,8 +408,6 @@ public enum StringKey: String, CaseIterable {
     case imageTooLargeMessage = "image_too_large_message"
     /// Windows-specific file validation message
     case backgroundInvalidFormatWin = "background_invalid_format_win"
-    /// Alert body, %@/{0} = theme name referencing this background, reused Mac/Windows
-    case backgroundInUseFmt = "background_in_use_fmt"
     /// Editor sheet header
     case editCustomBackgroundTitle = "edit_custom_background_title"
     /// Text field label
@@ -454,12 +450,6 @@ public enum StringKey: String, CaseIterable {
     case jpgPngGifAcceptedSuffix = "jpg_png_gif_accepted_suffix"
     /// Button that opens file picker for new deck
     case addCustomDeck = "add_custom_deck"
-    /// Alert title, reused Mac/Windows
-    case cardBackInUseTitle = "card_back_in_use_title"
-    /// Alert body, %@/{0} = theme name referencing this card back
-    case cardBackInUseFmt = "card_back_in_use_fmt"
-    /// Windows variant, {0} = comma-joined theme names, {1} = 's' or '' for plural
-    case cardBackInUseMultiThemeFmt = "card_back_in_use_multi_theme_fmt"
     /// Windows fallback message
     case cardBackLastRemaining = "card_back_last_remaining"
     /// Section heading
@@ -712,8 +702,6 @@ public enum StringKey: String, CaseIterable {
     case startButton = "start_button"
     /// Flash banner text, iOS (distinct wording from the common 'no_hints_available')
     case noHintsBanner = "no_hints_banner"
-    /// Post-game action button, iOS
-    case takeACardButton = "take_a_card_button"
     /// Accessibility label on overlay dismiss button, iOS
     case dismissA11y = "dismiss_a11y"
     /// Settings section header (uppercase), reused across iOS games
@@ -1268,6 +1256,8 @@ public enum StringKey: String, CaseIterable {
     case removeCardBackAlertTitle = "remove_card_back_alert_title"
     /// iOS slide-down menu: confirm removing a custom background
     case removeBackgroundAlertTitle = "remove_background_alert_title"
+    /// iOS slide-down menu: confirm removing custom face card art
+    case removeFaceArtAlertTitle = "remove_face_art_alert_title"
     /// iOS slide-down menu: alert body, reused for both card-back and background removal
     case removeImportedImageBody = "remove_imported_image_body"
     /// iOS slide-down menu: Statistics destination row

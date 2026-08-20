@@ -102,6 +102,7 @@ struct HoneycombDecksSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(coordinator.L(.done)) { dismiss() }
+                        .buttonStyle(.borderedProminent)
                 }
             }
             .sheet(item: Binding(
@@ -466,9 +467,11 @@ private struct DeckBuilderSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(coordinator.L(.cancel), action: onCancel)
+                        .buttonStyle(.bordered)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(coordinator.L(.save)) { onSave(name, cardIds) }
+                        .buttonStyle(.borderedProminent)
                         .disabled(validationError != nil || cardIds.count != 5 || name.isEmpty || name.count > 20)
                 }
             }

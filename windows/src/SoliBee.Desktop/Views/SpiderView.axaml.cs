@@ -464,6 +464,8 @@ public partial class SpiderView : CardGameView
     protected override StuckBanner NoMovesBannerControl => NoMovesBanner;
     protected override AutocompleteBanner AutocompleteBannerControl => AutocompleteBanner;
     protected override FlashToast HintToastControl => HintToast;
+    // Spider skips the bouncing-card cascade on a win — just the banner + confetti.
+    protected override bool ShowsVictoryCascade => false;
 
     protected override List<Point> ComputeFoundationSpawnPoints()
     {

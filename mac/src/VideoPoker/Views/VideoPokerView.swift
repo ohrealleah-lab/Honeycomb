@@ -515,10 +515,6 @@ public struct VideoPokerView: View {
         .opacity(cardsVisible ? 1 : 0)
         .frame(height: scaledCardH + 24)
         .overlay {
-            WinParticleView(active: showParticles)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .overlay {
             if showResultBanner && !viewModel.state.hand.isEmpty {
                 if viewModel.state.lastPayout > 0 {
                     let streak = viewModel.statistics.currentStreak
@@ -574,6 +570,12 @@ public struct VideoPokerView: View {
                     .transition(.opacity)
                 }
             }
+        }
+        // On top of the banner (not behind it) — matches Windows, where
+        // ParticleCanvas sits at a higher ZIndex than the result overlay.
+        .overlay {
+            WinParticleView(active: showParticles)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.state.phase)
     }
