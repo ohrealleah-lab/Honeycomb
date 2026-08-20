@@ -104,13 +104,10 @@ public final class IOSCustomBackgroundManager {
 public struct IOSBackgroundLayer: View {
     @Environment(AppCoordinator.self) private var coordinator
 
-    // Matches mac's FeltVignetteView(intensity:) — Video Poker/Blackjack pass 0.45
-    // (mac's FeltVignetteView() default) since their single-hand, more contained board
-    // benefits from a stronger vignette than the wider solitaire tableaus, which use
-    // mac's explicit 0.34.
+    // Matches mac's FeltVignetteView() default of 0.45.
     private let intensity: Double
 
-    public init(intensity: Double = 0.34) {
+    public init(intensity: Double = 0.45) {
         self.intensity = intensity
     }
 

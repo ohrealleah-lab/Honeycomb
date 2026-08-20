@@ -66,7 +66,7 @@ struct CustomBackgroundEditorView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 if showFeltVignette {
-                    FeltVignetteView(intensity: 0.34)
+                    FeltVignetteView()
                         .frame(width: Self.previewSize.width, height: Self.previewSize.height)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }

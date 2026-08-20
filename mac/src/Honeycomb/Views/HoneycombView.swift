@@ -167,7 +167,7 @@ public struct HoneycombView: View {
             // ZStack, and ZStack draws later children on top), so it can never cover
             // any cards regardless of the vignette's own shape — same ordering every
             // other game uses.
-            if coordinator.showFeltVignette { FeltVignetteView(intensity: 0.34) }
+            if coordinator.showFeltVignette { FeltVignetteView() }
 
             VStack {
                 // Top Control Row

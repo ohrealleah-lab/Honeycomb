@@ -328,8 +328,7 @@ public partial class MainWindow : Window
             double targetRadius = 680.0 * options.VignetteScale;
             rgb.Radius = targetRadius / diagonal;
 
-            bool isCasino = _currentGameTag == "Blackjack" || _currentGameTag == "VideoPoker";
-            double intensity = isCasino ? 0.45 : 0.34;
+            double intensity = 0.45;
             byte alpha = (byte)(intensity * 255);
 
             if (rgb.GradientStops.Count > 1)

@@ -49,7 +49,7 @@ struct KlondikeTouchView: View {
             let cardH = cardW * CardDimensions.aspectRatio
 
             ZStack {
-                IOSBackgroundLayer(intensity: 0.45)
+                IOSBackgroundLayer()
 
                 VStack(spacing: 10) {
                     topBar

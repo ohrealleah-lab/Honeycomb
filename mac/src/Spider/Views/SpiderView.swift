@@ -93,7 +93,7 @@ public struct SpiderView: View {
                     isBoardFocused = true
                 }
 
-            if coordinator.showFeltVignette { FeltVignetteView(intensity: 0.34) }
+            if coordinator.showFeltVignette { FeltVignetteView() }
 
             
             VStack(spacing: 0) {

@@ -102,7 +102,7 @@ public struct GameView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            if resolvedShowFeltVignette { FeltVignetteView(intensity: 0.34) }
+            if resolvedShowFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
                 // Stationary Top Control and Status Panel (1.0x Scale)
