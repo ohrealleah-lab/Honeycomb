@@ -45,6 +45,13 @@ public final class CustomBackgroundManager {
     // no downscaling, just a friendly error surfaced by the picker UI.
     public static let maxImportBytes = 25 * 1024 * 1024
 
+    // Ceiling on a "priority" (synchronous, on the calling thread) preload — see
+    // preloadImages(priorityPaths:) below. Above this, even the active background
+    // goes through the async path instead, so a pathologically large file (e.g. one
+    // imported before addCustomBackground started capping resolution, see below)
+    // can't block the main thread at app launch for an unbounded amount of time.
+    private static let maxSynchronousPreloadBytes = 4 * 1024 * 1024
+
     // Excluded from observation so cache writes don't trigger SwiftUI re-renders across the board.
     @ObservationIgnored private var imageCache: [String: NSImage] = [:]
     @ObservationIgnored private var thumbnailCache: [String: NSImage] = [:]
@@ -112,7 +119,13 @@ public final class CustomBackgroundManager {
             return false
         }
 
-        guard let finalPngData = ImageEncoding.pngData(from: image) else { return false }
+        // Capped to the same maxDisplayDimension the app ever actually shows —
+        // saving the source at full resolution (a phone photo can be tens of MB)
+        // makes every later load slower for no visual benefit, and specifically
+        // risks a multi-second synchronous decode at app launch if this ends up
+        // the active background (see preloadImages(priorityPaths:) above).
+        let cappedImage = scaled(image, maxDimension: Self.maxDisplayDimension)
+        guard let finalPngData = ImageEncoding.pngData(from: cappedImage) else { return false }
 
         let id = UUID()
         let filename = "\(id.uuidString).png"
@@ -275,7 +288,13 @@ public final class CustomBackgroundManager {
 
     /// Warms the image cache. Any paths in `priorityPaths` are loaded
     /// synchronously on the calling thread first (so the very first SwiftUI
-    /// render already has a non-nil image and skips the Color fallback).
+    /// render already has a non-nil image and skips the Color fallback) — unless
+    /// the file is larger than maxSynchronousPreloadBytes, in which case it's
+    /// treated as deferred instead. Without this, a single oversized background
+    /// (e.g. one imported before addCustomBackground started capping resolution)
+    /// can block the main thread for seconds at app launch, before the first
+    /// SwiftUI Scene even renders — which can trip macOS's "Application Not
+    /// Responding" check even though the app recovers fine once it catches up.
     /// Everything else is dispatched to a background thread as before.
     public func preloadImages(priorityPaths: Set<String> = []) {
         let toLoad = customBackgrounds
@@ -287,8 +306,12 @@ public final class CustomBackgroundManager {
         // SwiftUI render frame already has the active background in cache.
         let (priority, deferred) = toLoad.reduce(
             into: ([(path: String, url: URL)](), [(path: String, url: URL)]())) { result, item in
-            if priorityPaths.contains(item.path) { result.0.append(item) }
-            else { result.1.append(item) }
+            let size = (try? FileManager.default.attributesOfItem(atPath: item.url.path))?[.size] as? Int
+            if priorityPaths.contains(item.path), let size, size <= Self.maxSynchronousPreloadBytes {
+                result.0.append(item)
+            } else {
+                result.1.append(item)
+            }
         }
         for item in priority {
             guard let img = NSImage(contentsOf: item.url) else { continue }

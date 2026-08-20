@@ -46,6 +46,13 @@ public final class CustomCardBackManager {
         return list
     }
 
+    // Ceiling on a "priority" (synchronous, on the calling thread) preload — see
+    // preloadImages(priorityPaths:) below. Above this, even the active card back
+    // goes through the async path instead, so a pathologically large file (e.g. one
+    // imported before addCustomCardBack started capping resolution, see below) can't
+    // block the main thread at app launch for an unbounded amount of time.
+    private static let maxSynchronousPreloadBytes = 4 * 1024 * 1024
+
     // Excluded from observation so cache writes don't trigger SwiftUI re-renders across the board.
     @ObservationIgnored private var imageCache: [String: NSImage] = [:]
     @ObservationIgnored private var thumbnailCache: [String: NSImage] = [:]
@@ -177,7 +184,13 @@ public final class CustomCardBackManager {
         let filename = "\(id.uuidString).png"
         let fileURL = appSupportDirectory.appendingPathComponent(filename)
 
-        guard let finalPngData = ImageEncoding.pngData(from: image) else { return false }
+        // Capped before saving — an uncapped source (a phone photo can be tens of
+        // MB) makes every later load slower for no visual benefit at this card's
+        // small render size, and specifically risks a multi-second synchronous
+        // decode at app launch if this ends up the active card back (see
+        // preloadImages(priorityPaths:) above).
+        let cappedImage = scaledForImport(image, maxDimension: Self.maxImportDimension)
+        guard let finalPngData = ImageEncoding.pngData(from: cappedImage) else { return false }
 
         do {
             try finalPngData.write(to: fileURL)
@@ -271,6 +284,29 @@ public final class CustomCardBackManager {
     private static let displaySize = NSSize(width: 240, height: 346)
     // Carousel thumbnail size.
     private static let thumbSize = NSSize(width: 120, height: 170)
+    // Longer-edge cap applied at import (see addCustomCardBack) — generous headroom
+    // above displaySize's 2x-retina 480×692 for the crop editor's pinch-zoom, while
+    // still being a large reduction from an arbitrary full-resolution source photo.
+    private static let maxImportDimension: CGFloat = 1200
+
+    // Aspect-preserving max-dimension cap (unlike scaled(_:to:) below, which fits
+    // into and pads/centers within a fixed target canvas) — used to shrink an
+    // import's source resolution before it's saved to disk, not for display sizing.
+    private func scaledForImport(_ source: NSImage, maxDimension: CGFloat) -> NSImage {
+        let srcSize = source.size
+        guard srcSize.width > 0, srcSize.height > 0 else { return source }
+        let scale = min(maxDimension / max(srcSize.width, srcSize.height), 1.0)
+        guard scale < 1.0 else { return source }
+        let targetSize = NSSize(width: srcSize.width * scale, height: srcSize.height * scale)
+        let result = NSImage(size: targetSize)
+        result.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        source.draw(in: NSRect(origin: .zero, size: targetSize),
+                    from: NSRect(origin: .zero, size: srcSize),
+                    operation: .copy, fraction: 1.0)
+        result.unlockFocus()
+        return result
+    }
 
     private func scaled(_ source: NSImage, to size: NSSize) -> NSImage {
         // Preserve aspect ratio (matching SwiftUI's .aspectRatio(contentMode: .fit))
@@ -324,7 +360,13 @@ public final class CustomCardBackManager {
 
     /// Warms the image cache. Any paths in `priorityPaths` are loaded
     /// synchronously on the calling thread first (so the very first SwiftUI
-    /// render already has a non-nil image and skips the fallback view).
+    /// render already has a non-nil image and skips the fallback view) — unless
+    /// the file is larger than maxSynchronousPreloadBytes, in which case it's
+    /// treated as deferred instead. Without this, a single oversized card back
+    /// (e.g. one imported before addCustomCardBack started capping resolution) can
+    /// block the main thread for seconds at app launch, before the first SwiftUI
+    /// Scene even renders — which can trip macOS's "Application Not Responding"
+    /// check even though the app recovers fine once it catches up.
     /// Everything else is dispatched to a background thread as before.
     public func preloadImages(priorityPaths: Set<String> = []) {
         let toLoad = customCardBacks
@@ -336,8 +378,12 @@ public final class CustomCardBackManager {
         // SwiftUI render frame already has the active card back in cache.
         let (priority, deferred) = toLoad.reduce(
             into: ([(path: String, url: URL)](), [(path: String, url: URL)]())) { result, item in
-            if priorityPaths.contains(item.path) { result.0.append(item) }
-            else { result.1.append(item) }
+            let size = (try? FileManager.default.attributesOfItem(atPath: item.url.path))?[.size] as? Int
+            if priorityPaths.contains(item.path), let size, size <= Self.maxSynchronousPreloadBytes {
+                result.0.append(item)
+            } else {
+                result.1.append(item)
+            }
         }
         for item in priority {
             guard let img = NSImage(contentsOf: item.url) else { continue }

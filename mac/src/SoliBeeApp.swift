@@ -1,8 +1,25 @@
 import SwiftUI
 import CoreText
 
+// Opts out of macOS's secure-restorable-state machinery — a simple card game has
+// no real use for window-restoration security, and this app doesn't need it.
+// Added while investigating a multi-second launch stall that intermittently trips
+// "Application Not Responding" on the Dock icon shortly after launch: the stall
+// traces to AppKit's window/state-restoration bookkeeping and reproduces even in
+// Apple's own TextEdit (there, on quit rather than launch, so it's not visibly
+// flagged). This flag didn't reliably eliminate the stall in testing — it's kept
+// anyway since it's a legitimate, zero-downside opt-out for an app like this one,
+// not because it's confirmed to be the actual fix. The stall itself looks like a
+// flaky, machine-level daemon issue outside this codebase's control.
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
+        false
+    }
+}
+
 @main
 struct SoliBeeApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var coordinator = AppCoordinator()
 
     init() {
