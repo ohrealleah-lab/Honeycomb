@@ -5,15 +5,6 @@
 
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto" ClipToBounds="False">
 
-        <!-- Darkens the board behind the win/loss result banners below, matching iOS's
-             baseline. Spans all rows and is inserted before every other row's content so
-             it paints behind them (Avalonia z-orders same-parent children by document
-             order); IsHitTestVisible="False" since the banners themselves (NoWinOverlay/
-             WinBanner) are dismissible by tapping through to the board underneath. -->
-        <Border Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False"
-                IsVisible="{Binding #NoWinOverlay.IsVisible}" />
-        <Border Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False"
-                IsVisible="{Binding #WinBanner.IsVisible}" />
 
         <!-- ─── Pay Table Bar (top) ──────────────────────────────────────────── -->
         <Border x:Name="PayTableBar" Grid.Row="0" Background="Transparent" Padding="12,6,12,8" Margin="0,14,0,6">
@@ -140,56 +131,7 @@
                                    FontSize="32" FontWeight="Black" Foreground="White"/>
                     </Border>
 
-                    <!-- Overlay layer -->
-                    <Grid Height="226" VerticalAlignment="Top">
-
-                        <Grid x:Name="NoWinOverlay" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
-                                 static soft gold halo matching the other overlay banners. -->
-                            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="460"
-                                    IsHitTestVisible="True" PointerPressed="NoWinOverlay_PointerPressed">
-                                <StackPanel Spacing="12" HorizontalAlignment="Center">
-                                    <TextBlock x:Name="NoWinHeadlineText" Text="Not today, partner!"
-                                               FontSize="36" FontWeight="Black" Foreground="#FFD600"
-                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
-                                    <StackPanel x:Name="NoWinPayoutRow" Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock x:Name="NoWinMinusText" Text="-" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="{Binding BetDisplay}" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
-                                        <TextBlock x:Name="NoWinCreditsSuffixText" Text=" credits" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                            <!-- Dismiss button anchored TopRight, overlapping corner -->
-                            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
-                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
-                                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"/>
-                        </Grid>
-
-                        <Grid x:Name="WinBanner" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
-                                 static soft gold halo matching the other overlay banners. -->
-                            <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320"
-                                    IsHitTestVisible="True" PointerPressed="WinBanner_PointerPressed">
-                                <StackPanel Spacing="12" HorizontalAlignment="Center">
-                                    <TextBlock x:Name="WinHandNameBlock"
-                                               FontSize="36" FontWeight="Black" Foreground="#FFD600"
-                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
-                                    <TextBlock x:Name="WinPayoutBlock"
-                                               FontSize="14" Foreground="White" FontWeight="Regular"
-                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
-                                    <!-- Optional streak line for completeness (always hidden in Video Poker since no streak is tracked) -->
-                                    <TextBlock x:Name="WinStreakBlock" IsVisible="False"
-                                               FontSize="14" FontWeight="Bold" Foreground="#FFD600" Opacity="0.90"
-                                               HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-                            <!-- Dismiss button anchored TopRight, overlapping corner -->
-                            <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
-                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
-                                    Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"/>
-                        </Grid>
-
-                    </Grid>
+                    <!-- Overlay layer removed and placed at root -->
                 </Grid>
 
             <!-- Particle burst canvas -->
@@ -243,6 +185,69 @@
         <!-- Board-wide tap-catcher for Manually Dismiss Banners — see GameView.axaml. -->
         <Border x:Name="BannerTapCatcher" Grid.Row="0" Grid.RowSpan="3" Background="Transparent"
                 IsHitTestVisible="False" PointerPressed="BannerTapCatcher_PointerPressed"/>
+
+        <!-- Darkens the board behind the win/loss result banners below, matching iOS's
+             baseline. Spans all rows and is inserted before every other row's content so
+             it paints behind them (Avalonia z-orders same-parent children by document
+             order); IsHitTestVisible="False" since the banners themselves (NoWinOverlay/
+             WinBanner) are dismissible by tapping through to the board underneath. -->
+        <Border Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False"
+                IsVisible="{Binding #NoWinOverlay.IsVisible}" />
+        <Border Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False"
+                IsVisible="{Binding #WinBanner.IsVisible}" />
+
+        <!-- Overlay layer (Moved from Game Area to correctly layer above the scrim) -->
+        <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,28,0,0">
+            <Grid Height="226" VerticalAlignment="Top">
+
+                <Grid x:Name="NoWinOverlay" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
+                         static soft gold halo matching the other overlay banners. -->
+                    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="460"
+                            IsHitTestVisible="True" PointerPressed="NoWinOverlay_PointerPressed">
+                        <StackPanel Spacing="12" HorizontalAlignment="Center">
+                            <TextBlock x:Name="NoWinHeadlineText" Text="Not today, partner!"
+                                       FontSize="36" FontWeight="Black" Foreground="#FFD600"
+                                       HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
+                            <StackPanel x:Name="NoWinPayoutRow" Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock x:Name="NoWinMinusText" Text="-" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding BetDisplay}" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="NoWinCreditsSuffixText" Text=" credits" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <!-- Dismiss button anchored TopRight, overlapping corner -->
+                    <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                            Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"/>
+                </Grid>
+
+                <Grid x:Name="WinBanner" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
+                         static soft gold halo matching the other overlay banners. -->
+                    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320"
+                            IsHitTestVisible="True" PointerPressed="WinBanner_PointerPressed">
+                        <StackPanel Spacing="12" HorizontalAlignment="Center">
+                            <TextBlock x:Name="WinHandNameBlock"
+                                       FontSize="36" FontWeight="Black" Foreground="#FFD600"
+                                       HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="WinPayoutBlock"
+                                       FontSize="14" Foreground="White" FontWeight="Regular"
+                                       HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
+                            <!-- Optional streak line for completeness (always hidden in Video Poker since no streak is tracked) -->
+                            <TextBlock x:Name="WinStreakBlock" IsVisible="False"
+                                       FontSize="14" FontWeight="Bold" Foreground="#FFD600" Opacity="0.90"
+                                       HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <!-- Dismiss button anchored TopRight, overlapping corner -->
+                    <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                            Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="BannerDismiss_Click"/>
+                </Grid>
+
+            </Grid>
+        </Grid>
 
         <!-- Milestone/loading banners — separate from the hand-result overlay above,
              which is hardcoded to specific hand-result fields (name, payout). -->

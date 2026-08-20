@@ -413,6 +413,7 @@ struct VideoPokerTouchView: View {
         ZStack {
             if showResultBanner, viewModel.state.phase == .result, !viewModel.state.lastHandName.isEmpty {
                 Color.black.opacity(0.45).ignoresSafeArea()
+                    .allowsHitTesting(false)
 
                 if viewModel.state.lastPayout > 0 {
                     let localizedName = localizedHandName(viewModel.state.lastHandName, language: coordinator.language)
@@ -436,6 +437,10 @@ struct VideoPokerTouchView: View {
                     .background(Color.black.opacity(0.75))
                     .cornerRadius(28)
                     .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 24)
+                    .onTapGesture {
+                        viewModel.deal()
+                        dealHaptic.impactOccurred()
+                    }
                 } else {
                     VStack(spacing: 12) {
                         Text(coordinator.L(.notTodayPartner))
@@ -454,12 +459,15 @@ struct VideoPokerTouchView: View {
                     .padding(.vertical, 32)
                     .background(Color.black.opacity(0.75))
                     .cornerRadius(28)
+                    .onTapGesture {
+                        viewModel.deal()
+                        dealHaptic.impactOccurred()
+                    }
                 }
             }
         }
         .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .allowsHitTesting(false)
     }
 
     // MARK: Controls

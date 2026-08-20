@@ -554,6 +554,117 @@ public struct GameView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .allowsHitTesting(false)
             }
+            if isShowingRestartConfirm {
+                Color.black.opacity(0.45)
+
+                VStack {
+                    Spacer(minLength: 8)
+                    ZStack(alignment: .topTrailing) {
+                        VStack(spacing: 12) {
+                            Text(coordinator.L(.restartConfirmTitle))
+                                .font(.system(size: 36, weight: .black))
+                                .foregroundColor(.yellow)
+                                .shadow(radius: 3)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            HStack(spacing: 12) {
+                                Button(coordinator.L(.restartGame)) {
+                                    isShowingRestartConfirm = false
+                                    viewModel.restartCurrentGame()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.blue)
+                                .buttonBorderShape(.capsule)
+
+                                Button(coordinator.L(.cancel)) {
+                                    isShowingRestartConfirm = false
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.gray)
+                                .buttonBorderShape(.capsule)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 24)
+                        .frame(maxWidth: 420)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .background(Color.black.opacity(0.75))
+                        .cornerRadius(12)
+                        .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+
+                        Button(action: { isShowingRestartConfirm = false }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(10)
+                    }
+                    Spacer(minLength: 8)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            if isShowingNewGameConfirm {
+                Color.black.opacity(0.45)
+
+                VStack {
+                    Spacer(minLength: 8)
+                    ZStack(alignment: .topTrailing) {
+                        VStack(spacing: 12) {
+                            Text(coordinator.L(.newGameConfirmTitle))
+                                .font(.system(size: 36, weight: .black))
+                                .foregroundColor(.yellow)
+                                .shadow(radius: 3)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            HStack(spacing: 12) {
+                                Button(coordinator.L(.newGame)) {
+                                    isShowingNewGameConfirm = false
+                                    if let mode = pendingDrawMode {
+                                        viewModel.state.drawMode = mode
+                                        pendingDrawMode = nil
+                                    }
+                                    viewModel.startNewGame()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.blue)
+                                .buttonBorderShape(.capsule)
+
+                                Button(coordinator.L(.cancel)) {
+                                    isShowingNewGameConfirm = false
+                                    pendingDrawMode = nil
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.gray)
+                                .buttonBorderShape(.capsule)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 24)
+                        .frame(maxWidth: 420)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .background(Color.black.opacity(0.75))
+                        .cornerRadius(12)
+                        .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+
+                        Button(action: {
+                            isShowingNewGameConfirm = false
+                            pendingDrawMode = nil
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(10)
+                    }
+                    Spacer(minLength: 8)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
 
             if showNoHintsBanner {
                 FlashBannerView(message: coordinator.L(.noHintsAvailable))
@@ -713,17 +824,7 @@ public struct GameView: View {
         .sheet(isPresented: $isShowingStats) {
             StatsView(viewModel: viewModel)
         }
-        .confirmationDialog(coordinator.L(.restartConfirmTitle), isPresented: $isShowingRestartConfirm) {
-            Button(coordinator.L(.restartGame), role: .destructive) { viewModel.restartCurrentGame() }
-            Button(coordinator.L(.cancel), role: .cancel) { }
-        }
-        .confirmationDialog(coordinator.L(.newGameConfirmTitle), isPresented: $isShowingNewGameConfirm) {
-            Button(coordinator.L(.cancel), role: .cancel) { pendingDrawMode = nil }
-            Button(coordinator.L(.newGame), role: .destructive) {
-                if let mode = pendingDrawMode { viewModel.state.drawMode = mode; pendingDrawMode = nil }
-                viewModel.startNewGame()
-            }
-        }
+
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in if newVal { dismissedAutocompleteBanner = false } }
         .onChange(of: viewModel.isStuck) { _, newVal in if newVal { dismissedStuckBanner = false } }
         .onChange(of: viewModel.state.hasWon) { _, newVal in

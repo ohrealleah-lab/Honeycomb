@@ -145,21 +145,22 @@ struct WinParticleView: View {
 
     private let colors: [Color] = [.yellow, .orange, .white, .cyan, Color(red: 1, green: 0.84, blue: 0)]
 
-    private let cx: CGFloat = 300
-    private let cy: CGFloat = 90
-
     var body: some View {
-        ZStack {
-            ForEach(particles) { p in
-                let rad = p.angle * .pi / 180
-                let tx = spread ? cx + cos(rad) * p.speed : cx
-                let ty = spread ? cy + sin(rad) * p.speed : cy
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(p.color)
-                    .frame(width: 7 * p.scale, height: 3 * p.scale)
-                    .rotationEffect(.degrees(p.angle))
-                    .position(x: tx, y: ty)
-                    .animation(.easeOut(duration: 0.66), value: spread)
+        GeometryReader { geo in
+            let cx = geo.size.width / 2
+            let cy = geo.size.height / 2
+            ZStack {
+                ForEach(particles) { p in
+                    let rad = p.angle * .pi / 180
+                    let tx = spread ? cx + cos(rad) * p.speed : cx
+                    let ty = spread ? cy + sin(rad) * p.speed : cy
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(p.color)
+                        .frame(width: 7 * p.scale, height: 3 * p.scale)
+                        .rotationEffect(.degrees(p.angle))
+                        .position(x: tx, y: ty)
+                        .animation(.easeOut(duration: 0.66), value: spread)
+                }
             }
         }
         .opacity(opacity)
