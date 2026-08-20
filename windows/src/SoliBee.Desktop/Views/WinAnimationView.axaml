@@ -10,6 +10,13 @@
         <Canvas x:Name="AnimationCanvas" Background="Transparent"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
+        <!-- Darkens the board once the win banner itself appears — tracks WinInfoPanel
+             (set true after the bouncing cascade finishes), not this whole overlay's own
+             IsVisible, so the dim doesn't show during the cascade animation, matching
+             Mac's GameView.swift (scrim lives inside `if !dismissedWinBanner`, not
+             around WinAnimationView itself). -->
+        <Border Classes="banner-scrim" IsVisible="{Binding #WinInfoPanel.IsVisible}" />
+
         <!-- Win info panel (top layer) — same blue/gold scheme as the Autocomplete
              banner (Background #1A44CC, yellow button) for consistency. -->
         <Grid x:Name="WinInfoPanel" HorizontalAlignment="Center" VerticalAlignment="Center">

@@ -49,8 +49,13 @@
              the window's top. -->
         <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Stretch" />
 
-        <!-- Bouncing Card Cascade Overlay when won -->
+        <!-- Bouncing Card Cascade Overlay when won — its own darkening scrim lives
+             inside WinAnimationView.axaml, timed to the win banner's own appearance
+             rather than the cascade's, matching Mac's dismissedWinBanner-gated scrim. -->
         <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
+
+        <!-- Darkens the board behind the banner below, matching iOS's baseline. -->
+        <Border Classes="banner-scrim" IsVisible="{Binding #NoMovesBanner.IsVisible}" />
 
         <!-- Inline stuck banner -->
         <local:StuckBanner x:Name="NoMovesBanner" IsVisible="False"
@@ -65,6 +70,8 @@
                 </StackPanel>
             </local:StuckBanner.ExtraContent>
         </local:StuckBanner>
+
+        <Border Classes="banner-scrim" IsVisible="{Binding #AutocompleteBanner.IsVisible}" />
 
         <!-- Inline autocomplete banner -->
         <local:AutocompleteBanner x:Name="AutocompleteBanner" IsVisible="False"

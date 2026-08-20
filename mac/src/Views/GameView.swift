@@ -370,6 +370,8 @@ public struct GameView: View {
             
             // Game-over overlay (both Vegas and non-Vegas)
             if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
+                Color.black.opacity(0.45)
+
                 VStack {
                     Spacer(minLength: 8)
                     ZStack(alignment: .topTrailing) {
@@ -428,6 +430,8 @@ public struct GameView: View {
 
             // Autocomplete overlay — centered
             if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning && !dismissedAutocompleteBanner {
+                Color.black.opacity(0.45)
+
                 VStack {
                     Spacer(minLength: 8)
                     ZStack(alignment: .topTrailing) {
@@ -495,6 +499,8 @@ public struct GameView: View {
                 .ignoresSafeArea()
 
                 if !dismissedWinBanner {
+                    Color.black.opacity(0.45)
+
                     VStack {
                         Spacer(minLength: 8)
                         ZStack(alignment: .topTrailing) {

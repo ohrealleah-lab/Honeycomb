@@ -479,6 +479,8 @@ public struct HoneycombView: View {
             // showingRuleBanner flips back to false, this condition re-evaluates on its
             // own and the overlay appears — no extra plumbing needed.
             if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner {
+                Color.black.opacity(0.45)
+
                 ZStack(alignment: .topTrailing) {
                     VStack {
                         if viewModel.matchOutcome == .loss {
@@ -591,7 +593,7 @@ public struct HoneycombView: View {
                 }
                 .background(Color.black.opacity(0.8))
                 .cornerRadius(16)
-                .shadow(radius: 20)
+                .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
             }
 
 

@@ -139,6 +139,8 @@ public struct BlackjackView: View {
 
             // Result banner overlay
             if showResultBanner && viewModel.state.resultOutcome != .none {
+                Color.black.opacity(0.45)
+
                 resultBanner
             }
 

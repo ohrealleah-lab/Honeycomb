@@ -145,6 +145,14 @@ public struct VideoPokerView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
+            // Darkens the board behind the win/loss result banner (handArea's .overlay
+            // below) — added as a top-level ZStack sibling rather than inside that
+            // .overlay so it spans the whole window instead of just the card row's frame.
+            if showResultBanner && !viewModel.state.hand.isEmpty {
+                Color.black.opacity(0.45)
+                    .allowsHitTesting(false)
+            }
+
             // Keyboard shortcut buttons (invisible, zero-size)
             keyboardShortcuts
                 .opacity(0)

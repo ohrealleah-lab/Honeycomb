@@ -413,6 +413,8 @@ public struct BeecellView: View {
                     
                     // Stuck overlay — centered
                     if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
+                        Color.black.opacity(0.45)
+
                         VStack {
                             Spacer(minLength: 8)
                             ZStack(alignment: .topTrailing) {
@@ -465,6 +467,8 @@ public struct BeecellView: View {
 
                     // Autocomplete overlay — centered
                     if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning && !dismissedAutocompleteBanner {
+                        Color.black.opacity(0.45)
+
                         VStack {
                             Spacer(minLength: 8)
                             ZStack(alignment: .topTrailing) {
@@ -530,6 +534,8 @@ public struct BeecellView: View {
                 .ignoresSafeArea()
 
                 if !dismissedWinBanner {
+                Color.black.opacity(0.45)
+
                 VStack {
                     Spacer(minLength: 8)
                     ZStack(alignment: .topTrailing) {

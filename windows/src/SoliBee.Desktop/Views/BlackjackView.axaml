@@ -131,6 +131,9 @@
         <!-- ─── Particle burst canvas (layered over the entire board) ─── -->
         <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False" ZIndex="50"/>
 
+        <!-- Darkens the board behind the result overlay below, matching iOS's baseline. -->
+        <Border Classes="banner-scrim" IsVisible="{Binding #ResultOverlay.IsVisible}" ZIndex="39" />
+
         <!-- ─── Result overlay (layered over the entire board) ─── -->
         <Grid x:Name="ResultOverlayContainer" HorizontalAlignment="Center" VerticalAlignment="Center" ZIndex="40">
             <!-- Classes="banner-glow" (App.axaml) applies the shared static soft gold halo

@@ -410,8 +410,10 @@ struct VideoPokerTouchView: View {
     // inline between the pay table and the cards, matching mac's own actual pop-up
     // placement more closely than the inline spot this used to occupy did.
     private var resultOverlay: some View {
-        Group {
+        ZStack {
             if showResultBanner, viewModel.state.phase == .result, !viewModel.state.lastHandName.isEmpty {
+                Color.black.opacity(0.45).ignoresSafeArea()
+
                 if viewModel.state.lastPayout > 0 {
                     let localizedName = localizedHandName(viewModel.state.lastHandName, language: coordinator.language)
                     VStack(spacing: 12) {

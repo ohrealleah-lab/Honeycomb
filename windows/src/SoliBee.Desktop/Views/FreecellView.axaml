@@ -73,11 +73,16 @@
         <!-- Win animation overlay -->
         <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
 
+        <!-- Darkens the board behind each banner below, matching iOS's baseline. -->
+        <Border Classes="banner-scrim" IsVisible="{Binding #NoMovesBanner.IsVisible}" />
+
         <!-- Inline stuck banner -->
         <local:StuckBanner x:Name="NoMovesBanner" IsVisible="False"
                             NewGameClicked="NoMovesNewGame_Click"
                             RestartClicked="NoMovesRestart_Click"
                             DismissClicked="NoMovesDismiss_Click"/>
+
+        <Border Classes="banner-scrim" IsVisible="{Binding #AutocompleteBanner.IsVisible}" />
 
         <!-- Inline autocomplete banner -->
         <local:AutocompleteBanner x:Name="AutocompleteBanner" IsVisible="False"

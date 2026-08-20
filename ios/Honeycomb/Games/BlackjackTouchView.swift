@@ -443,8 +443,10 @@ struct BlackjackTouchView: View {
     // player hands, matching mac's own actual pop-up placement more closely than the
     // inline spot this used to occupy did. Content/behavior otherwise unchanged.
     private var resultOverlay: some View {
-        Group {
+        ZStack {
             if showResultBanner, viewModel.state.phase == .result, viewModel.state.resultOutcome != .none {
+                Color.black.opacity(0.45).ignoresSafeArea()
+
                 let (headline, subline) = localizedBlackjackResult(viewModel.state, language: coordinator.language)
                 let isWin = viewModel.state.isWinRound
                 VStack(spacing: 12) {

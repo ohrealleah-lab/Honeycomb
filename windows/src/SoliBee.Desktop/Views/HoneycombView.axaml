@@ -142,6 +142,9 @@
             </Grid>
         </Grid>
 
+        <!-- Darkens the board behind the post-match panel below, matching iOS's baseline. -->
+        <Border Classes="banner-scrim" IsVisible="{Binding #OverlayPanel.IsVisible}" ZIndex="99" />
+
         <!-- Overlay: Post-match panels -->
         <Border x:Name="OverlayPanel" Classes="banner-glow" Background="#BF000000" CornerRadius="12" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,24" MaxWidth="460" ZIndex="100">
             <Grid>

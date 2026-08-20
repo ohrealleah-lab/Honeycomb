@@ -261,6 +261,8 @@ public struct SpiderView: View {
                     
                     // Stuck overlay — centered
                     if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
+                        Color.black.opacity(0.45)
+
                         VStack {
                             Spacer(minLength: 8)
                             ZStack(alignment: .topTrailing) {
@@ -313,6 +315,8 @@ public struct SpiderView: View {
 
                     // Autocomplete overlay — centered
                     if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning && !dismissedAutocompleteBanner {
+                        Color.black.opacity(0.45)
+
                         VStack {
                             Spacer(minLength: 8)
                             ZStack(alignment: .topTrailing) {
@@ -375,6 +379,8 @@ public struct SpiderView: View {
             // Klondike/Beecell, Spider intentionally skips the bouncing-card cascade and
             // just shows the banner + confetti below.
             if viewModel.state.hasWon {
+                Color.black.opacity(0.45)
+
                 VStack {
                     Spacer(minLength: 8)
                     VStack(spacing: 12) {

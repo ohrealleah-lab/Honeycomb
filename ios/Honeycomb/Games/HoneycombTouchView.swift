@@ -922,7 +922,7 @@ struct HoneycombTouchView: View {
             // other banner in the app.
             .background(Color.black.opacity(0.8))
             .cornerRadius(16)
-            .shadow(radius: 20)
+            .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
             // Dismiss lives on the overlay card itself (not the screen corner) so it
             // never stacks on top of the top bar's Start/Quit button.
             .overlay(alignment: .topTrailing) {
