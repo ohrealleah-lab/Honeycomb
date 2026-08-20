@@ -367,8 +367,28 @@ public struct GameView: View {
             }
             .disabled(viewModel.isAutoplayRunning)
             .padding(.top, 20)
-            
-            // Game-over overlay (both Vegas and non-Vegas)
+
+            }
+            .frame(width: boardWidth, height: boardHeight, alignment: .topLeading)
+            .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
+            // minHeight: 0 (instead of a rigid fixed height) lets this subtree actually
+            // compress when the window is smaller than the toolbar + this board's full
+            // scaled height combined — a hard fixed frame here reports zero flexibility to
+            // the parent VStack, forcing 100% of any space deficit onto the toolbar
+            // regardless of its layoutPriority(1), which is what was making the toolbar
+            // shrink away below ~950pt of window height. Cards inside aren't clipped by
+            // this frame's allocated size either way (no .clipped() here), so this only
+            // changes how much space gets reserved for layout purposes, not how anything
+            // actually renders.
+            .frame(width: scaledBoardWidth, alignment: .topLeading)
+            .frame(minHeight: 0, idealHeight: scaledBoardHeight, maxHeight: scaledBoardHeight, alignment: .topLeading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            // Game-over overlay (both Vegas and non-Vegas) — a top-level sibling (not
+            // nested inside the scaled board area) so its scrim spans the whole window
+            // rather than being confined to the board's own reserved bounds. Matches the
+            // victory overlay below.
             if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
                 Color.black.opacity(0.45)
 
@@ -428,7 +448,7 @@ public struct GameView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
-            // Autocomplete overlay — centered
+            // Autocomplete overlay — a top-level sibling, same reasoning as above.
             if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning && !dismissedAutocompleteBanner {
                 Color.black.opacity(0.45)
 
@@ -471,23 +491,6 @@ public struct GameView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-
-            }
-            .frame(width: boardWidth, height: boardHeight, alignment: .topLeading)
-            .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
-            // minHeight: 0 (instead of a rigid fixed height) lets this subtree actually
-            // compress when the window is smaller than the toolbar + this board's full
-            // scaled height combined — a hard fixed frame here reports zero flexibility to
-            // the parent VStack, forcing 100% of any space deficit onto the toolbar
-            // regardless of its layoutPriority(1), which is what was making the toolbar
-            // shrink away below ~950pt of window height. Cards inside aren't clipped by
-            // this frame's allocated size either way (no .clipped() here), so this only
-            // changes how much space gets reserved for layout purposes, not how anything
-            // actually renders.
-            .frame(width: scaledBoardWidth, alignment: .topLeading)
-            .frame(minHeight: 0, idealHeight: scaledBoardHeight, maxHeight: scaledBoardHeight, alignment: .topLeading)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             // Victory overlay (Classic Bouncing Card Cascade) — a top-level sibling (not
             // nested inside the scaled board area) so it spans the whole window rather

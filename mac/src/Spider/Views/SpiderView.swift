@@ -259,104 +259,6 @@ public struct SpiderView: View {
                         }
                     }
                     
-                    // Stuck overlay — centered
-                    if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
-                        Color.black.opacity(0.45)
-
-                        VStack {
-                            Spacer(minLength: 8)
-                            ZStack(alignment: .topTrailing) {
-                                VStack(spacing: 12) {
-                                    Text(coordinator.L(.gameOver))
-                                        .font(.system(size: 36, weight: .black))
-                                        .foregroundColor(.yellow)
-                                        .shadow(radius: 3)
-
-                                    Text(coordinator.L(.noMovesRemaining))
-                                        .font(.system(.headline))
-                                        .foregroundColor(.white)
-
-                                    HStack(spacing: 12) {
-                                        Button(coordinator.L(.newGame)) {
-                                            viewModel.startNewGame()
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                        .tint(.blue)
-                                        .buttonBorderShape(.capsule)
-
-                                        Button(coordinator.L(.restartGame)) {
-                                            viewModel.restartCurrentGame()
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                        .tint(.blue)
-                                        .buttonBorderShape(.capsule)
-                                    }
-                                }
-                                .padding(.horizontal, 12)
-                    .padding(.vertical, 24)
-                                .frame(minWidth: 280)
-                                .fixedSize(horizontal: true, vertical: true)
-                                .background(Color.black.opacity(0.75))
-                                .cornerRadius(12)
-                                .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
-
-                                Button(action: { dismissedStuckBanner = true }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-                                .buttonStyle(.plain)
-                                .padding(10)
-                            }
-                            Spacer(minLength: 8)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-
-                    // Autocomplete overlay — centered
-                    if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning && !dismissedAutocompleteBanner {
-                        Color.black.opacity(0.45)
-
-                        VStack {
-                            Spacer(minLength: 8)
-                            ZStack(alignment: .topTrailing) {
-                                VStack(spacing: 12) {
-                                    Text(coordinator.L(.victoryGuaranteed))
-                                        .font(.system(size: 36, weight: .black))
-                                        .foregroundColor(.yellow)
-                                        .multilineTextAlignment(.center)
-                                    Text(coordinator.L(.autocompleteBodyOther))
-                                        .font(.system(.body))
-                                        .foregroundColor(.white)
-                                        .multilineTextAlignment(.center)
-                                    Button(coordinator.L(.autocompleteGame)) {
-                                        viewModel.runAutocomplete()
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(.blue)
-                                    .buttonBorderShape(.capsule)
-                                }
-                                .padding(.horizontal, 12)
-                    .padding(.vertical, 24)
-                                .frame(maxWidth: 280)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .background(Color.black.opacity(0.75))
-                                .cornerRadius(12)
-                                .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
-
-                                Button(action: { dismissedAutocompleteBanner = true }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-                                .buttonStyle(.plain)
-                                .padding(10)
-                            }
-                            Spacer(minLength: 8)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-
             }
                 .frame(width: boardWidth, height: boardHeight, alignment: .topLeading)
                 .scaleEffect(viewModel.zoomScale, anchor: .topLeading)
@@ -372,6 +274,107 @@ public struct SpiderView: View {
             }
             .frame(minWidth: boardWidth * viewModel.zoomScale, maxHeight: .infinity, alignment: .topLeading)
                 } // ScrollView
+
+            // Stuck overlay — a top-level sibling (not nested inside the scaled board
+            // area or its horizontal ScrollView) so its scrim spans the whole window
+            // rather than being confined to the board's own reserved/scrollable bounds.
+            // Matches the victory overlay below.
+            if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
+                Color.black.opacity(0.45)
+
+                VStack {
+                    Spacer(minLength: 8)
+                    ZStack(alignment: .topTrailing) {
+                        VStack(spacing: 12) {
+                            Text(coordinator.L(.gameOver))
+                                .font(.system(size: 36, weight: .black))
+                                .foregroundColor(.yellow)
+                                .shadow(radius: 3)
+
+                            Text(coordinator.L(.noMovesRemaining))
+                                .font(.system(.headline))
+                                .foregroundColor(.white)
+
+                            HStack(spacing: 12) {
+                                Button(coordinator.L(.newGame)) {
+                                    viewModel.startNewGame()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.blue)
+                                .buttonBorderShape(.capsule)
+
+                                Button(coordinator.L(.restartGame)) {
+                                    viewModel.restartCurrentGame()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.blue)
+                                .buttonBorderShape(.capsule)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+                        .frame(minWidth: 280)
+                        .fixedSize(horizontal: true, vertical: true)
+                        .background(Color.black.opacity(0.75))
+                        .cornerRadius(12)
+                        .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+
+                        Button(action: { dismissedStuckBanner = true }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(10)
+                    }
+                    Spacer(minLength: 8)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            // Autocomplete overlay — a top-level sibling, same reasoning as above.
+            if viewModel.isAutocompleteAvailable && !viewModel.isAutoplayRunning && !dismissedAutocompleteBanner {
+                Color.black.opacity(0.45)
+
+                VStack {
+                    Spacer(minLength: 8)
+                    ZStack(alignment: .topTrailing) {
+                        VStack(spacing: 12) {
+                            Text(coordinator.L(.victoryGuaranteed))
+                                .font(.system(size: 36, weight: .black))
+                                .foregroundColor(.yellow)
+                                .multilineTextAlignment(.center)
+                            Text(coordinator.L(.autocompleteBodyOther))
+                                .font(.system(.body))
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.center)
+                            Button(coordinator.L(.autocompleteGame)) {
+                                viewModel.runAutocomplete()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.blue)
+                            .buttonBorderShape(.capsule)
+                        }
+                        .padding(.horizontal, 12)
+                    .padding(.vertical, 24)
+                        .frame(maxWidth: 280)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .background(Color.black.opacity(0.75))
+                        .cornerRadius(12)
+                        .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+
+                        Button(action: { dismissedAutocompleteBanner = true }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(10)
+                    }
+                    Spacer(minLength: 8)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
 
             // Victory overlay — a top-level sibling (not nested inside the scaled board
             // area or its horizontal ScrollView) so it spans the whole window rather than
