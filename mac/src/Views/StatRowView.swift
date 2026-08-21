@@ -8,13 +8,26 @@ struct StatRowView: View {
     let label: String
     let value: String
     var valueBold: Bool = false
+    // Opt-in style for the redesigned two-column stat grids (Klondike/Beecell/Spider) —
+    // smaller muted-gray label, larger heavy-weight value — so the number reads as the
+    // thing players actually care about. Defaults to false so Blackjack/VideoPoker/
+    // Honeycomb's existing single-column panels render exactly as before.
+    var emphasized: Bool = false
 
     var body: some View {
         HStack {
             Text(label)
+                .font(emphasized ? .system(size: 13) : .system(.body))
+                .foregroundColor(emphasized ? .secondary : .primary)
             Spacer()
-            Text(value).fontWeight(valueBold ? .bold : .regular)
+            if emphasized {
+                Text(value)
+                    .font(.system(size: 17, weight: .heavy))
+            } else {
+                Text(value)
+                    .font(.system(.body))
+                    .fontWeight(valueBold ? .bold : .regular)
+            }
         }
-        .font(.system(.body))
     }
 }

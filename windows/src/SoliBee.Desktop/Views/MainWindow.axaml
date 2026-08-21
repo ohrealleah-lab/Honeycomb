@@ -221,6 +221,18 @@
                          while the title and Cancel/OK/View Stats row stay always visible. -->
                     <Border x:Name="PreferencesPanel" Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="{Binding #PreferencesInset.Bounds.Height}" BoxShadow="0 4 20 0 #A0000000">
                         <Grid RowDefinitions="Auto,*,Auto">
+                            <!-- Constrained watermark (matches Stats/Rules) — shared across every
+                                 game's Preferences panel since this Grid is the common chrome for
+                                 all of them. Fixed max size so it sits behind the content instead
+                                 of scaling with however tall a given game's options page is.
+                                 Anchored upper-right (below the Language row, over the checkbox
+                                 list) rather than centered — Windows-only positioning choice, no
+                                 equivalent change on Mac. -->
+                            <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
+                                   MaxWidth="220" MaxHeight="220" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                   Margin="0,100,0,0"
+                                   Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False" />
+
                             <!-- Header row: shared "‹ Back" chip (left, hidden on the main
                                  Preferences page) + centered title — PreferencesView toggles
                                  this instead of each of its Themes/Face Cards/Card Colors
@@ -291,48 +303,71 @@
                  so it centers in the full window instead of just Row 0's toolbar strip
                  (ZIndex above VignetteOverlay so its buttons stay unaffected) -->
             <Grid x:Name="StatsOverlay" Background="#90000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="95">
-                <Border Background="White" CornerRadius="8" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
+                <Border Background="White" CornerRadius="8" ClipToBounds="True" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 20 0 #A0000000">
+                    <Grid>
+                        <!-- Constrained to a fixed max size (not left to scale with the panel) —
+                             the panel just widened for the two-column stat grid below, and an
+                             unconstrained Stretch="Uniform" image grows to fill that extra width,
+                             overpowering the stat text instead of sitting behind it as a watermark. -->
+                        <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
+                               MaxWidth="220" MaxHeight="220" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
                     <!-- Width is fixed per-panel in code-behind (PopulateStatsPanel's callees) —
-                         300 for the single-column games, wider for Honeycomb's two-column layout
-                         (StatsDynamicRowsCol1/Col2 below), so its long stat list doesn't stretch
-                         the popup so tall. -->
-                    <StackPanel x:Name="StatsPanelRoot" Spacing="14" Width="300">
+                         460 for Klondike/Freecell/Spider's two-column StatsFixedRows grid below,
+                         300 for Blackjack/Video Poker's single column, wider still (620) for
+                         Honeycomb's two-column layout (StatsDynamicRowsCol1/Col2 below), so its
+                         long stat list doesn't stretch the popup so tall. -->
+                    <StackPanel x:Name="StatsPanelRoot" Spacing="14" Width="300" Margin="24">
                         <TextBlock x:Name="StatsTitleText" Text="Klondike Statistics" FontSize="18" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center" />
                         <Rectangle Height="1" Fill="#DDDDDD" />
-                        <StackPanel x:Name="StatsFixedRows" Spacing="8">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock x:Name="StatsGamesPlayedLabel" Text="Games Played" Foreground="#1A1A1A" />
-                                <TextBlock Grid.Column="1" x:Name="StatsGamesPlayedText" Foreground="#1A1A1A" FontWeight="Bold" />
+                        <!-- Two-column stat grid — each grid row holds one left/right pair (e.g.
+                             Games Played | Current Streak), with a divider row spanning both
+                             columns between them, matching the design refresh mockup. Labels
+                             are a smaller muted gray to push them back visually behind the
+                             bold, larger value text (see design_proposal.md's typography spec). -->
+                        <Grid x:Name="StatsFixedRows" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                            <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,10,14,10">
+                                <TextBlock x:Name="StatsGamesPlayedLabel" Text="Games Played" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsGamesPlayedText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock x:Name="StatsGamesWonLabel" Text="Games Won" Foreground="#1A1A1A" />
-                                <TextBlock Grid.Column="1" x:Name="StatsGamesWonText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="14,10,0,10">
+                                <TextBlock x:Name="StatsCurrentStreakLabel" Text="Current Streak" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsCurrentStreakText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock x:Name="StatsHighScoreLabel" Text="High Score" Foreground="#1A1A1A" />
-                                <TextBlock Grid.Column="1" x:Name="StatsHighScoreText" Foreground="#1A1A1A" FontWeight="Bold" />
+
+                            <Rectangle Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Height="1" Fill="#DDDDDD" />
+
+                            <Grid Grid.Row="2" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,10,14,10">
+                                <TextBlock x:Name="StatsGamesWonLabel" Text="Games Won" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsGamesWonText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock x:Name="StatsWinPctLabel" Text="Win Percentage" Foreground="#1A1A1A" />
-                                <TextBlock Grid.Column="1" x:Name="StatsWinPctText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="14,10,0,10">
+                                <TextBlock x:Name="StatsLongestStreakLabel" Text="Longest Streak" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsLongestStreakText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock x:Name="StatsCurrentStreakLabel" Text="Current Streak" Foreground="#1A1A1A" />
-                                <TextBlock Grid.Column="1" x:Name="StatsCurrentStreakText" Foreground="#1A1A1A" FontWeight="Bold" />
+
+                            <Rectangle Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Height="1" Fill="#DDDDDD" />
+
+                            <Grid Grid.Row="4" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,10,14,10">
+                                <TextBlock x:Name="StatsHighScoreLabel" Text="High Score" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsHighScoreText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock x:Name="StatsLongestStreakLabel" Text="Longest Streak" Foreground="#1A1A1A" />
-                                <TextBlock Grid.Column="1" x:Name="StatsLongestStreakText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="14,10,0,10">
+                                <TextBlock x:Name="StatsAvgWinTimeLabel" Text="Avg Winning Time" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsAvgWinTimeText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock x:Name="StatsAvgWinTimeLabel" Text="Avg Winning Time" Foreground="#1A1A1A" />
-                                <TextBlock Grid.Column="1" x:Name="StatsAvgWinTimeText" Foreground="#1A1A1A" FontWeight="Bold" />
+
+                            <Rectangle Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Height="1" Fill="#DDDDDD" />
+
+                            <Grid Grid.Row="6" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,10,14,10">
+                                <TextBlock x:Name="StatsWinPctLabel" Text="Win Percentage" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsWinPctText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock x:Name="StatsFastestWinLabel" Text="Fastest Win" Foreground="#1A1A1A" />
-                                <TextBlock Grid.Column="1" x:Name="StatsFastestWinText" Foreground="#1A1A1A" FontWeight="Bold" />
+                            <Grid Grid.Row="6" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="14,10,0,10">
+                                <TextBlock x:Name="StatsFastestWinLabel" Text="Fastest Win" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsFastestWinText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
-                        </StackPanel>
+                        </Grid>
                         <!-- Blackjack / Video Poker / Honeycomb have different field sets, so
                              their rows are built in code-behind rather than fixed like above.
                              Two side-by-side columns — Blackjack/VideoPoker only ever populate
@@ -345,11 +380,12 @@
                         <Rectangle Height="1" Fill="#DDDDDD" />
                         <Grid ColumnDefinitions="Auto,*,Auto">
                             <Button x:Name="ResetStatsButton" Content="Reset Stats" Click="ResetStats_Click" Grid.Column="0"
-                                    Background="Transparent" Foreground="#CC3333" BorderThickness="0" />
+                                    Classes="light-danger" Width="100" HorizontalContentAlignment="Center" BorderThickness="0" />
                             <Button x:Name="CloseStatsButton" Content="Close" Click="CloseStats_Click" Grid.Column="2"
                                     Width="80" HorizontalContentAlignment="Center" Classes="light-secondary" />
                         </Grid>
                     </StackPanel>
+                    </Grid>
                 </Border>
             </Grid>
         </Grid>

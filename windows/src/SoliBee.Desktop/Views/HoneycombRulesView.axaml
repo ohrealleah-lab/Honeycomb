@@ -3,6 +3,14 @@
              x:Class="SoliBee.Desktop.Views.HoneycombRulesView">
 
     <Grid RowDefinitions="Auto, Auto, Auto, *, Auto" Width="520">
+        <!-- Constrained watermark (matches the Stats panel's treatment) — fixed max size
+             rather than left to scale with the dialog, so it sits behind the content
+             instead of overpowering it. Spans every row so it centers across the whole
+             dialog, not just one row's slice of it. -->
+        <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
+               MaxWidth="550" MaxHeight="550" HorizontalAlignment="Center" VerticalAlignment="Center"
+               Grid.Row="0" Grid.RowSpan="5" IsHitTestVisible="False" />
+
         <!-- Difficulty at top -->
         <Grid Grid.Row="0" Margin="0,15,0,10" ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">

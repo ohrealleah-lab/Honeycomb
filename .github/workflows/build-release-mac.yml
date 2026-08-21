@@ -28,6 +28,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Determined before Build (not just for tag pushes) so it can patch Info.plist
+      # below prior to `make build` copying that file into the app bundle — otherwise
+      # the compiled app's own About-window version silently drifts from whatever tag
+      # it's actually released under (see src/Info.plist's comment on these keys). Falls
+      # back to whatever's already committed in Info.plist for branch/PR sanity builds,
+      # matching build-sign-windows.yml's equivalent non-tag fallback.
+      - name: Determine version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            echo "is_tag=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_tag=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set app version from tag
+        if: steps.version.outputs.is_tag == 'true'
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" src/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" src/Info.plist
+
       - name: Build
         run: make build
 
@@ -37,11 +59,6 @@ jobs:
       # ── Package + release (tag pushes only) ──────────────────────────────────
       # Everything below only runs for an actual `v*` tag push — branch pushes and PRs
       # stop after build/test above.
-
-      - name: Determine version from tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Install create-dmg
         if: startsWith(github.ref, 'refs/tags/v')

@@ -9,6 +9,11 @@
         ShowInTaskbar="False">
 
     <Grid RowDefinitions="*, Auto">
+        <Image Source="avares://Honeycomb/Assets/solibee.png" 
+               Opacity="0.15"
+               Grid.RowSpan="2" 
+               Stretch="Uniform" />
+        
         <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6" Margin="32,24,32,12">
 
             <TextBlock Text="Honeycomb"
@@ -19,22 +24,22 @@
 
             <TextBlock x:Name="CardSuiteText" Text="Card Suite"
                        FontSize="13" FontWeight="SemiBold"
-                       Foreground="#707070"
+                       Foreground="#333333"
                        HorizontalAlignment="Center"
                        LetterSpacing="2" />
 
             <Border Height="1" Background="#DDDDDD" Margin="0,6,0,6" />
 
             <TextBlock x:Name="VersionText"
-                       FontSize="12" Foreground="#555555"
+                       FontSize="12" Foreground="#333333"
                        HorizontalAlignment="Center" />
 
             <TextBlock x:Name="CopyrightText" Text="© 2026 Leahbee. All rights reserved."
-                       FontSize="11" Foreground="#808080"
+                       FontSize="11" Foreground="#333333"
                        HorizontalAlignment="Center" />
 
             <TextBlock x:Name="DedicationText" Text="For Rhinestone."
-                       FontSize="11" Foreground="#707070" FontStyle="Italic"
+                       FontSize="11" Foreground="#333333" FontStyle="Italic"
                        HorizontalAlignment="Center" Margin="0,4,0,0" />
 
             <Border Height="1" Background="#DDDDDD" Margin="0,6,0,6" />
@@ -48,7 +53,7 @@
                     HorizontalContentAlignment="Center" />
 
             <TextBlock x:Name="UpdateStatusText"
-                       FontSize="11" Foreground="#707070"
+                       FontSize="11" Foreground="#333333"
                        HorizontalAlignment="Center"
                        TextWrapping="Wrap"
                        TextAlignment="Center"

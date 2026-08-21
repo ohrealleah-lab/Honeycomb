@@ -1410,7 +1410,7 @@ struct StatsView: View {
 
     var body: some View {
         let stats = viewModel.statistics
-        
+
         VStack(spacing: 20) {
             Text(coordinator.L(.klondikeStatisticsTitle))
                 .font(.system(size: 16, weight: .bold))
@@ -1418,13 +1418,23 @@ struct StatsView: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 12) {
-                StatRowView(label: coordinator.L(.gamesPlayedColon), value: "\(stats.gamesPlayed)")
-                StatRowView(label: coordinator.L(.gamesWonColon), value: "\(stats.gamesWon)")
-                StatRowView(label: coordinator.L(.highScoreColon), value: viewModel.highScoreString)
-                StatRowView(label: coordinator.L(.winPercentageColon), value: String(format: "%.1f%%", stats.winPercentage))
+            VStack(spacing: 0) {
+                statPairRow(coordinator.L(.gamesPlayedColon), "\(stats.gamesPlayed)",
+                            coordinator.L(.currentStreakColon), "\(stats.currentStreak)")
+                Divider()
+                statPairRow(coordinator.L(.gamesWonColon), "\(stats.gamesWon)",
+                            coordinator.L(.longestStreakColon), "\(stats.longestStreak)")
+                Divider()
+                statPairRow(coordinator.L(.highScoreColon), viewModel.highScoreString,
+                            coordinator.L(.avgWinningTimeColon), stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
+                Divider()
+                statPairRow(coordinator.L(.winPercentageColon), String(format: "%.1f%%", stats.winPercentage),
+                            coordinator.L(.fastestWinColon), stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
 
+                // Vegas bankroll doesn't pair with anything else in the grid above, so it
+                // gets its own full-width row rather than forcing a lopsided 5th pair.
                 if viewModel.options.isVegasScoring {
+                    Divider()
                     HStack {
                         Text(coordinator.L(.vegasBankrollLabel))
                         Spacer()
@@ -1432,14 +1442,10 @@ struct StatsView: View {
                             .foregroundColor(viewModel.vegasBankroll >= 0 ? .green : .red)
                     }
                     .font(.system(.body))
+                    .padding(.vertical, 10)
                 }
-
-                StatRowView(label: coordinator.L(.currentStreakColon), value: "\(stats.currentStreak)")
-                StatRowView(label: coordinator.L(.longestStreakColon), value: "\(stats.longestStreak)")
-                StatRowView(label: coordinator.L(.avgWinningTimeColon), value: stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
-                StatRowView(label: coordinator.L(.fastestWinColon), value: stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
             }
-            .padding(.horizontal, 36)
+            .padding(.horizontal, 24)
 
             Divider()
 
@@ -1447,9 +1453,8 @@ struct StatsView: View {
                 Button(coordinator.L(.resetStats)) {
                     showingResetConfirmation = true
                 }
-                .buttonStyle(.borderless)
-                .foregroundColor(.red)
-                .font(.system(.body))
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
                 .alert(coordinator.L(.resetStatisticsTitle), isPresented: $showingResetConfirmation) {
                     Button(coordinator.L(.reset), role: .destructive) {
                         let emptyStats = GameStatistics()
@@ -1473,16 +1478,43 @@ struct StatsView: View {
                 Button(coordinator.L(.close)) {
                     dismiss()
                 }
+                .buttonStyle(.bordered)
                 .keyboardShortcut(.defaultAction)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
         }
-        .frame(width: 360)
+        .frame(width: 440)
+        .background {
+            // Fixed max size (not left to scale with the frame) — the panel just widened
+            // for the two-column stat grid above, and an unconstrained .scaledToFit grows
+            // to fill that extra width, overpowering the stat text instead of sitting
+            // behind it as a watermark.
+            if let image = NSImage(named: "Solibee") {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 220)
+                    .opacity(0.15)
+            }
+        }
         .background(
             Color(NSColor.windowBackgroundColor)
                 .overlay(Color.primary.opacity(0.04))
         )
+    }
+
+    // One grid row: two StatRowViews side by side, each taking equal width so the
+    // divider rules above/below line up across both columns.
+    @ViewBuilder
+    private func statPairRow(_ label1: String, _ value1: String, _ label2: String, _ value2: String) -> some View {
+        HStack(alignment: .top, spacing: 24) {
+            StatRowView(label: label1, value: value1, emphasized: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            StatRowView(label: label2, value: value2, emphasized: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 10)
     }
 }
 

@@ -119,6 +119,14 @@ public struct HoneycombStatsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 680, height: 480)
+        .background {
+            if let image = NSImage(named: "Solibee") {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .opacity(0.15)
+            }
+        }
         .background(
             Color(NSColor.windowBackgroundColor)
                 .overlay(Color.primary.opacity(0.04))

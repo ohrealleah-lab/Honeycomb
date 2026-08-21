@@ -136,6 +136,14 @@
             <!-- RIGHT: Card Bank -->
             <Grid Grid.Column="1" RowDefinitions="Auto, Auto, *" Margin="10,0,0,0">
 
+                <!-- Constrained watermark (matches Stats/Rules/Options) — spans the whole
+                     column so it stays fixed behind the title/filters/card grid rather than
+                     living inside BankScrollViewer's scrollable content, where it would
+                     scroll away with the cards instead of sitting underneath them. -->
+                <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
+                       MaxWidth="550" MaxHeight="550" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False" />
+
                 <TextBlock x:Name="CardBankTitle" Grid.Row="0"
                            Text="CARD BANK" FontSize="12" FontWeight="Bold"
                            Foreground="#888" Margin="0,0,0,10"/>

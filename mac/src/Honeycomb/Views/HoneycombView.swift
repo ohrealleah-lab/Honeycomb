@@ -1240,6 +1240,7 @@ struct HoneycombRulesView: View {
             title: coordinator.L(.toolbarRules),
             showThemes: false,
             showLanguage: false,
+            watermarkMaxSize: 550,
             onOK: {
                 var updatedOpts = viewModel.options
                 updatedOpts.difficulty = difficulty
@@ -1298,6 +1299,9 @@ struct HoneycombRulesView: View {
                 }
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.15), lineWidth: 1))
             }
+            // Watermark now comes from OptionsSheetShell itself (watermarkMaxSize: 550
+            // passed above) rather than a second one layered on just this VStack — this
+            // used to duplicate the shell's own watermark once that was added.
         }
     }
 

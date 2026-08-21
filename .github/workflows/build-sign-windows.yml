@@ -43,7 +43,12 @@ jobs:
 
     - name: Publish App
       working-directory: windows/src/SoliBee.Desktop
-      run: dotnet publish -c Release -r win-x64 --self-contained -o publish-dir
+      # Overrides the csproj's baseline Version/AssemblyVersion/FileVersion with the
+      # tag-derived one determined above, so the compiled exe's own About-window version
+      # (read via AssemblyInformationalVersionAttribute) always matches the tag it was
+      # actually built from instead of silently drifting from whatever's hardcoded in
+      # source (see SoliBee.Desktop.csproj's comment on those properties).
+      run: dotnet publish -c Release -r win-x64 --self-contained -o publish-dir -p:Version=${{ steps.get_version.outputs.version }} -p:AssemblyVersion=${{ steps.get_version.outputs.version }}.0 -p:FileVersion=${{ steps.get_version.outputs.version }}.0
 
     - name: Pack with Velopack
       working-directory: windows/src/SoliBee.Desktop

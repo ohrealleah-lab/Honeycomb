@@ -953,17 +953,20 @@ struct SpiderStatsView: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 12) {
-                StatRowView(label: coordinator.L(.gamesPlayedColon), value: "\(stats.gamesPlayed)")
-                StatRowView(label: coordinator.L(.gamesWonColon), value: "\(stats.gamesWon)")
-                StatRowView(label: coordinator.L(.highScoreColon), value: viewModel.highScoreString)
-                StatRowView(label: coordinator.L(.winPercentageColon), value: String(format: "%.1f%%", stats.winPercentage))
-                StatRowView(label: coordinator.L(.currentStreakColon), value: "\(stats.currentStreak)")
-                StatRowView(label: coordinator.L(.longestStreakColon), value: "\(stats.longestStreak)")
-                StatRowView(label: coordinator.L(.avgWinningTimeColon), value: stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : coordinator.L(.noTimePlaceholder))
-                StatRowView(label: coordinator.L(.fastestWinColon), value: stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : coordinator.L(.noTimePlaceholder))
+            VStack(spacing: 0) {
+                statPairRow(coordinator.L(.gamesPlayedColon), "\(stats.gamesPlayed)",
+                            coordinator.L(.currentStreakColon), "\(stats.currentStreak)")
+                Divider()
+                statPairRow(coordinator.L(.gamesWonColon), "\(stats.gamesWon)",
+                            coordinator.L(.longestStreakColon), "\(stats.longestStreak)")
+                Divider()
+                statPairRow(coordinator.L(.highScoreColon), viewModel.highScoreString,
+                            coordinator.L(.avgWinningTimeColon), stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : coordinator.L(.noTimePlaceholder))
+                Divider()
+                statPairRow(coordinator.L(.winPercentageColon), String(format: "%.1f%%", stats.winPercentage),
+                            coordinator.L(.fastestWinColon), stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : coordinator.L(.noTimePlaceholder))
             }
-            .padding(.horizontal, 36)
+            .padding(.horizontal, 24)
 
             Divider()
 
@@ -971,9 +974,8 @@ struct SpiderStatsView: View {
                 Button(coordinator.L(.resetStats)) {
                     showingResetConfirmation = true
                 }
-                .buttonStyle(.borderless)
-                .foregroundColor(.red)
-                .font(.system(.body))
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
                 .alert(coordinator.L(.resetStatisticsTitle), isPresented: $showingResetConfirmation) {
                     Button(coordinator.L(.reset), role: .destructive) {
                         var stats = viewModel.statistics
@@ -990,15 +992,38 @@ struct SpiderStatsView: View {
                 Button(coordinator.L(.close)) {
                     dismiss()
                 }
+                .buttonStyle(.bordered)
                 .keyboardShortcut(.defaultAction)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
         }
-        .frame(width: 360)
+        .frame(width: 440)
+        .background {
+            // See Klondike's matching StatsView — fixed max size so the watermark sits
+            // behind the stat text instead of scaling up with the panel width.
+            if let image = NSImage(named: "Solibee") {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 220)
+                    .opacity(0.15)
+            }
+        }
         .background(
             Color(NSColor.windowBackgroundColor)
                 .overlay(Color.primary.opacity(0.04))
         )
+    }
+
+    @ViewBuilder
+    private func statPairRow(_ label1: String, _ value1: String, _ label2: String, _ value2: String) -> some View {
+        HStack(alignment: .top, spacing: 24) {
+            StatRowView(label: label1, value: value1, emphasized: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            StatRowView(label: label2, value: value2, emphasized: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 10)
     }
 }

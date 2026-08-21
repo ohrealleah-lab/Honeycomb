@@ -243,6 +243,19 @@ public struct HoneycombDecksView: View {
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .top)
+                    .background {
+                        // Matches the Stats/Rules/Options watermark treatment — fixed max
+                        // size, and attached to this whole column (not inside the ScrollView
+                        // above) so it stays put behind the title/filter bar/card grid
+                        // instead of scrolling away with the cards.
+                        if let image = NSImage(named: "Solibee") {
+                            Image(nsImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxWidth: 550, maxHeight: 550)
+                                .opacity(0.15)
+                        }
+                    }
                 }
             }
         }

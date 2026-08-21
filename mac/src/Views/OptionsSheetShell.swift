@@ -21,6 +21,10 @@ struct OptionsSheetShell<Content: View>: View {
     // entirely rather than wiring a dead `{}` closure to a link that did nothing.
     var onViewStats: (() -> Void)?
     var onOK: () -> Void
+    // Solibee watermark's max width/height, shared across every sheet built on this shell
+    // but overridable per-caller — the Honeycomb Rules sheet (HoneycombRulesView) wants a
+    // noticeably bigger one than the plain per-game Preferences sheets.
+    var watermarkMaxSize: CGFloat
     @ViewBuilder var content: () -> Content
 
     @State private var customSelectedColor: Color
@@ -47,6 +51,7 @@ struct OptionsSheetShell<Content: View>: View {
         showThemes: Bool = true,
         showLanguage: Bool = true,
         onViewStats: (() -> Void)? = nil,
+        watermarkMaxSize: CGFloat = 220,
         onOK: @escaping () -> Void,
         @ViewBuilder content: @escaping () -> Content
     ) {
@@ -61,6 +66,7 @@ struct OptionsSheetShell<Content: View>: View {
         self.showThemes = showThemes
         self.showLanguage = showLanguage
         self.onViewStats = onViewStats
+        self.watermarkMaxSize = watermarkMaxSize
         self.onOK = onOK
         self.content = content
 
@@ -171,6 +177,19 @@ struct OptionsSheetShell<Content: View>: View {
             }
             .frame(width: 440)
             .fixedSize(horizontal: fixedSizeHorizontal, vertical: true)
+            .background {
+                // Matches the Stats/Rules panels' watermark treatment — fixed max size (not
+                // left to scale with the sheet) so it sits behind the content instead of
+                // overpowering it. Shared here (not per-game) since every game's Preferences
+                // sheet, plus the Honeycomb Rules sheet, is built on this one shell.
+                if let image = NSImage(named: "Solibee") {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: watermarkMaxSize, maxHeight: watermarkMaxSize)
+                        .opacity(0.15)
+                }
+            }
             .background(
                 Color(NSColor.windowBackgroundColor)
                     .overlay(Color.primary.opacity(0.04))

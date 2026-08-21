@@ -932,7 +932,9 @@ public partial class MainWindow : Window
 
         StatsFixedRows.IsVisible   = true;
         StatsDynamicRows.IsVisible = false;
-        StatsPanelRoot.Width = 300;
+        // Widened from the old single-column 300 to fit StatsFixedRows' two-column grid
+        // (see MainWindow.axaml) without the row pairs feeling cramped.
+        StatsPanelRoot.Width = 460;
 
         string title;
         int gamesPlayed, gamesWon, timedGamesWon, currentStreak, longestStreak, fastestWinSec, totalWinSec;

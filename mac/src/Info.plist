@@ -10,10 +10,15 @@
     <string>Honeycomb Card Suite</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <!-- Overridden at release-build time by build-release-mac.yml (via PlistBuddy),
+         which derives the real value from the git tag (e.g. v7.0.4) so the About
+         window's version always matches what actually shipped — never bump these by
+         hand for a release, only the tag matters. This baseline is only what a local
+         (non-CI) `make build` shows. -->
     <key>CFBundleShortVersionString</key>
-    <string>1.0.1</string>
+    <string>7.0.4</string>
     <key>CFBundleVersion</key>
-    <string>1.0.1</string>
+    <string>7.0.4</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSPrincipalClass</key>

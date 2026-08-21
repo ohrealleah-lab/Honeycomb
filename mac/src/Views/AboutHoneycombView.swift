@@ -37,6 +37,14 @@ struct AboutHoneycombView: View {
         }
         .padding(32)
         .frame(width: 320)
+        .background {
+            if let image = NSImage(named: "Solibee") {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .opacity(0.15)
+            }
+        }
     }
 
     @ViewBuilder
