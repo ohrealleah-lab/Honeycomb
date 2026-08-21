@@ -41,49 +41,59 @@
                 <TextBlock x:Name="MatchRulesHintText" Text="Pick up to 4 rules to lock in, or leave empty to let roulette decide. Ban a rule to keep it out entirely."
                            FontSize="11" Foreground="#707070" TextWrapping="Wrap" Margin="10,0,20,10"/>
 
-                <ItemsControl x:Name="RuleRowsList">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <!-- Background stays plain (not state-tinted) — the segmented control's
-                                 own fill already communicates the row's state; a row-wide tint
-                                 previously looked like color bleeding out past the pill itself.
-                                 Still needs a non-null Background (Transparent) to be hit-test
-                                 visible for the ToolTip below. -->
-                            <Border Background="Transparent" CornerRadius="0"
-                                    ToolTip.ShowDelay="1000" ToolTip.Tip="{Binding Description}">
-                                <Grid ColumnDefinitions="*,Auto" Margin="10,7,10,7">
-                                    <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" Foreground="{Binding TitleColor}"
-                                               VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <!-- Ban (left) / – (neutral, middle) / Play (right) — one continuous pill
-                                         track with hairline dividers between segments, rather than three
-                                         separate chip buttons. -->
-                                    <Border Grid.Column="1" Background="#F1F1F2" CornerRadius="12" ClipToBounds="True"
-                                            VerticalAlignment="Center">
-                                        <!-- 2px inset so the neutral track shows as a thin frame around the
-                                             segments instead of the selected fill running flush to the outer
-                                             edge — each end button rounds its own outer corners to match. -->
-                                        <StackPanel Orientation="Horizontal" Spacing="0" HorizontalAlignment="Left" Margin="2">
-                                            <Button Content="{Binding BanLabel}" Tag="{Binding Id}" Classes="segment" CornerRadius="9,0,0,9"
-                                                    Background="{Binding BanBg}" Foreground="{Binding BanFg}" Click="BanButton_Click"/>
-                                            <Rectangle Width="1" Fill="#DDDDDD" Margin="0,6"/>
-                                            <Button Content="—" Tag="{Binding Id}" Classes="segment" ToolTip.Tip="{Binding AutoLabel}"
-                                                    Background="{Binding AutoBg}" Foreground="{Binding AutoFg}" Click="AutoButton_Click"/>
-                                            <!-- Inversion (not pickable) still renders this divider + Play
-                                                 segment — invisible and inert (Opacity 0, IsHitTestVisible/
-                                                 IsEnabled False) rather than collapsed — so its row's track
-                                                 is the same width as every other row's instead of shrinking
-                                                 and drifting off the shared left-aligned Ban position. -->
-                                            <Rectangle Width="1" Fill="#DDDDDD" Margin="0,6" Opacity="{Binding PlayOpacity}"/>
-                                            <Button Content="{Binding PickLabel}" Tag="{Binding Id}" Classes="segment" CornerRadius="0,9,9,0"
-                                                    Opacity="{Binding PlayOpacity}" IsHitTestVisible="{Binding IsPickable}" IsEnabled="{Binding IsPickable}"
-                                                    Background="{Binding PickBg}" Foreground="{Binding PickFg}" Click="PickButton_Click"/>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <!-- Wraps the whole row list in a rounded outline, matching Mac's
+                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.15))) —
+                     ClipToBounds so a row's own Background doesn't square off the corners. -->
+                <Border BorderBrush="#26000000" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+                    <ItemsControl x:Name="RuleRowsList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Background stays plain (not state-tinted) — the segmented control's
+                                     own fill already communicates the row's state; a row-wide tint
+                                     previously looked like color bleeding out past the pill itself.
+                                     Still needs a non-null Background (Transparent) to be hit-test
+                                     visible for the ToolTip below. -->
+                                <Border Background="Transparent" CornerRadius="0"
+                                        ToolTip.ShowDelay="1000" ToolTip.Tip="{Binding Description}">
+                                    <StackPanel>
+                                        <Grid ColumnDefinitions="*,Auto" Margin="10,7,10,7">
+                                            <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" Foreground="{Binding TitleColor}"
+                                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <!-- Ban (left) / – (neutral, middle) / Play (right) — one continuous pill
+                                                 track with hairline dividers between segments, rather than three
+                                                 separate chip buttons. -->
+                                            <Border Grid.Column="1" Background="#F1F1F2" CornerRadius="12" ClipToBounds="True"
+                                                    VerticalAlignment="Center">
+                                                <!-- 2px inset so the neutral track shows as a thin frame around the
+                                                     segments instead of the selected fill running flush to the outer
+                                                     edge — each end button rounds its own outer corners to match. -->
+                                                <StackPanel Orientation="Horizontal" Spacing="0" HorizontalAlignment="Left" Margin="2">
+                                                    <Button Content="{Binding BanLabel}" Tag="{Binding Id}" Classes="segment" CornerRadius="9,0,0,9"
+                                                            Background="{Binding BanBg}" Foreground="{Binding BanFg}" Click="BanButton_Click"/>
+                                                    <Rectangle Width="1" Fill="#DDDDDD" Margin="0,6"/>
+                                                    <Button Content="—" Tag="{Binding Id}" Classes="segment" ToolTip.Tip="{Binding AutoLabel}"
+                                                            Background="{Binding AutoBg}" Foreground="{Binding AutoFg}" Click="AutoButton_Click"/>
+                                                    <!-- Inversion (not pickable) still renders this divider + Play
+                                                         segment — invisible and inert (Opacity 0, IsHitTestVisible/
+                                                         IsEnabled False) rather than collapsed — so its row's track
+                                                         is the same width as every other row's instead of shrinking
+                                                         and drifting off the shared left-aligned Ban position. -->
+                                                    <Rectangle Width="1" Fill="#DDDDDD" Margin="0,6" Opacity="{Binding PlayOpacity}"/>
+                                                    <Button Content="{Binding PickLabel}" Tag="{Binding Id}" Classes="segment" CornerRadius="0,9,9,0"
+                                                            Opacity="{Binding PlayOpacity}" IsHitTestVisible="{Binding IsPickable}" IsEnabled="{Binding IsPickable}"
+                                                            Background="{Binding PickBg}" Foreground="{Binding PickFg}" Click="PickButton_Click"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                        <!-- Row divider — matches Mac's Divider() placed between rows (not
+                                             after the last one, hence bound to !IsLast). -->
+                                        <Rectangle Height="1" Fill="#26000000" IsVisible="{Binding !IsLast}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
 
                 <TextBlock x:Name="SillyBeeWarning" Text="You cannot blacklist every game, silly bee." FontSize="11" FontWeight="SemiBold" Foreground="#E53935" IsVisible="False" Margin="10,10,0,0"/>
             </StackPanel>

@@ -78,21 +78,28 @@ public partial class HoneycombRulesView : UserControl
     // staying ban-only — are mirrored here in C#).
     private sealed class RuleRowVM
     {
-        public string Id = "";
-        public string Title = "";
-        public string Description = "";
-        public bool IsPickable = true;
+        // Properties, not fields — Avalonia's {Binding X} resolves via reflection against
+        // properties only; a same-named field silently fails to bind (no error, just
+        // renders blank/default), which is what left every row's title, ban/pick/auto
+        // labels, and segment colors empty on screen.
+        public string Id { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public bool IsPickable { get; set; } = true;
+        // Set on the last row in SyncUI's list so its DataTemplate can hide the
+        // row divider below it — mirrors Mac's `if id != banListOrder.last { Divider() }`.
+        public bool IsLast { get; set; } = false;
         public double PlayOpacity => IsPickable ? 1.0 : 0.0;
-        public IBrush TitleColor = BrushNeutralText;
-        public string AutoLabel = "";
-        public string PickLabel = "";
-        public string BanLabel = "";
-        public IBrush AutoBg = BrushTransparent;
-        public IBrush AutoFg = BrushMutedText;
-        public IBrush PickBg = BrushTransparent;
-        public IBrush PickFg = BrushMutedText;
-        public IBrush BanBg = BrushTransparent;
-        public IBrush BanFg = BrushMutedText;
+        public IBrush TitleColor { get; set; } = BrushNeutralText;
+        public string AutoLabel { get; set; } = "";
+        public string PickLabel { get; set; } = "";
+        public string BanLabel { get; set; } = "";
+        public IBrush AutoBg { get; set; } = BrushTransparent;
+        public IBrush AutoFg { get; set; } = BrushMutedText;
+        public IBrush PickBg { get; set; } = BrushTransparent;
+        public IBrush PickFg { get; set; } = BrushMutedText;
+        public IBrush BanBg { get; set; } = BrushTransparent;
+        public IBrush BanFg { get; set; } = BrushMutedText;
     }
 
     // Every ban-list-eligible rule, "Normal Mode" first — matches the ban-set cap
@@ -137,6 +144,7 @@ public partial class HoneycombRulesView : UserControl
                 isPicked: _localOpts.ManualRules.Contains(rule), isBanned: _localOpts.BannedRules.Contains(rule.ToString()),
                 autoLabel, pickLabel, banLabel));
         }
+        rows[^1].IsLast = true;
 
         RuleRowsList.ItemsSource = rows;
         RulesSelectedCountText.Text = Strings.Get(StringKey.RulesSelectedCountFmt, _language).Replace("%d", _localOpts.ManualRules.Count.ToString());
