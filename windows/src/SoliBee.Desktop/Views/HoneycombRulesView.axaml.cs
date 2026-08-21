@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
@@ -13,9 +14,17 @@ namespace SoliBee.Desktop.Views;
 
 public partial class HoneycombRulesView : UserControl
 {
+    // Static brush pool (never allocate a SolidColorBrush per-row-per-refresh) — same
+    // convention as CardView.axaml.cs's _brush* fields.
+    private static readonly IBrush BrushAccent = new SolidColorBrush(Color.Parse("#007AFF"));
+    private static readonly IBrush BrushBan = new SolidColorBrush(Color.Parse("#E53935"));
+    private static readonly IBrush BrushWhite = Brushes.White;
+    private static readonly IBrush BrushNeutralText = new SolidColorBrush(Color.Parse("#1A1A1A"));
+    private static readonly IBrush BrushMutedText = new SolidColorBrush(Color.Parse("#8A8A8A"));
+    private static readonly IBrush BrushTransparent = Brushes.Transparent;
+
     private HoneycombViewModel? _vm;
     private HoneycombOptions _localOpts;
-    private bool _initializing = true;
     private HelpWindow? _helpWindow;
     private AppLanguage _language = AppLanguage.English;
 
@@ -45,9 +54,6 @@ public partial class HoneycombRulesView : UserControl
         SyncUI();
     }
 
-    // Static labels/tooltips only — the Tag values driving BannedRules/ManualRules
-    // (see SyncUI/BanRule_Changed below) are untouched English identifiers, same as
-    // everywhere else in this pipeline.
     private void ApplyLocalization()
     {
         OpponentLabel.Text = Strings.Get(StringKey.OpponentLabelColon, _language);
@@ -57,52 +63,52 @@ public partial class HoneycombRulesView : UserControl
         KillerBeeItem.Content = Strings.Get(StringKey.StatKillerBee, _language);
         HoneycombHelpButton.Content = Strings.Get(StringKey.HelpHoneycomb, _language);
 
-        BanColumnHeaderText.Text = Strings.Get(StringKey.BanColumnHeader, _language);
-        PlayColumnHeaderText.Text = Strings.Get(StringKey.PlayColumnHeader, _language);
+        RulesTitleText.Text = Strings.Get(StringKey.RulesColumnTitle, _language);
         MatchRulesHintText.Text = Strings.Get(StringKey.MatchRulesHintWin, _language);
-        BanRemovesRuleHintText.Text = Strings.Get(StringKey.BanRemovesRuleHint, _language);
-
-        var normalModeExplanation = Strings.Get(StringKey.NormalModeBanListTooltip, _language);
-        RuleLabel_NormalMode.Text = Strings.Get(StringKey.ToggleNormalModeMac, _language);
-        RuleLabel_NormalMode.SetValue(ToolTip.TipProperty, normalModeExplanation);
-        Ban_NormalMode.SetValue(ToolTip.TipProperty, normalModeExplanation);
-        HoneycombRule_ForceNormal.SetValue(ToolTip.TipProperty, normalModeExplanation);
-        SetRuleLabel(RuleLabel_Ascension, HoneycombRule.Ascension);
-        SetRuleLabel(RuleLabel_Descension, HoneycombRule.Descension);
-        SetRuleLabel(RuleLabel_Same, HoneycombRule.Same);
-        SetRuleLabel(RuleLabel_Plus, HoneycombRule.Plus);
-        SetRuleLabel(RuleLabel_FallenAce, HoneycombRule.FallenAce);
-        SetRuleLabel(RuleLabel_AllOpen, HoneycombRule.AllOpen);
-        SetRuleLabel(RuleLabel_ThreeOpen, HoneycombRule.ThreeOpen);
-        SetRuleLabel(RuleLabel_Swap, HoneycombRule.Swap);
-        SetRuleLabel(RuleLabel_Order, HoneycombRule.Order);
-        SetRuleLabel(RuleLabel_Chaos, HoneycombRule.Chaos);
-        SetRuleLabel(RuleLabel_BombShelter, HoneycombRule.BombShelter);
-        SetRuleLabel(RuleLabel_Reverse, HoneycombRule.Reverse);
-        SetRuleLabel(RuleLabel_SuddenDeath, HoneycombRule.SuddenDeath);
 
         SillyBeeWarning.Text = Strings.Get(StringKey.SillyBeeWarning, _language);
         CancelButton.Content = Strings.Get(StringKey.Cancel, _language);
         OkButton.Content = Strings.Get(StringKey.Ok, _language);
     }
 
-    private void SetRuleLabel(TextBlock label, HoneycombRule rule)
+    // One row per rule-or-Normal-Mode, mirroring shared/Honeycomb/Models/
+    // HoneycombRuleSelectionEngine.swift's HoneycombRuleRowID on the Swift side
+    // (Windows has no shared-Swift access, so the same Auto/Pick/Ban semantics —
+    // max-4 cap, exclusive pairs, "can't ban everything" guard, Inversion/Reverse
+    // staying ban-only — are mirrored here in C#).
+    private sealed class RuleRowVM
     {
-        var name = HoneycombRuleLocalization.LocalizedRuleName(rule, _language);
-        var explanation = HoneycombRuleLocalization.LocalizedRuleExplanation(rule, null, _language);
-        label.Text = name;
-        label.SetValue(ToolTip.TipProperty, explanation);
-        // The Ban checkbox one column to the left shares the same tooltip text.
-        var banCheckBox = this.FindControl<CheckBox>($"Ban_{rule}");
-        var ruleCheckBox = this.FindControl<CheckBox>($"HoneycombRule_{rule}");
-        banCheckBox?.SetValue(ToolTip.TipProperty, explanation);
-        ruleCheckBox?.SetValue(ToolTip.TipProperty, explanation);
+        public string Id = "";
+        public string Title = "";
+        public string Description = "";
+        public bool IsPickable = true;
+        public double PlayOpacity => IsPickable ? 1.0 : 0.0;
+        public IBrush TitleColor = BrushNeutralText;
+        public string AutoLabel = "";
+        public string PickLabel = "";
+        public string BanLabel = "";
+        public IBrush AutoBg = BrushTransparent;
+        public IBrush AutoFg = BrushMutedText;
+        public IBrush PickBg = BrushTransparent;
+        public IBrush PickFg = BrushMutedText;
+        public IBrush BanBg = BrushTransparent;
+        public IBrush BanFg = BrushMutedText;
     }
+
+    // Every ban-list-eligible rule, "Normal Mode" first — matches the ban-set cap
+    // ("can't ban all 14") used below.
+    private static readonly HoneycombRule[] AllRules =
+    {
+        HoneycombRule.Ascension, HoneycombRule.Descension, HoneycombRule.Same, HoneycombRule.Plus,
+        HoneycombRule.FallenAce, HoneycombRule.AllOpen, HoneycombRule.ThreeOpen, HoneycombRule.Swap,
+        HoneycombRule.Order, HoneycombRule.Chaos, HoneycombRule.BombShelter, HoneycombRule.Reverse,
+        HoneycombRule.SuddenDeath,
+    };
+    private const string NormalModeId = "Normal Mode";
+    private const int TotalBanItems = 14; // Normal Mode + 13 HoneycombRule cases
 
     private void SyncUI()
     {
-        _initializing = true;
-        
         foreach (var item in HoneycombDifficultyCombo.Items.Cast<ComboBoxItem>())
         {
             if (item.Tag?.ToString() == _localOpts.Difficulty.ToString())
@@ -112,46 +118,56 @@ public partial class HoneycombRulesView : UserControl
             }
         }
 
-        // Game Choice
-        HoneycombRule_ForceNormal.IsChecked = _localOpts.ForceNormalRules;
-        HoneycombRule_Ascension.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Ascension);
-        HoneycombRule_Descension.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Descension);
-        HoneycombRule_Same.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Same);
-        HoneycombRule_Plus.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Plus);
-        HoneycombRule_FallenAce.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.FallenAce);
-        HoneycombRule_AllOpen.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.AllOpen);
-        HoneycombRule_ThreeOpen.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.ThreeOpen);
-        HoneycombRule_Swap.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Swap);
-        HoneycombRule_Order.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Order);
-        HoneycombRule_Chaos.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Chaos);
-        HoneycombRule_BombShelter.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.BombShelter);
-        HoneycombRule_Reverse.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.Reverse);
-        HoneycombRule_SuddenDeath.IsChecked = _localOpts.ManualRules.Contains(HoneycombRule.SuddenDeath);
+        var autoLabel = Strings.Get(StringKey.RuleStateAuto, _language);
+        var pickLabel = Strings.Get(StringKey.RuleStatePick, _language);
+        var banLabel = Strings.Get(StringKey.RuleStateBan, _language);
 
-        // Ban List
-        Ban_NormalMode.IsChecked = _localOpts.BannedRules.Contains("Normal Mode");
-        Ban_Ascension.IsChecked = _localOpts.BannedRules.Contains("Ascension");
-        Ban_Descension.IsChecked = _localOpts.BannedRules.Contains("Descension");
-        Ban_Same.IsChecked = _localOpts.BannedRules.Contains("Same");
-        Ban_Plus.IsChecked = _localOpts.BannedRules.Contains("Plus");
-        Ban_FallenAce.IsChecked = _localOpts.BannedRules.Contains("FallenAce");
-        Ban_AllOpen.IsChecked = _localOpts.BannedRules.Contains("AllOpen");
-        Ban_ThreeOpen.IsChecked = _localOpts.BannedRules.Contains("ThreeOpen");
-        Ban_Swap.IsChecked = _localOpts.BannedRules.Contains("Swap");
-        Ban_Order.IsChecked = _localOpts.BannedRules.Contains("Order");
-        Ban_Chaos.IsChecked = _localOpts.BannedRules.Contains("Chaos");
-        Ban_BombShelter.IsChecked = _localOpts.BannedRules.Contains("BombShelter");
-        Ban_Reverse.IsChecked = _localOpts.BannedRules.Contains("Reverse");
-        Ban_SuddenDeath.IsChecked = _localOpts.BannedRules.Contains("SuddenDeath");
+        var rows = new List<RuleRowVM>
+        {
+            BuildRow(NormalModeId, Strings.Get(StringKey.ToggleNormalModeMac, _language),
+                Strings.Get(StringKey.NormalModeBanListTooltip, _language), isPickable: true,
+                isPicked: _localOpts.ForceNormalRules, isBanned: _localOpts.BannedRules.Contains(NormalModeId),
+                autoLabel, pickLabel, banLabel)
+        };
+        foreach (var rule in AllRules)
+        {
+            rows.Add(BuildRow(rule.ToString(), HoneycombRuleLocalization.LocalizedRuleName(rule, _language),
+                HoneycombRuleLocalization.LocalizedRuleExplanation(rule, null, _language),
+                isPickable: rule != HoneycombRule.Reverse,
+                isPicked: _localOpts.ManualRules.Contains(rule), isBanned: _localOpts.BannedRules.Contains(rule.ToString()),
+                autoLabel, pickLabel, banLabel));
+        }
 
-        CheckBanLimit();
+        RuleRowsList.ItemsSource = rows;
+        RulesSelectedCountText.Text = Strings.Get(StringKey.RulesSelectedCountFmt, _language).Replace("%d", _localOpts.ManualRules.Count.ToString());
+        SillyBeeWarning.IsVisible = false;
+    }
 
-        _initializing = false;
+    private static RuleRowVM BuildRow(string id, string title, string description, bool isPickable,
+        bool isPicked, bool isBanned, string autoLabel, string pickLabel, string banLabel)
+    {
+        var isAuto = !isPicked && !isBanned;
+        return new RuleRowVM
+        {
+            Id = id,
+            Title = title,
+            Description = description,
+            IsPickable = isPickable,
+            TitleColor = isBanned ? BrushMutedText : BrushNeutralText,
+            AutoLabel = autoLabel,
+            PickLabel = pickLabel,
+            BanLabel = banLabel,
+            AutoBg = isAuto ? BrushWhite : BrushTransparent,
+            AutoFg = isAuto ? BrushNeutralText : BrushMutedText,
+            PickBg = isPicked ? BrushAccent : BrushTransparent,
+            PickFg = isPicked ? BrushWhite : BrushMutedText,
+            BanBg = isBanned ? BrushBan : BrushTransparent,
+            BanFg = isBanned ? BrushWhite : BrushMutedText,
+        };
     }
 
     private void HoneycombDifficultyCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_initializing) return;
         if (HoneycombDifficultyCombo.SelectedItem is ComboBoxItem item && item.Tag != null
             && Enum.TryParse<HoneycombDifficulty>(item.Tag.ToString(), out var difficulty))
         {
@@ -159,96 +175,68 @@ public partial class HoneycombRulesView : UserControl
         }
     }
 
-    private void HoneycombRule_Changed(object? sender, RoutedEventArgs e)
+    private void AutoButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (_initializing) return;
-        if (sender is CheckBox cb && cb.Tag is string tag)
-        {
-            if (tag == "ForceNormal")
-            {
-                _localOpts.ForceNormalRules = cb.IsChecked ?? false;
-                if (_localOpts.ForceNormalRules)
-                {
-                    _localOpts.ManualRules.Clear();
-                }
-            }
-            else if (Enum.TryParse<HoneycombRule>(tag, out var rule))
-            {
-                if (cb.IsChecked == true)
-                {
-                    // Remove the exclusive partner (if any) BEFORE the cap check —
-                    // selecting a rule whose partner is already selected is a net-zero
-                    // swap, not an addition, so it must never be blocked just because
-                    // the cap is full.
-                    var updated = new HashSet<HoneycombRule>(_localOpts.ManualRules);
-                    if (rule == HoneycombRule.Ascension) updated.Remove(HoneycombRule.Descension);
-                    if (rule == HoneycombRule.Descension) updated.Remove(HoneycombRule.Ascension);
-                    if (rule == HoneycombRule.Order) updated.Remove(HoneycombRule.Chaos);
-                    if (rule == HoneycombRule.Chaos) updated.Remove(HoneycombRule.Order);
-                    if (rule == HoneycombRule.AllOpen) updated.Remove(HoneycombRule.ThreeOpen);
-                    if (rule == HoneycombRule.ThreeOpen) updated.Remove(HoneycombRule.AllOpen);
-                    // Bomb Shelter's hidden card doesn't work when All Open/Three Open
-                    // reveals every card anyway.
-                    if (rule == HoneycombRule.AllOpen || rule == HoneycombRule.ThreeOpen) updated.Remove(HoneycombRule.BombShelter);
-                    if (rule == HoneycombRule.BombShelter) { updated.Remove(HoneycombRule.AllOpen); updated.Remove(HoneycombRule.ThreeOpen); }
-
-                    // Cap at 4 manual rules by blocking a 5th, rather than evicting the
-                    // oldest — matches Mac's selectedRules picker (a Set has no reliable
-                    // insertion order to evict by anyway).
-                    if (updated.Count < 4)
-                    {
-                        updated.Add(rule);
-                        _localOpts.ManualRules = updated;
-                        _localOpts.ForceNormalRules = false;
-                    }
-                }
-                else
-                {
-                    _localOpts.ManualRules.Remove(rule);
-                }
-            }
-            SyncUI();
-        }
+        if (sender is not Button { Tag: string id }) return;
+        _localOpts.BannedRules.Remove(id);
+        if (id == NormalModeId) { _localOpts.ForceNormalRules = false; }
+        else if (Enum.TryParse<HoneycombRule>(id, out var rule)) { _localOpts.ManualRules.Remove(rule); }
+        SyncUI();
     }
 
-    private void BanRule_Changed(object? sender, RoutedEventArgs e)
+    private void PickButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (_initializing) return;
-        if (sender is CheckBox cb && cb.Tag is string ruleName)
+        if (sender is not Button { Tag: string id }) return;
+        _localOpts.BannedRules.Remove(id);
+
+        if (id == NormalModeId)
         {
-            bool isChecked = cb.IsChecked ?? false;
-            
-            if (isChecked)
-            {
-                if (_localOpts.BannedRules.Count >= 11) // Max 12 total, can't ban all 12
-                {
-                    // Revert UI immediately
-                    _initializing = true;
-                    cb.IsChecked = false;
-                    _initializing = false;
-                    
-                    // Show warning
-                    SillyBeeWarning.IsVisible = true;
-                    // Auto-hide warning
-                    DispatcherTimer.RunOnce(() => { SillyBeeWarning.IsVisible = false; }, TimeSpan.FromSeconds(3));
-                    return;
-                }
-                
-                if (!_localOpts.BannedRules.Contains(ruleName))
-                    _localOpts.BannedRules.Add(ruleName);
-            }
-            else
-            {
-                _localOpts.BannedRules.Remove(ruleName);
-            }
-            
-            CheckBanLimit();
+            _localOpts.ForceNormalRules = true;
+            _localOpts.ManualRules.Clear();
         }
+        else if (Enum.TryParse<HoneycombRule>(id, out var rule) && rule != HoneycombRule.Reverse)
+        {
+            // Remove the exclusive partner (if any) BEFORE the cap check — selecting a
+            // rule whose partner is already selected is a net-zero swap, not an
+            // addition, so it must never be blocked just because the cap is full.
+            var updated = new HashSet<HoneycombRule>(_localOpts.ManualRules);
+            if (rule == HoneycombRule.Ascension) updated.Remove(HoneycombRule.Descension);
+            if (rule == HoneycombRule.Descension) updated.Remove(HoneycombRule.Ascension);
+            if (rule == HoneycombRule.Order) updated.Remove(HoneycombRule.Chaos);
+            if (rule == HoneycombRule.Chaos) updated.Remove(HoneycombRule.Order);
+            if (rule == HoneycombRule.AllOpen) updated.Remove(HoneycombRule.ThreeOpen);
+            if (rule == HoneycombRule.ThreeOpen) updated.Remove(HoneycombRule.AllOpen);
+            // Bomb Shelter's hidden card doesn't work when All Open/Three Open reveals
+            // every card anyway.
+            if (rule == HoneycombRule.AllOpen || rule == HoneycombRule.ThreeOpen) updated.Remove(HoneycombRule.BombShelter);
+            if (rule == HoneycombRule.BombShelter) { updated.Remove(HoneycombRule.AllOpen); updated.Remove(HoneycombRule.ThreeOpen); }
+
+            if (updated.Count < 4)
+            {
+                updated.Add(rule);
+                _localOpts.ManualRules = updated;
+                _localOpts.ForceNormalRules = false;
+            }
+        }
+        SyncUI();
     }
-    
-    private void CheckBanLimit()
+
+    private void BanButton_Click(object? sender, RoutedEventArgs e)
     {
-        SillyBeeWarning.IsVisible = false;
+        if (sender is not Button { Tag: string id }) return;
+
+        // "Silly bee" guard — never allow banning the last remaining unbanned item.
+        if (_localOpts.BannedRules.Count >= TotalBanItems - 1 && !_localOpts.BannedRules.Contains(id))
+        {
+            SillyBeeWarning.IsVisible = true;
+            DispatcherTimer.RunOnce(() => { SillyBeeWarning.IsVisible = false; }, TimeSpan.FromSeconds(3));
+            return;
+        }
+
+        if (id == NormalModeId) { _localOpts.ForceNormalRules = false; }
+        else if (Enum.TryParse<HoneycombRule>(id, out var rule)) { _localOpts.ManualRules.Remove(rule); }
+        _localOpts.BannedRules.Add(id);
+        SyncUI();
     }
 
     private void OK_Click(object? sender, RoutedEventArgs e)

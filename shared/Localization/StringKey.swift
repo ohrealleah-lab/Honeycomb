@@ -712,16 +712,10 @@ public enum StringKey: String, CaseIterable {
     case forceNormalRulesToggle = "force_normal_rules_toggle"
     /// Force-normal-mode toggle, Mac (fuller wording than iOS)
     case toggleNormalModeMac = "toggle_normal_mode_mac"
-    /// DisclosureGroup title, reused Mac/iOS
-    case matchRulesDisclosure = "match_rules_disclosure"
-    /// Rules sheet column heading, Mac
+    /// Unified rule-list section heading, reused Mac/iOS/Windows
     case rulesColumnTitle = "rules_column_title"
     /// Helper text, reused Mac/iOS
     case matchRulesHint = "match_rules_hint"
-    /// DisclosureGroup title, reused Mac/iOS
-    case banListDisclosure = "ban_list_disclosure"
-    /// Helper text, Mac
-    case banListHintMac = "ban_list_hint_mac"
     /// Ban-list item label, reused Mac/iOS
     case normalModeBanItem = "normal_mode_ban_item"
     /// Disabled-settings hint, iOS
@@ -1122,14 +1116,8 @@ public enum StringKey: String, CaseIterable {
     case rulesRandomizedAtStart = "rules_randomized_at_start"
     /// RuleExplanationPopover.swift rule-name label, %@ = translated rule name
     case ruleNameColonFmt = "rule_name_colon_fmt"
-    /// Column header, HoneycombRulesView.axaml (Windows)
-    case banColumnHeader = "ban_column_header"
-    /// Column header, HoneycombRulesView.axaml (Windows)
-    case playColumnHeader = "play_column_header"
     /// Helper text, HoneycombRulesView.axaml (Windows) — near-identical to matchRulesHint, kept separate since wording differs (match's vs match)
     case matchRulesHintWin = "match_rules_hint_win"
-    /// Helper text, HoneycombRulesView.axaml (Windows)
-    case banRemovesRuleHint = "ban_removes_rule_hint"
     /// Label, HoneycombRulesView.axaml (Windows) — colon variant of opponentPickerLabel
     case opponentLabelColon = "opponent_label_colon"
     /// Button, PreferencesView.axaml (Windows) — different wording from Mac's "Save as New Theme"
@@ -1372,4 +1360,12 @@ public enum StringKey: String, CaseIterable {
     case statSuddenDeathCountIos = "stat_sudden_death_count_ios"
     /// iOS Honeycomb stats sheet label for fallenAces — plainer than mac's thematic "Queen's Falls", matching iOS's literal stat-label style
     case statFallenAcesIos = "stat_fallen_aces_ios"
+    /// Unified rule-list per-row state control, Mac/iOS/Windows
+    case ruleStateAuto = "rule_state_auto"
+    /// Unified rule-list per-row state control, Mac/iOS/Windows
+    case ruleStatePick = "rule_state_pick"
+    /// Unified rule-list per-row state control, Mac/iOS/Windows
+    case ruleStateBan = "rule_state_ban"
+    /// Unified rule-list selection counter, Mac/iOS/Windows
+    case rulesSelectedCountFmt = "rules_selected_count_fmt"
 }

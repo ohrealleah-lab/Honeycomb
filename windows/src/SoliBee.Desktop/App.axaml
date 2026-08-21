@@ -145,6 +145,23 @@
             <Setter Property="BorderBrush" Value="#DDDDDD" />
         </Style>
 
+        <!-- One segment of the Rules screen's per-row Auto/Pick/Ban control
+             (HoneycombRulesView) — sizing/type only; Background/Foreground are set per
+             segment per row in code-behind since they vary with selection state. -->
+        <Style Selector="Button.segment">
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MinWidth" Value="34" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.segment:pointerover /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.85" />
+        </Style>
+
         <!-- Casino (Blackjack/Video Poker) button base + color-coded action variants —
              both games' button ladders were previously defined nearly identically per
              view (only class-name prefix differed: bj-button-* vs vp-button-*). Kept

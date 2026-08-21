@@ -995,8 +995,7 @@ struct HoneycombSettingsSection: View {
     // own didSet, instead of only updating this one game's local options copy.
     @Bindable var coordinator: AppCoordinator
 
-    @State private var showingMatchRules = false
-    @State private var showingBanList = false
+    @State private var showingRules = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1030,14 +1029,10 @@ struct HoneycombSettingsSection: View {
             .opacity(isMidMatch ? 0.5 : 1)
             .padding(.bottom, 8)
 
-            // Match Rules/Ban List sit directly under Opponent — they're the other
-            // game-relevant settings, and should read together above the general
-            // toggles (Sound, No Stress Mode, etc.).
-            matchRulesNavRow
-                .disabled(isMidMatch)
-                .opacity(isMidMatch ? 0.5 : 1)
-                .padding(.bottom, 8)
-            banListNavRow
+            // Rules (game choice + ban list, merged into one screen) sits directly under
+            // Opponent — the other game-relevant setting, and should read together above
+            // the general toggles (Sound, No Stress Mode, etc.).
+            rulesNavRow
                 .disabled(isMidMatch)
                 .opacity(isMidMatch ? 0.5 : 1)
                 .padding(.bottom, 8)
@@ -1060,30 +1055,15 @@ struct HoneycombSettingsSection: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .sheet(isPresented: $showingMatchRules) { HoneycombMatchRulesSheet(viewModel: viewModel) }
-        .sheet(isPresented: $showingBanList) { HoneycombBanListSheet(viewModel: viewModel) }
+        .sheet(isPresented: $showingRules) { HoneycombRulesSheet(viewModel: viewModel) }
     }
 
-    private var matchRulesNavRow: some View {
+    private var rulesNavRow: some View {
         Button {
-            showingMatchRules = true
+            showingRules = true
         } label: {
             HStack {
-                Text(coordinator.L(.matchRulesDisclosure))
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var banListNavRow: some View {
-        Button {
-            showingBanList = true
-        } label: {
-            HStack {
-                Text(coordinator.L(.banListDisclosure))
+                Text(coordinator.L(.toolbarRules))
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }

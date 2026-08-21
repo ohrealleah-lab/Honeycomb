@@ -1249,7 +1249,7 @@ struct HoneycombRulesView: View {
                 viewModel.options = updatedOpts
             }
         ) {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Picker(coordinator.L(.opponentPickerLabel), selection: $difficulty) {
                         ForEach(HoneycombDifficulty.allCases, id: \.self) { diff in
@@ -1267,112 +1267,130 @@ struct HoneycombRulesView: View {
                 .padding(.top, 16)
 
                 Divider()
-                
-                HStack(alignment: .top, spacing: 40) {
-                    // Left Column: Game Choice
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(coordinator.L(.rulesColumnTitle))
-                            .font(.title2).bold()
 
-                    Text(coordinator.L(.matchRulesHint))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Toggle(coordinator.L(.toggleNormalModeMac), isOn: Binding(
-                        get: { forceNormalMode },
-                        set: { isOn in
-                            forceNormalMode = isOn
-                            if isOn {
-                                selectedRules.removeAll()
-                            }
-                        }
-                    ))
-                    
-                    ForEach(HoneycombRule.allCases.filter { $0 != .reverse }, id: \.self) { rule in
-                        Toggle(honeycombLocalizedRuleName(rule.rawValue, language: coordinator.language), isOn: Binding(
-                            get: { selectedRules.contains(rule) },
-                            set: { isOn in
-                                if isOn {
-                                    // Remove the exclusive partner (if any) BEFORE the cap
-                                    // check — selecting a rule whose partner is already
-                                    // selected is a net-zero swap, not an addition, so it
-                                    // must never be blocked just because the cap is full.
-                                    var updated = selectedRules
-                                    if rule == .ascension { updated.remove(.descension) }
-                                    if rule == .descension { updated.remove(.ascension) }
-                                    if rule == .order { updated.remove(.chaos) }
-                                    if rule == .chaos { updated.remove(.order) }
-                                    if rule == .allOpen { updated.remove(.threeOpen) }
-                                    if rule == .threeOpen { updated.remove(.allOpen) }
-                                    // Bomb Shelter's hidden card doesn't work when
-                                    // All Open/Three Open reveals every card anyway.
-                                    if rule == .allOpen || rule == .threeOpen { updated.remove(.bombShelter) }
-                                    if rule == .bombShelter { updated.remove(.allOpen); updated.remove(.threeOpen) }
-
-                                    if updated.count < 4 {
-                                        updated.insert(rule)
-                                        selectedRules = updated
-                                        forceNormalMode = false
-                                    }
-                                } else {
-                                    selectedRules.remove(rule)
-                                }
-                            }
-                        ))
-                        .font(.system(.body))
-                        .disabled(forceNormalMode)
-                        .help(localizedRuleExplanation(rule))
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Right Column: Ban List
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(coordinator.L(.banListDisclosure))
+                HStack {
+                    Text(coordinator.L(.rulesColumnTitle))
                         .font(.title2).bold()
-
-                    Text(coordinator.L(.banListHintMac))
+                    Spacer()
+                    Text(coordinator.L(.rulesSelectedCountFmt, selectedRules.count))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                }
 
-                    let allBanItems = ["Normal Mode"] + HoneycombRule.allCases.map { $0.rawValue }
+                Text(coordinator.L(.matchRulesHint))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                    ForEach(allBanItems, id: \.self) { ruleName in
-                        HStack {
-                            Toggle(localizedRuleName(ruleName), isOn: Binding(
-                                get: { bannedRules.contains(ruleName) },
-                                set: { isOn in
-                                    if isOn {
-                                        // "Silly bee" guard
-                                        if bannedRules.count == allBanItems.count - 1 {
-                                            // Do nothing, but maybe we can show a warning?
-                                            // The prompt says "don't allow the last checkbox to check, and warn user"
-                                            // We will handle the warning inline below.
-                                        } else {
-                                            bannedRules.insert(ruleName)
-                                        }
-                                    } else {
-                                        bannedRules.remove(ruleName)
-                                    }
-                                }
-                            ))
-                            .font(.system(.body))
-                            .help(HoneycombRule(rawValue: ruleName).map(localizedRuleExplanation) ?? coordinator.L(.normalModeBanListTooltip))
+                if bannedRules.count == HoneycombRuleRowID.banListOrder.count - 1 {
+                    Text(coordinator.L(.sillyBeeWarning))
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
 
-                            if bannedRules.count == allBanItems.count - 1 && !bannedRules.contains(ruleName) {
-                                Text(coordinator.L(.sillyBeeWarning))
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                            }
+                VStack(spacing: 0) {
+                    ForEach(HoneycombRuleRowID.banListOrder, id: \.self) { id in
+                        ruleRow(id)
+                        if id != HoneycombRuleRowID.banListOrder.last {
+                            Divider()
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.15), lineWidth: 1))
             }
         }
+    }
+
+    private func rowState(_ id: HoneycombRuleRowID) -> HoneycombRuleState {
+        HoneycombRuleSelection.state(of: id, selectedRules: selectedRules, forceNormalMode: forceNormalMode, bannedRules: bannedRules)
+    }
+
+    private func setRowState(_ state: HoneycombRuleState, for id: HoneycombRuleRowID) {
+        HoneycombRuleSelection.setState(state, for: id, selectedRules: &selectedRules, forceNormalMode: &forceNormalMode, bannedRules: &bannedRules)
+    }
+
+    private func rowTitle(_ id: HoneycombRuleRowID) -> String {
+        switch id {
+        case .normalMode: return coordinator.L(.toggleNormalModeMac)
+        case .rule(let rule): return localizedRuleName(rule.rawValue)
+        }
+    }
+
+    private func rowExplanation(_ id: HoneycombRuleRowID) -> String {
+        switch id {
+        case .normalMode: return coordinator.L(.normalModeBanListTooltip)
+        case .rule(let rule): return localizedRuleExplanation(rule)
+        }
+    }
+
+    @ViewBuilder
+    private func ruleRow(_ id: HoneycombRuleRowID) -> some View {
+        let state = rowState(id)
+        HStack(spacing: 12) {
+            Text(rowTitle(id))
+                .font(.system(size: 13, weight: .semibold))
+                .strikethrough(state == .banned)
+                .foregroundColor(state == .banned ? .secondary : .primary)
+            Spacer(minLength: 8)
+            HStack(spacing: 0) {
+                stateSegment(coordinator.L(.ruleStateBan), isSelected: state == .banned, fill: .red, textColor: .white, corner: .leading) { setRowState(.banned, for: id) }
+                Divider().frame(height: 14)
+                stateSegment("–", isSelected: state == .auto, fill: Color(nsColor: .controlBackgroundColor), textColor: .primary, corner: .none) { setRowState(.auto, for: id) }
+                    .accessibilityLabel(coordinator.L(.ruleStateAuto))
+                Divider().frame(height: 14)
+                    .opacity(id.isPickable ? 1 : 0)
+                // Inversion (not pickable) still renders this segment — invisible and
+                // inert — rather than omitting it, so its row's track is the same width
+                // as every other row's instead of shrinking and drifting off the
+                // shared left-aligned Ban position (a fixed guess-width here would
+                // either clip a longer translation or leave a dead gray tail after
+                // Play on every ordinary 3-segment row).
+                stateSegment(coordinator.L(.ruleStatePick), isSelected: state == .picked, fill: .accentColor, textColor: .white, corner: .trailing) { setRowState(.picked, for: id) }
+                    .opacity(id.isPickable ? 1 : 0)
+                    .disabled(!id.isPickable)
+            }
+            .padding(2)
+            .background(Color.primary.opacity(0.06))
+            .clipShape(Capsule())
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        // No row-wide state tint here — it used to add a lighter halo spanning the
+        // full row width (including the padding past the segmented control), which
+        // visually looked like color bleeding out past the Play/Ban pill itself. The
+        // segmented control's own fill already fully communicates the row's state.
+        .help(rowExplanation(id))
+    }
+
+    private enum SegmentCorner { case leading, trailing, none }
+
+    private func stateSegment(_ label: String, isSelected: Bool, fill: Color, textColor: Color, corner: SegmentCorner, action: @escaping () -> Void) -> some View {
+        // Rounding each end segment's own fill (rather than relying only on the
+        // group's outer .clipShape) — a plain Button's background can otherwise
+        // render in its own compositing layer that ignores an ancestor's clip,
+        // leaving the trailing (Play) corner looking squared-off instead of capped.
+        let shape = UnevenRoundedRectangle(
+            topLeadingRadius: corner == .leading ? 11 : 0,
+            bottomLeadingRadius: corner == .leading ? 11 : 0,
+            bottomTrailingRadius: corner == .trailing ? 11 : 0,
+            topTrailingRadius: corner == .trailing ? 11 : 0
+        )
+        return Button(action: action) {
+            Text(label)
+                .font(.system(size: 10.5, weight: .bold))
+                .foregroundColor(isSelected ? textColor : .secondary)
+                .frame(minWidth: 34)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(isSelected ? fill : Color.clear)
+                .clipShape(shape)
+                // Without this, the button's tap target is just the Text's own tight
+                // glyph bounds, not the padded pill around it — background() draws
+                // behind the padding but doesn't extend hit-testing into it, so most
+                // clicks on the pill (anywhere but right on the letters) silently miss.
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func localizedRuleName(_ ruleName: String) -> String {

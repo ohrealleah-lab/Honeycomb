@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SoliBee.Desktop.Views.HoneycombRulesView">
 
-    <Grid RowDefinitions="Auto, Auto, *, Auto">
+    <Grid RowDefinitions="Auto, Auto, Auto, *, Auto" Width="520">
         <!-- Difficulty at top -->
         <Grid Grid.Row="0" Margin="0,15,0,10" ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
@@ -21,123 +21,75 @@
                     Padding="10,4" VerticalAlignment="Center" />
         </Grid>
 
-        <!-- Header block — moved out of the ScrollViewer below so "Ban?"/"Play" and
-             the instructions stay pinned in place; only the rule rows themselves
-             should scroll. -->
-        <StackPanel Grid.Row="1">
-            <Rectangle Height="1" Fill="#DDDDDD" Margin="0,0,0,15" />
+        <Rectangle Grid.Row="1" Height="1" Fill="#DDDDDD" Margin="0,0,0,12" />
 
-            <!-- One merged list instead of two independent full-length columns
-                 (Game Choice + Ban List) that each restated all 13-14 rule names
-                 on their own. Ban checkbox first (leftmost, matches the mockup),
-                 then the roulette-pool Select checkbox, then the rule name once.
-                 "Inversion" only exists in the ban set (no HoneycombRule enum
-                 value — it can never be manually selected, only banned from the
-                 roulette pool), so its row has no Select checkbox. -->
-            <!-- Fixed (not Auto) widths: this header Grid and the checkbox Grid below it
-                 size independently, so Auto columns here never actually matched the
-                 checkboxes' own Auto width below — harmless for the short English "Ban?"/
-                 "Play" labels, but "¿Vetar?" (translated, longer, needs its trailing "?"
-                 visible) overflowed past a width sized only for "Ban?". Fixed widths keep
-                 both Grids' columns matched regardless of translation length, and give the
-                 checkboxes below more breathing room besides. -->
-            <Grid ColumnDefinitions="50,58,*" Margin="0,0,0,6">
-                <TextBlock x:Name="BanColumnHeaderText" Grid.Column="0" Text="Ban?" FontSize="11" FontWeight="Bold" Foreground="#707070"
-                           TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="2,0"/>
-                <TextBlock x:Name="PlayColumnHeaderText" Grid.Column="1" Text="Play" FontSize="11" FontWeight="Bold" Foreground="#707070"
-                           TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="2,0"/>
-                <!-- Right margin clears the ScrollViewer's own scrollbar gutter — without
-                     it this text wrapped right up against (and visually under) the
-                     scrollbar instead of leaving it clear space. -->
-                <StackPanel Grid.Column="2" Margin="10,0,20,0">
-                    <TextBlock x:Name="MatchRulesHintText" Text="Select up to 4 rules. Leave empty to let roulette decide each match's rules."
-                               FontSize="11" Foreground="#707070" TextWrapping="Wrap"/>
-                    <TextBlock x:Name="BanRemovesRuleHintText" Text="Ban removes a rule from the roulette pool entirely."
-                               FontSize="11" Foreground="#707070" TextWrapping="Wrap"/>
-                </StackPanel>
-            </Grid>
+        <!-- Header block — pinned above the scrollable rule rows. One merged row per
+             rule instead of two independent full-length columns (Game Choice + Ban
+             List) that each restated all 14 rule names on their own — each rule now
+             gets a single Auto/Pick/Ban control (systemBlue-style accent for Pick,
+             red for Ban, both colors already used elsewhere in this app — Button
+             .banner-action's #007AFF, SillyBeeWarning's #E53935 — rather than
+             introducing new branding just for this screen). -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="10,0,0,8">
+            <TextBlock x:Name="RulesTitleText" Text="Game Rules" FontSize="14" FontWeight="Bold" Foreground="#1A1A1A"/>
+            <TextBlock x:Name="RulesSelectedCountText" Text="0 of 4 selected" FontSize="11" Foreground="#707070" Margin="10,2,0,0" VerticalAlignment="Bottom"/>
         </StackPanel>
 
-        <!-- Scrollable rule rows only -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+        <!-- Scrollable rule rows -->
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <!-- ToolTip.ShowDelay (ms) makes each rule's hover explanation match the
-                     same "hold for a beat" pacing as the mac port's .help() tooltips.
-                     Column widths (50,58) match the header Grid above, not Auto — see
-                     that Grid's own comment. -->
-                <Grid ColumnDefinitions="50,58,*"
-                      RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-                    <!-- Centers every checkbox within its now-wider fixed column instead
-                         of them hugging the left edge, so each sits under its header
-                         label ("¿Vetar?"/"Jugar") instead of bunched together. -->
-                    <Grid.Styles>
-                        <Style Selector="CheckBox">
-                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                        </Style>
-                    </Grid.Styles>
+                <TextBlock x:Name="MatchRulesHintText" Text="Pick up to 4 rules to lock in, or leave empty to let roulette decide. Ban a rule to keep it out entirely."
+                           FontSize="11" Foreground="#707070" TextWrapping="Wrap" Margin="10,0,20,10"/>
 
-                    <CheckBox Grid.Row="0" Grid.Column="0" x:Name="Ban_NormalMode" Tag="Normal Mode" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Forces a match with no active rules, skipping roulette."/>
-                    <CheckBox Grid.Row="0" Grid.Column="1" x:Name="HoneycombRule_ForceNormal" Tag="ForceNormal" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Forces a match with no active rules, skipping roulette."/>
-                    <TextBlock x:Name="RuleLabel_NormalMode" Grid.Row="0" Grid.Column="2" Text="Normal Mode (Force Zero Rules)" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="Forces a match with no active rules, skipping roulette."/>
+                <ItemsControl x:Name="RuleRowsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <!-- Background stays plain (not state-tinted) — the segmented control's
+                                 own fill already communicates the row's state; a row-wide tint
+                                 previously looked like color bleeding out past the pill itself.
+                                 Still needs a non-null Background (Transparent) to be hit-test
+                                 visible for the ToolTip below. -->
+                            <Border Background="Transparent" CornerRadius="0"
+                                    ToolTip.ShowDelay="1000" ToolTip.Tip="{Binding Description}">
+                                <Grid ColumnDefinitions="*,Auto" Margin="10,7,10,7">
+                                    <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" Foreground="{Binding TitleColor}"
+                                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <!-- Ban (left) / – (neutral, middle) / Play (right) — one continuous pill
+                                         track with hairline dividers between segments, rather than three
+                                         separate chip buttons. -->
+                                    <Border Grid.Column="1" Background="#F1F1F2" CornerRadius="12" ClipToBounds="True"
+                                            VerticalAlignment="Center">
+                                        <!-- 2px inset so the neutral track shows as a thin frame around the
+                                             segments instead of the selected fill running flush to the outer
+                                             edge — each end button rounds its own outer corners to match. -->
+                                        <StackPanel Orientation="Horizontal" Spacing="0" HorizontalAlignment="Left" Margin="2">
+                                            <Button Content="{Binding BanLabel}" Tag="{Binding Id}" Classes="segment" CornerRadius="9,0,0,9"
+                                                    Background="{Binding BanBg}" Foreground="{Binding BanFg}" Click="BanButton_Click"/>
+                                            <Rectangle Width="1" Fill="#DDDDDD" Margin="0,6"/>
+                                            <Button Content="—" Tag="{Binding Id}" Classes="segment" ToolTip.Tip="{Binding AutoLabel}"
+                                                    Background="{Binding AutoBg}" Foreground="{Binding AutoFg}" Click="AutoButton_Click"/>
+                                            <!-- Inversion (not pickable) still renders this divider + Play
+                                                 segment — invisible and inert (Opacity 0, IsHitTestVisible/
+                                                 IsEnabled False) rather than collapsed — so its row's track
+                                                 is the same width as every other row's instead of shrinking
+                                                 and drifting off the shared left-aligned Ban position. -->
+                                            <Rectangle Width="1" Fill="#DDDDDD" Margin="0,6" Opacity="{Binding PlayOpacity}"/>
+                                            <Button Content="{Binding PickLabel}" Tag="{Binding Id}" Classes="segment" CornerRadius="0,9,9,0"
+                                                    Opacity="{Binding PlayOpacity}" IsHitTestVisible="{Binding IsPickable}" IsEnabled="{Binding IsPickable}"
+                                                    Background="{Binding PickBg}" Foreground="{Binding PickFg}" Click="PickButton_Click"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-                    <CheckBox Grid.Row="1" Grid.Column="0" x:Name="Ban_Ascension" Tag="Ascension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Grants +1 to stats for cards matching randomly selected suits placed on the board."/>
-                    <CheckBox Grid.Row="1" Grid.Column="1" x:Name="HoneycombRule_Ascension" Tag="Ascension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Grants +1 to stats for cards matching randomly selected suits placed on the board."/>
-                    <TextBlock x:Name="RuleLabel_Ascension" Grid.Row="1" Grid.Column="2" Text="Pollination" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="Grants +1 to stats for cards matching randomly selected suits placed on the board."/>
-
-                    <CheckBox Grid.Row="2" Grid.Column="0" x:Name="Ban_Descension" Tag="Descension" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Inflicts -1 to stats for cards matching randomly selected suits placed on the board."/>
-                    <CheckBox Grid.Row="2" Grid.Column="1" x:Name="HoneycombRule_Descension" Tag="Descension" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Inflicts -1 to stats for cards matching randomly selected suits placed on the board."/>
-                    <TextBlock x:Name="RuleLabel_Descension" Grid.Row="2" Grid.Column="2" Text="Smoked Out" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="Inflicts -1 to stats for cards matching randomly selected suits placed on the board."/>
-
-                    <CheckBox Grid.Row="3" Grid.Column="0" x:Name="Ban_Same" Tag="Same" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously."/>
-                    <CheckBox Grid.Row="3" Grid.Column="1" x:Name="HoneycombRule_Same" Tag="Same" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously."/>
-                    <TextBlock x:Name="RuleLabel_Same" Grid.Row="3" Grid.Column="2" Text="Symmetry" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="If 2+ touching neighbor stats match your card's facing stats, all matching neighbors are captured simultaneously."/>
-
-                    <CheckBox Grid.Row="4" Grid.Column="0" x:Name="Ban_Plus" Tag="Plus" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured."/>
-                    <CheckBox Grid.Row="4" Grid.Column="1" x:Name="HoneycombRule_Plus" Tag="Plus" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured."/>
-                    <TextBlock x:Name="RuleLabel_Plus" Grid.Row="4" Grid.Column="2" Text="Math Bee" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="If the sum of (your stat + neighbor's stat) equals the same total across 2+ neighbors, all involved cards are captured."/>
-
-                    <CheckBox Grid.Row="5" Grid.Column="0" x:Name="Ban_FallenAce" Tag="FallenAce" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="A stat of A (10) can be captured by a stat of 1. If Inversion is also active, this flips: a stat of A captures a stat of 1 instead."/>
-                    <CheckBox Grid.Row="5" Grid.Column="1" x:Name="HoneycombRule_FallenAce" Tag="FallenAce" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="A stat of A (10) can be captured by a stat of 1. If Inversion is also active, this flips: a stat of A captures a stat of 1 instead."/>
-                    <TextBlock x:Name="RuleLabel_FallenAce" Grid.Row="5" Grid.Column="2" Text="Queen's Fall" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="A stat of A (10) can be captured by a stat of 1. If Inversion is also active, this flips: a stat of A captures a stat of 1 instead."/>
-
-                    <CheckBox Grid.Row="6" Grid.Column="0" x:Name="Ban_AllOpen" Tag="AllOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Both players' hands are completely visible."/>
-                    <CheckBox Grid.Row="6" Grid.Column="1" x:Name="HoneycombRule_AllOpen" Tag="AllOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Both players' hands are completely visible."/>
-                    <TextBlock x:Name="RuleLabel_AllOpen" Grid.Row="6" Grid.Column="2" Text="Clear Skies" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="Both players' hands are completely visible."/>
-
-                    <CheckBox Grid.Row="7" Grid.Column="0" x:Name="Ban_ThreeOpen" Tag="ThreeOpen" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Three random cards in the opponent's hand are visible."/>
-                    <CheckBox Grid.Row="7" Grid.Column="1" x:Name="HoneycombRule_ThreeOpen" Tag="ThreeOpen" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Three random cards in the opponent's hand are visible."/>
-                    <TextBlock x:Name="RuleLabel_ThreeOpen" Grid.Row="7" Grid.Column="2" Text="Scouting Party" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="Three random cards in the opponent's hand are visible."/>
-
-                    <CheckBox Grid.Row="8" Grid.Column="0" x:Name="Ban_Swap" Tag="Swap" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="One card from each player's hand is randomly swapped at the start of the match."/>
-                    <CheckBox Grid.Row="8" Grid.Column="1" x:Name="HoneycombRule_Swap" Tag="Swap" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="One card from each player's hand is randomly swapped at the start of the match."/>
-                    <TextBlock x:Name="RuleLabel_Swap" Grid.Row="8" Grid.Column="2" Text="Nectar Exchange" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="One card from each player's hand is randomly swapped at the start of the match."/>
-
-                    <CheckBox Grid.Row="9" Grid.Column="0" x:Name="Ban_Order" Tag="Order" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards must be played in the exact order they were drawn."/>
-                    <CheckBox Grid.Row="9" Grid.Column="1" x:Name="HoneycombRule_Order" Tag="Order" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards must be played in the exact order they were drawn."/>
-                    <TextBlock x:Name="RuleLabel_Order" Grid.Row="9" Grid.Column="2" Text="Hierarchy" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards must be played in the exact order they were drawn."/>
-
-                    <CheckBox Grid.Row="10" Grid.Column="0" x:Name="Ban_Chaos" Tag="Chaos" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards are randomly selected and forced to be played each turn."/>
-                    <CheckBox Grid.Row="10" Grid.Column="1" x:Name="HoneycombRule_Chaos" Tag="Chaos" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards are randomly selected and forced to be played each turn."/>
-                    <TextBlock x:Name="RuleLabel_Chaos" Grid.Row="10" Grid.Column="2" Text="Frenzy" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="Cards are randomly selected and forced to be played each turn."/>
-
-                    <CheckBox Grid.Row="11" Grid.Column="0" x:Name="Ban_BombShelter" Tag="BombShelter" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Each player's first card played remains face-down for 3 turns before flipping automatically."/>
-                    <CheckBox Grid.Row="11" Grid.Column="1" x:Name="HoneycombRule_BombShelter" Tag="BombShelter" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Each player's first card played remains face-down for 3 turns before flipping automatically."/>
-                    <TextBlock x:Name="RuleLabel_BombShelter" Grid.Row="11" Grid.Column="2" Text="Capped Brood" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="Each player's first card played remains face-down for 3 turns before flipping automatically."/>
-
-                    <CheckBox Grid.Row="12" Grid.Column="0" x:Name="Ban_Reverse" Tag="Reverse" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Lower stats capture higher stats."/>
-                    <CheckBox Grid.Row="12" Grid.Column="1" x:Name="HoneycombRule_Reverse" Tag="Reverse" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="Lower stats capture higher stats."/>
-                    <TextBlock x:Name="RuleLabel_Reverse" Grid.Row="12" Grid.Column="2" Text="Inversion" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="Lower stats capture higher stats."/>
-
-                    <CheckBox Grid.Row="13" Grid.Column="0" x:Name="Ban_SuddenDeath" Tag="SuddenDeath" Checked="BanRule_Changed" Unchecked="BanRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately."/>
-                    <CheckBox Grid.Row="13" Grid.Column="1" x:Name="HoneycombRule_SuddenDeath" Tag="SuddenDeath" Checked="HoneycombRule_Changed" Unchecked="HoneycombRule_Changed" ToolTip.ShowDelay="1000" ToolTip.Tip="If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately."/>
-                    <TextBlock x:Name="RuleLabel_SuddenDeath" Grid.Row="13" Grid.Column="2" Text="Swarm to the Death" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="10,4,0,4" ToolTip.ShowDelay="1000" ToolTip.Tip="If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately."/>
-                </Grid>
-
-                <TextBlock x:Name="SillyBeeWarning" Text="You cannot blacklist every game, silly bee." FontSize="11" FontWeight="SemiBold" Foreground="#E53935" IsVisible="False" Margin="0,10,0,0"/>
+                <TextBlock x:Name="SillyBeeWarning" Text="You cannot blacklist every game, silly bee." FontSize="11" FontWeight="SemiBold" Foreground="#E53935" IsVisible="False" Margin="10,10,0,0"/>
             </StackPanel>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
             <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click" Width="80" HorizontalContentAlignment="Center" Classes="light-secondary" />
             <Button x:Name="OkButton" Content="OK" Click="OK_Click" Width="80" HorizontalContentAlignment="Center" Classes="light-primary" />
         </StackPanel>
