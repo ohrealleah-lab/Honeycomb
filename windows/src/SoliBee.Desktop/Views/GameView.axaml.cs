@@ -22,7 +22,7 @@ public partial class GameView : CardGameView
     // Tells MainWindow whether this view's own board-scrim-worthy banners are up, so it can
     // extend the darkening over the toolbar too (see BoardScrimRequestMessage). `this` is
     // the source key — WinAnimationView's own VictoryOverlay reports itself separately.
-    private void UpdateBoardScrim()
+    protected override void UpdateBoardScrim()
     {
         // Re-stamped every call (not just once) since a resize could happen between one
         // banner and the next — see SizeBannerScrimToWindow's own comment for why a

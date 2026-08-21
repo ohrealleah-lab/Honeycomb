@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
-             x:Class="SoliBee.Desktop.Views.VideoPokerView">
+             x:Class="SoliBee.Desktop.Views.VideoPokerView"
+             ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto" ClipToBounds="False">
 
@@ -196,8 +197,8 @@
              side/bottom margins around this board's own tight-fit content, matching
              MainWindow's GlobalBannerScrim, which only ever covers the toolbar strip
              (see its comment in MainWindow.axaml). -->
-        <Border x:Name="NoWinOverlayScrim" Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False" IsVisible="False" />
-        <Border x:Name="WinBannerScrim" Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False" IsVisible="False" />
+        <Border x:Name="NoWinOverlayScrim" Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Stretch" />
+        <Border x:Name="WinBannerScrim" Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Stretch" />
 
         <!-- Overlay layer (Moved from Game Area to correctly layer above the scrim) -->
         <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,28,0,0">

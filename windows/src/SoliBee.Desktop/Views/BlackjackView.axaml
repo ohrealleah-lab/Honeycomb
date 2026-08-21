@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:SoliBee.Desktop.Views"
-             x:Class="SoliBee.Desktop.Views.BlackjackView">
+             x:Class="SoliBee.Desktop.Views.BlackjackView"
+             ClipToBounds="False">
 
     <Grid ClipToBounds="False">
         <!-- The actual game board felt grid -->
@@ -139,7 +140,7 @@
              SizeElementToGameArea, called alongside each BoardScrimRequestMessage send)
              so it also reaches the side/bottom margins around the centered board. -->
         <Border x:Name="ResultOverlayScrim" Classes="banner-scrim" IsVisible="False" ZIndex="39"
-                HorizontalAlignment="Center" VerticalAlignment="Center" />
+                HorizontalAlignment="Center" VerticalAlignment="Stretch" />
 
         <!-- ─── Result overlay (layered over the entire board) ─── -->
         <Grid x:Name="ResultOverlayContainer" HorizontalAlignment="Center" VerticalAlignment="Center" ZIndex="40">

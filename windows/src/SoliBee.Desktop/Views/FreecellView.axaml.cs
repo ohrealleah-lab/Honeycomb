@@ -22,7 +22,7 @@ public partial class FreecellView : CardGameView
 {
     // See GameView.UpdateBoardScrim — tells MainWindow whether this view's own board-scrim-
     // worthy banners are up so it can extend the darkening over the toolbar too.
-    private void UpdateBoardScrim()
+    protected override void UpdateBoardScrim()
     {
         AutocompleteBannerScrim.IsVisible = AutocompleteBanner.IsVisible;
         NoMovesBannerScrim.IsVisible = NoMovesBanner.IsVisible;

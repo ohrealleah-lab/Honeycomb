@@ -104,6 +104,7 @@ public abstract class CardGameView : UserControl
     protected abstract WinAnimationView VictoryOverlayControl { get; }
     protected abstract StuckBanner NoMovesBannerControl { get; }
     protected abstract AutocompleteBanner AutocompleteBannerControl { get; }
+    protected abstract void UpdateBoardScrim();
 
     // Klondike's Autocomplete banner reads "moved to foundations" — Freecell/Spider read
     // "sorted into foundations" instead (see AutocompleteBanner.ApplyLocalization).
@@ -206,9 +207,14 @@ public abstract class CardGameView : UserControl
         if (DataContext is ISolitaireGameViewModel vm)
             NoMovesBannerControl.StatsText = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
         NoMovesBannerControl.IsVisible = true;
+        UpdateBoardScrim();
     }
 
-    public void DebugShowAutocompleteBanner() => AutocompleteBannerControl.IsVisible = true;
+    public void DebugShowAutocompleteBanner()
+    {
+        AutocompleteBannerControl.IsVisible = true;
+        UpdateBoardScrim();
+    }
 
     // "Stuck" (no legal moves left) and "autocomplete available" banners' button
     // handlers — identical across all three CardGameView subclasses since they only
@@ -220,6 +226,7 @@ public abstract class CardGameView : UserControl
         if (DataContext is not ISolitaireGameViewModel vm) return;
         NoMovesBannerControl.IsVisible = false;
         AutocompleteBannerControl.IsVisible = false;
+        UpdateBoardScrim();
         vm.InitializeGame();
         SoundService.PlayShuffle();
     }
@@ -229,6 +236,7 @@ public abstract class CardGameView : UserControl
         if (DataContext is not ISolitaireGameViewModel vm) return;
         NoMovesBannerControl.IsVisible = false;
         AutocompleteBannerControl.IsVisible = false;
+        UpdateBoardScrim();
         vm.RestartGame();
         SoundService.PlayShuffle();
     }
@@ -236,18 +244,21 @@ public abstract class CardGameView : UserControl
     protected void NoMovesDismiss_Click(object? sender, EventArgs e)
     {
         NoMovesBannerControl.IsVisible = false;
+        UpdateBoardScrim();
     }
 
     protected void AutocompleteGame_Click(object? sender, EventArgs e)
     {
         if (DataContext is not ISolitaireGameViewModel vm) return;
         AutocompleteBannerControl.IsVisible = false;
+        UpdateBoardScrim();
         vm.Autocomplete();
     }
 
     protected void AutocompleteDismiss_Click(object? sender, EventArgs e)
     {
         AutocompleteBannerControl.IsVisible = false;
+        UpdateBoardScrim();
     }
 
     // Handles a double-click on a face-up card. Default behavior is "try to auto-move it
