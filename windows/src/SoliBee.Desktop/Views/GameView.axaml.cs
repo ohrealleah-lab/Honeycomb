@@ -19,6 +19,13 @@ namespace SoliBee.Desktop.Views;
 
 public partial class GameView : CardGameView
 {
+    // Tells MainWindow whether this view's own board-scrim-worthy banners are up, so it can
+    // extend the darkening over the toolbar too (see BoardScrimRequestMessage). `this` is
+    // the source key — WinAnimationView's own VictoryOverlay reports itself separately.
+    private void UpdateBoardScrim() =>
+        WeakReferenceMessenger.Default.Send(
+            new BoardScrimRequestMessage(this, NoMovesBanner.IsVisible || AutocompleteBanner.IsVisible));
+
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
         if (DataContext is not GameViewModel vm || cards.Count == 0) return false;
@@ -303,6 +310,7 @@ public partial class GameView : CardGameView
                 {
                     if (vm.IsAutoplayRunning) ClearCursorAndSelection();
                     AutocompleteBanner.IsVisible = vm.IsAutocompletable && !vm.IsAutoplayRunning;
+                    UpdateBoardScrim();
                 }
             }
             else if (e.PropertyName == nameof(GameViewModel.Stock))
@@ -351,6 +359,7 @@ public partial class GameView : CardGameView
                 {
                     if (vm.HasNoMoves) NoMovesBanner.StatsText = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
                     NoMovesBanner.IsVisible = vm.HasNoMoves;
+                    UpdateBoardScrim();
                 }
             }
             else if (e.PropertyName == nameof(GameViewModel.ActiveHint))

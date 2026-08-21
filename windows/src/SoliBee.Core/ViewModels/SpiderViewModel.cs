@@ -149,6 +149,12 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     // Klondike, but Spider always uses standard scoring regardless of it.
     public string ScoreDisplay => State.Score.ToString();
 
+    // See GameViewModel.MovesCount — GameState is a plain class, so mutating
+    // State.MovesCount++ in place never notifies the {Binding MovesCount} MOVES panel on
+    // its own; explicit OnPropertyChanged(nameof(MovesCount)) calls at each mutation site
+    // are what refresh it.
+    public int MovesCount => State?.MovesCount ?? 0;
+
     public bool CanUndo => _undoStack.Count > 0 && !State.HasWon;
 
     private string SuitKey => Options.SpiderSuitCount.ToString();
@@ -456,6 +462,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         string? movedAnchorCardId = cards.Last().Id;
 
         State.MovesCount++;
+        OnPropertyChanged(nameof(MovesCount));
         ScheduleIdleActionCheck();
         // A completed run (+100, anchored to its Ace) is the more significant event —
         // let it win over this move's own -1 (same "later/more significant event wins"
@@ -509,6 +516,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         State.Score = Math.Max(0, State.Score - 1);
 
         State.MovesCount++;
+        OnPropertyChanged(nameof(MovesCount));
         ScheduleIdleActionCheck();
         // No popup for the deal's own -1 — there's no single card to anchor it to (it
         // affects all ten columns at once) — but a run it happens to complete still gets
@@ -1075,6 +1083,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     {
         State.Score = snapshot.Score;
         State.MovesCount = snapshot.MovesCount;
+        OnPropertyChanged(nameof(MovesCount));
         State.TimerSeconds = snapshot.TimerSeconds;
         State.HasWon = false;
 

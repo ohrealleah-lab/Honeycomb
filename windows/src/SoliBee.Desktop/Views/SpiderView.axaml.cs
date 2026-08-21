@@ -23,6 +23,12 @@ public partial class SpiderView : CardGameView
 {
     private AppLanguage _language = AppLanguage.English;
 
+    // See GameView.UpdateBoardScrim — tells MainWindow whether this view's own board-scrim-
+    // worthy banners are up so it can extend the darkening over the toolbar too.
+    private void UpdateBoardScrim() =>
+        WeakReferenceMessenger.Default.Send(
+            new BoardScrimRequestMessage(this, NoMovesBanner.IsVisible || AutocompleteBanner.IsVisible));
+
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
         if (DataContext is not SpiderViewModel vm) return false;
@@ -338,12 +344,14 @@ public partial class SpiderView : CardGameView
             {
                 if (vm.HasNoMoves) NoMovesBanner.StatsText = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
                 NoMovesBanner.IsVisible = vm.HasNoMoves;
+                UpdateBoardScrim();
             }
             else if (e.PropertyName == nameof(SpiderViewModel.IsAutocompletable) ||
                      e.PropertyName == nameof(SpiderViewModel.IsAutoplayRunning))
             {
                 if (vm.IsAutoplayRunning) ClearCursorAndSelection();
                 AutocompleteBanner.IsVisible = vm.IsAutocompletable && !vm.IsAutoplayRunning;
+                UpdateBoardScrim();
             }
             else if (e.PropertyName == nameof(SpiderViewModel.ActiveHint))
             {

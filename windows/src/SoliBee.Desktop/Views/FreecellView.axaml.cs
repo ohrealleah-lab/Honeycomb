@@ -20,6 +20,12 @@ namespace SoliBee.Desktop.Views;
 
 public partial class FreecellView : CardGameView
 {
+    // See GameView.UpdateBoardScrim — tells MainWindow whether this view's own board-scrim-
+    // worthy banners are up so it can extend the darkening over the toolbar too.
+    private void UpdateBoardScrim() =>
+        WeakReferenceMessenger.Default.Send(
+            new BoardScrimRequestMessage(this, NoMovesBanner.IsVisible || AutocompleteBanner.IsVisible));
+
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {
         if (DataContext is not FreecellViewModel vm) return false;
@@ -312,17 +318,29 @@ public partial class FreecellView : CardGameView
                 ApplyFeltColor(vm.Options);
                 BindPiles(vm);
                 RefreshAllPiles();
+
+                // BindPiles just toggled TopRow2/Tableau8/Tableau9's IsVisible (2-deck-only
+                // FreeCells4-7/Foundations4-7/extra tableaus) — CardView's drag-and-drop hit
+                // test cache (_pileViewListCache) still holds whichever PileViews existed
+                // when it was first built this session, so a stale entry from 2-deck mode
+                // now sits there hidden but still "found" by FindTargetPileView's Bounds<=0
+                // fallback (it defaults to a full 128x181 hit box), silently intercepting
+                // drops meant for a live neighboring pile like FreeCell3. Clearing it forces
+                // a fresh rebuild against the current visual tree on the next drag.
+                CardView.ClearPileViewCache(this);
             }
             else if (e.PropertyName == nameof(FreecellViewModel.IsAutocompletable) ||
                      e.PropertyName == nameof(FreecellViewModel.IsAutoplayRunning))
             {
                 if (vm.IsAutoplayRunning) ClearCursorAndSelection();
                 AutocompleteBanner.IsVisible = vm.IsAutocompletable && !vm.IsAutoplayRunning;
+                UpdateBoardScrim();
             }
             else if (e.PropertyName == nameof(FreecellViewModel.HasNoMoves))
             {
                 if (vm.HasNoMoves) NoMovesBanner.StatsText = WinAnimationView.FormatStatsLine(vm.ScoreDisplay, vm.TimeDisplay);
                 NoMovesBanner.IsVisible = vm.HasNoMoves;
+                UpdateBoardScrim();
             }
             else if (e.PropertyName == nameof(FreecellViewModel.ActiveHint))
             {
@@ -363,6 +381,21 @@ public partial class FreecellView : CardGameView
         TopRow2.IsVisible = deckCount == 2;
         Tableau8.IsVisible = deckCount == 2;
         Tableau9.IsVisible = deckCount == 2;
+
+        // DragCanvas/VictoryOverlay get an *explicit* Width/Height stamped on them at the
+        // start of every drag/win (SizeDragCanvasToWindow/SizeVictoryOverlayToWindow),
+        // sized to the board's natural footprint at that moment — and an explicit Width
+        // contributes to BoardFeltGrid's Measure regardless of alignment. If either was
+        // last sized while in 2-deck mode, that stale wider value stays baked into the
+        // board's measured natural size after switching back to 1-deck (even though
+        // BoardPanel/TopRow1/TableauGrid above just shrank correctly), understating
+        // MainWindow.UpdateResponsiveLayout's scale and rendering the whole board smaller
+        // than it should be. Clearing back to unset (NaN) lets both fall back to their
+        // alignment-driven size until the next drag/win re-stamps them fresh.
+        DragCanvas.Width = double.NaN;
+        DragCanvas.Height = double.NaN;
+        VictoryOverlay.Width = double.NaN;
+        VictoryOverlay.Height = double.NaN;
 
         if (vm.FreeCells.Count >= 4)
         {

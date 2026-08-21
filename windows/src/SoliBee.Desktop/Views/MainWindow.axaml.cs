@@ -40,6 +40,11 @@ public partial class MainWindow : Window
     // SolitaireDraw1/SolitaireDraw3 share one GameView instance since they're the same
     // ViewModel/View with different Options, not different views.
     private readonly Dictionary<string, Control> _cachedViews = new();
+    // Tracks which game views/banners currently want the toolbar-covering scrim shown, keyed
+    // by BoardScrimRequestMessage.Source — a HashSet rather than a single bool so one banner
+    // hiding doesn't clear a scrim another still-visible banner (e.g. a view's own banner
+    // plus its embedded WinAnimationView) still needs. See BoardScrimRequestMessage.
+    private readonly HashSet<object> _activeScrimSources = new();
 
     public MainWindow()
     {
@@ -109,6 +114,17 @@ public partial class MainWindow : Window
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
         {
             CardView.InvalidateAllCardViews(this);
+        });
+
+        // Extends whichever game view's own local banner-scrim (Win/Stuck/Autocomplete/
+        // round-result) up over the toolbar — the local scrims live inside GameAreaGrid and
+        // are sized to that game's own board content, so they can never reach the toolbar
+        // strip themselves (root Grid.Row="0", a separate row from GameAreaGrid's Row="1").
+        WeakReferenceMessenger.Default.Register<BoardScrimRequestMessage>(this, (r, m) =>
+        {
+            if (m.Active) _activeScrimSources.Add(m.Source);
+            else _activeScrimSources.Remove(m.Source);
+            GlobalBannerScrim.IsVisible = _activeScrimSources.Count > 0;
         });
 
         // Set initial background color

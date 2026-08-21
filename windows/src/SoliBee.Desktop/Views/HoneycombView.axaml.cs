@@ -21,6 +21,11 @@ namespace SoliBee.Desktop.Views;
 
 public partial class HoneycombView : UserControl
 {
+    // See GameView.UpdateBoardScrim — tells MainWindow whether this view's post-match
+    // OverlayPanel is up so it can extend the darkening over the toolbar too.
+    private void UpdateBoardScrim() =>
+        WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, OverlayPanel.IsVisible));
+
     private AppLanguage _language = AppLanguage.English;
     private HoneycombViewModel? _vm;
     private int _selectedHandIndex = -1;
@@ -510,6 +515,7 @@ public partial class HoneycombView : UserControl
 
         
         OverlayPanel.IsVisible = !vm.IsPlaying && state.Phase == HoneycombPhase.Result && state.ShowPostGamePrompt && !_isStealingCard && !_overlayDismissed;
+        UpdateBoardScrim();
         if (!vm.IsPlaying && state.Phase == HoneycombPhase.Result && state.ShowPostGamePrompt)
         {
             OverlayTitle.IsVisible = true;
@@ -613,7 +619,8 @@ public partial class HoneycombView : UserControl
         StealConfirmationPanel.IsVisible = vm.PendingSteal != null;
 
         OverlayPanel.IsVisible = !vm.IsPlaying && state.Phase == HoneycombPhase.Result && state.ShowPostGamePrompt && !_isStealingCard && !_overlayDismissed && !_bannerActive;
-        
+        UpdateBoardScrim();
+
         List<string> ruleNames;
         if (vm.IsPlaying)
         {
@@ -889,6 +896,7 @@ public partial class HoneycombView : UserControl
     {
         _overlayDismissed = true;
         OverlayPanel.IsVisible = false;
+        UpdateBoardScrim();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -1076,7 +1084,8 @@ public partial class HoneycombView : UserControl
 
         _overlayDismissed = false;
         OverlayPanel.IsVisible = true;
-        
+        UpdateBoardScrim();
+
         switch (kind)
         {
             case "Win":

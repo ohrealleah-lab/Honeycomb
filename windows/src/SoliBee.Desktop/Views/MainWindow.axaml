@@ -112,7 +112,7 @@
                         <!-- MOVES -->
                         <StackPanel x:Name="MovesStatPanel" Spacing="2" HorizontalAlignment="Center">
                             <TextBlock x:Name="MovesLabelText" Text="MOVES" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding State.MovesCount}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding MovesCount}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- TIME -->
                         <StackPanel x:Name="TimeStatPanel" Spacing="2" HorizontalAlignment="Center">
@@ -134,6 +134,16 @@
             </Border>
 
         </Grid>
+
+        <!-- Extends a game view's own local banner-scrim (Win/Stuck/Autocomplete/round-result)
+             up over the toolbar strip — driven by BoardScrimRequestMessage (see MainWindow.axaml.cs),
+             since the local per-game scrims live inside GameAreaGrid (root Grid.Row="1") and are
+             sized to that game's own board content, so they can never reach Row 0 themselves.
+             IsHitTestVisible="False" (unlike ConfirmActionOverlay) — these banners are
+             non-modal today (toolbar stays clickable while e.g. a Win banner is up), so this
+             purely extends the darkening without changing that. -->
+        <Grid x:Name="GlobalBannerScrim" Background="#73000000" IsVisible="False" IsHitTestVisible="False"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" ZIndex="120" />
 
         <!-- Main Game Area -->
         <Grid x:Name="GameAreaGrid" Grid.Row="1" ClipToBounds="False" ZIndex="150">
@@ -342,28 +352,31 @@
                     </StackPanel>
                 </Border>
             </Grid>
+        </Grid>
 
-            <!-- Game Action Confirmation Overlay — ZIndex above the toolbar (100) so it actually
-                 blocks toolbar clicks (e.g. GameSelectionBox/PokerVariantBox) while a confirmation
-                 is pending; otherwise a second toolbar action could silently swap out _pendingAction
-                 with no acknowledgment that the first request was dropped. -->
-            <Grid x:Name="ConfirmActionOverlay" Background="#73000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="101">
-                <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="380">
-                        <StackPanel Spacing="12" HorizontalAlignment="Center" Width="300">
-                            <TextBlock x:Name="ConfirmActionTitle" Text="Start New Game?" FontSize="36" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap" />
-                            <TextBlock x:Name="ConfirmActionMessage" Text="Are you sure you want to abandon the current game and start a new one?" FontSize="14" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap" />
-                            <WrapPanel HorizontalAlignment="Center" Margin="0,12,0,0">
-                                <Button x:Name="ConfirmActionButton" Classes="banner-action" Content="New Game" Click="ConfirmAction_Click" Margin="0,0,12,8" />
-                                <Button x:Name="CancelConfirmActionButton" Classes="banner-action" Content="Cancel" Click="CancelConfirmAction_Click" Margin="0,0,0,8" />
-                            </WrapPanel>
-                        </StackPanel>
-                    </Border>
-                    <!-- Dismiss button anchored TopRight, overlapping corner -->
-                    <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
-                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
-                            Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="CancelConfirmAction_Click"/>
-                </Grid>
+        <!-- Game Action Confirmation Overlay — moved out of GameAreaGrid (which only occupies
+             root Grid.Row="1", below the toolbar) up to root level so Grid.RowSpan="2" actually
+             spans both root rows and the scrim covers the toolbar too, not just the board.
+             ZIndex above the toolbar (100) so it actually blocks toolbar clicks (e.g.
+             GameSelectionBox/PokerVariantBox) while a confirmation is pending; otherwise a
+             second toolbar action could silently swap out _pendingAction with no acknowledgment
+             that the first request was dropped. -->
+        <Grid x:Name="ConfirmActionOverlay" Background="#73000000" IsVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" Grid.RowSpan="2" ZIndex="200">
+            <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="380">
+                    <StackPanel Spacing="12" HorizontalAlignment="Center" Width="300">
+                        <TextBlock x:Name="ConfirmActionTitle" Text="Start New Game?" FontSize="36" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap" />
+                        <TextBlock x:Name="ConfirmActionMessage" Text="Are you sure you want to abandon the current game and start a new one?" FontSize="14" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap" />
+                        <WrapPanel HorizontalAlignment="Center" Margin="0,12,0,0">
+                            <Button x:Name="ConfirmActionButton" Classes="banner-action" Content="New Game" Click="ConfirmAction_Click" Margin="0,0,12,8" />
+                            <Button x:Name="CancelConfirmActionButton" Classes="banner-action" Content="Cancel" Click="CancelConfirmAction_Click" Margin="0,0,0,8" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+                <!-- Dismiss button anchored TopRight, overlapping corner -->
+                <Button Width="20" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                        Foreground="#B3FFFFFF" FontSize="16" Content="✕" Click="CancelConfirmAction_Click"/>
             </Grid>
         </Grid>
 

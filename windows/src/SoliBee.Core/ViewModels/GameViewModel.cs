@@ -158,6 +158,15 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
     public string ScoreDisplay => ScoreFormatter.FormatScore(State?.Score ?? 0, Options?.IsVegasScoring == true);
 
+    // The MOVES stat panel binds to this rather than the raw State.MovesCount path —
+    // GameState is a plain class (no INotifyPropertyChanged), so mutating
+    // State.MovesCount++ in place never told the binding to re-pull it. Explicit
+    // OnPropertyChanged(nameof(MovesCount)) calls at each mutation site (mirroring
+    // ScoreDisplay/TimeDisplay's own pattern) are what actually refresh it — bumping
+    // nameof(State) instead would also fire the View's State-change handler, which
+    // resets the keyboard cursor/selection on every single move.
+    public int MovesCount => State?.MovesCount ?? 0;
+
     // Real Vegas-scoring rules: Draw One gets a single pass through the deck (no
     // recycles at all); Draw Three gets 2 recycles (3 total passes). Canonical source
     // for this limit — every recycle-eligibility check in this file (DrawCard,
@@ -388,6 +397,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         _vegasGameStartScore = State.Score;
         SyncVegasScore();
         State.MovesCount = 0;
+        OnPropertyChanged(nameof(MovesCount));
         State.TimerSeconds = 0;
         State.IsTimerActive = false;
         State.HasWon = false;
@@ -504,6 +514,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
                 State.IsTimerActive = true;
             State.MovesCount++;
+            OnPropertyChanged(nameof(MovesCount));
             ScheduleIdleActionCheck();
             _justRecycled = true;
             CheckDeadlock();
@@ -536,6 +547,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
             State.IsTimerActive = true;
         State.MovesCount++;
+        OnPropertyChanged(nameof(MovesCount));
         ScheduleIdleActionCheck();
         CheckAutocomplete();
         CheckDeadlock();
@@ -660,6 +672,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         if (!State.IsTimerActive && !State.HasWon && !Options.IsNoStressMode)
             State.IsTimerActive = true;
         State.MovesCount++;
+        OnPropertyChanged(nameof(MovesCount));
         ScheduleIdleActionCheck();
         CheckVictory();
         CheckAutocomplete();
@@ -816,6 +829,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         }
 
         State.MovesCount = snapshot.MovesCount;
+        OnPropertyChanged(nameof(MovesCount));
         State.TimerSeconds = snapshot.TimerSeconds;
         State.RecyclesCount = snapshot.RecyclesCount;
         State.HasWon = snapshot.HasWon;

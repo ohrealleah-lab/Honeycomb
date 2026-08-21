@@ -7,7 +7,9 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
 using SoliBee.Core.Models;
+using SoliBee.Core.ViewModels;
 
 namespace SoliBee.Desktop.Views;
 
@@ -166,6 +168,7 @@ public partial class WinAnimationView : UserControl
         // Show win info panel with score and time
         WinStatsLabel.Text = FormatStatsLine(scoreText, timeText);
         WinInfoPanel.IsVisible = true;
+        WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, true));
         // Blocks board interaction while the banner is up; Close_Click releases this
         // once the player dismisses the banner (see Close_Click).
         AnimationCanvas.IsHitTestVisible = true;
@@ -237,6 +240,7 @@ public partial class WinAnimationView : UserControl
         _lastTickTime       = null;
 
         WinInfoPanel.IsVisible = false;
+        WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
     }
 
     private void Timer_Tick(object? sender, EventArgs e)
@@ -455,6 +459,7 @@ public partial class WinAnimationView : UserControl
     {
         WinInfoPanel.IsVisible = false;
         AnimationCanvas.IsHitTestVisible = false;
+        WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
     }
 }
 

@@ -597,6 +597,7 @@ public partial class BlackjackView : UserControl
 
         ResultOverlay.Opacity   = 1.0;
         ResultOverlay.IsVisible = true;
+        WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, true));
 
         if (win)
             WinParticleSystem.Burst(ParticleCanvas);
@@ -626,6 +627,7 @@ public partial class BlackjackView : UserControl
                 _bannerFadeTimer = null;
                 ResultOverlay.IsVisible = false;
                 ResultOverlay.Opacity   = 1.0;
+                WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
                 StartCardsFade();
                 return;
             }
@@ -682,6 +684,7 @@ public partial class BlackjackView : UserControl
         _bannerFadeTimer?.Stop();  _bannerFadeTimer  = null;
         ResultOverlay.IsVisible = false;
         ResultOverlay.Opacity   = 1.0;
+        WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
         StopCardsFade();
     }
 

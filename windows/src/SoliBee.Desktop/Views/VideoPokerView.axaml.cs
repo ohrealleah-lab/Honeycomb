@@ -490,6 +490,7 @@ public partial class VideoPokerView : UserControl
         _activeBanner = banner;
         banner.Opacity = 1.0;
         banner.IsVisible = true;
+        WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, true));
         if (banner == WinBanner)
             WinParticleSystem.Burst(ParticleCanvas);
         StartBannerDelay();
@@ -525,6 +526,7 @@ public partial class VideoPokerView : UserControl
                     _activeBanner.IsVisible = false;
                     _activeBanner.Opacity   = 1.0;
                     _activeBanner = null;
+                    WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
                 }
                 StartCardsFade();
                 return;
@@ -546,6 +548,7 @@ public partial class VideoPokerView : UserControl
             _activeBanner.IsVisible = false;
             _activeBanner.Opacity   = 1.0;
             _activeBanner = null;
+            WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
         }
         StopPayRowPulse();
         StopCardsFade();

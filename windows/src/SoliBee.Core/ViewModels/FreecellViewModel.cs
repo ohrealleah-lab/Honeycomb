@@ -13,6 +13,15 @@ namespace SoliBee.Core.ViewModels;
 public record OptionsChangedMessage(GameOptions Options);
 public record FaceCardArtChangedMessage();
 
+// Sent by any game view/banner (Win, Stuck, Autocomplete, round-result, etc.) whenever its
+// own local darkening scrim shows/hides, so MainWindow can extend that same darkening up
+// over the toolbar strip — the local per-view scrims are sized to that view's own board
+// content and can never reach the toolbar themselves (it lives in a separate row of
+// MainWindow's root Grid). Source disambiguates multiple simultaneously-active scrims
+// (e.g. a view's own banner plus its embedded WinAnimationView) so one hiding doesn't
+// clear a scrim another still wants shown — see MainWindow's _activeScrimSources.
+public record BoardScrimRequestMessage(object Source, bool Active);
+
 // Index/Total are 1-based queue position info for the "[N/Total]" label prefix.
 // Left at their defaults (1/1) by callers that don't have a real queue yet — a
 // single-hint queue shows no prefix, which is exactly the desired display for those.
@@ -156,6 +165,11 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
 
     public string TimeDisplay => TimeSpan.FromSeconds(State?.TimerSeconds ?? 0).ToString(@"mm\:ss");
     public string ScoreDisplay => State.Score.ToString();
+    // See GameViewModel.MovesCount — GameState is a plain class, so mutating
+    // State.MovesCount++ in place never notifies the {Binding MovesCount} MOVES panel on
+    // its own; explicit OnPropertyChanged(nameof(MovesCount)) calls at each mutation site
+    // are what refresh it.
+    public int MovesCount => State?.MovesCount ?? 0;
     public bool CanUndo => _undoStack.Count > 0 && !_autocompleteLocked && !State.HasWon;
 
     // Freecell has no Vegas-mode option of its own — Options.IsVegasScoring is shared
@@ -468,6 +482,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
 
         UpdateScore(source.Type, target.Type, cards.Count);
         State.MovesCount++;
+        OnPropertyChanged(nameof(MovesCount));
         ScheduleIdleActionCheck();
         CheckVictory();
         CheckAutocomplete();
@@ -1174,6 +1189,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     {
         State.Score = snapshot.Score;
         State.MovesCount = snapshot.MovesCount;
+        OnPropertyChanged(nameof(MovesCount));
         // TimerSeconds deliberately NOT restored — the timer must keep running forward
         // through an undo, not rewind to whatever it read when the undone move's
         // snapshot was saved (matches Mac's BeecellViewModel.undoLastAction()).
