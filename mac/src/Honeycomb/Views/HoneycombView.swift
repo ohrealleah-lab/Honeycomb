@@ -1240,7 +1240,7 @@ struct HoneycombRulesView: View {
             title: coordinator.L(.toolbarRules),
             showThemes: false,
             showLanguage: false,
-            watermarkMaxSize: 550,
+            watermarkMaxSize: 412.5,
             onOK: {
                 var updatedOpts = viewModel.options
                 updatedOpts.difficulty = difficulty
@@ -1354,7 +1354,7 @@ struct HoneycombRulesView: View {
                     .disabled(!id.isPickable)
             }
             .padding(2)
-            .background(Color.primary.opacity(0.06))
+            .background(Color.primary.opacity(0.16))
             .clipShape(Capsule())
         }
         .padding(.horizontal, 12)
@@ -1382,7 +1382,7 @@ struct HoneycombRulesView: View {
         return Button(action: action) {
             Text(label)
                 .font(.system(size: 10.5, weight: .bold))
-                .foregroundColor(isSelected ? textColor : .secondary)
+                .foregroundColor(isSelected ? textColor : .primary)
                 .frame(minWidth: 34)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
