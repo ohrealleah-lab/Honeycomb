@@ -457,6 +457,45 @@ public partial class HoneycombViewModel : ObservableObject
         return playerIds.Select(id => new HoneycombCard(HoneycombDatabase.Shared.Card(id)!, 1)).ToList();
     }
 
+    // Each difficulty's normal (non-Reverse) star-tier composition: (stars, count) pairs
+    // summing to 5 cards. Higher difficulty = higher star tiers = higher stat totals.
+    private static List<(int stars, int count)> NormalComposition(HoneycombDifficulty difficulty)
+    {
+        var comp = new List<(int stars, int count)>();
+        if (difficulty == HoneycombDifficulty.Easy) { comp.Add((1, 4)); comp.Add((2, 1)); }
+        else if (difficulty == HoneycombDifficulty.Medium)
+        {
+            comp.Add((2, 4));
+            // Honey Bee: a 20% chance of a 4★ card instead of the usual 3★, so its
+            // deck isn't entirely predictable at this difficulty.
+            comp.Add(Random.Shared.NextDouble() < 0.2 ? (4, 1) : (3, 1));
+        }
+        else if (difficulty == HoneycombDifficulty.Hard) { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
+        else { comp.Add((3, 2)); comp.Add((4, 1)); comp.Add((5, 2)); }
+        return comp;
+    }
+
+    // Under Reverse, low stats win, so a difficulty's Reverse deck should be built from
+    // whichever tiers are actually strong under that inverted rule instead of its normal
+    // (high-star-heavy) table. Easy/Baby Bee keeps its own normal low-star table under
+    // Reverse instead — it's already the weakest possible deck either way, and its
+    // low-star cards are actually strong under Reverse, which is fine since Easy isn't
+    // meant to pose a real threat regardless. Medium reuses its own normal table, since
+    // under Reverse its four 2★, one 3★ composition is already low-stat-heavy enough to
+    // hold up as its own Reverse deck. Hard gets an explicit two 1★, three 2★ table
+    // instead of borrowing Medium's — Medium's table left Hard too close to Medium's own
+    // Reverse strength. Ultra Hard goes all the way to five 1★ cards, the tier with the
+    // lowest possible stat sum, since even Easy's one 2★ slot was measurably weaker under
+    // Reverse than an all-1★ deck. Applies identically whether Reverse came from roulette
+    // or was manually picked — no separate "manual" table.
+    private static List<(int stars, int count)> ReverseComposition(HoneycombDifficulty difficulty)
+    {
+        if (difficulty == HoneycombDifficulty.Easy) return NormalComposition(HoneycombDifficulty.Easy);
+        if (difficulty == HoneycombDifficulty.Medium) return NormalComposition(HoneycombDifficulty.Medium);
+        if (difficulty == HoneycombDifficulty.Hard) return new List<(int, int)> { (1, 2), (2, 3) };
+        return new List<(int, int)> { (1, 5) };
+    }
+
     // Rolls a brand-new opponent card pool for a genuinely-new match. Only called from
     // StartNewMatch() — RematchGame() reuses the frozen pool from _rematchOpponentDeck
     // instead, via ApplyOpponentDeck(), so repeated rematches keep facing the same
@@ -464,58 +503,7 @@ public partial class HoneycombViewModel : ObservableObject
     private List<HoneycombCardData> RollOpponentDeck()
     {
         bool reverse = State.ActiveRules.Contains(HoneycombRule.Reverse);
-        // Distinct from `reverse` itself: this is specifically "the player deliberately
-        // picked Inversion via the Play checkbox" rather than it coming up via roulette.
-        // Medium/Hard's roulette-tuned reverse compositions below predate Inversion being
-        // manually selectable and were never adjusted for it — Medium's, in particular,
-        // left the AI's deck at its normal (non-reverse) star spread, which under
-        // low-beats-high made the AI's own 2-4★ cards trivial to farm with a 1★ hand.
-        // Forcing the AI's deck low too when the player is the one choosing Inversion
-        // closes that off.
-        bool manualReverse = reverse && Options.ManualRules != null && Options.ManualRules.Contains(HoneycombRule.Reverse);
-
-        var comp = new List<(int stars, int count)>();
-        if (!reverse)
-        {
-            if (Options.Difficulty == HoneycombDifficulty.Easy) { comp.Add((1, 4)); comp.Add((2, 1)); }
-            else if (Options.Difficulty == HoneycombDifficulty.Medium)
-            {
-                comp.Add((2, 4));
-                // Honey Bee: a 20% chance of a 4★ card instead of the usual 3★, so its
-                // deck isn't entirely predictable at this difficulty.
-                comp.Add(Random.Shared.NextDouble() < 0.2 ? (4, 1) : (3, 1));
-            }
-            else if (Options.Difficulty == HoneycombDifficulty.Hard) { comp.Add((3, 3)); comp.Add((4, 1)); comp.Add((5, 1)); }
-            else { comp.Add((3, 2)); comp.Add((4, 1)); comp.Add((5, 2)); }
-        }
-        else if (manualReverse && Options.Difficulty == HoneycombDifficulty.Medium)
-        {
-            comp.Add((2, 3)); comp.Add((1, 2));
-        }
-        else if (manualReverse && Options.Difficulty == HoneycombDifficulty.Hard)
-        {
-            comp.Add((1, 3)); comp.Add((2, 2));
-        }
-        // Baby Bee just uses the same low-star deck it always plays under Inversion,
-        // whether Inversion came from roulette or was manually selected — it's the
-        // weakest difficulty either way, so there's no farming exploit to guard
-        // against here the way there is on Medium/Hard.
-        else if (Options.Difficulty == HoneycombDifficulty.Easy)
-        {
-            comp.Add((1, 4)); comp.Add((2, 1));
-        }
-        else
-        {
-            if (Options.Difficulty == HoneycombDifficulty.Medium)
-            {
-                comp.Add((2, 4));
-                // Honey Bee: a 20% chance of a 4★ card instead of the usual 3★, so its
-                // deck isn't entirely predictable at this difficulty.
-                comp.Add(Random.Shared.NextDouble() < 0.2 ? (4, 1) : (3, 1));
-            }
-            else if (Options.Difficulty == HoneycombDifficulty.Hard) { comp.Add((1, 2)); comp.Add((2, 3)); }
-            else { comp.Add((1, 5)); }
-        }
+        var comp = reverse ? ReverseComposition(Options.Difficulty) : NormalComposition(Options.Difficulty);
 
         var deck = new List<HoneycombCardData>();
         foreach (var (stars, count) in comp)

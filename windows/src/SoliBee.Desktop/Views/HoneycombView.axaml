@@ -154,8 +154,14 @@
         <Border x:Name="OverlayPanelScrim" Classes="banner-scrim" IsVisible="False" ZIndex="99"
                 HorizontalAlignment="Center" VerticalAlignment="Center" />
 
-        <!-- Overlay: Post-match panels -->
-        <Border x:Name="OverlayPanel" Classes="banner-glow" Background="#BF000000" CornerRadius="12" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,24" MaxWidth="460" ZIndex="100">
+        <!-- Overlay: Post-match panels. Honeycomb's board is much larger than e.g. Video
+             Poker's, so MainWindow's single per-view auto-fit zoom (MainWindow.axaml.cs,
+             UpdateContentScale) renders this banner far smaller on screen than that game's
+             equivalently-sized banner even though both use similar raw FontSize/Padding —
+             the RenderTransform below counters that by matching Video Poker's typical
+             on-screen banner size. -->
+        <Border x:Name="OverlayPanel" Classes="banner-glow" Background="#BF000000" CornerRadius="12" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,24" MaxWidth="460" ZIndex="100"
+                RenderTransform="scale(1.9)" RenderTransformOrigin="50%,50%">
             <Grid>
                 <!-- Close Button -->
                 <Button Content="✕" Click="CloseOverlay_Click" Classes="banner-close" Margin="0,-12,-12,0"/>

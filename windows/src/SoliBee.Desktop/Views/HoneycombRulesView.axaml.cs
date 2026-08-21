@@ -140,7 +140,7 @@ public partial class HoneycombRulesView : UserControl
         {
             rows.Add(BuildRow(rule.ToString(), HoneycombRuleLocalization.LocalizedRuleName(rule, _language),
                 HoneycombRuleLocalization.LocalizedRuleExplanation(rule, null, _language),
-                isPickable: rule != HoneycombRule.Reverse,
+                isPickable: true,
                 isPicked: _localOpts.ManualRules.Contains(rule), isBanned: _localOpts.BannedRules.Contains(rule.ToString()),
                 autoLabel, pickLabel, banLabel));
         }
@@ -202,7 +202,7 @@ public partial class HoneycombRulesView : UserControl
             _localOpts.ForceNormalRules = true;
             _localOpts.ManualRules.Clear();
         }
-        else if (Enum.TryParse<HoneycombRule>(id, out var rule) && rule != HoneycombRule.Reverse)
+        else if (Enum.TryParse<HoneycombRule>(id, out var rule))
         {
             // Remove the exclusive partner (if any) BEFORE the cap check — selecting a
             // rule whose partner is already selected is a net-zero swap, not an

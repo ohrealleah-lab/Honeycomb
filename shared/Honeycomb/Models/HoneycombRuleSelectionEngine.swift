@@ -19,14 +19,9 @@ public enum HoneycombRuleRowID: Hashable {
     case normalMode
 
     public static let banListOrder: [HoneycombRuleRowID] = [.normalMode] + HoneycombRule.allCases.map { .rule($0) }
-    // Reverse (Inversion) stays roulette/ban-only — deliberately not manually pickable,
-    // see the decode-time strip in HoneycombViewModel.Options.
-    public static let pickableOrder: [HoneycombRuleRowID] = [.normalMode] + HoneycombRule.allCases.filter { $0 != .reverse }.map { .rule($0) }
+    public static let pickableOrder: [HoneycombRuleRowID] = [.normalMode] + HoneycombRule.allCases.map { .rule($0) }
 
-    public var isPickable: Bool {
-        if case .rule(let r) = self, r == .reverse { return false }
-        return true
-    }
+    public var isPickable: Bool { true }
 
     var banName: String {
         switch self {

@@ -42,10 +42,7 @@ public final class HoneycombViewModel {
             noStressMode = try container.decodeIfPresent(Bool.self, forKey: .noStressMode) ?? false
             difficulty = try container.decodeIfPresent(HoneycombDifficulty.self, forKey: .difficulty) ?? .medium
             activeDeckIndex = try container.decodeIfPresent(Int.self, forKey: .activeDeckIndex) ?? 0
-            // Reverse is no longer manually selectable (it stays roulette-only, since
-            // it's easily exploitable when a player can pick it on purpose) — strip it
-            // from any save made back when it was a selectable rule.
-            selectedRules = (try container.decodeIfPresent(Set<HoneycombRule>.self, forKey: .selectedRules) ?? []).subtracting([.reverse])
+            selectedRules = try container.decodeIfPresent(Set<HoneycombRule>.self, forKey: .selectedRules) ?? []
             forceNormalMode = try container.decodeIfPresent(Bool.self, forKey: .forceNormalMode) ?? false
             honeyMode = try container.decodeIfPresent(Bool.self, forKey: .honeyMode) ?? true
             manuallyDismissBanners = try container.decodeIfPresent(Bool.self, forKey: .manuallyDismissBanners) ?? false
@@ -1054,18 +1051,20 @@ public final class HoneycombViewModel {
 
     // Under Reverse, low stats win, so a difficulty's Reverse deck should be built from
     // whichever tiers are actually strong under that inverted rule instead of its
-    // normal (high-star-heavy) table. Easy borrows Hard's normal table wholesale (see
-    // setupOpponentHand); Medium reuses its own normal table, since under Reverse its
-    // four 2*, one 3* composition is already low-stat-heavy enough to hold up as its
-    // own Reverse deck. Hard gets an explicit two 1*, three 2* table instead of
-    // borrowing Medium's — Medium's table left Hard too close to Medium's own Reverse
-    // strength. Ultra Hard goes all the way to five 1* cards — 1* is the tier with the
-    // lowest possible stat sum (see TIER_CONFIG in cards_db.json's generation), so an
+    // normal (high-star-heavy) table. Easy/Baby Bee keeps its own normal low-star table
+    // under Reverse instead — it's already the weakest possible deck either way, and its
+    // low-star cards are actually strong under Reverse, which is fine since Easy isn't
+    // meant to pose a real threat regardless. Medium reuses its own normal table, since
+    // under Reverse its four 2*, one 3* composition is already low-stat-heavy enough to
+    // hold up as its own Reverse deck. Hard gets an explicit two 1*, three 2* table
+    // instead of borrowing Medium's — Medium's table left Hard too close to Medium's own
+    // Reverse strength. Ultra Hard goes all the way to five 1* cards — 1* is the tier with
+    // the lowest possible stat sum (see TIER_CONFIG in cards_db.json's generation), so an
     // Ultra Hard deck borrowing even Easy's one 2* slot was still measurably weaker
     // under Reverse than an all-1* deck.
     private func reverseComposition(for difficulty: HoneycombDifficulty) -> [(stars: Int, count: Int)] {
         switch difficulty {
-        case .easy: return normalComposition(for: .hard)
+        case .easy: return normalComposition(for: .easy)
         case .medium: return normalComposition(for: .medium)
         case .hard: return [(1, 2), (2, 3)]
         case .ultraHard: return [(1, 5)]
