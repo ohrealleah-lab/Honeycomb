@@ -23,8 +23,13 @@ public partial class HoneycombView : UserControl
 {
     // See GameView.UpdateBoardScrim — tells MainWindow whether this view's post-match
     // OverlayPanel is up so it can extend the darkening over the toolbar too.
-    private void UpdateBoardScrim() =>
+    private void UpdateBoardScrim()
+    {
+        OverlayPanelScrim.IsVisible = OverlayPanel.IsVisible;
+        if (TopLevel.GetTopLevel(this) is MainWindow mw)
+            mw.SizeElementToGameArea(OverlayPanelScrim);
         WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, OverlayPanel.IsVisible));
+    }
 
     private AppLanguage _language = AppLanguage.English;
     private HoneycombViewModel? _vm;

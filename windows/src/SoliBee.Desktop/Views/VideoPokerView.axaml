@@ -190,11 +190,14 @@
              baseline. Spans all rows and is inserted before every other row's content so
              it paints behind them (Avalonia z-orders same-parent children by document
              order); IsHitTestVisible="False" since the banners themselves (NoWinOverlay/
-             WinBanner) are dismissible by tapping through to the board underneath. -->
-        <Border Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False"
-                IsVisible="{Binding #NoWinOverlay.IsVisible}" />
-        <Border Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False"
-                IsVisible="{Binding #WinBanner.IsVisible}" />
+             WinBanner) are dismissible by tapping through to the board underneath.
+             Explicitly sized in code-behind (MainWindow.SizeElementToGameArea, called
+             alongside each BoardScrimRequestMessage send) so it also reaches the
+             side/bottom margins around this board's own tight-fit content, matching
+             MainWindow's GlobalBannerScrim, which only ever covers the toolbar strip
+             (see its comment in MainWindow.axaml). -->
+        <Border x:Name="NoWinOverlayScrim" Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False" IsVisible="False" />
+        <Border x:Name="WinBannerScrim" Grid.Row="0" Grid.RowSpan="3" Classes="banner-scrim" IsHitTestVisible="False" IsVisible="False" />
 
         <!-- Overlay layer (Moved from Game Area to correctly layer above the scrim) -->
         <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,28,0,0">

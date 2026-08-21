@@ -142,8 +142,17 @@
             </Grid>
         </Grid>
 
-        <!-- Darkens the board behind the post-match panel below, matching iOS's baseline. -->
-        <Border Classes="banner-scrim" IsVisible="{Binding #OverlayPanel.IsVisible}" ZIndex="99" />
+        <!-- Darkens the board behind the post-match panel below, matching iOS's baseline.
+             This is the layer that actually dims the Player/Opponent cards (it sits above
+             the whole board layout, below OverlayPanel, both by document order in this
+             view's own z-order) — MainWindow's GlobalBannerScrim can't reach them itself
+             (it only ever covers the toolbar strip; see its comment in MainWindow.axaml).
+             Explicitly sized in code-behind (MainWindow.SizeElementToGameArea, called
+             alongside BoardScrimRequestMessage) rather than left to Stretch-fit this
+             board's own tight content, so it also reaches the side/bottom margins around
+             the centered Player/Board/Baby Bee layout. -->
+        <Border x:Name="OverlayPanelScrim" Classes="banner-scrim" IsVisible="False" ZIndex="99"
+                HorizontalAlignment="Center" VerticalAlignment="Center" />
 
         <!-- Overlay: Post-match panels -->
         <Border x:Name="OverlayPanel" Classes="banner-glow" Background="#BF000000" CornerRadius="12" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,24" MaxWidth="460" ZIndex="100">

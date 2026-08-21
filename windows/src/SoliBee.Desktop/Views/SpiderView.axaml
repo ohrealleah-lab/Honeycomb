@@ -106,15 +106,19 @@
              respects Manually Dismiss Banners via Flash()'s manualDismiss param. -->
         <local:FlashToast x:Name="DealBlockedToast"/>
 
-        <!-- Darkens the board behind each banner below, matching iOS's baseline. -->
-        <Border Classes="banner-scrim" IsVisible="{Binding #AutocompleteBanner.IsVisible}" />
+        <!-- Darkens the board behind each banner below, matching iOS's baseline. Explicitly
+             sized in code-behind (SizeBannerScrimToWindow) — see GameView.axaml's matching
+             NoMovesBannerScrim comment for why. -->
+        <Border x:Name="AutocompleteBannerScrim" Classes="banner-scrim" IsVisible="False"
+                HorizontalAlignment="Center" VerticalAlignment="Stretch" />
 
         <!-- Inline autocomplete banner -->
         <local:AutocompleteBanner x:Name="AutocompleteBanner" IsVisible="False"
                                    AutocompleteClicked="AutocompleteGame_Click"
                                    DismissClicked="AutocompleteDismiss_Click"/>
 
-        <Border Classes="banner-scrim" IsVisible="{Binding #NoMovesBanner.IsVisible}" />
+        <Border x:Name="NoMovesBannerScrim" Classes="banner-scrim" IsVisible="False"
+                HorizontalAlignment="Center" VerticalAlignment="Stretch" />
 
         <!-- Inline stuck banner -->
         <local:StuckBanner x:Name="NoMovesBanner" IsVisible="False"

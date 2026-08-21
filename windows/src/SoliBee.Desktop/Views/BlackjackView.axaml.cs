@@ -597,6 +597,8 @@ public partial class BlackjackView : UserControl
 
         ResultOverlay.Opacity   = 1.0;
         ResultOverlay.IsVisible = true;
+        ResultOverlayScrim.IsVisible = true;
+        if (TopLevel.GetTopLevel(this) is MainWindow mw) mw.SizeElementToGameArea(ResultOverlayScrim);
         WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, true));
 
         if (win)
@@ -626,6 +628,7 @@ public partial class BlackjackView : UserControl
                 _bannerFadeTimer!.Stop();
                 _bannerFadeTimer = null;
                 ResultOverlay.IsVisible = false;
+                ResultOverlayScrim.IsVisible = false;
                 ResultOverlay.Opacity   = 1.0;
                 WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
                 StartCardsFade();
@@ -683,6 +686,7 @@ public partial class BlackjackView : UserControl
         _bannerDelayTimer?.Stop(); _bannerDelayTimer = null;
         _bannerFadeTimer?.Stop();  _bannerFadeTimer  = null;
         ResultOverlay.IsVisible = false;
+        ResultOverlayScrim.IsVisible = false;
         ResultOverlay.Opacity   = 1.0;
         WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
         StopCardsFade();

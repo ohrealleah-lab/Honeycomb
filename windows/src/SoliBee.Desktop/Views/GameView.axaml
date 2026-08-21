@@ -54,8 +54,13 @@
              rather than the cascade's, matching Mac's dismissedWinBanner-gated scrim. -->
         <local:WinAnimationView x:Name="VictoryOverlay" IsVisible="False" />
 
-        <!-- Darkens the board behind the banner below, matching iOS's baseline. -->
-        <Border Classes="banner-scrim" IsVisible="{Binding #NoMovesBanner.IsVisible}" />
+        <!-- Darkens the board behind the banner below, matching iOS's baseline. Explicitly
+             sized in code-behind (SizeBannerScrimToWindow) to the real window's board area
+             rather than left to Stretch-fit this board's own tight content — same
+             HorizontalAlignment="Center"/VerticalAlignment="Stretch" reasoning as
+             DragCanvas above. -->
+        <Border x:Name="NoMovesBannerScrim" Classes="banner-scrim" IsVisible="False"
+                HorizontalAlignment="Center" VerticalAlignment="Stretch" />
 
         <!-- Inline stuck banner -->
         <local:StuckBanner x:Name="NoMovesBanner" IsVisible="False"
@@ -71,7 +76,8 @@
             </local:StuckBanner.ExtraContent>
         </local:StuckBanner>
 
-        <Border Classes="banner-scrim" IsVisible="{Binding #AutocompleteBanner.IsVisible}" />
+        <Border x:Name="AutocompleteBannerScrim" Classes="banner-scrim" IsVisible="False"
+                HorizontalAlignment="Center" VerticalAlignment="Stretch" />
 
         <!-- Inline autocomplete banner -->
         <local:AutocompleteBanner x:Name="AutocompleteBanner" IsVisible="False"

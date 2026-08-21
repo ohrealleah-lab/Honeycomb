@@ -25,9 +25,15 @@ public partial class SpiderView : CardGameView
 
     // See GameView.UpdateBoardScrim — tells MainWindow whether this view's own board-scrim-
     // worthy banners are up so it can extend the darkening over the toolbar too.
-    private void UpdateBoardScrim() =>
+    private void UpdateBoardScrim()
+    {
+        AutocompleteBannerScrim.IsVisible = AutocompleteBanner.IsVisible;
+        NoMovesBannerScrim.IsVisible = NoMovesBanner.IsVisible;
+        SizeBannerScrimToWindow(NoMovesBannerScrim);
+        SizeBannerScrimToWindow(AutocompleteBannerScrim);
         WeakReferenceMessenger.Default.Send(
             new BoardScrimRequestMessage(this, NoMovesBanner.IsVisible || AutocompleteBanner.IsVisible));
+    }
 
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {

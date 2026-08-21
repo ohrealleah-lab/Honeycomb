@@ -14,7 +14,14 @@
              (set true after the bouncing cascade finishes), not this whole overlay's own
              IsVisible, so the dim doesn't show during the cascade animation, matching
              Mac's GameView.swift (scrim lives inside `if !dismissedWinBanner`, not
-             around WinAnimationView itself). -->
+             around WinAnimationView itself). Default Stretch alignment is correct here
+             (unlike GameView's own NoMovesBannerScrim/AutocompleteBannerScrim, which need
+             explicit sizing) — this whole WinAnimationView control is already stamped to
+             the real window's board area by SizeVictoryOverlayToWindow (called at
+             TriggerVictoryCascade time in each host view), so this Border inherits that
+             correct size for free. Works together with MainWindow's GlobalBannerScrim
+             (toolbar strip only) via this view's own BoardScrimRequestMessage sends on
+             WinInfoPanel's show/hide (see WinAnimationView.axaml.cs). -->
         <Border Classes="banner-scrim" IsVisible="{Binding #WinInfoPanel.IsVisible}" />
 
         <!-- Win info panel (top layer) — same blue/gold scheme as the Autocomplete

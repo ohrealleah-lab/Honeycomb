@@ -2001,6 +2001,20 @@ public partial class MainWindow : Window
         return new Size(GameAreaGrid.Bounds.Width / scale, GameAreaGrid.Bounds.Height / scale);
     }
 
+    // Generic version of GameView/FreecellView/SpiderView's SizeDragCanvasToWindow/
+    // SizeVictoryOverlayToWindow (CardGameView.cs) for views with no shared base class to
+    // hang a wrapper off (HoneycombView, BlackjackView, VideoPokerView) — same fix, same
+    // "sized fresh at the moment it matters, not kept in continuous sync" tradeoff: a
+    // game's local banner-scrim Border lives inside the scaled board subtree, so ordinary
+    // Stretch alignment only fills that board's own tight-fit content size, not the real
+    // window, leaving the side/bottom margins around a centered board undimmed.
+    public void SizeElementToGameArea(Control element)
+    {
+        var size = GetUnscaledGameAreaSize();
+        element.Width = size.Width;
+        element.Height = size.Height;
+    }
+
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         if (BoardBackgroundImage.IsVisible && _lastBoardBackgroundOptions != null)

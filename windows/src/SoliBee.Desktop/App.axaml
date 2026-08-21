@@ -17,19 +17,19 @@
             <Setter Property="BoxShadow" Value="0 0 16 0 #80FFD600" />
         </Style>
 
-        <!-- Shared full-board darkening scrim placed behind every win/stuck/autocomplete/
-             result banner, matching iOS's Color.black.opacity(0.45) baseline. Apply to a
-             Border with no HorizontalAlignment/VerticalAlignment set (so it stretches to
-             fill its parent Grid/Panel cell instead of sizing to content), placed before
-             the banner card in z-order. Blocks pointer input by default (like
-             StealConfirmationPanel's existing scrim in HoneycombView.axaml) since these
-             banners are modal; set IsHitTestVisible="False" per-instance for a banner
-             whose board should stay clickable underneath (e.g. Video Poker's result
-             overlay). Not used on toasts (FlashToast) or persistent HUD chips
-             (RulesBannerBar, StealInstructionBar) — those stay undimmed. -->
+        <!-- This is the layer that actually darkens each game's own cards — it sits above
+             them but below that game's own banner popup, both by document order in each
+             view's own XAML. Explicitly sized (via SizeBannerScrimToWindow, called
+             alongside BoardScrimRequestMessage at each banner's show site — see e.g.
+             GameView.axaml.cs) to the real window's board-row area rather than left to
+             Stretch-fit its own tight card content, so it also reaches the side/bottom
+             margins around a centered board, matching MainWindow's GlobalBannerScrim,
+             which covers only the toolbar strip this can't reach — see that element's
+             comment for why the two are split this way instead of overlapping. -->
         <Style Selector="Border.banner-scrim">
             <Setter Property="Background" Value="#73000000" />
         </Style>
+
 
         <!-- Shared close "X" circle button used on every dismissible banner
              (WinAnimationView, and the No-Moves/Autocomplete banners in

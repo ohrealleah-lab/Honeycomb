@@ -490,6 +490,13 @@ public partial class VideoPokerView : UserControl
         _activeBanner = banner;
         banner.Opacity = 1.0;
         banner.IsVisible = true;
+        NoWinOverlayScrim.IsVisible = banner == NoWinOverlay;
+        WinBannerScrim.IsVisible = banner == WinBanner;
+        if (TopLevel.GetTopLevel(this) is MainWindow mw)
+        {
+            mw.SizeElementToGameArea(NoWinOverlayScrim);
+            mw.SizeElementToGameArea(WinBannerScrim);
+        }
         WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, true));
         if (banner == WinBanner)
             WinParticleSystem.Burst(ParticleCanvas);
@@ -525,6 +532,8 @@ public partial class VideoPokerView : UserControl
                 {
                     _activeBanner.IsVisible = false;
                     _activeBanner.Opacity   = 1.0;
+                    NoWinOverlayScrim.IsVisible = false;
+                    WinBannerScrim.IsVisible = false;
                     _activeBanner = null;
                     WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
                 }
@@ -547,6 +556,8 @@ public partial class VideoPokerView : UserControl
         {
             _activeBanner.IsVisible = false;
             _activeBanner.Opacity   = 1.0;
+            NoWinOverlayScrim.IsVisible = false;
+            WinBannerScrim.IsVisible = false;
             _activeBanner = null;
             WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
         }

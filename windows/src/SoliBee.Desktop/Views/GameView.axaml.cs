@@ -22,9 +22,18 @@ public partial class GameView : CardGameView
     // Tells MainWindow whether this view's own board-scrim-worthy banners are up, so it can
     // extend the darkening over the toolbar too (see BoardScrimRequestMessage). `this` is
     // the source key — WinAnimationView's own VictoryOverlay reports itself separately.
-    private void UpdateBoardScrim() =>
+    private void UpdateBoardScrim()
+    {
+        // Re-stamped every call (not just once) since a resize could happen between one
+        // banner and the next — see SizeBannerScrimToWindow's own comment for why a
+        // per-event stamp (not continuous sync) is an accepted tradeoff here.
+        AutocompleteBannerScrim.IsVisible = AutocompleteBanner.IsVisible;
+        NoMovesBannerScrim.IsVisible = NoMovesBanner.IsVisible;
+        SizeBannerScrimToWindow(NoMovesBannerScrim);
+        SizeBannerScrimToWindow(AutocompleteBannerScrim);
         WeakReferenceMessenger.Default.Send(
             new BoardScrimRequestMessage(this, NoMovesBanner.IsVisible || AutocompleteBanner.IsVisible));
+    }
 
     public override bool CanMoveCards(List<Card> cards, Pile targetPile)
     {

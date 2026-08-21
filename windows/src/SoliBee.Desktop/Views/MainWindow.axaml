@@ -135,13 +135,21 @@
 
         </Grid>
 
-        <!-- Extends a game view's own local banner-scrim (Win/Stuck/Autocomplete/round-result)
-             up over the toolbar strip — driven by BoardScrimRequestMessage (see MainWindow.axaml.cs),
-             since the local per-game scrims live inside GameAreaGrid (root Grid.Row="1") and are
-             sized to that game's own board content, so they can never reach Row 0 themselves.
-             IsHitTestVisible="False" (unlike ConfirmActionOverlay) — these banners are
-             non-modal today (toolbar stays clickable while e.g. a Win banner is up), so this
-             purely extends the darkening without changing that. -->
+        <!-- Covers ONLY the toolbar strip — driven by BoardScrimRequestMessage (see
+             MainWindow.axaml.cs). Deliberately Grid.Row="0" only, not RowSpan="2": each
+             game's own local Border.banner-scrim (App.axaml) is sized (via
+             SizeBannerScrimToWindow, called alongside BoardScrimRequestMessage at each
+             banner's show site) to cover the entire board row itself, including the
+             side/bottom margins its old tight-content-only size used to miss — see that
+             method's comment. Splitting the two this way (toolbar here, everything else
+             there) means the two darkening layers never cover the same pixel twice, unlike
+             an earlier version that spanned both rows here and produced a visibly darker
+             rectangle wherever it overlapped the local scrim. It also means a banner's own
+             popup — sitting above its board's local scrim in that view's own z-order, but
+             never above this element at all since this is confined to the toolbar row it
+             lives nowhere near — is never darkened. IsHitTestVisible="False" (unlike
+             ConfirmActionOverlay) so it never blocks toolbar clicks — these banners are
+             non-modal today (toolbar stays clickable while e.g. a Win banner is up). -->
         <Grid x:Name="GlobalBannerScrim" Background="#73000000" IsVisible="False" IsHitTestVisible="False"
               HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0" ZIndex="120" />
 

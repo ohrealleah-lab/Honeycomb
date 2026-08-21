@@ -84,6 +84,20 @@ public abstract class CardGameView : UserControl
         }
     }
 
+    // Same fix as SizeDragCanvasToWindow/SizeVictoryOverlayToWindow above, for a game's
+    // own local banner-scrim Border (App.axaml's Border.banner-scrim) — it's the layer
+    // that actually darkens this game's cards (sitting above them, below that game's own
+    // banner popup, both by document order in this view's own XAML), but left to Stretch-
+    // fit its tight card content it misses the side/bottom margins around a centered
+    // board. Called alongside each BoardScrimRequestMessage send (see e.g.
+    // GameView.axaml.cs) rather than kept in continuous sync, matching the other two
+    // methods' tradeoff.
+    protected void SizeBannerScrimToWindow(Border scrim)
+    {
+        if (TopLevel.GetTopLevel(this) is MainWindow mw)
+            mw.SizeElementToGameArea(scrim);
+    }
+
     // The named controls TriggerVictoryCascade/DebugShowWinBanner/etc. below need —
     // each subclass's own XAML-named element, exposed once here so the logic that
     // touches them can live in one place instead of being copy-pasted per game.
