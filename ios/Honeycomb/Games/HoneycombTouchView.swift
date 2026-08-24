@@ -86,9 +86,15 @@ struct HoneycombTouchView: View {
     private let placementHaptic = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
+        // Landscape-vs-portrait is needed before topBar renders (to decide whether
+        // rulesCapsule joins it or stays its own row below), earlier than the inner
+        // GeometryReader below — which exists only to scale the board — computes its
+        // own copy of the same thing.
+        GeometryReader { outerGeo in
+        let isLandscape = outerGeo.size.width > outerGeo.size.height
         ZStack {
             VStack(spacing: 0) {
-                topBar
+                topBar(isLandscape: isLandscape)
                     .padding(.horizontal, 8)
                     .frame(height: 44)
                     // The pre-game "Start" button (borderedProminent + icon label) is
@@ -103,9 +109,15 @@ struct HoneycombTouchView: View {
                 // floated it as an overlay reaching up into topBar's icons). Score
                 // renders separately, in scoreCapsule below the board, so it can no
                 // longer drag this row's height up and risk that same overlap.
-                rulesCapsule
-                    .padding(.top, 6)
-                    .padding(.bottom, 8)
+                // Landscape instead shows a compact version inside topBar itself (see
+                // rulesCapsuleCompact) — landscape's shorter height has the least room
+                // to spare, so freeing up this whole row matters more there than it
+                // does in portrait.
+                if !isLandscape {
+                    rulesCapsule
+                        .padding(.top, 6)
+                        .padding(.bottom, 8)
+                }
 
                 GeometryReader { geo in
                     let isLandscape = geo.size.width > geo.size.height
@@ -170,7 +182,7 @@ struct HoneycombTouchView: View {
                     .zIndex(100)
             }
             if showNoHintsBanner {
-                FlashBannerView(message: coordinator.L(.noHintsBanner))
+                FlashBannerView(message: coordinator.L(.noHintsBanner), onDismiss: dismissNoHintsBanner)
                     .zIndex(100)
             }
 
@@ -293,11 +305,12 @@ struct HoneycombTouchView: View {
             }
         }
         .background(IOSBackgroundLayer())
+        }
     }
 
     // MARK: Top bar
 
-    private var topBar: some View {
+    private func topBar(isLandscape: Bool) -> some View {
         // Tightened from spacing: 12 — up to seven 44pt icon buttons (menu/options/
         // palette/manage decks/debug/undo/hint) plus the Quit/Start button no longer
         // fit an iPhone's width at the old spacing once undo/hint moved up here from
@@ -360,6 +373,16 @@ struct HoneycombTouchView: View {
                     Label(coordinator.L(.startButton), systemImage: "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
+            }
+        }
+        // Landscape only — see rulesCapsuleCompact for why this is a distinct, shorter
+        // variant rather than reusing rulesCapsule directly: topBar's frame is clipped
+        // to 44pt (to contain the pre-game Start button), so anything placed here has
+        // to actually fit within that band, not just overflow into it the way
+        // Blackjack/Video Poker's credit-panel overlay does.
+        .overlay {
+            if isLandscape {
+                rulesCapsuleCompact
             }
         }
     }
@@ -582,7 +605,11 @@ struct HoneycombTouchView: View {
             .onTapGesture {
                 isShowingRulesTooltip = true
             }
-            .popover(isPresented: $isShowingRulesTooltip, attachmentAnchor: .point(.bottom), arrowEdge: .bottom) {
+            // Anchored/arrowed from the top, not the bottom — this row sits right
+            // below topBar with no room above it for a popover to open upward into;
+            // .bottom used to push the popover up against (and get clipped by) the
+            // status bar/notch. Opening downward into the board has plenty of room.
+            .popover(isPresented: $isShowingRulesTooltip, attachmentAnchor: .point(.top), arrowEdge: .top) {
                 let isPreGame = viewModel.gameState != .playing && viewModel.gameState != .suddenDeath
                 let isRoulette = isPreGame && !viewModel.options.forceNormalMode && viewModel.options.selectedRules.isEmpty
                 let effectiveRules: [HoneycombRule] = isPreGame && !isRoulette ? Array(viewModel.options.selectedRules) : viewModel.activeRules
@@ -594,6 +621,41 @@ struct HoneycombTouchView: View {
             .padding(.vertical, 8)
             .background(Color.black.opacity(0.75))
             .cornerRadius(16)
+    }
+
+    // Landscape's topBar overlay version of rulesCapsule — same tap-to-explain
+    // popover and content, but sized to actually fit inside topBar's clipped 44pt
+    // band instead of rulesCapsule's own fixed 40pt-minimum, two-line, generously-
+    // padded pill, which would just get clipped off here. Single line, smaller font,
+    // truncates rather than wrapping — landscape's shorter screen has the least
+    // vertical room to spare, so this trades some horizontal legibility for not
+    // needing its own row at all.
+    private var rulesCapsuleCompact: some View {
+        Text(rulesBannerLines.joined(separator: "  •  "))
+            .font(.system(size: 13, weight: .black))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .truncationMode(.tail)
+            .frame(maxWidth: 240)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isShowingRulesTooltip = true
+            }
+            // See rulesCapsule's identical comment — this sits even closer to the true
+            // top of the screen (inside topBar itself), so the same top-edge/notch
+            // clipping problem is worse here if left anchored/arrowed from the bottom.
+            .popover(isPresented: $isShowingRulesTooltip, attachmentAnchor: .point(.top), arrowEdge: .top) {
+                let isPreGame = viewModel.gameState != .playing && viewModel.gameState != .suddenDeath
+                let isRoulette = isPreGame && !viewModel.options.forceNormalMode && viewModel.options.selectedRules.isEmpty
+                let effectiveRules: [HoneycombRule] = isPreGame && !isRoulette ? Array(viewModel.options.selectedRules) : viewModel.activeRules
+                RuleExplanationPopover(viewModel: viewModel, isRoulette: isRoulette, effectiveRules: effectiveRules)
+                    .presentationCompactAdaptation(.popover)
+            }
+            .foregroundStyle(.yellow)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(Color.black.opacity(0.75))
+            .cornerRadius(14)
     }
 
     // Score only shows once a match exists — matches the old scoreBadge's gating —
@@ -857,12 +919,16 @@ struct HoneycombTouchView: View {
         ruleBannerTask = task
     }
 
+    private func dismissNoHintsBanner() {
+        noHintsBannerTask?.cancel()
+        noHintsBannerTask = nil
+        withAnimation(.easeOut(duration: 0.3)) { showNoHintsBanner = false }
+    }
+
     private func flashNoHintsBanner() {
         noHintsBannerTask?.cancel()
         withAnimation(.easeIn(duration: 0.15)) { showNoHintsBanner = true }
-        let task = DispatchWorkItem {
-            withAnimation(.easeOut(duration: 0.3)) { showNoHintsBanner = false }
-        }
+        let task = DispatchWorkItem { dismissNoHintsBanner() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
         noHintsBannerTask = task
     }
