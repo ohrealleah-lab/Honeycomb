@@ -568,8 +568,16 @@ struct BlackjackTouchView: View {
                             }
                         }
                     }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
+                    // Padding only when it's actually doing something (giving the
+                    // split active-hand highlight below room to breathe) — applied
+                    // unconditionally before, this widened a single non-split hand by
+                    // 10pt a side versus both the placeholder state and dealerArea
+                    // (neither of which ever has this padding), so the whole centered
+                    // HStack row grew the moment a hand was dealt, pushing the
+                    // dealer's side further right even though it hadn't changed size
+                    // at all.
+                    .padding(.vertical, viewModel.state.playerHands.count > 1 ? 6 : 0)
+                    .padding(.horizontal, viewModel.state.playerHands.count > 1 ? 10 : 0)
                     .background(
                         (i == viewModel.state.activeHandIndex && viewModel.state.phase == .playing && viewModel.state.playerHands.count > 1)
                             ? Color.black.opacity(0.25) : .clear,
@@ -809,44 +817,42 @@ struct BlackjackTouchView: View {
 
     // Stacked, not the portrait/original actionControls' HStack row — a Hit/Stand/
     // Double/Split row at full size (or even compact size) is wider than
-    // inlineLandscapeControls' column has room for. Each button is only
-    // bettingGridButtonWidth wide (one grid cell, not bettingGridLandscape's full
-    // double-width Deal) — narrower than the column's own reserved width (which
-    // stays pinned to bettingGridButtonWidth * 2 + bettingGridSpacing so cardW
-    // doesn't change once a hand starts), so it renders centered with breathing
-    // room on either side instead of crowding into the dealer's cards.
+    // inlineLandscapeControls' column has room for. Each button spans the full
+    // column width (bettingGridButtonWidth * 2 + bettingGridSpacing, matching
+    // bettingGridLandscape's Deal button) rather than a single grid-cell width —
+    // narrower than that wrapped "Stand"/"Double" onto two lines and clipped.
     private var actionColumnLandscape: some View {
         VStack(spacing: Self.bettingGridSpacing) {
             casinoButton(coordinator.L(.touchActionHit), color: .green.opacity(0.85), compact: true,
-                         width: Self.bettingGridButtonWidth) {
+                         width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) {
                 viewModel.hit()
                 actionHaptic.impactOccurred()
             }
             casinoButton(coordinator.L(.touchActionStand), color: .red.opacity(0.75), compact: true,
-                         width: Self.bettingGridButtonWidth) {
+                         width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) {
                 viewModel.stand()
                 actionHaptic.impactOccurred()
             }
             if viewModel.canDouble {
                 casinoButton(coordinator.L(.touchActionDouble), color: .blue.opacity(0.75), compact: true,
-                             width: Self.bettingGridButtonWidth) {
+                             width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) {
                     viewModel.doubleDown()
                     actionHaptic.impactOccurred()
                 }
             }
             if viewModel.canSplit {
                 casinoButton(coordinator.L(.touchActionSplit), color: .purple.opacity(0.75), compact: true,
-                             width: Self.bettingGridButtonWidth) {
+                             width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) {
                     viewModel.split()
                     actionHaptic.impactOccurred()
                 }
             }
         }
-        // Centers the narrower buttons within the same width bettingGridLandscape
-        // occupies, rather than letting this VStack's own (now smaller) natural
-        // width shrink the whole column — that would pull playerHandsArea/
-        // dealerArea in closer together too, shifting the board sideways the
-        // moment a hand starts even though cardW itself hasn't changed.
+        // Redundant with each button's own explicit width above, but pins the
+        // VStack's own reported width too — without it, an empty state (Double/
+        // Split both hidden) could in principle report a narrower natural width and
+        // shrink the whole column, pulling playerHandsArea/dealerArea closer
+        // together and shifting the board sideways even though cardW hasn't changed.
         .frame(width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing)
     }
 
