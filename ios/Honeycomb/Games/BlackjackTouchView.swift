@@ -155,9 +155,13 @@ struct BlackjackTouchView: View {
                 // scroll.
                 ScrollView {
                     VStack(spacing: 16) {
-                        topBar
+                        topBar(isLandscape: isLandscape)
                             .padding(.horizontal, 12)
                             .frame(height: 44)
+
+                        if !isLandscape && !viewModel.isFreePlay {
+                            creditDisplay
+                        }
 
                         if isLandscape {
                             // Landscape's width can't spare the height a vertical
@@ -355,7 +359,7 @@ struct BlackjackTouchView: View {
 
     // MARK: Top bar
 
-    private var topBar: some View {
+    private func topBar(isLandscape: Bool) -> some View {
         HStack(spacing: 10) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
             debugMenuButton(items: [("Win", .win), ("Loss", .loss)]) {
@@ -368,17 +372,21 @@ struct BlackjackTouchView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.8))
         }
-        // Overlay on the whole bar, not a third HStack element flanked by Spacers,
-        // matching Klondike's identical statusCapsule placement — reclaims the
-        // separate row creditDisplay used to occupy below topBar, giving that space
-        // back to the cards. Top-aligned, not centered — creditDisplay's own height
-        // is taller than topBar's fixed 44pt band, and centering it split that
-        // overflow evenly above/below, pushing it up into the status bar/notch above
-        // the screen's safe area. Top-aligning keeps its top edge flush with topBar's
-        // instead, with a little padding on top of that so it doesn't sit flush
-        // against the very top; all the overflow lands below, into the board.
+        // Landscape only: overlay on the whole bar, not a third HStack element flanked
+        // by Spacers, matching Klondike's identical statusCapsule placement — reclaims
+        // the separate row creditDisplay would otherwise occupy below topBar, giving
+        // that space back to the cards (landscape's shorter height has the least room
+        // to spare). Top-aligned, not centered — creditDisplay's own height is taller
+        // than topBar's fixed 44pt band, and centering it split that overflow evenly
+        // above/below, pushing it up into the status bar/notch above the screen's safe
+        // area. Top-aligning keeps its top edge flush with topBar's instead, with a
+        // little padding on top of that so it doesn't sit flush against the very top;
+        // all the overflow lands below, into the board.
+        // Portrait has height to spare, so creditDisplay instead renders as its own row
+        // below topBar (see body) rather than overlapping the menu icons — the overlay
+        // was only ever a landscape space-saving trick, not the intended default.
         .overlay(alignment: .top) {
-            if !viewModel.isFreePlay {
+            if isLandscape && !viewModel.isFreePlay {
                 creditDisplay
                     .padding(.top, 6)
             }

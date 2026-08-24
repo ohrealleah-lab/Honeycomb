@@ -72,9 +72,14 @@ struct VideoPokerTouchView: View {
             // whenever No Stress Mode (or hideBetBoard) hid the pay table.
             ZStack(alignment: .bottom) {
                 VStack(spacing: 0) {
-                    topBar
+                    topBar(isLandscape: isLandscape)
                         .padding(.horizontal, 12)
                         .frame(height: 44)
+
+                    if !isLandscape && !viewModel.isFreePlay {
+                        creditDisplay
+                            .padding(.top, 8)
+                    }
 
                     // ScrollView fallback rather than a computed shrink factor: unlike
                     // the tableau games, most of this view's height is fixed-size text
@@ -91,6 +96,10 @@ struct VideoPokerTouchView: View {
                             // landscape's shorter height has the least room to spare, so
                             // it always wins regardless of the manual setting.
                             if !isLandscape && !viewModel.options.hideBetBoard && !viewModel.options.noStressMode {
+                                Text(localizedVariantName(viewModel.options.variant, language: coordinator.language))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.8))
+                                    .lineLimit(1)
                                 payTableView
                                     .padding(.horizontal, 16)
                             }
@@ -283,31 +292,39 @@ struct VideoPokerTouchView: View {
 
     // MARK: Top bar
 
-    private var topBar: some View {
+    private func topBar(isLandscape: Bool) -> some View {
         HStack(spacing: 10) {
-            menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
+            topBarIconButton(systemImage: "square.grid.2x2", accessibilityLabel: coordinator.L(.menuTabGameSelection)) {
+                isMenuOpen = true
+            }
             debugMenuButton(items: [("Win", .win), ("Loss", .loss)]) {
                 viewModel.debugBannerRequest = $0
             }
 
             Spacer()
 
-            Text(localizedVariantName(viewModel.options.variant, language: coordinator.language))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.8))
-                .lineLimit(1)
+            // Options/Themes right-aligned, per request — previously bunched with Game
+            // Selection on the left, which put them directly under creditDisplay's
+            // overlay (see below) and read as visually cramped/overlapping.
+            topBarIconButton(systemImage: "gearshape", accessibilityLabel: coordinator.L(.options)) {
+                showingOptions = true
+            }
+            topBarIconButton(systemImage: "paintpalette", accessibilityLabel: coordinator.L(.themesPanelTitle)) {
+                showingThemes = true
+            }
         }
-        // Overlay on the whole bar, not a third HStack element flanked by Spacers,
-        // matching Klondike's identical statusCapsule placement — reclaims the
-        // separate row creditDisplay used to occupy in the ScrollView content, giving
-        // that space back to the cards. Top-aligned, not centered — creditDisplay's
+        // Landscape only: overlay on the whole bar, not a third HStack element flanked
+        // by Spacers, matching Klondike's identical statusCapsule placement — reclaims
+        // the separate row creditDisplay would otherwise occupy in the ScrollView
+        // content, giving that space back to the cards (landscape's shorter height has
+        // the least room to spare). Top-aligned, not centered — creditDisplay's
         // own height is taller than topBar's fixed 44pt band, and centering it split
         // that overflow evenly above/below, pushing it up into the status bar/notch
         // above the screen's safe area. Top-aligning keeps its top edge flush with
         // topBar's instead, with a little padding on top of that so it doesn't sit
         // flush against the very top; all the overflow lands below, into the board.
         .overlay(alignment: .top) {
-            if !viewModel.isFreePlay {
+            if isLandscape && !viewModel.isFreePlay {
                 creditDisplay
                     .padding(.top, 6)
             }
@@ -541,8 +558,8 @@ struct VideoPokerTouchView: View {
             }
         } else {
             VStack(spacing: 12) {
-                phaseButton(compact: false)
                 betTrio(compact: false)
+                phaseButton(compact: false)
             }
         }
     }
