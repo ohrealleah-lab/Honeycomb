@@ -181,6 +181,12 @@ public struct HoneycombDecksView: View {
 
                                 startOverPanel
                             }
+                            // Transparent gaps between rows don't hit-test by default on
+                            // macOS — without this, scrolling with the pointer over one of
+                            // those gaps (rather than directly on a row) silently did
+                            // nothing instead of scrolling the list.
+                            .contentShape(Rectangle())
+                            .frame(maxWidth: .infinity)
                         }
                         .frame(maxHeight: .infinity)
                     }
@@ -239,6 +245,12 @@ public struct HoneycombDecksView: View {
                                 }
                             }
                             .padding(.vertical, 4)
+                            // Transparent gaps between cards don't hit-test by default on
+                            // macOS — without this, scrolling with the pointer over a gap
+                            // (rather than directly on a card) silently did nothing instead
+                            // of scrolling the grid.
+                            .contentShape(Rectangle())
+                            .frame(maxWidth: .infinity)
                         }
                     }
                     .padding()
