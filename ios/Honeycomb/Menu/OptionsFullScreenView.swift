@@ -35,7 +35,6 @@ struct OptionsFullScreenView<GameSettings: View>: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     languageSection
-                    globalSection
                     if showsGameSection {
                         VStack(alignment: .leading, spacing: 10) {
                             sectionHeading(coordinator.gameMode.localizedDisplayName(language: coordinator.language))
@@ -44,6 +43,7 @@ struct OptionsFullScreenView<GameSettings: View>: View {
                                 .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
                         }
                     }
+                    globalSection
                     navigationSection
                 }
                 .padding(16)

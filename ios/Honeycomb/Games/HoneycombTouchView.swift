@@ -18,7 +18,6 @@ struct HoneycombTouchView: View {
     private static let cardAspect: CGFloat = CardDimensions.aspectRatio
     private static let boardCardSize = CGSize(width: 150, height: 150 * cardAspect)
     private static let playerCardSize = CGSize(width: 116, height: 116 * cardAspect)
-    private static let opponentCardSize = CGSize(width: 96, height: 96 * cardAspect)
     private static let boardSpacing: CGFloat = 10
     private static let handSpacing: CGFloat = 6
     private static let dealFlipStagger: Double = HoneycombFlipTiming.duration
@@ -375,8 +374,9 @@ struct HoneycombTouchView: View {
             let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
             // VStack(spacing: 8) { oppRow; boardGrid.padding(.vertical,4); playerRow }
             // .padding(8) = oppRow + boardHeight + playerRow + (2 gaps*8 +
-            // boardGrid's own vertical padding 8 + outer padding 16).
-            let height = Self.opponentCardSize.height + Self.playerCardSize.height + boardHeight + 40
+            // boardGrid's own vertical padding 8 + outer padding 16). oppRow now
+            // uses playerCardSize too (matched sizes per request), hence the *2.
+            let height = Self.playerCardSize.height * 2 + boardHeight + 40
             return CGSize(width: width * 1.02, height: height * 1.04)
         }
     }
@@ -424,11 +424,13 @@ struct HoneycombTouchView: View {
             .padding(16)
         } else {
             VStack(spacing: 8) {
-                rowHand(cards: opponentDisplayHand, size: Self.opponentCardSize) { i, card in
+                // Matches playerCardSize per request — was a smaller, distinct
+                // opponentCardSize before.
+                rowHand(cards: opponentDisplayHand, size: Self.playerCardSize) { i, card in
                     HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
-                        HoneycombCardView(card: card, size: Self.opponentCardSize, isFlipped: true)
+                        HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)
                     } back: {
-                        opponentHandCard(card, size: Self.opponentCardSize)
+                        opponentHandCard(card, size: Self.playerCardSize)
                             .id(card.id)
                     }
                     .id(handIdentityToken)
