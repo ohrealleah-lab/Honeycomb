@@ -154,7 +154,6 @@ struct BlackjackTouchView: View {
                 // is pinned below as a fixed bottom bar (not part of this scrolling
                 // content) so it's never what gets pushed off screen — only the cards
                 // scroll.
-                ScrollViewReader { scrollProxy in
                 ScrollView {
                     VStack(spacing: 16) {
                         topBar(isLandscape: isLandscape)
@@ -191,14 +190,6 @@ struct BlackjackTouchView: View {
 
                             playerHandsArea(cardW: cardW, maxHandWidth: maxHandWidth)
                         }
-
-                        // Scroll target for the auto-scroll below — a split's second (or
-                        // third) hand can push content taller than the screen in either
-                        // orientation, and without this the fixed controls bar/
-                        // inlineLandscapeControls would sit on top of whichever hand
-                        // happened to be at the bottom of the unscrolled viewport instead
-                        // of the player ever seeing it move out of the way.
-                        Color.clear.frame(height: 1).id("bjScrollBottom")
                     }
                     // Reserves room at the bottom for the fixed controls bar (measured
                     // live below) so the last card/banner content never ends up
@@ -227,21 +218,6 @@ struct BlackjackTouchView: View {
                 // actually overflows it — exactly the fallback-only behavior wanted.
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicators(.hidden)
-                // Split creates a second hand (or bust/advance moves to it) — scroll so
-                // the controls bar/inlineLandscapeControls end up below the newly-visible
-                // content instead of on top of it. .bottom anchor, not .top, so the
-                // active hand and the controls acting on it both land in view together.
-                .onChange(of: viewModel.state.playerHands.count) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        scrollProxy.scrollTo("bjScrollBottom", anchor: .bottom)
-                    }
-                }
-                .onChange(of: viewModel.state.activeHandIndex) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        scrollProxy.scrollTo("bjScrollBottom", anchor: .bottom)
-                    }
-                }
-                }
 
                 // Overlay, not part of the ScrollView's flow — centers on the whole
                 // screen regardless of scroll position or how tall the dealer/player
