@@ -108,7 +108,8 @@ struct HoneycombTouchView: View {
 
                 GeometryReader { geo in
                     let isLandscape = geo.size.width > geo.size.height
-                    let intrinsic = intrinsicSize(landscape: isLandscape)
+                    let landscapeHandSize = isLandscape ? computeLandscapeHandCardSize(availableSize: geo.size) : Self.boardCardSize
+                    let intrinsic = intrinsicSize(landscape: isLandscape, landscapeHandCardSize: landscapeHandSize)
                     let scale = min(2.0, max(0.2, min(geo.size.width / intrinsic.width,
                                                       geo.size.height / intrinsic.height)))
 
@@ -123,7 +124,7 @@ struct HoneycombTouchView: View {
                     // no drag never reproduced it). .overlay()'s content is documented
                     // to never affect the base view's reported size, unlike a plain
                     // ZStack sibling, which removes that risk entirely.
-                    gameContent(landscape: isLandscape)
+                    gameContent(landscape: isLandscape, landscapeHandCardSize: landscapeHandSize)
                         // No explicit alignment — matches the original ZStack's default
                         // (.center) exactly. An earlier version of this fix added
                         // alignment: .topLeading here, which changed how any mismatch
@@ -132,7 +133,7 @@ struct HoneycombTouchView: View {
                         // instead of split evenly) — that's what pushed the setup screen's
                         // placeholder hand up into the topBar after quitting a match.
                         .frame(width: intrinsic.width, height: intrinsic.height)
-                        .overlay(dragGhost)
+                        .overlay(dragGhost(landscape: isLandscape, landscapeHandCardSize: landscapeHandSize))
                     // Anchors dragSpace — every cellFrames GeometryReader and DragGesture
                     // .named(Self.dragSpace) reference (see dropCellIndex() below) depends
                     // on this exact container. Moving this modifier elsewhere, or applying
@@ -360,9 +361,9 @@ struct HoneycombTouchView: View {
     // of risking that same crop. Neither branch includes the rules banner or the
     // score line — rulesCapsule and scoreCapsule are both fixed rows outside this
     // scaled content now (see body), not part of gameContent's own tree.
-    private func intrinsicSize(landscape: Bool) -> CGSize {
+    private func intrinsicSize(landscape: Bool, landscapeHandCardSize: CGSize = HoneycombTouchView.boardCardSize) -> CGSize {
         if landscape {
-            let handColumnWidth = 2 * Self.playerCardSize.width + Self.handSpacing
+            let handColumnWidth = 2 * landscapeHandCardSize.width + Self.handSpacing
             let boardWidth = 3 * Self.boardCardSize.width + 2 * Self.boardSpacing
             let width = handColumnWidth * 2 + boardWidth + 2 * 24 + 32
             let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
@@ -381,17 +382,58 @@ struct HoneycombTouchView: View {
         }
     }
 
+    // Landscape's hand-card size, solved from the available window size rather than a
+    // fixed constant. The board's fixed 3-row grid governs the overall scale on a
+    // landscape iPhone (its height is always the binding dimension — the board alone is
+    // taller relative to its width than the very wide/short landscape screen is), which
+    // leaves the hand columns with spare horizontal room at that same scale. This solves
+    // for the hand-card width that exactly fills that spare room — i.e. the largest size
+    // that doesn't shrink the board — instead of guessing a fixed multiple of
+    // boardCardSize that either falls short or (on a narrower landscape window) overflows.
+    private func computeLandscapeHandCardSize(availableSize: CGSize) -> CGSize {
+        let boardWidth = 3 * Self.boardCardSize.width + 2 * Self.boardSpacing
+        let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
+        // Must match intrinsicSize(landscape: true)'s height formula exactly, or the
+        // scale this solves for won't match the scale actually applied later, and
+        // hand cards come out sized for a different box than they're rendered into.
+        let fixedIntrinsicHeight = (boardHeight + 32) * 1.04
+        guard fixedIntrinsicHeight > 0, availableSize.height > 0 else { return Self.boardCardSize }
+        let scale = availableSize.height / fixedIntrinsicHeight
+        guard scale > 0 else { return Self.boardCardSize }
+        // Inverse of intrinsicSize(landscape: true)'s width formula, solved for the
+        // per-card width given a target total intrinsic width of availableSize.width/scale.
+        let targetIntrinsicWidth = availableSize.width / scale
+        let widthForBothHandColumns = targetIntrinsicWidth / 1.02 - boardWidth - 2 * 24 - 32
+        let handColumnWidth = widthForBothHandColumns / 2
+        let widthFromFill = (handColumnWidth - Self.handSpacing) / 2
+
+        // pyramidHand stacks 3 rows (2/2/1), so its height is 3 card-heights plus 2
+        // gaps — that has to fit within boardHeight too (the fixed height this whole
+        // function assumed), or the hand column ends up taller than the board and
+        // overflows top/bottom despite there being width to spare. This is the real
+        // binding constraint in a 3-row pyramid — it caps hand cards barely above
+        // boardCardSize regardless of how much horizontal room is free.
+        let maxCardHeightFromPyramid = (boardHeight - 2 * Self.handSpacing) / 3
+        let widthFromPyramidHeight = maxCardHeightFromPyramid / Self.cardAspect
+
+        // Never smaller than the board cards — an unusually narrow landscape window
+        // (out of scope: iPad) falls back to matching the board rather than shrinking
+        // hand cards below their old fixed 116pt size.
+        let width = max(min(widthFromFill, widthFromPyramidHeight), Self.boardCardSize.width)
+        return CGSize(width: width, height: width * Self.cardAspect)
+    }
+
     @ViewBuilder
-    private func gameContent(landscape: Bool) -> some View {
+    private func gameContent(landscape: Bool, landscapeHandCardSize: CGSize = HoneycombTouchView.boardCardSize) -> some View {
         if landscape {
             HStack(alignment: .center, spacing: 24) {
                 VStack(spacing: 6) {
                     handLabel(coordinator.L(.handLabelYou))
-                    pyramidHand(cards: playerDisplayHand, size: Self.playerCardSize) { i, card in
+                    pyramidHand(cards: playerDisplayHand, size: landscapeHandCardSize) { i, card in
                         HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
-                            HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)
+                            HoneycombCardView(card: card, size: landscapeHandCardSize, isFlipped: true)
                         } back: {
-                            playerHandCard(card)
+                            playerHandCard(card, size: landscapeHandCardSize)
                                 .id(card.id)
                         }
                         .id(handIdentityToken)
@@ -407,11 +449,11 @@ struct HoneycombTouchView: View {
                     // Not "Dealer" — Honeycomb's opponent is a named AI difficulty
                     // (e.g. "Baby Bee"), not a card-game dealer role like Blackjack's.
                     handLabel(honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language))
-                    pyramidHand(cards: opponentDisplayHand, size: Self.playerCardSize) { i, card in
+                    pyramidHand(cards: opponentDisplayHand, size: landscapeHandCardSize) { i, card in
                         HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
-                            HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)
+                            HoneycombCardView(card: card, size: landscapeHandCardSize, isFlipped: true)
                         } back: {
-                            opponentHandCard(card, size: Self.playerCardSize)
+                            opponentHandCard(card, size: landscapeHandCardSize)
                                 .id(card.id)
                         }
                         .id(handIdentityToken)
@@ -652,14 +694,14 @@ struct HoneycombTouchView: View {
     // MARK: Hand cards
 
     @ViewBuilder
-    private func playerHandCard(_ card: HoneycombCard) -> some View {
+    private func playerHandCard(_ card: HoneycombCard, size: CGSize = Self.playerCardSize) -> some View {
         let handIndex = viewModel.playerHand.firstIndex(where: { $0.id == card.id })
         let isMandated = viewModel.gameState == .playing
             && viewModel.mandatedPlayerHandIndex != nil
             && viewModel.mandatedPlayerHandIndex == handIndex
         let isLegalToPlay = viewModel.mandatedPlayerHandIndex == nil || viewModel.mandatedPlayerHandIndex == handIndex
 
-        HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: false)
+        HoneycombCardView(card: card, size: size, isFlipped: false)
             .onTapGesture {
                 if viewModel.gameState == .playing && viewModel.isPlayerTurn && isLegalToPlay {
                     selectedHandCardId = selectedHandCardId == card.id ? nil : card.id
@@ -739,11 +781,12 @@ struct HoneycombTouchView: View {
     }
 
     @ViewBuilder
-    private var dragGhost: some View {
+    private func dragGhost(landscape: Bool, landscapeHandCardSize: CGSize) -> some View {
         if let card = dragHandCard {
-            HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: false)
+            let size = landscape ? landscapeHandCardSize : Self.playerCardSize
+            HoneycombCardView(card: card, size: size, isFlipped: false)
                 .position(x: dragLocation.x + dragOffset.width,
-                          y: dragLocation.y + dragOffset.height - Self.playerCardSize.height * 0.25)
+                          y: dragLocation.y + dragOffset.height - size.height * 0.25)
                 .shadow(radius: 10, y: 5)
                 .allowsHitTesting(false)
         }
