@@ -18,6 +18,13 @@ final class GameTimer {
         timer = nil
         setActive(false)
     }
+
+    // Safety net for callers that never call stop() before releasing their GameTimer —
+    // Timer.scheduledTimer's repeating block strongly retains whatever `tick` captures,
+    // so a leaked, still-firing timer would otherwise keep that alive indefinitely too.
+    deinit {
+        timer?.invalidate()
+    }
 }
 
 // Bounded undo history shared by every game's ViewModel — caps at `capacity` snapshots,

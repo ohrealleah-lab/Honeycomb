@@ -724,31 +724,39 @@ public final class HoneycombViewModel {
         }
         let generation = handSetupGeneration
 
-        func startFirstMove() {
-            if swapPending {
-                isAnimatingPlacement = false
-            }
-            if !isPlayerTurn {
-                self.aiPlayTurn()
-            } else {
-                self.prewarmHint()
-            }
-        }
-
         if !isPlayerTurn || swapPending {
             let delay = swapPending ? swapAnimationCompleteDelay : Self.opponentMoveDelay
             if UISound.isHeadlessMode {
-                startFirstMove()
+                startFirstMove(swapPending: swapPending)
             } else {
+                // A plain nested `func startFirstMove()` here (rather than the instance
+                // method below) would still compile and run correctly, but referencing
+                // it by name from inside this [weak self] closure makes the closure
+                // capture the nested function itself — which strongly captures self
+                // independently, in its own closure context — silently reintroducing
+                // the strong reference this [weak self] was written to avoid. Calling
+                // the already-unwrapped `self` below instead keeps the strong reference
+                // scoped to just this closure's synchronous execution.
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                     guard let self, self.handSetupGeneration == generation else { return }
-                    startFirstMove()
+                    self.startFirstMove(swapPending: swapPending)
                 }
             }
         } else {
             // Player opens with no swap animation pending — the board is immediately
             // actionable, so start warming the first hint now instead of waiting for
             // startFirstMove() (which only runs in the two branches above).
+            prewarmHint()
+        }
+    }
+
+    private func startFirstMove(swapPending: Bool) {
+        if swapPending {
+            isAnimatingPlacement = false
+        }
+        if !isPlayerTurn {
+            aiPlayTurn()
+        } else {
             prewarmHint()
         }
     }
