@@ -1046,7 +1046,12 @@ public final class HoneycombViewModel {
     // summing to 5 cards. Higher difficulty = higher star tiers = higher stat totals.
     private func normalComposition(for difficulty: HoneycombDifficulty) -> [(stars: Int, count: Int)] {
         switch difficulty {
-        case .easy: return [(1, 4), (2, 1)]
+        case .easy:
+            // Baby Bee: a 20% chance of a 3★ card instead of the usual second 2★, so
+            // its deck isn't entirely predictable at this difficulty either — same
+            // idea as Medium's own variable last slot below.
+            let lastSlot = Double.random(in: 0..<1) < 0.2 ? 3 : 2
+            return [(1, 3), (2, 1), (lastSlot, 1)]
         case .medium:
             // Honey Bee: a 20% chance of a 4★ card instead of the usual 3★, so its
             // deck isn't entirely predictable at this difficulty.
