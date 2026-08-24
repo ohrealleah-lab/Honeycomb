@@ -505,7 +505,6 @@
         "This one weird trick captures 4 cards at once — dealers don't want you to know it.",
         "You won't believe what happened when a worker bee met a Fallen Ace.",
         "She said yes to Symmetry. He said yes to Math Bee. Chaos ensued.",
-        "Busy as a bee, broke as a beekeeper.",
         "Absence makes the heart grow fonder — and the hive grow louder.",
         "Two bees or not two bees — that's a math problem, not a question."
       ],
@@ -565,7 +564,6 @@
         "Este extraño truco captura 4 cartas a la vez — los repartidores no quieren que lo sepas.",
         "No vas a creer lo que pasó cuando una abeja obrera conoció a un As Caído.",
         "Ella dijo sí a la Simetría. Él dijo sí a Abeja Matemática. Se desató el caos.",
-        "Ocupado como una abeja, arruinado como un apicultor.",
         "La ausencia hace que el corazón se encariñe — y la colmena suene más fuerte.",
         ""
       ]
@@ -1484,6 +1482,22 @@
       ],
       "messagesEs": [
         ""
+      ]
+    },
+    {
+      "id": "gameplay_player_runs_out_of_credits_video_poker_blackjack",
+      "category": "Gameplay",
+      "trigger": "Player runs out of credits (Video Poker/Blackjack).",
+      "type": "repeatableFlavor",
+      "location": "toast",
+      "gated": true,
+      "gateChance": 0.2,
+      "fallback": "Out of Credits!",
+      "messages": [
+        "Busy as a bee, broke as a beekeeper."
+      ],
+      "messagesEs": [
+        "Ocupado como una abeja, arruinado como un apicultor."
       ]
     }
   ]

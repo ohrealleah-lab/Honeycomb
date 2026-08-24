@@ -701,6 +701,9 @@ public static class Strings
         [StringKey.RuleStatePick] = "Play",
         [StringKey.RuleStateBan] = "Ban",
         [StringKey.RulesSelectedCountFmt] = "%d of 4 selected",
+        [StringKey.OutOfCreditsToast] = "Out of Credits!",
+        [StringKey.BtnClearShort] = "Clear",
+        [StringKey.GlobalOptionsSection] = "Global",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1386,5 +1389,8 @@ public static class Strings
         [StringKey.RuleStatePick] = "Jugar",
         [StringKey.RuleStateBan] = "Vetar",
         [StringKey.RulesSelectedCountFmt] = "%d de 4 seleccionadas",
+        [StringKey.OutOfCreditsToast] = "¡Sin créditos!",
+        [StringKey.BtnClearShort] = "Borrar",
+        [StringKey.GlobalOptionsSection] = "Global",
     };
 }

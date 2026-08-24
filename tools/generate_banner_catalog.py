@@ -111,6 +111,11 @@ GATED_FALLBACKS = {
     ("Rule-Specific", "Pollination pushes a card's modifier to +3 or higher."): "Pollination!",
     ("Rule-Specific", "Smoked Out drops a card's effective stat to 1."): "Smoked Out!",
     ('Rule-Specific', 'A player triggers a "Plus" combo (the math matches perfectly).'): "Math Bee!",
+    # Video Poker/Blackjack only — no existing production banner, so this fallback
+    # (unlike the others above) IS the primary text 80% of the time, not just
+    # documentation; see out_of_credits_toast in the UI-string sheet for the
+    # localized version each call site actually uses.
+    ("Gameplay", "Player runs out of credits (Video Poker/Blackjack)."): "Out of Credits!",
 }
 
 RULE_NAME_FALLBACK_SENTINEL = "$RULE_NAME"

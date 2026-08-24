@@ -228,6 +228,11 @@ struct VideoPokerTouchView: View {
                 let animationTask = DispatchWorkItem {
                     let hideTask = DispatchWorkItem {
                         withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false; showResultBanner = false }
+                        // Checked here, not synchronously when the hand resolves — this is
+                        // the moment the win/lose result banner has actually finished its
+                        // display+dismiss, so the toast reads as following it (and landing
+                        // alongside the Rebuy button) instead of stacking on top of it.
+                        viewModel.checkOutOfCredits()
                         let promptTask = DispatchWorkItem {
                             showCardBackPlaceholders = true
                             withAnimation(.easeInOut(duration: 0.4)) { cardsVisible = true }
@@ -388,7 +393,14 @@ struct VideoPokerTouchView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 1)
                 .background(isHit ? Color.yellow.opacity(winFlash ? 0.9 : 0.4) : .clear)
-                .animation(isHit ? .easeInOut(duration: 0.3).repeatForever(autoreverses: true) : .default, value: winFlash)
+                // Bounded, not .repeatForever — a repeatForever animation triggered by
+                // winFlash toggling true then false is never explicitly canceled once
+                // started (isHit later going false for a subsequent hand doesn't stop an
+                // already-running repeat, since winFlash itself isn't changing anymore),
+                // so the pay table row kept pulsing indefinitely after the win that
+                // triggered it. 10 repeats (~3s at 0.3s/leg) comfortably outlasts the ~1s
+                // window winFlash is actually true for, then settles and stays stopped.
+                .animation(isHit ? .easeInOut(duration: 0.3).repeatCount(10, autoreverses: true) : .default, value: winFlash)
             }
         }
         .padding(.vertical, 6)

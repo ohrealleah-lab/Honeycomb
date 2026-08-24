@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 
@@ -33,6 +34,29 @@ public partial class BlackjackViewModel : ObservableObject
         if (_bannerQueue.Count == 0) return;
         _bannerQueue.Dequeue();
         if (_bannerQueue.Count > 0) OnFlashBanner?.Invoke(_bannerQueue.Peek());
+    }
+
+    // Fires the "out of credits" toast at the same Credits <= 10 threshold CanRebuy
+    // uses, and only after an outright round loss (not a win/push — a split round can
+    // win one hand while losing another, or a double-down can win back more than it
+    // cost, so being low on credits alone doesn't mean the player is actually stuck).
+    // Public and called from the view, deliberately NOT from SettleAndFinish itself —
+    // the view times this call to fire once its own win/lose result banner has finished
+    // fading out, so the toast reads as landing alongside the Rebuy button rather than
+    // stacking on top of the result banner while it's still up. 20% flavor ("Busy as a
+    // bee, broke as a beekeeper.") / 80% the plain "Out of Credits!" toast, per the
+    // catalog entry's gate.
+    public void CheckOutOfCredits()
+    {
+        if (Options.IsNoStressMode || State.Credits > 10) return;
+        bool roundWon  = State.PlayerHands.Any(h => h.Result is BlackjackHandResult.Won or BlackjackHandResult.Blackjack);
+        bool roundLost = State.PlayerHands.Any(h => h.Result == BlackjackHandResult.Lost);
+        if (!roundLost || roundWon) return;
+        var result = BannerCatalog.Fire(BannerId.GameplayPlayerRunsOutOfCreditsVideoPokerBlackjack);
+        var text = result.Kind == BannerFireKind.Message
+            ? result.Text!
+            : Strings.Get(StringKey.OutOfCreditsToast, SettingsService.LoadOptions().Language);
+        EnqueueBanner(text);
     }
 
     // Fires once, exactly on crossing a threshold — checked against the value BEFORE

@@ -690,4 +690,7 @@ public enum StringKey
     RuleStatePick,
     RuleStateBan,
     RulesSelectedCountFmt,
+    OutOfCreditsToast,
+    BtnClearShort,
+    GlobalOptionsSection,
 }

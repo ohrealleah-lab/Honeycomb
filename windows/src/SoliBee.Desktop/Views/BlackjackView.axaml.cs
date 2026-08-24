@@ -631,6 +631,11 @@ public partial class BlackjackView : UserControl
                 ResultOverlayScrim.IsVisible = false;
                 ResultOverlay.Opacity   = 1.0;
                 WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
+                // Checked here, not synchronously when the round resolves — this is the
+                // moment the win/lose result banner has actually finished fading out, so
+                // the toast reads as following it (and landing alongside the Rebuy button)
+                // instead of stacking on top of it.
+                if (DataContext is BlackjackViewModel vm) vm.CheckOutOfCredits();
                 StartCardsFade();
                 return;
             }

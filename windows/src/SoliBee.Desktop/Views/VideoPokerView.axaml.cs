@@ -537,6 +537,11 @@ public partial class VideoPokerView : UserControl
                     _activeBanner = null;
                     WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, false));
                 }
+                // Checked here, not synchronously when the hand resolves — this is the
+                // moment the win/lose result banner has actually finished fading out, so
+                // the toast reads as following it (and landing alongside the Rebuy button)
+                // instead of stacking on top of it.
+                if (DataContext is VideoPokerViewModel vm) vm.CheckOutOfCredits();
                 StartCardsFade();
                 return;
             }

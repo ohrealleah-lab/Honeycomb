@@ -73,4 +73,5 @@ public enum BannerID: String, CaseIterable, Codable {
     case loadingGameLoadsOnDiwali = "loading_game_loads_on_diwali"
     case loadingGameLoadsOnEidAlFitr = "loading_game_loads_on_eid_al_fitr"
     case loadingGameLoadsOnHanukkah = "loading_game_loads_on_hanukkah"
+    case gameplayPlayerRunsOutOfCreditsVideoPokerBlackjack = "gameplay_player_runs_out_of_credits_video_poker_blackjack"
 }

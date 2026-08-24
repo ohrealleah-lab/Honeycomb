@@ -26,9 +26,6 @@ public enum StringKey: String, CaseIterable {
     case preferences = "preferences"
     /// Options sheet button
     case viewStats = "view_stats"
-    /// iOS Options sheet section header — groups Sound/No Stress Mode/Honey Mode/Hide
-    /// Hint/Manually Dismiss Banners, separate from the per-game settings section below it
-    case globalOptionsSection = "global_options_section"
     /// Options sheet section header
     case visualThemes = "visual_themes"
     /// Options sheet section subtitle
@@ -265,7 +262,7 @@ public enum StringKey: String, CaseIterable {
     case betMax = "bet_max"
     /// Score badge, %d = player score — Honeycomb touch view
     case scoreYouFmt = "score_you_fmt"
-    /// Score badge, Honeycomb touch view — %@/{0} = opponent's difficulty name (e.g. Baby Bee), %d/{1} = opponent score
+    /// Score badge, Honeycomb touch view — %d = opponent score, %@/{1} = opponent's difficulty name (e.g. Baby Bee)
     case scoreDealerFmt = "score_dealer_fmt"
     /// Window nav title, SoliBeeApp.swift
     case appNavigationTitle = "app_navigation_title"
@@ -553,8 +550,6 @@ public enum StringKey: String, CaseIterable {
     case btnClearBet = "btn_clear_bet"
     /// Betting action button, Windows wording (Title Case vs Mac's uppercase)
     case btnClearBetWin = "btn_clear_bet_win"
-    /// Short "Clear" label for Blackjack's landscape betting grid (fits one line at that button width)
-    case btnClearShort = "btn_clear_short"
     /// Action button, Mac wording — reused Blackjack/Video Poker
     case btnDealSpace = "btn_deal_space"
     /// Action button, Windows wording
@@ -1373,4 +1368,10 @@ public enum StringKey: String, CaseIterable {
     case ruleStateBan = "rule_state_ban"
     /// Unified rule-list selection counter, Mac/iOS/Windows
     case rulesSelectedCountFmt = "rules_selected_count_fmt"
+    /// Toast shown when the player runs out of credits, reused Blackjack/Video Poker
+    case outOfCreditsToast = "out_of_credits_toast"
+    /// Short "Clear" label for Blackjack landscape betting grid (fits one line at that button width)
+    case btnClearShort = "btn_clear_short"
+    /// iOS Options sheet section header — groups Sound/No Stress Mode/Honey Mode/Hide Hint/Manually Dismiss Banners, separate from the per-game settings section below it
+    case globalOptionsSection = "global_options_section"
 }

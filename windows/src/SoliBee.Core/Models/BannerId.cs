@@ -76,6 +76,7 @@ public enum BannerId
     LoadingGameLoadsOnDiwali,
     LoadingGameLoadsOnEidAlFitr,
     LoadingGameLoadsOnHanukkah,
+    GameplayPlayerRunsOutOfCreditsVideoPokerBlackjack,
 }
 
 public static class BannerIdExtensions
@@ -150,6 +151,7 @@ public static class BannerIdExtensions
         ["loading_game_loads_on_diwali"] = BannerId.LoadingGameLoadsOnDiwali,
         ["loading_game_loads_on_eid_al_fitr"] = BannerId.LoadingGameLoadsOnEidAlFitr,
         ["loading_game_loads_on_hanukkah"] = BannerId.LoadingGameLoadsOnHanukkah,
+        ["gameplay_player_runs_out_of_credits_video_poker_blackjack"] = BannerId.GameplayPlayerRunsOutOfCreditsVideoPokerBlackjack,
     };
 
     public static BannerId Parse(string id) => ById[id];

@@ -73,6 +73,27 @@ public final class BlackjackViewModel {
         }
     }
 
+    // Fires the "out of credits" toast when sessionCredits is at/under the same <= 10
+    // threshold canRebuy uses, and only after an outright round loss (not a win/push —
+    // a split round can win one hand while losing another, or a double-down can win
+    // back more than it cost, so being low on credits alone doesn't mean the player is
+    // actually stuck). Public and called from the view, deliberately NOT from
+    // evaluateAllHands() itself — the view times this call to fire once its own win/
+    // lose result banner has finished its display+dismiss animation, so the toast reads
+    // as landing alongside the Rebuy button rather than stacking on top of the result
+    // banner while it's still up. 20% flavor ("Busy as a bee, broke as a beekeeper.") /
+    // 80% the plain "Out of Credits!" toast, per the catalog entry's gate.
+    public func checkOutOfCredits() {
+        guard !isFreePlay, state.sessionCredits <= 10 else { return }
+        let roundWon = state.playerHands.contains { $0.result == .win || $0.result == .blackjack }
+        let roundLost = state.playerHands.contains { $0.result == .loss || $0.result == .bust }
+        guard roundLost && !roundWon else { return }
+        switch BannerCatalog.shared.fire(.gameplayPlayerRunsOutOfCreditsVideoPokerBlackjack) {
+        case .message(let text): enqueueBanner(text)
+        case .fallback, .none: enqueueBanner(L(.outOfCreditsToast, language: BannerCatalog.currentLanguage))
+        }
+    }
+
     public func advanceBannerQueue() {
         guard !bannerQueue.isEmpty else { return }
         bannerQueue.removeFirst()

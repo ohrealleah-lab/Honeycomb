@@ -46,6 +46,25 @@ public partial class VideoPokerViewModel : ObservableObject
         if (_bannerQueue.Count > 0) OnFlashBanner?.Invoke(_bannerQueue.Peek());
     }
 
+    // Fires the "out of credits" toast at the same SessionCredits <= 10 threshold
+    // NeedsRebuy uses, and only after an outright loss (State.LastPayout == 0; a
+    // winning hand could still land back in that low range, and that's not "out of
+    // credits" the way a loss leaving them stuck is). Public and called from the view,
+    // deliberately NOT from Draw() itself — the view times this call to fire once its
+    // own win/lose result banner has finished fading out, so the toast reads as landing
+    // alongside the Rebuy button rather than stacking on top of the result banner while
+    // it's still up. 20% flavor ("Busy as a bee, broke as a beekeeper.") / 80% the
+    // plain "Out of Credits!" toast, per the catalog entry's gate.
+    public void CheckOutOfCredits()
+    {
+        if (Options.IsNoStressMode || State.SessionCredits > 10 || State.LastPayout != 0) return;
+        var result = BannerCatalog.Fire(BannerId.GameplayPlayerRunsOutOfCreditsVideoPokerBlackjack);
+        var text = result.Kind == BannerFireKind.Message
+            ? result.Text!
+            : Strings.Get(StringKey.OutOfCreditsToast, SettingsService.LoadOptions().Language);
+        EnqueueBanner(text);
+    }
+
     // Fires once, exactly on crossing a threshold — checked against the value BEFORE
     // this draw's win was added.
     private void CheckWinMilestones(int previousWinningHands)

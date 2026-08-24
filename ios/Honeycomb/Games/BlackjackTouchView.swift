@@ -325,6 +325,11 @@ struct BlackjackTouchView: View {
                 let bannerTask = DispatchWorkItem {
                     let hideTask = DispatchWorkItem {
                         withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false; showResultBanner = false }
+                        // Checked here, not synchronously when the round resolves — this is
+                        // the moment the win/lose result banner has actually finished its
+                        // display+dismiss, so the toast reads as following it (and landing
+                        // alongside the Rebuy button) instead of stacking on top of it.
+                        viewModel.checkOutOfCredits()
                         let promptTask = DispatchWorkItem {
                             showCardBackPlaceholders = true
                             withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
