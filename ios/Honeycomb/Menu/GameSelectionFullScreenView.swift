@@ -73,10 +73,10 @@ struct GameSelectionFullScreenView: View {
     private func icon(for mode: GameMode) -> String {
         switch mode {
         case .klondike:   return "suit.spade.fill"
-        case .beecell:    return "square.grid.2x2.fill"
+        case .beecell:    return "suit.heart.fill"
         case .spider:     return "suit.club.fill"
-        case .videoPoker: return "die.face.5.fill"
-        case .blackjack:  return "creditcard.fill"
+        case .videoPoker: return "suit.diamond.fill"
+        case .blackjack:  return "21.circle.fill"
         case .honeycomb:  return "hexagon.fill"
         }
     }
