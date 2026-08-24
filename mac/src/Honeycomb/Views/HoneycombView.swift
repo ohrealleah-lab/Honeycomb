@@ -893,7 +893,11 @@ public struct HoneycombView: View {
     // true natural width instead of being squeezed/truncated when the row is tight.
     @ViewBuilder
     private var rulesBanner: some View {
-        if isStealingCard {
+        // Hidden once a steal is staged (pendingSteal != nil) — the confirmation
+        // alert ("Are you sure you want to steal this card?") takes over from here,
+        // and leaving this instruction toast up underneath it stacked two banners
+        // on screen at once.
+        if isStealingCard && viewModel.pendingSteal == nil {
             VStack(spacing: 16) {
                 Text(coordinator.L(.stealInstruction))
                     .font(.system(size: 24, weight: .bold))
@@ -912,6 +916,12 @@ public struct HoneycombView: View {
             .cornerRadius(16)
             .shadow(radius: 20)
             .frame(height: Self.rulesBannerHeight, alignment: .bottom)
+        } else if isStealingCard {
+            // pendingSteal != nil here (see the guard above) — the confirmation
+            // alert is up, so render nothing rather than letting the unrelated
+            // Rules banner flash in underneath it for the moment before OK/Cancel.
+            Color.clear
+                .frame(height: Self.rulesBannerHeight, alignment: .bottom)
         } else {
             let isDense = rulesBannerLines.count > 2
             let titleSize: CGFloat = isDense ? 20 : 28
