@@ -173,15 +173,26 @@ struct HoneycombDecksSheet: View {
             }
             // Doubled from 44x62 — on a phone screen these were too small to read the
             // rank/suit at a glance, especially for the active deck a player checks most.
-            HStack(spacing: 8) {
-                ForEach(deck.cardIds, id: \.self) { cardId in
-                    if let cardData = HoneycombDatabase.shared.card(id: cardId) {
-                        HoneycombCardView(card: HoneycombCard(data: cardData, owner: .player),
-                                          size: CGSize(width: 88, height: 124), isFlipped: false,
-                                          useOwnershipColoring: false)
+            // That fixed 88pt width doesn't fit a portrait iPhone though — 5 cards + 4
+            // gaps run wider than the screen, with no scroll view to reach the
+            // overflow, so cards past the first few were just cut off at the trailing
+            // edge. GeometryReader scales the card width down to whatever's actually
+            // available (never up past 88, so it still looks right on wider screens).
+            GeometryReader { geo in
+                let spacing: CGFloat = 8
+                let count = CGFloat(max(deck.cardIds.count, 1))
+                let cardWidth = min(88, (geo.size.width - spacing * (count - 1)) / count)
+                HStack(spacing: spacing) {
+                    ForEach(deck.cardIds, id: \.self) { cardId in
+                        if let cardData = HoneycombDatabase.shared.card(id: cardId) {
+                            HoneycombCardView(card: HoneycombCard(data: cardData, owner: .player),
+                                              size: CGSize(width: cardWidth, height: cardWidth * 124 / 88), isFlipped: false,
+                                              useOwnershipColoring: false)
+                        }
                     }
                 }
             }
+            .frame(height: 124)
         }
         .padding()
         .background(Color.black.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
@@ -413,26 +424,34 @@ private struct DeckBuilderSheet: View {
                     VStack(spacing: 8) {
                         Text(coordinator.L(.yourDeckCountFmt, cardIds.count))
                             .font(.headline)
-                        HStack(spacing: 6) {
-                            ForEach(0..<5, id: \.self) { i in
-                                if i < cardIds.count {
-                                    let cardId = cardIds[i]
-                                    if let cardData = HoneycombDatabase.shared.card(id: cardId) {
-                                        HoneycombCardView(card: HoneycombCard(data: cardData, owner: .player),
-                                                          size: CGSize(width: 64, height: 90), isFlipped: false,
-                                                          useOwnershipColoring: false)
-                                            .onTapGesture {
-                                                cardIds.remove(at: i)
-                                                validate()
-                                            }
+                        // Same overflow risk as savedDeckRow's card row (5 fixed-width
+                        // slots + gaps can run wider than a narrow phone's screen) —
+                        // GeometryReader scales the slot width down to fit instead.
+                        GeometryReader { geo in
+                            let spacing: CGFloat = 6
+                            let slotWidth = min(64, (geo.size.width - spacing * 4) / 5)
+                            HStack(spacing: spacing) {
+                                ForEach(0..<5, id: \.self) { i in
+                                    if i < cardIds.count {
+                                        let cardId = cardIds[i]
+                                        if let cardData = HoneycombDatabase.shared.card(id: cardId) {
+                                            HoneycombCardView(card: HoneycombCard(data: cardData, owner: .player),
+                                                              size: CGSize(width: slotWidth, height: slotWidth * 90 / 64), isFlipped: false,
+                                                              useOwnershipColoring: false)
+                                                .onTapGesture {
+                                                    cardIds.remove(at: i)
+                                                    validate()
+                                                }
+                                        }
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.gray.opacity(0.3))
+                                            .frame(width: slotWidth, height: slotWidth * 90 / 64)
                                     }
-                                } else {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.gray.opacity(0.3))
-                                        .frame(width: 64, height: 90)
                                 }
                             }
                         }
+                        .frame(height: 90)
                     }
                     .padding()
                     .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))

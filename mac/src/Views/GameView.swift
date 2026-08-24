@@ -1466,13 +1466,6 @@ struct StatsView: View {
                     Text(coordinator.L(.resetStatisticsBodyGeneric))
                 }
 
-                if viewModel.options.isVegasScoring {
-                    Button(coordinator.L(.resetBankrollButton)) { viewModel.resetVegasBankroll() }
-                        .buttonStyle(.borderless)
-                        .foregroundColor(.red)
-                        .font(.system(.body))
-                }
-
                 Spacer()
 
                 Button(coordinator.L(.close)) {

@@ -99,8 +99,13 @@ public struct HoneycombCardView: View {
     // Matches every other game's CardView rank index: 17pt bold monospaced at the
     // standard 128pt-wide card. Honeycomb cards render at several different sizes
     // (board/hand vs. deck-manager thumbnails), so this scales proportionally to size
-    // while landing exactly on 17pt at the standard width.
-    private var numberFontSize: CGFloat { size.width * (17.0 / CardDimensions.width) }
+    // while landing exactly on 17pt (24pt on iOS) at the standard width.
+    #if os(iOS)
+    private static let baseNumberFontSize: CGFloat = 24.0
+    #else
+    private static let baseNumberFontSize: CGFloat = 17.0
+    #endif
+    private var numberFontSize: CGFloat { size.width * (Self.baseNumberFontSize / CardDimensions.width) }
     // Approximate half-width/height of a single monospaced-digit glyph at that font
     // size, used to keep the fixed 3pt gap measured from the glyph's visible edge
     // rather than its baseline position.
