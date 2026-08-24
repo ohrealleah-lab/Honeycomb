@@ -48,6 +48,16 @@ struct BlackjackTouchView: View {
     // bar layout. No-op in free play, where bettingControls itself has no chip row.
     @State private var chipRowHeight: CGFloat = 74
 
+    // Just the real, visibly-rendered control row's height — unlike controlsHeight
+    // (measured on the whole fixed bottom bar, including actionRow's invisible
+    // chipRowHeight-matching placeholder below single-row phases), this excludes
+    // that placeholder. cardW's available-height budget uses this one: reserving
+    // room for the placeholder too (as controlsHeight would) shrank cards to leave
+    // space under Hit/Stand that nothing is actually drawn into, since the
+    // placeholder exists only to anchor the button row's position, not to hold
+    // content cards could otherwise render behind.
+    @State private var visibleControlsHeight: CGFloat = 0
+
     private let actionHaptic = UIImpactFeedbackGenerator(style: .medium)
 
     private var canAffordBet: Bool {
@@ -64,12 +74,14 @@ struct BlackjackTouchView: View {
     private let tightOverlapFraction: CGFloat = 0.55
     private let tightestOverlapFraction: CGFloat = 0.75
 
-    private func handSpacing(cardW: CGFloat, count: Int, isSplit: Bool) -> CGFloat {
+    private func handSpacing(cardW: CGFloat, count: Int, isSplit: Bool, isLandscape: Bool) -> CGFloat {
         let fraction: CGFloat
         if isSplit {
             fraction = count >= 4 ? tightestOverlapFraction : tightOverlapFraction
         } else {
-            fraction = count >= 6 ? tightOverlapFraction : lightOverlapFraction
+            let isIPhonePortrait = UIDevice.current.userInterfaceIdiom == .phone && !isLandscape
+            let threshold = isIPhonePortrait ? 5 : 6
+            fraction = count >= threshold ? tightOverlapFraction : lightOverlapFraction
         }
         return -cardW * fraction
     }
@@ -92,17 +104,66 @@ struct BlackjackTouchView: View {
         }
     }
 
+    // A split stacks a second (and possibly third) player hand below the first in
+    // portrait — the ScrollView fallback keeps that from ever clipping, but it read
+    // as broken rather than intentional: dealer + hands should fit above the fixed
+    // controls bar without scrolling whenever reasonably possible, the same as every
+    // other card count already shrinks for via sizeScale above. Landscape lays hands
+    // out side-by-side instead (see body's isLandscape branch) and isn't affected.
+    private func splitPortraitScale(handCount: Int, isLandscape: Bool) -> CGFloat {
+        guard !isLandscape, handCount > 1 else { return 1.0 }
+        return handCount >= 3 ? 0.7 : 0.8
+    }
+
     var body: some View {
         GeometryReader { geo in
-            // Same base size/cap as Video Poker (cardW = min(width * 0.32, 190)) so
-            // the two games' cards read as the same size, then scaled down once a
-            // hand grows past 5 cards.
-            let cardW = min(geo.size.width * 0.32, 190) * sizeScale(for: maxHandCardCount)
             let isLandscape = geo.size.width > geo.size.height
+            // Betting (and the "place a new bet" flavor of .result) gets a dedicated
+            // grid — bettingGridLandscape — sitting inline between playerHandsArea and
+            // dealerArea instead of a fixed bar under the cards, matching the
+            // requested mockup. Every other landscape phase keeps the original fixed-
+            // bottom-bar controls unchanged.
+            let showsInlineBettingGrid = isLandscape
+                && (viewModel.state.phase == .betting || (viewModel.state.phase == .result && !viewModel.canRebuy))
+            // Same base width cap as Video Poker (min(width * 0.32, 190)) so the two
+            // games' cards read as the same size, then scaled down once a hand grows
+            // past 5 cards, and further still once a split (portrait only) stacks more
+            // than one player hand below the dealer. The height term used to be a flat
+            // geo.size.height * 0.32 guess, which was generous enough on an iPhone's
+            // ~400pt landscape height to still overflow by a small margin — enough that
+            // .scrollBounceBehavior(.basedOnSize) correctly (if unhelpfully) kept
+            // allowing a drag, since content genuinely didn't fit. This instead adds up
+            // every actual vertical consumer in the single-hand landscape layout —
+            // topBar, the VStack's own spacing, dealerArea/playerHandsArea's internal
+            // label-to-cards spacing and label line height, and the reserved space
+            // below for the fixed controls bar — and solves for the card height that
+            // makes the rest fit exactly, so there's no overflow left to scroll.
+            // Reserves nothing when showsInlineBettingGrid — there's no fixed bottom
+            // bar to clear in that state, so cards get to grow into the space it would
+            // have used, per request ("if card size can be gained back... increase it").
+            let reservedBottom: CGFloat = showsInlineBettingGrid ? 0 : (visibleControlsHeight + 38)
+            let verticalChrome: CGFloat = 44 /* topBar */ + 16 /* outer VStack spacing */
+                + 6 /* dealerArea/playerHandsArea's label-to-cards VStack spacing */
+                + 20 /* .subheadline label line height */
+                + reservedBottom
+            let cardHeightFromAvailable = max(0, geo.size.height - verticalChrome)
+            // When showsInlineBettingGrid, playerHandsArea/dealerArea size to their own
+            // natural content width (not frame(maxWidth: .infinity), which the non-grid
+            // landscape branch uses instead) — so unlike that branch, the width * 0.32
+            // cap above doesn't actually bound the HStack's total rendered width here;
+            // it was sized as if two hand areas alone needed to share the row, without
+            // accounting for bettingGridLandscape sitting between them. A 2-card hand
+            // at cardW renders at ~1.7 * cardW (lightOverlapFraction's -0.3 * cardW
+            // spacing between the two cards), so two hand areas plus the grid plus the
+            // HStack's two 12pt gaps need to fit in geo.size.width — solved for cardW.
+            let cardWidthFromAvailable: CGFloat = showsInlineBettingGrid
+                ? (geo.size.width - (Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) - 24) / 3.4
+                : .greatestFiniteMagnitude
+            let cardW = min(geo.size.width * 0.32, cardHeightFromAvailable / CardDimensions.aspectRatio, cardWidthFromAvailable, 190)
+                * sizeScale(for: maxHandCardCount)
+                * splitPortraitScale(handCount: viewModel.state.playerHands.count, isLandscape: isLandscape)
 
             ZStack(alignment: .bottom) {
-                IOSBackgroundLayer(intensity: 0.6)
-
                 // ScrollView fallback rather than a computed shrink factor — a split
                 // stacks a second hand below the first, and this can't always fit
                 // dealer + two hands + controls in either orientation. controls itself
@@ -115,30 +176,36 @@ struct BlackjackTouchView: View {
                             .padding(.horizontal, 12)
                             .frame(height: 44)
 
-                        if !viewModel.isFreePlay {
-                            creditDisplay
-                        }
-
                         if isLandscape {
                             // Landscape's width can't spare the height a vertical
                             // dealer-then-player stack needs, but it has plenty of width
-                            // to spare — dealer left, player right instead.
-                            HStack(alignment: .top, spacing: 24) {
-                                playerHandsArea(cardW: cardW)
-                                    .frame(maxWidth: .infinity)
-                                dealerArea(cardW: cardW)
-                                    .frame(maxWidth: .infinity)
+                            // to spare — dealer left, player right instead. The betting
+                            // grid sits in that same gap instead of a Spacer when it's
+                            // showing, in place of spacing: 24.
+                            HStack(alignment: .top, spacing: showsInlineBettingGrid ? 12 : 24) {
+                                playerHandsArea(cardW: cardW, isLandscape: isLandscape)
+                                    .frame(maxWidth: showsInlineBettingGrid ? nil : .infinity)
+                                if showsInlineBettingGrid {
+                                    bettingGridLandscape
+                                }
+                                dealerArea(cardW: cardW, isLandscape: isLandscape)
+                                    .frame(maxWidth: showsInlineBettingGrid ? nil : .infinity)
                             }
                         } else {
-                            dealerArea(cardW: cardW)
+                            dealerArea(cardW: cardW, isLandscape: isLandscape)
 
-                            playerHandsArea(cardW: cardW)
+                            playerHandsArea(cardW: cardW, isLandscape: isLandscape)
                         }
                     }
-                    // Reserves exactly enough room at the bottom for the fixed controls
-                    // bar (measured live below) so the last card/banner content never
-                    // ends up scrolled underneath it.
-                    .padding(.bottom, controlsHeight)
+                    // Reserves room at the bottom for the fixed controls bar (measured
+                    // live below) so the last card/banner content never ends up
+                    // scrolled underneath it — beyond the exact measured height as a
+                    // visible buffer (matches Video Poker's identical adjustment;
+                    // exactly matching it still read as touching/overlapping). 38, not
+                    // 16 — landscape's betting screen still had its chip row grazing
+                    // the cards above at 16, then again at 28. 0 when
+                    // showsInlineBettingGrid — see reservedBottom above.
+                    .padding(.bottom, reservedBottom)
                     // Flexible Spacers used to sit between the cards and controls,
                     // which combined with this enforced min-height stretched them apart
                     // into a large gap at every screen size — top-aligning instead lets
@@ -147,6 +214,16 @@ struct BlackjackTouchView: View {
                     // the controls instead of between them.
                     .frame(minHeight: geo.size.height, alignment: .top)
                 }
+                // This ScrollView is a fallback for content that doesn't fit (a split's
+                // second hand, a short landscape height), not a surface meant to invite
+                // scrolling — hiding the indicator wasn't enough on its own, since a
+                // plain ScrollView still lets you drag/rubber-band the content up (with
+                // nothing to snap back to but empty space) even when it already fits.
+                // .basedOnSize disables that drag entirely whenever content fits within
+                // the viewport, and only re-enables real scrolling once content
+                // actually overflows it — exactly the fallback-only behavior wanted.
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
 
                 // Overlay, not part of the ScrollView's flow — centers on the whole
                 // screen regardless of scroll position or how tall the dealer/player
@@ -167,16 +244,24 @@ struct BlackjackTouchView: View {
                 // action buttons below the visible screen, right when they're needed
                 // most. Pinning them here means only the cards ever scroll; the buttons
                 // that act on them stay in the same place at every hand size, in both
-                // orientations.
-                controls
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .onGeometryChange(for: CGFloat.self) { proxy in
-                        proxy.size.height
-                    } action: { newHeight in
-                        controlsHeight = newHeight
-                    }
+                // orientations. Skipped entirely when showsInlineBettingGrid — that
+                // state's controls (bettingGridLandscape) already rendered inline
+                // above, between the two card areas, not down here.
+                if !showsInlineBettingGrid {
+                    controls(isLandscape: isLandscape)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        // Less than the top's 12 per request (matches Video Poker's
+                        // identical adjustment) — nudges the buttons down a little
+                        // closer to the screen's bottom edge.
+                        .padding(.bottom, 4)
+                        .frame(maxWidth: .infinity)
+                        .onGeometryChange(for: CGFloat.self) { proxy in
+                            proxy.size.height
+                        } action: { newHeight in
+                            controlsHeight = newHeight
+                        }
+                }
             }
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
@@ -197,6 +282,17 @@ struct BlackjackTouchView: View {
             manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
+        // IOSBackgroundLayer calls .ignoresSafeArea() internally. As a plain ZStack
+        // sibling (inside the GeometryReader above), that makes the ZStack itself
+        // adopt the full-bleed, notch-including size and propose that same expanded
+        // size to every other sibling too — including the ScrollView with the actual
+        // game content, which is what let cards and the top bar clip under the
+        // Dynamic Island in landscape. Attaching it as .background() here, on the
+        // whole view, outside the GeometryReader entirely, avoids that: .background()
+        // never feeds size back up to the view it's attached to, so the background
+        // can still bleed edge-to-edge without dragging the GeometryReader's own
+        // reported size out past the safe area with it.
+        .background(IOSBackgroundLayer(intensity: 0.6))
         .onAppear { viewModel.checkLoadingBanner() }
         // Debug-only trigger handler — mirrors mac's BlackjackView.swift onChange(of:
         // viewModel.debugBannerRequest), minus resultBannerShowTask (this view doesn't
@@ -286,6 +382,21 @@ struct BlackjackTouchView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.8))
         }
+        // Overlay on the whole bar, not a third HStack element flanked by Spacers,
+        // matching Klondike's identical statusCapsule placement — reclaims the
+        // separate row creditDisplay used to occupy below topBar, giving that space
+        // back to the cards. Top-aligned, not centered — creditDisplay's own height
+        // is taller than topBar's fixed 44pt band, and centering it split that
+        // overflow evenly above/below, pushing it up into the status bar/notch above
+        // the screen's safe area. Top-aligning keeps its top edge flush with topBar's
+        // instead, with a little padding on top of that so it doesn't sit flush
+        // against the very top; all the overflow lands below, into the board.
+        .overlay(alignment: .top) {
+            if !viewModel.isFreePlay {
+                creditDisplay
+                    .padding(.top, 6)
+            }
+        }
     }
 
     // MARK: Credit display
@@ -327,12 +438,17 @@ struct BlackjackTouchView: View {
 
     // MARK: Dealer
 
-    private func dealerArea(cardW: CGFloat) -> some View {
+    private func dealerArea(cardW: CGFloat, isLandscape: Bool) -> some View {
         VStack(spacing: 6) {
+            // Matches playerHandsArea's label font exactly (.subheadline, not
+            // .caption) — a smaller dealer label made this VStack's label+cards
+            // shorter than the player's, so the two card rows (each top-aligned
+            // within their own VStack) landed on different horizontal axes despite
+            // sharing one HStack row.
             Text(dealerLabel)
-                .font(.caption.weight(.bold))
+                .font(.subheadline.weight(.bold))
                 .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: handSpacing(cardW: cardW, count: max(viewModel.state.dealerCards.count, 2), isSplit: false)) {
+            HStack(spacing: handSpacing(cardW: cardW, count: max(viewModel.state.dealerCards.count, 2), isSplit: false, isLandscape: isLandscape)) {
                 if viewModel.state.dealerCards.isEmpty || showCardBackPlaceholders {
                     ForEach(0..<2, id: \.self) { i in
                         HoneycombSimpleCardBack()
@@ -363,7 +479,7 @@ struct BlackjackTouchView: View {
 
     // MARK: Player hand(s)
 
-    private func playerHandsArea(cardW: CGFloat) -> some View {
+    private func playerHandsArea(cardW: CGFloat, isLandscape: Bool) -> some View {
         VStack(spacing: 18) {
             if viewModel.state.playerHands.isEmpty || showCardBackPlaceholders {
                 // Pre-deal placeholder — matches dealerArea's own empty-state branch
@@ -375,7 +491,7 @@ struct BlackjackTouchView: View {
                     Text(coordinator.L(.touchYouLabel))
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
-                    HStack(spacing: handSpacing(cardW: cardW, count: 2, isSplit: false)) {
+                    HStack(spacing: handSpacing(cardW: cardW, count: 2, isSplit: false, isLandscape: isLandscape)) {
                         ForEach(0..<2, id: \.self) { i in
                             HoneycombSimpleCardBack()
                                 .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
@@ -412,7 +528,7 @@ struct BlackjackTouchView: View {
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(.white)
                         }
-                        HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, isSplit: viewModel.state.playerHands.count > 1)) {
+                        HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, isSplit: viewModel.state.playerHands.count > 1, isLandscape: isLandscape)) {
                             ForEach(Array(hand.cards.enumerated()), id: \.offset) { i, card in
                                 TouchCardView(card: card, width: cardW)
                                     .opacity(cardsVisible ? 1 : 0)
@@ -453,7 +569,7 @@ struct BlackjackTouchView: View {
                     Text(headline)
                         .font(.system(size: 64, weight: .black))
                         .minimumScaleFactor(0.5)
-                        .lineLimit(1)
+                        .lineLimit(2)
                         .foregroundStyle(.yellow)
 
                     if !viewModel.isFreePlay {
@@ -468,6 +584,7 @@ struct BlackjackTouchView: View {
                 .background(Color.black.opacity(0.75))
                 .cornerRadius(24)
                 .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5) : .clear, radius: 32)
+                .padding(.horizontal, 16)
                 // Matches mac's bannerWinFlash — a slow repeating pulse for the
                 // duration the win banner is visible, not a one-shot flash.
                 .scaleEffect(isWin && bannerWinFlash ? 1.06 : 1.0)
@@ -476,20 +593,24 @@ struct BlackjackTouchView: View {
                 .onDisappear { bannerWinFlash = false }
             }
         }
-        .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(false)
     }
 
     // MARK: Controls
 
-    private var controls: some View {
+    // compact: true in landscape — an iPhone's ~400pt landscape height doesn't leave
+    // room for the full-size (28pt font/28h·20v padding) buttons below a width-driven
+    // card row, and they ran off the bottom/edge of the screen without this. Portrait
+    // doesn't need it (buttons sit in their own row under the cards with plenty of
+    // vertical room to spare).
+    private func controls(isLandscape: Bool) -> some View {
         Group {
             switch viewModel.state.phase {
             case .betting:
-                bettingControls
+                bettingControls(compact: isLandscape)
             case .playing:
-                actionRow(actionControls)
+                actionRow(actionControls(compact: isLandscape))
             case .dealerTurn:
                 actionRow(
                     HStack {
@@ -500,9 +621,9 @@ struct BlackjackTouchView: View {
                 )
             case .result:
                 if viewModel.canRebuy {
-                    actionRow(rebuyControl)
+                    actionRow(rebuyControl(compact: isLandscape))
                 } else {
-                    bettingControls
+                    bettingControls(compact: isLandscape)
                 }
             }
         }
@@ -514,41 +635,38 @@ struct BlackjackTouchView: View {
     private func actionRow(_ row: some View) -> some View {
         VStack(spacing: 10) {
             row
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.size.height
+                } action: { newHeight in
+                    visibleControlsHeight = newHeight
+                }
             if !viewModel.isFreePlay {
                 Color.clear.frame(height: chipRowHeight)
             }
         }
     }
 
-    // Matches mac's actionButtons betting/result case (BlackjackView.swift:600-626)
-    // exactly: Clear (hidden in free play, mac's own gate) + Deal in one row, then a
-    // row of five colored chip buttons (1/5/10/25/2x) — was a dark capsule reset+bet-
-    // text+double control plus only 3 plain-bordered chips (missing the 10 chip
-    // entirely, no color coding, no relation to the rest of the button system). The
-    // bet amount itself isn't duplicated here, same as mac — it's already shown in
-    // creditDisplay's BET stat above.
-    private var bettingControls: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                if !viewModel.isFreePlay {
-                    casinoButton(coordinator.L(.btnClearBet), color: Color(white: 0.25)) {
-                        viewModel.clearBet()
-                    }
-                }
-                casinoButton(coordinator.L(.dealButton), color: .yellow,
-                             disabled: !canAffordBet || viewModel.state.currentBet == 0) {
-                    viewModel.deal()
-                    actionHaptic.impactOccurred()
-                }
-            }
-
+    // Chips (1/5/10/25/2x) row, then Clear/Deal below it — iOS-only ordering swap
+    // from mac's actionButtons (BlackjackView.swift:600-626), which puts Clear/Deal
+    // first. The row of five colored chip buttons was a dark capsule reset+bet-text+
+    // double control plus only 3 plain-bordered chips (missing the 10 chip entirely,
+    // no color coding, no relation to the rest of the button system) before either
+    // platform got this design. The bet amount itself isn't duplicated here, same as
+    // mac — it's already shown in creditDisplay's BET stat above.
+    private func bettingControls(compact: Bool) -> some View {
+        // Betting has two rows (5 chips, then Clear/Deal) competing for the same
+        // landscape height every other phase's single row doesn't — 10% smaller than
+        // the standard compact scale per request, on top of the extra vertical
+        // clearance added below (see the ScrollView's .padding(.bottom, ...)).
+        let scale: CGFloat = compact ? 0.9 : 1.0
+        return VStack(spacing: 10) {
             if !viewModel.isFreePlay {
                 HStack(spacing: 10) {
-                    casinoButton(coordinator.L(.chip1), color: .white, textColor: .black) { viewModel.addToBet(1) }
-                    casinoButton(coordinator.L(.chip5), color: .red.opacity(0.85)) { viewModel.addToBet(5) }
-                    casinoButton(coordinator.L(.chip10), color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
-                    casinoButton(coordinator.L(.chip25), color: .green.opacity(0.75)) { viewModel.addToBet(25) }
-                    casinoButton(coordinator.L(.chip2x), color: .orange.opacity(0.85)) { viewModel.doubleBet() }
+                    casinoButton(coordinator.L(.chip1), color: .white, textColor: .black, compact: true, scale: scale) { viewModel.addToBet(1) }
+                    casinoButton(coordinator.L(.chip5), color: .red.opacity(0.85), compact: true, scale: scale) { viewModel.addToBet(5) }
+                    casinoButton(coordinator.L(.chip10), color: .blue.opacity(0.75), compact: true, scale: scale) { viewModel.addToBet(10) }
+                    casinoButton(coordinator.L(.chip25), color: .green.opacity(0.75), compact: true, scale: scale) { viewModel.addToBet(25) }
+                    casinoButton(coordinator.L(.chip2x), color: .orange.opacity(0.85), compact: true, scale: scale) { viewModel.doubleBet() }
                 }
                 .onGeometryChange(for: CGFloat.self) { proxy in
                     proxy.size.height
@@ -556,27 +674,102 @@ struct BlackjackTouchView: View {
                     chipRowHeight = newHeight
                 }
             }
+
+            HStack(spacing: 10) {
+                if !viewModel.isFreePlay {
+                    casinoButton(coordinator.L(.btnClearBet), color: Color(white: 0.25), compact: compact, scale: scale) {
+                        viewModel.clearBet()
+                    }
+                }
+                casinoButton(coordinator.L(.dealButton), color: .yellow,
+                             disabled: !canAffordBet || viewModel.state.currentBet == 0, compact: compact, scale: scale) {
+                    viewModel.deal()
+                    actionHaptic.impactOccurred()
+                }
+            }
+        }
+        // No invisible placeholder here, unlike actionRow — both rows are real
+        // content, so this VStack's whole rendered height already is the visible
+        // height (see visibleControlsHeight above).
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+        } action: { newHeight in
+            visibleControlsHeight = newHeight
         }
     }
 
-    private var actionControls: some View {
+    // Matches the requested mockup: a 2-column grid (1/5, 10/25, 2X/Clear) with Deal
+    // spanning below, sitting in the gap between playerHandsArea and dealerArea
+    // instead of bettingControls' two full-width rows in a fixed bar under the
+    // cards. Landscape-only and betting-only (see body's showsInlineBettingGrid) —
+    // freeing that fixed bar's reserved space entirely is what let cardW grow for
+    // this state specifically. Every chip/Clear cell shares one fixed width (wide
+    // enough for "Clear", the longest label) rather than each sizing to its own
+    // content — per request, so "1" doesn't read as a narrower button than "Clear".
+    // Deal is exactly double that width plus the column gap, so it visually spans
+    // both columns and reads as the button that draws the eye. Height stays a
+    // minHeight floor, not fixed — that sizing was already right.
+    // 68pt is "Clear"'s exact unwrapped width at this font/padding (18pt black
+    // condensed + 14pt horizontal padding each side) — measured live via a
+    // temporary onGeometryChange readout rather than guessed. +4 for a small
+    // safety margin against rounding.
+    private static let bettingGridButtonWidth: CGFloat = 72
+    private static let bettingGridButtonMinHeight: CGFloat = 34
+    private static let bettingGridSpacing: CGFloat = 4
+
+    private var bettingGridLandscape: some View {
+        VStack(spacing: Self.bettingGridSpacing) {
+            if !viewModel.isFreePlay {
+                Grid(horizontalSpacing: Self.bettingGridSpacing, verticalSpacing: Self.bettingGridSpacing) {
+                    GridRow {
+                        casinoButton(coordinator.L(.chip1), color: .white, textColor: .black, compact: true, width: Self.bettingGridButtonWidth) { viewModel.addToBet(1) }
+                        casinoButton(coordinator.L(.chip5), color: .red.opacity(0.85), compact: true, width: Self.bettingGridButtonWidth) { viewModel.addToBet(5) }
+                    }
+                    GridRow {
+                        casinoButton(coordinator.L(.chip10), color: .blue.opacity(0.75), compact: true, width: Self.bettingGridButtonWidth) { viewModel.addToBet(10) }
+                        casinoButton(coordinator.L(.chip25), color: .green.opacity(0.75), compact: true, width: Self.bettingGridButtonWidth) { viewModel.addToBet(25) }
+                    }
+                    GridRow {
+                        casinoButton(coordinator.L(.chip2x), color: .orange.opacity(0.85), compact: true, width: Self.bettingGridButtonWidth) { viewModel.doubleBet() }
+                        casinoButton(coordinator.L(.btnClearShort), color: Color(white: 0.25), compact: true, width: Self.bettingGridButtonWidth) { viewModel.clearBet() }
+                    }
+                }
+            }
+            casinoButton(coordinator.L(.dealButton), color: .yellow,
+                         disabled: !canAffordBet || viewModel.state.currentBet == 0, compact: true, width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) {
+                viewModel.deal()
+                actionHaptic.impactOccurred()
+            }
+        }
+        // playerHandsArea/dealerArea are VStack{label; cards} — the HStack's shared
+        // .top alignment left this grid's own top edge (with no label above it)
+        // sitting above where the cards actually start. maxHeight: .infinity lets
+        // the parent HStack stretch this to match the taller card areas' height,
+        // then alignment: .bottom places the actual button content flush with the
+        // bottom of that stretched frame — i.e. flush with the bottom of the cards,
+        // rather than guessing a fixed top offset to compensate for the missing
+        // label.
+        .frame(maxHeight: .infinity, alignment: .bottom)
+    }
+
+    private func actionControls(compact: Bool) -> some View {
         HStack(spacing: 10) {
-            casinoButton(coordinator.L(.touchActionHit), color: .green.opacity(0.85)) {
+            casinoButton(coordinator.L(.touchActionHit), color: .green.opacity(0.85), compact: compact) {
                 viewModel.hit()
                 actionHaptic.impactOccurred()
             }
-            casinoButton(coordinator.L(.touchActionStand), color: .red.opacity(0.75)) {
+            casinoButton(coordinator.L(.touchActionStand), color: .red.opacity(0.75), compact: compact) {
                 viewModel.stand()
                 actionHaptic.impactOccurred()
             }
             if viewModel.canDouble {
-                casinoButton(coordinator.L(.touchActionDouble), color: .blue.opacity(0.75)) {
+                casinoButton(coordinator.L(.touchActionDouble), color: .blue.opacity(0.75), compact: compact) {
                     viewModel.doubleDown()
                     actionHaptic.impactOccurred()
                 }
             }
             if viewModel.canSplit {
-                casinoButton(coordinator.L(.touchActionSplit), color: .purple.opacity(0.75)) {
+                casinoButton(coordinator.L(.touchActionSplit), color: .purple.opacity(0.75), compact: compact) {
                     viewModel.split()
                     actionHaptic.impactOccurred()
                 }
@@ -584,10 +777,10 @@ struct BlackjackTouchView: View {
         }
     }
 
-    private var rebuyControl: some View {
+    private func rebuyControl(compact: Bool) -> some View {
         HStack {
             Spacer()
-            casinoButton(coordinator.L(.rebuyButton), color: .red.opacity(0.8)) {
+            casinoButton(coordinator.L(.rebuyButton), color: .red.opacity(0.8), compact: compact) {
                 viewModel.rebuy()
             }
             Spacer()
@@ -600,27 +793,21 @@ struct BlackjackTouchView: View {
 struct BlackjackSettingsSection: View {
     @Bindable var viewModel: BlackjackViewModel
     let canOpenOptions: Bool
-    // @Bindable, not @Environment — Sound/No Stress Mode/Honey Mode/Manually Dismiss
-    // Banners bind directly to the coordinator (see AppCoordinator's "single source of
-    // truth" fields) so a change here live-propagates to every other game via their
-    // own didSet, instead of only updating this one game's local options copy.
     @Bindable var coordinator: AppCoordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Group {
+                // Sound/No Stress Mode/Honey Mode/Manually Dismiss Banners live in
+                // OptionsFullScreenView's own Global section now — this card is
+                // Blackjack-specific only. (No Hide Hint here — Blackjack has no hint
+                // feature. No onNoStressModeChange either, unlike the other games —
+                // isFreePlay reads options.noStressMode live, so the change takes
+                // effect on the next deal on its own; calling startNewGame() there
+                // only served to unconditionally wipe the win streak on a benign
+                // settings change.)
                 Stepper(coordinator.L(.startingCreditsFmt, viewModel.options.startingCredits),
                         value: $viewModel.options.startingCredits, in: 10...10000, step: 10)
-                Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
-                // No startNewGame() call here, unlike mac's equivalent — this Toggle is
-                // disabled during gameplay (.disabledDuringGameplay below), so it can only
-                // ever fire between hands, when there's no in-progress hand to interrupt.
-                // isFreePlay reads options.noStressMode live, so the change takes effect
-                // on the next deal on its own; calling startNewGame() here only served to
-                // unconditionally wipe the win streak on a benign settings change.
-                Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
-                Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
-                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
             }
             .disabledDuringGameplay(!canOpenOptions)
 

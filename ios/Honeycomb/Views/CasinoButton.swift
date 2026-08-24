@@ -24,6 +24,9 @@ func casinoButton(
     color: Color,
     textColor: Color = .white,
     disabled: Bool = false,
+    compact: Bool = false,
+    scale: CGFloat = 1.0,
+    width: CGFloat? = nil,
     action: @escaping () -> Void
 ) -> some View {
     Button(action: action) {
@@ -37,15 +40,18 @@ func casinoButton(
         // Doubled from mac's literal 14pt/condensed — touch targets read small/hard to
         // tap at the mac-matched size, so this deliberately diverges from mac's own
         // scale (still .width(.condensed), same font identity, just twice as large).
-        .font(.system(size: 28, weight: .black, design: .default).width(.condensed))
+        // compact halves that back down (close to mac's original 14pt) rather than
+        // reusing the full-size scale, since chips are a denser, secondary row.
+        .font(.system(size: (compact ? 18 : 28) * scale, weight: .black, design: .default).width(.condensed))
         .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
-        .padding(.horizontal, 28)
-        .padding(.vertical, 20)
+        .padding(.horizontal, (compact ? 14 : 28) * scale)
+        .padding(.vertical, (compact ? 14 : 20) * scale)
         // No .frame(maxWidth: .infinity) — matches mac's casinoButton, which sizes to
         // its own content rather than stretching to fill its row. The row itself then
         // reads as one natural-width control cluster centered under the cards (its
         // parent VStack's default center alignment), same as mac, instead of a full-
         // width bar with buttons spread apart by Spacers.
+        .frame(width: width)
         .background(disabled ? Color.gray.opacity(0.3) : color)
         .cornerRadius(12)
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.3), lineWidth: 1))

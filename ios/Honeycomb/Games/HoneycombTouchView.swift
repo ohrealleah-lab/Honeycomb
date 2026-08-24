@@ -88,8 +88,6 @@ struct HoneycombTouchView: View {
 
     var body: some View {
         ZStack {
-            IOSBackgroundLayer()
-
             VStack(spacing: 0) {
                 topBar
                     .padding(.horizontal, 12)
@@ -252,6 +250,7 @@ struct HoneycombTouchView: View {
                 // confirmation since Take a Card is now gone.
             }
         }
+        .background(IOSBackgroundLayer())
     }
 
     // MARK: Top bar

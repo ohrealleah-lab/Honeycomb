@@ -49,8 +49,6 @@ struct KlondikeTouchView: View {
             let cardH = cardW * CardDimensions.aspectRatio
 
             ZStack {
-                IOSBackgroundLayer()
-
                 VStack(spacing: 10) {
                     topBar
                         .padding(.horizontal, 12)
@@ -163,6 +161,7 @@ struct KlondikeTouchView: View {
             manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
+        .background(IOSBackgroundLayer())
     }
 
     // MARK: Top bar

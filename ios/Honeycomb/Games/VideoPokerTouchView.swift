@@ -51,7 +51,7 @@ struct VideoPokerTouchView: View {
             // *default* look (a fanned hand), not just a narrow-screen fallback: an
             // 18%-of-card-width negative gap on every screen, growing more negative only
             // if that's still not enough room to fit all 5.
-            let cardW = min(geo.size.width * 0.32, 190)
+            let cardW = min(geo.size.width * 0.32, geo.size.height * 0.32, 190)
             let overlapSpacing = -cardW * 0.18
             let overlappedRowWidth = cardW * 5 + overlapSpacing * 4
             let availableRowWidth = geo.size.width - 24
@@ -61,8 +61,6 @@ struct VideoPokerTouchView: View {
             let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
-                IOSBackgroundLayer(intensity: 0.6)
-
                 // ScrollView fallback rather than a computed shrink factor: unlike the
                 // tableau games, most of this view's height is fixed-size text (the pay
                 // table) that doesn't have a natural "shrink" — landscape's shorter
@@ -83,13 +81,6 @@ struct VideoPokerTouchView: View {
                                 .padding(.horizontal, 16)
                         }
 
-                        // Between the pay table and the cards, not above the pay table —
-                        // sits in the same "breathing room" gap as resultBanner rather
-                        // than crowding the top bar.
-                        if !viewModel.isFreePlay {
-                            creditDisplay
-                        }
-
                         holdHint
 
                         handRow(cardW: cardW, spacing: handSpacing)
@@ -108,6 +99,16 @@ struct VideoPokerTouchView: View {
                     // the cards and them.
                     .frame(minHeight: geo.size.height, alignment: .top)
                 }
+                // This ScrollView is a fallback for content that doesn't fit (a short
+                // landscape height), not a surface meant to invite scrolling — hiding
+                // the indicator wasn't enough on its own, since a plain ScrollView
+                // still lets you drag/rubber-band the content up (with nothing to snap
+                // back to but empty space) even when it already fits. .basedOnSize
+                // disables that drag entirely whenever content fits within the
+                // viewport, and only re-enables real scrolling once content actually
+                // overflows it — exactly the fallback-only behavior wanted.
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
 
                 // Overlay, not part of the ScrollView's flow — centers on the whole
                 // screen regardless of scroll position or how tall the content above it
@@ -139,6 +140,7 @@ struct VideoPokerTouchView: View {
                                           coordinator: coordinator)
             }
         }
+        .background(IOSBackgroundLayer(intensity: 0.6))
         .queuedFlashBanner(
             trigger: viewModel.flashBannerTrigger,
             latestMessage: viewModel.flashBanner,
@@ -261,6 +263,21 @@ struct VideoPokerTouchView: View {
                 .foregroundStyle(.white.opacity(0.8))
                 .lineLimit(1)
         }
+        // Overlay on the whole bar, not a third HStack element flanked by Spacers,
+        // matching Klondike's identical statusCapsule placement — reclaims the
+        // separate row creditDisplay used to occupy in the ScrollView content, giving
+        // that space back to the cards. Top-aligned, not centered — creditDisplay's
+        // own height is taller than topBar's fixed 44pt band, and centering it split
+        // that overflow evenly above/below, pushing it up into the status bar/notch
+        // above the screen's safe area. Top-aligning keeps its top edge flush with
+        // topBar's instead, with a little padding on top of that so it doesn't sit
+        // flush against the very top; all the overflow lands below, into the board.
+        .overlay(alignment: .top) {
+            if !viewModel.isFreePlay {
+                creditDisplay
+                    .padding(.top, 6)
+            }
+        }
     }
 
     // MARK: Credit display
@@ -357,14 +374,9 @@ struct VideoPokerTouchView: View {
                     let visible = i < cardVisible.count && cardVisible[i]
                     let wobble = i < cardRotation.count ? cardRotation[i] : 0.0
                     // No "HELD" text label — matches mac, which conveys a held card
-                    // purely through the lift (and here, the yellow border), not a
-                    // separate text caption above it.
+                    // purely through the lift, not a separate text caption above it.
                     Group {
                         TouchCardView(card: card, width: cardW)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: cardW * 0.07)
-                                    .stroke(Color.yellow, lineWidth: isHeld ? 3 : 0)
-                            )
                             .onTapGesture {
                                 guard viewModel.state.phase == .holding else { return }
                                 viewModel.toggleHold(at: i)

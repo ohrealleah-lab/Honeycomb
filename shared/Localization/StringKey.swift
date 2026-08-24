@@ -550,6 +550,8 @@ public enum StringKey: String, CaseIterable {
     case btnClearBet = "btn_clear_bet"
     /// Betting action button, Windows wording (Title Case vs Mac's uppercase)
     case btnClearBetWin = "btn_clear_bet_win"
+    /// Short "Clear" label for Blackjack's landscape betting grid (fits one line at that button width)
+    case btnClearShort = "btn_clear_short"
     /// Action button, Mac wording — reused Blackjack/Video Poker
     case btnDealSpace = "btn_deal_space"
     /// Action button, Windows wording
