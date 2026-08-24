@@ -67,54 +67,29 @@ struct BlackjackTouchView: View {
     private let tightOverlapFraction: CGFloat = 0.55
     private let tightestOverlapFraction: CGFloat = 0.75
 
-    private func handSpacing(cardW: CGFloat, count: Int, isSplit: Bool, isLandscape: Bool) -> CGFloat {
-        let fraction: CGFloat
-        if isSplit {
-            fraction = count >= 4 ? tightestOverlapFraction : tightOverlapFraction
-        } else if isLandscape {
-            // Always tight in landscape, regardless of count — not just once a hand
-            // grows past a threshold. Keeps the marginal width each additional card
-            // adds small and predictable, so cardW (solved once for a fixed
-            // worst-case count — see body) never needs to shrink and reflow the
-            // whole board sideways mid-hand as more cards are drawn.
-            fraction = tightOverlapFraction
-        } else {
-            let threshold = UIDevice.current.userInterfaceIdiom == .phone ? 5 : 6
-            fraction = count >= threshold ? tightOverlapFraction : lightOverlapFraction
-        }
-        return -cardW * fraction
-    }
-
-    // Widest hand currently on screen (dealer or any player hand) — drives the
-    // shrink-by-count tiering below. Mac's own equivalent (playerCardScale) is
-    // actually disabled today in favor of overlap alone, but Blackjack hands can
-    // grow past 5 cards in a way Video Poker's fixed-5 hand never does, and overlap
-    // alone eventually reads as illegible rather than just tightly fanned.
-    private var maxHandCardCount: Int {
-        // During the post-result reset pause, state.playerHands/dealerCards still
-        // hold the just-finished hand's counts even though only 2 generic
-        // placeholder cards are actually on screen.
-        guard !showCardBackPlaceholders else { return 2 }
-        let playerMax = viewModel.state.playerHands.map { $0.cards.count }.max() ?? 0
-        return max(viewModel.state.dealerCards.count, playerMax, 2)
-    }
-
-    private func sizeScale(for count: Int) -> CGFloat {
-        switch count {
-        case ..<5: return 1.0
-        case 5, 6: return 0.85
-        default: return 0.7
-        }
+    private func handSpacing(cardW: CGFloat, count: Int, maxHandWidth: CGFloat) -> CGFloat {
+        guard count > 1 else { return 0 }
+        // The maximum distance between the leading edges of consecutive cards so the whole
+        // hand fits perfectly within maxHandWidth.
+        let maxSpacingDistance = (maxHandWidth - cardW) / CGFloat(count - 1)
+        // The default comfortable fanned out spacing (lightOverlapFraction = 0.3)
+        let defaultSpacingDistance = cardW * (1 - lightOverlapFraction)
+        // Use the tighter of the two so small hands don't spread too far, but large hands
+        // still fit inside maxHandWidth without shrinking the cards themselves.
+        let actualSpacingDistance = min(maxSpacingDistance, defaultSpacingDistance)
+        // HStack spacing is the gap between the trailing edge of one card and the leading
+        // edge of the next. Negative spacing creates overlap.
+        return actualSpacingDistance - cardW
     }
 
     // A split stacks a second (and possibly third) player hand below the first in
     // portrait — the ScrollView fallback keeps that from ever clipping, but it read
     // as broken rather than intentional: dealer + hands should fit above the fixed
-    // controls bar without scrolling whenever reasonably possible, the same as every
-    // other card count already shrinks for via sizeScale above. Landscape lays hands
-    // out side-by-side instead (see body's isLandscape branch) and isn't affected.
-    private func splitPortraitScale(handCount: Int, isLandscape: Bool) -> CGFloat {
-        guard !isLandscape, handCount > 1 else { return 1.0 }
+    // controls bar without scrolling whenever reasonably possible. Landscape lays hands
+    // out side-by-side instead (see body's isLandscape branch) but hands still stack
+    // vertically within the player area during a split, so shrinking helps avoid scrolling.
+    private func splitScale(handCount: Int) -> CGFloat {
+        guard handCount > 1 else { return 1.0 }
         return handCount >= 3 ? 0.7 : 0.8
     }
 
@@ -133,10 +108,7 @@ struct BlackjackTouchView: View {
             // Using one column for every phase means one cardW formula for every
             // phase too, so the board no longer shifts under the player when a hand
             // starts.
-            // Same base width cap as Video Poker (min(width * 0.32, 190)) so the two
-            // games' cards read as the same size, then scaled down once a hand grows
-            // past 5 cards, and further still once a split (portrait only) stacks more
-            // than one player hand below the dealer. The height term used to be a flat
+            // The height term used to be a flat
             // geo.size.height * 0.32 guess, which was generous enough on an iPhone's
             // ~400pt landscape height to still overflow by a small margin — enough that
             // .scrollBounceBehavior(.basedOnSize) correctly (if unhelpfully) kept
@@ -149,7 +121,9 @@ struct BlackjackTouchView: View {
             // Reserves nothing in landscape — there's no fixed bottom bar to clear
             // there, so cards get to grow into the space it would have used, per
             // request ("if card size can be gained back... increase it").
-            let reservedBottom: CGFloat = isLandscape ? 0 : (visibleControlsHeight + 38)
+            // Reserves 58pt in landscape so the inline controls can hang below the cards
+            // (specifically so Deal hangs below, aligning 2X/Clear with the cards).
+            let reservedBottom: CGFloat = isLandscape ? 58 : (visibleControlsHeight + 38)
             let verticalChrome: CGFloat = 44 /* topBar */ + 16 /* outer VStack spacing */
                 + 6 /* dealerArea/playerHandsArea's label-to-cards VStack spacing */
                 + 20 /* .subheadline label line height */
@@ -157,38 +131,19 @@ struct BlackjackTouchView: View {
             let cardHeightFromAvailable = max(0, geo.size.height - verticalChrome)
             // In landscape, playerHandsArea/dealerArea size to their own natural
             // content width (not frame(maxWidth: .infinity), which portrait's fixed-
-            // bottom-bar layout uses instead) — so unlike portrait, the width * 0.32
-            // cap above doesn't actually bound the HStack's total rendered width here;
-            // it was sized as if two hand areas alone needed to share the row, without
-            // accounting for inlineLandscapeControls sitting between them. Solved for
-            // cardW so the player's hand area plus the dealer's plus the middle
-            // column plus the HStack's two 12pt gaps fit in geo.size.width. This used
-            // to plug in each side's *live* card count, which meant cardW itself
-            // shrank a little every time a card was drawn — hitting repeatedly
-            // visibly reflowed the whole board sideways as the reserved width grew to
-            // match. Assumes a fixed count (4) on both sides instead, so cardW is
-            // solved once and doesn't change for most hands — cards pack tighter as
-            // more are drawn (handSpacing's tight overlap, always-on in landscape
-            // now) rather than the board resizing around them. 4, not 6 — assuming
-            // every hand might reach 6 cards made even a starting 2-card hand render
-            // noticeably smaller than it needed to for the common case, in exchange
-            // for stability only very long hands actually need; a hand growing past 4
-            // can still reflow slightly, same tradeoff sizeScale below already makes
-            // for hands past 5. The middle column's own width is pinned to
-            // bettingGridButtonWidth * 2 + bettingGridSpacing for every phase (see
-            // inlineLandscapeControls) specifically so this reserve — and therefore
-            // cardW — stays identical whichever phase is showing there. 60pt safety
-            // margin beyond the exact reserve since the tight-overlap approximation
-            // isn't pixel-exact against SwiftUI's actual layout (label text width,
-            // rounding, etc.).
-            let worstCaseHandWidthFactor = 1 + (4 - 1) * (1 - tightOverlapFraction)
-            let cardWidthFromAvailable: CGFloat = isLandscape
-                ? (geo.size.width - (Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) - 24 - 60)
-                    / (2 * worstCaseHandWidthFactor)
-                : .greatestFiniteMagnitude
-            let cardW = min(geo.size.width * 0.32, cardHeightFromAvailable / CardDimensions.aspectRatio, cardWidthFromAvailable, 190)
-                * sizeScale(for: maxHandCardCount)
-                * splitPortraitScale(handCount: viewModel.state.playerHands.count, isLandscape: isLandscape)
+            // bottom-bar layout uses instead). We reserve space for the center controls
+            // and assume a worst-case hand width factor to prevent the cards from needing
+            // to shrink when more cards are drawn.
+            let worstCaseHandWidthFactor: CGFloat = 2.5
+            let maxHandWidth: CGFloat = isLandscape
+                ? (geo.size.width - (Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) - 24 - 60) / 2
+                : (geo.size.width - 32)
+            let cardWidthFromAvailable = maxHandWidth / 1.7
+            let effectiveHandCount = (viewModel.state.playerHands.isEmpty || showCardBackPlaceholders)
+                ? 1
+                : viewModel.state.playerHands.count
+            let cardW = min(cardHeightFromAvailable / CardDimensions.aspectRatio, cardWidthFromAvailable)
+                * splitScale(handCount: effectiveHandCount)
 
             ZStack(alignment: .bottom) {
                 // ScrollView fallback rather than a computed shrink factor — a split
@@ -212,15 +167,20 @@ struct BlackjackTouchView: View {
                             // for every phase, so the gap's width — and therefore
                             // cardW — never changes between them.
                             HStack(alignment: .top, spacing: 12) {
-                                playerHandsArea(cardW: cardW, isLandscape: isLandscape)
+                                playerHandsArea(cardW: cardW, maxHandWidth: maxHandWidth)
                                 inlineLandscapeControls
+                                    // Shrink the layout bounds by 58pt at the bottom so the
+                                    // Deal button isn't counted in the height. Then the bottom
+                                    // alignment below will align the 2X/Clear row perfectly
+                                    // with the bottom of the cards!
+                                    .padding(.bottom, -58)
                                     .frame(maxHeight: .infinity, alignment: .bottom)
-                                dealerArea(cardW: cardW, isLandscape: isLandscape)
+                                dealerArea(cardW: cardW, maxHandWidth: maxHandWidth)
                             }
                         } else {
-                            dealerArea(cardW: cardW, isLandscape: isLandscape)
+                            dealerArea(cardW: cardW, maxHandWidth: maxHandWidth)
 
-                            playerHandsArea(cardW: cardW, isLandscape: isLandscape)
+                            playerHandsArea(cardW: cardW, maxHandWidth: maxHandWidth)
                         }
                     }
                     // Reserves room at the bottom for the fixed controls bar (measured
@@ -463,7 +423,7 @@ struct BlackjackTouchView: View {
 
     // MARK: Dealer
 
-    private func dealerArea(cardW: CGFloat, isLandscape: Bool) -> some View {
+    private func dealerArea(cardW: CGFloat, maxHandWidth: CGFloat) -> some View {
         VStack(spacing: 6) {
             // Matches playerHandsArea's label font exactly (.subheadline, not
             // .caption) — a smaller dealer label made this VStack's label+cards
@@ -473,7 +433,7 @@ struct BlackjackTouchView: View {
             Text(dealerLabel)
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: handSpacing(cardW: cardW, count: max(viewModel.state.dealerCards.count, 2), isSplit: false, isLandscape: isLandscape)) {
+            HStack(spacing: handSpacing(cardW: cardW, count: max(viewModel.state.dealerCards.count, 2), maxHandWidth: maxHandWidth)) {
                 if viewModel.state.dealerCards.isEmpty || showCardBackPlaceholders {
                     ForEach(0..<2, id: \.self) { i in
                         HoneycombSimpleCardBack()
@@ -504,7 +464,7 @@ struct BlackjackTouchView: View {
 
     // MARK: Player hand(s)
 
-    private func playerHandsArea(cardW: CGFloat, isLandscape: Bool) -> some View {
+    private func playerHandsArea(cardW: CGFloat, maxHandWidth: CGFloat) -> some View {
         VStack(spacing: 18) {
             if viewModel.state.playerHands.isEmpty || showCardBackPlaceholders {
                 // Pre-deal placeholder — matches dealerArea's own empty-state branch
@@ -516,7 +476,7 @@ struct BlackjackTouchView: View {
                     Text(coordinator.L(.touchYouLabel))
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
-                    HStack(spacing: handSpacing(cardW: cardW, count: 2, isSplit: false, isLandscape: isLandscape)) {
+                    HStack(spacing: handSpacing(cardW: cardW, count: 2, maxHandWidth: maxHandWidth)) {
                         ForEach(0..<2, id: \.self) { i in
                             HoneycombSimpleCardBack()
                                 .frame(width: cardW, height: cardW * CardDimensions.aspectRatio)
@@ -553,7 +513,7 @@ struct BlackjackTouchView: View {
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(.white)
                         }
-                        HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, isSplit: viewModel.state.playerHands.count > 1, isLandscape: isLandscape)) {
+                        HStack(spacing: handSpacing(cardW: cardW, count: hand.cards.count, maxHandWidth: maxHandWidth)) {
                             ForEach(Array(hand.cards.enumerated()), id: \.offset) { i, card in
                                 TouchCardView(card: card, width: cardW)
                                     .opacity(cardsVisible ? 1 : 0)
