@@ -506,7 +506,7 @@ public partial class BlackjackView : UserControl
         {
             headline   = Strings.Get(StringKey.ResultHeadlineBlackjack, _language);
             subline    = netStr;
-            background = "#BF000000";
+            background = "#80000000";
             win        = true;
             streak     = vm.ConsecutiveWins;
         }
@@ -514,7 +514,7 @@ public partial class BlackjackView : UserControl
         {
             headline   = Strings.Get(StringKey.YouWin, _language);
             subline    = netStr;
-            background = "#BF000000";
+            background = "#80000000";
             win        = true;
             streak     = vm.ConsecutiveWins;
         }
@@ -522,7 +522,7 @@ public partial class BlackjackView : UserControl
         {
             headline   = Strings.Get(StringKey.ResultHeadlinePush, _language);
             subline    = freePlay ? "" : Strings.Get(StringKey.ResultSubPush, _language);
-            background = "#BF000000";
+            background = "#80000000";
             win        = false;
             streak     = 0;
         }
@@ -532,7 +532,7 @@ public partial class BlackjackView : UserControl
             isNotTodayPartner = !anyBust;
             headline   = anyBust ? Strings.Get(StringKey.ResultHeadlineBust, _language) : Strings.Get(StringKey.NotTodayPartner, _language);
             subline    = netStr;
-            background = "#BF000000";
+            background = "#80000000";
             win        = false;
             streak     = 0;
         }
@@ -566,7 +566,7 @@ public partial class BlackjackView : UserControl
         ResultPlayerTotal.Text    = "Player: 21";
         ResultHeadline.Text       = win ? "You win!" : "Not today, partner!";
         ResultSubline.Text        = win ? "+50 credits" : "-50 credits";
-        ResultOverlay.Background  = new SolidColorBrush(Color.Parse("#BF000000"));
+        ResultOverlay.Background  = new SolidColorBrush(Color.Parse("#80000000"));
         ResultOverlay.BoxShadow   = BoxShadows.Parse(BannerStyles.GoldGlowBoxShadow);
         ResultOverlay.MaxWidth    = win ? 320 : 460;
         ShowBanner(win, streak: 0);

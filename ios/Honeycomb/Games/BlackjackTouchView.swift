@@ -30,6 +30,7 @@ struct BlackjackTouchView: View {
     @State private var showCardBackPlaceholders = false
     @State private var dealerFlipped = false
     @State private var showIdlePrompt = false
+    @State private var resultBannerShowTask: DispatchWorkItem? = nil
     @State private var resultHideTask: DispatchWorkItem? = nil
     @State private var resultCardHideTask: DispatchWorkItem? = nil
     @State private var idlePromptTask: DispatchWorkItem? = nil
@@ -153,6 +154,7 @@ struct BlackjackTouchView: View {
                 // is pinned below as a fixed bottom bar (not part of this scrolling
                 // content) so it's never what gets pushed off screen — only the cards
                 // scroll.
+                ScrollViewReader { scrollProxy in
                 ScrollView {
                     VStack(spacing: 16) {
                         topBar(isLandscape: isLandscape)
@@ -164,29 +166,39 @@ struct BlackjackTouchView: View {
                         }
 
                         if isLandscape {
-                            // Landscape's width can't spare the height a vertical
-                            // dealer-then-player stack needs, but it has plenty of width
-                            // to spare — dealer left, player right instead, with
-                            // inlineLandscapeControls (chips while betting, the action
-                            // buttons once a hand starts, etc.) sitting in that same gap
-                            // for every phase, so the gap's width — and therefore
-                            // cardW — never changes between them.
+                            // Player left, dealer right, with a fixed-width spacer in the
+                            // gap between them — inlineLandscapeControls itself renders as
+                            // a fixed .overlay below, not inline here, so it never moves
+                            // as hand height changes (see that overlay's own comment).
+                            // Each hand area is pinned to exactly maxHandWidth — the same
+                            // budget cardW/handSpacing solve within — and trailing/leading-
+                            // aligned toward that gap. Without this, a natural (content-
+                            // sized) VStack could render narrower than maxHandWidth on one
+                            // side but not the other (e.g. after a double added a 3rd
+                            // card), which recenters the whole HStack as a block and shifts
+                            // the actual gap off from the fixed controls overlay's constant
+                            // screen-center position — cards would drift into the buttons.
                             HStack(alignment: .top, spacing: 12) {
                                 playerHandsArea(cardW: cardW, maxHandWidth: maxHandWidth)
-                                inlineLandscapeControls
-                                    // Shrink the layout bounds by 58pt at the bottom so the
-                                    // Deal button isn't counted in the height. Then the bottom
-                                    // alignment below will align the 2X/Clear row perfectly
-                                    // with the bottom of the cards!
-                                    .padding(.bottom, -58)
-                                    .frame(maxHeight: .infinity, alignment: .bottom)
+                                    .frame(width: maxHandWidth, alignment: .trailing)
+                                Color.clear
+                                    .frame(width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing)
                                 dealerArea(cardW: cardW, maxHandWidth: maxHandWidth)
+                                    .frame(width: maxHandWidth, alignment: .leading)
                             }
                         } else {
                             dealerArea(cardW: cardW, maxHandWidth: maxHandWidth)
 
                             playerHandsArea(cardW: cardW, maxHandWidth: maxHandWidth)
                         }
+
+                        // Scroll target for the auto-scroll below — a split's second (or
+                        // third) hand can push content taller than the screen in either
+                        // orientation, and without this the fixed controls bar/
+                        // inlineLandscapeControls would sit on top of whichever hand
+                        // happened to be at the bottom of the unscrolled viewport instead
+                        // of the player ever seeing it move out of the way.
+                        Color.clear.frame(height: 1).id("bjScrollBottom")
                     }
                     // Reserves room at the bottom for the fixed controls bar (measured
                     // live below) so the last card/banner content never ends up
@@ -215,6 +227,21 @@ struct BlackjackTouchView: View {
                 // actually overflows it — exactly the fallback-only behavior wanted.
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicators(.hidden)
+                // Split creates a second hand (or bust/advance moves to it) — scroll so
+                // the controls bar/inlineLandscapeControls end up below the newly-visible
+                // content instead of on top of it. .bottom anchor, not .top, so the
+                // active hand and the controls acting on it both land in view together.
+                .onChange(of: viewModel.state.playerHands.count) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        scrollProxy.scrollTo("bjScrollBottom", anchor: .bottom)
+                    }
+                }
+                .onChange(of: viewModel.state.activeHandIndex) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        scrollProxy.scrollTo("bjScrollBottom", anchor: .bottom)
+                    }
+                }
+                }
 
                 // Overlay, not part of the ScrollView's flow — centers on the whole
                 // screen regardless of scroll position or how tall the dealer/player
@@ -234,9 +261,7 @@ struct BlackjackTouchView: View {
                 // (a split especially) could grow tall enough to push these action
                 // buttons below the visible screen, right when they're needed most.
                 // Pinning them here means only the cards ever scroll; the buttons that
-                // act on them stay in the same place at every hand size. Landscape
-                // never uses this — every phase's controls render inline instead (see
-                // inlineLandscapeControls), between the two card areas, not down here.
+                // act on them stay in the same place at every hand size.
                 if !isLandscape {
                     controls(isLandscape: isLandscape)
                         .padding(.horizontal, 16)
@@ -246,6 +271,22 @@ struct BlackjackTouchView: View {
                         // closer to the screen's bottom edge.
                         .padding(.bottom, 4)
                         .frame(maxWidth: .infinity)
+                }
+
+                // Landscape's equivalent fixed control — used to be an HStack child
+                // sitting in the gap between playerHandsArea and dealerArea, bottom-
+                // aligned within a .frame(maxHeight: .infinity) that stretched to match
+                // whichever side was tallest. That worked for a single 2-card hand, but
+                // a split stacks a second (or third) hand tall enough to push that
+                // "bottom" far down the scrollable content — well past the visible
+                // screen — leaving Hit/Stand floating in empty space, disconnected from
+                // both hands. Fixed here instead, at a constant on-screen position
+                // outside the ScrollView, so it never moves (or goes off-screen) no
+                // matter how tall a split makes the cards above it.
+                if isLandscape {
+                    inlineLandscapeControls
+                        .frame(width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing)
+                        .padding(.bottom, 8)
                 }
             }
         }
@@ -285,13 +326,13 @@ struct BlackjackTouchView: View {
         .background(IOSBackgroundLayer(intensity: 0.6))
         .onAppear { viewModel.checkLoadingBanner() }
         // Debug-only trigger handler — mirrors mac's BlackjackView.swift onChange(of:
-        // viewModel.debugBannerRequest), minus resultBannerShowTask (this view doesn't
-        // have that task var). viewModel.debugSetupBannerState(kind) is shared code that
-        // builds the actual hand/result state; this just resets the transient result-
-        // banner/card UI state around it.
+        // viewModel.debugBannerRequest). viewModel.debugSetupBannerState(kind) is shared
+        // code that builds the actual hand/result state; this just resets the transient
+        // result-banner/card UI state around it.
         .onChange(of: viewModel.debugBannerRequest) { _, kind in
             guard let kind else { return }
             viewModel.debugBannerRequest = nil
+            resultBannerShowTask?.cancel()
             resultHideTask?.cancel()
             resultCardHideTask?.cancel()
             showResultBanner = false
@@ -313,14 +354,21 @@ struct BlackjackTouchView: View {
                 dealerFlipped = true
                 withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
 
-                // Shows synchronously rather than through a delayed DispatchWorkItem
-                // (mac waits 1.0s first) — a plain, directly-verifiable SwiftUI
-                // condition instead of depending on an async task actually firing.
-                showResultBanner = true
-                if viewModel.state.isWinRound {
-                    showParticles = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+                // Matches mac: a 1.0s beat before the banner appears, so the player
+                // actually gets to see the final hand (dealer's revealed cards, bust,
+                // etc.) before it's covered. Used to show synchronously here instead —
+                // that made the banner pop up over the hand with no time to read it,
+                // and meant iOS held the banner up a full second longer than mac despite
+                // both fading it at the same absolute moment.
+                let bannerShowTask = DispatchWorkItem {
+                    showResultBanner = true
+                    if viewModel.state.isWinRound {
+                        showParticles = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+                    }
                 }
+                resultBannerShowTask = bannerShowTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: bannerShowTask)
 
                 let bannerTask = DispatchWorkItem {
                     let hideTask = DispatchWorkItem {
@@ -345,6 +393,7 @@ struct BlackjackTouchView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: bannerTask)
             }
             if newPhase == .betting || newPhase == .playing {
+                resultBannerShowTask?.cancel(); resultBannerShowTask = nil
                 resultHideTask?.cancel(); resultHideTask = nil
                 resultCardHideTask?.cancel(); resultCardHideTask = nil
                 idlePromptTask?.cancel(); idlePromptTask = nil
@@ -588,7 +637,7 @@ struct BlackjackTouchView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
                 .padding(.vertical, 36)
-                .background(Color.black.opacity(0.75))
+                .background(Color.black.opacity(0.5))
                 .cornerRadius(24)
                 .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5) : .clear, radius: 32)
                 .padding(.horizontal, 16)

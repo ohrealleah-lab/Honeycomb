@@ -28,10 +28,16 @@ struct VideoPokerTouchView: View {
     @State private var cardsVisible = true
     @State private var showCardBackPlaceholders = true
     @State private var showIdlePrompt = false
+    @State private var resultBannerShowTask: DispatchWorkItem? = nil
     @State private var resultWinFlashTask: DispatchWorkItem? = nil
     @State private var resultAnimationTask: DispatchWorkItem? = nil
     @State private var resultHideTask: DispatchWorkItem? = nil
     @State private var idlePromptTask: DispatchWorkItem? = nil
+    // Portrait only — the real betTrio row's live-measured height, reused as an
+    // invisible placeholder during .holding (see portraitBetTrioSlot) so the controls
+    // bar's total height stays constant across every phase instead of collapsing from
+    // 2 rows to 1 and back, which shifted the pay table/cards up and down with it.
+    @State private var betTrioHeight: CGFloat = 60
     // Height of the fixed bottom controls bar (see body) — reserved as bottom padding
     // on the scrollable content so it never ends up hidden underneath it.
     @State private var controlsHeight: CGFloat = 90
@@ -192,13 +198,13 @@ struct VideoPokerTouchView: View {
         )
         .onAppear { viewModel.checkLoadingBanner() }
         // Debug-only trigger handler — mirrors mac's VideoPokerView.swift onChange(of:
-        // viewModel.debugBannerRequest), minus resultBannerShowTask (this view doesn't
-        // have that task var). viewModel.debugSetupBannerState(kind) is shared code that
-        // builds the actual hand/result state; this just resets the transient result-
-        // banner UI state around it, same as the phase == .result branch below does.
+        // viewModel.debugBannerRequest). viewModel.debugSetupBannerState(kind) is shared
+        // code that builds the actual hand/result state; this just resets the transient
+        // result-banner UI state around it, same as the phase == .result branch below does.
         .onChange(of: viewModel.debugBannerRequest) { _, kind in
             guard let kind else { return }
             viewModel.debugBannerRequest = nil
+            resultBannerShowTask?.cancel()
             resultWinFlashTask?.cancel()
             resultAnimationTask?.cancel()
             resultHideTask?.cancel()
@@ -215,15 +221,21 @@ struct VideoPokerTouchView: View {
             viewModel.scheduleIdleActionCheck()
             if newPhase == .result {
                 // Cancel any leftover tasks just in case.
+                resultBannerShowTask?.cancel()
                 resultWinFlashTask?.cancel()
                 resultAnimationTask?.cancel()
                 resultHideTask?.cancel()
                 idlePromptTask?.cancel()
 
-                // Shows synchronously rather than through a delayed DispatchWorkItem
-                // (mac waits 1.0s first) — a plain, directly-verifiable SwiftUI
-                // condition instead of depending on an async task actually firing.
-                showResultBanner = true
+                // Matches mac: a 1.0s beat before the banner appears, so the player
+                // actually gets to see the final hand before it's covered. Used to show
+                // synchronously here instead — that made the banner pop up over the hand
+                // with no time to read it, and meant iOS held the banner up a full
+                // second longer than mac despite both fading it at the same absolute
+                // moment.
+                let bannerShowTask = DispatchWorkItem { showResultBanner = true }
+                resultBannerShowTask = bannerShowTask
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: bannerShowTask)
 
                 let animationTask = DispatchWorkItem {
                     let hideTask = DispatchWorkItem {
@@ -248,15 +260,18 @@ struct VideoPokerTouchView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: animationTask)
 
                 if viewModel.state.lastPayout > 0 {
-                    winFlash = true
-                    showParticles = true
-                    let winFlashOffTask = DispatchWorkItem { winFlash = false }
-                    resultWinFlashTask = winFlashOffTask
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: winFlashOffTask)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+                    let winFlashTask = DispatchWorkItem {
+                        winFlash = true
+                        showParticles = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { winFlash = false }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
+                    }
+                    resultWinFlashTask = winFlashTask
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: winFlashTask)
                 }
             }
             if newPhase == .holding {
+                resultBannerShowTask?.cancel(); resultBannerShowTask = nil
                 resultWinFlashTask?.cancel(); resultWinFlashTask = nil
                 resultAnimationTask?.cancel(); resultAnimationTask = nil
                 resultHideTask?.cancel(); resultHideTask = nil
@@ -269,6 +284,7 @@ struct VideoPokerTouchView: View {
                 animateDeal()
             }
             if newPhase == .deal {
+                resultBannerShowTask?.cancel(); resultBannerShowTask = nil
                 resultWinFlashTask?.cancel(); resultWinFlashTask = nil
                 resultAnimationTask?.cancel(); resultAnimationTask = nil
                 resultHideTask?.cancel(); resultHideTask = nil
@@ -509,9 +525,15 @@ struct VideoPokerTouchView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
                     .padding(.vertical, 32)
-                    .background(Color.black.opacity(0.75))
+                    .background(Color.black.opacity(0.5))
                     .cornerRadius(28)
                     .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 24)
+                    // Scoped to the message box only, not the whole ZStack (which also
+                    // contains the full-bleed scrim above) — ignoresSafeArea() only
+                    // cancels the system safe area, not an ancestor's explicit .padding(),
+                    // so padding the outer ZStack was insetting the scrim itself, leaving
+                    // a visible gap of unshaded background down both edges of the screen.
+                    .padding(.horizontal, 16)
                     .onTapGesture {
                         viewModel.deal()
                         dealHaptic.impactOccurred()
@@ -532,8 +554,11 @@ struct VideoPokerTouchView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
                     .padding(.vertical, 32)
-                    .background(Color.black.opacity(0.75))
+                    .background(Color.black.opacity(0.5))
                     .cornerRadius(28)
+                    // See the win branch's identical .padding(.horizontal, 16) above for
+                    // why this is scoped to the box, not the outer ZStack.
+                    .padding(.horizontal, 16)
                     .onTapGesture {
                         viewModel.deal()
                         dealHaptic.impactOccurred()
@@ -541,7 +566,6 @@ struct VideoPokerTouchView: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -570,9 +594,32 @@ struct VideoPokerTouchView: View {
             }
         } else {
             VStack(spacing: 12) {
-                betTrio(compact: false)
+                portraitBetTrioSlot()
                 phaseButton(compact: false)
             }
+        }
+    }
+
+    // Matches Blackjack's actionRow/chipRowHeight pattern — betTrio disappears
+    // entirely during .holding (nothing to bet with once a hand is in progress),
+    // which used to collapse this VStack from 2 rows to 1 and back, shifting the
+    // vertically-centered pay table/cards up and down with it (see controlsHeight's
+    // own comment and the ScrollView's .padding(.bottom, controlsHeight + 16) below).
+    // Swapping in a same-height invisible placeholder instead keeps the controls bar's
+    // total height — and therefore controlsHeight — constant across every phase.
+    @ViewBuilder
+    private func portraitBetTrioSlot() -> some View {
+        if viewModel.isFreePlay {
+            EmptyView()
+        } else if viewModel.state.phase == .holding {
+            Color.clear.frame(height: betTrioHeight)
+        } else {
+            betTrio(compact: false)
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.size.height
+                } action: { newHeight in
+                    betTrioHeight = newHeight
+                }
         }
     }
 
