@@ -26,6 +26,7 @@ struct SpiderTouchView: View {
     @State private var showingThemes = false
     @State private var showingStats = false
     @State private var dismissedStuckBanner = false
+    @State private var dismissedAutocompleteBanner = false
     @State private var showParticles = false
     @State private var isDealInFlight = false
     @State private var showNoHintsBanner = false
@@ -46,12 +47,17 @@ struct SpiderTouchView: View {
             let heightShrink = neededHeight > geo.size.height ? geo.size.height / neededHeight : 1.0
             let cardW = widthCardW * heightShrink
             let cardH = cardW * CardDimensions.aspectRatio
+            let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
                 VStack(spacing: 10) {
-                    topBar
+                    topBar(isLandscape: isLandscape)
                         .padding(.horizontal, 8)
                         .frame(height: 44)
+
+                    if !isLandscape {
+                        statusCapsule
+                    }
 
                     topRow(cardW: cardW, cardH: cardH)
                         .padding(.horizontal, 8)
@@ -63,10 +69,6 @@ struct SpiderTouchView: View {
                 }
 
                 dragOverlay(cardW: cardW, cardH: cardH)
-
-                if viewModel.isAutocompleteAvailable && !viewModel.state.hasWon {
-                    autocompleteButton
-                }
 
                 if viewModel.state.hasWon {
                     // Unlike Klondike/Beecell, Spider intentionally skips the bouncing-
@@ -98,6 +100,11 @@ struct SpiderTouchView: View {
             // appears. .overlay() doesn't feed size back up the way a ZStack sibling
             // does, so it can bleed edge-to-edge without dragging the board's own size
             // out with it.
+            .overlay {
+                if viewModel.isAutocompleteAvailable && !viewModel.state.hasWon && !dismissedAutocompleteBanner {
+                    autocompleteBanner
+                }
+            }
             .overlay {
                 if viewModel.state.hasWon {
                     winOverlay
@@ -141,10 +148,15 @@ struct SpiderTouchView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
             }
         }
+        // Mirrors mac's SpiderView.swift onChange(of: viewModel.isAutocompleteAvailable)
+        // — a fresh autocomplete opportunity always re-shows the banner even if the last
+        // one was dismissed.
+        .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in
+            if newVal { dismissedAutocompleteBanner = false }
+        }
         // Debug-only trigger handler — mirrors mac's SpiderView.swift onChange(of:
-        // viewModel.debugBannerRequest), minus dismissedWinBanner/dismissedAutocompleteBanner
-        // resets (this view doesn't have those flags — its win/autocomplete UI shows
-        // unconditionally off hasWon/isAutocompleteAvailable, no separate dismiss state).
+        // viewModel.debugBannerRequest), minus dismissedWinBanner (this view doesn't
+        // have that flag — its win UI shows unconditionally off hasWon).
         .onChange(of: viewModel.debugBannerRequest) { _, kind in
             guard let kind else { return }
             viewModel.debugBannerRequest = nil
@@ -164,6 +176,7 @@ struct SpiderTouchView: View {
                 viewModel.isStuck = true
             case .autocomplete:
                 viewModel.state.hasWon = false
+                dismissedAutocompleteBanner = false
                 viewModel.isAutocompleteAvailable = true
             case .loss, .same, .plus, .suddenDeath:
                 break
@@ -189,12 +202,14 @@ struct SpiderTouchView: View {
 
     // MARK: Top bar
 
-    private var topBar: some View {
-        // statusCapsule is an overlay, not a third HStack element flanked by
-        // Spacers — the leading (menu) and trailing (New Deal) content aren't the
-        // same width, so centering it "between" two Spacers actually centered it in
-        // whatever space was left over, not on the bar itself. An overlay centers it
-        // on the full bar width regardless of how wide either side is.
+    private func topBar(isLandscape: Bool) -> some View {
+        // Landscape only: statusCapsule is an overlay, not a third HStack element
+        // flanked by Spacers — the leading (menu) and trailing (New Deal) content
+        // aren't the same width, so centering it "between" two Spacers actually
+        // centered it in whatever space was left over, not on the bar itself. An
+        // overlay centers it on the full bar width regardless of how wide either side
+        // is. Portrait has height to spare, so statusCapsule instead renders as its own
+        // row below topBar (see body) rather than overlapping the menu icons.
         // Tightened from spacing:10 — six 44pt icon buttons (menu/options/palette/
         // debug/undo/hint) plus the New Deal/Quit button no longer fit an iPhone's
         // width at the old spacing once undo/hint moved up here from the board; the
@@ -237,7 +252,11 @@ struct SpiderTouchView: View {
             }
             .buttonStyle(.borderedProminent)
         }
-        .overlay { statusCapsule }
+        .overlay {
+            if isLandscape {
+                statusCapsule
+            }
+        }
     }
 
     private var statusCapsule: some View {
@@ -552,20 +571,47 @@ struct SpiderTouchView: View {
 
     // MARK: Overlays
 
-    private var autocompleteButton: some View {
-        VStack {
-            Spacer()
-            Button {
-                viewModel.runAutocomplete()
-            } label: {
-                Label(coordinator.L(.helpShortcutAutocomplete), systemImage: "wand.and.stars")
-                    .font(.headline)
-                    .padding(.horizontal, 8)
+    // Matches Klondike's autocompleteBanner exactly (shared banner design across
+    // Klondike/Beecell/Spider), swapping in autocompleteBodyOther for the generic
+    // "sorted into foundations" wording instead of Klondike's own body text.
+    private var autocompleteBanner: some View {
+        ZStack {
+            Color.black.opacity(0.45).ignoresSafeArea()
+            ZStack(alignment: .topTrailing) {
+                VStack(spacing: 12) {
+                    Text(coordinator.L(.victoryGuaranteed))
+                        .font(.system(size: 30, weight: .black))
+                        .foregroundColor(.yellow)
+                        .multilineTextAlignment(.center)
+                    Text(coordinator.L(.autocompleteBodyOther))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                    Button {
+                        viewModel.runAutocomplete()
+                    } label: {
+                        Label(coordinator.L(.autocompleteGame), systemImage: "wand.and.stars")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .buttonBorderShape(.capsule)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 24)
+                .frame(maxWidth: 320)
+                .background(Color.black.opacity(0.75))
+                .cornerRadius(12)
+                .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+
+                Button {
+                    dismissedAutocompleteBanner = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .padding(10)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.yellow)
-            .foregroundStyle(.black)
-            .padding(.bottom, 24)
         }
     }
 

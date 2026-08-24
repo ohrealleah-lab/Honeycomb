@@ -48,12 +48,17 @@ struct KlondikeTouchView: View {
             let heightShrink = neededHeight > geo.size.height ? geo.size.height / neededHeight : 1.0
             let cardW = widthCardW * heightShrink
             let cardH = cardW * CardDimensions.aspectRatio
+            let isLandscape = geo.size.width > geo.size.height
 
             ZStack {
                 VStack(spacing: 10) {
-                    topBar
+                    topBar(isLandscape: isLandscape)
                         .padding(.horizontal, 8)
                         .frame(height: 44)
+
+                    if !isLandscape {
+                        statusCapsule
+                    }
 
                     topRow(cardW: cardW, cardH: cardH)
                         .padding(.horizontal, 8)
@@ -192,12 +197,14 @@ struct KlondikeTouchView: View {
 
     // MARK: Top bar
 
-    private var topBar: some View {
-        // statusCapsule is an overlay, not a third HStack element flanked by
-        // Spacers — the leading (menu) and trailing (New Deal) content aren't the
-        // same width, so centering it "between" two Spacers actually centered it in
-        // whatever space was left over, not on the bar itself. An overlay centers it
-        // on the full bar width regardless of how wide either side is.
+    private func topBar(isLandscape: Bool) -> some View {
+        // Landscape only: statusCapsule is an overlay, not a third HStack element
+        // flanked by Spacers — the leading (menu) and trailing (New Deal) content
+        // aren't the same width, so centering it "between" two Spacers actually
+        // centered it in whatever space was left over, not on the bar itself. An
+        // overlay centers it on the full bar width regardless of how wide either side
+        // is. Portrait has height to spare, so statusCapsule instead renders as its own
+        // row below topBar (see body) rather than overlapping the menu icons.
         // Tightened from spacing:10 — six 44pt icon buttons (menu/options/palette/
         // debug/undo/hint) plus the New Deal/Quit button no longer fit an iPhone's
         // width at the old spacing once undo/hint moved up here from the board; the
@@ -240,7 +247,11 @@ struct KlondikeTouchView: View {
             }
             .buttonStyle(.borderedProminent)
         }
-        .overlay { statusCapsule }
+        .overlay {
+            if isLandscape {
+                statusCapsule
+            }
+        }
     }
 
     private var statusCapsule: some View {
