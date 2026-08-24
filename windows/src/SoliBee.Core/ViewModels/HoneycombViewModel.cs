@@ -462,7 +462,15 @@ public partial class HoneycombViewModel : ObservableObject
     private static List<(int stars, int count)> NormalComposition(HoneycombDifficulty difficulty)
     {
         var comp = new List<(int stars, int count)>();
-        if (difficulty == HoneycombDifficulty.Easy) { comp.Add((1, 4)); comp.Add((2, 1)); }
+        if (difficulty == HoneycombDifficulty.Easy)
+        {
+            comp.Add((1, 3));
+            comp.Add((2, 1));
+            // Baby Bee: a 20% chance of a 3★ card instead of the usual second 2★, so
+            // its deck isn't entirely predictable at this difficulty either — same
+            // idea as Medium's own variable last slot below.
+            comp.Add(Random.Shared.NextDouble() < 0.2 ? (3, 1) : (2, 1));
+        }
         else if (difficulty == HoneycombDifficulty.Medium)
         {
             comp.Add((2, 4));
