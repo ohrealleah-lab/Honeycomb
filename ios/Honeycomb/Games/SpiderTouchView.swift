@@ -71,17 +71,12 @@ struct SpiderTouchView: View {
                 if viewModel.state.hasWon {
                     // Unlike Klondike/Beecell, Spider intentionally skips the bouncing-
                     // card cascade and just shows the banner + confetti.
-                    winOverlay
 
                     // On top of the banner (not behind it) — matches the Blackjack/
                     // Video Poker confetti ordering.
                     WinParticleView(active: showParticles)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .allowsHitTesting(false)
-                }
-
-                if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
-                    stuckOverlay
                 }
 
                 if showNoHintsBanner {
@@ -96,6 +91,23 @@ struct SpiderTouchView: View {
             // .named(Self.boardSpace) reference below depends on this exact container.
             // Moving this modifier to a different view breaks drop hit-testing silently.
             .coordinateSpace(name: Self.boardSpace)
+            // winOverlay/stuckOverlay both call .ignoresSafeArea() internally. As plain
+            // ZStack siblings, that would make the ZStack itself adopt the full-bleed,
+            // notch-including size and propose it to every other sibling too, shifting
+            // the whole board out past the safe area right as the win/stuck banner
+            // appears. .overlay() doesn't feed size back up the way a ZStack sibling
+            // does, so it can bleed edge-to-edge without dragging the board's own size
+            // out with it.
+            .overlay {
+                if viewModel.state.hasWon {
+                    winOverlay
+                }
+            }
+            .overlay {
+                if viewModel.isStuck && !viewModel.state.hasWon && !dismissedStuckBanner {
+                    stuckOverlay
+                }
+            }
         }
         .environment(\.feltColor, coordinator.feltColor)
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
