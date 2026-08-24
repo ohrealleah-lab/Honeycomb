@@ -132,7 +132,7 @@ enum StringsEnglish {
         .holdAll: "Hold All",
         .betMax: "Bet Max",
         .scoreYouFmt: "You %d",
-        .scoreDealerFmt: "%d %@",
+        .scoreDealerFmt: "%@ %d",
         .appNavigationTitle: "Honeycomb Card Suite",
         .resetDefaultCardBacks: "Reset Default Card Backs",
         .stayOnTop: "Stay on Top",

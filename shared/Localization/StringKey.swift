@@ -262,7 +262,7 @@ public enum StringKey: String, CaseIterable {
     case betMax = "bet_max"
     /// Score badge, %d = player score — Honeycomb touch view
     case scoreYouFmt = "score_you_fmt"
-    /// Score badge, Honeycomb touch view — %d = opponent score, %@/{1} = opponent's difficulty name (e.g. Baby Bee)
+    /// Score badge, Honeycomb touch view — %@/{0} = opponent's difficulty name (e.g. Baby Bee), %d = opponent score
     case scoreDealerFmt = "score_dealer_fmt"
     /// Window nav title, SoliBeeApp.swift
     case appNavigationTitle = "app_navigation_title"

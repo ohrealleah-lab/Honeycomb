@@ -223,6 +223,22 @@ struct HoneycombTouchView: View {
                 viewModel.startNewGame()
             }
             viewModel.checkLoadingBanner()
+            // Resync flip state with reality — IOSRouterView's `switch` on gameMode
+            // unmounts this view entirely when the player switches to a different game
+            // (unlike mac's AppCoordinator, which keeps every game's view alive at
+            // once), so returning to Honeycomb creates a brand-new HoneycombTouchView
+            // with isPlayerCardRevealed/isOpponentCardRevealed reset to their all-false
+            // defaults. viewModel.honeycombViewModel itself isn't reset (same instance,
+            // still mid-match), so the .onChange(of: viewModel.gameState) below never
+            // fires — nothing else was restoring these, leaving every card stuck
+            // showing its face-down back with no flip in sight and no way to play.
+            // Bumping handIdentityToken makes the freshly-created HoneycombFlipContainers
+            // pick these values up as their *initial* state, not something to animate.
+            if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
+                isPlayerCardRevealed = [Bool](repeating: true, count: viewModel.playerHand.count)
+                isOpponentCardRevealed = viewModel.opponentHand.map { viewModel.isOpponentCardVisible(cardId: $0.id) }
+                handIdentityToken += 1
+            }
         }
         .onChange(of: viewModel.gameState) { oldValue, newValue in
             if newValue == .setup {
@@ -596,8 +612,10 @@ struct HoneycombTouchView: View {
             Text(coordinator.L(.scoreYouFmt, viewModel.board.playerScore + viewModel.playerHand.count))
             // Not "DEALER" — shows the opponent's actual name (e.g. "Baby Bee"), same
             // fix as the hand-side label above the opponent's cards. Name comes first
-            // to match "You: N" on the left (scoreDealerFmt's %@/%d order was swapped
-            // to match — see Strings.English.swift).
+            // to match "You: N" on the left — scoreDealerFmt is "%@ %d" to match this
+            // call's (name, score) argument order; a stale "%d %@" here crashed on
+            // every Honeycomb match (the %@ tried to message the Int score as if it
+            // were an object).
             Text(coordinator.L(.scoreDealerFmt,
                                 honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language),
                                 viewModel.board.opponentScore + viewModel.opponentHand.count))
