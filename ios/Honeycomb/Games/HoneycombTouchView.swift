@@ -363,13 +363,13 @@ struct HoneycombTouchView: View {
     // scaled content now (see body), not part of gameContent's own tree.
     private func intrinsicSize(landscape: Bool, landscapeHandCardSize: CGSize = HoneycombTouchView.boardCardSize) -> CGSize {
         if landscape {
-            let handColumnWidth = 2 * landscapeHandCardSize.width + Self.handSpacing
+            let handColumnWidth = 3 * landscapeHandCardSize.width + 2 * Self.handSpacing
             let boardWidth = 3 * Self.boardCardSize.width + 2 * Self.boardSpacing
             let width = handColumnWidth * 2 + boardWidth + 2 * 24 + 32
             let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
-            // Board column is just boardGrid now, plus the outer HStack's .padding(16) top+bottom = 32.
-            let height = boardHeight + 32
-            return CGSize(width: width * 1.02, height: height * 1.04)
+            // Removed vertical padding from gameContent, so height is just boardHeight.
+            let height = boardHeight
+            return CGSize(width: width * 1.01, height: height * 1.01)
         } else {
             let width = 5 * Self.playerCardSize.width + 4 * Self.handSpacing + 16
             let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
@@ -396,30 +396,29 @@ struct HoneycombTouchView: View {
         // Must match intrinsicSize(landscape: true)'s height formula exactly, or the
         // scale this solves for won't match the scale actually applied later, and
         // hand cards come out sized for a different box than they're rendered into.
-        let fixedIntrinsicHeight = (boardHeight + 32) * 1.04
+        let fixedIntrinsicHeight = boardHeight * 1.01
         guard fixedIntrinsicHeight > 0, availableSize.height > 0 else { return Self.boardCardSize }
         let scale = availableSize.height / fixedIntrinsicHeight
         guard scale > 0 else { return Self.boardCardSize }
         // Inverse of intrinsicSize(landscape: true)'s width formula, solved for the
         // per-card width given a target total intrinsic width of availableSize.width/scale.
         let targetIntrinsicWidth = availableSize.width / scale
-        let widthForBothHandColumns = targetIntrinsicWidth / 1.02 - boardWidth - 2 * 24 - 32
+        let widthForBothHandColumns = targetIntrinsicWidth / 1.01 - boardWidth - 2 * 24 - 32
         let handColumnWidth = widthForBothHandColumns / 2
-        let widthFromFill = (handColumnWidth - Self.handSpacing) / 2
+        let widthFromFill = (handColumnWidth - 2 * Self.handSpacing) / 3
 
-        // pyramidHand stacks 3 rows (2/2/1), so its height is 3 card-heights plus 2
-        // gaps — that has to fit within boardHeight too (the fixed height this whole
+        // pyramidHand stacks 2 rows (3/2), so its height is 2 card-heights plus 1
+        // gap — that has to fit within boardHeight too (the fixed height this whole
         // function assumed), or the hand column ends up taller than the board and
         // overflows top/bottom despite there being width to spare. This is the real
-        // binding constraint in a 3-row pyramid — it caps hand cards barely above
+        // binding constraint in a 2-row pyramid — it caps hand cards slightly above
         // boardCardSize regardless of how much horizontal room is free.
-        let maxCardHeightFromPyramid = (boardHeight - 2 * Self.handSpacing) / 3
+        let maxCardHeightFromPyramid = (boardHeight - 1 * Self.handSpacing) / 2
         let widthFromPyramidHeight = maxCardHeightFromPyramid / Self.cardAspect
 
-        // Never smaller than the board cards — an unusually narrow landscape window
-        // (out of scope: iPad) falls back to matching the board rather than shrinking
-        // hand cards below their old fixed 116pt size.
-        let width = max(min(widthFromFill, widthFromPyramidHeight), Self.boardCardSize.width)
+        // Never smaller than the board cards, but capped at 1.2x board size so
+        // the hands don't completely dwarf the board on wide screens.
+        let width = min(max(min(widthFromFill, widthFromPyramidHeight), Self.boardCardSize.width), Self.boardCardSize.width * 1.2)
         return CGSize(width: width, height: width * Self.cardAspect)
     }
 
@@ -463,7 +462,7 @@ struct HoneycombTouchView: View {
                 }
                 .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
             }
-            .padding(16)
+            .padding(.horizontal, 16)
         } else {
             VStack(spacing: 8) {
                 // Matches playerCardSize per request — was a smaller, distinct
@@ -527,15 +526,12 @@ struct HoneycombTouchView: View {
     private func pyramidHand<Content: View>(cards: [HoneycombCard], size: CGSize,
                                             @ViewBuilder content: @escaping (Int, HoneycombCard) -> Content) -> some View {
         VStack(spacing: Self.handSpacing) {
-            HStack(spacing: Self.handSpacing) { ForEach(0..<min(2, cards.count), id: \.self) { i in content(i, cards[i]) } }
-            if cards.count > 2 {
-                HStack(spacing: Self.handSpacing) { ForEach(2..<min(4, cards.count), id: \.self) { i in content(i, cards[i]) } }
-            }
-            if cards.count > 4 {
-                HStack(spacing: Self.handSpacing) { ForEach(4..<cards.count, id: \.self) { i in content(i, cards[i]) } }
+            HStack(spacing: Self.handSpacing) { ForEach(0..<min(3, cards.count), id: \.self) { i in content(i, cards[i]) } }
+            if cards.count > 3 {
+                HStack(spacing: Self.handSpacing) { ForEach(3..<cards.count, id: \.self) { i in content(i, cards[i]) } }
             }
         }
-        .frame(width: 2 * size.width + Self.handSpacing)
+        .frame(width: 3 * size.width + 2 * Self.handSpacing)
     }
 
     // MARK: Rules + score (undo/hint moved up into the menu bar)
