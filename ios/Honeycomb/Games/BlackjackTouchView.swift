@@ -131,10 +131,7 @@ struct BlackjackTouchView: View {
             let cardHeightFromAvailable = max(0, geo.size.height - verticalChrome)
             // In landscape, playerHandsArea/dealerArea size to their own natural
             // content width (not frame(maxWidth: .infinity), which portrait's fixed-
-            // bottom-bar layout uses instead). We reserve space for the center controls
-            // and assume a worst-case hand width factor to prevent the cards from needing
-            // to shrink when more cards are drawn.
-            let worstCaseHandWidthFactor: CGFloat = 2.5
+            // bottom-bar layout uses instead). We reserve space for the center controls.
             let maxHandWidth: CGFloat = isLandscape
                 ? (geo.size.width - (Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) - 24 - 60) / 2
                 : (geo.size.width - 32)
@@ -142,7 +139,11 @@ struct BlackjackTouchView: View {
             let effectiveHandCount = (viewModel.state.playerHands.isEmpty || showCardBackPlaceholders)
                 ? 1
                 : viewModel.state.playerHands.count
-            let cardW = min(cardHeightFromAvailable / CardDimensions.aspectRatio, cardWidthFromAvailable)
+            // Same base width cap as Video Poker (min(width * 0.32, 190)) so the two
+            // games' cards read as the same size — without this, maxHandWidth's fit-to-
+            // width formula lets a lone 2-card hand grow unbounded on wide screens
+            // (iPad portrait: (834-32)/1.7 ≈ 472pt cards).
+            let cardW = min(geo.size.width * 0.32, cardHeightFromAvailable / CardDimensions.aspectRatio, cardWidthFromAvailable, 190)
                 * splitScale(handCount: effectiveHandCount)
 
             ZStack(alignment: .bottom) {
