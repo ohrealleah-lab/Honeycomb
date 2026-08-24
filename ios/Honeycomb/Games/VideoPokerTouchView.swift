@@ -32,6 +32,9 @@ struct VideoPokerTouchView: View {
     @State private var resultAnimationTask: DispatchWorkItem? = nil
     @State private var resultHideTask: DispatchWorkItem? = nil
     @State private var idlePromptTask: DispatchWorkItem? = nil
+    // Height of the fixed bottom controls bar (see body) — reserved as bottom padding
+    // on the scrollable content so it never ends up hidden underneath it.
+    @State private var controlsHeight: CGFloat = 90
 
     private let holdHaptic = UIImpactFeedbackGenerator(style: .light)
     private let dealHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -60,55 +63,64 @@ struct VideoPokerTouchView: View {
                 : overlapSpacing
             let isLandscape = geo.size.width > geo.size.height
 
-            ZStack {
-                // ScrollView fallback rather than a computed shrink factor: unlike the
-                // tableau games, most of this view's height is fixed-size text (the pay
-                // table) that doesn't have a natural "shrink" — landscape's shorter
-                // height can still exceed it, so let it scroll instead of clipping the
-                // Deal button off the bottom. Portrait already fits without scrolling.
-                ScrollView {
-                    VStack(spacing: 12) {
-                        topBar
-                            .padding(.horizontal, 12)
-                            .frame(height: 44)
+            // Bottom-aligned, matching Blackjack's ZStack(alignment: .bottom) — controls
+            // (below) is a fixed bar pinned outside the ScrollView's flow, not part of
+            // its scrolling content, so it never drifts away from the bottom of the
+            // screen regardless of how much (or little) the pay table/credit display/
+            // cards above it take up — that mismatch was what previously left Deal
+            // stranded directly under the cards with a large empty gap below it
+            // whenever No Stress Mode (or hideBetBoard) hid the pay table.
+            ZStack(alignment: .bottom) {
+                VStack(spacing: 0) {
+                    topBar
+                        .padding(.horizontal, 12)
+                        .frame(height: 44)
 
-                        // Landscape auto-hides the pay table, same idea as mac's existing
-                        // hideBetBoard/noStressMode/Triple-Play conditions — landscape's
-                        // shorter height has the least room to spare, so it always wins
-                        // regardless of the manual setting.
-                        if !isLandscape && !viewModel.options.hideBetBoard && !viewModel.options.noStressMode {
-                            payTableView
-                                .padding(.horizontal, 16)
+                    // ScrollView fallback rather than a computed shrink factor: unlike
+                    // the tableau games, most of this view's height is fixed-size text
+                    // (the pay table) that doesn't have a natural "shrink" — landscape's
+                    // shorter height can still exceed it, so let it scroll instead of
+                    // clipping content. Portrait already fits without scrolling, so
+                    // centering here (rather than top-aligning, like Blackjack) reads as
+                    // the cards sitting in the middle of the available space instead of
+                    // stuck to its top edge.
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            // Landscape auto-hides the pay table, same idea as mac's
+                            // existing hideBetBoard/noStressMode/Triple-Play conditions —
+                            // landscape's shorter height has the least room to spare, so
+                            // it always wins regardless of the manual setting.
+                            if !isLandscape && !viewModel.options.hideBetBoard && !viewModel.options.noStressMode {
+                                payTableView
+                                    .padding(.horizontal, 16)
+                            }
+
+                            holdHint
+
+                            handRow(cardW: cardW, spacing: handSpacing)
+                                .padding(.horizontal, 12)
                         }
-
-                        holdHint
-
-                        handRow(cardW: cardW, spacing: handSpacing)
-                            .padding(.horizontal, 12)
-
-                        controls
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 12)
+                        // Reserves room at the bottom for the fixed controls bar
+                        // (measured live below) so the cards never end up scrolled
+                        // underneath it — +16 beyond the exact measured height as a
+                        // visible buffer, since exactly matching it still read as
+                        // touching/overlapping (this box's own .center alignment can
+                        // shift how the measured gap actually lands).
+                        .padding(.bottom, controlsHeight + 16)
+                        .frame(minHeight: geo.size.height - 44, alignment: .center)
                     }
-                    // Flexible Spacers used to sit around the cards, which combined
-                    // with this enforced min-height stretched them apart into a large
-                    // gap between the cards and the controls at every screen size —
-                    // top-aligning instead lets the content hug together at its natural
-                    // height (buttons directly under the cards, matching mac) and
-                    // pushes any leftover space below the controls instead of between
-                    // the cards and them.
-                    .frame(minHeight: geo.size.height, alignment: .top)
+                    // This ScrollView is a fallback for content that doesn't fit (a
+                    // short landscape height), not a surface meant to invite scrolling —
+                    // hiding the indicator wasn't enough on its own, since a plain
+                    // ScrollView still lets you drag/rubber-band the content up (with
+                    // nothing to snap back to but empty space) even when it already
+                    // fits. .basedOnSize disables that drag entirely whenever content
+                    // fits within the viewport, and only re-enables real scrolling once
+                    // content actually overflows it — exactly the fallback-only
+                    // behavior wanted.
+                    .scrollBounceBehavior(.basedOnSize)
+                    .scrollIndicators(.hidden)
                 }
-                // This ScrollView is a fallback for content that doesn't fit (a short
-                // landscape height), not a surface meant to invite scrolling — hiding
-                // the indicator wasn't enough on its own, since a plain ScrollView
-                // still lets you drag/rubber-band the content up (with nothing to snap
-                // back to but empty space) even when it already fits. .basedOnSize
-                // disables that drag entirely whenever content fits within the
-                // viewport, and only re-enables real scrolling once content actually
-                // overflows it — exactly the fallback-only behavior wanted.
-                .scrollBounceBehavior(.basedOnSize)
-                .scrollIndicators(.hidden)
 
                 // Overlay, not part of the ScrollView's flow — centers on the whole
                 // screen regardless of scroll position or how tall the content above it
@@ -126,6 +138,22 @@ struct VideoPokerTouchView: View {
                 WinParticleView(active: showParticles)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .allowsHitTesting(false)
+
+                // Fixed bottom bar, outside the ScrollView above — same placement as
+                // Blackjack's controls: pinned to the bottom of the screen at every
+                // hand/pay-table size instead of trailing directly under the cards.
+                controls(isLandscape: isLandscape)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    // Less than the top's 12 per request — nudges the buttons down
+                    // a little closer to the screen's bottom edge.
+                    .padding(.bottom, 4)
+                    .frame(maxWidth: .infinity)
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.size.height
+                    } action: { newHeight in
+                        controlsHeight = newHeight
+                    }
             }
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
@@ -464,7 +492,7 @@ struct VideoPokerTouchView: View {
                         Text(coordinator.L(.notTodayPartner))
                             .font(.system(size: 64, weight: .black))
                             .minimumScaleFactor(0.5)
-                            .lineLimit(1)
+                            .lineLimit(2)
                             .foregroundStyle(.yellow)
                         if !viewModel.isFreePlay {
                             Text(coordinator.L(.resultCreditsLostFmt, viewModel.state.currentBet))
@@ -490,41 +518,70 @@ struct VideoPokerTouchView: View {
 
     // MARK: Controls
 
-    // Matches mac's actionButtons exactly (VideoPokerView.swift:763-793): one
-    // continuous, natural-width HStack — bet trio, a Divider, then the phase button —
-    // centered under the cards by the parent VStack's default alignment, instead of a
-    // full-width bar with the bet trio pinned left and the phase button pushed to the
-    // far right by a Spacer.
-    private var controls: some View {
-        HStack(spacing: 12) {
-            if viewModel.state.phase != .holding {
-                casinoButton(coordinator.L(.btnBetMinus), color: .white.opacity(0.2)) {
+    // Landscape (and iPad) matches mac's actionButtons exactly (VideoPokerView.swift:
+    // 763-793): one continuous, natural-width HStack — bet trio, a Divider, then the
+    // phase button. Portrait iPhone stacks instead — Deal/Draw/Rebuy on top, the bet
+    // trio in its own row below — since all 5 controls plus a divider in one row left
+    // no room for each casinoButton's generous padding/28pt font at portrait iPhone
+    // widths, forcing labels to wrap ("Ma-x", "De-al") instead of shrinking gracefully.
+    @ViewBuilder
+    private func controls(isLandscape: Bool) -> some View {
+        if isLandscape {
+            // compact: true here — an iPhone's ~400pt landscape height doesn't leave
+            // room for the full-size (28pt font/28h·20v padding) buttons below a
+            // width-driven card row, and they ran off the bottom/edge of the screen
+            // without this. Portrait doesn't need it (buttons stack in their own row
+            // under the cards with plenty of vertical room to spare).
+            HStack(spacing: 12) {
+                betTrio(compact: true)
+                if !viewModel.isFreePlay && viewModel.state.phase != .holding {
+                    Divider().frame(height: 28).overlay(Color.white.opacity(0.3))
+                }
+                phaseButton(compact: true)
+            }
+        } else {
+            VStack(spacing: 12) {
+                phaseButton(compact: false)
+                betTrio(compact: false)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func betTrio(compact: Bool) -> some View {
+        // Matches mac's actionButtons: No Stress Mode (isFreePlay) hides the bet trio
+        // entirely, not just when holding — there's nothing to bet with in free play.
+        if !viewModel.isFreePlay && viewModel.state.phase != .holding {
+            HStack(spacing: 12) {
+                casinoButton(coordinator.L(.btnBetMinus), color: .white.opacity(0.2), compact: compact) {
                     viewModel.decreaseBet()
                 }
-                casinoButton(coordinator.L(.touchBetMaxButton), color: .orange.opacity(0.85)) {
+                casinoButton(coordinator.L(.touchBetMaxButton), color: .orange.opacity(0.85), compact: compact) {
                     viewModel.maxBet()
                 }
-                casinoButton(coordinator.L(.btnBetPlus), color: .white.opacity(0.2)) {
+                casinoButton(coordinator.L(.btnBetPlus), color: .white.opacity(0.2), compact: compact) {
                     viewModel.increaseBet()
                 }
-                Divider().frame(height: 36).overlay(Color.white.opacity(0.3))
             }
+        }
+    }
 
-            if !canAffordBet && viewModel.state.phase != .holding {
-                casinoButton(coordinator.L(.rebuyButton), color: .red.opacity(0.8)) {
-                    viewModel.rebuy()
-                }
-            } else if viewModel.state.phase == .holding {
-                casinoButton(coordinator.L(.btnDraw), color: .green.opacity(0.85)) {
-                    viewModel.draw()
-                    dealHaptic.impactOccurred()
-                }
-            } else {
-                casinoButton(coordinator.L(.dealButton), color: .yellow, textColor: .black,
-                             disabled: !canAffordBet) {
-                    viewModel.deal()
-                    dealHaptic.impactOccurred()
-                }
+    @ViewBuilder
+    private func phaseButton(compact: Bool) -> some View {
+        if !canAffordBet && viewModel.state.phase != .holding {
+            casinoButton(coordinator.L(.rebuyButton), color: .red.opacity(0.8), compact: compact) {
+                viewModel.rebuy()
+            }
+        } else if viewModel.state.phase == .holding {
+            casinoButton(coordinator.L(.btnDraw), color: .green.opacity(0.85), compact: compact) {
+                viewModel.draw()
+                dealHaptic.impactOccurred()
+            }
+        } else {
+            casinoButton(coordinator.L(.dealButton), color: .yellow, textColor: .black,
+                         disabled: !canAffordBet, compact: compact) {
+                viewModel.deal()
+                dealHaptic.impactOccurred()
             }
         }
     }
