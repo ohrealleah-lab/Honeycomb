@@ -798,6 +798,13 @@ struct BlackjackTouchView: View {
                 actionHaptic.impactOccurred()
             }
         }
+        // Pinned explicitly, matching actionColumnLandscape's own explicit width —
+        // without this, the column relied on the Grid/Deal button's content
+        // naturally landing at exactly bettingGridButtonWidth * 2 + bettingGridSpacing,
+        // which isn't guaranteed pixel-for-pixel, and any drift there shifted the
+        // whole HStack's centered position the moment Deal switched this column out
+        // for actionColumnLandscape.
+        .frame(width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing)
     }
 
     // Stacked, not the portrait/original actionControls' HStack row — a Hit/Stand/
