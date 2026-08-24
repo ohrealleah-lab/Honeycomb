@@ -504,7 +504,10 @@ struct VideoPokerTouchView: View {
         ZStack {
             if showResultBanner, viewModel.state.phase == .result, !viewModel.state.lastHandName.isEmpty {
                 Color.black.opacity(0.45).ignoresSafeArea()
-                    .allowsHitTesting(false)
+                    .onTapGesture {
+                        viewModel.deal()
+                        dealHaptic.impactOccurred()
+                    }
 
                 if viewModel.state.lastPayout > 0 {
                     let localizedName = localizedHandName(viewModel.state.lastHandName, language: coordinator.language)

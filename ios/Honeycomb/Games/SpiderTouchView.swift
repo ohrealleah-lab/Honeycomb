@@ -652,18 +652,23 @@ struct SpiderTouchView: View {
                 .padding(.vertical, 10)
                 .background(.black.opacity(0.75), in: Capsule())
                 .transition(.scale.combined(with: .opacity))
+                .contentShape(Capsule())
+                .onTapGesture { dismissNoHintsBanner() }
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(.top, 60)
-        .allowsHitTesting(false)
+    }
+
+    private func dismissNoHintsBanner() {
+        noHintsBannerTask?.cancel()
+        noHintsBannerTask = nil
+        withAnimation(.easeOut(duration: 0.3)) { showNoHintsBanner = false }
     }
 
     private func flashNoHintsBanner() {
         noHintsBannerTask?.cancel()
         withAnimation(.easeIn(duration: 0.15)) { showNoHintsBanner = true }
-        let task = DispatchWorkItem {
-            withAnimation(.easeOut(duration: 0.3)) { showNoHintsBanner = false }
-        }
+        let task = DispatchWorkItem { dismissNoHintsBanner() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
         noHintsBannerTask = task
     }
@@ -684,7 +689,6 @@ struct SpiderTouchView: View {
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(.top, 60)
-        .allowsHitTesting(viewModel.options.manuallyDismissBanners)
     }
 
     private func dismissEmptyStockWarning() {

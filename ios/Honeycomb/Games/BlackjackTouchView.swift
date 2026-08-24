@@ -219,25 +219,14 @@ struct BlackjackTouchView: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicators(.hidden)
 
-                // Overlay, not part of the ScrollView's flow — centers on the whole
-                // screen regardless of scroll position or how tall the dealer/player
-                // areas are, rather than wherever it happened to sit between them.
-                resultOverlay
-
-                // Listed after resultOverlay so the burst renders in front of the
-                // banner, not behind it — matches Windows' BlackjackView, where
-                // ParticleCanvas sits at a higher ZIndex than the result overlay, and
-                // Video Poker's own confetti/banner ordering here on iOS.
-                WinParticleView(active: showParticles)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .allowsHitTesting(false)
-
                 // Fixed bottom bar, outside the ScrollView above — portrait's
                 // dealer+hands stacking vertically with no side-by-side room to spare
                 // (a split especially) could grow tall enough to push these action
                 // buttons below the visible screen, right when they're needed most.
                 // Pinning them here means only the cards ever scroll; the buttons that
-                // act on them stay in the same place at every hand size.
+                // act on them stay in the same place at every hand size. Declared before
+                // resultOverlay so the win/lose banner renders on top of these controls,
+                // not behind them.
                 if !isLandscape {
                     controls(isLandscape: isLandscape)
                         .padding(.horizontal, 16)
@@ -258,12 +247,27 @@ struct BlackjackTouchView: View {
                 // screen — leaving Hit/Stand floating in empty space, disconnected from
                 // both hands. Fixed here instead, at a constant on-screen position
                 // outside the ScrollView, so it never moves (or goes off-screen) no
-                // matter how tall a split makes the cards above it.
+                // matter how tall a split makes the cards above it. Also declared before
+                // resultOverlay, same reasoning as the portrait bar above — otherwise the
+                // win/lose banner rendered behind the betting grid/action buttons.
                 if isLandscape {
                     inlineLandscapeControls
                         .frame(width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing)
                         .padding(.bottom, 8)
                 }
+
+                // Overlay, not part of the ScrollView's flow — centers on the whole
+                // screen regardless of scroll position or how tall the dealer/player
+                // areas are, rather than wherever it happened to sit between them.
+                resultOverlay
+
+                // Listed after resultOverlay so the burst renders in front of the
+                // banner, not behind it — matches Windows' BlackjackView, where
+                // ParticleCanvas sits at a higher ZIndex than the result overlay, and
+                // Video Poker's own confetti/banner ordering here on iOS.
+                WinParticleView(active: showParticles)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
             }
         }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
@@ -594,6 +598,7 @@ struct BlackjackTouchView: View {
         ZStack {
             if showResultBanner, viewModel.state.phase == .result, viewModel.state.resultOutcome != .none {
                 Color.black.opacity(0.45).ignoresSafeArea()
+                    .onTapGesture { dismissResultBannerEarly() }
 
                 let (headline, subline) = localizedBlackjackResult(viewModel.state, language: coordinator.language)
                 let isWin = viewModel.state.isWinRound
@@ -623,10 +628,31 @@ struct BlackjackTouchView: View {
                 .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: bannerWinFlash)
                 .onAppear { if isWin { bannerWinFlash = true } }
                 .onDisappear { bannerWinFlash = false }
+                .onTapGesture { dismissResultBannerEarly() }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .allowsHitTesting(false)
+        .allowsHitTesting(showResultBanner)
+    }
+
+    // Lets a tap on the win/lose banner skip straight to what its own auto-dismiss
+    // timer (see .onChange(of: viewModel.state.phase) above) would have done anyway —
+    // same hide+fade, same checkOutOfCredits/idle-prompt follow-up — just early,
+    // instead of making the player wait out the full ~6s display.
+    private func dismissResultBannerEarly() {
+        resultBannerShowTask?.cancel(); resultBannerShowTask = nil
+        resultHideTask?.cancel(); resultHideTask = nil
+        resultCardHideTask?.cancel(); resultCardHideTask = nil
+        withAnimation(.easeOut(duration: 0.4)) { cardsVisible = false; showResultBanner = false }
+        viewModel.checkOutOfCredits()
+        let promptTask = DispatchWorkItem {
+            showCardBackPlaceholders = true
+            withAnimation(.easeIn(duration: 0.3)) { cardsVisible = true }
+            withAnimation(.easeInOut(duration: 0.6)) { showIdlePrompt = true }
+        }
+        idlePromptTask?.cancel()
+        idlePromptTask = promptTask
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: promptTask)
     }
 
     // MARK: Controls

@@ -22,7 +22,10 @@ private struct QueuedFlashBannerModifier: ViewModifier {
         content
             .overlay {
                 if isShowing {
-                    FlashBannerView(message: text, onDismiss: manuallyDismissBanners ? dismiss : nil)
+                    // Always tappable, not just when manuallyDismissBanners is on — a
+                    // toast on its own auto-dismiss timer is still worth letting the
+                    // player clear early with a tap instead of waiting it out.
+                    FlashBannerView(message: text, onDismiss: dismiss)
                         .zIndex(100)
                 }
             }
