@@ -2132,6 +2132,19 @@ public partial class HoneycombViewModel : ObservableObject
         OnPropertyChanged(nameof(OpponentNameDisplay));
     }
 
+    // Previous values of the derived properties below, so NotifyStateChanged only
+    // fires OnPropertyChanged for the ones that actually changed. State itself is
+    // exempt from this guard — HoneycombState is a plain mutated-in-place POCO, not
+    // INotifyPropertyChanged, so its own OnPropertyChanged(nameof(State)) is the only
+    // signal that tells bound nested properties (e.g. State.PlayerScore) to
+    // re-evaluate; skipping it on "no reference change" would just mean the board/
+    // score UI stops updating, since the reference genuinely never changes.
+    private bool _lastIsPlaying;
+    private bool _lastCanUndo;
+    private (int handIndex, int cellIndex)? _lastActiveHint;
+    private int _lastPlayerScoreDisplay;
+    private int _lastOpponentScoreDisplay;
+
     private void NotifyStateChanged()
     {
         if (State != null)
@@ -2140,11 +2153,21 @@ public partial class HoneycombViewModel : ObservableObject
             State.OpponentScore = CountOpponentCards(State.Board, State.OpponentHand);
         }
         OnPropertyChanged(nameof(State));
-        OnPropertyChanged(nameof(IsPlaying));
-        OnPropertyChanged(nameof(CanUndo));
-        OnPropertyChanged(nameof(ActiveHint));
-        OnPropertyChanged(nameof(PlayerScoreDisplay));
-        OnPropertyChanged(nameof(OpponentScoreDisplay));
+
+        bool isPlaying = IsPlaying;
+        if (isPlaying != _lastIsPlaying) { _lastIsPlaying = isPlaying; OnPropertyChanged(nameof(IsPlaying)); }
+
+        bool canUndo = CanUndo;
+        if (canUndo != _lastCanUndo) { _lastCanUndo = canUndo; OnPropertyChanged(nameof(CanUndo)); }
+
+        var activeHint = ActiveHint;
+        if (activeHint != _lastActiveHint) { _lastActiveHint = activeHint; OnPropertyChanged(nameof(ActiveHint)); }
+
+        int playerScoreDisplay = PlayerScoreDisplay;
+        if (playerScoreDisplay != _lastPlayerScoreDisplay) { _lastPlayerScoreDisplay = playerScoreDisplay; OnPropertyChanged(nameof(PlayerScoreDisplay)); }
+
+        int opponentScoreDisplay = OpponentScoreDisplay;
+        if (opponentScoreDisplay != _lastOpponentScoreDisplay) { _lastOpponentScoreDisplay = opponentScoreDisplay; OnPropertyChanged(nameof(OpponentScoreDisplay)); }
     }
 
     public void ResetStats()
