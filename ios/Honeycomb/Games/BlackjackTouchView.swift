@@ -85,6 +85,11 @@ struct BlackjackTouchView: View {
     // grow past 5 cards in a way Video Poker's fixed-5 hand never does, and overlap
     // alone eventually reads as illegible rather than just tightly fanned.
     private var maxHandCardCount: Int {
+        // Same stale-count guard as playerCardCount/dealerCardCount in body — during
+        // the post-result reset pause, state.playerHands/dealerCards still hold the
+        // just-finished hand's counts even though only 2 generic placeholder cards
+        // are actually on screen.
+        guard !showCardBackPlaceholders else { return 2 }
         let playerMax = viewModel.state.playerHands.map { $0.cards.count }.max() ?? 0
         return max(viewModel.state.dealerCards.count, playerMax, 2)
     }
@@ -150,16 +155,42 @@ struct BlackjackTouchView: View {
             // bottom-bar layout uses instead) — so unlike portrait, the width * 0.32
             // cap above doesn't actually bound the HStack's total rendered width here;
             // it was sized as if two hand areas alone needed to share the row, without
-            // accounting for inlineLandscapeControls sitting between them. A 2-card
-            // hand at cardW renders at ~1.7 * cardW (lightOverlapFraction's -0.3 *
-            // cardW spacing between the two cards), so two hand areas plus the middle
-            // column plus the HStack's two 12pt gaps need to fit in geo.size.width —
-            // solved for cardW. The middle column's own width is pinned to
-            // bettingGridButtonWidth * 2 + bettingGridSpacing for every phase (see
-            // inlineLandscapeControls) specifically so this reserve — and therefore
-            // cardW — stays identical whichever phase is showing there.
+            // accounting for inlineLandscapeControls sitting between them. An N-card
+            // hand (isSplit false, N < the tight-overlap threshold) renders at roughly
+            // cardW * (1 + (N-1) * 0.7) — lightOverlapFraction's -0.3 * cardW spacing
+            // between each pair of cards — so the player's hand area plus the
+            // dealer's plus the middle column plus the HStack's two 12pt gaps need to
+            // fit in geo.size.width — solved for cardW. Originally hardcoded for a
+            // fixed 2-card hand on both sides; then briefly used maxHandCardCount for
+            // both sides equally, which is wrong whenever the two hands differ in
+            // size (dealer stands at 2 while the player has hit to 4, say) — this
+            // computes each side's own factor from its own actual card count instead.
+            // The middle column's own width is pinned to bettingGridButtonWidth * 2 +
+            // bettingGridSpacing for every phase (see inlineLandscapeControls)
+            // specifically so this reserve — and therefore cardW — stays identical
+            // whichever phase is showing there. Live measurement after this still
+            // showed the row overflowing past geo.size.width by tens of points even
+            // with matched card counts on both sides — the light-overlap approximation
+            // isn't pixel-exact against SwiftUI's actual layout (label text width,
+            // rounding, etc.) — so this also reserves a much larger 60pt safety margin
+            // rather than trying to chase exact-fit precision.
+            let handWidthFactor: (Int) -> CGFloat = { count in
+                1 + (CGFloat(min(count, 5)) - 1) * (1 - lightOverlapFraction)
+            }
+            // showCardBackPlaceholders swaps in exactly 2 generic face-down cards per
+            // side during the post-result reset pause — but state.playerHands/
+            // dealerCards themselves still hold the just-finished hand's real (often
+            // larger) card counts until the next Deal actually rebuilds them. Reading
+            // those directly here made the reset pause's 2-card placeholder row render
+            // shrunk to whatever size the *previous* hand needed, since nothing else
+            // resets playerCardCount/dealerCardCount back down to 2 in the meantime.
+            let playerCardCount = showCardBackPlaceholders
+                ? 2 : max(viewModel.state.playerHands.map { $0.cards.count }.max() ?? 0, 2)
+            let dealerCardCount = showCardBackPlaceholders
+                ? 2 : max(viewModel.state.dealerCards.count, 2)
             let cardWidthFromAvailable: CGFloat = isLandscape
-                ? (geo.size.width - (Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) - 24) / 3.4
+                ? (geo.size.width - (Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) - 24 - 60)
+                    / (handWidthFactor(playerCardCount) + handWidthFactor(dealerCardCount))
                 : .greatestFiniteMagnitude
             let cardW = min(geo.size.width * 0.32, cardHeightFromAvailable / CardDimensions.aspectRatio, cardWidthFromAvailable, 190)
                 * sizeScale(for: maxHandCardCount)
