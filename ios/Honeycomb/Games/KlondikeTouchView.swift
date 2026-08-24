@@ -4,8 +4,8 @@ import UIKit
 /// Touch-first Klondike board for iPhone/iPad, driven by the shared GameViewModel.
 /// Interactions mirror the mac GameView: tap the stock to draw, drag cards/sequences
 /// with smart-drop resolution (SmartDrop + pile-frame hit testing, ported from the mac
-/// view), and double-tap a card to send it to a foundation. Undo/hint live in the empty
-/// grid slot between the waste and the foundations.
+/// view), and double-tap a card to send it to a foundation. Undo/hint live in the menu
+/// bar (topBar).
 struct KlondikeTouchView: View {
     @Bindable var viewModel: GameViewModel
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
@@ -27,6 +27,7 @@ struct KlondikeTouchView: View {
     @State private var showingThemes = false
     @State private var showingStats = false
     @State private var dismissedStuckBanner = false
+    @State private var dismissedAutocompleteBanner = false
     @State private var showParticles = false
     @State private var isDrawInFlight = false
     @State private var showNoHintsBanner = false
@@ -51,7 +52,7 @@ struct KlondikeTouchView: View {
             ZStack {
                 VStack(spacing: 10) {
                     topBar
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, 8)
                         .frame(height: 44)
 
                     topRow(cardW: cardW, cardH: cardH)
@@ -65,8 +66,8 @@ struct KlondikeTouchView: View {
 
                 dragOverlay(cardW: cardW, cardH: cardH)
 
-                if viewModel.isAutocompleteAvailable && !viewModel.state.hasWon {
-                    autocompleteButton
+                if viewModel.isAutocompleteAvailable && !viewModel.state.hasWon && !dismissedAutocompleteBanner {
+                    autocompleteBanner
                 }
 
                 if viewModel.state.hasWon {
@@ -100,7 +101,12 @@ struct KlondikeTouchView: View {
         .sheet(isPresented: $showingStats) { KlondikeStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
-            OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
+            OptionsFullScreenView(
+                coordinator: coordinator,
+                onShowStats: { showingStats = true },
+                hideHintBinding: $viewModel.options.hideHintButton,
+                onNoStressModeChange: { viewModel.startNewGame() }
+            ) {
                 KlondikeSettingsSection(viewModel: viewModel, coordinator: coordinator)
             }
         }
@@ -120,10 +126,15 @@ struct KlondikeTouchView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showParticles = false }
             }
         }
+        // Mirrors mac's GameView.swift onChange(of: viewModel.isAutocompleteAvailable) —
+        // a fresh autocomplete opportunity always re-shows the banner even if the last
+        // one was dismissed.
+        .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in
+            if newVal { dismissedAutocompleteBanner = false }
+        }
         // Debug-only trigger handler — mirrors mac's GameView.swift onChange(of:
-        // viewModel.debugBannerRequest), minus dismissedWinBanner/dismissedAutocompleteBanner
-        // resets (this view doesn't have those flags — its win/autocomplete UI shows
-        // unconditionally off hasWon/isAutocompleteAvailable, no separate dismiss state).
+        // viewModel.debugBannerRequest), minus dismissedWinBanner (this view's win UI
+        // shows unconditionally off hasWon, no separate dismiss state).
         .onChange(of: viewModel.debugBannerRequest) { _, kind in
             guard let kind else { return }
             viewModel.debugBannerRequest = nil
@@ -141,6 +152,7 @@ struct KlondikeTouchView: View {
                 viewModel.isStuck = true
             case .autocomplete:
                 viewModel.state.hasWon = false
+                dismissedAutocompleteBanner = false
                 viewModel.isAutocompleteAvailable = true
             case .loss, .same, .plus, .suddenDeath:
                 break
@@ -172,13 +184,39 @@ struct KlondikeTouchView: View {
         // same width, so centering it "between" two Spacers actually centered it in
         // whatever space was left over, not on the bar itself. An overlay centers it
         // on the full bar width regardless of how wide either side is.
-        HStack(spacing: 10) {
+        // Tightened from spacing:10 — six 44pt icon buttons (menu/options/palette/
+        // debug/undo/hint) plus the New Deal/Quit button no longer fit an iPhone's
+        // width at the old spacing once undo/hint moved up here from the board; the
+        // bar's own ideal width exceeding the screen made it the VStack's widest
+        // child, silently pulling every other (exactly screen-width) row a few points
+        // off-center along with it — this is what looked like an asymmetric left/
+        // right margin on the whole board, not just the top bar.
+        HStack(spacing: 6) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
             debugMenuButton(items: [("Win", .win), ("Loss (Stuck)", .stuck), ("Autocomplete", .autocomplete)]) {
                 viewModel.debugBannerRequest = $0
             }
 
             Spacer()
+
+            // Moved up from the board's stock/waste-to-foundation gap into the menu
+            // bar, grouped with New Deal on the trailing side rather than the leading
+            // icon cluster — keeps the leading cluster narrow (avoiding the Score
+            // badge overlay, which centers on the whole bar) and reads as "the game
+            // actions" grouped together.
+            topBarIconButton(systemImage: "arrow.uturn.backward", accessibilityLabel: coordinator.L(.undo)) {
+                viewModel.undoLastAction()
+            }
+            .disabled(!viewModel.canUndo)
+            .opacity(viewModel.canUndo ? 1 : 0.35)
+
+            if !viewModel.options.hideHintButton {
+                topBarIconButton(systemImage: "lightbulb", accessibilityLabel: coordinator.L(.hint)) {
+                    if !viewModel.findHint() {
+                        flashNoHintsBanner()
+                    }
+                }
+            }
 
             Button {
                 dismissedStuckBanner = false
@@ -221,7 +259,7 @@ struct KlondikeTouchView: View {
         }
     }
 
-    // MARK: Top row: stock, waste, undo/hint slot, foundations
+    // MARK: Top row: stock, waste, gap, foundations
 
     private func topRow(cardW: CGFloat, cardH: CGFloat) -> some View {
         HStack(alignment: .top, spacing: Self.columnSpacing) {
@@ -229,28 +267,13 @@ struct KlondikeTouchView: View {
 
             wasteView(cardW: cardW, cardH: cardH)
 
-            // The empty grid slot between waste and foundations — undo and hint live
-            // here, per the agreed mobile layout, centered in the gap between the
-            // stock/waste pair and the foundations.
-            VStack(spacing: 6) {
-                controlCircle(systemImage: "arrow.uturn.backward", label: coordinator.L(.undo),
-                              diameter: min(40, cardW * 0.8)) {
-                    viewModel.undoLastAction()
-                }
-                .disabled(!viewModel.canUndo)
-                .opacity(viewModel.canUndo ? 1 : 0.35)
-
-                if !viewModel.options.hideHintButton {
-                    controlCircle(systemImage: "lightbulb", label: coordinator.L(.hint),
-                                  diameter: min(40, cardW * 0.8)) {
-                        if !viewModel.findHint() {
-                            flashNoHintsBanner()
-                        }
-                    }
-                }
-            }
-            .frame(width: cardW, height: cardH, alignment: .center)
-            .zIndex(3)
+            // The empty grid slot between waste and foundations — undo/hint used to
+            // live here; they've moved up into the menu bar (topBar), but the gap
+            // itself stays so the foundations keep their usual real-Klondike column
+            // position instead of the whole row's column math (7 evenly-sized slots)
+            // needing to shift for a now-6-column layout.
+            Color.clear
+                .frame(width: cardW, height: cardH)
 
             ForEach(viewModel.state.foundations) { pile in
                 foundationView(pile: pile, cardW: cardW, cardH: cardH)
@@ -434,18 +457,6 @@ struct KlondikeTouchView: View {
         .frame(width: cardW, height: cardH)
     }
 
-    private func controlCircle(systemImage: String, label: String, diameter: CGFloat = 40,
-                               action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: diameter * 0.42, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: diameter, height: diameter)
-                .background(.black.opacity(0.35), in: Circle())
-        }
-        .accessibilityLabel(label)
-    }
-
     private func frameTracker(id: String) -> some View {
         GeometryReader { geo in
             Color.clear
@@ -606,20 +617,48 @@ struct KlondikeTouchView: View {
 
     // MARK: Overlays
 
-    private var autocompleteButton: some View {
-        VStack {
-            Spacer()
-            Button {
-                viewModel.runAutocomplete()
-            } label: {
-                Label(coordinator.L(.helpShortcutAutocomplete), systemImage: "wand.and.stars")
-                    .font(.headline)
-                    .padding(.horizontal, 8)
+    // Matches mac's GameView autocomplete overlay — full-board dark scrim + gold-glow
+    // card with the "Victory Guaranteed!" headline, body text, and a dismiss X — rather
+    // than the plain yellow pill button this used to be, which was the only banner in
+    // the app that didn't share that look.
+    private var autocompleteBanner: some View {
+        ZStack {
+            Color.black.opacity(0.45).ignoresSafeArea()
+            ZStack(alignment: .topTrailing) {
+                VStack(spacing: 12) {
+                    Text(coordinator.L(.victoryGuaranteed))
+                        .font(.system(size: 30, weight: .black))
+                        .foregroundColor(.yellow)
+                        .multilineTextAlignment(.center)
+                    Text(coordinator.L(.autocompleteBodyKlondike))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                    Button {
+                        viewModel.runAutocomplete()
+                    } label: {
+                        Label(coordinator.L(.autocompleteGame), systemImage: "wand.and.stars")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .buttonBorderShape(.capsule)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 24)
+                .frame(maxWidth: 320)
+                .background(Color.black.opacity(0.75))
+                .cornerRadius(12)
+                .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+
+                Button {
+                    dismissedAutocompleteBanner = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .padding(10)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.yellow)
-            .foregroundStyle(.black)
-            .padding(.bottom, 24)
         }
     }
 
@@ -735,10 +774,6 @@ struct KlondikeTouchView: View {
 
 struct KlondikeSettingsSection: View {
     @Bindable var viewModel: GameViewModel
-    // @Bindable, not @Environment — Sound/No Stress Mode/Honey Mode/Manually Dismiss
-    // Banners bind directly to the coordinator (see AppCoordinator's "single source of
-    // truth" fields) so a change here live-propagates to every other game via their
-    // own didSet, instead of only updating this one game's local options copy.
     @Bindable var coordinator: AppCoordinator
 
     var body: some View {
@@ -749,13 +784,10 @@ struct KlondikeSettingsSection: View {
             }
             .pickerStyle(.segmented)
 
+            // Sound/No Stress Mode/Honey Mode/Hide Hint/Manually Dismiss Banners live
+            // in OptionsFullScreenView's own Global section now — this card is
+            // Klondike-specific only.
             Toggle(coordinator.L(.vegasScoring), isOn: $viewModel.options.isVegasScoring)
-            Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
-            Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
-                .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
-            Toggle(coordinator.L(.hideHintButton), isOn: $viewModel.options.hideHintButton)
-            Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
-            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
         }
     }
 }

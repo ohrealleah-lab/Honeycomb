@@ -134,7 +134,13 @@ struct VideoPokerTouchView: View {
         .sheet(isPresented: $showingStats) { VideoPokerStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
-            OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
+            OptionsFullScreenView(
+                coordinator: coordinator,
+                onShowStats: { showingStats = true },
+                onNoStressModeChange: { viewModel.startNewGame() },
+                isGlobalSectionDisabled: viewModel.state.phase == .holding,
+                globalSectionUnlockNote: coordinator.L(.touchSettingsUnlockHandEnds)
+            ) {
                 VideoPokerSettingsSection(viewModel: viewModel,
                                           isMidHand: viewModel.state.phase == .holding,
                                           coordinator: coordinator)
@@ -529,10 +535,6 @@ struct VideoPokerTouchView: View {
 struct VideoPokerSettingsSection: View {
     @Bindable var viewModel: VideoPokerViewModel
     let isMidHand: Bool
-    // @Bindable, not @Environment — Sound/No Stress Mode/Honey Mode/Manually Dismiss
-    // Banners bind directly to the coordinator (see AppCoordinator's "single source of
-    // truth" fields) so a change here live-propagates to every other game via their
-    // own didSet, instead of only updating this one game's local options copy.
     @Bindable var coordinator: AppCoordinator
 
     var body: some View {
@@ -574,12 +576,11 @@ struct VideoPokerSettingsSection: View {
                     .labelsHidden()
                 }
 
+                // Sound/No Stress Mode/Honey Mode/Manually Dismiss Banners live in
+                // OptionsFullScreenView's own Global section now — this card is
+                // Video Poker-specific only. (No Hide Hint here — Video Poker has no
+                // hint feature.)
                 Toggle(coordinator.L(.hideBetBoard), isOn: $viewModel.options.hideBetBoard)
-                Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
-                Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
-                    .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
-                Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
-                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
             }
             .disabledDuringGameplay(isMidHand)
 

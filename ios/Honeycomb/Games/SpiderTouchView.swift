@@ -50,7 +50,7 @@ struct SpiderTouchView: View {
             ZStack {
                 VStack(spacing: 10) {
                     topBar
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, 8)
                         .frame(height: 44)
 
                     topRow(cardW: cardW, cardH: cardH)
@@ -104,7 +104,12 @@ struct SpiderTouchView: View {
         .sheet(isPresented: $showingStats) { SpiderStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
-            OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
+            OptionsFullScreenView(
+                coordinator: coordinator,
+                onShowStats: { showingStats = true },
+                hideHintBinding: $viewModel.options.hideHintButton,
+                onNoStressModeChange: { viewModel.startNewGame() }
+            ) {
                 SpiderSettingsSection(viewModel: viewModel, coordinator: coordinator)
             }
         }
@@ -178,13 +183,39 @@ struct SpiderTouchView: View {
         // same width, so centering it "between" two Spacers actually centered it in
         // whatever space was left over, not on the bar itself. An overlay centers it
         // on the full bar width regardless of how wide either side is.
-        HStack(spacing: 10) {
+        // Tightened from spacing:10 — six 44pt icon buttons (menu/options/palette/
+        // debug/undo/hint) plus the New Deal/Quit button no longer fit an iPhone's
+        // width at the old spacing once undo/hint moved up here from the board; the
+        // bar's own ideal width exceeding the screen made it the VStack's widest
+        // child, silently pulling every other (exactly screen-width) row a few points
+        // off-center along with it — this is what looked like an asymmetric left/
+        // right margin on the whole board, not just the top bar.
+        HStack(spacing: 6) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
             debugMenuButton(items: [("Win", .win), ("Loss (Stuck)", .stuck), ("Autocomplete", .autocomplete)]) {
                 viewModel.debugBannerRequest = $0
             }
 
             Spacer()
+
+            // Moved up from between the stock and the completed-runs indicator into
+            // the menu bar, grouped with New Deal on the trailing side rather than the
+            // leading icon cluster — keeps the leading cluster narrow (avoiding the
+            // Score badge overlay, which centers on the whole bar) and reads as "the
+            // game actions" grouped together.
+            topBarIconButton(systemImage: "arrow.uturn.backward", accessibilityLabel: coordinator.L(.undo)) {
+                viewModel.undoLastAction()
+            }
+            .disabled(!viewModel.canUndo)
+            .opacity(viewModel.canUndo ? 1 : 0.35)
+
+            if !viewModel.options.hideHintButton {
+                topBarIconButton(systemImage: "lightbulb", accessibilityLabel: coordinator.L(.hint)) {
+                    if !viewModel.findHint() {
+                        flashNoHintsBanner()
+                    }
+                }
+            }
 
             Button {
                 dismissedStuckBanner = false
@@ -209,7 +240,7 @@ struct SpiderTouchView: View {
         .background(.black.opacity(0.35), in: Capsule())
     }
 
-    // MARK: Top row: stock (deal), undo/hint, completed-runs indicator
+    // MARK: Top row: stock (deal), completed-runs indicator
 
     private var completedRunCount: Int {
         viewModel.state.foundations.filter { !$0.cards.isEmpty }.count
@@ -219,22 +250,8 @@ struct SpiderTouchView: View {
         HStack(alignment: .center, spacing: 12) {
             stockView(cardW: cardW, cardH: cardH)
 
-            Spacer()
-
-            controlCircle(systemImage: "arrow.uturn.backward", label: coordinator.L(.undo)) {
-                viewModel.undoLastAction()
-            }
-            .disabled(!viewModel.canUndo)
-            .opacity(viewModel.canUndo ? 1 : 0.35)
-
-            if !viewModel.options.hideHintButton {
-                controlCircle(systemImage: "lightbulb", label: coordinator.L(.hint)) {
-                    if !viewModel.findHint() {
-                        flashNoHintsBanner()
-                    }
-                }
-            }
-
+            // Undo/hint used to live here, between the stock and the runs indicator;
+            // they've moved up into the menu bar (topBar).
             Spacer()
 
             runsIndicator(cardW: cardW, cardH: cardH)
@@ -383,17 +400,6 @@ struct SpiderTouchView: View {
     }
 
     // MARK: Shared pieces
-
-    private func controlCircle(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(width: 40, height: 40)
-                .background(.black.opacity(0.35), in: Circle())
-        }
-        .accessibilityLabel(label)
-    }
 
     private func frameTracker(id: String) -> some View {
         GeometryReader { geo in
@@ -695,10 +701,6 @@ struct SpiderTouchView: View {
 
 struct SpiderSettingsSection: View {
     @Bindable var viewModel: SpiderViewModel
-    // @Bindable, not @Environment — Sound/No Stress Mode/Honey Mode/Manually Dismiss
-    // Banners bind directly to the coordinator (see AppCoordinator's "single source of
-    // truth" fields) so a change here live-propagates to every other game via their
-    // own didSet, instead of only updating this one game's local options copy.
     @Bindable var coordinator: AppCoordinator
 
     var body: some View {
@@ -709,13 +711,9 @@ struct SpiderSettingsSection: View {
                 Text(coordinator.L(.suitCount4)).tag(4)
             }
             .pickerStyle(.segmented)
-
-            Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
-            Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
-                .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
-            Toggle(coordinator.L(.hideHintButton), isOn: $viewModel.options.hideHintButton)
-            Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
-            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
+            // Sound/No Stress Mode/Honey Mode/Hide Hint/Manually Dismiss Banners live
+            // in OptionsFullScreenView's own Global section now — this card is
+            // Spider-specific only.
         }
     }
 }

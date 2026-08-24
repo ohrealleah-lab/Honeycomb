@@ -34,12 +34,6 @@ struct BlackjackTouchView: View {
     @State private var resultCardHideTask: DispatchWorkItem? = nil
     @State private var idlePromptTask: DispatchWorkItem? = nil
 
-    // Measured live via controls' own .onGeometryChange below (its height varies by
-    // phase — a single action-button row vs. betting's two rows of chips) rather than
-    // a hardcoded guess, so the scrollable content's reserved bottom padding always
-    // matches exactly, in both orientations.
-    @State private var controlsHeight: CGFloat = 0
-
     // Height of bettingControls' chip row (Clear Bet/Deal sits above it) — reserved as
     // an invisible placeholder under every other phase's single-row controls (Hit/
     // Stand, the dealer-turn spinner, Rebuy) so that row always lands at the same
@@ -48,14 +42,13 @@ struct BlackjackTouchView: View {
     // bar layout. No-op in free play, where bettingControls itself has no chip row.
     @State private var chipRowHeight: CGFloat = 74
 
-    // Just the real, visibly-rendered control row's height — unlike controlsHeight
-    // (measured on the whole fixed bottom bar, including actionRow's invisible
-    // chipRowHeight-matching placeholder below single-row phases), this excludes
-    // that placeholder. cardW's available-height budget uses this one: reserving
-    // room for the placeholder too (as controlsHeight would) shrank cards to leave
-    // space under Hit/Stand that nothing is actually drawn into, since the
-    // placeholder exists only to anchor the button row's position, not to hold
-    // content cards could otherwise render behind.
+    // Portrait only (see body's isLandscape branch) — just the real, visibly-
+    // rendered control row's height, excluding actionRow's invisible
+    // chipRowHeight-matching placeholder below single-row phases. cardW's
+    // available-height budget uses this one: reserving room for the placeholder
+    // too shrank cards to leave space under Hit/Stand that nothing is actually
+    // drawn into, since the placeholder exists only to anchor the button row's
+    // position, not to hold content cards could otherwise render behind.
     @State private var visibleControlsHeight: CGFloat = 0
 
     private let actionHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -118,13 +111,18 @@ struct BlackjackTouchView: View {
     var body: some View {
         GeometryReader { geo in
             let isLandscape = geo.size.width > geo.size.height
-            // Betting (and the "place a new bet" flavor of .result) gets a dedicated
-            // grid — bettingGridLandscape — sitting inline between playerHandsArea and
-            // dealerArea instead of a fixed bar under the cards, matching the
-            // requested mockup. Every other landscape phase keeps the original fixed-
-            // bottom-bar controls unchanged.
-            let showsInlineBettingGrid = isLandscape
-                && (viewModel.state.phase == .betting || (viewModel.state.phase == .result && !viewModel.canRebuy))
+            // Every landscape phase (betting, playing, dealerTurn, result) now shows
+            // its controls in the same inline column between playerHandsArea and
+            // dealerArea — see inlineLandscapeControls — instead of some phases using
+            // that column and others falling back to a fixed bar under the cards. That
+            // used to make dealt cards visibly jump size and position right after
+            // Deal: the betting screen's cardW was solved around the inline column's
+            // reserved width, while the post-deal screen's cardW was solved around a
+            // fixed bottom bar's reserved height instead — two different formulas
+            // landing on two different sizes for what should read as the same board.
+            // Using one column for every phase means one cardW formula for every
+            // phase too, so the board no longer shifts under the player when a hand
+            // starts.
             // Same base width cap as Video Poker (min(width * 0.32, 190)) so the two
             // games' cards read as the same size, then scaled down once a hand grows
             // past 5 cards, and further still once a split (portrait only) stacks more
@@ -138,25 +136,29 @@ struct BlackjackTouchView: View {
             // label-to-cards spacing and label line height, and the reserved space
             // below for the fixed controls bar — and solves for the card height that
             // makes the rest fit exactly, so there's no overflow left to scroll.
-            // Reserves nothing when showsInlineBettingGrid — there's no fixed bottom
-            // bar to clear in that state, so cards get to grow into the space it would
-            // have used, per request ("if card size can be gained back... increase it").
-            let reservedBottom: CGFloat = showsInlineBettingGrid ? 0 : (visibleControlsHeight + 38)
+            // Reserves nothing in landscape — there's no fixed bottom bar to clear
+            // there, so cards get to grow into the space it would have used, per
+            // request ("if card size can be gained back... increase it").
+            let reservedBottom: CGFloat = isLandscape ? 0 : (visibleControlsHeight + 38)
             let verticalChrome: CGFloat = 44 /* topBar */ + 16 /* outer VStack spacing */
                 + 6 /* dealerArea/playerHandsArea's label-to-cards VStack spacing */
                 + 20 /* .subheadline label line height */
                 + reservedBottom
             let cardHeightFromAvailable = max(0, geo.size.height - verticalChrome)
-            // When showsInlineBettingGrid, playerHandsArea/dealerArea size to their own
-            // natural content width (not frame(maxWidth: .infinity), which the non-grid
-            // landscape branch uses instead) — so unlike that branch, the width * 0.32
+            // In landscape, playerHandsArea/dealerArea size to their own natural
+            // content width (not frame(maxWidth: .infinity), which portrait's fixed-
+            // bottom-bar layout uses instead) — so unlike portrait, the width * 0.32
             // cap above doesn't actually bound the HStack's total rendered width here;
             // it was sized as if two hand areas alone needed to share the row, without
-            // accounting for bettingGridLandscape sitting between them. A 2-card hand
-            // at cardW renders at ~1.7 * cardW (lightOverlapFraction's -0.3 * cardW
-            // spacing between the two cards), so two hand areas plus the grid plus the
-            // HStack's two 12pt gaps need to fit in geo.size.width — solved for cardW.
-            let cardWidthFromAvailable: CGFloat = showsInlineBettingGrid
+            // accounting for inlineLandscapeControls sitting between them. A 2-card
+            // hand at cardW renders at ~1.7 * cardW (lightOverlapFraction's -0.3 *
+            // cardW spacing between the two cards), so two hand areas plus the middle
+            // column plus the HStack's two 12pt gaps need to fit in geo.size.width —
+            // solved for cardW. The middle column's own width is pinned to
+            // bettingGridButtonWidth * 2 + bettingGridSpacing for every phase (see
+            // inlineLandscapeControls) specifically so this reserve — and therefore
+            // cardW — stays identical whichever phase is showing there.
+            let cardWidthFromAvailable: CGFloat = isLandscape
                 ? (geo.size.width - (Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) - 24) / 3.4
                 : .greatestFiniteMagnitude
             let cardW = min(geo.size.width * 0.32, cardHeightFromAvailable / CardDimensions.aspectRatio, cardWidthFromAvailable, 190)
@@ -179,17 +181,16 @@ struct BlackjackTouchView: View {
                         if isLandscape {
                             // Landscape's width can't spare the height a vertical
                             // dealer-then-player stack needs, but it has plenty of width
-                            // to spare — dealer left, player right instead. The betting
-                            // grid sits in that same gap instead of a Spacer when it's
-                            // showing, in place of spacing: 24.
-                            HStack(alignment: .top, spacing: showsInlineBettingGrid ? 12 : 24) {
+                            // to spare — dealer left, player right instead, with
+                            // inlineLandscapeControls (chips while betting, the action
+                            // buttons once a hand starts, etc.) sitting in that same gap
+                            // for every phase, so the gap's width — and therefore
+                            // cardW — never changes between them.
+                            HStack(alignment: .top, spacing: 12) {
                                 playerHandsArea(cardW: cardW, isLandscape: isLandscape)
-                                    .frame(maxWidth: showsInlineBettingGrid ? nil : .infinity)
-                                if showsInlineBettingGrid {
-                                    bettingGridLandscape
-                                }
+                                inlineLandscapeControls
+                                    .frame(maxHeight: .infinity, alignment: .bottom)
                                 dealerArea(cardW: cardW, isLandscape: isLandscape)
-                                    .frame(maxWidth: showsInlineBettingGrid ? nil : .infinity)
                             }
                         } else {
                             dealerArea(cardW: cardW, isLandscape: isLandscape)
@@ -238,16 +239,15 @@ struct BlackjackTouchView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .allowsHitTesting(false)
 
-                // Fixed bottom bar, outside the ScrollView above — a split's second
-                // hand (or, in portrait, the dealer+hands all stacking vertically with
-                // no side-by-side room to spare) could grow tall enough to push these
-                // action buttons below the visible screen, right when they're needed
-                // most. Pinning them here means only the cards ever scroll; the buttons
-                // that act on them stay in the same place at every hand size, in both
-                // orientations. Skipped entirely when showsInlineBettingGrid — that
-                // state's controls (bettingGridLandscape) already rendered inline
-                // above, between the two card areas, not down here.
-                if !showsInlineBettingGrid {
+                // Fixed bottom bar, outside the ScrollView above — portrait's
+                // dealer+hands stacking vertically with no side-by-side room to spare
+                // (a split especially) could grow tall enough to push these action
+                // buttons below the visible screen, right when they're needed most.
+                // Pinning them here means only the cards ever scroll; the buttons that
+                // act on them stay in the same place at every hand size. Landscape
+                // never uses this — every phase's controls render inline instead (see
+                // inlineLandscapeControls), between the two card areas, not down here.
+                if !isLandscape {
                     controls(isLandscape: isLandscape)
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
@@ -256,11 +256,6 @@ struct BlackjackTouchView: View {
                         // closer to the screen's bottom edge.
                         .padding(.bottom, 4)
                         .frame(maxWidth: .infinity)
-                        .onGeometryChange(for: CGFloat.self) { proxy in
-                            proxy.size.height
-                        } action: { newHeight in
-                            controlsHeight = newHeight
-                        }
                 }
             }
         }
@@ -270,7 +265,12 @@ struct BlackjackTouchView: View {
         .sheet(isPresented: $showingStats) { BlackjackStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
-            OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
+            OptionsFullScreenView(
+                coordinator: coordinator,
+                onShowStats: { showingStats = true },
+                isGlobalSectionDisabled: !viewModel.canOpenOptions,
+                globalSectionUnlockNote: coordinator.L(.touchSettingsUnlockBetweenHands)
+            ) {
                 BlackjackSettingsSection(viewModel: viewModel,
                                          canOpenOptions: viewModel.canOpenOptions,
                                          coordinator: coordinator)
@@ -698,17 +698,43 @@ struct BlackjackTouchView: View {
         }
     }
 
+    // Landscape's inline controls column, between playerHandsArea and dealerArea —
+    // one shared column every phase renders into (see body's isLandscape branch),
+    // so the column's width — and therefore cardW, solved around it — never
+    // changes between phases. .frame(maxHeight: .infinity, alignment: .bottom) is
+    // applied once at the call site (not per-case here) so every phase's content
+    // lands flush with the bottom of the cards the same way.
+    @ViewBuilder
+    private var inlineLandscapeControls: some View {
+        switch viewModel.state.phase {
+        case .betting:
+            bettingGridLandscape
+        case .playing:
+            actionColumnLandscape
+        case .dealerTurn:
+            ProgressView().tint(.white)
+                .frame(width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing)
+        case .result:
+            if viewModel.canRebuy {
+                casinoButton(coordinator.L(.rebuyButton), color: .red.opacity(0.8), compact: true,
+                             width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) {
+                    viewModel.rebuy()
+                }
+            } else {
+                bettingGridLandscape
+            }
+        }
+    }
+
     // Matches the requested mockup: a 2-column grid (1/5, 10/25, 2X/Clear) with Deal
     // spanning below, sitting in the gap between playerHandsArea and dealerArea
     // instead of bettingControls' two full-width rows in a fixed bar under the
-    // cards. Landscape-only and betting-only (see body's showsInlineBettingGrid) —
-    // freeing that fixed bar's reserved space entirely is what let cardW grow for
-    // this state specifically. Every chip/Clear cell shares one fixed width (wide
-    // enough for "Clear", the longest label) rather than each sizing to its own
-    // content — per request, so "1" doesn't read as a narrower button than "Clear".
-    // Deal is exactly double that width plus the column gap, so it visually spans
-    // both columns and reads as the button that draws the eye. Height stays a
-    // minHeight floor, not fixed — that sizing was already right.
+    // cards. Every chip/Clear cell shares one fixed width (wide enough for "Clear",
+    // the longest label) rather than each sizing to its own content — per request,
+    // so "1" doesn't read as a narrower button than "Clear". Deal is exactly double
+    // that width plus the column gap, so it visually spans both columns and reads
+    // as the button that draws the eye. Height stays a minHeight floor, not fixed —
+    // that sizing was already right.
     // 68pt is "Clear"'s exact unwrapped width at this font/padding (18pt black
     // condensed + 14pt horizontal padding each side) — measured live via a
     // temporary onGeometryChange readout rather than guessed. +4 for a small
@@ -741,15 +767,49 @@ struct BlackjackTouchView: View {
                 actionHaptic.impactOccurred()
             }
         }
-        // playerHandsArea/dealerArea are VStack{label; cards} — the HStack's shared
-        // .top alignment left this grid's own top edge (with no label above it)
-        // sitting above where the cards actually start. maxHeight: .infinity lets
-        // the parent HStack stretch this to match the taller card areas' height,
-        // then alignment: .bottom places the actual button content flush with the
-        // bottom of that stretched frame — i.e. flush with the bottom of the cards,
-        // rather than guessing a fixed top offset to compensate for the missing
-        // label.
-        .frame(maxHeight: .infinity, alignment: .bottom)
+    }
+
+    // Stacked, not the portrait/original actionControls' HStack row — a Hit/Stand/
+    // Double/Split row at full size (or even compact size) is wider than
+    // inlineLandscapeControls' column has room for. Each button is only
+    // bettingGridButtonWidth wide (one grid cell, not bettingGridLandscape's full
+    // double-width Deal) — narrower than the column's own reserved width (which
+    // stays pinned to bettingGridButtonWidth * 2 + bettingGridSpacing so cardW
+    // doesn't change once a hand starts), so it renders centered with breathing
+    // room on either side instead of crowding into the dealer's cards.
+    private var actionColumnLandscape: some View {
+        VStack(spacing: Self.bettingGridSpacing) {
+            casinoButton(coordinator.L(.touchActionHit), color: .green.opacity(0.85), compact: true,
+                         width: Self.bettingGridButtonWidth) {
+                viewModel.hit()
+                actionHaptic.impactOccurred()
+            }
+            casinoButton(coordinator.L(.touchActionStand), color: .red.opacity(0.75), compact: true,
+                         width: Self.bettingGridButtonWidth) {
+                viewModel.stand()
+                actionHaptic.impactOccurred()
+            }
+            if viewModel.canDouble {
+                casinoButton(coordinator.L(.touchActionDouble), color: .blue.opacity(0.75), compact: true,
+                             width: Self.bettingGridButtonWidth) {
+                    viewModel.doubleDown()
+                    actionHaptic.impactOccurred()
+                }
+            }
+            if viewModel.canSplit {
+                casinoButton(coordinator.L(.touchActionSplit), color: .purple.opacity(0.75), compact: true,
+                             width: Self.bettingGridButtonWidth) {
+                    viewModel.split()
+                    actionHaptic.impactOccurred()
+                }
+            }
+        }
+        // Centers the narrower buttons within the same width bettingGridLandscape
+        // occupies, rather than letting this VStack's own (now smaller) natural
+        // width shrink the whole column — that would pull playerHandsArea/
+        // dealerArea in closer together too, shifting the board sideways the
+        // moment a hand starts even though cardW itself hasn't changed.
+        .frame(width: Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing)
     }
 
     private func actionControls(compact: Bool) -> some View {

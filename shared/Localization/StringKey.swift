@@ -26,6 +26,9 @@ public enum StringKey: String, CaseIterable {
     case preferences = "preferences"
     /// Options sheet button
     case viewStats = "view_stats"
+    /// iOS Options sheet section header — groups Sound/No Stress Mode/Honey Mode/Hide
+    /// Hint/Manually Dismiss Banners, separate from the per-game settings section below it
+    case globalOptionsSection = "global_options_section"
     /// Options sheet section header
     case visualThemes = "visual_themes"
     /// Options sheet section subtitle
@@ -262,7 +265,7 @@ public enum StringKey: String, CaseIterable {
     case betMax = "bet_max"
     /// Score badge, %d = player score — Honeycomb touch view
     case scoreYouFmt = "score_you_fmt"
-    /// Score badge, Honeycomb touch view — %d = opponent score, %@/{1} = opponent's difficulty name (e.g. Baby Bee)
+    /// Score badge, Honeycomb touch view — %@/{0} = opponent's difficulty name (e.g. Baby Bee), %d/{1} = opponent score
     case scoreDealerFmt = "score_dealer_fmt"
     /// Window nav title, SoliBeeApp.swift
     case appNavigationTitle = "app_navigation_title"

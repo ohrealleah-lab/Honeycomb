@@ -90,13 +90,22 @@ struct HoneycombTouchView: View {
         ZStack {
             VStack(spacing: 0) {
                 topBar
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 8)
                     .frame(height: 44)
                     // The pre-game "Start" button (borderedProminent + icon label) is
                     // taller than the other topBar controls, so left unclipped it
                     // overflows this fixed frame and bleeds into the board below —
                     // clip so every topBar state stays confined to its 44pt band.
                     .clipped()
+
+                // Fixed row, not scaled with the board — rules text stays legible
+                // regardless of screen size. Sits directly below topBar in normal
+                // flow (no overlap with the menu bar, unlike an earlier version that
+                // floated it as an overlay reaching up into topBar's icons). Score
+                // renders separately, in scoreCapsule below the board, so it can no
+                // longer drag this row's height up and risk that same overlap.
+                rulesCapsule
+                    .padding(.top, 6)
 
                 GeometryReader { geo in
                     let isLandscape = geo.size.width > geo.size.height
@@ -141,6 +150,15 @@ struct HoneycombTouchView: View {
                     // escapes its allocated space regardless of scale-math precision.
                     .clipped()
                 }
+
+                // Fixed row, like rulesCapsule — living inside gameContent meant this
+                // text rode along with the board's .scaleEffect(scale) above, which is
+                // usually well under 1 on a phone, so a font size matching rulesCapsule
+                // numerically still rendered visibly smaller on screen. Sitting here
+                // instead (right after GeometryReader, so still directly below the
+                // player's cards) renders at true point size like rulesCapsule does.
+                scoreCapsule
+                    .padding(.bottom, 4)
             }
 
             // Matches mac's HoneycombView: two independent FlashBannerView render sites
@@ -185,7 +203,14 @@ struct HoneycombTouchView: View {
         .sheet(isPresented: $showingStats) { HoneycombStatsSheet(stats: viewModel.stats) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingOptions) {
-            OptionsFullScreenView(coordinator: coordinator, onShowStats: { showingStats = true }) {
+            OptionsFullScreenView(
+                coordinator: coordinator,
+                onShowStats: { showingStats = true },
+                hideHintBinding: $viewModel.options.hideHintButton,
+                onNoStressModeChange: { viewModel.startNewGame() },
+                isGlobalSectionDisabled: isMidMatch,
+                globalSectionUnlockNote: coordinator.L(.settingsUnlockNote)
+            ) {
                 HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch, coordinator: coordinator)
             }
         }
@@ -256,12 +281,13 @@ struct HoneycombTouchView: View {
     // MARK: Top bar
 
     private var topBar: some View {
-        // scoreBadge is an overlay, not a third HStack element flanked by Spacers —
-        // the leading (menu/decks) and trailing (Quit/Start) button groups aren't the
-        // same width, so centering it "between" two Spacers actually centered it in
-        // whatever space was left over, not on the bar itself. An overlay centers it
-        // on the full bar width regardless of how wide either button group is.
-        HStack(spacing: 12) {
+        // Tightened from spacing: 12 — up to seven 44pt icon buttons (menu/options/
+        // palette/manage decks/debug/undo/hint) plus the Quit/Start button no longer
+        // fit an iPhone's width at the old spacing once undo/hint moved up here from
+        // the board; the bar's own ideal width exceeding the screen made it the
+        // VStack's widest child, silently pulling every other (exactly screen-width)
+        // row a few points off-center along with it.
+        HStack(spacing: 6) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
 
             topBarIconButton(systemImage: "rectangle.stack", accessibilityLabel: coordinator.L(.manageDecks)) {
@@ -285,7 +311,28 @@ struct HoneycombTouchView: View {
 
             Spacer()
 
+            // Moved up from flanking the Rules banner into the menu bar, grouped with
+            // Quit on the trailing side rather than the leading icon cluster. Same
+            // availability rules as before (hint additionally hides on Ultra Hard/
+            // off-turn/when disabled in Options; undo just dims when there's nothing
+            // to undo).
             if isMidMatch {
+                topBarIconButton(systemImage: "arrow.uturn.backward", accessibilityLabel: coordinator.L(.undo)) {
+                    viewModel.undoLastAction()
+                }
+                .disabled(!viewModel.canUndo)
+                .opacity(viewModel.canUndo ? 1 : 0.35)
+
+                if !viewModel.options.hideHintButton, viewModel.options.difficulty != .ultraHard, viewModel.isPlayerTurn {
+                    topBarIconButton(systemImage: "lightbulb", accessibilityLabel: coordinator.L(.hint)) {
+                        if viewModel.hasHintsAvailable {
+                            viewModel.findHint()
+                        } else {
+                            flashNoHintsBanner()
+                        }
+                    }
+                }
+
                 Button(coordinator.L(.quitButton)) { viewModel.gameState = .setup }
                     .buttonStyle(.bordered)
                     .tint(.white)
@@ -298,66 +345,38 @@ struct HoneycombTouchView: View {
                 .buttonStyle(.borderedProminent)
             }
         }
-        .overlay {
-            if viewModel.gameState != .setup {
-                scoreBadge
-            }
-        }
-    }
-
-    private var scoreBadge: some View {
-        // Matches the rules banner's yellow-on-black styling instead of cyan/pink —
-        // consistent with every other Honeycomb banner in the app.
-        HStack(spacing: 10) {
-            Text(coordinator.L(.scoreYouFmt, viewModel.board.playerScore + viewModel.playerHand.count))
-            Text("–")
-            // Not "DEALER" — shows the opponent's actual name (e.g. "Baby Bee"), same
-            // fix as the hand-side label above the opponent's cards.
-            Text(coordinator.L(.scoreDealerFmt, viewModel.board.opponentScore + viewModel.opponentHand.count,
-                                honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language)))
-        }
-        .foregroundStyle(.yellow)
-        .font(.subheadline.weight(.bold))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        // Matches the rules banner's card styling (solid black.opacity(0.75) +
-        // cornerRadius 16) instead of the lighter, more-transparent capsule this had
-        // before, so the two banners read as a consistent pair.
-        .background(Color.black.opacity(0.75))
-        .cornerRadius(16)
     }
 
     // MARK: Scaled game content
 
     // These formulas mirror gameContent(landscape:)'s actual view tree (spacing,
-    // padding, bannerRow's height, boardGrid's own .padding(.vertical, 4)) term for
-    // term, rather than approximating — a computed scale even a few points too
-    // generous makes the *real* rendered content taller than the box it's fit into,
-    // and since the GeometryReader below now clips to that box (so the overflow
-    // can't bleed into the topBar above it), an underestimate here means real
-    // content — the pre-game placeholder hand, most visibly — gets its top cropped
-    // instead. The 1.04x pads against anything not perfectly predictable from this
-    // static formula (SwiftUI's own text line-height rounding, etc.) by leaving a
-    // little unused margin instead of risking that same crop. Both branches reference
-    // Self.bannerRowHeight rather than a hardcoded copy of bannerRow's own .frame
-    // height, so the two can't silently drift apart the way two literal numbers would.
+    // padding, boardGrid's own .padding(.vertical, 4)) term for term, rather than
+    // approximating — a computed scale even a few points too generous makes the
+    // *real* rendered content taller than the box it's fit into, and since the
+    // GeometryReader below now clips to that box (so the overflow can't bleed into
+    // the topBar above it), an underestimate here means real content — the pre-game
+    // placeholder hand, most visibly — gets its top cropped instead. The 1.04x pads
+    // against anything not perfectly predictable from this static formula (SwiftUI's
+    // own text line-height rounding, etc.) by leaving a little unused margin instead
+    // of risking that same crop. Neither branch includes the rules banner or the
+    // score line — rulesCapsule and scoreCapsule are both fixed rows outside this
+    // scaled content now (see body), not part of gameContent's own tree.
     private func intrinsicSize(landscape: Bool) -> CGSize {
         if landscape {
             let handColumnWidth = 2 * Self.playerCardSize.width + Self.handSpacing
             let boardWidth = 3 * Self.boardCardSize.width + 2 * Self.boardSpacing
             let width = handColumnWidth * 2 + boardWidth + 2 * 24 + 32
             let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
-            // Board column: VStack(spacing: 8) { bannerRow; boardGrid } = boardHeight + 8 + bannerRowHeight,
-            // plus the outer HStack's .padding(16) top+bottom = 32.
-            let height = boardHeight + 8 + Self.bannerRowHeight + 32
+            // Board column is just boardGrid now, plus the outer HStack's .padding(16) top+bottom = 32.
+            let height = boardHeight + 32
             return CGSize(width: width * 1.02, height: height * 1.04)
         } else {
             let width = 5 * Self.playerCardSize.width + 4 * Self.handSpacing + 16
             let boardHeight = 3 * Self.boardCardSize.height + 2 * Self.boardSpacing
-            // VStack(spacing: 8) { oppRow; bannerRow; boardGrid.padding(.vertical,4); playerRow }
-            // .padding(8) = oppRow + boardHeight + playerRow + (3 gaps*8 + bannerRowHeight +
+            // VStack(spacing: 8) { oppRow; boardGrid.padding(.vertical,4); playerRow }
+            // .padding(8) = oppRow + boardHeight + playerRow + (2 gaps*8 +
             // boardGrid's own vertical padding 8 + outer padding 16).
-            let height = Self.opponentCardSize.height + Self.playerCardSize.height + boardHeight + 48 + Self.bannerRowHeight
+            let height = Self.opponentCardSize.height + Self.playerCardSize.height + boardHeight + 40
             return CGSize(width: width * 1.02, height: height * 1.04)
         }
     }
@@ -382,10 +401,7 @@ struct HoneycombTouchView: View {
                 }
                 .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
 
-                VStack(spacing: 8) {
-                    bannerRow
-                    boardGrid
-                }
+                boardGrid
 
                 VStack(spacing: 6) {
                     // Not "Dealer" — Honeycomb's opponent is a named AI difficulty
@@ -420,8 +436,6 @@ struct HoneycombTouchView: View {
                     .modifier(SwapLiftEffect(isAnimating: viewModel.swapAnimationPhase != .idle && viewModel.swapHighlightCardIds.contains(card.id), phase: viewModel.swapAnimationPhase))
                 }
                 .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
-
-                bannerRow
 
                 boardGrid
                     .padding(.vertical, 4)
@@ -480,102 +494,71 @@ struct HoneycombTouchView: View {
         .frame(width: 2 * size.width + Self.handSpacing)
     }
 
-    // MARK: Banner row (rules text + undo/hint in the free space beside it)
+    // MARK: Rules + score (undo/hint moved up into the menu bar)
 
-    private var bannerRow: some View {
-        // Mirrors mac's HoneycombView dense-mode banner scaling: with 3+ active rules
-        // (now reachable since Hard/UltraHard roulette scaling lives in shared/ and
-        // already applies here), the joined rules string is long enough to clip against
-        // this row's fixed 38pt height at the normal font size — shrink it instead of
-        // letting it truncate. minimumScaleFactor is a safety net on top, not a
-        // substitute, since it only shrinks as a last resort and can't be relied on
-        // alone to keep 3-4 rule names legible within 2 lines.
+    // Fixed row, not scaled with the board — rules text stays legible regardless of
+    // screen size. Sits directly below topBar in normal flow (no overlap with the
+    // menu bar by construction, unlike an earlier version that floated over topBar as
+    // an overlay). Score renders separately — see scoreCapsule below the board — so
+    // it can no longer drag this row's height up and risk that same overlap.
+    private var rulesCapsule: some View {
         let isDense = rulesBannerLines.count > 2
-        // Matches mac's HoneycombView rules banner treatment exactly: a "Rules:" title
-        // over the rule name(s), yellow/.black weight, on a solid black.opacity(0.75)
-        // rounded card — not bare text floating in the row. Sizes are smaller than
-        // mac's literal 20-28pt titles/16-22pt lines since mac has a dedicated floating
-        // box while this sits in a compact row alongside the hint/undo buttons.
-        return HStack(spacing: 10) {
-            hintButton
-            VStack(spacing: isDense ? 1 : 2) {
-                Text(coordinator.L(.rulesBannerTitle))
-                    .font(.system(size: isDense ? 10 : 12, weight: .black))
-                Text(rulesBannerLines.joined(separator: "  •  "))
-                    .font(.system(size: isDense ? 13 : 16, weight: .black))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                    .multilineTextAlignment(.center)
+        return Text(rulesBannerLines.joined(separator: "  •  "))
+            .font(.system(size: isDense ? 13 : 16, weight: .black))
+            .lineLimit(2)
+            .minimumScaleFactor(0.7)
+            .multilineTextAlignment(.center)
+            // Fixed regardless of actual line count — pre-game shows one short word
+            // ("Roulette"), in-game shows the real rules list which can wrap to 2
+            // lines. This is a normal flow row above GeometryReader, so if its height
+            // tracked the text exactly, GeometryReader's available height — and the
+            // board's scale/position within it — would visibly shift the moment a
+            // match starts and the text changes. Reserves 2-line-at-16pt worth of
+            // space always instead.
+            .frame(minHeight: 40)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isShowingRulesTooltip = true
+            }
+            .popover(isPresented: $isShowingRulesTooltip, attachmentAnchor: .point(.bottom), arrowEdge: .bottom) {
+                let isPreGame = viewModel.gameState != .playing && viewModel.gameState != .suddenDeath
+                let isRoulette = isPreGame && !viewModel.options.forceNormalMode && viewModel.options.selectedRules.isEmpty
+                let effectiveRules: [HoneycombRule] = isPreGame && !isRoulette ? Array(viewModel.options.selectedRules) : viewModel.activeRules
+                RuleExplanationPopover(viewModel: viewModel, isRoulette: isRoulette, effectiveRules: effectiveRules)
+                    .presentationCompactAdaptation(.popover)
             }
             .foregroundStyle(.yellow)
             .padding(.horizontal, 14)
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
             .background(Color.black.opacity(0.75))
             .cornerRadius(16)
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle()) // Make the whole area tappable
-                .onTapGesture {
-                    isShowingRulesTooltip = true
-                }
-                .popover(isPresented: $isShowingRulesTooltip, attachmentAnchor: .point(.bottom), arrowEdge: .bottom) {
-                    let isPreGame = viewModel.gameState != .playing && viewModel.gameState != .suddenDeath
-                    let isRoulette = isPreGame && !viewModel.options.forceNormalMode && viewModel.options.selectedRules.isEmpty
-                    let effectiveRules: [HoneycombRule] = isPreGame && !isRoulette ? Array(viewModel.options.selectedRules) : viewModel.activeRules
-                    RuleExplanationPopover(viewModel: viewModel, isRoulette: isRoulette, effectiveRules: effectiveRules)
-                        .presentationCompactAdaptation(.popover)
-                }
-            undoButton
-        }
-        .frame(height: Self.bannerRowHeight)
-        .padding(.horizontal, 4)
     }
 
-    // Bumped to fit the boxed title+value rules banner above (was 46, a single text
-    // line) — intrinsicSize(landscape:) below references this same constant rather
-    // than a second hardcoded copy, so the two can't drift out of sync.
-    private static let bannerRowHeight: CGFloat = 58
-
-    @ViewBuilder
-    private var hintButton: some View {
-        // Hidden (not just disabled) when unavailable — small screens shouldn't spend
-        // space on a button that can't do anything right now.
-        if isMidMatch, !viewModel.options.hideHintButton, viewModel.options.difficulty != .ultraHard,
-           viewModel.isPlayerTurn {
-            roundButton(systemImage: "lightbulb") {
-                if viewModel.hasHintsAvailable {
-                    viewModel.findHint()
-                } else {
-                    flashNoHintsBanner()
-                }
-            }
-            .accessibilityLabel(coordinator.L(.hint))
-        } else {
-            Color.clear.frame(width: 44, height: 44)
+    // Score only shows once a match exists — matches the old scoreBadge's gating —
+    // but always RENDERS (hidden via opacity, not removed via `if`) so its footprint
+    // is constant, same reasoning as rulesCapsule's fixed .frame(minHeight:) above:
+    // this is a fixed row in body (right after GeometryReader, below the scaled
+    // board), so an `if`-gated version popping in/out would change that row's own
+    // height and shift the board itself. Plain text (no pill background) — sized to
+    // match rulesCapsule's isDense logic, just .bold instead of rulesCapsule's
+    // .black weight.
+    private var scoreCapsule: some View {
+        let isDense = rulesBannerLines.count > 2
+        // Wide fixed gap (not a "–" separator) per request — reads as two distinct
+        // "label: score" stats rather than one "X – Y" scoreline.
+        return HStack(spacing: 28) {
+            Text(coordinator.L(.scoreYouFmt, viewModel.board.playerScore + viewModel.playerHand.count))
+            // Not "DEALER" — shows the opponent's actual name (e.g. "Baby Bee"), same
+            // fix as the hand-side label above the opponent's cards. Name comes first
+            // to match "You: N" on the left (scoreDealerFmt's %@/%d order was swapped
+            // to match — see Strings.English.swift).
+            Text(coordinator.L(.scoreDealerFmt,
+                                honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language),
+                                viewModel.board.opponentScore + viewModel.opponentHand.count))
         }
-    }
-
-    @ViewBuilder
-    private var undoButton: some View {
-        if isMidMatch {
-            roundButton(systemImage: "arrow.uturn.backward") {
-                viewModel.undoLastAction()
-            }
-            .disabled(!viewModel.canUndo)
-            .opacity(viewModel.canUndo ? 1 : 0.35)
-            .accessibilityLabel(coordinator.L(.undo))
-        } else {
-            Color.clear.frame(width: 44, height: 44)
-        }
-    }
-
-    private func roundButton(systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
-                .background(.black.opacity(0.35), in: Circle())
-        }
+        .opacity(viewModel.gameState != .setup ? 1 : 0)
+        .font(.system(size: isDense ? 13 : 16, weight: .bold))
+        .foregroundStyle(.yellow)
     }
 
     private var rulesBannerLines: [String] {
@@ -988,10 +971,6 @@ struct HoneycombTouchView: View {
 struct HoneycombSettingsSection: View {
     @Bindable var viewModel: HoneycombViewModel
     let isMidMatch: Bool
-    // @Bindable, not @Environment — Sound/No Stress Mode/Honey Mode/Manually Dismiss
-    // Banners bind directly to the coordinator (see AppCoordinator's "single source of
-    // truth" fields) so a change here live-propagates to every other game via their
-    // own didSet, instead of only updating this one game's local options copy.
     @Bindable var coordinator: AppCoordinator
 
     @State private var showingRules = false
@@ -1008,11 +987,11 @@ struct HoneycombSettingsSection: View {
             // + chevron as a button — the Picker's own label text is silently dropped
             // (same issue found and fixed in Video Poker's Variant/Default Bet pickers).
             //
-            // Extra .padding(.bottom, 8) on this row and the two nav rows below it (on
-            // top of the VStack's own spacing: 8) — Toggle's default style carries its
-            // own built-in vertical padding that these plain HStack/Button rows don't
-            // have, so matching Toggle's visual row-to-row gap needs more than the flat
-            // 8 that's already correct between the toggles themselves.
+            // Extra .padding(.bottom, 8) on this row (on top of the VStack's own
+            // spacing: 8) — Toggle's default style carries its own built-in vertical
+            // padding that this plain HStack row doesn't have, so matching Toggle's
+            // visual row-to-row gap needs more than the flat 8 that's already correct
+            // between toggles.
             HStack {
                 Text(coordinator.L(.opponentPickerLabel))
                 Spacer()
@@ -1029,24 +1008,12 @@ struct HoneycombSettingsSection: View {
             .padding(.bottom, 8)
 
             // Rules (game choice + ban list, merged into one screen) sits directly under
-            // Opponent — the other game-relevant setting, and should read together above
-            // the general toggles (Sound, No Stress Mode, etc.).
+            // Opponent — the other game-relevant setting. Sound/No Stress Mode/Honey
+            // Mode/Hide Hint/Manually Dismiss Banners live in OptionsFullScreenView's
+            // own Global section now, not here — this card is Honeycomb-specific only.
             rulesNavRow
                 .disabled(isMidMatch)
                 .opacity(isMidMatch ? 0.5 : 1)
-                .padding(.bottom, 8)
-
-            Group {
-                Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
-                Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
-                    .onChange(of: viewModel.options.noStressMode) { _, _ in viewModel.startNewGame() }
-                Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
-                Toggle(coordinator.L(.hideHintButton), isOn: $viewModel.options.hideHintButton)
-                Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
-            }
-            // Options only take effect on the next match — same mid-match gate as mac.
-            .disabled(isMidMatch)
-            .opacity(isMidMatch ? 0.5 : 1)
 
             if isMidMatch {
                 Text(coordinator.L(.settingsUnlockNote))

@@ -15,25 +15,42 @@ struct FlashBannerView: View {
     var onDismiss: (() -> Void)? = nil
 
     var body: some View {
-        VStack {
-            Spacer(minLength: 8)
-            Text(message)
-                .font(.system(size: 60, weight: .black))
-                .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))
-                .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.3)
-                .shadow(radius: 3)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 18)
-                .background(Color.black.opacity(0.75))
-                .cornerRadius(12)
-                .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
-                .contentShape(Rectangle())
-                .onTapGesture { onDismiss?() }
-            Spacer(minLength: 8)
+        GeometryReader { geo in
+            VStack {
+                Spacer(minLength: 8)
+                Text(message)
+                    .font(.system(size: Self.fontSize(for: geo.size), weight: .black))
+                    .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.3)
+                    .shadow(radius: 3)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 18)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(12)
+                    .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+                    .contentShape(Rectangle())
+                    .onTapGesture { onDismiss?() }
+                Spacer(minLength: 8)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(onDismiss != nil)
         .transition(.opacity)
+    }
+
+    // 60 stays the mac/iOS-landscape size (unchanged) — a longer message like
+    // "First Move: Player! Calculate carefully!" at 60pt wraps to 3-4 lines on a
+    // narrow portrait phone width and overflows well past the screen, since this
+    // Text has no lineLimit for minimumScaleFactor to actually kick in against
+    // (it just keeps wrapping instead of shrinking). Smaller on iOS portrait so
+    // longer messages wrap to fewer, more readable lines that fit the screen.
+    private static func fontSize(for size: CGSize) -> CGFloat {
+        #if os(iOS)
+        if size.height > size.width {
+            return 34
+        }
+        #endif
+        return 60
     }
 }
