@@ -166,17 +166,22 @@ struct BlackjackTouchView: View {
             // to plug in each side's *live* card count, which meant cardW itself
             // shrank a little every time a card was drawn — hitting repeatedly
             // visibly reflowed the whole board sideways as the reserved width grew to
-            // match. Using a fixed worst-case count (6) on both sides instead means
-            // cardW is solved once and never changes for the rest of the hand — cards
-            // pack tighter as more are drawn (handSpacing's tight overlap, always-on
-            // in landscape now) rather than the board resizing around them. The
-            // middle column's own width is pinned to bettingGridButtonWidth * 2 +
-            // bettingGridSpacing for every phase (see inlineLandscapeControls)
-            // specifically so this reserve — and therefore cardW — stays identical
-            // whichever phase is showing there. 60pt safety margin beyond the exact
-            // reserve since the tight-overlap approximation isn't pixel-exact against
-            // SwiftUI's actual layout (label text width, rounding, etc.).
-            let worstCaseHandWidthFactor = 1 + (6 - 1) * (1 - tightOverlapFraction)
+            // match. Assumes a fixed count (4) on both sides instead, so cardW is
+            // solved once and doesn't change for most hands — cards pack tighter as
+            // more are drawn (handSpacing's tight overlap, always-on in landscape
+            // now) rather than the board resizing around them. 4, not 6 — assuming
+            // every hand might reach 6 cards made even a starting 2-card hand render
+            // noticeably smaller than it needed to for the common case, in exchange
+            // for stability only very long hands actually need; a hand growing past 4
+            // can still reflow slightly, same tradeoff sizeScale below already makes
+            // for hands past 5. The middle column's own width is pinned to
+            // bettingGridButtonWidth * 2 + bettingGridSpacing for every phase (see
+            // inlineLandscapeControls) specifically so this reserve — and therefore
+            // cardW — stays identical whichever phase is showing there. 60pt safety
+            // margin beyond the exact reserve since the tight-overlap approximation
+            // isn't pixel-exact against SwiftUI's actual layout (label text width,
+            // rounding, etc.).
+            let worstCaseHandWidthFactor = 1 + (4 - 1) * (1 - tightOverlapFraction)
             let cardWidthFromAvailable: CGFloat = isLandscape
                 ? (geo.size.width - (Self.bettingGridButtonWidth * 2 + Self.bettingGridSpacing) - 24 - 60)
                     / (2 * worstCaseHandWidthFactor)
