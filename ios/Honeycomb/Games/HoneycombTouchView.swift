@@ -225,6 +225,7 @@ struct HoneycombTouchView: View {
                 globalSectionUnlockNote: coordinator.L(.settingsUnlockNote)
             ) {
                 HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch, coordinator: coordinator)
+                WatermarkScaleCalibrationSlider(coordinator: coordinator)
             }
         }
         // Headless-testing hook: `simctl launch ... -honeycombAutostart 1` starts a match

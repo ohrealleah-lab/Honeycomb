@@ -96,6 +96,10 @@ public struct VideoPokerView: View {
             BackgroundLayerView()
                 .ignoresSafeArea()
 
+            GameWatermarkView()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
             if coordinator.showFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
@@ -1017,6 +1021,7 @@ struct VideoPokerOptionsView: View {
     @State private var noStressMode: Bool
     @State private var honeyMode: Bool
     @State private var manuallyDismissBanners: Bool
+    @State private var hideBee: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -1036,6 +1041,7 @@ struct VideoPokerOptionsView: View {
         _noStressMode    = State(initialValue: viewModel.options.noStressMode)
         _honeyMode       = State(initialValue: viewModel.options.honeyMode)
         _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
+        _hideBee = State(initialValue: coordinator.hideBee)
     }
 
     var body: some View {
@@ -1080,6 +1086,7 @@ struct VideoPokerOptionsView: View {
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
+                coordinator.hideBee = hideBee
             }
         ) {
             Picker(coordinator.L(.pickerVariantLabel), selection: $variant) {
@@ -1113,6 +1120,11 @@ struct VideoPokerOptionsView: View {
             Toggle(coordinator.L(.noStressMode),   isOn: $noStressMode).font(.system(.body))
             Toggle(coordinator.L(.honeyMode), isOn: $honeyMode).font(.system(.body))
             Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners).font(.system(.body))
+            Toggle(coordinator.L(.hideBee), isOn: $hideBee).font(.system(.body))
+
+            Divider()
+
+            WatermarkScaleCalibrationSlider(coordinator: coordinator)
         }
     }
 

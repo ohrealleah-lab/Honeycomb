@@ -19,6 +19,11 @@ public partial class HoneycombViewModel : ObservableObject
     [ObservableProperty] private HoneycombState _state = new();
     [ObservableProperty] private HoneycombOptions _options = new();
     [ObservableProperty] private HoneycombStats _stats = new();
+    // Bee watermark toggle/scale live on the shared GameOptions (see HoneycombOptions'
+    // "Mac parity options" comment for why — same pattern as HoneyMode/IsSoundEnabled),
+    // mirrored here so the board view has something to bind to.
+    [ObservableProperty] private bool _hideBee;
+    [ObservableProperty] private double _honeycombWatermarkScale = 1.0;
 
     private static int s_consecutiveStarters = 0;
     private static int s_lastStarter = 0;
@@ -172,10 +177,14 @@ public partial class HoneycombViewModel : ObservableObject
         _isHeadless = isHeadless;
         Options = SettingsService.LoadHoneycombOptions();
         Stats = LoadStats();
-        
+        HideBee = SettingsService.LoadOptions().HideBee;
+        HoneycombWatermarkScale = SettingsService.LoadOptions().HoneycombWatermarkScale;
+
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
             Options = SettingsService.LoadHoneycombOptions();
+            HideBee = m.Options.HideBee;
+            HoneycombWatermarkScale = m.Options.HoneycombWatermarkScale;
             NotifyStateChanged();
         });
     }

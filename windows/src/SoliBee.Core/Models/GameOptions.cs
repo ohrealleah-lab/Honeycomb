@@ -65,6 +65,20 @@ public class GameOptions
     // unless the player opts in.
     public bool ManuallyDismissBanners { get; set; } = false;
 
+    // Hides the centered Solibee watermark drawn behind every game's board.
+    public bool HideBee { get; set; } = false;
+
+    // TEMPORARY — dev calibration values for the bee watermark's per-game scale. Once
+    // final values are known, delete the Preferences slider (WatermarkScaleSection in
+    // PreferencesView.axaml + its code-behind) and change these six defaults to the
+    // calibrated constants; the board views' Image/ScaleTransform bindings need no changes.
+    public double KlondikeWatermarkScale   { get; set; } = 1.0;
+    public double FreecellWatermarkScale   { get; set; } = 1.0;
+    public double SpiderWatermarkScale     { get; set; } = 1.0;
+    public double VideoPokerWatermarkScale { get; set; } = 1.0;
+    public double BlackjackWatermarkScale  { get; set; } = 1.0;
+    public double HoneycombWatermarkScale  { get; set; } = 1.0;
+
     public bool IsVignetteEnabled { get; set; } = true;
     // Turns off timers (solitaire) and enables free play (VP/Blackjack — hides the
     // credit/bet board and betting controls; hands are played without wagering).

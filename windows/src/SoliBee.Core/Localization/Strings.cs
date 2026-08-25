@@ -703,6 +703,7 @@ public static class Strings
         [StringKey.OutOfCreditsToast] = "Out of Credits!",
         [StringKey.BtnClearShort] = "Clear",
         [StringKey.GlobalOptionsSection] = "Global",
+        [StringKey.HideBee] = "Hide the Bee",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1390,5 +1391,6 @@ public static class Strings
         [StringKey.OutOfCreditsToast] = "¡Sin créditos!",
         [StringKey.BtnClearShort] = "Borrar",
         [StringKey.GlobalOptionsSection] = "Global",
+        [StringKey.HideBee] = "Ocultar la Abeja",
     };
 }

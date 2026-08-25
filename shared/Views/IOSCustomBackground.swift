@@ -143,6 +143,8 @@ public struct IOSBackgroundLayer: View {
                 }
             }
 
+            GameWatermarkView()
+
             if coordinator.showFeltVignette {
                 // Mac's FeltVignetteView uses fixed startRadius/endRadius (100/680) that
                 // happen to roughly match its typical desktop window size. iOS screens

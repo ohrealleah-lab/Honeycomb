@@ -19,6 +19,14 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
+            <Image Grid.RowSpan="6" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="0.15"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                   IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
+                <Image.RenderTransform>
+                    <ScaleTransform ScaleX="{Binding Options.BlackjackWatermarkScale}" ScaleY="{Binding Options.BlackjackWatermarkScale}"/>
+                </Image.RenderTransform>
+            </Image>
+
             <!-- ─── Credits / Bet / Hands bar ───────────────────────────────────── -->
             <!-- Lives in the top spacer row, centered vertically, so it sits centered
                  between the title bar and the dealer cards instead of pinned to the

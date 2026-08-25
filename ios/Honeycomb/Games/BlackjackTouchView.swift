@@ -356,6 +356,7 @@ struct BlackjackTouchView: View {
                 BlackjackSettingsSection(viewModel: viewModel,
                                          canOpenOptions: viewModel.canOpenOptions,
                                          coordinator: coordinator)
+                WatermarkScaleCalibrationSlider(coordinator: coordinator)
             }
         }
         .queuedFlashBanner(

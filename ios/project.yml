@@ -44,6 +44,10 @@ targets:
         buildPhase: resources
       - path: ../mac/images/backgrounds/Solibee.png
         buildPhase: resources
+      # Bee watermark art (see GameWatermarkView.swift) — separate from the Solibee
+      # card-back theme above.
+      - path: ../mac/images/backgrounds/hcblack.png
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.leah.Honeycomb

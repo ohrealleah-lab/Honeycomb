@@ -105,6 +105,7 @@ struct OptionsFullScreenView<GameSettings: View>: View {
                     Toggle(coordinator.L(.hideHintButton), isOn: hideHintBinding)
                 }
                 Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
+                Toggle(coordinator.L(.hideBee), isOn: $coordinator.hideBee)
             }
             .disabledDuringGameplay(isGlobalSectionDisabled)
             .padding(12)

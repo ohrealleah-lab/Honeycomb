@@ -1372,4 +1372,6 @@ public enum StringKey: String, CaseIterable {
     case btnClearShort = "btn_clear_short"
     /// iOS Options sheet section header — groups Sound/No Stress Mode/Honey Mode/Hide Hint/Manually Dismiss Banners, separate from the per-game settings section below it
     case globalOptionsSection = "global_options_section"
+    /// Toggle label, reused across every game's Options on Mac/iOS/Windows
+    case hideBee = "hide_bee"
 }

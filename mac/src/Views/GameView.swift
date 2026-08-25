@@ -102,6 +102,10 @@ public struct GameView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
+            GameWatermarkView()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
             if resolvedShowFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
@@ -1316,6 +1320,7 @@ struct OptionsView: View {
     @State private var noStressMode: Bool
     @State private var honeyMode: Bool
     @State private var manuallyDismissBanners: Bool
+    @State private var hideBee: Bool
 
     let onViewStats: (() -> Void)?
     let availableWidth: CGFloat
@@ -1336,6 +1341,7 @@ struct OptionsView: View {
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
         _honeyMode = State(initialValue: viewModel.options.honeyMode)
         _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
+        _hideBee = State(initialValue: coordinator.hideBee)
     }
 
     var body: some View {
@@ -1371,6 +1377,7 @@ struct OptionsView: View {
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
+                coordinator.hideBee = hideBee
             }
         ) {
             Picker(coordinator.L(.drawModeLabel), selection: $drawMode) {
@@ -1398,6 +1405,13 @@ struct OptionsView: View {
 
             Toggle(coordinator.L(.honeyMode), isOn: $honeyMode)
                 .font(.system(.body))
+
+            Toggle(coordinator.L(.hideBee), isOn: $hideBee)
+                .font(.system(.body))
+
+            Divider()
+
+            WatermarkScaleCalibrationSlider(coordinator: coordinator)
         }
     }
 }

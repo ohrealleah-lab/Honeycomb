@@ -352,6 +352,34 @@ public partial class PreferencesView : UserControl
         }
     }
 
+    // TEMPORARY — dev calibration for the bee watermark's per-game scale. Once final
+    // values are known, delete WatermarkScaleSection (AXAML), this pair, and the
+    // WatermarkScaleSlider_ValueChanged handler below, then hardcode the calibrated
+    // constants as the six *WatermarkScale defaults on GameOptions.
+    private double GetWatermarkScale(GameOptions options) => ActiveGameFamily switch
+    {
+        "Klondike"   => options.KlondikeWatermarkScale,
+        "Freecell"   => options.FreecellWatermarkScale,
+        "Spider"     => options.SpiderWatermarkScale,
+        "VideoPoker" => options.VideoPokerWatermarkScale,
+        "Blackjack"  => options.BlackjackWatermarkScale,
+        "Honeycomb"  => options.HoneycombWatermarkScale,
+        _            => 1.0
+    };
+
+    private void SetWatermarkScale(GameOptions options, double value)
+    {
+        switch (ActiveGameFamily)
+        {
+            case "Klondike":   options.KlondikeWatermarkScale = value; break;
+            case "Freecell":   options.FreecellWatermarkScale = value; break;
+            case "Spider":     options.SpiderWatermarkScale = value; break;
+            case "VideoPoker": options.VideoPokerWatermarkScale = value; break;
+            case "Blackjack":  options.BlackjackWatermarkScale = value; break;
+            case "Honeycomb":  options.HoneycombWatermarkScale = value; break;
+        }
+    }
+
     // Syncs all UI controls to match the provided options. Call inside _initializing guard.
     private void SyncUIFromOptions(GameOptions options)
     {
@@ -364,6 +392,8 @@ public partial class PreferencesView : UserControl
         HideHintCheckBox.IsChecked     = GetHideHintButton(options);
         ManuallyDismissBannersCheckBox.IsChecked = options.ManuallyDismissBanners;
         AlwaysOnTopCheckBox.IsChecked  = options.IsAlwaysOnTop;
+        HideBeeCheckBox.IsChecked      = options.HideBee;
+        WatermarkScaleSlider.Value     = GetWatermarkScale(options);
 
         PopulateCardBacks(options);
 
@@ -572,6 +602,8 @@ public partial class PreferencesView : UserControl
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
         PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
+        HideBeeCheckBox.IsChecked = shared.HideBee;
+        WatermarkScaleSlider.Value = GetWatermarkScale(shared);
     }
 
     // Blackjack has its own separate options model, same shape as Video Poker above —
@@ -591,6 +623,8 @@ public partial class PreferencesView : UserControl
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
         PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
+        HideBeeCheckBox.IsChecked = shared.HideBee;
+        WatermarkScaleSlider.Value = GetWatermarkScale(shared);
     }
 
     // ── Language ──────────────────────────────────────────────────────────────
@@ -624,6 +658,7 @@ public partial class PreferencesView : UserControl
         ManuallyDismissBannersCheckBox.Content = Strings.Get(StringKey.ManuallyDismissBanners, language);
         AlwaysOnTopCheckBox.Content = Strings.Get(StringKey.AlwaysOnTop, language);
         PointHighlightsCheckBox.Content = Strings.Get(StringKey.HoneyMode, language);
+        HideBeeCheckBox.Content = Strings.Get(StringKey.HideBee, language);
 
         AboutHoneycombButton.Content = Strings.Get(StringKey.AboutHoneycomb, language);
 
@@ -1136,6 +1171,7 @@ public partial class PreferencesView : UserControl
             options.IsAlwaysOnTop      = AlwaysOnTopCheckBox.IsChecked  ?? false;
             options.HoneyMode          = PointHighlightsCheckBox.IsChecked  ?? true;
             options.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
+            options.HideBee            = HideBeeCheckBox.IsChecked ?? false;
 
             NotifySettingsChanged(options);
             if (ActiveGameFamily == "Honeycomb") SaveHoneycombOptionsAndNotify();
@@ -1152,6 +1188,7 @@ public partial class PreferencesView : UserControl
             shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
             shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
             shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
+            shared.HideBee           = HideBeeCheckBox.IsChecked ?? false;
             NotifySettingsChanged(shared);
 
             // vpOptions is the live VideoPokerViewModel.Options instance, so mutations
@@ -1170,11 +1207,38 @@ public partial class PreferencesView : UserControl
             shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
             shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
             shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
+            shared.HideBee           = HideBeeCheckBox.IsChecked ?? false;
             NotifySettingsChanged(shared);
 
             // bjOptions is the live BlackjackViewModel.Options instance, so mutations
             // above already apply — SaveOptions() persists to disk and notifies the view.
             BlackjackVm?.SaveOptions();
+        }
+    }
+
+    // TEMPORARY — dev calibration slider live-saves on every drag tick (unlike the
+    // rest of this panel's controls, which only persist via Option_Changed above).
+    // See the GetWatermarkScale/SetWatermarkScale pair's removal note.
+    private void WatermarkScaleSlider_ValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_initializing) return;
+
+        if (DataContext is GameOptions options)
+        {
+            SetWatermarkScale(options, e.NewValue);
+            NotifySettingsChanged(options);
+        }
+        else if (DataContext is VideoPokerOptions)
+        {
+            var shared = SettingsService.LoadOptions();
+            SetWatermarkScale(shared, e.NewValue);
+            NotifySettingsChanged(shared);
+        }
+        else if (DataContext is BlackjackOptions)
+        {
+            var shared = SettingsService.LoadOptions();
+            SetWatermarkScale(shared, e.NewValue);
+            NotifySettingsChanged(shared);
         }
     }
 

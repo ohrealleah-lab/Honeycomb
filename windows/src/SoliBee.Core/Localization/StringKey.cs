@@ -692,4 +692,5 @@ public enum StringKey
     OutOfCreditsToast,
     BtnClearShort,
     GlobalOptionsSection,
+    HideBee,
 }

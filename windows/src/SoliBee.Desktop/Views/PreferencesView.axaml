@@ -69,6 +69,16 @@
                      both the "+N"/"-N" score popups and whether Repeatable Flavor/Ambiance
                      banners fire at all. -->
                 <CheckBox x:Name="PointHighlightsCheckBox" Content="Honey Mode (Flavor)" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                <CheckBox x:Name="HideBeeCheckBox" Content="Hide the Bee" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+            </StackPanel>
+
+            <!-- TEMPORARY — dev calibration for the bee watermark's per-game scale.
+                 Delete this StackPanel + WatermarkScaleSlider_ValueChanged once final
+                 per-game values are known (see GetWatermarkScale/SetWatermarkScale). -->
+            <StackPanel x:Name="WatermarkScaleSection" Spacing="4">
+                <TextBlock Text="Bee Watermark Scale (temporary — dev calibration)" FontSize="11" Foreground="#1A1A1A"/>
+                <Slider x:Name="WatermarkScaleSlider" Minimum="0.1" Maximum="5.0"
+                        ValueChanged="WatermarkScaleSlider_ValueChanged"/>
             </StackPanel>
 
             <Rectangle x:Name="VisualThemesDivider" Height="1" Fill="#DDDDDD" Margin="0,4,0,4"/>

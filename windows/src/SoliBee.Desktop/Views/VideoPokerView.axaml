@@ -5,6 +5,13 @@
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto" ClipToBounds="False">
+        <Image Grid.RowSpan="3" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="0.15"
+               HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+               IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
+            <Image.RenderTransform>
+                <ScaleTransform ScaleX="{Binding Options.VideoPokerWatermarkScale}" ScaleY="{Binding Options.VideoPokerWatermarkScale}"/>
+            </Image.RenderTransform>
+        </Image>
 
 
         <!-- ─── Pay Table Popup (revealed on BidBar hover, see BidBar_PointerEntered/Exited) ── -->

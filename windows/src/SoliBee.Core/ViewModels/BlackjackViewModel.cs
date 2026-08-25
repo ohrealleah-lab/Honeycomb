@@ -179,6 +179,8 @@ public partial class BlackjackViewModel : ObservableObject
         Options.CustomFeltColorHex = shared.CustomFeltColorHex;
         Options.IsVignetteEnabled  = shared.IsVignetteEnabled;
         Options.IsNoStressMode     = shared.IsNoStressMode;
+        Options.HideBee            = shared.HideBee;
+        Options.BlackjackWatermarkScale = shared.BlackjackWatermarkScale;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
@@ -188,6 +190,8 @@ public partial class BlackjackViewModel : ObservableObject
             Options.CustomFeltColorHex = m.Options.CustomFeltColorHex;
             Options.IsVignetteEnabled  = m.Options.IsVignetteEnabled;
             Options.IsNoStressMode     = m.Options.IsNoStressMode;
+            Options.HideBee            = m.Options.HideBee;
+            Options.BlackjackWatermarkScale = m.Options.BlackjackWatermarkScale;
             OnPropertyChanged(nameof(Options));
             NotifyStateChanged();
         });

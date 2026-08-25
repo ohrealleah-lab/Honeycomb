@@ -50,6 +50,13 @@
     </UserControl.Styles>
 
     <Grid Background="Transparent" ClipToBounds="False">
+        <Image Source="avares://Honeycomb/Assets/hcblack.png" Opacity="0.15"
+               HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+               IsVisible="{Binding !HideBee}" RenderTransformOrigin="0.5,0.5">
+            <Image.RenderTransform>
+                <ScaleTransform ScaleX="{Binding HoneycombWatermarkScale}" ScaleY="{Binding HoneycombWatermarkScale}"/>
+            </Image.RenderTransform>
+        </Image>
         <!-- Main Layout -->
         <Grid ColumnDefinitions="Auto, *, Auto, *, Auto" RowDefinitions="160, Auto" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False" Margin="40,0,40,80">
             

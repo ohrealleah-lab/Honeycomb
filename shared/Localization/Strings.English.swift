@@ -687,5 +687,6 @@ enum StringsEnglish {
         .outOfCreditsToast: "Out of Credits!",
         .btnClearShort: "Clear",
         .globalOptionsSection: "Global",
+        .hideBee: "Hide the Bee",
     ]
 }

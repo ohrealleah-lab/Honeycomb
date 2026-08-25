@@ -118,6 +118,57 @@ public final class AppCoordinator {
     public var showFeltVignette: Bool {
         didSet { UserDefaults.standard.set(showFeltVignette, forKey: "showFeltVignette") }
     }
+    // Hides the centered Solibee watermark drawn behind every game's board. Same
+    // plain app-wide display setting pattern as showFeltVignette above.
+    public var hideBee: Bool {
+        didSet { UserDefaults.standard.set(hideBee, forKey: "global_hide_bee") }
+    }
+
+    // MARK: - Bee watermark per-game scale (TEMPORARY — dev calibration)
+    // One raw stored value per game, plus currentGameWatermarkScale below as the single
+    // read/write surface both GameWatermarkView and WatermarkScaleCalibrationSlider use.
+    // Once final per-game values are known, delete the calibration slider and change
+    // these six defaults to the calibrated constants — nothing else needs to change.
+    public var klondikeWatermarkScale: Double {
+        didSet { UserDefaults.standard.set(klondikeWatermarkScale, forKey: "watermark_scale_klondike") }
+    }
+    public var beecellWatermarkScale: Double {
+        didSet { UserDefaults.standard.set(beecellWatermarkScale, forKey: "watermark_scale_beecell") }
+    }
+    public var spiderWatermarkScale: Double {
+        didSet { UserDefaults.standard.set(spiderWatermarkScale, forKey: "watermark_scale_spider") }
+    }
+    public var videoPokerWatermarkScale: Double {
+        didSet { UserDefaults.standard.set(videoPokerWatermarkScale, forKey: "watermark_scale_videoPoker") }
+    }
+    public var blackjackWatermarkScale: Double {
+        didSet { UserDefaults.standard.set(blackjackWatermarkScale, forKey: "watermark_scale_blackjack") }
+    }
+    public var honeycombWatermarkScale: Double {
+        didSet { UserDefaults.standard.set(honeycombWatermarkScale, forKey: "watermark_scale_honeycomb") }
+    }
+    public var currentGameWatermarkScale: Double {
+        get {
+            switch gameMode {
+            case .klondike:   return klondikeWatermarkScale
+            case .beecell:    return beecellWatermarkScale
+            case .spider:     return spiderWatermarkScale
+            case .videoPoker: return videoPokerWatermarkScale
+            case .blackjack:  return blackjackWatermarkScale
+            case .honeycomb:  return honeycombWatermarkScale
+            }
+        }
+        set {
+            switch gameMode {
+            case .klondike:   klondikeWatermarkScale = newValue
+            case .beecell:    beecellWatermarkScale = newValue
+            case .spider:     spiderWatermarkScale = newValue
+            case .videoPoker: videoPokerWatermarkScale = newValue
+            case .blackjack:  blackjackWatermarkScale = newValue
+            case .honeycomb:  honeycombWatermarkScale = newValue
+            }
+        }
+    }
     // App-wide UI language — not a theme field (no SoliBeeTheme entry, no
     // liveSaveActiveTheme), same single-source pattern as the theme fields above.
     // Every L() call reads this directly, and since AppCoordinator is @Observable,
@@ -316,6 +367,20 @@ public final class AppCoordinator {
         self.cardBackTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Solibee"
         self.showFeltVignette = UserDefaults.standard.object(forKey: "showFeltVignette") != nil
             ? UserDefaults.standard.bool(forKey: "showFeltVignette") : true
+        self.hideBee = UserDefaults.standard.object(forKey: "global_hide_bee") != nil
+            ? UserDefaults.standard.bool(forKey: "global_hide_bee") : false
+        self.klondikeWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_klondike") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_klondike") : 1.0
+        self.beecellWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_beecell") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_beecell") : 1.0
+        self.spiderWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_spider") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_spider") : 1.0
+        self.videoPokerWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_videoPoker") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_videoPoker") : 1.0
+        self.blackjackWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_blackjack") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_blackjack") : 1.0
+        self.honeycombWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_honeycomb") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_honeycomb") : 1.0
         self.language = AppLanguage(rawValue: UserDefaults.standard.string(forKey: "appLanguage") ?? "") ?? .english
         #if canImport(AppKit)
         self.stayOnTop = UserDefaults.standard.object(forKey: "stayOnTop") != nil

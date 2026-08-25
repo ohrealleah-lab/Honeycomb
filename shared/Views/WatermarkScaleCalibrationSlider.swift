@@ -1,0 +1,20 @@
+import SwiftUI
+
+// TEMPORARY — dev calibration control for the bee watermark's per-game scale. Delete
+// this file and its call sites once final per-game scale values are known (see
+// AppCoordinator's "Bee watermark per-game scale" section for the values to hardcode).
+struct WatermarkScaleCalibrationSlider: View {
+    @Bindable var coordinator: AppCoordinator
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Bee Watermark Scale (temporary — dev calibration)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Slider(value: $coordinator.currentGameWatermarkScale, in: 0.1...5.0)
+            Text(String(format: "%.2f", coordinator.currentGameWatermarkScale))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+}

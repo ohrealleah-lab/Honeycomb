@@ -170,6 +170,16 @@ public static class SettingsService
                 if (GetValue("HoneyMode") is bool honeyMode)
                     options.HoneyMode = honeyMode;
 
+                if (GetValue("HideBee") is bool hideBee)
+                    options.HideBee = hideBee;
+
+                if (GetValue("KlondikeWatermarkScale") is double klWms) options.KlondikeWatermarkScale = klWms;
+                if (GetValue("FreecellWatermarkScale") is double fcWms) options.FreecellWatermarkScale = fcWms;
+                if (GetValue("SpiderWatermarkScale") is double spWms) options.SpiderWatermarkScale = spWms;
+                if (GetValue("VideoPokerWatermarkScale") is double vpWms) options.VideoPokerWatermarkScale = vpWms;
+                if (GetValue("BlackjackWatermarkScale") is double bjWms) options.BlackjackWatermarkScale = bjWms;
+                if (GetValue("HoneycombWatermarkScale") is double hcWms) options.HoneycombWatermarkScale = hcWms;
+
                 if (GetValue("IsVignetteEnabled") is bool isVignette)
                     options.IsVignetteEnabled = isVignette;
                 if (GetValue("IsStatusBarVisible") is bool isStatusBar)
@@ -283,6 +293,15 @@ public static class SettingsService
                 SetValue("CardBackOffsetX", options.CardBackOffsetX);
                 SetValue("CardBackOffsetY", options.CardBackOffsetY);
                 SetValue("HoneyMode", options.HoneyMode);
+
+                SetValue("HideBee", options.HideBee);
+
+                SetValue("KlondikeWatermarkScale", options.KlondikeWatermarkScale);
+                SetValue("FreecellWatermarkScale", options.FreecellWatermarkScale);
+                SetValue("SpiderWatermarkScale", options.SpiderWatermarkScale);
+                SetValue("VideoPokerWatermarkScale", options.VideoPokerWatermarkScale);
+                SetValue("BlackjackWatermarkScale", options.BlackjackWatermarkScale);
+                SetValue("HoneycombWatermarkScale", options.HoneycombWatermarkScale);
 
                 SetValue("IsVignetteEnabled", options.IsVignetteEnabled);
                 SetValue("IsStatusBarVisible", options.IsStatusBarVisible);

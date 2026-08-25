@@ -175,6 +175,7 @@ struct VideoPokerTouchView: View {
                 VideoPokerSettingsSection(viewModel: viewModel,
                                           isMidHand: viewModel.state.phase == .holding,
                                           coordinator: coordinator)
+                WatermarkScaleCalibrationSlider(coordinator: coordinator)
             }
         }
         .background(IOSBackgroundLayer(intensity: 0.6))

@@ -687,5 +687,6 @@ enum StringsSpanish {
         .outOfCreditsToast: "¡Sin créditos!",
         .btnClearShort: "Borrar",
         .globalOptionsSection: "Global",
+        .hideBee: "Ocultar la Abeja",
     ]
 }

@@ -163,6 +163,10 @@ public struct HoneycombView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
+            GameWatermarkView()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
             // Placed behind the toolbar/board/hands (declared before them in this
             // ZStack, and ZStack draws later children on top), so it can never cover
             // any cards regardless of the vignette's own shape — same ordering every
@@ -1143,6 +1147,7 @@ struct HoneycombOptionsView: View {
     @State private var honeyMode: Bool
     @State private var hideHintButton: Bool
     @State private var manuallyDismissBanners: Bool
+    @State private var hideBee: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -1158,6 +1163,7 @@ struct HoneycombOptionsView: View {
         _honeyMode = State(initialValue: viewModel.options.honeyMode)
         _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
         _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
+        _hideBee = State(initialValue: coordinator.hideBee)
     }
 
     var body: some View {
@@ -1185,6 +1191,7 @@ struct HoneycombOptionsView: View {
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
+                coordinator.hideBee = hideBee
                 // No Stress Mode's deck composition is only decided at match start, so
                 // toggling it on mid-match has no visible effect until the next deal —
                 // silently deal fresh instead of leaving a stale, unapplied setting.
@@ -1208,7 +1215,12 @@ struct HoneycombOptionsView: View {
             Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners)
                 .font(.system(.body))
 
+            Toggle(coordinator.L(.hideBee), isOn: $hideBee)
+                .font(.system(.body))
+
             Divider()
+
+            WatermarkScaleCalibrationSlider(coordinator: coordinator)
         }
     }
 }

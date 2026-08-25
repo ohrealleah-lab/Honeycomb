@@ -96,6 +96,10 @@ public struct BeecellView: View {
                     isBoardFocused = true
                 }
 
+            GameWatermarkView()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
             if coordinator.showFeltVignette { FeltVignetteView() }
 
 
@@ -1144,6 +1148,7 @@ struct BeecellOptionsView: View {
     @State private var noStressMode: Bool
     @State private var honeyMode: Bool
     @State private var manuallyDismissBanners: Bool
+    @State private var hideBee: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
 
@@ -1160,6 +1165,7 @@ struct BeecellOptionsView: View {
         _noStressMode = State(initialValue: viewModel.options.noStressMode)
         _honeyMode = State(initialValue: viewModel.options.honeyMode)
         _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
+        _hideBee = State(initialValue: coordinator.hideBee)
     }
 
     var body: some View {
@@ -1188,6 +1194,7 @@ struct BeecellOptionsView: View {
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
+                coordinator.hideBee = hideBee
             }
         ) {
             Picker(coordinator.L(.toggleGameModeLabel), selection: $deckCount) {
@@ -1212,6 +1219,13 @@ struct BeecellOptionsView: View {
 
             Toggle(coordinator.L(.honeyMode), isOn: $honeyMode)
                 .font(.system(.body))
+
+            Toggle(coordinator.L(.hideBee), isOn: $hideBee)
+                .font(.system(.body))
+
+            Divider()
+
+            WatermarkScaleCalibrationSlider(coordinator: coordinator)
         }
     }
 }
