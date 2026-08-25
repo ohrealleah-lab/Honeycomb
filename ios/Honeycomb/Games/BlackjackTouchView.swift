@@ -790,12 +790,15 @@ struct BlackjackTouchView: View {
         let scale: CGFloat = compact ? 0.9 : 1.0
         return VStack(spacing: 10) {
             if !viewModel.isFreePlay {
+                // Vector chips here too, matching bettingGridLandscape's — a portrait
+                // player switching to landscape (or vice versa) mid-session shouldn't
+                // see the bet row change from round chips to rectangular buttons.
                 HStack(spacing: 10) {
-                    casinoButton(coordinator.L(.chip1), color: .white, textColor: .black, compact: true, scale: scale) { viewModel.addToBet(1) }
-                    casinoButton(coordinator.L(.chip5), color: .red.opacity(0.85), compact: true, scale: scale) { viewModel.addToBet(5) }
-                    casinoButton(coordinator.L(.chip10), color: .blue.opacity(0.75), compact: true, scale: scale) { viewModel.addToBet(10) }
-                    casinoButton(coordinator.L(.chip25), color: .green.opacity(0.75), compact: true, scale: scale) { viewModel.addToBet(25) }
-                    casinoButton(coordinator.L(.chip2x), color: .orange.opacity(0.85), compact: true, scale: scale) { viewModel.doubleBet() }
+                    PokerChipView(label: coordinator.L(.chip1), baseColor: .white, stripeColor: .black.opacity(0.85), textColor: .black, diameter: Self.portraitChipDiameter * scale) { viewModel.addToBet(1) }
+                    PokerChipView(label: coordinator.L(.chip5), baseColor: Color(red: 0.88, green: 0.22, blue: 0.22), stripeColor: .white, textColor: .white, diameter: Self.portraitChipDiameter * scale) { viewModel.addToBet(5) }
+                    PokerChipView(label: coordinator.L(.chip10), baseColor: Color(red: 0.18, green: 0.50, blue: 0.92), stripeColor: .white, textColor: .white, diameter: Self.portraitChipDiameter * scale) { viewModel.addToBet(10) }
+                    PokerChipView(label: coordinator.L(.chip25), baseColor: Color(red: 0.18, green: 0.72, blue: 0.36), stripeColor: .white, textColor: .white, diameter: Self.portraitChipDiameter * scale) { viewModel.addToBet(25) }
+                    PokerChipView(label: coordinator.L(.chip2x), baseColor: Color(red: 0.95, green: 0.55, blue: 0.15), stripeColor: .white, textColor: .white, diameter: Self.portraitChipDiameter * scale) { viewModel.doubleBet() }
                 }
                 .onGeometryChange(for: CGFloat.self) { proxy in
                     proxy.size.height
@@ -878,6 +881,11 @@ struct BlackjackTouchView: View {
     private var isRegularWidth: Bool { horizontalSizeClass == .regular }
     private static let bettingGridButtonMinHeight: CGFloat = 34
     private static let bettingGridSpacing: CGFloat = 4
+    // Portrait's bettingControls chip diameter — sized to roughly match the footprint
+    // a compact:true casinoButton rendered at scale 1.0 (28pt padding + ~18pt text),
+    // then scaled down by bettingControls' own `scale` the same way its other buttons
+    // already are.
+    private static let portraitChipDiameter: CGFloat = 52
     // Wider gap than bettingGridSpacing specifically between the chip row and the
     // Clear/Deal row below it — those two rows read as different groups (bet amount
     // vs. commit-the-bet action), so they get more breathing room than the tight
@@ -894,14 +902,36 @@ struct BlackjackTouchView: View {
         VStack(spacing: Self.bettingGridRowSpacing) {
             if !viewModel.isFreePlay {
                 // All 5 chips on one line (per request) rather than a 2-column grid —
-                // Clear moves down to share Deal's row instead, to Deal's left.
+                // Clear moves down to share Deal's row instead, to Deal's left. Vector
+                // chips (round, casino-style) rather than casinoButton's rectangular
+                // pill — landscape's dedicated bet tray reads as chips; portrait's
+                // bettingControls keeps the rectangular style. diameter is pinned to
+                // bettingGridButtonWidth (the same iPad/iPhone-aware sizing every other
+                // landscape control column already shares) rather than a fixed
+                // constant, so this row still sums to exactly controlsColumnWidth.
                 HStack(spacing: Self.bettingGridSpacing) {
-                    casinoButton(coordinator.L(.chip1), color: .white, textColor: .black, compact: true, scale: bettingGridButtonScale, width: bettingGridButtonWidth) { viewModel.addToBet(1) }
-                    casinoButton(coordinator.L(.chip5), color: .red.opacity(0.85), compact: true, scale: bettingGridButtonScale, width: bettingGridButtonWidth) { viewModel.addToBet(5) }
-                    casinoButton(coordinator.L(.chip10), color: .blue.opacity(0.75), compact: true, scale: bettingGridButtonScale, width: bettingGridButtonWidth) { viewModel.addToBet(10) }
-                    casinoButton(coordinator.L(.chip25), color: .green.opacity(0.75), compact: true, scale: bettingGridButtonScale, width: bettingGridButtonWidth) { viewModel.addToBet(25) }
-                    casinoButton(coordinator.L(.chip2x), color: .orange.opacity(0.85), compact: true, scale: bettingGridButtonScale, width: bettingGridButtonWidth) { viewModel.doubleBet() }
+                    PokerChipView(label: coordinator.L(.chip1), baseColor: .white, stripeColor: .black.opacity(0.85), textColor: .black, diameter: bettingGridButtonWidth) {
+                        viewModel.addToBet(1)
+                        actionHaptic.impactOccurred()
+                    }
+                    PokerChipView(label: coordinator.L(.chip5), baseColor: Color(red: 0.88, green: 0.22, blue: 0.22), stripeColor: .white, textColor: .white, diameter: bettingGridButtonWidth) {
+                        viewModel.addToBet(5)
+                        actionHaptic.impactOccurred()
+                    }
+                    PokerChipView(label: coordinator.L(.chip10), baseColor: Color(red: 0.18, green: 0.50, blue: 0.92), stripeColor: .white, textColor: .white, diameter: bettingGridButtonWidth) {
+                        viewModel.addToBet(10)
+                        actionHaptic.impactOccurred()
+                    }
+                    PokerChipView(label: coordinator.L(.chip25), baseColor: Color(red: 0.18, green: 0.72, blue: 0.36), stripeColor: .white, textColor: .white, diameter: bettingGridButtonWidth) {
+                        viewModel.addToBet(25)
+                        actionHaptic.impactOccurred()
+                    }
+                    PokerChipView(label: coordinator.L(.chip2x), baseColor: Color(red: 0.95, green: 0.55, blue: 0.15), stripeColor: .white, textColor: .white, diameter: bettingGridButtonWidth) {
+                        viewModel.doubleBet()
+                        actionHaptic.impactOccurred()
+                    }
                 }
+                .frame(width: controlsColumnWidth)
             }
             HStack(spacing: Self.bettingGridSpacing) {
                 if !viewModel.isFreePlay {
