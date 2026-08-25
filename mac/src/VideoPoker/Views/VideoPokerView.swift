@@ -1121,10 +1121,6 @@ struct VideoPokerOptionsView: View {
             Toggle(coordinator.L(.honeyMode), isOn: $honeyMode).font(.system(.body))
             Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners).font(.system(.body))
             Toggle(coordinator.L(.hideBee), isOn: $hideBee).font(.system(.body))
-
-            Divider()
-
-            WatermarkScaleCalibrationSlider(coordinator: coordinator)
         }
     }
 

@@ -453,30 +453,63 @@ public final class AppCoordinator {
             ? UserDefaults.standard.bool(forKey: "showFeltVignette") : true
         self.hideBee = UserDefaults.standard.object(forKey: "global_hide_bee") != nil
             ? UserDefaults.standard.bool(forKey: "global_hide_bee") : false
+
+        // Defaults below are calibrated from the mac app specifically (dialed in via
+        // the WatermarkScaleCalibrationSlider on mac, then baked in here as the
+        // shipped baseline) — iOS hasn't been calibrated yet, so it keeps the generic
+        // 1.0/0.0 placeholders until its own slider values are handed over.
+        #if canImport(AppKit)
+        let defaultKlondikeScale = 1.299, defaultKlondikeOffsetX = 0.0, defaultKlondikeOffsetY = 110.2
+        let defaultBeecellScale = 1.297, defaultBeecellOffsetX = 0.0, defaultBeecellOffsetY = 110.3
+        let defaultSpiderScale = 1.301, defaultSpiderOffsetX = 0.0, defaultSpiderOffsetY = 93.2
+        let defaultVideoPokerScale = 1.881, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
+        let defaultBlackjackScale = 1.880, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
+        let defaultHoneycombScale = 1.202, defaultHoneycombOffsetX = -12.8, defaultHoneycombOffsetY = 67.2
+        #else
+        let defaultKlondikeScale = 1.0, defaultKlondikeOffsetX = 0.0, defaultKlondikeOffsetY = 0.0
+        let defaultBeecellScale = 1.0, defaultBeecellOffsetX = 0.0, defaultBeecellOffsetY = 0.0
+        let defaultSpiderScale = 1.0, defaultSpiderOffsetX = 0.0, defaultSpiderOffsetY = 0.0
+        let defaultVideoPokerScale = 1.0, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
+        let defaultBlackjackScale = 1.0, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
+        let defaultHoneycombScale = 1.0, defaultHoneycombOffsetX = 0.0, defaultHoneycombOffsetY = 0.0
+        #endif
+
         self.klondikeWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_klondike") != nil
-            ? UserDefaults.standard.double(forKey: "watermark_scale_klondike") : 1.0
+            ? UserDefaults.standard.double(forKey: "watermark_scale_klondike") : defaultKlondikeScale
         self.beecellWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_beecell") != nil
-            ? UserDefaults.standard.double(forKey: "watermark_scale_beecell") : 1.0
+            ? UserDefaults.standard.double(forKey: "watermark_scale_beecell") : defaultBeecellScale
         self.spiderWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_spider") != nil
-            ? UserDefaults.standard.double(forKey: "watermark_scale_spider") : 1.0
+            ? UserDefaults.standard.double(forKey: "watermark_scale_spider") : defaultSpiderScale
         self.videoPokerWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_videoPoker") != nil
-            ? UserDefaults.standard.double(forKey: "watermark_scale_videoPoker") : 1.0
+            ? UserDefaults.standard.double(forKey: "watermark_scale_videoPoker") : defaultVideoPokerScale
         self.blackjackWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_blackjack") != nil
-            ? UserDefaults.standard.double(forKey: "watermark_scale_blackjack") : 1.0
+            ? UserDefaults.standard.double(forKey: "watermark_scale_blackjack") : defaultBlackjackScale
         self.honeycombWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_honeycomb") != nil
-            ? UserDefaults.standard.double(forKey: "watermark_scale_honeycomb") : 1.0
-        self.klondikeWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_klondike")
-        self.klondikeWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_klondike")
-        self.beecellWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_beecell")
-        self.beecellWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_beecell")
-        self.spiderWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_spider")
-        self.spiderWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_spider")
-        self.videoPokerWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_videoPoker")
-        self.videoPokerWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_videoPoker")
-        self.blackjackWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_blackjack")
-        self.blackjackWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_blackjack")
-        self.honeycombWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_honeycomb")
-        self.honeycombWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_honeycomb")
+            ? UserDefaults.standard.double(forKey: "watermark_scale_honeycomb") : defaultHoneycombScale
+        self.klondikeWatermarkOffsetX = UserDefaults.standard.object(forKey: "watermark_offsetX_klondike") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_klondike") : defaultKlondikeOffsetX
+        self.klondikeWatermarkOffsetY = UserDefaults.standard.object(forKey: "watermark_offsetY_klondike") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_klondike") : defaultKlondikeOffsetY
+        self.beecellWatermarkOffsetX = UserDefaults.standard.object(forKey: "watermark_offsetX_beecell") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_beecell") : defaultBeecellOffsetX
+        self.beecellWatermarkOffsetY = UserDefaults.standard.object(forKey: "watermark_offsetY_beecell") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_beecell") : defaultBeecellOffsetY
+        self.spiderWatermarkOffsetX = UserDefaults.standard.object(forKey: "watermark_offsetX_spider") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_spider") : defaultSpiderOffsetX
+        self.spiderWatermarkOffsetY = UserDefaults.standard.object(forKey: "watermark_offsetY_spider") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_spider") : defaultSpiderOffsetY
+        self.videoPokerWatermarkOffsetX = UserDefaults.standard.object(forKey: "watermark_offsetX_videoPoker") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_videoPoker") : defaultVideoPokerOffsetX
+        self.videoPokerWatermarkOffsetY = UserDefaults.standard.object(forKey: "watermark_offsetY_videoPoker") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_videoPoker") : defaultVideoPokerOffsetY
+        self.blackjackWatermarkOffsetX = UserDefaults.standard.object(forKey: "watermark_offsetX_blackjack") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_blackjack") : defaultBlackjackOffsetX
+        self.blackjackWatermarkOffsetY = UserDefaults.standard.object(forKey: "watermark_offsetY_blackjack") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_blackjack") : defaultBlackjackOffsetY
+        self.honeycombWatermarkOffsetX = UserDefaults.standard.object(forKey: "watermark_offsetX_honeycomb") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_honeycomb") : defaultHoneycombOffsetX
+        self.honeycombWatermarkOffsetY = UserDefaults.standard.object(forKey: "watermark_offsetY_honeycomb") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_honeycomb") : defaultHoneycombOffsetY
         self.language = AppLanguage(rawValue: UserDefaults.standard.string(forKey: "appLanguage") ?? "") ?? .english
         #if canImport(AppKit)
         self.stayOnTop = UserDefaults.standard.object(forKey: "stayOnTop") != nil

@@ -1222,10 +1222,6 @@ struct BeecellOptionsView: View {
 
             Toggle(coordinator.L(.hideBee), isOn: $hideBee)
                 .font(.system(.body))
-
-            Divider()
-
-            WatermarkScaleCalibrationSlider(coordinator: coordinator)
         }
     }
 }
