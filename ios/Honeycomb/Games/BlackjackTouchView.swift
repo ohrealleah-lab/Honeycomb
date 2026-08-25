@@ -867,6 +867,11 @@ struct BlackjackTouchView: View {
     private var isRegularWidth: Bool { horizontalSizeClass == .regular }
     private static let bettingGridButtonMinHeight: CGFloat = 34
     private static let bettingGridSpacing: CGFloat = 4
+    // Wider gap than bettingGridSpacing specifically between the chip row and the
+    // Clear/Deal row below it — those two rows read as different groups (bet amount
+    // vs. commit-the-bet action), so they get more breathing room than the tight
+    // 4pt used between chips (or buttons) within a single row.
+    private static let bettingGridRowSpacing: CGFloat = 14
     // The reserved gap's width — every landscape phase's controls (chips, Hit/Stand/
     // Double/Split, the dealer-turn spinner, Rebuy) share this one column width, sized
     // to the widest row (the 5-across chip row below), so cardW's own maxHandWidth
@@ -875,7 +880,7 @@ struct BlackjackTouchView: View {
     private var controlsColumnWidth: CGFloat { 5 * bettingGridButtonWidth + 4 * Self.bettingGridSpacing }
 
     private var bettingGridLandscape: some View {
-        VStack(spacing: Self.bettingGridSpacing) {
+        VStack(spacing: Self.bettingGridRowSpacing) {
             if !viewModel.isFreePlay {
                 // All 5 chips on one line (per request) rather than a 2-column grid —
                 // Clear moves down to share Deal's row instead, to Deal's left.
@@ -889,10 +894,10 @@ struct BlackjackTouchView: View {
             }
             HStack(spacing: Self.bettingGridSpacing) {
                 if !viewModel.isFreePlay {
-                    casinoButton(coordinator.L(.btnClearShort), color: Color(white: 0.25), compact: true, scale: bettingGridButtonScale, width: bettingGridButtonWidth) { viewModel.clearBet() }
+                    casinoButton(coordinator.L(.btnClearShort), color: Color(white: 0.25), compact: true, scale: bettingGridButtonScale, heightScale: 1.25, width: bettingGridButtonWidth) { viewModel.clearBet() }
                 }
                 casinoButton(coordinator.L(.dealButton), color: .yellow,
-                             disabled: !canAffordBet || viewModel.state.currentBet == 0, compact: true, scale: bettingGridButtonScale,
+                             disabled: !canAffordBet || viewModel.state.currentBet == 0, compact: true, scale: bettingGridButtonScale, heightScale: 1.25,
                              width: viewModel.isFreePlay ? controlsColumnWidth : controlsColumnWidth - bettingGridButtonWidth - Self.bettingGridSpacing) {
                     viewModel.deal()
                     actionHaptic.impactOccurred()

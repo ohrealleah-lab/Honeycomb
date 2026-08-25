@@ -26,6 +26,7 @@ func casinoButton(
     disabled: Bool = false,
     compact: Bool = false,
     scale: CGFloat = 1.0,
+    heightScale: CGFloat = 1.0,
     width: CGFloat? = nil,
     action: @escaping () -> Void
 ) -> some View {
@@ -45,7 +46,10 @@ func casinoButton(
         .font(.system(size: (compact ? 18 : 28) * scale, weight: .black, design: .default).width(.condensed))
         .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
         .padding(.horizontal, (compact ? 14 : 28) * scale)
-        .padding(.vertical, (compact ? 14 : 20) * scale)
+        // heightScale multiplies vertical padding only (not scale, which also drives
+        // font size and horizontal padding) — a taller button without larger text, for
+        // callers that want to grow just a button's touch target/prominence.
+        .padding(.vertical, (compact ? 14 : 20) * scale * heightScale)
         // No .frame(maxWidth: .infinity) — matches mac's casinoButton, which sizes to
         // its own content rather than stretching to fill its row. The row itself then
         // reads as one natural-width control cluster centered under the cards (its
