@@ -367,6 +367,17 @@ struct HoneycombTouchView: View {
                     .buttonStyle(.bordered)
                     .tint(.white)
             } else {
+                // Mirrors mac's toolbar Rematch button — same availability
+                // (gameOver + canRematch) — for whenever the post-game overlay's been
+                // dismissed (its "x") to look at the finished board, so there's still a
+                // way back to the same opponent instead of only Start Match rolling a
+                // fresh one.
+                if viewModel.gameState == .gameOver && viewModel.canRematch {
+                    Button(coordinator.L(.rematch)) { viewModel.rematch() }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                }
+
                 Button {
                     viewModel.startNewGame()
                 } label: {
