@@ -273,7 +273,7 @@ enum StringsEnglish {
         .streakText5plusFmt: "*** %d WIN STREAK ***",
         .streakText3to4Fmt: "** %d WIN STREAK **",
         .streakText2Fmt: "%d wins in a row!",
-        .btnClearBet: "CLEAR BET",
+        .btnClearBet: "Clear Bet",
         .btnClearBetWin: "Clear Bet",
         .btnDealSpace: "DEAL  [Space]",
         .btnDealSpaceWin: "Deal  [Space]",

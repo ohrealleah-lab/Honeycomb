@@ -897,6 +897,9 @@ struct BlackjackTouchView: View {
     // budget — and the gap the fixed inlineLandscapeControls overlay sits in — never
     // changes between phases.
     private var controlsColumnWidth: CGFloat { 5 * bettingGridButtonWidth + 4 * Self.bettingGridSpacing }
+    // "Clear Bet" needs two chip-slots' width to stay unwrapped at bettingGridButtonScale
+    // — a single slot (bettingGridButtonWidth) fit the old one-word "Clear" but not this.
+    private var clearBetWidth: CGFloat { bettingGridButtonWidth * 2 + Self.bettingGridSpacing }
 
     private var bettingGridLandscape: some View {
         VStack(spacing: Self.bettingGridRowSpacing) {
@@ -935,11 +938,14 @@ struct BlackjackTouchView: View {
             }
             HStack(spacing: Self.bettingGridSpacing) {
                 if !viewModel.isFreePlay {
-                    casinoButton(coordinator.L(.btnClearShort), color: Color(white: 0.25), compact: true, scale: bettingGridButtonScale, heightScale: 1.25, width: bettingGridButtonWidth) { viewModel.clearBet() }
+                    // Full "Clear Bet" wording, matching portrait — needs two chip-
+                    // slots' width, not one, to stay unwrapped at this scale (unlike
+                    // the single-word "Clear" this used to show).
+                    casinoButton(coordinator.L(.btnClearBet), color: Color(white: 0.25), compact: true, scale: bettingGridButtonScale, heightScale: 1.25, width: clearBetWidth) { viewModel.clearBet() }
                 }
                 casinoButton(coordinator.L(.dealButton), color: .yellow,
                              disabled: !canAffordBet || viewModel.state.currentBet == 0, compact: true, scale: bettingGridButtonScale, heightScale: 1.25,
-                             width: viewModel.isFreePlay ? controlsColumnWidth : controlsColumnWidth - bettingGridButtonWidth - Self.bettingGridSpacing) {
+                             width: viewModel.isFreePlay ? controlsColumnWidth : controlsColumnWidth - clearBetWidth - Self.bettingGridSpacing) {
                     viewModel.deal()
                     actionHaptic.impactOccurred()
                 }
