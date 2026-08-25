@@ -309,10 +309,21 @@ struct BlackjackTouchView: View {
                     inlineLandscapeControls
                         .frame(width: controlsColumnWidth)
                         .padding(.bottom, 8)
+                        // inlineLandscapeControls swaps content per game phase (chip
+                        // grid, Hit/Stand/Double/Split, the dealer-turn spinner, Rebuy),
+                        // and each variant has a different natural height. cardW and
+                        // landscapeTopPad both derive from landscapeControlsHeight, so
+                        // reassigning it on every phase change made the cards visibly
+                        // resize/shift each time the phase changed within a single hand.
+                        // Taking the max instead of the latest value converges to the
+                        // tallest variant (typically within the first hand of a session)
+                        // and then never changes again, so cards stay at one constant
+                        // size/position for the rest of the session regardless of which
+                        // phase's controls are currently showing underneath.
                         .onGeometryChange(for: CGFloat.self) { proxy in
                             proxy.size.height
                         } action: { newHeight in
-                            landscapeControlsHeight = newHeight
+                            landscapeControlsHeight = max(landscapeControlsHeight, newHeight)
                         }
                 }
 
