@@ -180,6 +180,19 @@ public static class SettingsService
                 if (GetValue("BlackjackWatermarkScale") is double bjWms) options.BlackjackWatermarkScale = bjWms;
                 if (GetValue("HoneycombWatermarkScale") is double hcWms) options.HoneycombWatermarkScale = hcWms;
 
+                if (GetValue("KlondikeWatermarkOffsetX") is double klWox) options.KlondikeWatermarkOffsetX = klWox;
+                if (GetValue("KlondikeWatermarkOffsetY") is double klWoy) options.KlondikeWatermarkOffsetY = klWoy;
+                if (GetValue("FreecellWatermarkOffsetX") is double fcWox) options.FreecellWatermarkOffsetX = fcWox;
+                if (GetValue("FreecellWatermarkOffsetY") is double fcWoy) options.FreecellWatermarkOffsetY = fcWoy;
+                if (GetValue("SpiderWatermarkOffsetX") is double spWox) options.SpiderWatermarkOffsetX = spWox;
+                if (GetValue("SpiderWatermarkOffsetY") is double spWoy) options.SpiderWatermarkOffsetY = spWoy;
+                if (GetValue("VideoPokerWatermarkOffsetX") is double vpWox) options.VideoPokerWatermarkOffsetX = vpWox;
+                if (GetValue("VideoPokerWatermarkOffsetY") is double vpWoy) options.VideoPokerWatermarkOffsetY = vpWoy;
+                if (GetValue("BlackjackWatermarkOffsetX") is double bjWox) options.BlackjackWatermarkOffsetX = bjWox;
+                if (GetValue("BlackjackWatermarkOffsetY") is double bjWoy) options.BlackjackWatermarkOffsetY = bjWoy;
+                if (GetValue("HoneycombWatermarkOffsetX") is double hcWox) options.HoneycombWatermarkOffsetX = hcWox;
+                if (GetValue("HoneycombWatermarkOffsetY") is double hcWoy) options.HoneycombWatermarkOffsetY = hcWoy;
+
                 if (GetValue("IsVignetteEnabled") is bool isVignette)
                     options.IsVignetteEnabled = isVignette;
                 if (GetValue("IsStatusBarVisible") is bool isStatusBar)
@@ -302,6 +315,19 @@ public static class SettingsService
                 SetValue("VideoPokerWatermarkScale", options.VideoPokerWatermarkScale);
                 SetValue("BlackjackWatermarkScale", options.BlackjackWatermarkScale);
                 SetValue("HoneycombWatermarkScale", options.HoneycombWatermarkScale);
+
+                SetValue("KlondikeWatermarkOffsetX", options.KlondikeWatermarkOffsetX);
+                SetValue("KlondikeWatermarkOffsetY", options.KlondikeWatermarkOffsetY);
+                SetValue("FreecellWatermarkOffsetX", options.FreecellWatermarkOffsetX);
+                SetValue("FreecellWatermarkOffsetY", options.FreecellWatermarkOffsetY);
+                SetValue("SpiderWatermarkOffsetX", options.SpiderWatermarkOffsetX);
+                SetValue("SpiderWatermarkOffsetY", options.SpiderWatermarkOffsetY);
+                SetValue("VideoPokerWatermarkOffsetX", options.VideoPokerWatermarkOffsetX);
+                SetValue("VideoPokerWatermarkOffsetY", options.VideoPokerWatermarkOffsetY);
+                SetValue("BlackjackWatermarkOffsetX", options.BlackjackWatermarkOffsetX);
+                SetValue("BlackjackWatermarkOffsetY", options.BlackjackWatermarkOffsetY);
+                SetValue("HoneycombWatermarkOffsetX", options.HoneycombWatermarkOffsetX);
+                SetValue("HoneycombWatermarkOffsetY", options.HoneycombWatermarkOffsetY);
 
                 SetValue("IsVignetteEnabled", options.IsVignetteEnabled);
                 SetValue("IsStatusBarVisible", options.IsStatusBarVisible);

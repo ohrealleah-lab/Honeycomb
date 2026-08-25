@@ -23,7 +23,10 @@
                    HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                    IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
                 <Image.RenderTransform>
-                    <ScaleTransform ScaleX="{Binding Options.BlackjackWatermarkScale}" ScaleY="{Binding Options.BlackjackWatermarkScale}"/>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="{Binding Options.BlackjackWatermarkScale}" ScaleY="{Binding Options.BlackjackWatermarkScale}"/>
+                        <TranslateTransform X="{Binding Options.BlackjackWatermarkOffsetX}" Y="{Binding Options.BlackjackWatermarkOffsetY}"/>
+                    </TransformGroup>
                 </Image.RenderTransform>
             </Image>
 

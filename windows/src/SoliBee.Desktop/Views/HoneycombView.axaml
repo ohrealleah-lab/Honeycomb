@@ -54,7 +54,10 @@
                HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                IsVisible="{Binding !HideBee}" RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
-                <ScaleTransform ScaleX="{Binding HoneycombWatermarkScale}" ScaleY="{Binding HoneycombWatermarkScale}"/>
+                <TransformGroup>
+                    <ScaleTransform ScaleX="{Binding HoneycombWatermarkScale}" ScaleY="{Binding HoneycombWatermarkScale}"/>
+                    <TranslateTransform X="{Binding HoneycombWatermarkOffsetX}" Y="{Binding HoneycombWatermarkOffsetY}"/>
+                </TransformGroup>
             </Image.RenderTransform>
         </Image>
         <!-- Main Layout -->

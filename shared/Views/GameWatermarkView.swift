@@ -19,9 +19,10 @@ private enum WatermarkImage {
 #endif
 
 /// Centered bee watermark drawn behind the board, shared by both platforms.
-/// Hidden entirely when coordinator.hideBee is on; otherwise scaled per the active
-/// game's coordinator.currentGameWatermarkScale (see AppCoordinator's "Bee watermark
-/// per-game scale" section — that value is TEMPORARY dev-calibration data for now).
+/// Hidden entirely when coordinator.hideBee is on; otherwise scaled/positioned per the
+/// active game's coordinator.currentGameWatermarkScale/OffsetX/OffsetY (see
+/// AppCoordinator's "Bee watermark per-game scale"/"per-game position" sections —
+/// those values are TEMPORARY dev-calibration data for now).
 struct GameWatermarkView: View {
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
@@ -33,6 +34,7 @@ struct GameWatermarkView: View {
                     .resizable()
                     .scaledToFit()
                     .scaleEffect(coordinator.currentGameWatermarkScale)
+                    .offset(x: coordinator.currentGameWatermarkOffsetX, y: coordinator.currentGameWatermarkOffsetY)
                     .opacity(0.15)
                     .allowsHitTesting(false)
             }
@@ -42,6 +44,7 @@ struct GameWatermarkView: View {
                     .resizable()
                     .scaledToFit()
                     .scaleEffect(coordinator.currentGameWatermarkScale)
+                    .offset(x: coordinator.currentGameWatermarkOffsetX, y: coordinator.currentGameWatermarkOffsetY)
                     .opacity(0.15)
                     .allowsHitTesting(false)
             }

@@ -181,6 +181,8 @@ public partial class BlackjackViewModel : ObservableObject
         Options.IsNoStressMode     = shared.IsNoStressMode;
         Options.HideBee            = shared.HideBee;
         Options.BlackjackWatermarkScale = shared.BlackjackWatermarkScale;
+        Options.BlackjackWatermarkOffsetX = shared.BlackjackWatermarkOffsetX;
+        Options.BlackjackWatermarkOffsetY = shared.BlackjackWatermarkOffsetY;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
@@ -192,6 +194,8 @@ public partial class BlackjackViewModel : ObservableObject
             Options.IsNoStressMode     = m.Options.IsNoStressMode;
             Options.HideBee            = m.Options.HideBee;
             Options.BlackjackWatermarkScale = m.Options.BlackjackWatermarkScale;
+            Options.BlackjackWatermarkOffsetX = m.Options.BlackjackWatermarkOffsetX;
+            Options.BlackjackWatermarkOffsetY = m.Options.BlackjackWatermarkOffsetY;
             OnPropertyChanged(nameof(Options));
             NotifyStateChanged();
         });

@@ -169,6 +169,90 @@ public final class AppCoordinator {
             }
         }
     }
+
+    // MARK: - Bee watermark per-game position (TEMPORARY — dev calibration)
+    // Same shape/removal plan as the scale block above — one raw X/Y pair per game,
+    // plus currentGameWatermarkOffsetX/Y as the single read/write surface.
+    public var klondikeWatermarkOffsetX: Double {
+        didSet { UserDefaults.standard.set(klondikeWatermarkOffsetX, forKey: "watermark_offsetX_klondike") }
+    }
+    public var klondikeWatermarkOffsetY: Double {
+        didSet { UserDefaults.standard.set(klondikeWatermarkOffsetY, forKey: "watermark_offsetY_klondike") }
+    }
+    public var beecellWatermarkOffsetX: Double {
+        didSet { UserDefaults.standard.set(beecellWatermarkOffsetX, forKey: "watermark_offsetX_beecell") }
+    }
+    public var beecellWatermarkOffsetY: Double {
+        didSet { UserDefaults.standard.set(beecellWatermarkOffsetY, forKey: "watermark_offsetY_beecell") }
+    }
+    public var spiderWatermarkOffsetX: Double {
+        didSet { UserDefaults.standard.set(spiderWatermarkOffsetX, forKey: "watermark_offsetX_spider") }
+    }
+    public var spiderWatermarkOffsetY: Double {
+        didSet { UserDefaults.standard.set(spiderWatermarkOffsetY, forKey: "watermark_offsetY_spider") }
+    }
+    public var videoPokerWatermarkOffsetX: Double {
+        didSet { UserDefaults.standard.set(videoPokerWatermarkOffsetX, forKey: "watermark_offsetX_videoPoker") }
+    }
+    public var videoPokerWatermarkOffsetY: Double {
+        didSet { UserDefaults.standard.set(videoPokerWatermarkOffsetY, forKey: "watermark_offsetY_videoPoker") }
+    }
+    public var blackjackWatermarkOffsetX: Double {
+        didSet { UserDefaults.standard.set(blackjackWatermarkOffsetX, forKey: "watermark_offsetX_blackjack") }
+    }
+    public var blackjackWatermarkOffsetY: Double {
+        didSet { UserDefaults.standard.set(blackjackWatermarkOffsetY, forKey: "watermark_offsetY_blackjack") }
+    }
+    public var honeycombWatermarkOffsetX: Double {
+        didSet { UserDefaults.standard.set(honeycombWatermarkOffsetX, forKey: "watermark_offsetX_honeycomb") }
+    }
+    public var honeycombWatermarkOffsetY: Double {
+        didSet { UserDefaults.standard.set(honeycombWatermarkOffsetY, forKey: "watermark_offsetY_honeycomb") }
+    }
+    public var currentGameWatermarkOffsetX: Double {
+        get {
+            switch gameMode {
+            case .klondike:   return klondikeWatermarkOffsetX
+            case .beecell:    return beecellWatermarkOffsetX
+            case .spider:     return spiderWatermarkOffsetX
+            case .videoPoker: return videoPokerWatermarkOffsetX
+            case .blackjack:  return blackjackWatermarkOffsetX
+            case .honeycomb:  return honeycombWatermarkOffsetX
+            }
+        }
+        set {
+            switch gameMode {
+            case .klondike:   klondikeWatermarkOffsetX = newValue
+            case .beecell:    beecellWatermarkOffsetX = newValue
+            case .spider:     spiderWatermarkOffsetX = newValue
+            case .videoPoker: videoPokerWatermarkOffsetX = newValue
+            case .blackjack:  blackjackWatermarkOffsetX = newValue
+            case .honeycomb:  honeycombWatermarkOffsetX = newValue
+            }
+        }
+    }
+    public var currentGameWatermarkOffsetY: Double {
+        get {
+            switch gameMode {
+            case .klondike:   return klondikeWatermarkOffsetY
+            case .beecell:    return beecellWatermarkOffsetY
+            case .spider:     return spiderWatermarkOffsetY
+            case .videoPoker: return videoPokerWatermarkOffsetY
+            case .blackjack:  return blackjackWatermarkOffsetY
+            case .honeycomb:  return honeycombWatermarkOffsetY
+            }
+        }
+        set {
+            switch gameMode {
+            case .klondike:   klondikeWatermarkOffsetY = newValue
+            case .beecell:    beecellWatermarkOffsetY = newValue
+            case .spider:     spiderWatermarkOffsetY = newValue
+            case .videoPoker: videoPokerWatermarkOffsetY = newValue
+            case .blackjack:  blackjackWatermarkOffsetY = newValue
+            case .honeycomb:  honeycombWatermarkOffsetY = newValue
+            }
+        }
+    }
     // App-wide UI language — not a theme field (no SoliBeeTheme entry, no
     // liveSaveActiveTheme), same single-source pattern as the theme fields above.
     // Every L() call reads this directly, and since AppCoordinator is @Observable,
@@ -381,6 +465,18 @@ public final class AppCoordinator {
             ? UserDefaults.standard.double(forKey: "watermark_scale_blackjack") : 1.0
         self.honeycombWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_honeycomb") != nil
             ? UserDefaults.standard.double(forKey: "watermark_scale_honeycomb") : 1.0
+        self.klondikeWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_klondike")
+        self.klondikeWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_klondike")
+        self.beecellWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_beecell")
+        self.beecellWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_beecell")
+        self.spiderWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_spider")
+        self.spiderWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_spider")
+        self.videoPokerWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_videoPoker")
+        self.videoPokerWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_videoPoker")
+        self.blackjackWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_blackjack")
+        self.blackjackWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_blackjack")
+        self.honeycombWatermarkOffsetX = UserDefaults.standard.double(forKey: "watermark_offsetX_honeycomb")
+        self.honeycombWatermarkOffsetY = UserDefaults.standard.double(forKey: "watermark_offsetY_honeycomb")
         self.language = AppLanguage(rawValue: UserDefaults.standard.string(forKey: "appLanguage") ?? "") ?? .english
         #if canImport(AppKit)
         self.stayOnTop = UserDefaults.standard.object(forKey: "stayOnTop") != nil

@@ -9,7 +9,10 @@
                HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
-                <ScaleTransform ScaleX="{Binding Options.KlondikeWatermarkScale}" ScaleY="{Binding Options.KlondikeWatermarkScale}"/>
+                <TransformGroup>
+                    <ScaleTransform ScaleX="{Binding Options.KlondikeWatermarkScale}" ScaleY="{Binding Options.KlondikeWatermarkScale}"/>
+                    <TranslateTransform X="{Binding Options.KlondikeWatermarkOffsetX}" Y="{Binding Options.KlondikeWatermarkOffsetY}"/>
+                </TransformGroup>
             </Image.RenderTransform>
         </Image>
         <!-- Center container for the entire playing board, aligned towards the top to reduce space with the menu -->

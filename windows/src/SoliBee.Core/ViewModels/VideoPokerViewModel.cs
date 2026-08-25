@@ -222,6 +222,8 @@ public partial class VideoPokerViewModel : ObservableObject
         Options.IsNoStressMode      = shared.IsNoStressMode;
         Options.HideBee             = shared.HideBee;
         Options.VideoPokerWatermarkScale = shared.VideoPokerWatermarkScale;
+        Options.VideoPokerWatermarkOffsetX = shared.VideoPokerWatermarkOffsetX;
+        Options.VideoPokerWatermarkOffsetY = shared.VideoPokerWatermarkOffsetY;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
@@ -233,6 +235,8 @@ public partial class VideoPokerViewModel : ObservableObject
             Options.IsNoStressMode      = m.Options.IsNoStressMode;
             Options.HideBee             = m.Options.HideBee;
             Options.VideoPokerWatermarkScale = m.Options.VideoPokerWatermarkScale;
+            Options.VideoPokerWatermarkOffsetX = m.Options.VideoPokerWatermarkOffsetX;
+            Options.VideoPokerWatermarkOffsetY = m.Options.VideoPokerWatermarkOffsetY;
             OnPropertyChanged(nameof(Options));
             NotifyStateChanged();
         });

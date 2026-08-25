@@ -79,6 +79,21 @@ public class GameOptions
     public double BlackjackWatermarkScale  { get; set; } = 1.0;
     public double HoneycombWatermarkScale  { get; set; } = 1.0;
 
+    // TEMPORARY — dev calibration values for the bee watermark's per-game position.
+    // Same removal plan as the scale fields above.
+    public double KlondikeWatermarkOffsetX   { get; set; } = 0.0;
+    public double KlondikeWatermarkOffsetY   { get; set; } = 0.0;
+    public double FreecellWatermarkOffsetX   { get; set; } = 0.0;
+    public double FreecellWatermarkOffsetY   { get; set; } = 0.0;
+    public double SpiderWatermarkOffsetX     { get; set; } = 0.0;
+    public double SpiderWatermarkOffsetY     { get; set; } = 0.0;
+    public double VideoPokerWatermarkOffsetX { get; set; } = 0.0;
+    public double VideoPokerWatermarkOffsetY { get; set; } = 0.0;
+    public double BlackjackWatermarkOffsetX  { get; set; } = 0.0;
+    public double BlackjackWatermarkOffsetY  { get; set; } = 0.0;
+    public double HoneycombWatermarkOffsetX  { get; set; } = 0.0;
+    public double HoneycombWatermarkOffsetY  { get; set; } = 0.0;
+
     public bool IsVignetteEnabled { get; set; } = true;
     // Turns off timers (solitaire) and enables free play (VP/Blackjack — hides the
     // credit/bet board and betting controls; hands are played without wagering).

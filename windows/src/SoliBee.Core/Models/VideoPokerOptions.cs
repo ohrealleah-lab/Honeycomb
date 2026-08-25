@@ -13,6 +13,8 @@ public class VideoPokerOptions
     public bool IsNoStressMode { get; set; } = false;
     public bool HideBee { get; set; } = false;
     public double VideoPokerWatermarkScale { get; set; } = 1.0;
+    public double VideoPokerWatermarkOffsetX { get; set; } = 0.0;
+    public double VideoPokerWatermarkOffsetY { get; set; } = 0.0;
 
     // Shallow copy so callers can snapshot "before edits" and restore it later
     // (e.g. Preferences' Cancel button) without aliasing the live instance.

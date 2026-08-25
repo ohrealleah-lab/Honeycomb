@@ -9,7 +9,10 @@
                HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
-                <ScaleTransform ScaleX="{Binding Options.FreecellWatermarkScale}" ScaleY="{Binding Options.FreecellWatermarkScale}"/>
+                <TransformGroup>
+                    <ScaleTransform ScaleX="{Binding Options.FreecellWatermarkScale}" ScaleY="{Binding Options.FreecellWatermarkScale}"/>
+                    <TranslateTransform X="{Binding Options.FreecellWatermarkOffsetX}" Y="{Binding Options.FreecellWatermarkOffsetY}"/>
+                </TransformGroup>
             </Image.RenderTransform>
         </Image>
         <StackPanel x:Name="BoardPanel" Width="1066" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="18" Margin="0,10,0,0" ClipToBounds="False">

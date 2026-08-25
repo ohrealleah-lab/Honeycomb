@@ -2121,10 +2121,9 @@ public partial class MainWindow : Window
         double scaleX = availableW / naturalW;
         double scaleY = availableH / naturalH;
 
-        // Cards scale down as far as the window shrinks (no floor), but capped at 2.0x
-        // growth so a very large/maximized window doesn't blow cards up indefinitely —
-        // matches mac's own zoomScale cap (VideoPokerView.swift's min(2.0, max(0.3, ...))).
-        double effectiveZoom = Math.Min(2.0, Math.Min(scaleX, scaleY));
+        // Remove configuredZoom cap entirely: cards now perfectly scale
+        // up OR down to fill whatever space the window provides.
+        double effectiveZoom = Math.Min(scaleX, scaleY);
 
         _contentScale.ScaleX = effectiveZoom;
         _contentScale.ScaleY = effectiveZoom;

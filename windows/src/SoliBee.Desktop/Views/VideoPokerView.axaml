@@ -9,7 +9,10 @@
                HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
-                <ScaleTransform ScaleX="{Binding Options.VideoPokerWatermarkScale}" ScaleY="{Binding Options.VideoPokerWatermarkScale}"/>
+                <TransformGroup>
+                    <ScaleTransform ScaleX="{Binding Options.VideoPokerWatermarkScale}" ScaleY="{Binding Options.VideoPokerWatermarkScale}"/>
+                    <TranslateTransform X="{Binding Options.VideoPokerWatermarkOffsetX}" Y="{Binding Options.VideoPokerWatermarkOffsetY}"/>
+                </TransformGroup>
             </Image.RenderTransform>
         </Image>
 

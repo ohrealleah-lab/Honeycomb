@@ -24,6 +24,8 @@ public partial class HoneycombViewModel : ObservableObject
     // mirrored here so the board view has something to bind to.
     [ObservableProperty] private bool _hideBee;
     [ObservableProperty] private double _honeycombWatermarkScale = 1.0;
+    [ObservableProperty] private double _honeycombWatermarkOffsetX;
+    [ObservableProperty] private double _honeycombWatermarkOffsetY;
 
     private static int s_consecutiveStarters = 0;
     private static int s_lastStarter = 0;
@@ -179,12 +181,16 @@ public partial class HoneycombViewModel : ObservableObject
         Stats = LoadStats();
         HideBee = SettingsService.LoadOptions().HideBee;
         HoneycombWatermarkScale = SettingsService.LoadOptions().HoneycombWatermarkScale;
+        HoneycombWatermarkOffsetX = SettingsService.LoadOptions().HoneycombWatermarkOffsetX;
+        HoneycombWatermarkOffsetY = SettingsService.LoadOptions().HoneycombWatermarkOffsetY;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (_, m) =>
         {
             Options = SettingsService.LoadHoneycombOptions();
             HideBee = m.Options.HideBee;
             HoneycombWatermarkScale = m.Options.HoneycombWatermarkScale;
+            HoneycombWatermarkOffsetX = m.Options.HoneycombWatermarkOffsetX;
+            HoneycombWatermarkOffsetY = m.Options.HoneycombWatermarkOffsetY;
             NotifyStateChanged();
         });
     }

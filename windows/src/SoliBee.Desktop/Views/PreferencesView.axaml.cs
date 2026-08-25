@@ -380,6 +380,56 @@ public partial class PreferencesView : UserControl
         }
     }
 
+    // TEMPORARY — dev calibration for the bee watermark's per-game position. Same
+    // removal plan as the scale pair above.
+    private double GetWatermarkOffsetX(GameOptions options) => ActiveGameFamily switch
+    {
+        "Klondike"   => options.KlondikeWatermarkOffsetX,
+        "Freecell"   => options.FreecellWatermarkOffsetX,
+        "Spider"     => options.SpiderWatermarkOffsetX,
+        "VideoPoker" => options.VideoPokerWatermarkOffsetX,
+        "Blackjack"  => options.BlackjackWatermarkOffsetX,
+        "Honeycomb"  => options.HoneycombWatermarkOffsetX,
+        _            => 0.0
+    };
+
+    private void SetWatermarkOffsetX(GameOptions options, double value)
+    {
+        switch (ActiveGameFamily)
+        {
+            case "Klondike":   options.KlondikeWatermarkOffsetX = value; break;
+            case "Freecell":   options.FreecellWatermarkOffsetX = value; break;
+            case "Spider":     options.SpiderWatermarkOffsetX = value; break;
+            case "VideoPoker": options.VideoPokerWatermarkOffsetX = value; break;
+            case "Blackjack":  options.BlackjackWatermarkOffsetX = value; break;
+            case "Honeycomb":  options.HoneycombWatermarkOffsetX = value; break;
+        }
+    }
+
+    private double GetWatermarkOffsetY(GameOptions options) => ActiveGameFamily switch
+    {
+        "Klondike"   => options.KlondikeWatermarkOffsetY,
+        "Freecell"   => options.FreecellWatermarkOffsetY,
+        "Spider"     => options.SpiderWatermarkOffsetY,
+        "VideoPoker" => options.VideoPokerWatermarkOffsetY,
+        "Blackjack"  => options.BlackjackWatermarkOffsetY,
+        "Honeycomb"  => options.HoneycombWatermarkOffsetY,
+        _            => 0.0
+    };
+
+    private void SetWatermarkOffsetY(GameOptions options, double value)
+    {
+        switch (ActiveGameFamily)
+        {
+            case "Klondike":   options.KlondikeWatermarkOffsetY = value; break;
+            case "Freecell":   options.FreecellWatermarkOffsetY = value; break;
+            case "Spider":     options.SpiderWatermarkOffsetY = value; break;
+            case "VideoPoker": options.VideoPokerWatermarkOffsetY = value; break;
+            case "Blackjack":  options.BlackjackWatermarkOffsetY = value; break;
+            case "Honeycomb":  options.HoneycombWatermarkOffsetY = value; break;
+        }
+    }
+
     // Syncs all UI controls to match the provided options. Call inside _initializing guard.
     private void SyncUIFromOptions(GameOptions options)
     {
@@ -394,6 +444,8 @@ public partial class PreferencesView : UserControl
         AlwaysOnTopCheckBox.IsChecked  = options.IsAlwaysOnTop;
         HideBeeCheckBox.IsChecked      = options.HideBee;
         WatermarkScaleSlider.Value     = GetWatermarkScale(options);
+        WatermarkOffsetXSlider.Value   = GetWatermarkOffsetX(options);
+        WatermarkOffsetYSlider.Value   = GetWatermarkOffsetY(options);
 
         PopulateCardBacks(options);
 
@@ -604,6 +656,8 @@ public partial class PreferencesView : UserControl
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
         HideBeeCheckBox.IsChecked = shared.HideBee;
         WatermarkScaleSlider.Value = GetWatermarkScale(shared);
+        WatermarkOffsetXSlider.Value = GetWatermarkOffsetX(shared);
+        WatermarkOffsetYSlider.Value = GetWatermarkOffsetY(shared);
     }
 
     // Blackjack has its own separate options model, same shape as Video Poker above —
@@ -625,6 +679,8 @@ public partial class PreferencesView : UserControl
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
         HideBeeCheckBox.IsChecked = shared.HideBee;
         WatermarkScaleSlider.Value = GetWatermarkScale(shared);
+        WatermarkOffsetXSlider.Value = GetWatermarkOffsetX(shared);
+        WatermarkOffsetYSlider.Value = GetWatermarkOffsetY(shared);
     }
 
     // ── Language ──────────────────────────────────────────────────────────────
@@ -1238,6 +1294,54 @@ public partial class PreferencesView : UserControl
         {
             var shared = SettingsService.LoadOptions();
             SetWatermarkScale(shared, e.NewValue);
+            NotifySettingsChanged(shared);
+        }
+    }
+
+    // TEMPORARY — dev calibration sliders, same live-save shape as
+    // WatermarkScaleSlider_ValueChanged above. See its removal note.
+    private void WatermarkOffsetXSlider_ValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_initializing) return;
+
+        if (DataContext is GameOptions options)
+        {
+            SetWatermarkOffsetX(options, e.NewValue);
+            NotifySettingsChanged(options);
+        }
+        else if (DataContext is VideoPokerOptions)
+        {
+            var shared = SettingsService.LoadOptions();
+            SetWatermarkOffsetX(shared, e.NewValue);
+            NotifySettingsChanged(shared);
+        }
+        else if (DataContext is BlackjackOptions)
+        {
+            var shared = SettingsService.LoadOptions();
+            SetWatermarkOffsetX(shared, e.NewValue);
+            NotifySettingsChanged(shared);
+        }
+    }
+
+    private void WatermarkOffsetYSlider_ValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_initializing) return;
+
+        if (DataContext is GameOptions options)
+        {
+            SetWatermarkOffsetY(options, e.NewValue);
+            NotifySettingsChanged(options);
+        }
+        else if (DataContext is VideoPokerOptions)
+        {
+            var shared = SettingsService.LoadOptions();
+            SetWatermarkOffsetY(shared, e.NewValue);
+            NotifySettingsChanged(shared);
+        }
+        else if (DataContext is BlackjackOptions)
+        {
+            var shared = SettingsService.LoadOptions();
+            SetWatermarkOffsetY(shared, e.NewValue);
             NotifySettingsChanged(shared);
         }
     }
