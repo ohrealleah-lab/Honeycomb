@@ -13,6 +13,7 @@ struct VideoPokerTouchView: View {
     @State private var showingOptions = false
     @State private var showingThemes = false
     @State private var showingStats = false
+    @State private var isShowingBetBoard = false
 
     // Post-result pacing/reset choreography — ported from mac's VideoPokerView
     // (.onChange(of: viewModel.state.phase) + chained DispatchWorkItem/asyncAfter),
@@ -72,10 +73,10 @@ struct VideoPokerTouchView: View {
             // Bottom-aligned, matching Blackjack's ZStack(alignment: .bottom) — controls
             // (below) is a fixed bar pinned outside the ScrollView's flow, not part of
             // its scrolling content, so it never drifts away from the bottom of the
-            // screen regardless of how much (or little) the pay table/credit display/
-            // cards above it take up — that mismatch was what previously left Deal
-            // stranded directly under the cards with a large empty gap below it
-            // whenever No Stress Mode (or hideBetBoard) hid the pay table.
+            // screen regardless of how much (or little) the credit display/cards above
+            // it take up — that mismatch was what previously left Deal stranded
+            // directly under the cards with a large empty gap below it whenever No
+            // Stress Mode hid the credit display.
             ZStack(alignment: .bottom) {
                 VStack(spacing: 0) {
                     topBar(isLandscape: isLandscape)
@@ -97,19 +98,6 @@ struct VideoPokerTouchView: View {
                     // stuck to its top edge.
                     ScrollView {
                         VStack(spacing: 12) {
-                            // Landscape auto-hides the pay table, same idea as mac's
-                            // existing hideBetBoard/noStressMode/Triple-Play conditions —
-                            // landscape's shorter height has the least room to spare, so
-                            // it always wins regardless of the manual setting.
-                            if !isLandscape && !viewModel.options.hideBetBoard && !viewModel.options.noStressMode {
-                                Text(localizedVariantName(viewModel.options.variant, language: coordinator.language))
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.white.opacity(0.8))
-                                    .lineLimit(1)
-                                payTableView
-                                    .padding(.horizontal, 16)
-                            }
-
                             holdHint
 
                             handRow(cardW: cardW, spacing: handSpacing)
@@ -377,6 +365,27 @@ struct VideoPokerTouchView: View {
                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 )
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isShowingBetBoard = true
+        }
+        // Anchored/arrowed from the top, not the bottom — creditDisplay sits near the
+        // top of the screen in both orientations (below topBar in portrait, overlaid
+        // on topBar in landscape), matching rulesCapsule's reasoning: opening upward
+        // would push the popover into the status bar/notch and get clipped, while
+        // opening downward has the whole board below it to expand into.
+        .popover(isPresented: $isShowingBetBoard, attachmentAnchor: .point(.top), arrowEdge: .top) {
+            payTableView
+                .presentationCompactAdaptation(.popover)
+                // Matches the Honeycomb rules popover's own treatment
+                // (RuleExplanationPopover) so this reads as the same surface instead
+                // of a lighter, system-chromed popover with its own default corner
+                // radius — the pay table's row backgrounds are opacity-based and read
+                // washed-out/translucent against that default background.
+                .presentationBackground(Color.black.opacity(0.9))
+                .presentationCornerRadius(16)
+                .environment(\.colorScheme, .dark)
+        }
     }
 
     private func creditStat(_ label: String, _ value: String, _ color: Color) -> some View {
@@ -392,23 +401,56 @@ struct VideoPokerTouchView: View {
 
     // MARK: Pay table
 
+    // Full 5-coin grid, matching mac's payHalfGrid — previously this only showed the
+    // payout for the player's current bet, a single number per hand, which left out
+    // every other bet level's payout mac's pay table shows side by side (e.g. that
+    // Royal Flush jumps from a flat multiple to a bonus jackpot specifically at max
+    // bet is invisible from a current-bet-only column).
     private var payTableView: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 0) {
+            Text(localizedVariantName(viewModel.options.variant, language: coordinator.language))
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.yellow)
+                .lineLimit(1)
+                .padding(.bottom, 10)
+
+            HStack(spacing: 0) {
+                Text("").frame(width: 170, alignment: .leading)
+                ForEach(1...5, id: \.self) { coins in
+                    Text(coins == 5 ? coordinator.L(.payTableMaxCol) : "\(coins)")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(coins == viewModel.state.currentBet ? .yellow : .white.opacity(0.45))
+                        .lineLimit(1)
+                        .frame(width: 68, alignment: .center)
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color.black.opacity(0.4))
+
             ForEach(Array(viewModel.payTable.enumerated()), id: \.offset) { _, entry in
                 let isHit = viewModel.state.phase == .result
                     && viewModel.state.lastPayout > 0
                     && viewModel.state.lastHandName == entry.handName
-                HStack {
+                HStack(spacing: 0) {
                     Text(localizedHandName(entry.handName, language: coordinator.language))
-                    Spacer()
-                    Text("\(entry.payout(bet: max(1, viewModel.state.currentBet)))")
-                        .monospacedDigit()
+                        .font(.system(size: 20, weight: isHit ? .black : .regular))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(width: 170, alignment: .leading)
+                    ForEach(0..<5, id: \.self) { i in
+                        Text("\(entry.multipliers[i] * (i + 1))")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(isHit ? .black : (i + 1 == viewModel.state.currentBet ? .yellow : .white.opacity(0.65)))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .frame(width: 68, alignment: .center)
+                    }
                 }
-                .font(.caption2.weight(isHit ? .black : .medium))
-                .foregroundStyle(isHit ? .yellow : .white.opacity(0.85))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 1)
-                .background(isHit ? Color.yellow.opacity(winFlash ? 0.9 : 0.4) : .clear)
+                .foregroundStyle(isHit ? .black : .white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(isHit ? Color.yellow.opacity(winFlash ? 1.0 : 0.7) : Color.black.opacity(0.2))
                 // Bounded, not .repeatForever — a repeatForever animation triggered by
                 // winFlash toggling true then false is never explicitly canceled once
                 // started (isHit later going false for a subsequent hand doesn't stop an
@@ -419,8 +461,7 @@ struct VideoPokerTouchView: View {
                 .animation(isHit ? .easeInOut(duration: 0.3).repeatCount(10, autoreverses: true) : .default, value: winFlash)
             }
         }
-        .padding(.vertical, 6)
-        .background(.black.opacity(0.25), in: RoundedRectangle(cornerRadius: 10))
+        .padding(16)
     }
 
     // MARK: Hand
@@ -715,8 +756,8 @@ struct VideoPokerSettingsSection: View {
                 // Sound/No Stress Mode/Honey Mode/Manually Dismiss Banners live in
                 // OptionsFullScreenView's own Global section now — this card is
                 // Video Poker-specific only. (No Hide Hint here — Video Poker has no
-                // hint feature.)
-                Toggle(coordinator.L(.hideBetBoard), isOn: $viewModel.options.hideBetBoard)
+                // hint feature. No Hide Bet Board either — the pay table is now an
+                // on-demand popover from creditDisplay, see payTableView.)
             }
             .disabledDuringGameplay(isMidHand)
 

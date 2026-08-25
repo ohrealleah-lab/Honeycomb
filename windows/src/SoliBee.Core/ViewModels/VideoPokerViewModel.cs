@@ -26,8 +26,6 @@ public partial class VideoPokerViewModel : ObservableObject
     // unannounced bet reduction the player has to notice and manually undo.
     private int _preferredBet = 1;
 
-    public bool IsBetBoardVisible => !Options.IsNoStressMode && !Options.HideBetBoard;
-
     // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
     // port's BannerQueue/EnqueueBanner/AdvanceBannerQueue.
     private readonly Queue<string> _bannerQueue = new();
@@ -598,7 +596,6 @@ public partial class VideoPokerViewModel : ObservableObject
         // Options is the same live instance Preferences edits directly (single consumer,
         // no cross-ViewModel broadcast needed) — notify so the view refreshes immediately.
         OnPropertyChanged(nameof(Options));
-        OnPropertyChanged(nameof(IsBetBoardVisible));
     }
 
     private static VideoPokerOptions LoadOptions()

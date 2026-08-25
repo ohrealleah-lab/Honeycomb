@@ -50,7 +50,6 @@ public enum StringKey
     VegasScoringMode,
     AlwaysOnTop,
     Timed,
-    HideBetBoard,
     StartingCreditsFmt,
     DealerLabel,
     PlayerLabel,

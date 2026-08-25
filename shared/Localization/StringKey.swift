@@ -88,8 +88,6 @@ public enum StringKey: String, CaseIterable {
     case alwaysOnTop = "always_on_top"
     /// Timer toggle label, reused across iOS Klondike/Spider/Beecell settings
     case timed = "timed"
-    /// Toggle label, Video Poker/Blackjack Options (Mac/iOS/Windows)
-    case hideBetBoard = "hide_bet_board"
     /// Stepper label, %d = credit amount — reused in Blackjack/Video Poker Options
     case startingCreditsFmt = "starting_credits_fmt"
     /// Uppercase hand-area label, reused across Blackjack/Honeycomb on all 3 platforms

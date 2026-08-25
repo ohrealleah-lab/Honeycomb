@@ -45,7 +45,6 @@ enum StringsSpanish {
         .vegasScoringMode: "Modo de Puntuación Vegas",
         .alwaysOnTop: "Siempre Visible",
         .timed: "Cronometrado",
-        .hideBetBoard: "Ocultar Panel de Apuestas",
         .startingCreditsFmt: "Créditos Iniciales: %d",
         .dealerLabel: "REPARTIDOR",
         .playerLabel: "JUGADOR",

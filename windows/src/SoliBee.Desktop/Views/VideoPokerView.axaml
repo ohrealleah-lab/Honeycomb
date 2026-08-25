@@ -7,8 +7,9 @@
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto" ClipToBounds="False">
 
 
-        <!-- ─── Pay Table Bar (top) ──────────────────────────────────────────── -->
-        <Border x:Name="PayTableBar" Grid.Row="0" Background="Transparent" Padding="12,6,12,8" Margin="0,14,0,6">
+        <!-- ─── Pay Table Popup (revealed on BidBar hover, see BidBar_PointerEntered/Exited) ── -->
+        <Popup x:Name="PayTablePopup" PlacementTarget="{Binding ElementName=BidBar}" Placement="Bottom" IsOpen="False" IsLightDismissEnabled="False">
+            <Border Background="#FF1A1A1A" CornerRadius="6" Padding="12,6,12,8" BoxShadow="0 10 30 0 #80000000">
 
                 <!-- Two-column pay table -->
                 <Grid ColumnDefinitions="*,12,*">
@@ -59,7 +60,8 @@
                     </StackPanel>
 
                 </Grid>
-        </Border>
+            </Border>
+        </Popup>
 
         <!-- ─── Game Area ─────────────────────────────────────────────────────── -->
         <!-- Cards and buttons sit in their own Auto rows, one fixed gap apart, flanked
@@ -82,8 +84,11 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- Credits / Bet / Hands bar — centered in the top spacer row -->
-            <local:BidBarView x:Name="BidBar" Grid.Row="0"/>
+            <!-- Credits / Bet / Hands bar — centered in the top spacer row. Hover reveals
+                 the pay table popup (see BidBar_PointerEntered/Exited) — Video Poker
+                 only; Blackjack's own BidBarView usage doesn't wire these events. -->
+            <local:BidBarView x:Name="BidBar" Grid.Row="0"
+                               PointerEntered="BidBar_PointerEntered" PointerExited="BidBar_PointerExited"/>
 
             <!-- Cards + overlays — centered in the Auto row -->
             <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"

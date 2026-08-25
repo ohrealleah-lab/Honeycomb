@@ -45,7 +45,6 @@ enum StringsEnglish {
         .vegasScoringMode: "Vegas Scoring Mode",
         .alwaysOnTop: "Always on Top",
         .timed: "Timed",
-        .hideBetBoard: "Hide Bet Board",
         .startingCreditsFmt: "Starting Credits: %d",
         .dealerLabel: "DEALER",
         .playerLabel: "PLAYER",

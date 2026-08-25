@@ -5,6 +5,18 @@ public struct VideoPokerView: View {
     var viewModel: VideoPokerViewModel
     @State private var isShowingOptions = false
     @State private var isShowingStats   = false
+    @State private var isShowingBetBoard = false
+    // Debounces creditDisplay's .onHover — inside the board's scaleEffect transform,
+    // AppKit's hover hit-testing jitters between true/false on nearly every small
+    // cursor movement (not just real enter/exit), which without this reopens/recloses
+    // the pay table popover on every pixel of mouse motion, reading as a flicker/redraw.
+    // A true is applied immediately; a false is only committed after a brief delay that
+    // gets canceled if another true arrives first, absorbing that jitter.
+    @State private var betBoardHoverTask: DispatchWorkItem? = nil
+    // Measured live height of creditDisplay's pill — the bet board overlay offsets
+    // itself down by this much so it starts right below the pill instead of overlapping
+    // it (see creditDisplay's .overlay(alignment: .top) for why exact non-overlap matters).
+    @State private var betBoardPillHeight: CGFloat = 60
     @State private var isShowingNewGameConfirm = false
     @State private var winFlash         = false
     @State private var cardVisible: [Bool] = Array(repeating: false, count: 5)
@@ -102,15 +114,6 @@ public struct VideoPokerView: View {
                 // attempts (worse the more the board is scaled down from its 905pt width).
                 GeometryReader { outerGeo in
                     VStack(spacing: 0) {
-                        if !(viewModel.options.hideBetBoard || viewModel.options.noStressMode) && viewModel.options.playMode != .triple {
-                            payTableGrid
-                                .padding(.horizontal, 16)
-                                .padding(.top, 8)
-                                .padding(.bottom, 6)
-
-                            Divider().overlay(Color.white.opacity(0.1))
-                        }
-
                         VStack(spacing: 16) {
                             if !viewModel.isFreePlay {
                                 creditDisplay
@@ -252,7 +255,6 @@ public struct VideoPokerView: View {
         }, onResize: recomputeScale))
         .onChange(of: viewModel.options.playMode) { recomputeScale() }
         .onChange(of: viewModel.options.noStressMode) { recomputeScale() }
-        .onChange(of: viewModel.options.hideBetBoard) { recomputeScale() }
         .onChange(of: measuredBoardHeight) { recomputeScale() }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
@@ -468,8 +470,6 @@ public struct VideoPokerView: View {
             }
         }
         .fixedSize()
-        .cornerRadius(6)
-        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.15), lineWidth: 1))
         .animation(.easeInOut(duration: 0.15), value: viewModel.state.phase)
     }
 
@@ -773,6 +773,61 @@ public struct VideoPokerView: View {
                     lineWidth: 1
                 )
         )
+        .background(GeometryReader { geo in
+            Color.clear
+                .onAppear { betBoardPillHeight = geo.size.height }
+                .onChange(of: geo.size.height) { _, newHeight in betBoardPillHeight = newHeight }
+        })
+        .onHover { hovering in
+            betBoardHoverTask?.cancel()
+            if hovering {
+                isShowingBetBoard = true
+            } else {
+                let task = DispatchWorkItem { isShowingBetBoard = false }
+                betBoardHoverTask = task
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: task)
+            }
+        }
+        // A same-window overlay, not .popover — .popover renders in its own separate
+        // NSPopover window, and on macOS any window appearing directly over a
+        // .onHover-tracked view can make AppKit briefly report that view as
+        // un-hovered the instant the new window appears (even when the mouse never
+        // actually left it), regardless of anchor placement. Since isShowingBetBoard
+        // itself drives that same popover's visibility, that spurious un-hover closed
+        // it, which handed hover back to the pill, which reopened it — an infinite
+        // open/close loop ("bounce") on any cursor movement. An overlay stays in the
+        // same window as the pill, so no such window-swap ever happens.
+        // allowsHitTesting(false) keeps the overlay itself from ever capturing the
+        // mouse — it's read-only content, and letting it intercept hover would
+        // reintroduce the same class of bug.
+        .overlay(alignment: .top) {
+            if isShowingBetBoard {
+                payTableGrid
+                    .padding(16)
+                    // Matches the Honeycomb rules banner's own popover treatment
+                    // (RuleExplanationPopover) so this reads as the same surface
+                    // instead of the pay table's own opacity-based row backgrounds
+                    // reading washed-out/translucent against the felt behind them.
+                    .background(Color.black.opacity(0.9))
+                    .cornerRadius(16)
+                    .environment(\.colorScheme, .dark)
+                    .offset(y: betBoardPillHeight + 8)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+                    .zIndex(50)
+            }
+        }
+        .animation(.easeInOut(duration: 0.12), value: isShowingBetBoard)
+        // The zIndex inside the .overlay above only ranks the pay table against
+        // creditDisplay's own pill content — it says nothing about paint order
+        // against handArea, a *separate* sibling later in the same parent VStack,
+        // which is what the overlay actually visually spills downward into. Siblings
+        // in a VStack still paint in declaration order regardless of a child's own
+        // internal zIndex, so without this, the cards (declared after creditDisplay)
+        // painted over the open pay table. Raising creditDisplay's own zIndex above
+        // handArea's default 0 only while the pay table is open fixes that without
+        // permanently changing stacking order the rest of the time.
+        .zIndex(isShowingBetBoard ? 50 : 0)
     }
 
     // MARK: - Action Buttons
@@ -959,7 +1014,6 @@ struct VideoPokerOptionsView: View {
     @State private var betPerHand: Int
     @State private var isSoundEnabled: Bool
     @State private var hideHintButton: Bool
-    @State private var hideBetBoard: Bool
     @State private var noStressMode: Bool
     @State private var honeyMode: Bool
     @State private var manuallyDismissBanners: Bool
@@ -979,7 +1033,6 @@ struct VideoPokerOptionsView: View {
         _betPerHand      = State(initialValue: viewModel.options.betPerHand)
         _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
         _hideHintButton  = State(initialValue: viewModel.options.hideHintButton)
-        _hideBetBoard    = State(initialValue: viewModel.options.hideBetBoard)
         _noStressMode    = State(initialValue: viewModel.options.noStressMode)
         _honeyMode       = State(initialValue: viewModel.options.honeyMode)
         _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
@@ -1005,7 +1058,6 @@ struct VideoPokerOptionsView: View {
                 o.betPerHand      = betPerHand
                 o.isSoundEnabled  = isSoundEnabled
                 o.hideHintButton  = hideHintButton
-                o.hideBetBoard    = hideBetBoard
                 o.noStressMode    = noStressMode
                 o.honeyMode       = honeyMode
                 o.manuallyDismissBanners = manuallyDismissBanners
@@ -1058,7 +1110,6 @@ struct VideoPokerOptionsView: View {
             Divider()
 
             Toggle(coordinator.L(.soundEffects),    isOn: $isSoundEnabled).font(.system(.body))
-            Toggle(coordinator.L(.hideBetBoard),   isOn: $hideBetBoard).font(.system(.body))
             Toggle(coordinator.L(.noStressMode),   isOn: $noStressMode).font(.system(.body))
             Toggle(coordinator.L(.honeyMode), isOn: $honeyMode).font(.system(.body))
             Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners).font(.system(.body))

@@ -177,6 +177,16 @@ public partial class VideoPokerView : UserControl
         (DataContext as VideoPokerViewModel)?.AdvanceBannerQueue();
     }
 
+    private void BidBar_PointerEntered(object? sender, PointerEventArgs e)
+    {
+        PayTablePopup.IsOpen = true;
+    }
+
+    private void BidBar_PointerExited(object? sender, PointerEventArgs e)
+    {
+        PayTablePopup.IsOpen = false;
+    }
+
     private void VideoPokerView_Unloaded(object? sender, RoutedEventArgs e)
     {
         if (DataContext is VideoPokerViewModel vm)
@@ -215,10 +225,10 @@ public partial class VideoPokerView : UserControl
 
     private void Refresh(VideoPokerViewModel vm)
     {
-        // No Stress Mode's free play has no bet to place, so the pay table (whose
-        // payouts scale with bet), credits/bet readout, and betting controls all
-        // disappear — only Hold/Clear/Deal remain (see UpdateControls).
-        PayTableBar.IsVisible = vm.IsBetBoardVisible;
+        // No Stress Mode's free play has no bet to place, so the credits/bet readout
+        // and betting controls disappear — only Hold/Clear/Deal remain (see
+        // UpdateControls). With no BidBar to hover, the pay table popup naturally
+        // becomes unreachable too, so no separate gate is needed for it.
         BidBar.IsVisible      = !vm.Options.IsNoStressMode;
         UpdateCards(vm);
         UpdateHoldBadges(vm);
