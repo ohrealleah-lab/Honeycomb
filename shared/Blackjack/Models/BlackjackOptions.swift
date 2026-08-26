@@ -25,15 +25,3 @@ public struct BlackjackOptions: Codable, Equatable {
         manuallyDismissBanners = try c.decodeIfPresent(Bool.self, forKey: .manuallyDismissBanners) ?? false
     }
 }
-
-extension BlackjackOptions: HasCommonGameOptions {
-    public var commonOptions: CommonGameOptions {
-        get {
-            CommonGameOptions(isSoundEnabled: isSoundEnabled, noStressMode: noStressMode)
-        }
-        set {
-            isSoundEnabled = newValue.isSoundEnabled
-            noStressMode = newValue.noStressMode
-        }
-    }
-}

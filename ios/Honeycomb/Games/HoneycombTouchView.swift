@@ -219,7 +219,7 @@ struct HoneycombTouchView: View {
             OptionsFullScreenView(
                 coordinator: coordinator,
                 onShowStats: { showingStats = true },
-                hideHintBinding: $viewModel.options.hideHintButton,
+                hideHintBinding: Bindable(coordinator).hideHintButton,
                 onNoStressModeChange: { viewModel.startNewGame() },
                 isGlobalSectionDisabled: isMidMatch,
                 globalSectionUnlockNote: coordinator.L(.settingsUnlockNote)

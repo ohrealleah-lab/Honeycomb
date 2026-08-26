@@ -2643,20 +2643,3 @@ public final class HoneycombViewModel {
         }
     }
 }
-
-extension HoneycombViewModel.Options: HasCommonGameOptions {
-    public var commonOptions: CommonGameOptions {
-        get {
-            CommonGameOptions(
-                isSoundEnabled: isSoundEnabled,
-                noStressMode: noStressMode,
-                hideHintButton: hideHintButton
-            )
-        }
-        set {
-            isSoundEnabled = newValue.isSoundEnabled
-            noStressMode = newValue.noStressMode
-            if let v = newValue.hideHintButton { hideHintButton = v }
-        }
-    }
-}

@@ -1191,6 +1191,7 @@ struct HoneycombOptionsView: View {
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
+                coordinator.hideHintButton = hideHintButton
                 coordinator.hideBee = hideBee
                 // No Stress Mode's deck composition is only decided at match start, so
                 // toggling it on mid-match has no visible effect until the next deal —

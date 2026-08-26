@@ -134,7 +134,7 @@ struct BeecellTouchView: View {
             OptionsFullScreenView(
                 coordinator: coordinator,
                 onShowStats: { showingStats = true },
-                hideHintBinding: $viewModel.options.hideHintButton,
+                hideHintBinding: Bindable(coordinator).hideHintButton,
                 onNoStressModeChange: { viewModel.startNewGame() },
                 showsGameSection: false
             ) {

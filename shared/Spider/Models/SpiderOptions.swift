@@ -48,22 +48,3 @@ public struct SpiderOptions: Codable, Equatable {
         self.manuallyDismissBanners = try container.decodeIfPresent(Bool.self, forKey: .manuallyDismissBanners) ?? false
     }
 }
-
-extension SpiderOptions: HasCommonGameOptions {
-    public var commonOptions: CommonGameOptions {
-        get {
-            CommonGameOptions(
-                isSoundEnabled: isSoundEnabled,
-                noStressMode: noStressMode,
-                hideHintButton: hideHintButton,
-                isTimed: isTimed
-            )
-        }
-        set {
-            isSoundEnabled = newValue.isSoundEnabled
-            noStressMode = newValue.noStressMode
-            if let v = newValue.hideHintButton { hideHintButton = v }
-            if let v = newValue.isTimed { isTimed = v }
-        }
-    }
-}

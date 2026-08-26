@@ -8,10 +8,11 @@ struct OptionsFullScreenView<GameSettings: View>: View {
     @Environment(\.dismiss) private var dismiss
     var onShowStats: () -> Void
     // hideHintBinding is nil for the two games with no hint feature (Video Poker,
-    // Blackjack) — Hide Hint only renders when a binding is supplied. Unlike Sound/
-    // No Stress Mode/Honey Mode/Manually Dismiss Banners (all coordinator-bound, so
-    // genuinely shared app-wide), Hide Hint stays a per-game options field; grouping
-    // it under "Global" here is a display choice, not a claim it's shared state.
+    // Blackjack) — Hide Hint only renders when a binding is supplied. Every caller that
+    // does supply one passes Bindable(coordinator).hideHintButton, so like Sound/No
+    // Stress Mode/Honey Mode/Manually Dismiss Banners it's genuinely coordinator-bound,
+    // shared app-wide — the Optional exists only to let per-game callers opt out of
+    // showing the row, not because the value itself is per-game.
     var hideHintBinding: Binding<Bool>? = nil
     // Klondike/Beecell/Spider/Honeycomb/Video Poker restart the current game when No
     // Stress Mode changes (it affects what's dealt/shown); Blackjack deliberately
@@ -90,9 +91,10 @@ struct OptionsFullScreenView<GameSettings: View>: View {
     // of each game's own settings section into one shared card — previously every
     // game repeated the same five toggles inline above its own game-specific
     // settings, with no visual distinction between "applies everywhere" and
-    // "this game only". Sound/No Stress Mode/Honey Mode/Manually Dismiss Banners
-    // bind straight to the coordinator (see AppCoordinator's "single source of
-    // truth" fields), so they're identical no matter which game's Options this is.
+    // "this game only". All five bind straight to the coordinator (see
+    // AppCoordinator's "single source of truth" fields; Hide Hint via the
+    // hideHintBinding passed in from each caller), so they're identical no matter
+    // which game's Options this is.
     private var globalSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeading(coordinator.L(.globalOptionsSection))

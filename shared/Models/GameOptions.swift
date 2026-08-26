@@ -71,25 +71,6 @@ public struct GameOptions: Codable, Equatable {
     }
 }
 
-extension GameOptions: HasCommonGameOptions {
-    public var commonOptions: CommonGameOptions {
-        get {
-            CommonGameOptions(
-                isSoundEnabled: isSoundEnabled,
-                noStressMode: noStressMode,
-                hideHintButton: hideHintButton,
-                isTimed: isTimed
-            )
-        }
-        set {
-            isSoundEnabled = newValue.isSoundEnabled
-            noStressMode = newValue.noStressMode
-            if let v = newValue.hideHintButton { hideHintButton = v }
-            if let v = newValue.isTimed { isTimed = v }
-        }
-    }
-}
-
 public enum FeltColorTheme: String, Codable, CaseIterable {
     case feltGreen
     case crimson

@@ -35,13 +35,12 @@ public final class AppCoordinator {
             case .blackjack:  blackjackViewModel.resetIfRoundOver()
             default: break
             }
-            syncSharedOptions(from: oldValue, to: gameMode)
-            // Reassert the real Sound/No Stress Mode values on every switch — mainly
-            // defensive, since nothing besides applySharedCommonOptionsToAllGames itself
-            // should ever change these per-game fields, but this guarantees switching
-            // games can never be the thing that changes what they're set to (the exact
-            // bug this replaced: syncSharedOptions used to broadcast whichever game you
-            // just left onto every other game, including these two fields).
+            // Reassert the real Sound/No Stress Mode/etc. values on every switch —
+            // mainly defensive, since nothing besides applySharedCommonOptionsToAllGames
+            // itself should ever change these per-game fields, but this guarantees
+            // switching games can never be the thing that changes what they're set to
+            // (the exact bug this replaced: a now-removed syncSharedOptions used to
+            // broadcast whichever game you just left onto every other game).
             applySharedCommonOptionsToAllGames()
             // The broadcast above reassigns `options` on every backgrounded game too,
             // which re-fires each one's own handleOptionsChanged — including its "No
@@ -488,6 +487,15 @@ public final class AppCoordinator {
             applySharedCommonOptionsToAllGames()
         }
     }
+    // Same true-single-source pattern as isSoundEnabled/noStressMode/honeyMode above.
+    // Video Poker and Blackjack have no hint feature, so they're skipped in the
+    // broadcast below rather than carrying an unused field.
+    public var hideHintButton: Bool {
+        didSet {
+            UserDefaults.standard.set(hideHintButton, forKey: "global_hide_hint_button")
+            applySharedCommonOptionsToAllGames()
+        }
+    }
 
     private func applySharedCommonOptionsToAllGames() {
         klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
@@ -514,6 +522,11 @@ public final class AppCoordinator {
         videoPokerViewModel.options.manuallyDismissBanners = manuallyDismissBanners
         blackjackViewModel.options.manuallyDismissBanners  = manuallyDismissBanners
         honeycombViewModel.options.manuallyDismissBanners  = manuallyDismissBanners
+        klondikeViewModel.options.hideHintButton   = hideHintButton
+        beecellViewModel.options.hideHintButton    = hideHintButton
+        spiderViewModel.options.hideHintButton     = hideHintButton
+        videoPokerViewModel.options.hideHintButton = hideHintButton
+        honeycombViewModel.options.hideHintButton  = hideHintButton
     }
 
     #if canImport(AppKit)
@@ -729,6 +742,12 @@ public final class AppCoordinator {
         self.manuallyDismissBanners = UserDefaults.standard.object(forKey: "global_manually_dismiss_banners") != nil
             ? UserDefaults.standard.bool(forKey: "global_manually_dismiss_banners")
             : false
+        // Same one-time migration as isSoundEnabled/noStressMode above — falls back to
+        // Klondike's already-persisted per-game value so existing installs don't see a
+        // surprise reset the first time this becomes app-wide.
+        self.hideHintButton = UserDefaults.standard.object(forKey: "global_hide_hint_button") != nil
+            ? UserDefaults.standard.bool(forKey: "global_hide_hint_button")
+            : klondikeViewModel.options.hideHintButton
         BannerCatalog.honeyModeEnabled = self.honeyMode
         BannerCatalog.currentLanguage = self.language
 
@@ -760,36 +779,6 @@ public final class AppCoordinator {
         applySharedCommonOptionsToAllGames()
 
         observeFaceArtChangesForLiveSave()
-    }
-
-    // MARK: - Shared option sync (genuinely per-game gameplay prefs only — theme fields
-    // above are a single live-shared store and need no propagation on mode switch)
-
-    // Each game's Options struct conforms to HasCommonGameOptions (see
-    // CommonGameOptions.swift), exposing just the fields that are conceptually shared
-    // across games (sound, no-stress, hint visibility, point highlights, timer) as
-    // Optionals where that game doesn't have the concept. Reading `commonOptions` off
-    // the outgoing game and assigning it to every other game's `commonOptions` handles
-    // the propagation generically — a `nil` field is left untouched by the setter, so
-    // e.g. Video Poker's lack of `isTimed` naturally doesn't clobber the solitaire
-    // games' timer preference.
-    private func syncSharedOptions(from old: GameMode, to new: GameMode) {
-        let common: CommonGameOptions
-        switch old {
-        case .klondike:   common = klondikeViewModel.options.commonOptions
-        case .beecell:    common = beecellViewModel.options.commonOptions
-        case .spider:     common = spiderViewModel.options.commonOptions
-        case .videoPoker: common = videoPokerViewModel.options.commonOptions
-        case .blackjack:  common = blackjackViewModel.options.commonOptions
-        case .honeycomb:  common = honeycombViewModel.options.commonOptions
-        }
-
-        if old != .klondike   { klondikeViewModel.options.commonOptions = common }
-        if old != .beecell    { beecellViewModel.options.commonOptions = common }
-        if old != .spider     { spiderViewModel.options.commonOptions = common }
-        if old != .videoPoker { videoPokerViewModel.options.commonOptions = common }
-        if old != .blackjack  { blackjackViewModel.options.commonOptions = common }
-        if old != .honeycomb  { honeycombViewModel.options.commonOptions = common }
     }
 
     // MARK: - Game actions

@@ -901,6 +901,7 @@ struct SpiderOptionsView: View {
                 coordinator.noStressMode = noStressMode
                 coordinator.honeyMode = honeyMode
                 coordinator.manuallyDismissBanners = manuallyDismissBanners
+                coordinator.hideHintButton = hideHintButton
                 coordinator.hideBee = hideBee
             }
         ) {
