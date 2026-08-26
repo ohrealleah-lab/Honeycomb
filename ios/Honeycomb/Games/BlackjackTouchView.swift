@@ -251,6 +251,14 @@ struct BlackjackTouchView: View {
                                     creditDisplay
                                 }
                                 dealerArea(cardW: cardW, maxHandWidth: maxHandWidth)
+                                // Extra breathing room between the two hands specifically
+                                // (beyond the 16pt the VStack already gives every child) —
+                                // matches mac's DEALER/VS/PLAYER layout, which visibly
+                                // separates the two hands rather than stacking them close
+                                // together. Fixed, not proportional to leftover space, so
+                                // it stays modest even when centering (below) pushes the
+                                // whole block into a much taller available area.
+                                Spacer().frame(height: 20)
                                 playerHandsArea(cardW: cardW, maxHandWidth: maxHandWidth)
                             }
                             // Reserves room at the bottom for the fixed controls bar
@@ -260,14 +268,19 @@ struct BlackjackTouchView: View {
                             // (matches Video Poker's identical adjustment; exactly
                             // matching it still read as touching/overlapping).
                             .padding(.bottom, reservedBottom)
-                            // Flexible Spacers used to sit between the cards and
-                            // controls, which combined with this enforced min-height
-                            // stretched them apart into a large gap at every screen
-                            // size — top-aligning instead lets the content hug together
-                            // at its natural height (buttons directly under the cards,
-                            // matching mac) and pushes any leftover space below the
-                            // controls instead of between them.
-                            .frame(minHeight: geo.size.height - 44, alignment: .top)
+                            // Centered, not top-aligned — on a tall screen (iPad
+                            // portrait especially) the cards are nowhere near tall
+                            // enough to fill the available room, and top-aligning left
+                            // them bunched up under the top bar with one large empty
+                            // gap dumped below, reading as unfinished rather than
+                            // intentionally laid out. Centering (matching mac's DEALER/
+                            // VS/PLAYER block, which sits centered in its window) splits
+                            // that leftover room evenly above and below instead. Still
+                            // degrades to the same scrolling behavior as .top when
+                            // content is taller than this minHeight (a split hand, a
+                            // short screen) — centering a block that already exceeds its
+                            // container is a no-op.
+                            .frame(minHeight: geo.size.height - 44, alignment: .center)
                         }
                         .scrollBounceBehavior(.basedOnSize)
                         .scrollIndicators(.hidden)
