@@ -1020,9 +1020,10 @@ public struct GameView: View {
         let cols = CGFloat(max(viewModel.state.tableau.count, 7))
         let intrinsicWidth = cols * 128.0 + (cols - 1) * 18.0 + 40.0
         let intrinsicHeight = currentIntrinsicBoardHeight()
-        let scaleX = contentSize.width / intrinsicWidth
-        let scaleY = (contentSize.height - Self.toolbarHeight) / intrinsicHeight
-        viewModel.zoomScale = min(2.0, max(0.3, min(scaleX, scaleY)))
+        viewModel.zoomScale = WindowFit.scale(
+            contentSize: contentSize,
+            intrinsicSize: CGSize(width: intrinsicWidth, height: intrinsicHeight),
+            heightInset: Self.toolbarHeight)
     }
 
     // The board's true current height: the piles row (181) + row spacing (16) + the
@@ -1049,19 +1050,7 @@ public struct GameView: View {
     // games never resizes the window, so manual resizing stays seamless across games.
     private func applyInitialWindowSize() {
         guard let window = hostingWindow else { return }
-        window.contentMinSize = Self.minWindowSize
-
-        if !UserDefaults.standard.bool(forKey: "HasLaunchedBefore") {
-            UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
-            let target = Self.defaultOpeningSize
-            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target))
-            if let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
-                newFrame.origin.x = visible.midX - newFrame.width / 2
-                newFrame.origin.y = visible.midY - newFrame.height / 2
-            }
-            window.setFrame(newFrame, display: true)
-        }
-
+        window.applyInitialSize(minSize: Self.minWindowSize, defaultOpeningSize: Self.defaultOpeningSize)
         recomputeScale()
     }
 

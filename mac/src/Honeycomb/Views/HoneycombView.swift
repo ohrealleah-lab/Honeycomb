@@ -819,17 +819,17 @@ public struct HoneycombView: View {
         toolbarWidth = contentSize.width
         windowContentHeight = contentSize.height
 
-        let size = intrinsicContentSize
-        let scaleX = contentSize.width / size.width
-        let scaleY = (contentSize.height - Self.toolbarHeight) / size.height
-        viewModel.zoomScale = min(2.0, max(0.3, min(scaleX, scaleY)))
+        viewModel.zoomScale = WindowFit.scale(
+            contentSize: contentSize,
+            intrinsicSize: intrinsicContentSize,
+            heightInset: Self.toolbarHeight)
     }
 
     // Applies the window's opening size and refits the scale — called at app launch and
     // every time this game becomes active again.
     private func applyInitialWindowSize() {
         guard let window = hostingWindow else { return }
-        window.contentMinSize = Self.minWindowSize
+        window.applyInitialSize(minSize: Self.minWindowSize, defaultOpeningSize: nil)
         recomputeScale()
     }
 

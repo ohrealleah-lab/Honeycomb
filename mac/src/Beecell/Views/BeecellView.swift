@@ -781,7 +781,7 @@ public struct BeecellView: View {
             coordinator.activeWindow = window
             applyInitialWindowSize()
         }, onResize: recomputeScale))
-        .onChange(of: viewModel.options.deckCount) { recomputeScale() }
+        .onChange(of: viewModel.options.deckCount) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { note in
             guard (note.object as? NSWindow) == hostingWindow, !draggedCards.isEmpty else { return }
             cancelDrag()
@@ -800,9 +800,10 @@ public struct BeecellView: View {
         let cols = Double(viewModel.options.deckCount == 1 ? 8 : 10)
         let intrinsicWidth = cols * 128.0 + (cols - 1) * 18.0 + 40.0
         let intrinsicHeight = currentIntrinsicBoardHeight()
-        let scaleX = contentSize.width / intrinsicWidth
-        let scaleY = (contentSize.height - Self.toolbarHeight) / intrinsicHeight
-        viewModel.zoomScale = min(2.0, max(0.3, min(scaleX, scaleY)))
+        viewModel.zoomScale = WindowFit.scale(
+            contentSize: contentSize,
+            intrinsicSize: CGSize(width: intrinsicWidth, height: intrinsicHeight),
+            heightInset: Self.toolbarHeight)
     }
 
     // The board's true current height: the top row (freecells/foundations — a single
@@ -826,19 +827,7 @@ public struct BeecellView: View {
     // games never resizes the window, so manual resizing stays seamless across games.
     private func applyInitialWindowSize() {
         guard let window = hostingWindow else { return }
-        window.contentMinSize = Self.minWindowSize
-
-        if !UserDefaults.standard.bool(forKey: "HasLaunchedBefore") {
-            UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
-            let target = Self.defaultOpeningSize
-            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target))
-            if let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
-                newFrame.origin.x = visible.midX - newFrame.width / 2
-                newFrame.origin.y = visible.midY - newFrame.height / 2
-            }
-            window.setFrame(newFrame, display: true)
-        }
-
+        window.applyInitialSize(minSize: Self.minWindowSize, defaultOpeningSize: Self.defaultOpeningSize)
         recomputeScale()
     }
 
@@ -1027,112 +1016,6 @@ public struct BeecellView: View {
         return coordinator.L(.winSummaryWithTimeFmt, scorePart, formatTime(viewModel.state.timerSeconds))
     }
 
-}
-
-// Window Accessor and Detecting View helpers for resizing the macOS window to match the board size
-struct WindowAccessor: NSViewRepresentable {
-    var callback: (NSWindow) -> Void
-    // Called every time the window resizes, for any reason (live drag, our own
-    // programmatic resizes, etc.) — games use this to continuously refit their board's
-    // scale to the window's current size. This view has no idea what a "board" is; it
-    // just reports that a resize happened.
-    var onResize: (() -> Void)? = nil
-
-    func makeNSView(context: Context) -> WindowDetectingView {
-        WindowDetectingView(onWindowDetected: callback, onResize: onResize)
-    }
-
-    func updateNSView(_ nsView: WindowDetectingView, context: Context) {
-        nsView.onResize = onResize
-    }
-}
-
-class WindowDetectingView: NSView {
-    var onWindowDetected: (NSWindow) -> Void
-    var onResize: (() -> Void)?
-    private var resizeObserver: Any?
-
-    init(onWindowDetected: @escaping (NSWindow) -> Void, onResize: (() -> Void)? = nil) {
-        self.onWindowDetected = onWindowDetected
-        self.onResize = onResize
-        super.init(frame: .zero)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        if let window = self.window {
-            onWindowDetected(window)
-            observeResize(of: window)
-        }
-    }
-
-    // Live interactive drag-resizing (grabbing an edge/corner by hand) is pure native
-    // AppKit behavior — none of this app's own resize logic (recomputeScale/
-    // applyInitialWindowSize) runs during it, so this notification is the only hook for
-    // it. Two jobs on every resize: (1) if the window ever ends up positioned such that
-    // its top edge is above the screen's visible area (stale OS window restoration, an
-    // edge case in native resizing, etc.), correct it — the toolbar/title bar must stay
-    // reachable; (2) let the game view recompute its fit-to-window scale.
-    private func observeResize(of window: NSWindow) {
-        if let existing = resizeObserver { NotificationCenter.default.removeObserver(existing) }
-        resizeObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.didResizeNotification, object: window, queue: .main
-        ) { [weak self, weak window] _ in
-            guard let window, let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame else { return }
-            var frame = window.frame
-            if frame.maxY > visible.maxY {
-                frame.origin.y = visible.maxY - frame.height
-                window.setFrame(frame, display: true)
-            }
-            self?.onResize?()
-        }
-    }
-
-    deinit {
-        if let existing = resizeObserver { NotificationCenter.default.removeObserver(existing) }
-    }
-}
-
-class WindowZoomController {
-    private weak var window: NSWindow?
-    private var previousFrame: NSRect?
-    private var eventMonitor: Any?
-
-    init(window: NSWindow) {
-        self.window = window
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            guard let self, let win = self.window, event.window === win, event.clickCount == 2 else { return event }
-            let contentHeight = win.contentView?.frame.height ?? 0
-            if event.locationInWindow.y > contentHeight {
-                self.toggleZoom()
-                return nil
-            }
-            return event
-        }
-    }
-
-    deinit {
-        if let monitor = eventMonitor { NSEvent.removeMonitor(monitor) }
-    }
-
-    func toggleZoom() {
-        guard let window, let screen = window.screen ?? NSScreen.main else { return }
-        if let prev = previousFrame {
-            window.setFrame(prev, display: true, animate: true)
-            previousFrame = nil
-        } else {
-            previousFrame = window.frame
-            window.setFrame(screen.visibleFrame, display: true, animate: true)
-        }
-    }
-
-    func clearZoomState() {
-        previousFrame = nil
-    }
 }
 
 // MARK: - Options Preference Dialog

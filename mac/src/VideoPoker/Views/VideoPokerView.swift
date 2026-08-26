@@ -257,9 +257,9 @@ public struct VideoPokerView: View {
                 applyInitialWindowSize()
             }
         }, onResize: recomputeScale))
-        .onChange(of: viewModel.options.playMode) { recomputeScale() }
-        .onChange(of: viewModel.options.noStressMode) { recomputeScale() }
-        .onChange(of: measuredBoardHeight) { recomputeScale() }
+        .onChange(of: viewModel.options.playMode) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
+        .onChange(of: viewModel.options.noStressMode) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
+        .onChange(of: measuredBoardHeight) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .overlay {
@@ -972,9 +972,10 @@ public struct VideoPokerView: View {
         toolbarWidth = contentSize.width
         windowContentHeight = contentSize.height
         actionButtonsWidth = contentSize.width
-        let scaleX = contentSize.width / 905.0
-        let scaleY = (contentSize.height - Self.toolbarHeight - Self.legendHeight) / measuredBoardHeight
-        viewModel.zoomScale = min(2.0, max(0.3, min(scaleX, scaleY)))
+        viewModel.zoomScale = WindowFit.scale(
+            contentSize: contentSize,
+            intrinsicSize: CGSize(width: 905.0, height: measuredBoardHeight),
+            heightInset: Self.toolbarHeight + Self.legendHeight)
     }
 
     // Applies the window's opening size — called at app launch and every time this game
@@ -983,19 +984,7 @@ public struct VideoPokerView: View {
     // games never resizes the window, so manual resizing stays seamless across games.
     private func applyInitialWindowSize() {
         guard let window = hostingWindow else { return }
-        window.contentMinSize = Self.minWindowSize
-
-        if !UserDefaults.standard.bool(forKey: "HasLaunchedBefore") {
-            UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
-            let target = Self.defaultOpeningSize
-            var newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target))
-            if let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
-                newFrame.origin.x = visible.midX - newFrame.width / 2
-                newFrame.origin.y = visible.midY - newFrame.height / 2
-            }
-            window.setFrame(newFrame, display: true)
-        }
-
+        window.applyInitialSize(minSize: Self.minWindowSize, defaultOpeningSize: Self.defaultOpeningSize)
         recomputeScale()
     }
 

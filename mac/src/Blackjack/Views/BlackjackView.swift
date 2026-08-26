@@ -194,8 +194,8 @@ public struct BlackjackView: View {
                 applyInitialWindowSize()
             }
         }, onResize: recomputeScale))
-        .onChange(of: viewModel.options.noStressMode) { recomputeScale() }
-        .onChange(of: measuredBoardHeight) { recomputeScale() }
+        .onChange(of: viewModel.options.noStressMode) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
+        .onChange(of: measuredBoardHeight) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
         .overlay {
@@ -792,9 +792,10 @@ public struct BlackjackView: View {
         toolbarWidth = contentSize.width
         windowContentHeight = contentSize.height
         actionButtonsWidth = contentSize.width
-        let scaleX = contentSize.width / 905.0
-        let scaleY = (contentSize.height - Self.toolbarHeight - Self.legendHeight) / measuredBoardHeight
-        viewModel.zoomScale = min(2.0, max(0.3, min(scaleX, scaleY)))
+        viewModel.zoomScale = WindowFit.scale(
+            contentSize: contentSize,
+            intrinsicSize: CGSize(width: 905.0, height: measuredBoardHeight),
+            heightInset: Self.toolbarHeight + Self.legendHeight)
     }
 
     // Applies the window's opening size — called at app launch and every time this game
