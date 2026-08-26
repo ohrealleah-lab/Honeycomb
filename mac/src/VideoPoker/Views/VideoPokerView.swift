@@ -187,7 +187,7 @@ public struct VideoPokerView: View {
                     .padding(.horizontal, 20)
                     .padding(.vertical, 24)
                     .fixedSize()
-                    .background(Color.black.opacity(0.5))
+                    .background(Color.black.opacity(0.75))
                     .cornerRadius(12)
                     .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
                     .onTapGesture { viewModel.deal() }
@@ -207,7 +207,7 @@ public struct VideoPokerView: View {
                     .padding(.vertical, 24)
                     .frame(maxWidth: 420)
                     .fixedSize(horizontal: false, vertical: true)
-                    .background(Color.black.opacity(0.5))
+                    .background(Color.black.opacity(0.75))
                     .cornerRadius(12)
                     .onTapGesture { viewModel.deal() }
                     .transition(.opacity)

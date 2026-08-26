@@ -595,7 +595,7 @@ public struct HoneycombView: View {
                     .buttonStyle(.plain)
                     .padding(12)
                 }
-                .background(Color.black.opacity(0.8))
+                .background(Color.black.opacity(0.75))
                 .cornerRadius(16)
                 .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
             }
