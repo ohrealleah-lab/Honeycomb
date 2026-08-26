@@ -36,6 +36,21 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     [ObservableProperty]
     private CardPointPopup? _pointPopup;
 
+    // Flat properties for the bee watermark's RenderTransform bindings (SpiderView.axaml).
+    // A binding path like "Options.SpiderWatermarkScale" only refreshes when Avalonia
+    // re-walks the whole path, which isn't reliable on the rapid-fire ticks the dev
+    // calibration sliders send while being dragged. [ObservableProperty] on a flat double
+    // gives each tick its own real equality-checked change notification instead, matching
+    // HoneycombViewModel's already-working HoneycombWatermarkScale.
+    [ObservableProperty]
+    private double _spiderWatermarkScale = 1.0;
+
+    [ObservableProperty]
+    private double _spiderWatermarkOffsetX;
+
+    [ObservableProperty]
+    private double _spiderWatermarkOffsetY;
+
     public List<Pile> StockPiles { get; } = new();
     public List<Pile> Tableaus { get; } = new();
     public List<Pile> Foundations { get; } = new();
@@ -166,6 +181,9 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         _syncContext = SynchronizationContext.Current;
         Options = SettingsService.LoadOptions();
         Stats = StatsService.LoadStats();
+        SpiderWatermarkScale   = Options.SpiderWatermarkScale;
+        SpiderWatermarkOffsetX = Options.SpiderWatermarkOffsetX;
+        SpiderWatermarkOffsetY = Options.SpiderWatermarkOffsetY;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
@@ -175,6 +193,9 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
             bool noStressJustEnabled = m.Options.IsNoStressMode && !old.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
+            SpiderWatermarkScale   = m.Options.SpiderWatermarkScale;
+            SpiderWatermarkOffsetX = m.Options.SpiderWatermarkOffsetX;
+            SpiderWatermarkOffsetY = m.Options.SpiderWatermarkOffsetY;
             if (Options.SpiderSuitCount != old.SpiderSuitCount)
                 InitializeGame(countAsNewGame: false);
             else if (noStressJustEnabled && State.IsTimerActive)

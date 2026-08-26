@@ -13,8 +13,8 @@
                        IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
                     <Image.RenderTransform>
                         <TransformGroup>
-                            <ScaleTransform ScaleX="{Binding Options.SpiderWatermarkScale}" ScaleY="{Binding Options.SpiderWatermarkScale}"/>
-                            <TranslateTransform X="{Binding Options.SpiderWatermarkOffsetX}" Y="{Binding Options.SpiderWatermarkOffsetY}"/>
+                            <ScaleTransform ScaleX="{Binding SpiderWatermarkScale}" ScaleY="{Binding SpiderWatermarkScale}"/>
+                            <TranslateTransform X="{Binding SpiderWatermarkOffsetX}" Y="{Binding SpiderWatermarkOffsetY}"/>
                         </TransformGroup>
                     </Image.RenderTransform>
                 </Image>

@@ -53,6 +53,21 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     [ObservableProperty]
     private CardPointPopup? _pointPopup;
 
+    // Flat properties for the bee watermark's RenderTransform bindings (FreecellView.axaml).
+    // A binding path like "Options.FreecellWatermarkScale" only refreshes when Avalonia
+    // re-walks the whole path, which isn't reliable on the rapid-fire ticks the dev
+    // calibration sliders send while being dragged. [ObservableProperty] on a flat double
+    // gives each tick its own real equality-checked change notification instead, matching
+    // HoneycombViewModel's already-working HoneycombWatermarkScale.
+    [ObservableProperty]
+    private double _freecellWatermarkScale = 1.0;
+
+    [ObservableProperty]
+    private double _freecellWatermarkOffsetX;
+
+    [ObservableProperty]
+    private double _freecellWatermarkOffsetY;
+
     public List<Pile> FreeCells { get; } = new();
     public List<Pile> Foundations { get; } = new();
     public List<Pile> Tableaus { get; } = new();
@@ -187,6 +202,9 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         Stats = StatsService.LoadStats();
         StatsService.MigrateFreecellVegasStats(Stats);
         StatsService.SaveStats(Stats);
+        FreecellWatermarkScale   = Options.FreecellWatermarkScale;
+        FreecellWatermarkOffsetX = Options.FreecellWatermarkOffsetX;
+        FreecellWatermarkOffsetY = Options.FreecellWatermarkOffsetY;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
@@ -201,6 +219,9 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
             bool noStressJustDisabled = !m.Options.IsNoStressMode && old.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
+            FreecellWatermarkScale   = m.Options.FreecellWatermarkScale;
+            FreecellWatermarkOffsetX = m.Options.FreecellWatermarkOffsetX;
+            FreecellWatermarkOffsetY = m.Options.FreecellWatermarkOffsetY;
             if (Options.FreecellDeckCount != old.FreecellDeckCount)
                 InitializeGame(countAsNewGame: false);
             else if (noStressJustEnabled && State.IsTimerActive)

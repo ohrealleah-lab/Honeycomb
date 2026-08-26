@@ -29,6 +29,17 @@ public partial class BlackjackViewModel : ObservableObject
         if (_bannerQueue.Count == 1) OnFlashBanner?.Invoke(text);
     }
 
+    // Flat passthroughs for the bee watermark's RenderTransform bindings (BlackjackView.axaml).
+    // A binding path like "Options.BlackjackWatermarkScale" only refreshes when its OWN
+    // property-changed notification fires; raising OnPropertyChanged(nameof(Options)) on
+    // rapid-fire ticks (dragging the calibration sliders) doesn't reliably force Avalonia to
+    // re-walk the nested path every time. Binding directly to these VM-level properties, with
+    // their own explicit OnPropertyChanged call in the OptionsChangedMessage handler below,
+    // sidesteps that.
+    public double BlackjackWatermarkScale   => Options.BlackjackWatermarkScale;
+    public double BlackjackWatermarkOffsetX => Options.BlackjackWatermarkOffsetX;
+    public double BlackjackWatermarkOffsetY => Options.BlackjackWatermarkOffsetY;
+
     public void AdvanceBannerQueue()
     {
         if (_bannerQueue.Count == 0) return;
@@ -197,6 +208,9 @@ public partial class BlackjackViewModel : ObservableObject
             Options.BlackjackWatermarkOffsetX = m.Options.BlackjackWatermarkOffsetX;
             Options.BlackjackWatermarkOffsetY = m.Options.BlackjackWatermarkOffsetY;
             OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(BlackjackWatermarkScale));
+            OnPropertyChanged(nameof(BlackjackWatermarkOffsetX));
+            OnPropertyChanged(nameof(BlackjackWatermarkOffsetY));
             NotifyStateChanged();
         });
     }

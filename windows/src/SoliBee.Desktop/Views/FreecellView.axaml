@@ -10,8 +10,8 @@
                IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
                 <TransformGroup>
-                    <ScaleTransform ScaleX="{Binding Options.FreecellWatermarkScale}" ScaleY="{Binding Options.FreecellWatermarkScale}"/>
-                    <TranslateTransform X="{Binding Options.FreecellWatermarkOffsetX}" Y="{Binding Options.FreecellWatermarkOffsetY}"/>
+                    <ScaleTransform ScaleX="{Binding FreecellWatermarkScale}" ScaleY="{Binding FreecellWatermarkScale}"/>
+                    <TranslateTransform X="{Binding FreecellWatermarkOffsetX}" Y="{Binding FreecellWatermarkOffsetY}"/>
                 </TransformGroup>
             </Image.RenderTransform>
         </Image>

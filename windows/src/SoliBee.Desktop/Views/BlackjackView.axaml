@@ -24,8 +24,8 @@
                    IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
                 <Image.RenderTransform>
                     <TransformGroup>
-                        <ScaleTransform ScaleX="{Binding Options.BlackjackWatermarkScale}" ScaleY="{Binding Options.BlackjackWatermarkScale}"/>
-                        <TranslateTransform X="{Binding Options.BlackjackWatermarkOffsetX}" Y="{Binding Options.BlackjackWatermarkOffsetY}"/>
+                        <ScaleTransform ScaleX="{Binding BlackjackWatermarkScale}" ScaleY="{Binding BlackjackWatermarkScale}"/>
+                        <TranslateTransform X="{Binding BlackjackWatermarkOffsetX}" Y="{Binding BlackjackWatermarkOffsetY}"/>
                     </TransformGroup>
                 </Image.RenderTransform>
             </Image>

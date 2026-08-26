@@ -10,8 +10,8 @@
                IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
                 <TransformGroup>
-                    <ScaleTransform ScaleX="{Binding Options.KlondikeWatermarkScale}" ScaleY="{Binding Options.KlondikeWatermarkScale}"/>
-                    <TranslateTransform X="{Binding Options.KlondikeWatermarkOffsetX}" Y="{Binding Options.KlondikeWatermarkOffsetY}"/>
+                    <ScaleTransform ScaleX="{Binding KlondikeWatermarkScale}" ScaleY="{Binding KlondikeWatermarkScale}"/>
+                    <TranslateTransform X="{Binding KlondikeWatermarkOffsetX}" Y="{Binding KlondikeWatermarkOffsetY}"/>
                 </TransformGroup>
             </Image.RenderTransform>
         </Image>

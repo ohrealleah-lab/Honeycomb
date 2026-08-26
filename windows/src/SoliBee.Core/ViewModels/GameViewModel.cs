@@ -33,6 +33,21 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     [ObservableProperty]
     private HintMove? _activeHint;
 
+    // Flat properties for the bee watermark's RenderTransform bindings (GameView.axaml).
+    // A binding path like "Options.KlondikeWatermarkScale" only refreshes when Avalonia
+    // re-walks the whole path, which isn't reliable on the rapid-fire ticks the dev
+    // calibration sliders send while being dragged. [ObservableProperty] on a flat double
+    // gives each tick its own real equality-checked change notification instead, matching
+    // HoneycombViewModel's already-working HoneycombWatermarkScale.
+    [ObservableProperty]
+    private double _klondikeWatermarkScale = 1.0;
+
+    [ObservableProperty]
+    private double _klondikeWatermarkOffsetX;
+
+    [ObservableProperty]
+    private double _klondikeWatermarkOffsetY;
+
     [ObservableProperty]
     private CardPointPopup? _pointPopup;
 
@@ -196,6 +211,9 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         Options = SettingsService.LoadOptions();
         Stats = StatsService.LoadStats();
         Stats.VegasCumulativeScore = 0; // Clear bankroll on new app launch
+        KlondikeWatermarkScale   = Options.KlondikeWatermarkScale;
+        KlondikeWatermarkOffsetX = Options.KlondikeWatermarkOffsetX;
+        KlondikeWatermarkOffsetY = Options.KlondikeWatermarkOffsetY;
 
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
@@ -210,6 +228,9 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             bool noStressJustDisabled = !m.Options.IsNoStressMode && Options.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
+            KlondikeWatermarkScale   = m.Options.KlondikeWatermarkScale;
+            KlondikeWatermarkOffsetX = m.Options.KlondikeWatermarkOffsetX;
+            KlondikeWatermarkOffsetY = m.Options.KlondikeWatermarkOffsetY;
             if (vegasChanged) InitializeGame(countAsNewGame: false);
             else if (noStressJustEnabled && State.IsTimerActive)
             {
