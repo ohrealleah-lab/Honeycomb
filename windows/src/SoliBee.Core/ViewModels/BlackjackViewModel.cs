@@ -45,6 +45,12 @@ public partial class BlackjackViewModel : ObservableObject
     // per-game board watermark — matching HoneycombViewModel's own top-level HideBee.
     public bool HideBee => Options.HideBee;
 
+    // The board watermark Image binds Opacity (not IsVisible) to this — IsVisible would
+    // collapse the Image out of BoardFeltGrid's layout, and since it's the only content
+    // spanning that Grid's Auto rows, collapsing it shrinks those rows and shifts the
+    // board itself. Opacity hides it visually while keeping its layout footprint intact.
+    public double WatermarkOpacity => HideBee ? 0.0 : 0.15;
+
     public void AdvanceBannerQueue()
     {
         if (_bannerQueue.Count == 0) return;
@@ -214,6 +220,7 @@ public partial class BlackjackViewModel : ObservableObject
             Options.BlackjackWatermarkOffsetY = m.Options.BlackjackWatermarkOffsetY;
             OnPropertyChanged(nameof(Options));
             OnPropertyChanged(nameof(HideBee));
+            OnPropertyChanged(nameof(WatermarkOpacity));
             OnPropertyChanged(nameof(BlackjackWatermarkScale));
             OnPropertyChanged(nameof(BlackjackWatermarkOffsetX));
             OnPropertyChanged(nameof(BlackjackWatermarkOffsetY));
@@ -629,6 +636,7 @@ public partial class BlackjackViewModel : ObservableObject
         // no cross-ViewModel broadcast needed) — notify so the view refreshes immediately.
         OnPropertyChanged(nameof(Options));
         OnPropertyChanged(nameof(HideBee));
+        OnPropertyChanged(nameof(WatermarkOpacity));
     }
 
     private static BlackjackOptions LoadOptions()

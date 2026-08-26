@@ -5,9 +5,9 @@
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto" ClipToBounds="False">
-        <Image Grid.RowSpan="3" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="0.15"
+        <Image Grid.RowSpan="3" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
                HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
-               IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
+               RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform ScaleX="{Binding VideoPokerWatermarkScale}" ScaleY="{Binding VideoPokerWatermarkScale}"/>

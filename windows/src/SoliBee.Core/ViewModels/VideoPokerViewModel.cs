@@ -204,6 +204,12 @@ public partial class VideoPokerViewModel : ObservableObject
     // per-game board watermark — matching HoneycombViewModel's own top-level HideBee.
     public bool HideBee => Options.HideBee;
 
+    // The board watermark Image binds Opacity (not IsVisible) to this — IsVisible would
+    // collapse the Image out of BoardFeltGrid's layout, and since it's the only content
+    // spanning that Grid's Auto rows, collapsing it shrinks those rows and shifts the
+    // board itself. Opacity hides it visually while keeping its layout footprint intact.
+    public double WatermarkOpacity => HideBee ? 0.0 : 0.15;
+
     // Matches Mac: Draw never costs new credits (the bet was already taken at Deal), but
     // starting a fresh Deal requires covering the current bet unless in free play.
     public bool   CanDeal         => IsHolding || Options.IsNoStressMode || State.SessionCredits >= State.CurrentBet;
@@ -255,6 +261,7 @@ public partial class VideoPokerViewModel : ObservableObject
             Options.VideoPokerWatermarkOffsetY = m.Options.VideoPokerWatermarkOffsetY;
             OnPropertyChanged(nameof(Options));
             OnPropertyChanged(nameof(HideBee));
+            OnPropertyChanged(nameof(WatermarkOpacity));
             OnPropertyChanged(nameof(VideoPokerWatermarkScale));
             OnPropertyChanged(nameof(VideoPokerWatermarkOffsetX));
             OnPropertyChanged(nameof(VideoPokerWatermarkOffsetY));
@@ -625,6 +632,7 @@ public partial class VideoPokerViewModel : ObservableObject
         // no cross-ViewModel broadcast needed) — notify so the view refreshes immediately.
         OnPropertyChanged(nameof(Options));
         OnPropertyChanged(nameof(HideBee));
+        OnPropertyChanged(nameof(WatermarkOpacity));
     }
 
     private static VideoPokerOptions LoadOptions()

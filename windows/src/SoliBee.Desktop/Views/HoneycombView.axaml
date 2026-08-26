@@ -50,19 +50,46 @@
     </UserControl.Styles>
 
     <Grid Background="Transparent" ClipToBounds="False">
-        <Image Source="avares://Honeycomb/Assets/hcblack.png" Opacity="0.15"
-               HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
-               IsVisible="{Binding !HideBee}" RenderTransformOrigin="0.5,0.5">
-            <Image.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform ScaleX="{Binding HoneycombWatermarkScale}" ScaleY="{Binding HoneycombWatermarkScale}"/>
-                    <TranslateTransform X="{Binding HoneycombWatermarkOffsetX}" Y="{Binding HoneycombWatermarkOffsetY}"/>
-                </TransformGroup>
-            </Image.RenderTransform>
-        </Image>
         <!-- Main Layout -->
         <Grid ColumnDefinitions="Auto, *, Auto, *, Auto" RowDefinitions="160, Auto" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False" Margin="40,0,40,80">
-            
+
+            <!-- Bee watermark — lives inside this Grid's own Row/ColumnSpan (not a
+                 window-centered sibling of it) so it scales in lockstep with however
+                 wide this row actually renders. Columns 1 and 3 are "*" spacer gaps
+                 between the fixed-size hand grids and the fixed-size board grid that
+                 grow with window width — a fixed-pixel RenderTransform only matched
+                 the one window width it was calibrated at, and let the bee spill
+                 outside the card cluster at any other width. Scoped to Grid.Row="1"
+                 only (not RowSpan into Row 0's fixed 160px banner row too) — spanning
+                 a fixed row and an Auto row made this Viewbox's own natural size get
+                 counted toward the Auto row's height without crediting the 160px the
+                 fixed row already guarantees, inflating Row 1 and pushing the whole
+                 board down. Scoped to just Row 1, it competes on equal footing with
+                 the hand/board grids that already size that row (all ~900px), so it
+                 can't inflate it. The Canvas below is a fixed "design" reference the
+                 size of Row 1's own natural layout (spacer columns at their minimum:
+                 410+40 + 609+40 + 410+40 wide, 860+40 tall); the Viewbox uniformly
+                 rescales that whole canvas — bee position and size together — to fit
+                 however big Row 1's Grid cell actually is right now, so
+                 Scale/OffsetX/OffsetY stay correct at every window width instead of
+                 just one. -->
+            <Viewbox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5"
+                     Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                     IsHitTestVisible="False">
+                <Canvas Width="1549" Height="900">
+                    <Image Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
+                           Canvas.Left="262.5" Canvas.Top="-62" IsHitTestVisible="False"
+                           RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform ScaleX="{Binding HoneycombWatermarkScale}" ScaleY="{Binding HoneycombWatermarkScale}"/>
+                                <TranslateTransform X="{Binding HoneycombWatermarkOffsetX}" Y="{Binding HoneycombWatermarkOffsetY}"/>
+                            </TransformGroup>
+                        </Image.RenderTransform>
+                    </Image>
+                </Canvas>
+            </Viewbox>
+
             <!-- Left Column: Player Hand (2-2-1 Pyramid) -->
             <Grid Grid.Column="0" Grid.Row="1" Width="410" Height="860" Margin="20" ClipToBounds="False" ZIndex="10">
                 <TextBlock x:Name="PlayerHandLabel" Text="PLAYER" Foreground="White" FontWeight="ExtraBold" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-35,0,0" Opacity="0.8"/>
