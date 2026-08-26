@@ -10,8 +10,8 @@
                IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
                 <TransformGroup>
-                    <ScaleTransform ScaleX="{Binding Options.VideoPokerWatermarkScale}" ScaleY="{Binding Options.VideoPokerWatermarkScale}"/>
-                    <TranslateTransform X="{Binding Options.VideoPokerWatermarkOffsetX}" Y="{Binding Options.VideoPokerWatermarkOffsetY}"/>
+                    <ScaleTransform ScaleX="{Binding VideoPokerWatermarkScale}" ScaleY="{Binding VideoPokerWatermarkScale}"/>
+                    <TranslateTransform X="{Binding VideoPokerWatermarkOffsetX}" Y="{Binding VideoPokerWatermarkOffsetY}"/>
                 </TransformGroup>
             </Image.RenderTransform>
         </Image>
@@ -106,35 +106,44 @@
 
                     <StackPanel x:Name="CardsRow" Orientation="Horizontal" Spacing="0" HorizontalAlignment="Center">
 
-                        <!-- CardSlot size matches CardView's own native 128x181 exactly (was
-                             190x268.375, ~1.48x bigger, making the Viewbox this used to wrap
-                             each CardView in scale cards up well past Blackjack's — which
-                             renders CardView at native size with no Viewbox at all). Now that
-                             slot size == child size, that Viewbox was a no-op for sizing but
-                             still an extra transform node the hold-wobble's RotateTransform had
-                             to compose through, which was throwing the wobble's rotation off —
-                             removed, CardView is a direct child now, same as Blackjack. The
-                             overlap margin is scaled down to -40 (128 * 0.3125) to keep the
-                             same 31.25% overlap proportion the fan of cards had at the old size. -->
-                        <Grid x:Name="CardSlot0" Width="128" Height="181"
+                        <!-- CardSlot wraps each CardView in a Viewbox sized 190x268.375 (~1.48x
+                             CardView's native 128x181), matching Blackjack's CardBaseWidth scale
+                             (BlackjackView.axaml.cs MakeCardVisual) so cards render the same size
+                             on both screens. The hold-wobble RotateTransform targets the Viewbox
+                             itself (not the CardView inside it) — rotating the CardView would nest
+                             the animated transform inside the same node the Viewbox uses to compute
+                             its own scale each frame, which visibly threw the rotation off; rotating
+                             the Viewbox from the outside avoids that feedback loop entirely. The
+                             overlap margin is -59.375 (190 * 0.3125), a 31.25% overlap. -->
+                        <Grid x:Name="CardSlot0" Width="190" Height="268.375"
                               Tag="0" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card0View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox x:Name="Card0Box" Stretch="Uniform" Width="190" Height="268.375">
+                                <local:CardView x:Name="Card0View" IsHitTestVisible="False"/>
+                            </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot1" Width="128" Height="181" Margin="-40,0,0,0"
+                        <Grid x:Name="CardSlot1" Width="190" Height="268.375" Margin="-59.375,0,0,0"
                               Tag="1" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card1View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox x:Name="Card1Box" Stretch="Uniform" Width="190" Height="268.375">
+                                <local:CardView x:Name="Card1View" IsHitTestVisible="False"/>
+                            </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot2" Width="128" Height="181" Margin="-40,0,0,0"
+                        <Grid x:Name="CardSlot2" Width="190" Height="268.375" Margin="-59.375,0,0,0"
                               Tag="2" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card2View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox x:Name="Card2Box" Stretch="Uniform" Width="190" Height="268.375">
+                                <local:CardView x:Name="Card2View" IsHitTestVisible="False"/>
+                            </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot3" Width="128" Height="181" Margin="-40,0,0,0"
+                        <Grid x:Name="CardSlot3" Width="190" Height="268.375" Margin="-59.375,0,0,0"
                               Tag="3" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card3View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox x:Name="Card3Box" Stretch="Uniform" Width="190" Height="268.375">
+                                <local:CardView x:Name="Card3View" IsHitTestVisible="False"/>
+                            </Viewbox>
                         </Grid>
-                        <Grid x:Name="CardSlot4" Width="128" Height="181" Margin="-40,0,0,0"
+                        <Grid x:Name="CardSlot4" Width="190" Height="268.375" Margin="-59.375,0,0,0"
                               Tag="4" Background="Transparent" PointerPressed="CardSlot_PointerPressed">
-                            <local:CardView x:Name="Card4View" IsHitTestVisible="False" Width="128" Height="181"/>
+                            <Viewbox x:Name="Card4Box" Stretch="Uniform" Width="190" Height="268.375">
+                                <local:CardView x:Name="Card4View" IsHitTestVisible="False"/>
+                            </Viewbox>
                         </Grid>
 
                     </StackPanel>

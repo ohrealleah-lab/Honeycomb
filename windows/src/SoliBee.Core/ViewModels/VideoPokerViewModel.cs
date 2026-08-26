@@ -188,6 +188,17 @@ public partial class VideoPokerViewModel : ObservableObject
     public bool   IsDealing       => State.Phase == VideoPokerPhase.Deal || State.Phase == VideoPokerPhase.Result;
     public bool   IsHolding       => State.Phase == VideoPokerPhase.Holding;
 
+    // Flat passthroughs for the bee watermark's RenderTransform bindings (VideoPokerView.axaml).
+    // A binding path like "Options.VideoPokerWatermarkScale" only refreshes when its OWN
+    // property-changed notification fires; raising OnPropertyChanged(nameof(Options)) on
+    // rapid-fire ticks (dragging the calibration sliders) doesn't reliably force Avalonia to
+    // re-walk the nested path every time. Binding directly to these VM-level properties, with
+    // their own explicit OnPropertyChanged call in the OptionsChangedMessage handler below,
+    // sidesteps that.
+    public double VideoPokerWatermarkScale   => Options.VideoPokerWatermarkScale;
+    public double VideoPokerWatermarkOffsetX => Options.VideoPokerWatermarkOffsetX;
+    public double VideoPokerWatermarkOffsetY => Options.VideoPokerWatermarkOffsetY;
+
     // Matches Mac: Draw never costs new credits (the bet was already taken at Deal), but
     // starting a fresh Deal requires covering the current bet unless in free play.
     public bool   CanDeal         => IsHolding || Options.IsNoStressMode || State.SessionCredits >= State.CurrentBet;
@@ -238,6 +249,9 @@ public partial class VideoPokerViewModel : ObservableObject
             Options.VideoPokerWatermarkOffsetX = m.Options.VideoPokerWatermarkOffsetX;
             Options.VideoPokerWatermarkOffsetY = m.Options.VideoPokerWatermarkOffsetY;
             OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(VideoPokerWatermarkScale));
+            OnPropertyChanged(nameof(VideoPokerWatermarkOffsetX));
+            OnPropertyChanged(nameof(VideoPokerWatermarkOffsetY));
             NotifyStateChanged();
         });
     }

@@ -24,6 +24,7 @@ public partial class VideoPokerView : UserControl
 
     private readonly CardView[]  _cardViews = null!;
     private Grid[]               _cardSlots = null!;
+    private Viewbox[]            _cardBoxes = null!;
     private readonly Dictionary<string, Border> _payRowBorders = new();
     private TextBlock[] _payColHeaders      = null!;
     private TextBlock[] _payColHeadersRight = null!;
@@ -74,6 +75,7 @@ public partial class VideoPokerView : UserControl
 
         _cardViews = new[] { Card0View, Card1View, Card2View, Card3View, Card4View };
         _cardSlots = new[] { CardSlot0, CardSlot1, CardSlot2, CardSlot3, CardSlot4 };
+        _cardBoxes = new[] { Card0Box, Card1Box, Card2Box, Card3Box, Card4Box };
         _payColHeaders      = new[] { PayColHdr1,  PayColHdr2,  PayColHdr3,  PayColHdr4,  PayColHdr5  };
         _payColHeadersRight = new[] { PayColHdrR1, PayColHdrR2, PayColHdrR3, PayColHdrR4, PayColHdrR5 };
 
@@ -352,9 +354,9 @@ public partial class VideoPokerView : UserControl
     private void StartHoldWobble(int slot)
     {
         _holdWobbleTimers[slot]?.Stop();
-        _cardViews[slot].RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+        _cardBoxes[slot].RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
         var rotTx = new RotateTransform(0);
-        _cardViews[slot].RenderTransform = rotTx;
+        _cardBoxes[slot].RenderTransform = rotTx;
         double phase = 0;
         double amplitude = 10.0;
         _holdWobbleTimers[slot] = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
@@ -367,7 +369,7 @@ public partial class VideoPokerView : UserControl
             {
                 _holdWobbleTimers[slot]!.Stop();
                 _holdWobbleTimers[slot] = null;
-                _cardViews[slot].RenderTransform = null;
+                _cardBoxes[slot].RenderTransform = null;
             }
         };
         _holdWobbleTimers[slot]!.Start();
@@ -379,7 +381,7 @@ public partial class VideoPokerView : UserControl
         {
             _holdWobbleTimers[i]?.Stop();
             _holdWobbleTimers[i] = null;
-            _cardViews[i].RenderTransform = null;
+            _cardBoxes[i].RenderTransform = null;
         }
     }
 
