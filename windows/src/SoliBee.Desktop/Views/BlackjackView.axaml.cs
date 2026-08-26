@@ -111,6 +111,20 @@ public partial class BlackjackView : UserControl
         });
         vm.CheckLoadingBanner();
         Refresh(vm);
+
+        // Unlike VideoPoker's card slots (fixed, always-present elements in the AXAML),
+        // the dealer/player cards here are added to DealerCardsPanel/PlayerHandsContainer
+        // programmatically inside Refresh — the very first time that happens is right here,
+        // after this view already had at least one measure/arrange pass with those
+        // StackPanels empty. BoardFeltGrid's dealer/VS/player/button rows are all
+        // Height="Auto", so if that stale empty-content measurement isn't invalidated,
+        // the button row renders at the height it would occupy with no dealer/player
+        // cards at all — overlapping the (still-visible, since ClipToBounds="False")
+        // card placeholders instead of sitting below them. Forcing one synchronous
+        // layout pass here, now that the cards actually exist, avoids that first-frame
+        // glitch; a real Deal() naturally triggers enough of its own layout work
+        // (slide-in animations etc.) that it isn't affected.
+        BoardFeltGrid.UpdateLayout();
     }
 
     private void Vm_OnFlashBanner(string message)
