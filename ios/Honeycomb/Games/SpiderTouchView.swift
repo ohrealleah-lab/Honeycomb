@@ -56,7 +56,16 @@ struct SpiderTouchView: View {
                         .frame(height: 44)
 
                     if !isLandscape {
+                        // scaleEffect is a render-time transform — the VStack still lays
+                        // out siblings using the capsule's pre-scale size, so topRow/
+                        // tableauRow below never shift. anchor: .center splits the growth
+                        // evenly up/down from where the capsule already sits (rather than
+                        // .top, which grew it entirely downward into the foundations).
+                        // zIndex draws the now-slightly-overflowing capsule above topRow
+                        // instead of being painted under it.
                         statusCapsule
+                            .scaleEffect(1.25, anchor: .center)
+                            .zIndex(1)
                     }
 
                     topRow(cardW: cardW, cardH: cardH)
