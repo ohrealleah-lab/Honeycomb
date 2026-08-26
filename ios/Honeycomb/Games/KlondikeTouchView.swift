@@ -356,7 +356,16 @@ struct KlondikeTouchView: View {
             }
         }
         .frame(width: cardW, height: cardH, alignment: .topLeading)
-        .modifier(TouchHintHighlight(isHighlighted: hintTouches(viewModel.state.waste.id)))
+        // The stock/waste "draw" and "recycle" hints are modeled as stock↔waste
+        // source/target pairs (see GameViewModel's hint scoring), so a plain
+        // hintTouches(waste.id) check also lights up waste whenever stock is the
+        // hint's source or target — even though stock already rings itself (see
+        // stockView above). Excluding those two cases here matches mac's
+        // GameView (isHinted's stock exclusion) so only the stock pile rings for
+        // a draw/recycle hint, not both.
+        .modifier(TouchHintHighlight(isHighlighted: hintTouches(viewModel.state.waste.id)
+            && viewModel.activeHint?.sourcePileId != viewModel.state.stock.id
+            && viewModel.activeHint?.targetPileId != viewModel.state.stock.id))
         .background(frameTracker(id: viewModel.state.waste.id))
         .zIndex(2)
     }
