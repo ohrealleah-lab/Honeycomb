@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// Pure-vector casino chip button — no image assets. Used by Blackjack's iPad/iPhone
-/// landscape bet row (see BlackjackTouchView.bettingGridLandscape) in place of the
-/// rectangular casinoButton chips portrait still uses; the two are visually distinct
-/// by design, matching the request for a dedicated chip look on the landscape tray.
+/// Pure-vector casino chip button — no image assets. Used by Blackjack's bet row on
+/// iOS (BlackjackTouchView, both landscape and portrait) and mac (BlackjackView), in
+/// place of each platform's rectangular casinoButton chips.
 struct PokerChipView: View {
     let label: String
     let baseColor: Color

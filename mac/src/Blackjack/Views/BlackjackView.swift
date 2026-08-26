@@ -641,11 +641,11 @@ public struct BlackjackView: View {
 
                 if !viewModel.isFreePlay {
                     HStack(spacing: 12) {
-                        casinoButton(coordinator.L(.chip1),  color: .white, textColor: .black) { viewModel.addToBet(1) }
-                        casinoButton(coordinator.L(.chip5),  color: .red.opacity(0.85)) { viewModel.addToBet(5) }
-                        casinoButton(coordinator.L(.chip10), color: .blue.opacity(0.75)) { viewModel.addToBet(10) }
-                        casinoButton(coordinator.L(.chip25), color: .green.opacity(0.75)) { viewModel.addToBet(25) }
-                        casinoButton(coordinator.L(.chip2x), color: .orange.opacity(0.85)) { viewModel.doubleBet() }
+                        PokerChipView(label: coordinator.L(.chip1), baseColor: .white, stripeColor: .black.opacity(0.85), textColor: .black, diameter: Self.chipDiameter) { viewModel.addToBet(1) }
+                        PokerChipView(label: coordinator.L(.chip5), baseColor: Color(red: 0.88, green: 0.22, blue: 0.22), stripeColor: .white, textColor: .white, diameter: Self.chipDiameter) { viewModel.addToBet(5) }
+                        PokerChipView(label: coordinator.L(.chip10), baseColor: Color(red: 0.18, green: 0.50, blue: 0.92), stripeColor: .white, textColor: .white, diameter: Self.chipDiameter) { viewModel.addToBet(10) }
+                        PokerChipView(label: coordinator.L(.chip25), baseColor: Color(red: 0.18, green: 0.72, blue: 0.36), stripeColor: .white, textColor: .white, diameter: Self.chipDiameter) { viewModel.addToBet(25) }
+                        PokerChipView(label: coordinator.L(.chip2x), baseColor: Color(red: 0.95, green: 0.55, blue: 0.15), stripeColor: .white, textColor: .white, diameter: Self.chipDiameter) { viewModel.doubleBet() }
                     }
                 } else {
                     phantomChipRow
@@ -689,15 +689,18 @@ public struct BlackjackView: View {
     // measured/scaled height — never changes when the phase changes.
     private var phantomChipRow: some View {
         HStack(spacing: 12) {
-            casinoButton(coordinator.L(.chip1), color: .clear, textColor: .clear) {}
-            casinoButton(coordinator.L(.chip5), color: .clear, textColor: .clear) {}
-            casinoButton(coordinator.L(.chip10), color: .clear, textColor: .clear) {}
-            casinoButton(coordinator.L(.chip25), color: .clear, textColor: .clear) {}
-            casinoButton(coordinator.L(.chip2x), color: .clear, textColor: .clear) {}
+            ForEach(0..<5, id: \.self) { _ in
+                Circle().frame(width: Self.chipDiameter, height: Self.chipDiameter)
+            }
         }
         .opacity(0)
         .allowsHitTesting(false)
     }
+
+    // Matches PokerChipView's own default — kept explicit here (rather than relying on
+    // the type's default) since phantomChipRow needs the identical value without
+    // constructing a PokerChipView at all.
+    private static let chipDiameter: CGFloat = 46
 
     private func stackedButton(_ label: String, hotkey: String, color: Color,
                                textColor: Color = .white, disabled: Bool = false,
