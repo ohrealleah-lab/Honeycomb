@@ -127,7 +127,6 @@ struct KlondikeTouchView: View {
                 onNoStressModeChange: { viewModel.startNewGame() }
             ) {
                 KlondikeSettingsSection(viewModel: viewModel, coordinator: coordinator)
-                WatermarkScaleCalibrationSlider(coordinator: coordinator)
             }
         }
         .onAppear {

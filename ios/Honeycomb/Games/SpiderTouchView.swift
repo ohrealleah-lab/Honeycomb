@@ -130,7 +130,6 @@ struct SpiderTouchView: View {
                 onNoStressModeChange: { viewModel.startNewGame() }
             ) {
                 SpiderSettingsSection(viewModel: viewModel, coordinator: coordinator)
-                WatermarkScaleCalibrationSlider(coordinator: coordinator)
             }
         }
         .onAppear {

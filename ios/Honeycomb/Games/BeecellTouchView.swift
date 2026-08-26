@@ -126,13 +126,10 @@ struct BeecellTouchView: View {
                 coordinator: coordinator,
                 onShowStats: { showingStats = true },
                 hideHintBinding: $viewModel.options.hideHintButton,
-                onNoStressModeChange: { viewModel.startNewGame() }
+                onNoStressModeChange: { viewModel.startNewGame() },
+                showsGameSection: false
             ) {
-                // TEMPORARY — Beecell otherwise has no per-game settings on iOS
-                // (showsGameSection was false); flipped on just to host the bee
-                // watermark calibration slider below. Revert to showsGameSection:
-                // false + EmptyView() once the slider is removed.
-                WatermarkScaleCalibrationSlider(coordinator: coordinator)
+                EmptyView()
             }
         }
         .onAppear {

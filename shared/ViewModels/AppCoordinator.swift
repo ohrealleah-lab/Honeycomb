@@ -124,11 +124,11 @@ public final class AppCoordinator {
         didSet { UserDefaults.standard.set(hideBee, forKey: "global_hide_bee") }
     }
 
-    // MARK: - Bee watermark per-game scale (TEMPORARY — dev calibration)
+    // MARK: - Bee watermark per-game scale
     // One raw stored value per game, plus currentGameWatermarkScale below as the single
-    // read/write surface both GameWatermarkView and WatermarkScaleCalibrationSlider use.
-    // Once final per-game values are known, delete the calibration slider and change
-    // these six defaults to the calibrated constants — nothing else needs to change.
+    // read/write surface GameWatermarkView uses. Calibrated per platform (see the
+    // default constants in init()) — the calibration slider that produced these values
+    // has been removed on both mac and iOS now that they're final.
     public var klondikeWatermarkScale: Double {
         didSet { UserDefaults.standard.set(klondikeWatermarkScale, forKey: "watermark_scale_klondike") }
     }
@@ -170,9 +170,9 @@ public final class AppCoordinator {
         }
     }
 
-    // MARK: - Bee watermark per-game position (TEMPORARY — dev calibration)
-    // Same shape/removal plan as the scale block above — one raw X/Y pair per game,
-    // plus currentGameWatermarkOffsetX/Y as the single read/write surface.
+    // MARK: - Bee watermark per-game position
+    // Same shape as the scale block above — one raw X/Y pair per game, plus
+    // currentGameWatermarkOffsetX/Y as the single read/write surface.
     public var klondikeWatermarkOffsetX: Double {
         didSet { UserDefaults.standard.set(klondikeWatermarkOffsetX, forKey: "watermark_offsetX_klondike") }
     }
@@ -253,6 +253,133 @@ public final class AppCoordinator {
             }
         }
     }
+
+    // MARK: - Bee watermark per-game scale/position (iOS landscape variant)
+    // iOS is the only platform that distinguishes orientation (mac has no landscape/
+    // portrait concept) — GameWatermarkView picks between this set and the plain
+    // properties above based on the board's actual rendered aspect ratio. Same
+    // one-raw-value-per-game + single-read/write-surface shape as the portrait fields.
+    public var klondikeWatermarkScaleLandscape: Double {
+        didSet { UserDefaults.standard.set(klondikeWatermarkScaleLandscape, forKey: "watermark_scale_landscape_klondike") }
+    }
+    public var beecellWatermarkScaleLandscape: Double {
+        didSet { UserDefaults.standard.set(beecellWatermarkScaleLandscape, forKey: "watermark_scale_landscape_beecell") }
+    }
+    public var spiderWatermarkScaleLandscape: Double {
+        didSet { UserDefaults.standard.set(spiderWatermarkScaleLandscape, forKey: "watermark_scale_landscape_spider") }
+    }
+    public var videoPokerWatermarkScaleLandscape: Double {
+        didSet { UserDefaults.standard.set(videoPokerWatermarkScaleLandscape, forKey: "watermark_scale_landscape_videoPoker") }
+    }
+    public var blackjackWatermarkScaleLandscape: Double {
+        didSet { UserDefaults.standard.set(blackjackWatermarkScaleLandscape, forKey: "watermark_scale_landscape_blackjack") }
+    }
+    public var honeycombWatermarkScaleLandscape: Double {
+        didSet { UserDefaults.standard.set(honeycombWatermarkScaleLandscape, forKey: "watermark_scale_landscape_honeycomb") }
+    }
+    public var currentGameWatermarkScaleLandscape: Double {
+        get {
+            switch gameMode {
+            case .klondike:   return klondikeWatermarkScaleLandscape
+            case .beecell:    return beecellWatermarkScaleLandscape
+            case .spider:     return spiderWatermarkScaleLandscape
+            case .videoPoker: return videoPokerWatermarkScaleLandscape
+            case .blackjack:  return blackjackWatermarkScaleLandscape
+            case .honeycomb:  return honeycombWatermarkScaleLandscape
+            }
+        }
+        set {
+            switch gameMode {
+            case .klondike:   klondikeWatermarkScaleLandscape = newValue
+            case .beecell:    beecellWatermarkScaleLandscape = newValue
+            case .spider:     spiderWatermarkScaleLandscape = newValue
+            case .videoPoker: videoPokerWatermarkScaleLandscape = newValue
+            case .blackjack:  blackjackWatermarkScaleLandscape = newValue
+            case .honeycomb:  honeycombWatermarkScaleLandscape = newValue
+            }
+        }
+    }
+    public var klondikeWatermarkOffsetXLandscape: Double {
+        didSet { UserDefaults.standard.set(klondikeWatermarkOffsetXLandscape, forKey: "watermark_offsetX_landscape_klondike") }
+    }
+    public var klondikeWatermarkOffsetYLandscape: Double {
+        didSet { UserDefaults.standard.set(klondikeWatermarkOffsetYLandscape, forKey: "watermark_offsetY_landscape_klondike") }
+    }
+    public var beecellWatermarkOffsetXLandscape: Double {
+        didSet { UserDefaults.standard.set(beecellWatermarkOffsetXLandscape, forKey: "watermark_offsetX_landscape_beecell") }
+    }
+    public var beecellWatermarkOffsetYLandscape: Double {
+        didSet { UserDefaults.standard.set(beecellWatermarkOffsetYLandscape, forKey: "watermark_offsetY_landscape_beecell") }
+    }
+    public var spiderWatermarkOffsetXLandscape: Double {
+        didSet { UserDefaults.standard.set(spiderWatermarkOffsetXLandscape, forKey: "watermark_offsetX_landscape_spider") }
+    }
+    public var spiderWatermarkOffsetYLandscape: Double {
+        didSet { UserDefaults.standard.set(spiderWatermarkOffsetYLandscape, forKey: "watermark_offsetY_landscape_spider") }
+    }
+    public var videoPokerWatermarkOffsetXLandscape: Double {
+        didSet { UserDefaults.standard.set(videoPokerWatermarkOffsetXLandscape, forKey: "watermark_offsetX_landscape_videoPoker") }
+    }
+    public var videoPokerWatermarkOffsetYLandscape: Double {
+        didSet { UserDefaults.standard.set(videoPokerWatermarkOffsetYLandscape, forKey: "watermark_offsetY_landscape_videoPoker") }
+    }
+    public var blackjackWatermarkOffsetXLandscape: Double {
+        didSet { UserDefaults.standard.set(blackjackWatermarkOffsetXLandscape, forKey: "watermark_offsetX_landscape_blackjack") }
+    }
+    public var blackjackWatermarkOffsetYLandscape: Double {
+        didSet { UserDefaults.standard.set(blackjackWatermarkOffsetYLandscape, forKey: "watermark_offsetY_landscape_blackjack") }
+    }
+    public var honeycombWatermarkOffsetXLandscape: Double {
+        didSet { UserDefaults.standard.set(honeycombWatermarkOffsetXLandscape, forKey: "watermark_offsetX_landscape_honeycomb") }
+    }
+    public var honeycombWatermarkOffsetYLandscape: Double {
+        didSet { UserDefaults.standard.set(honeycombWatermarkOffsetYLandscape, forKey: "watermark_offsetY_landscape_honeycomb") }
+    }
+    public var currentGameWatermarkOffsetXLandscape: Double {
+        get {
+            switch gameMode {
+            case .klondike:   return klondikeWatermarkOffsetXLandscape
+            case .beecell:    return beecellWatermarkOffsetXLandscape
+            case .spider:     return spiderWatermarkOffsetXLandscape
+            case .videoPoker: return videoPokerWatermarkOffsetXLandscape
+            case .blackjack:  return blackjackWatermarkOffsetXLandscape
+            case .honeycomb:  return honeycombWatermarkOffsetXLandscape
+            }
+        }
+        set {
+            switch gameMode {
+            case .klondike:   klondikeWatermarkOffsetXLandscape = newValue
+            case .beecell:    beecellWatermarkOffsetXLandscape = newValue
+            case .spider:     spiderWatermarkOffsetXLandscape = newValue
+            case .videoPoker: videoPokerWatermarkOffsetXLandscape = newValue
+            case .blackjack:  blackjackWatermarkOffsetXLandscape = newValue
+            case .honeycomb:  honeycombWatermarkOffsetXLandscape = newValue
+            }
+        }
+    }
+    public var currentGameWatermarkOffsetYLandscape: Double {
+        get {
+            switch gameMode {
+            case .klondike:   return klondikeWatermarkOffsetYLandscape
+            case .beecell:    return beecellWatermarkOffsetYLandscape
+            case .spider:     return spiderWatermarkOffsetYLandscape
+            case .videoPoker: return videoPokerWatermarkOffsetYLandscape
+            case .blackjack:  return blackjackWatermarkOffsetYLandscape
+            case .honeycomb:  return honeycombWatermarkOffsetYLandscape
+            }
+        }
+        set {
+            switch gameMode {
+            case .klondike:   klondikeWatermarkOffsetYLandscape = newValue
+            case .beecell:    beecellWatermarkOffsetYLandscape = newValue
+            case .spider:     spiderWatermarkOffsetYLandscape = newValue
+            case .videoPoker: videoPokerWatermarkOffsetYLandscape = newValue
+            case .blackjack:  blackjackWatermarkOffsetYLandscape = newValue
+            case .honeycomb:  honeycombWatermarkOffsetYLandscape = newValue
+            }
+        }
+    }
+
     // App-wide UI language — not a theme field (no SoliBeeTheme entry, no
     // liveSaveActiveTheme), same single-source pattern as the theme fields above.
     // Every L() call reads this directly, and since AppCoordinator is @Observable,
@@ -454,24 +581,41 @@ public final class AppCoordinator {
         self.hideBee = UserDefaults.standard.object(forKey: "global_hide_bee") != nil
             ? UserDefaults.standard.bool(forKey: "global_hide_bee") : false
 
-        // Defaults below are calibrated from the mac app specifically (dialed in via
-        // the WatermarkScaleCalibrationSlider on mac, then baked in here as the
-        // shipped baseline) — iOS hasn't been calibrated yet, so it keeps the generic
-        // 1.0/0.0 placeholders until its own slider values are handed over.
-        #if canImport(AppKit)
+        // Defaults below are calibrated per platform — mac's own values (dialed in via
+        // mac's WatermarkScaleCalibrationSlider before it was removed there) and iOS's
+        // own values (dialed in via iOS's own portrait/landscape sliders, also now
+        // removed). Both platforms' calibration is done, so these are final constants,
+        // not placeholders.
+        #if os(iOS)
+        let defaultKlondikeScale = 1.299, defaultKlondikeOffsetX = 0.0, defaultKlondikeOffsetY = -24.3
+        let defaultBeecellScale = 1.297, defaultBeecellOffsetX = 0.0, defaultBeecellOffsetY = -24.2
+        let defaultSpiderScale = 1.301, defaultSpiderOffsetX = 0.0, defaultSpiderOffsetY = -22.3
+        let defaultVideoPokerScale = 1.881, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 15.3
+        let defaultBlackjackScale = 1.880, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = -15.3
+        let defaultHoneycombScale = 1.440, defaultHoneycombOffsetX = -15.7, defaultHoneycombOffsetY = 75.8
+
+        let defaultKlondikeScaleLandscape = 1.299, defaultKlondikeOffsetXLandscape = 0.0, defaultKlondikeOffsetYLandscape = 110.2
+        let defaultBeecellScaleLandscape = 1.297, defaultBeecellOffsetXLandscape = 0.0, defaultBeecellOffsetYLandscape = 110.3
+        let defaultSpiderScaleLandscape = 1.301, defaultSpiderOffsetXLandscape = 0.0, defaultSpiderOffsetYLandscape = 93.2
+        let defaultVideoPokerScaleLandscape = 1.881, defaultVideoPokerOffsetXLandscape = 0.0, defaultVideoPokerOffsetYLandscape = 0.0
+        let defaultBlackjackScaleLandscape = 1.880, defaultBlackjackOffsetXLandscape = 0.0, defaultBlackjackOffsetYLandscape = 0.0
+        let defaultHoneycombScaleLandscape = 1.202, defaultHoneycombOffsetXLandscape = -12.8, defaultHoneycombOffsetYLandscape = 14.7
+        #else
         let defaultKlondikeScale = 1.299, defaultKlondikeOffsetX = 0.0, defaultKlondikeOffsetY = 110.2
         let defaultBeecellScale = 1.297, defaultBeecellOffsetX = 0.0, defaultBeecellOffsetY = 110.3
         let defaultSpiderScale = 1.301, defaultSpiderOffsetX = 0.0, defaultSpiderOffsetY = 93.2
         let defaultVideoPokerScale = 1.881, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
         let defaultBlackjackScale = 1.880, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
         let defaultHoneycombScale = 1.202, defaultHoneycombOffsetX = -12.8, defaultHoneycombOffsetY = 67.2
-        #else
-        let defaultKlondikeScale = 1.0, defaultKlondikeOffsetX = 0.0, defaultKlondikeOffsetY = 0.0
-        let defaultBeecellScale = 1.0, defaultBeecellOffsetX = 0.0, defaultBeecellOffsetY = 0.0
-        let defaultSpiderScale = 1.0, defaultSpiderOffsetX = 0.0, defaultSpiderOffsetY = 0.0
-        let defaultVideoPokerScale = 1.0, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
-        let defaultBlackjackScale = 1.0, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
-        let defaultHoneycombScale = 1.0, defaultHoneycombOffsetX = 0.0, defaultHoneycombOffsetY = 0.0
+
+        // mac has no orientation concept and never reads these — reusing the portrait
+        // numbers just gives its copies *a* sane value; never surfaced in mac's UI.
+        let defaultKlondikeScaleLandscape = defaultKlondikeScale, defaultKlondikeOffsetXLandscape = defaultKlondikeOffsetX, defaultKlondikeOffsetYLandscape = defaultKlondikeOffsetY
+        let defaultBeecellScaleLandscape = defaultBeecellScale, defaultBeecellOffsetXLandscape = defaultBeecellOffsetX, defaultBeecellOffsetYLandscape = defaultBeecellOffsetY
+        let defaultSpiderScaleLandscape = defaultSpiderScale, defaultSpiderOffsetXLandscape = defaultSpiderOffsetX, defaultSpiderOffsetYLandscape = defaultSpiderOffsetY
+        let defaultVideoPokerScaleLandscape = defaultVideoPokerScale, defaultVideoPokerOffsetXLandscape = defaultVideoPokerOffsetX, defaultVideoPokerOffsetYLandscape = defaultVideoPokerOffsetY
+        let defaultBlackjackScaleLandscape = defaultBlackjackScale, defaultBlackjackOffsetXLandscape = defaultBlackjackOffsetX, defaultBlackjackOffsetYLandscape = defaultBlackjackOffsetY
+        let defaultHoneycombScaleLandscape = defaultHoneycombScale, defaultHoneycombOffsetXLandscape = defaultHoneycombOffsetX, defaultHoneycombOffsetYLandscape = defaultHoneycombOffsetY
         #endif
 
         self.klondikeWatermarkScale = UserDefaults.standard.object(forKey: "watermark_scale_klondike") != nil
@@ -510,6 +654,46 @@ public final class AppCoordinator {
             ? UserDefaults.standard.double(forKey: "watermark_offsetX_honeycomb") : defaultHoneycombOffsetX
         self.honeycombWatermarkOffsetY = UserDefaults.standard.object(forKey: "watermark_offsetY_honeycomb") != nil
             ? UserDefaults.standard.double(forKey: "watermark_offsetY_honeycomb") : defaultHoneycombOffsetY
+
+        // Landscape variant — final calibrated defaults (see the platform-conditional
+        // block above).
+        self.klondikeWatermarkScaleLandscape = UserDefaults.standard.object(forKey: "watermark_scale_landscape_klondike") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_landscape_klondike") : defaultKlondikeScaleLandscape
+        self.beecellWatermarkScaleLandscape = UserDefaults.standard.object(forKey: "watermark_scale_landscape_beecell") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_landscape_beecell") : defaultBeecellScaleLandscape
+        self.spiderWatermarkScaleLandscape = UserDefaults.standard.object(forKey: "watermark_scale_landscape_spider") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_landscape_spider") : defaultSpiderScaleLandscape
+        self.videoPokerWatermarkScaleLandscape = UserDefaults.standard.object(forKey: "watermark_scale_landscape_videoPoker") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_landscape_videoPoker") : defaultVideoPokerScaleLandscape
+        self.blackjackWatermarkScaleLandscape = UserDefaults.standard.object(forKey: "watermark_scale_landscape_blackjack") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_landscape_blackjack") : defaultBlackjackScaleLandscape
+        self.honeycombWatermarkScaleLandscape = UserDefaults.standard.object(forKey: "watermark_scale_landscape_honeycomb") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_scale_landscape_honeycomb") : defaultHoneycombScaleLandscape
+        self.klondikeWatermarkOffsetXLandscape = UserDefaults.standard.object(forKey: "watermark_offsetX_landscape_klondike") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_landscape_klondike") : defaultKlondikeOffsetXLandscape
+        self.klondikeWatermarkOffsetYLandscape = UserDefaults.standard.object(forKey: "watermark_offsetY_landscape_klondike") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_landscape_klondike") : defaultKlondikeOffsetYLandscape
+        self.beecellWatermarkOffsetXLandscape = UserDefaults.standard.object(forKey: "watermark_offsetX_landscape_beecell") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_landscape_beecell") : defaultBeecellOffsetXLandscape
+        self.beecellWatermarkOffsetYLandscape = UserDefaults.standard.object(forKey: "watermark_offsetY_landscape_beecell") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_landscape_beecell") : defaultBeecellOffsetYLandscape
+        self.spiderWatermarkOffsetXLandscape = UserDefaults.standard.object(forKey: "watermark_offsetX_landscape_spider") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_landscape_spider") : defaultSpiderOffsetXLandscape
+        self.spiderWatermarkOffsetYLandscape = UserDefaults.standard.object(forKey: "watermark_offsetY_landscape_spider") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_landscape_spider") : defaultSpiderOffsetYLandscape
+        self.videoPokerWatermarkOffsetXLandscape = UserDefaults.standard.object(forKey: "watermark_offsetX_landscape_videoPoker") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_landscape_videoPoker") : defaultVideoPokerOffsetXLandscape
+        self.videoPokerWatermarkOffsetYLandscape = UserDefaults.standard.object(forKey: "watermark_offsetY_landscape_videoPoker") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_landscape_videoPoker") : defaultVideoPokerOffsetYLandscape
+        self.blackjackWatermarkOffsetXLandscape = UserDefaults.standard.object(forKey: "watermark_offsetX_landscape_blackjack") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_landscape_blackjack") : defaultBlackjackOffsetXLandscape
+        self.blackjackWatermarkOffsetYLandscape = UserDefaults.standard.object(forKey: "watermark_offsetY_landscape_blackjack") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_landscape_blackjack") : defaultBlackjackOffsetYLandscape
+        self.honeycombWatermarkOffsetXLandscape = UserDefaults.standard.object(forKey: "watermark_offsetX_landscape_honeycomb") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetX_landscape_honeycomb") : defaultHoneycombOffsetXLandscape
+        self.honeycombWatermarkOffsetYLandscape = UserDefaults.standard.object(forKey: "watermark_offsetY_landscape_honeycomb") != nil
+            ? UserDefaults.standard.double(forKey: "watermark_offsetY_landscape_honeycomb") : defaultHoneycombOffsetYLandscape
+
         self.language = AppLanguage(rawValue: UserDefaults.standard.string(forKey: "appLanguage") ?? "") ?? .english
         #if canImport(AppKit)
         self.stayOnTop = UserDefaults.standard.object(forKey: "stayOnTop") != nil
