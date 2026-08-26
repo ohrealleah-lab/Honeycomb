@@ -8,9 +8,10 @@ namespace SoliBee.Desktop.Views;
 
 /// Pure-vector casino chip face — no image assets. Mirrors the SwiftUI PokerChipView
 /// used by the iOS/mac Blackjack ports (shared/Views/PokerChipView.swift) so all three
-/// platforms render the same chip design: a radial-gradient disc, 6 evenly-spaced edge
-/// marks, a flat inner inlay disc, and centered denomination text. Purely visual —
-/// wrap in a Button (see BlackjackView.axaml's "poker-chip" style) for click handling.
+/// platforms render the same chip design: a soft drop shadow, a radial-gradient disc,
+/// 6 evenly-spaced edge marks, a flat inner inlay disc, and centered denomination text.
+/// Purely visual — wrap in a Button (see BlackjackView.axaml's "poker-chip" style) for
+/// click handling.
 public class PokerChipFace : Control
 {
     public static readonly StyledProperty<string> LabelProperty =
@@ -38,23 +39,47 @@ public class PokerChipFace : Control
     // evenly spaced, at any diameter.
     private const int EdgeMarkCount = 6;
 
+    // Shared across every chip instance — these never depend on this control's own
+    // BaseColor/StripeColor/TextColor, so there's nothing to rebuild per-instance.
+    private static readonly IBrush ShadowBrushOuter = new SolidColorBrush(Colors.Black, 0.12);
+    private static readonly IBrush ShadowBrushInner = new SolidColorBrush(Colors.Black, 0.18);
+    private static readonly IPen InlayStrokePen = new Pen(new SolidColorBrush(Color.FromArgb(64, 0, 0, 0)), 1);
+
+    // Per-instance brushes derived from BaseColor/StripeColor/TextColor, rebuilt only
+    // when one of those actually changes (OnPropertyChanged below) rather than
+    // allocated fresh on every Render() call — Render() can run on any invalidation,
+    // not just a real color change, so allocating IBrush instances there is wasted GC
+    // pressure for values that in practice change rarely if ever. Matches this
+    // project's established static/cached-brush convention (see CardView.axaml.cs).
+    private IBrush _outerGradientBrush = Brushes.Transparent;
+    private IBrush _stripeBrush = Brushes.Transparent;
+    private IBrush _inlayBrush = Brushes.Transparent;
+    private IBrush _textBrush = Brushes.Transparent;
+
     static PokerChipFace()
     {
         AffectsRender<PokerChipFace>(LabelProperty, BaseColorProperty, StripeColorProperty, TextColorProperty, DiameterProperty);
         AffectsMeasure<PokerChipFace>(DiameterProperty);
     }
 
-    protected override Size MeasureOverride(Size availableSize) => new(Diameter, Diameter);
-
-    public override void Render(DrawingContext context)
+    public PokerChipFace()
     {
-        var d = Diameter;
-        var center = new Point(d / 2, d / 2);
+        RebuildColorBrushes();
+    }
 
-        // 1. Base outer disc with a radial "3D depth" gradient — brighter center fading
-        //    to the flat base color at the rim.
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == BaseColorProperty || change.Property == StripeColorProperty || change.Property == TextColorProperty)
+        {
+            RebuildColorBrushes();
+        }
+    }
+
+    private void RebuildColorBrushes()
+    {
         var baseColor = BaseColor;
-        var gradient = new RadialGradientBrush
+        _outerGradientBrush = new RadialGradientBrush
         {
             GradientStops =
             {
@@ -62,11 +87,41 @@ public class PokerChipFace : Control
                 new GradientStop(baseColor, 1),
             },
         };
-        context.DrawEllipse(gradient, null, center, d / 2, d / 2);
+        _stripeBrush = new SolidColorBrush(StripeColor);
+        _inlayBrush = new SolidColorBrush(baseColor);
+        _textBrush = new SolidColorBrush(TextColor);
+    }
+
+    // The drop shadow (below) is drawn a few px larger than the disc itself, so the
+    // control needs to measure a bit bigger than Diameter or that overshoot gets
+    // clipped flat at the control's own (square) layout bounds by the containing
+    // ContentPresenter — a circle cropped by a square edge reads as a rounded square,
+    // not a shadow. This padding gives the shadow room without affecting the disc's
+    // own drawn size.
+    private const double ShadowPadding = 4;
+
+    protected override Size MeasureOverride(Size availableSize) =>
+        new(Diameter + ShadowPadding * 2, Diameter + ShadowPadding * 2);
+
+    public override void Render(DrawingContext context)
+    {
+        var d = Diameter;
+        var center = new Point(ShadowPadding + d / 2, ShadowPadding + d / 2);
+
+        // 0. Soft drop shadow behind the disc — matches the SwiftUI original's
+        //    .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 2). DrawingContext
+        //    has no blur primitive, so this approximates the blur with two progressively
+        //    larger, progressively fainter offset ellipses instead of one hard-edged one.
+        var shadowCenter = new Point(center.X, center.Y + 2);
+        context.DrawEllipse(ShadowBrushOuter, null, shadowCenter, d / 2 + 3, d / 2 + 3);
+        context.DrawEllipse(ShadowBrushInner, null, shadowCenter, d / 2 + 1.5, d / 2 + 1.5);
+
+        // 1. Base outer disc with a radial "3D depth" gradient — brighter center fading
+        //    to the flat base color at the rim.
+        context.DrawEllipse(_outerGradientBrush, null, center, d / 2, d / 2);
 
         // 2. Six evenly-spaced edge marks — draw once at 12 o'clock, then rotate the
         //    drawing surface around the chip's center for each of the remaining five.
-        var stripeBrush = new SolidColorBrush(StripeColor);
         var markWidth = d * 0.10;
         var markHeight = d * 0.16;
         var markRect = new RoundedRect(
@@ -83,15 +138,12 @@ public class PokerChipFace : Control
                 * Matrix.CreateTranslation(center.X, center.Y);
             using (context.PushTransform(rotateAroundCenter))
             {
-                context.DrawRectangle(stripeBrush, null, markRect);
+                context.DrawRectangle(_stripeBrush, null, markRect);
             }
         }
 
         // 3. Flat solid inner inlay disc.
-        context.DrawEllipse(
-            new SolidColorBrush(baseColor),
-            new Pen(new SolidColorBrush(Color.FromArgb(64, 0, 0, 0)), 1),
-            center, d * 0.31, d * 0.31);
+        context.DrawEllipse(_inlayBrush, InlayStrokePen, center, d * 0.31, d * 0.31);
 
         // 4. Ultra-bold denomination text, centered.
         var text = new FormattedText(
@@ -100,7 +152,7 @@ public class PokerChipFace : Control
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI", FontStyle.Normal, FontWeight.Black),
             d * 0.32,
-            new SolidColorBrush(TextColor));
+            _textBrush);
         context.DrawText(text, new Point(center.X - text.Width / 2, center.Y - text.Height / 2));
     }
 }

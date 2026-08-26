@@ -263,11 +263,22 @@
                 </Transitions>
             </Setter>
         </Style>
+        <!-- FluentTheme's default Button style doesn't set Background on the Button
+             itself for :pointerover/:pressed — it targets the ContentPresenter inside
+             the template directly (same reason the Opacity setter below already has to
+             use /template/ ContentPresenter rather than plain Button). A setter on
+             Button.poker-chip:pointerover/:pressed therefore loses to that more
+             specific template-part style and the theme's semi-transparent rectangular
+             background still shows through as a square patch behind the round chip. -->
+        <Style Selector="Button.poker-chip:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Opacity" Value="0.85"/>
+        </Style>
+        <Style Selector="Button.poker-chip:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="Button.poker-chip:pressed">
             <Setter Property="RenderTransform" Value="scale(0.90)"/>
-        </Style>
-        <Style Selector="Button.poker-chip:pointerover /template/ ContentPresenter">
-            <Setter Property="Opacity" Value="0.85"/>
         </Style>
         <Style Selector="Button.poker-chip:disabled">
             <Setter Property="Opacity" Value="0.35"/>
