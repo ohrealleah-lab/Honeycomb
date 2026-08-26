@@ -182,7 +182,7 @@ struct OptionsSheetShell<Content: View>: View {
                 // left to scale with the sheet) so it sits behind the content instead of
                 // overpowering it. Shared here (not per-game) since every game's Preferences
                 // sheet, plus the Honeycomb Rules sheet, is built on this one shell.
-                if let image = NSImage(named: "Solibee") {
+                if !coordinator.hideBee, let image = NSImage(named: "Solibee") {
                     Image(nsImage: image)
                         .resizable()
                         .scaledToFit()

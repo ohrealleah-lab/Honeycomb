@@ -260,7 +260,7 @@ public struct HoneycombDecksView: View {
                         // size, and attached to this whole column (not inside the ScrollView
                         // above) so it stays put behind the title/filter bar/card grid
                         // instead of scrolling away with the cards.
-                        if let image = NSImage(named: "Solibee") {
+                        if !coordinator.hideBee, let image = NSImage(named: "Solibee") {
                             Image(nsImage: image)
                                 .resizable()
                                 .scaledToFit()

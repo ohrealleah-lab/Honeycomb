@@ -48,6 +48,12 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     [ObservableProperty]
     private double _klondikeWatermarkOffsetY;
 
+    // Flat passthrough so MainWindow's shared Preferences/Stats overlay watermarks (used
+    // by all 6 games, unlike the per-game board watermark above) can bind a single
+    // "HideBee" path regardless of which game's ViewModel is currently the DataContext —
+    // matching HoneycombViewModel's own top-level HideBee.
+    public bool HideBee => Options.HideBee;
+
     [ObservableProperty]
     private CardPointPopup? _pointPopup;
 
@@ -228,6 +234,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             bool noStressJustDisabled = !m.Options.IsNoStressMode && Options.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(HideBee));
             KlondikeWatermarkScale   = m.Options.KlondikeWatermarkScale;
             KlondikeWatermarkOffsetX = m.Options.KlondikeWatermarkOffsetX;
             KlondikeWatermarkOffsetY = m.Options.KlondikeWatermarkOffsetY;

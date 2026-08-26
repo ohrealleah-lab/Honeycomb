@@ -51,6 +51,12 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     [ObservableProperty]
     private double _spiderWatermarkOffsetY;
 
+    // Flat passthrough so MainWindow's shared Preferences/Stats overlay watermarks (used
+    // by all 6 games, unlike the per-game board watermark above) can bind a single
+    // "HideBee" path regardless of which game's ViewModel is currently the DataContext —
+    // matching HoneycombViewModel's own top-level HideBee.
+    public bool HideBee => Options.HideBee;
+
     public List<Pile> StockPiles { get; } = new();
     public List<Pile> Tableaus { get; } = new();
     public List<Pile> Foundations { get; } = new();
@@ -193,6 +199,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
             bool noStressJustEnabled = m.Options.IsNoStressMode && !old.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(HideBee));
             SpiderWatermarkScale   = m.Options.SpiderWatermarkScale;
             SpiderWatermarkOffsetX = m.Options.SpiderWatermarkOffsetX;
             SpiderWatermarkOffsetY = m.Options.SpiderWatermarkOffsetY;

@@ -1493,7 +1493,7 @@ struct StatsView: View {
             // for the two-column stat grid above, and an unconstrained .scaledToFit grows
             // to fill that extra width, overpowering the stat text instead of sitting
             // behind it as a watermark.
-            if let image = NSImage(named: "Solibee") {
+            if !coordinator.hideBee, let image = NSImage(named: "Solibee") {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()

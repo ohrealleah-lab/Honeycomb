@@ -40,6 +40,11 @@ public partial class BlackjackViewModel : ObservableObject
     public double BlackjackWatermarkOffsetX => Options.BlackjackWatermarkOffsetX;
     public double BlackjackWatermarkOffsetY => Options.BlackjackWatermarkOffsetY;
 
+    // Same flat-passthrough shape as the watermark properties above, but for MainWindow's
+    // shared Preferences/Stats overlay watermarks (used by all 6 games) rather than the
+    // per-game board watermark — matching HoneycombViewModel's own top-level HideBee.
+    public bool HideBee => Options.HideBee;
+
     public void AdvanceBannerQueue()
     {
         if (_bannerQueue.Count == 0) return;
@@ -208,6 +213,7 @@ public partial class BlackjackViewModel : ObservableObject
             Options.BlackjackWatermarkOffsetX = m.Options.BlackjackWatermarkOffsetX;
             Options.BlackjackWatermarkOffsetY = m.Options.BlackjackWatermarkOffsetY;
             OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(HideBee));
             OnPropertyChanged(nameof(BlackjackWatermarkScale));
             OnPropertyChanged(nameof(BlackjackWatermarkOffsetX));
             OnPropertyChanged(nameof(BlackjackWatermarkOffsetY));
@@ -622,6 +628,7 @@ public partial class BlackjackViewModel : ObservableObject
         // Options is the same live instance Preferences edits directly (single consumer,
         // no cross-ViewModel broadcast needed) — notify so the view refreshes immediately.
         OnPropertyChanged(nameof(Options));
+        OnPropertyChanged(nameof(HideBee));
     }
 
     private static BlackjackOptions LoadOptions()

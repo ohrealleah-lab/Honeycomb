@@ -1012,7 +1012,7 @@ struct SpiderStatsView: View {
         .background {
             // See Klondike's matching StatsView — fixed max size so the watermark sits
             // behind the stat text instead of scaling up with the panel width.
-            if let image = NSImage(named: "Solibee") {
+            if !coordinator.hideBee, let image = NSImage(named: "Solibee") {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()

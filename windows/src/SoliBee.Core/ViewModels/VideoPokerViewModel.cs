@@ -199,6 +199,11 @@ public partial class VideoPokerViewModel : ObservableObject
     public double VideoPokerWatermarkOffsetX => Options.VideoPokerWatermarkOffsetX;
     public double VideoPokerWatermarkOffsetY => Options.VideoPokerWatermarkOffsetY;
 
+    // Same flat-passthrough shape as the watermark properties above, but for MainWindow's
+    // shared Preferences/Stats overlay watermarks (used by all 6 games) rather than the
+    // per-game board watermark — matching HoneycombViewModel's own top-level HideBee.
+    public bool HideBee => Options.HideBee;
+
     // Matches Mac: Draw never costs new credits (the bet was already taken at Deal), but
     // starting a fresh Deal requires covering the current bet unless in free play.
     public bool   CanDeal         => IsHolding || Options.IsNoStressMode || State.SessionCredits >= State.CurrentBet;
@@ -249,6 +254,7 @@ public partial class VideoPokerViewModel : ObservableObject
             Options.VideoPokerWatermarkOffsetX = m.Options.VideoPokerWatermarkOffsetX;
             Options.VideoPokerWatermarkOffsetY = m.Options.VideoPokerWatermarkOffsetY;
             OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(HideBee));
             OnPropertyChanged(nameof(VideoPokerWatermarkScale));
             OnPropertyChanged(nameof(VideoPokerWatermarkOffsetX));
             OnPropertyChanged(nameof(VideoPokerWatermarkOffsetY));
@@ -618,6 +624,7 @@ public partial class VideoPokerViewModel : ObservableObject
         // Options is the same live instance Preferences edits directly (single consumer,
         // no cross-ViewModel broadcast needed) — notify so the view refreshes immediately.
         OnPropertyChanged(nameof(Options));
+        OnPropertyChanged(nameof(HideBee));
     }
 
     private static VideoPokerOptions LoadOptions()

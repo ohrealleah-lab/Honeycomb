@@ -142,7 +142,8 @@
                      scroll away with the cards instead of sitting underneath them. -->
                 <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
                        MaxWidth="550" MaxHeight="550" HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False" />
+                       Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False"
+                       IsVisible="{Binding !HideBee}" />
 
                 <TextBlock x:Name="CardBankTitle" Grid.Row="0"
                            Text="CARD BANK" FontSize="12" FontWeight="Bold"

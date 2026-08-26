@@ -120,7 +120,7 @@ public struct HoneycombStatsView: View {
         }
         .frame(width: 680, height: 480)
         .background {
-            if let image = NSImage(named: "Solibee") {
+            if !coordinator.hideBee, let image = NSImage(named: "Solibee") {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()

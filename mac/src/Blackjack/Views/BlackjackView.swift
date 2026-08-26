@@ -958,5 +958,20 @@ struct BlackjackStatsView: View {
             .padding(.bottom, 16)
         }
         .frame(width: 340)
+        .background {
+            // See Klondike's matching StatsView — fixed max size so the watermark sits
+            // behind the stat text instead of scaling up with the panel width.
+            if !coordinator.hideBee, let image = NSImage(named: "Solibee") {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 220)
+                    .opacity(0.15)
+            }
+        }
+        .background(
+            Color(NSColor.windowBackgroundColor)
+                .overlay(Color.primary.opacity(0.04))
+        )
     }
 }

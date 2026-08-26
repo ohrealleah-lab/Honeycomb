@@ -239,7 +239,8 @@
                             <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
                                    MaxWidth="220" MaxHeight="220" HorizontalAlignment="Right" VerticalAlignment="Top"
                                    Margin="0,100,0,0"
-                                   Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False" />
+                                   Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False"
+                                   IsVisible="{Binding !HideBee}" />
 
                             <!-- Header row: shared "‹ Back" chip (left, hidden on the main
                                  Preferences page) + centered title — PreferencesView toggles
@@ -318,7 +319,8 @@
                              unconstrained Stretch="Uniform" image grows to fill that extra width,
                              overpowering the stat text instead of sitting behind it as a watermark. -->
                         <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
-                               MaxWidth="220" MaxHeight="220" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                               MaxWidth="220" MaxHeight="220" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsVisible="{Binding !HideBee}" />
 
                     <!-- Width is fixed per-panel in code-behind (PopulateStatsPanel's callees) —
                          460 for Klondike/Freecell/Spider's two-column StatsFixedRows grid below,

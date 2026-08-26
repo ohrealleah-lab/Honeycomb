@@ -68,6 +68,12 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     [ObservableProperty]
     private double _freecellWatermarkOffsetY;
 
+    // Flat passthrough so MainWindow's shared Preferences/Stats overlay watermarks (used
+    // by all 6 games, unlike the per-game board watermark above) can bind a single
+    // "HideBee" path regardless of which game's ViewModel is currently the DataContext —
+    // matching HoneycombViewModel's own top-level HideBee.
+    public bool HideBee => Options.HideBee;
+
     public List<Pile> FreeCells { get; } = new();
     public List<Pile> Foundations { get; } = new();
     public List<Pile> Tableaus { get; } = new();
@@ -219,6 +225,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
             bool noStressJustDisabled = !m.Options.IsNoStressMode && old.IsNoStressMode;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(HideBee));
             FreecellWatermarkScale   = m.Options.FreecellWatermarkScale;
             FreecellWatermarkOffsetX = m.Options.FreecellWatermarkOffsetX;
             FreecellWatermarkOffsetY = m.Options.FreecellWatermarkOffsetY;
