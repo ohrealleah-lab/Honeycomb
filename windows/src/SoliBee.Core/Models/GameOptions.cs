@@ -68,32 +68,30 @@ public class GameOptions
     // Hides the centered Solibee watermark drawn behind every game's board.
     public bool HideBee { get; set; } = false;
 
-    // TEMPORARY — dev calibration values for the bee watermark's per-game scale/position.
-    // Defaults below are imported from the mac app's own calibrated values (dialed in via
-    // WatermarkScaleSection on mac, then baked in here as Windows' starting point) — not
-    // independently calibrated for Windows' own board proportions yet. Once Windows has
-    // its own final values, delete the Preferences sliders (WatermarkScaleSection in
-    // PreferencesView.axaml + its code-behind) and change these defaults to the calibrated
-    // constants; the board views' Image/TransformGroup bindings need no changes.
-    public double KlondikeWatermarkScale   { get; set; } = 1.299;
-    public double FreecellWatermarkScale   { get; set; } = 1.297;
-    public double SpiderWatermarkScale     { get; set; } = 1.301;
-    public double VideoPokerWatermarkScale { get; set; } = 1.881;
-    public double BlackjackWatermarkScale  { get; set; } = 1.880;
-    public double HoneycombWatermarkScale  { get; set; } = 1.202;
+    // Bee watermark per-game scale/position — calibrated on Windows' own board
+    // proportions (read from the local Windows install's settings.json) and baked in
+    // here as Windows' shipped default, mirroring how mac's own calibrated values were
+    // baked in as its default. The dev calibration sliders (formerly WatermarkScaleSection
+    // in PreferencesView.axaml + its code-behind) have been removed now that these are final.
+    public double KlondikeWatermarkScale   { get; set; } = 1.2956;
+    public double FreecellWatermarkScale   { get; set; } = 1.2956;
+    public double SpiderWatermarkScale     { get; set; } = 1.7856;
+    public double VideoPokerWatermarkScale { get; set; } = 1.9424;
+    public double BlackjackWatermarkScale  { get; set; } = 1.9424;
+    public double HoneycombWatermarkScale  { get; set; } = 1.1388;
 
-    public double KlondikeWatermarkOffsetX   { get; set; } = 0.0;
-    public double KlondikeWatermarkOffsetY   { get; set; } = 110.2;
-    public double FreecellWatermarkOffsetX   { get; set; } = 0.0;
-    public double FreecellWatermarkOffsetY   { get; set; } = 110.3;
-    public double SpiderWatermarkOffsetX     { get; set; } = 0.0;
-    public double SpiderWatermarkOffsetY     { get; set; } = 93.2;
-    public double VideoPokerWatermarkOffsetX { get; set; } = 0.0;
-    public double VideoPokerWatermarkOffsetY { get; set; } = 0.0;
-    public double BlackjackWatermarkOffsetX  { get; set; } = 0.0;
-    public double BlackjackWatermarkOffsetY  { get; set; } = 0.0;
-    public double HoneycombWatermarkOffsetX  { get; set; } = -12.8;
-    public double HoneycombWatermarkOffsetY  { get; set; } = 67.2;
+    public double KlondikeWatermarkOffsetX   { get; set; } = -180.0;
+    public double KlondikeWatermarkOffsetY   { get; set; } = -124.0;
+    public double FreecellWatermarkOffsetX   { get; set; } = -180.0;
+    public double FreecellWatermarkOffsetY   { get; set; } = -124.0;
+    public double SpiderWatermarkOffsetX     { get; set; } = -432.0;
+    public double SpiderWatermarkOffsetY     { get; set; } = -304.0;
+    public double VideoPokerWatermarkOffsetX { get; set; } = -500.0;
+    public double VideoPokerWatermarkOffsetY { get; set; } = -444.0;
+    public double BlackjackWatermarkOffsetX  { get; set; } = -500.0;
+    public double BlackjackWatermarkOffsetY  { get; set; } = -444.0;
+    public double HoneycombWatermarkOffsetX  { get; set; } = -116.0;
+    public double HoneycombWatermarkOffsetY  { get; set; } = 0.0;
 
     public bool IsVignetteEnabled { get; set; } = true;
     // Turns off timers (solitaire) and enables free play (VP/Blackjack — hides the

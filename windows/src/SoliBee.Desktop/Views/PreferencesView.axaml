@@ -72,21 +72,6 @@
                 <CheckBox x:Name="HideBeeCheckBox" Content="Hide the Bee" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
             </StackPanel>
 
-            <!-- TEMPORARY — dev calibration for the bee watermark's per-game scale.
-                 Delete this StackPanel + WatermarkScaleSlider_ValueChanged once final
-                 per-game values are known (see GetWatermarkScale/SetWatermarkScale). -->
-            <StackPanel x:Name="WatermarkScaleSection" Spacing="4">
-                <TextBlock Text="Bee Watermark Scale (temporary — dev calibration)" FontSize="11" Foreground="#1A1A1A"/>
-                <Slider x:Name="WatermarkScaleSlider" Minimum="0.1" Maximum="5.0"
-                        ValueChanged="WatermarkScaleSlider_ValueChanged"/>
-                <TextBlock Text="Bee Watermark Horizontal Position (temporary — dev calibration)" FontSize="11" Foreground="#1A1A1A"/>
-                <Slider x:Name="WatermarkOffsetXSlider" Minimum="-500" Maximum="500"
-                        ValueChanged="WatermarkOffsetXSlider_ValueChanged"/>
-                <TextBlock Text="Bee Watermark Vertical Position (temporary — dev calibration)" FontSize="11" Foreground="#1A1A1A"/>
-                <Slider x:Name="WatermarkOffsetYSlider" Minimum="-500" Maximum="500"
-                        ValueChanged="WatermarkOffsetYSlider_ValueChanged"/>
-            </StackPanel>
-
             <Rectangle x:Name="VisualThemesDivider" Height="1" Fill="#DDDDDD" Margin="0,4,0,4"/>
 
             <!-- Themes navigation row (not applicable to Video Poker) -->
