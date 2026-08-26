@@ -104,13 +104,25 @@
                             <Button x:Name="RebuyButton"  Content="Buy In"    Height="46" Padding="16,0"
                                     Click="Rebuy_Click"  Classes="casino-button casino-button-green" IsVisible="False"/>
                         </StackPanel>
-                        <!-- Row 2: flat chip buttons — 1/5/10/25 add to the bet, 2X doubles it -->
+                        <!-- Row 2: vector poker chips — 1/5/10/25 add to the bet, 2X doubles it.
+                             Matches the iOS/mac chip design (shared/Views/PokerChipView.swift):
+                             radial-gradient disc, 6 edge marks, flat inner inlay, bold text. -->
                         <StackPanel x:Name="ChipButtonRow" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                            <Button x:Name="Chip1Button"  Content="1"  Tag="1"  Click="Chip_Click" Classes="bj-chip bj-chip-1"/>
-                            <Button x:Name="Chip5Button"  Content="5"  Tag="5"  Click="Chip_Click" Classes="bj-chip bj-chip-2"/>
-                            <Button x:Name="Chip10Button" Content="10" Tag="10" Click="Chip_Click" Classes="bj-chip bj-chip-3"/>
-                            <Button x:Name="Chip25Button" Content="25" Tag="25" Click="Chip_Click" Classes="bj-chip bj-chip-4"/>
-                            <Button x:Name="DoubleBetButton" Content="2X" Click="DoubleBet_Click" Classes="bj-chip bj-chip-5"/>
+                            <Button x:Name="Chip1Button"  Tag="1"  Click="Chip_Click" Classes="poker-chip">
+                                <local:PokerChipFace Label="1" BaseColor="White" StripeColor="#D9000000" TextColor="Black"/>
+                            </Button>
+                            <Button x:Name="Chip5Button"  Tag="5"  Click="Chip_Click" Classes="poker-chip">
+                                <local:PokerChipFace Label="5" BaseColor="#E03838" StripeColor="White" TextColor="White"/>
+                            </Button>
+                            <Button x:Name="Chip10Button" Tag="10" Click="Chip_Click" Classes="poker-chip">
+                                <local:PokerChipFace Label="10" BaseColor="#2E80EB" StripeColor="White" TextColor="White"/>
+                            </Button>
+                            <Button x:Name="Chip25Button" Tag="25" Click="Chip_Click" Classes="poker-chip">
+                                <local:PokerChipFace Label="25" BaseColor="#2EB85C" StripeColor="White" TextColor="White"/>
+                            </Button>
+                            <Button x:Name="DoubleBetButton" Click="DoubleBet_Click" Classes="poker-chip">
+                                <local:PokerChipFace Label="2X" BaseColor="#F28C26" StripeColor="White" TextColor="White"/>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
 
@@ -236,46 +248,29 @@
             </Setter>
         </Style>
 
-        <!-- Chip buttons -->
-        <Style Selector="Button.bj-chip">
-            <Setter Property="Width" Value="44"/>
-            <Setter Property="Height" Value="44"/>
-            <Setter Property="CornerRadius" Value="22"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="FontWeight" Value="Black"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <!-- Vector poker chip buttons — chrome-free Button wrapping a PokerChipFace,
+             which draws the chip itself; this style only handles interaction feedback
+             (press-scale, hover, disabled) since the visual is entirely custom-drawn. -->
+        <Style Selector="Button.poker-chip">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="RenderTransform" Value="scale(1.0)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08"/>
+                </Transitions>
+            </Setter>
         </Style>
-        <Style Selector="Button.bj-chip:disabled">
-            <Setter Property="Opacity" Value="0.35"/>
+        <Style Selector="Button.poker-chip:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.90)"/>
         </Style>
-        <Style Selector="Button.bj-chip-1">
-            <Setter Property="Background" Value="#CCCCCC"/>
-            <Setter Property="Foreground" Value="#1A1A1A"/>
-            <Setter Property="BorderBrush" Value="#888888"/>
-        </Style>
-        <Style Selector="Button.bj-chip-2">
-            <Setter Property="Background" Value="#1565C0"/>
-            <Setter Property="BorderBrush" Value="#90CAF9"/>
-        </Style>
-        <Style Selector="Button.bj-chip-3">
-            <Setter Property="Background" Value="#B71C1C"/>
-            <Setter Property="BorderBrush" Value="#EF9A9A"/>
-        </Style>
-        <Style Selector="Button.bj-chip-4">
-            <Setter Property="Background" Value="#1B5E20"/>
-            <Setter Property="BorderBrush" Value="#A5D6A7"/>
-        </Style>
-        <Style Selector="Button.bj-chip-5">
-            <Setter Property="Background" Value="#E65100"/>
-            <Setter Property="BorderBrush" Value="#FFCC80"/>
-        </Style>
-        <Style Selector="Button.bj-chip:pointerover /template/ ContentPresenter">
+        <Style Selector="Button.poker-chip:pointerover /template/ ContentPresenter">
             <Setter Property="Opacity" Value="0.85"/>
+        </Style>
+        <Style Selector="Button.poker-chip:disabled">
+            <Setter Property="Opacity" Value="0.35"/>
         </Style>
     </UserControl.Styles>
 
