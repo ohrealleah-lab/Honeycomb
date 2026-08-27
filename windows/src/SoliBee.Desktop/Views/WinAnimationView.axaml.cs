@@ -87,7 +87,7 @@ public partial class WinAnimationView : UserControl
     private const double FoundationSpawnNudgeX  = 42.5;
     private double _timeSinceLastSpawn = 0;
     // Set dynamically based on the number of foundations in the current game.
-    private double _spawnInterval = 0.4;
+    private double _spawnInterval = 0.9;
     private IReadOnlyList<Point>? _foundationPoints;
     private DateTime? _lastTickTime;
 
@@ -156,13 +156,13 @@ public partial class WinAnimationView : UserControl
         // so this many concurrent cards is affordable.
         if (numFoundations > 4)
         {
-            _spawnInterval = 0.2;
-            _maxActiveCards = 80;
+            _spawnInterval = 0.45;
+            _maxActiveCards = 40;
         }
         else
         {
-            _spawnInterval = 0.4;
-            _maxActiveCards = 40;
+            _spawnInterval = 0.9;
+            _maxActiveCards = 20;
         }
 
         // Show win info panel with score and time
