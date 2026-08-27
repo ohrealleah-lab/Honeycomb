@@ -178,8 +178,16 @@ public partial class FaceCardArtSectionView : UserControl
         });
         innerGrid.Children.Add(bottomRight);
 
-        // Click to open picker or editor
-        cardBorder.PointerPressed += async (_, _) => await OnTileClickAsync(slot);
+        // Click to open picker or editor. Capture(null) before awaiting — same
+        // PointerPressed + async void + ShowDialog gotcha as PreferencesView's
+        // AdjustCardBack_Click (see windows/CLAUDE.md); without it the implicit
+        // pointer capture lingers on cardBorder while the file picker/editor is up,
+        // which can block or misroute pointer input elsewhere until it resolves.
+        cardBorder.PointerPressed += async (_, e) =>
+        {
+            e.Pointer.Capture(null);
+            await OnTileClickAsync(slot);
+        };
 
         // Container: the card, with a delete badge overlaid on its lower-left corner
         // when art is loaded — art is always considered active once loaded (no separate
