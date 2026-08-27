@@ -295,7 +295,10 @@ public struct HoneycombView: View {
                     let displayHand: [HoneycombCard] = viewModel.gameState == .setup ? Self.placeholderHand
                         : (viewModel.gameState == .gameOver ? viewModel.playerStartingDeck : viewModel.playerHand)
                     VStack(spacing: 6) {
-                        handSideLabel(coordinator.L(.playerLabel))
+                        handSideLabel(honeycombLocalizedPlayerRankName(
+                            cardsCollected: HoneycombProfileManager.shared.unlockedCardIds.count,
+                            totalCards: HoneycombDatabase.shared.allCards.count,
+                            language: coordinator.language))
                         handGrid(hand: displayHand) { i, card in
                             HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)

@@ -184,9 +184,9 @@ public partial class HoneycombView : UserControl
     // language too.
     private void ApplyLocalization()
     {
-        PlayerHandLabel.Text   = Strings.Get(StringKey.PlayerLabel, _language);
-        // OpponentHandLabel is driven by RefreshCore (vm.OpponentNameDisplay), not a
-        // static localized string — see the comment there.
+        // PlayerHandLabel (like OpponentHandLabel) is driven by RefreshCore, not a
+        // static localized string — see the comment there. It shows a rank tied to
+        // lifetime cards collected, not just "Player" for everyone.
 
         RulesTitle.Text          = Strings.Get(StringKey.RulesBannerTitle, _language);
         StealInstructionText.Text = Strings.Get(StringKey.StealInstruction, _language);
@@ -498,6 +498,16 @@ public partial class HoneycombView : UserControl
         // changing — OpponentNameDisplay's own PropertyChanged notification is what
         // drives Vm_PropertyChanged -> Refresh() in that case.
         OpponentHandLabel.Text = vm.OpponentNameDisplay;
+
+        // Refreshed here rather than only in ApplyLocalization, same reasoning as
+        // OpponentHandLabel above — the player's rank can change (a new card
+        // unlocked) without the language changing. totalCards read live rather than
+        // hardcoded so it can't drift if the generated collection's size ever
+        // changes. Mirrors the Mac/iOS ports' identical treatment.
+        PlayerHandLabel.Text = HoneycombRuleLocalization.LocalizedPlayerRankName(
+            HoneycombProfileManager.Shared.UnlockedCardIds.Count,
+            HoneycombDatabase.Shared.AllCards.Count,
+            _language);
 
         if (vm.IsPlaying) 
         {

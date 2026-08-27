@@ -65,3 +65,31 @@ public func honeycombLocalizedDifficultyName(_ difficulty: HoneycombDifficulty, 
     case .ultraHard: return L(.statKillerBee, language: language)
     }
 }
+
+// The player's own hand-area label, opposite the opponent's difficulty-tier name
+// (honeycombLocalizedDifficultyName above) — shows a rank tied to the player's
+// lifetime card-collection progress (HoneycombProfileManager.shared.unlockedCardIds)
+// instead of a static "Player" for everyone. totalCards should be
+// HoneycombDatabase.shared.allCards.count, read live rather than hardcoded, so this
+// never drifts out of sync if the generated collection's size ever changes.
+// cardsCollected >= totalCards is checked before the 500+ band specifically so a
+// player who has genuinely unlocked every card gets the distinct completionist title
+// (Apiarist) rather than being folded into the same "500+" band as someone who's
+// merely close (Hive Monarch).
+public func honeycombLocalizedPlayerRankName(cardsCollected: Int, totalCards: Int, language: AppLanguage) -> String {
+    if totalCards > 0 && cardsCollected >= totalCards {
+        return L(.rankApiarist, language: language)
+    }
+    switch cardsCollected {
+    case 500...:    return L(.rankHiveMonarch, language: language)
+    case 400..<500: return L(.rankSwarmLeader, language: language)
+    case 300..<400: return L(.rankRoyalAttendant, language: language)
+    case 200..<300: return L(.rankCombArchitect, language: language)
+    case 150..<200: return L(.rankWaggleDancer, language: language)
+    case 100..<150: return L(.rankGuardBee, language: language)
+    case 50..<100:  return L(.rankWorkerBee, language: language)
+    case 20..<50:   return L(.rankScoutBee, language: language)
+    case 10..<20:   return L(.rankNurseBee, language: language)
+    default:        return L(.playerLabel, language: language)
+    }
+}

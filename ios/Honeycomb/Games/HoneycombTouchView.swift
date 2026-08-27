@@ -483,7 +483,10 @@ struct HoneycombTouchView: View {
         if landscape {
             HStack(alignment: .center, spacing: 24) {
                 VStack(spacing: 6) {
-                    handLabel(coordinator.L(.handLabelYou))
+                    handLabel(honeycombLocalizedPlayerRankName(
+                        cardsCollected: HoneycombProfileManager.shared.unlockedCardIds.count,
+                        totalCards: HoneycombDatabase.shared.allCards.count,
+                        language: coordinator.language))
                     pyramidHand(cards: playerDisplayHand, size: landscapeHandCardSize) { i, card in
                         HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
                             HoneycombCardView(card: card, size: landscapeHandCardSize, isFlipped: true)

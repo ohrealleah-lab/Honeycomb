@@ -767,6 +767,30 @@ public enum StringKey: String, CaseIterable {
     case statKillerBeeWins = "stat_killer_bee_wins"
     /// Stat row label, Mac
     case statSwarmsToDeath = "stat_swarms_to_death"
+
+    // MARK: Honeycomb player rank (by lifetime cards collected — see
+    // honeycombLocalizedPlayerRankName). Card counts below the boundary for
+    // rankNurseBee still show playerLabel ("Player") rather than a key of their own.
+    /// Player rank, 10-19 cards collected
+    case rankNurseBee = "rank_nurse_bee"
+    /// Player rank, 20-49 cards collected
+    case rankScoutBee = "rank_scout_bee"
+    /// Player rank, 50-99 cards collected
+    case rankWorkerBee = "rank_worker_bee"
+    /// Player rank, 100-149 cards collected
+    case rankGuardBee = "rank_guard_bee"
+    /// Player rank, 150-199 cards collected
+    case rankWaggleDancer = "rank_waggle_dancer"
+    /// Player rank, 200-299 cards collected
+    case rankCombArchitect = "rank_comb_architect"
+    /// Player rank, 300-399 cards collected
+    case rankRoyalAttendant = "rank_royal_attendant"
+    /// Player rank, 400-499 cards collected
+    case rankSwarmLeader = "rank_swarm_leader"
+    /// Player rank, 500+ cards collected but not the full set
+    case rankHiveMonarch = "rank_hive_monarch"
+    /// Player rank, every card in the collection unlocked
+    case rankApiarist = "rank_apiarist"
     /// Stat row label, Mac
     case statTotalCardsFlipped = "stat_total_cards_flipped"
     /// Stat row label, Mac

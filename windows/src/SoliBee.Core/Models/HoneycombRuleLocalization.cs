@@ -58,4 +58,30 @@ public static class HoneycombRuleLocalization
         HoneycombDifficulty.UltraHard => Strings.Get(StringKey.StatKillerBee, language),
         _ => difficulty.DisplayName(),
     };
+
+    // The player's own hand-area label, opposite the opponent's difficulty-tier name
+    // (LocalizedDifficultyName above) — shows a rank tied to the player's lifetime
+    // card-collection progress (HoneycombProfileManager.Shared.UnlockedCardIds)
+    // instead of a static "Player" for everyone. totalCards should be
+    // HoneycombDatabase.Shared.AllCards.Count, read live rather than hardcoded, so
+    // this never drifts out of sync if the generated collection's size ever changes.
+    // cardsCollected >= totalCards is checked before the 500+ band specifically so a
+    // player who has genuinely unlocked every card gets the distinct completionist
+    // title (Apiarist) rather than being folded into the same "500+" band as someone
+    // who's merely close (Hive Monarch). Mirrors the Mac port's identical
+    // honeycombLocalizedPlayerRankName in HoneycombRuleLocalization.swift.
+    public static string LocalizedPlayerRankName(int cardsCollected, int totalCards, AppLanguage language)
+    {
+        if (totalCards > 0 && cardsCollected >= totalCards) return Strings.Get(StringKey.RankApiarist, language);
+        if (cardsCollected >= 500) return Strings.Get(StringKey.RankHiveMonarch, language);
+        if (cardsCollected >= 400) return Strings.Get(StringKey.RankSwarmLeader, language);
+        if (cardsCollected >= 300) return Strings.Get(StringKey.RankRoyalAttendant, language);
+        if (cardsCollected >= 200) return Strings.Get(StringKey.RankCombArchitect, language);
+        if (cardsCollected >= 150) return Strings.Get(StringKey.RankWaggleDancer, language);
+        if (cardsCollected >= 100) return Strings.Get(StringKey.RankGuardBee, language);
+        if (cardsCollected >= 50)  return Strings.Get(StringKey.RankWorkerBee, language);
+        if (cardsCollected >= 20)  return Strings.Get(StringKey.RankScoutBee, language);
+        if (cardsCollected >= 10)  return Strings.Get(StringKey.RankNurseBee, language);
+        return Strings.Get(StringKey.PlayerLabel, language);
+    }
 }
