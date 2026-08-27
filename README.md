@@ -18,39 +18,41 @@
 * **Meaningful Progression**: Permanently steal cards from your opponent to build up your Card Bank, craft custom decks, and track comprehensive battle stats.
 * **Challenging AI**: Climb the ranks against Baby Bee, Honey Bee, Queen Bee, and Killer Bee — each bringing their own unique decks and strategies.
 
-<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/30e2edd0-d275-4e4f-8fc1-37b2f020a8f3" />
+<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/bb8a4358-e6d7-4e19-a99a-1e88cc7bb26f" />
+
 
 ### 2. Klondike Solitaire
 * **Modes**: Easy (1-Card Draw) and Standard (3-Card Draw).
 * **Rules & Scoring**: Classic scoring rules alongside an optional **Vegas Scoring Mode**.
 * **Classic Win Animation**: The cards will flow from the foundations, and you will feel alive again.
 
-<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/ae9058b8-6ca7-4123-bfa8-17aa959256c4" />
+<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/f99f00e9-da4c-40b3-bbf2-d8b9855a69bb" />
+
 
 ### 3. Freecell Solitaire
 * **Modes**: Supports both **1-Deck** (8 columns, 4 free cells, 4 foundations) and **2-Deck** (10 columns, 8 free cells, 8 foundations) options.
 * **Rules & Scoring**: Open card placement strategy with move limits based on the number of empty free cells and tableau spaces.
 
-<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/03839abd-a435-4f3d-8177-a7b57512a3bd" />
+<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/fbe299bc-7c49-4ebc-9d09-779e20c31ea0" />
 
 ### 4. Spider Solitaire
 * **Modes**: **1-Suit** (Spades), **2-Suit** (Spades/Hearts), or **4-Suit** (Spades/Hearts/Diamonds/Clubs) options.
 * **Rules & Scoring**: Start at 500 points, decrement 1 point per move, and earn 100 points for each full sequence (King to Ace of a single suit) cleared.
 
-<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/c0e104b2-fedd-459e-acf7-fbe61e33d25b" />
+<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/e1585280-d30b-4ab7-a834-0c834d93d923" />
 
 ### 5. Video Poker
 * **Jacks or Better**: Win by holding a pair of Jacks or higher
 * **Deuces Wild**: All 2s are wild cards
 * **Bonus Poker**: Jacks or Better rules with enhanced payouts for four-of-a-kind hands.
 
-<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/423a7722-9c35-4d01-bcfc-8305df7148e7" />
+<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/35eed9e9-93c3-4ef3-95c7-9f4632211cbc" />
 
 ### 6. Video Blackjack
 * **Casino-style Blackjack**: Hit, stand, double, and split.
 * **Video Blackjack Betting**: Bid in 1, 10, or 25 credits, or double your last bet.
 
-<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/22b6e2df-fa43-46a3-b7c9-251584fca22a" />
+<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/4981aa0d-ca78-4f1d-bfa1-eb476b21e246" />
 
 ---
 
