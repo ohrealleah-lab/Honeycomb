@@ -16,9 +16,9 @@
          hand for a release, only the tag matters. This baseline is only what a local
          (non-CI) `make build` shows. -->
     <key>CFBundleShortVersionString</key>
-    <string>7.0.5</string>
+    <string>7.0.6</string>
     <key>CFBundleVersion</key>
-    <string>7.0.5</string>
+    <string>7.0.6</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSPrincipalClass</key>
