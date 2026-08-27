@@ -224,7 +224,7 @@ public struct VideoPokerView: View {
                 .frame(width: 0, height: 0)
                 .clipped()
 
-            HotkeyLegendView(text: coordinator.L(.hotkeyLegendVideopoker))
+            // HotkeyLegendView(text: coordinator.L(.hotkeyLegendVideopoker))
 
             if showQueuedBanner {
                 FlashBannerView(

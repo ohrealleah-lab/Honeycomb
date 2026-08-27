@@ -628,7 +628,7 @@ public struct BeecellView: View {
                 .allowsHitTesting(false)
             }
 
-            HotkeyLegendView(text: coordinator.L(.hotkeyLegendBeecell))
+            // HotkeyLegendView(text: coordinator.L(.hotkeyLegendBeecell))
         }
         .environment(\.feltColor, coordinator.feltColor)
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)

@@ -720,7 +720,7 @@ public struct GameView: View {
                 .allowsHitTesting(false)
         }
 
-            HotkeyLegendView(text: coordinator.L(.hotkeyLegendKlondike))
+            // HotkeyLegendView(text: coordinator.L(.hotkeyLegendKlondike))
         }
         .environment(\.feltColor, resolvedFeltColorTheme)
         .environment(\.activeCardBackTheme, resolvedCardBackTheme)

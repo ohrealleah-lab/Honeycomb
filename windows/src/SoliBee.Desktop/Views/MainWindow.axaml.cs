@@ -2028,15 +2028,20 @@ public partial class MainWindow : Window
 
     private void UpdateSolitaireKeyHint(string tag, bool isCardGame)
     {
-        if (SolitaireKeyHintLabel == null) return;
-        SolitaireKeyHintLabel.IsVisible = isCardGame;
-        if (!isCardGame) return;
-        SolitaireKeyHintLabel.Text = GetBaseGameTag(tag) switch
-        {
-            "Freecell" => Strings.Get(StringKey.HotkeyLegendBeecell, _language),
-            "Spider"   => Strings.Get(StringKey.HotkeyLegendSpider, _language),
-            _          => Strings.Get(StringKey.HotkeyLegendKlondike, _language),
-        };
+        // Hotkey legend commented out (mac's per-game HotkeyLegendView calls are
+        // commented out the same way) — body no-op'd rather than removed so this is
+        // easy to bring back; SolitaireKeyHintLabel's default (empty Text, no
+        // IsVisible override) just never gets touched.
+        return;
+        // if (SolitaireKeyHintLabel == null) return;
+        // SolitaireKeyHintLabel.IsVisible = isCardGame;
+        // if (!isCardGame) return;
+        // SolitaireKeyHintLabel.Text = GetBaseGameTag(tag) switch
+        // {
+        //     "Freecell" => Strings.Get(StringKey.HotkeyLegendBeecell, _language),
+        //     "Spider"   => Strings.Get(StringKey.HotkeyLegendSpider, _language),
+        //     _          => Strings.Get(StringKey.HotkeyLegendKlondike, _language),
+        // };
     }
 
     // Retries UpdateResponsiveLayout every 100ms (up to 1s) until two consecutive

@@ -161,7 +161,7 @@ public struct BlackjackView: View {
                 .frame(width: 0, height: 0)
                 .clipped()
 
-            HotkeyLegendView(text: coordinator.L(.hotkeyLegendBlackjack))
+            // HotkeyLegendView(text: coordinator.L(.hotkeyLegendBlackjack))
 
             if showQueuedBanner {
                 FlashBannerView(

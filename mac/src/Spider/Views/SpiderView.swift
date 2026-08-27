@@ -463,7 +463,7 @@ public struct SpiderView: View {
                 .allowsHitTesting(false)
             }
 
-            HotkeyLegendView(text: coordinator.L(.hotkeyLegendSpider))
+            // HotkeyLegendView(text: coordinator.L(.hotkeyLegendSpider))
         }
         .environment(\.feltColor, coordinator.feltColor)
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
