@@ -605,7 +605,16 @@ struct BlackjackTouchView: View {
             Text(dealerLabel)
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: handSpacing(cardW: cardW, count: max(viewModel.state.dealerCards.count, 2), maxHandWidth: maxHandWidth)) {
+            // Placeholders always render exactly 2 backs (below), but spacing used to be
+            // computed from viewModel.state.dealerCards.count directly — real hand data
+            // that isn't cleared until the next deal(), so it stays stale (e.g. 4, if the
+            // dealer hit twice last round) through the whole post-round placeholder phase.
+            // handSpacing tuned for 4 cards packs them tighter than 2 cards need, so the
+            // reset placeholders rendered overlapping/crowded instead of at the normal
+            // 2-card gap. Count what's actually about to render instead.
+            let effectiveDealerCount = (viewModel.state.dealerCards.isEmpty || showCardBackPlaceholders)
+                ? 2 : viewModel.state.dealerCards.count
+            HStack(spacing: handSpacing(cardW: cardW, count: max(effectiveDealerCount, 2), maxHandWidth: maxHandWidth)) {
                 if viewModel.state.dealerCards.isEmpty || showCardBackPlaceholders {
                     ForEach(0..<2, id: \.self) { i in
                         HoneycombSimpleCardBack()
