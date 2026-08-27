@@ -1006,7 +1006,7 @@ public partial class HoneycombViewModel : ObservableObject
 
         // The match may have been quit/reset while the above was computing — bail
         // rather than acting on state that no longer reflects a live game.
-        if (!IsPlaying || State.CurrentTurn != -1)
+        if (generation != _matchGeneration || !IsPlaying || State.CurrentTurn != -1)
         {
             _isAnimating = false;
             NotifyStateChanged();

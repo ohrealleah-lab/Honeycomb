@@ -675,6 +675,12 @@ public final class SpiderViewModel {
     }
 
     public func undoLastAction() {
+        // Undo is disallowed once the win sequence has committed: checkWinState() calls
+        // recordWin() which immediately persists gamesWon/currentStreak to disk. Rolling
+        // back past that point would leave the saved stats permanently inflated while
+        // the board shows a pre-win state. The undo stack is cleared on win so this
+        // guard is a safety net, not the primary mechanism.
+        guard !state.hasWon else { return }
         guard let previous = undoStack.pop() else { return }
         // The timer must keep running forward through an undo, not rewind to whatever it
         // read when the undone move's snapshot was saved.

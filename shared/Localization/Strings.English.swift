@@ -347,7 +347,7 @@ enum StringsEnglish {
         .ruleLineNormal: "Normal",
         .ruleLineRoulette: "Roulette",
         .ruleLineSuitFmt: "%@ Suit: %@",
-        .handLabelYou: "YOU",
+        .handLabelYou: "You",
         .quitButton: "Quit",
         .startButton: "Start",
         .noHintsBanner: "No hints for this one!",
