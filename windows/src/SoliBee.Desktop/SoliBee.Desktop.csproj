@@ -9,9 +9,9 @@
          from the git tag (e.g. v7.0.4) so the About window's version always matches
          what actually shipped — never bump these by hand for a release, only the tag
          matters. This baseline is only what a local (non-CI) dev build shows. -->
-    <Version>7.0.4</Version>
-    <AssemblyVersion>7.0.4.0</AssemblyVersion>
-    <FileVersion>7.0.4.0</FileVersion>
+    <Version>7.0.5</Version>
+    <AssemblyVersion>7.0.5.0</AssemblyVersion>
+    <FileVersion>7.0.5.0</FileVersion>
     <AssemblyName>Honeycomb</AssemblyName>
     <Product>Honeycomb Card Suite</Product>
     <Company>Leahbee</Company>
