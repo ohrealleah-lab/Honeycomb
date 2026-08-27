@@ -155,68 +155,24 @@ public struct VideoPokerView: View {
             // Darkens the board behind the win/loss result banner (handArea's .overlay
             // below) — added as a top-level ZStack sibling rather than inside that
             // .overlay so it spans the whole window instead of just the card row's frame.
-            if showResultBanner && !viewModel.state.hand.isEmpty {
-                Color.black.opacity(0.45)
-                    .allowsHitTesting(false)
-                    
-                if viewModel.state.lastPayout > 0 {
-                    let streak = viewModel.statistics.currentStreak
-                    let streakText: String? = streak >= 2
-                        ? (streak >= 5 ? coordinator.L(.streakText5plusFmt, streak)
-                           : streak >= 3 ? coordinator.L(.streakText3to4Fmt, streak)
-                           : coordinator.L(.streakText2Fmt, streak))
-                        : nil
-                    VStack(spacing: 8) {
-                        Text(coordinator.L(.resultHandNameFmt, localizedHandName(viewModel.state.lastHandName, language: coordinator.language)))
-                            .font(.system(size: 36, weight: .black))
-                            .foregroundColor(.yellow)
-                            .scaleEffect(winFlash ? 1.1 : 1.0)
-                            .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
-                        if !viewModel.isFreePlay {
-                            Text(coordinator.L(.resultCreditsWonFmt, viewModel.state.lastPayout))
-                                .font(.system(.body))
-                                .foregroundColor(.white)
-                        }
-                        if let streakText {
-                            Text(streakText)
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.yellow.opacity(0.9))
-                                .multilineTextAlignment(.center)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 24)
-                    .fixedSize()
-                    .background(Color.black.opacity(0.75))
-                    .cornerRadius(12)
-                    .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
-                    .onTapGesture { viewModel.deal() }
-                    .transition(.opacity)
-                } else {
-                    VStack(spacing: 8) {
-                        Text(coordinator.L(.notTodayPartner))
-                            .font(.system(size: 36, weight: .black))
-                            .foregroundColor(.yellow)
-                        if !viewModel.isFreePlay {
-                            Text(coordinator.L(.resultCreditsLostFmt, viewModel.state.currentBet))
-                                .font(.system(.body))
-                                .foregroundColor(.white)
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 24)
-                    .frame(maxWidth: 420)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .background(Color.black.opacity(0.75))
-                    .cornerRadius(12)
-                    .onTapGesture { viewModel.deal() }
-                    .transition(.opacity)
-                }
-                
-                WinParticleView(active: showParticles)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .allowsHitTesting(false)
-            }
+            // Kept permanently mounted, gated by opacity/allowsHitTesting only — never
+            // inserted/removed via `if`. The banner content has its own onTapGesture
+            // (deal early), so an animated conditional removal here left a stuck
+            // hit-test region that could swallow the *real* Deal button/chip clicks
+            // underneath after the banner should have fully dismissed (same bug class
+            // fixed for Blackjack's equivalent result banner — see its comment for the
+            // mechanism).
+            let isResultBannerActive = showResultBanner && !viewModel.state.hand.isEmpty
+            Color.black.opacity(isResultBannerActive ? 0.45 : 0)
+                .allowsHitTesting(false)
+
+            resultBanner
+                .opacity(isResultBannerActive ? 1 : 0)
+                .allowsHitTesting(isResultBannerActive)
+
+            WinParticleView(active: showParticles)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
 
             // Keyboard shortcut buttons (invisible, zero-size)
             keyboardShortcuts
@@ -532,6 +488,64 @@ public struct VideoPokerView: View {
 
     private var resultLabel: some View {
         Color.clear.frame(height: 52)
+    }
+
+    // Win/loss content for the result banner overlay (see body) — extracted so the
+    // overlay itself can stay permanently mounted and gate visibility/interactivity
+    // through this property rather than conditionally inserting/removing it.
+    @ViewBuilder
+    private var resultBanner: some View {
+        if viewModel.state.lastPayout > 0 {
+            let streak = viewModel.statistics.currentStreak
+            let streakText: String? = streak >= 2
+                ? (streak >= 5 ? coordinator.L(.streakText5plusFmt, streak)
+                   : streak >= 3 ? coordinator.L(.streakText3to4Fmt, streak)
+                   : coordinator.L(.streakText2Fmt, streak))
+                : nil
+            VStack(spacing: 8) {
+                Text(coordinator.L(.resultHandNameFmt, localizedHandName(viewModel.state.lastHandName, language: coordinator.language)))
+                    .font(.system(size: 36, weight: .black))
+                    .foregroundColor(.yellow)
+                    .scaleEffect(winFlash ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.45), value: winFlash)
+                if !viewModel.isFreePlay {
+                    Text(coordinator.L(.resultCreditsWonFmt, viewModel.state.lastPayout))
+                        .font(.system(.body))
+                        .foregroundColor(.white)
+                }
+                if let streakText {
+                    Text(streakText)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.yellow.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 24)
+            .fixedSize()
+            .background(Color.black.opacity(0.75))
+            .cornerRadius(12)
+            .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
+            .onTapGesture { viewModel.deal() }
+        } else {
+            VStack(spacing: 8) {
+                Text(coordinator.L(.notTodayPartner))
+                    .font(.system(size: 36, weight: .black))
+                    .foregroundColor(.yellow)
+                if !viewModel.isFreePlay {
+                    Text(coordinator.L(.resultCreditsLostFmt, viewModel.state.currentBet))
+                        .font(.system(.body))
+                        .foregroundColor(.white)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 24)
+            .frame(maxWidth: 420)
+            .fixedSize(horizontal: false, vertical: true)
+            .background(Color.black.opacity(0.75))
+            .cornerRadius(12)
+            .onTapGesture { viewModel.deal() }
+        }
     }
 
     // MARK: - Hand Area

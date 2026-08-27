@@ -7,7 +7,6 @@ public struct BlackjackView: View {
     @State private var isShowingStats   = false
     @State private var isShowingNewGameConfirm = false
     @State private var showResultBanner  = false
-    @State private var bannerWinFlash    = false
     @State private var showParticles     = false
     @State private var cardsVisible           = true
     @State private var showCardBackPlaceholders = false
@@ -141,12 +140,26 @@ public struct BlackjackView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-            // Result banner overlay
-            if showResultBanner && viewModel.state.resultOutcome != .none {
-                Color.black.opacity(0.45)
+            // Result banner overlay — kept permanently mounted, gated by
+            // opacity/allowsHitTesting only, never inserted/removed via `if`. An
+            // animated conditional removal here left a stuck hit-test region blocking
+            // Deal/chip clicks underneath until a forced relayout (e.g. opening
+            // Options) — same bug class as the queued-banner tap-catcher below (see
+            // its own comment for the mechanism); this overlay just hadn't been
+            // migrated to that pattern yet.
+            // Neither the scrim nor the banner itself take clicks, even while active —
+            // resultBanner has no tap gesture of its own, and the scrim previously being
+            // hit-testable while shown blocked every click on screen, including Deal and
+            // the click-anywhere-on-the-board-to-deal overlay underneath (both real,
+            // intentional ways to skip the wait) — not just the "stuck after dismiss"
+            // case this pattern was originally introduced to fix.
+            let isResultBannerActive = showResultBanner && viewModel.state.resultOutcome != .none
+            Color.black.opacity(isResultBannerActive ? 0.45 : 0)
+                .allowsHitTesting(false)
 
-                resultBanner
-            }
+            resultBanner
+                .opacity(isResultBannerActive ? 1 : 0)
+                .allowsHitTesting(false)
 
             // On top of the banner (not behind it) — matches Windows' BlackjackView,
             // where ParticleCanvas sits at a higher ZIndex than the result overlay, and
@@ -581,10 +594,13 @@ public struct BlackjackView: View {
                 .font(.system(size: 36, weight: .black))
                 .foregroundColor(.yellow)
                 .multilineTextAlignment(.center)
-                .scaleEffect(isWin && bannerWinFlash ? 1.06 : 1.0)
-                .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: bannerWinFlash)
-                .onAppear { if isWin { bannerWinFlash = true } }
-                .onDisappear { bannerWinFlash = false }
+                // Was onAppear/onDisappear-driven (bannerWinFlash) — resultBanner is
+                // now permanently mounted (see its call site), so appear/disappear no
+                // longer fire per round. showResultBanner itself already flips once
+                // per round shown, so it's the same restart signal .animation(value:)
+                // needs.
+                .scaleEffect(isWin && showResultBanner ? 1.06 : 1.0)
+                .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: showResultBanner)
 
             if !viewModel.isFreePlay {
                 Text(subline)
@@ -615,7 +631,6 @@ public struct BlackjackView: View {
         .background(Color.black.opacity(0.75))
         .cornerRadius(12)
         .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5) : .clear, radius: 16)
-        .transition(.opacity)
     }
 
     // MARK: - Action Buttons
