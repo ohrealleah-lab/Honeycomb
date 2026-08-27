@@ -64,6 +64,21 @@ struct BlackjackTouchView: View {
     // (close to the chip-grid-plus-Deal-row's real height).
     @State private var landscapeControlsHeight: CGFloat = 100
 
+    // Portrait's counterpart to landscapeControlsHeight — the fixed bottom bar's own
+    // total rendered height (its own top/bottom padding plus, for every non-betting
+    // phase, the invisible chipRowHeight-matching placeholder below the visible row —
+    // see actionRow), measured on the bar itself rather than reconstructed from
+    // visibleControlsHeight/chipRowHeight separately. reservedBottom used to do that
+    // reconstruction (visibleControlsHeight + a flat buffer) and silently omitted the
+    // placeholder + its spacing, which sit between the visible row and the bar's true
+    // bottom edge — undercounting the real bar height by roughly chipRowHeight + 10pt,
+    // enough that Hit/Stand/Double/Split routinely rendered a card's-height-worth
+    // overlapping the buttons instead of clearing them. 150 is a reasonable
+    // pre-measurement default; max(...) below matches landscapeControlsHeight's own
+    // monotonic-convergence fix for the same class of bug (a transient smaller
+    // measurement during a phase transition briefly under-reserving space).
+    @State private var portraitControlsHeight: CGFloat = 150
+
     private let actionHaptic = UIImpactFeedbackGenerator(style: .medium)
 
     private var canAffordBet: Bool {
@@ -139,7 +154,7 @@ struct BlackjackTouchView: View {
             // visible buffer — was a flat 58pt guess, which undershot the overlay's
             // actual height (closer to 100pt+ on iPad's wider button/text scale) and
             // let cards render into space the overlay then covered.
-            let reservedBottom: CGFloat = isLandscape ? (landscapeControlsHeight + 16) : (visibleControlsHeight + 38)
+            let reservedBottom: CGFloat = isLandscape ? (landscapeControlsHeight + 16) : (portraitControlsHeight + 16)
             let verticalChrome: CGFloat = 44 /* topBar */ + 16 /* outer VStack spacing */
                 + 6 /* dealerArea/playerHandsArea's label-to-cards VStack spacing */
                 + 20 /* .subheadline label line height */
@@ -245,45 +260,66 @@ struct BlackjackTouchView: View {
                         // pinned below as a fixed bottom bar (not part of this
                         // scrolling content) so it's never what gets pushed off screen
                         // — only the cards scroll.
-                        ScrollView {
-                            VStack(spacing: 16) {
-                                if !viewModel.isFreePlay {
-                                    creditDisplay
+                        // ScrollViewReader lets the onChange below (of activeHandIndex)
+                        // scroll a specific hand into view — see that handler for why.
+                        ScrollViewReader { scrollProxy in
+                            ScrollView {
+                                VStack(spacing: 16) {
+                                    if !viewModel.isFreePlay {
+                                        creditDisplay
+                                    }
+                                    dealerArea(cardW: cardW, maxHandWidth: maxHandWidth)
+                                    // Extra breathing room between the two hands specifically
+                                    // (beyond the 16pt the VStack already gives every child) —
+                                    // matches mac's DEALER/VS/PLAYER layout, which visibly
+                                    // separates the two hands rather than stacking them close
+                                    // together. Fixed, not proportional to leftover space, so
+                                    // it stays modest even when centering (below) pushes the
+                                    // whole block into a much taller available area.
+                                    Spacer().frame(height: 20)
+                                    playerHandsArea(cardW: cardW, maxHandWidth: maxHandWidth)
                                 }
-                                dealerArea(cardW: cardW, maxHandWidth: maxHandWidth)
-                                // Extra breathing room between the two hands specifically
-                                // (beyond the 16pt the VStack already gives every child) —
-                                // matches mac's DEALER/VS/PLAYER layout, which visibly
-                                // separates the two hands rather than stacking them close
-                                // together. Fixed, not proportional to leftover space, so
-                                // it stays modest even when centering (below) pushes the
-                                // whole block into a much taller available area.
-                                Spacer().frame(height: 20)
-                                playerHandsArea(cardW: cardW, maxHandWidth: maxHandWidth)
+                                // Reserves room at the bottom for the fixed controls bar
+                                // (visibleControlsHeight, measured live) so the last card/
+                                // banner content never ends up scrolled underneath it —
+                                // beyond the exact measured height as a visible buffer
+                                // (matches Video Poker's identical adjustment; exactly
+                                // matching it still read as touching/overlapping).
+                                .padding(.bottom, reservedBottom)
+                                // Centered, not top-aligned — on a tall screen (iPad
+                                // portrait especially) the cards are nowhere near tall
+                                // enough to fill the available room, and top-aligning left
+                                // them bunched up under the top bar with one large empty
+                                // gap dumped below, reading as unfinished rather than
+                                // intentionally laid out. Centering (matching mac's DEALER/
+                                // VS/PLAYER block, which sits centered in its window) splits
+                                // that leftover room evenly above and below instead. Still
+                                // degrades to the same scrolling behavior as .top when
+                                // content is taller than this minHeight (a split hand, a
+                                // short screen) — centering a block that already exceeds its
+                                // container is a no-op.
+                                .frame(minHeight: geo.size.height - 44, alignment: .center)
                             }
-                            // Reserves room at the bottom for the fixed controls bar
-                            // (visibleControlsHeight, measured live) so the last card/
-                            // banner content never ends up scrolled underneath it —
-                            // beyond the exact measured height as a visible buffer
-                            // (matches Video Poker's identical adjustment; exactly
-                            // matching it still read as touching/overlapping).
-                            .padding(.bottom, reservedBottom)
-                            // Centered, not top-aligned — on a tall screen (iPad
-                            // portrait especially) the cards are nowhere near tall
-                            // enough to fill the available room, and top-aligning left
-                            // them bunched up under the top bar with one large empty
-                            // gap dumped below, reading as unfinished rather than
-                            // intentionally laid out. Centering (matching mac's DEALER/
-                            // VS/PLAYER block, which sits centered in its window) splits
-                            // that leftover room evenly above and below instead. Still
-                            // degrades to the same scrolling behavior as .top when
-                            // content is taller than this minHeight (a split hand, a
-                            // short screen) — centering a block that already exceeds its
-                            // container is a no-op.
-                            .frame(minHeight: geo.size.height - 44, alignment: .center)
+                            .scrollBounceBehavior(.basedOnSize)
+                            .scrollIndicators(.hidden)
+                            // A split's second (or third) hand can land partway or fully
+                            // below the fold on a phone, with no indication there's more
+                            // to scroll to — the player would see the just-created hand
+                            // cut off by the fixed Hit/Stand bar (or not at all) instead of
+                            // being taken to it. Anchored to .top rather than .center/.bottom
+                            // so the active hand's own content, plus the reservedBottom
+                            // clearance below it, both land inside the viewport — anchoring
+                            // to .bottom instead would scroll reservedBottom's gap (which
+                            // sits after playerHandsArea in the VStack) off past the bottom
+                            // edge, right back into the "touching the buttons" state this is
+                            // fixing. Also fires on activeHandIndex resetting to 0 for a
+                            // fresh deal, which conveniently scrolls back to the top too.
+                            .onChange(of: viewModel.state.activeHandIndex) { _, newIndex in
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    scrollProxy.scrollTo("hand-\(newIndex)", anchor: .top)
+                                }
+                            }
                         }
-                        .scrollBounceBehavior(.basedOnSize)
-                        .scrollIndicators(.hidden)
                     }
                 }
 
@@ -304,6 +340,15 @@ struct BlackjackTouchView: View {
                         // closer to the screen's bottom edge.
                         .padding(.bottom, 4)
                         .frame(maxWidth: .infinity)
+                        // Measures this bar's own true total height (padding included)
+                        // for reservedBottom above — see portraitControlsHeight's
+                        // declaration for why this replaced reconstructing it from
+                        // visibleControlsHeight alone.
+                        .onGeometryChange(for: CGFloat.self) { proxy in
+                            proxy.size.height
+                        } action: { newHeight in
+                            portraitControlsHeight = max(portraitControlsHeight, newHeight)
+                        }
                 }
 
                 // Landscape's equivalent fixed control — used to be an HStack child
@@ -664,6 +709,12 @@ struct BlackjackTouchView: View {
                             ? Color.black.opacity(0.25) : .clear,
                         in: RoundedRectangle(cornerRadius: 12)
                     )
+                    // Lets the portrait ScrollView scroll a specific hand into view (see
+                    // body's onChange(of: viewModel.state.activeHandIndex)) — after a
+                    // split, advancing from hand 1 to hand 2 otherwise left hand 2 wherever
+                    // it happened to land, which on a tall split (or a short phone screen)
+                    // could be partially hidden behind the fixed Hit/Stand bar.
+                    .id("hand-\(i)")
                 }
             }
         }
