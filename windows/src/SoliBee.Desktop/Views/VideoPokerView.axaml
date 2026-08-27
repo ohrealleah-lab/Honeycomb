@@ -231,7 +231,7 @@
                 <Grid x:Name="NoWinOverlay" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
                          static soft gold halo matching the other overlay banners. -->
-                    <Border Classes="banner-glow" Background="#80000000" CornerRadius="12" Padding="24,24" MaxWidth="460"
+                    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="460"
                             IsHitTestVisible="True" PointerPressed="NoWinOverlay_PointerPressed">
                         <StackPanel Spacing="12" HorizontalAlignment="Center">
                             <TextBlock x:Name="NoWinHeadlineText" Text="Not today, partner!"
@@ -253,7 +253,7 @@
                 <Grid x:Name="WinBanner" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
                          static soft gold halo matching the other overlay banners. -->
-                    <Border Classes="banner-glow" Background="#80000000" CornerRadius="12" Padding="24,24" MaxWidth="320"
+                    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320"
                             IsHitTestVisible="True" PointerPressed="WinBanner_PointerPressed">
                         <StackPanel Spacing="12" HorizontalAlignment="Center">
                             <TextBlock x:Name="WinHandNameBlock"
