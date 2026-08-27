@@ -546,6 +546,9 @@ public enum StringKey: String, CaseIterable {
     case streakText2Fmt = "streak_text_2_fmt"
     /// Betting action button, Mac wording
     case btnClearBet = "btn_clear_bet"
+    /// Short-form betting action button — iPhone landscape's stacked chip grid, where a
+    /// chip-sized cell doesn't have room for the full "Clear Bet" wording
+    case btnClear = "btn_clear"
     /// Betting action button, Windows wording (Title Case vs Mac's uppercase)
     case btnClearBetWin = "btn_clear_bet_win"
     /// Action button, Mac wording — reused Blackjack/Video Poker

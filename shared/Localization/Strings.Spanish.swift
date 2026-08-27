@@ -274,6 +274,7 @@ enum StringsSpanish {
         .streakText3to4Fmt: "** RACHA DE %d VICTORIAS **",
         .streakText2Fmt: "¡%d victorias seguidas!",
         .btnClearBet: "Borrar Apuesta",
+        .btnClear: "Borrar",
         .btnClearBetWin: "Borrar Apuesta",
         .btnDealSpace: "REPARTIR  [Espacio]",
         .btnDealSpaceWin: "Repartir  [Espacio]",
