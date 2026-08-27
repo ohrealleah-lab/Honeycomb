@@ -69,11 +69,17 @@ public partial class BlackjackView : UserControl
         ClearBetButton.Content   = Strings.Get(StringKey.BtnClearBetWin, _language);
         DealButton.Content       = Strings.Get(StringKey.BtnDealSpaceWin, _language);
         RebuyButton.Content      = Strings.Get(StringKey.BuyInButton, _language);
-        Chip1Button.Content      = Strings.Get(StringKey.Chip1, _language);
-        Chip5Button.Content      = Strings.Get(StringKey.Chip5, _language);
-        Chip10Button.Content     = Strings.Get(StringKey.Chip10, _language);
-        Chip25Button.Content     = Strings.Get(StringKey.Chip25, _language);
-        DoubleBetButton.Content  = Strings.Get(StringKey.Chip2x, _language);
+
+        // Chip buttons wrap a PokerChipFace (the vector-drawn chip visual, see
+        // PokerChipFace.cs) as their Content, not a plain string — setting .Content
+        // directly here like the buttons above would replace that control outright and
+        // discard it before it ever renders, leaving just bare fallback text on the
+        // felt. Update the existing instance's Label instead.
+        if (Chip1Button.Content is PokerChipFace chip1)     chip1.Label     = Strings.Get(StringKey.Chip1, _language);
+        if (Chip5Button.Content is PokerChipFace chip5)     chip5.Label     = Strings.Get(StringKey.Chip5, _language);
+        if (Chip10Button.Content is PokerChipFace chip10)   chip10.Label    = Strings.Get(StringKey.Chip10, _language);
+        if (Chip25Button.Content is PokerChipFace chip25)   chip25.Label    = Strings.Get(StringKey.Chip25, _language);
+        if (DoubleBetButton.Content is PokerChipFace chip2x) chip2x.Label   = Strings.Get(StringKey.Chip2x, _language);
 
         HitButton.Content    = Strings.Get(StringKey.BtnHitWin, _language);
         StandButton.Content  = Strings.Get(StringKey.BtnStandWin, _language);
@@ -520,7 +526,7 @@ public partial class BlackjackView : UserControl
         {
             headline   = Strings.Get(StringKey.ResultHeadlineBlackjack, _language);
             subline    = netStr;
-            background = "#80000000";
+            background = "#BF000000";
             win        = true;
             streak     = vm.ConsecutiveWins;
         }
@@ -528,7 +534,7 @@ public partial class BlackjackView : UserControl
         {
             headline   = Strings.Get(StringKey.YouWin, _language);
             subline    = netStr;
-            background = "#80000000";
+            background = "#BF000000";
             win        = true;
             streak     = vm.ConsecutiveWins;
         }
@@ -536,7 +542,7 @@ public partial class BlackjackView : UserControl
         {
             headline   = Strings.Get(StringKey.ResultHeadlinePush, _language);
             subline    = freePlay ? "" : Strings.Get(StringKey.ResultSubPush, _language);
-            background = "#80000000";
+            background = "#BF000000";
             win        = false;
             streak     = 0;
         }
@@ -546,7 +552,7 @@ public partial class BlackjackView : UserControl
             isNotTodayPartner = !anyBust;
             headline   = anyBust ? Strings.Get(StringKey.ResultHeadlineBust, _language) : Strings.Get(StringKey.NotTodayPartner, _language);
             subline    = netStr;
-            background = "#80000000";
+            background = "#BF000000";
             win        = false;
             streak     = 0;
         }
@@ -580,7 +586,7 @@ public partial class BlackjackView : UserControl
         ResultPlayerTotal.Text    = "Player: 21";
         ResultHeadline.Text       = win ? "You win!" : "Not today, partner!";
         ResultSubline.Text        = win ? "+50 credits" : "-50 credits";
-        ResultOverlay.Background  = new SolidColorBrush(Color.Parse("#80000000"));
+        ResultOverlay.Background  = new SolidColorBrush(Color.Parse("#BF000000"));
         ResultOverlay.BoxShadow   = BoxShadows.Parse(BannerStyles.GoldGlowBoxShadow);
         ResultOverlay.MaxWidth    = win ? 320 : 460;
         ShowBanner(win, streak: 0);

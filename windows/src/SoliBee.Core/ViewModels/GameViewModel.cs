@@ -54,6 +54,12 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     // matching HoneycombViewModel's own top-level HideBee.
     public bool HideBee => Options.HideBee;
 
+    // The board watermark Image binds Opacity (not IsVisible) to this — IsVisible would
+    // collapse the Image out of BoardFeltGrid's layout, and since it's the only content
+    // spanning that Grid's Auto rows, collapsing it shrinks those rows and shifts the
+    // board itself. Opacity hides it visually while keeping its layout footprint intact.
+    public double WatermarkOpacity => HideBee ? 0.0 : 0.15;
+
     [ObservableProperty]
     private CardPointPopup? _pointPopup;
 
@@ -235,6 +241,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             OnPropertyChanged(nameof(HideBee));
+            OnPropertyChanged(nameof(WatermarkOpacity));
             KlondikeWatermarkScale   = m.Options.KlondikeWatermarkScale;
             KlondikeWatermarkOffsetX = m.Options.KlondikeWatermarkOffsetX;
             KlondikeWatermarkOffsetY = m.Options.KlondikeWatermarkOffsetY;

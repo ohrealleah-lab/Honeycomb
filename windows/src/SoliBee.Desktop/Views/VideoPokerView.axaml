@@ -5,9 +5,9 @@
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto" ClipToBounds="False">
-        <Image Grid.RowSpan="3" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="0.15"
+        <Image Grid.RowSpan="3" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
                HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
-               IsVisible="{Binding !Options.HideBee}" RenderTransformOrigin="0.5,0.5">
+               RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform ScaleX="{Binding VideoPokerWatermarkScale}" ScaleY="{Binding VideoPokerWatermarkScale}"/>
@@ -231,7 +231,7 @@
                 <Grid x:Name="NoWinOverlay" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
                          static soft gold halo matching the other overlay banners. -->
-                    <Border Classes="banner-glow" Background="#80000000" CornerRadius="12" Padding="24,24" MaxWidth="460"
+                    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="460"
                             IsHitTestVisible="True" PointerPressed="NoWinOverlay_PointerPressed">
                         <StackPanel Spacing="12" HorizontalAlignment="Center">
                             <TextBlock x:Name="NoWinHeadlineText" Text="Not today, partner!"
@@ -253,7 +253,7 @@
                 <Grid x:Name="WinBanner" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- Banner card. Classes="banner-glow" (App.axaml) applies the shared
                          static soft gold halo matching the other overlay banners. -->
-                    <Border Classes="banner-glow" Background="#80000000" CornerRadius="12" Padding="24,24" MaxWidth="320"
+                    <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="320"
                             IsHitTestVisible="True" PointerPressed="WinBanner_PointerPressed">
                         <StackPanel Spacing="12" HorizontalAlignment="Center">
                             <TextBlock x:Name="WinHandNameBlock"

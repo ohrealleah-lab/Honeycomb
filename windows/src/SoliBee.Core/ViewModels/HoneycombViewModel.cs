@@ -23,6 +23,14 @@ public partial class HoneycombViewModel : ObservableObject
     // "Mac parity options" comment for why — same pattern as HoneyMode/IsSoundEnabled),
     // mirrored here so the board view has something to bind to.
     [ObservableProperty] private bool _hideBee;
+
+    // The board watermark Image binds Opacity (not IsVisible) to this — IsVisible would
+    // collapse the Image out of its parent Grid's layout, and since it's the only content
+    // spanning that Grid's Auto rows, collapsing it shrinks those rows and shifts the
+    // board itself. Opacity hides it visually while keeping its layout footprint intact.
+    public double WatermarkOpacity => HideBee ? 0.0 : 0.15;
+    partial void OnHideBeeChanged(bool value) => OnPropertyChanged(nameof(WatermarkOpacity));
+
     [ObservableProperty] private double _honeycombWatermarkScale = 1.0;
     [ObservableProperty] private double _honeycombWatermarkOffsetX;
     [ObservableProperty] private double _honeycombWatermarkOffsetY;
