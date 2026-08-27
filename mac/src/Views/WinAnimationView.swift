@@ -102,10 +102,24 @@ public struct WinAnimationView: View {
         }
         lastFrameDate = currentDate
 
-        // Spawn a new card from the queue if interval elapsed. 0.6s rather than the
-        // original 0.4s — 50% slower so each card has time to bounce off-screen before
-        // the next one launches, instead of crowding the board with overlapping cards.
-        if !cardsQueue.isEmpty && currentDate.timeIntervalSince(lastSpawnTime) > 0.6 {
+        // Spawn a new card from the queue if interval elapsed and there's room under
+        // the concurrent-card cap. Slowed further from the original 0.4s (then 0.6s) to
+        // 0.9s per request — aiming for the classic Windows Solitaire cascade's
+        // unhurried, one-card-at-a-time feel rather than a rapid-fire spawn (that game's
+        // pace wasn't a fixed spec, it just landed there because its animation loop ran
+        // uncapped against period CPU speed). Halved to 0.45s when there are more than 4
+        // foundations (Beecell's 2-deck mode, 8 foundations/104 cards) so a bigger deck's
+        // total spawn-out time stays roughly the same as a standard deck's, rather than
+        // taking twice as long to empty — same ratio Windows' own port already uses for
+        // its equivalent Spider case. maxActiveCards is a safety ceiling, not the pacing
+        // mechanism: it only matters if it's too low relative to spawnInterval and
+        // maxCardLifetime, which would stall spawning into strict one-out-one-in once
+        // every slot is occupied by a still-bouncing card — same risk Windows' own
+        // maxActiveCards comment describes for its equivalent cap.
+        let spawnInterval: TimeInterval = foundations.count > 4 ? 0.45 : 0.9
+        let maxActiveCards = foundations.count > 4 ? 40 : 20
+        if !cardsQueue.isEmpty && activeCards.count < maxActiveCards
+            && currentDate.timeIntervalSince(lastSpawnTime) > spawnInterval {
             let nextCard = cardsQueue.removeFirst()
 
             let foundationIndex = foundations.firstIndex { pile in
