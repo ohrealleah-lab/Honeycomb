@@ -79,10 +79,6 @@ struct SoliBeeApp: App {
 
                 Divider()
 
-                // Debug-only — intentionally kept in English, not run through L().
-                Button("Roll that beautiful bee footage") {
-                    coordinator.triggerWinAnimation()
-                }
             }
 
             CommandGroup(replacing: .appInfo) {
@@ -100,9 +96,9 @@ struct SoliBeeApp: App {
                 ))
             }
 
-            CommandMenu(coordinator.L(.debugBannersMenu)) {
-                DebugBannerCommands(coordinator: coordinator)
-            }
+//            CommandMenu(coordinator.L(.debugBannersMenu)) {
+//                DebugBannerCommands(coordinator: coordinator)
+//            }
         }
 
         // Each of these is its own Scene/WindowGroup — SwiftUI's environment doesn't
