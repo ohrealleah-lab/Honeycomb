@@ -68,7 +68,7 @@
                 <!-- Global, shared across all 6 games like the toggles above — controls
                      both the "+N"/"-N" score popups and whether Repeatable Flavor/Ambiance
                      banners fire at all. -->
-                <CheckBox x:Name="PointHighlightsCheckBox" Content="Honey Mode (Flavor)" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                <CheckBox x:Name="PointHighlightsCheckBox" Content="Enable Banners" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
                 <CheckBox x:Name="HideBeeCheckBox" Content="Hide the Bee" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
             </StackPanel>
 

@@ -388,22 +388,6 @@ public enum StringKey
     StatQueenBeeWins,
     StatKillerBeeWins,
     StatSwarmsToDeath,
-
-    // Honeycomb player rank (by lifetime cards collected — see
-    // HoneycombRuleLocalization.LocalizedPlayerRankName). Card counts below the
-    // boundary for RankNurseBee still show PlayerLabel ("Player") rather than a key
-    // of their own. Mirrors the Mac port's identical StringKey.swift additions.
-    RankNurseBee,
-    RankScoutBee,
-    RankWorkerBee,
-    RankGuardBee,
-    RankWaggleDancer,
-    RankCombArchitect,
-    RankRoyalAttendant,
-    RankSwarmLeader,
-    RankHiveMonarch,
-    RankApiarist,
-
     StatTotalCardsFlipped,
     StatQueensFalls,
     StatHiveMindsTriggered,
