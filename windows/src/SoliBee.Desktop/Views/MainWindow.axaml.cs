@@ -2135,14 +2135,16 @@ public partial class MainWindow : Window
         // scaleX is already the smaller of the two there, same value Math.Min would have
         // picked anyway.
         //
-        // Blackjack/Video Poker opt back into the old Math.Min behavior — their layout
-        // stacks vertically (Dealer/VS/Player/buttons for Blackjack; credits bar/cards/
-        // buttons for Video Poker) rather than spreading wide like the solitaire games'
-        // tableau, so on a window wide relative to its height, width-driven scaling grows
-        // them enough that the lower rows run off the bottom of the visible window
-        // entirely (ClipToBounds="False" doesn't even clip it, just renders it there
-        // unseen) — a much worse outcome than a somewhat-small board.
-        bool isVerticallyStackedGame = _currentGameTag == "Blackjack" || _currentGameTag == "VideoPoker";
+        // Blackjack/Video Poker/Honeycomb opt back into the old Math.Min behavior — their
+        // layout stacks vertically (Dealer/VS/Player/buttons for Blackjack; credits bar/
+        // cards/buttons for Video Poker; the 2-2-1 hand pyramids + 3x3 board for
+        // Honeycomb, all fixed-height content) rather than spreading wide like the
+        // solitaire games' tableau, so on a window wide relative to its height (e.g.
+        // maximized on a wide monitor), width-driven scaling grows them enough that the
+        // lower rows run off the bottom of the visible window entirely
+        // (ClipToBounds="False" doesn't even clip it, just renders it there unseen) — a
+        // much worse outcome than a somewhat-small board.
+        bool isVerticallyStackedGame = _currentGameTag == "Blackjack" || _currentGameTag == "VideoPoker" || _currentGameTag == "Honeycomb";
         double effectiveZoom = isVerticallyStackedGame
             ? Math.Min(scaleX, Math.Max(1, GameAreaGrid.Bounds.Height) / naturalH)
             : scaleX;
