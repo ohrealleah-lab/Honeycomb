@@ -101,8 +101,10 @@ struct OptionsFullScreenView<GameSettings: View>: View {
             VStack(alignment: .leading, spacing: 8) {
                 Toggle(coordinator.L(.soundShort), isOn: $coordinator.isSoundEnabled)
                 Toggle(coordinator.L(.noStressMode), isOn: $coordinator.noStressMode)
+                    .help(coordinator.L(.noStressModeTooltip))
                     .onChange(of: coordinator.noStressMode) { _, _ in onNoStressModeChange?() }
                 Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
+                    .help(coordinator.L(.honeyModeTooltip))
                 if let hideHintBinding {
                     Toggle(coordinator.L(.hideHintButton), isOn: hideHintBinding)
                 }

@@ -622,12 +622,16 @@ public partial class PreferencesView : UserControl
         SpanishLanguageItem.Content = Strings.Get(StringKey.LanguageSpanish, language);
 
         NoStressModeCheckBox.Content = Strings.Get(StringKey.NoStressMode, language);
+        NoStressModeCheckBox.SetValue(ToolTip.TipProperty, Strings.Get(StringKey.NoStressModeTooltip, language));
+
         SoundCheckBox.Content = Strings.Get(StringKey.SoundEffects, language);
         VegasCheckBox.Content = Strings.Get(StringKey.VegasScoring, language);
         HideHintCheckBox.Content = Strings.Get(StringKey.HideHintButton, language);
         ManuallyDismissBannersCheckBox.Content = Strings.Get(StringKey.ManuallyDismissBanners, language);
         AlwaysOnTopCheckBox.Content = Strings.Get(StringKey.AlwaysOnTop, language);
         PointHighlightsCheckBox.Content = Strings.Get(StringKey.HoneyMode, language);
+        PointHighlightsCheckBox.SetValue(ToolTip.TipProperty, Strings.Get(StringKey.HoneyModeTooltip, language));
+
         HideBeeCheckBox.Content = Strings.Get(StringKey.HideBee, language);
 
         AboutHoneycombButton.Content = Strings.Get(StringKey.AboutHoneycomb, language);

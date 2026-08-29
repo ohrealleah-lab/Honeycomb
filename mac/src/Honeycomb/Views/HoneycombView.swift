@@ -1208,9 +1208,11 @@ struct HoneycombOptionsView: View {
                 .font(.system(.body))
 
             Toggle(coordinator.L(.noStressMode), isOn: $noStressMode)
+                .help(coordinator.L(.noStressModeTooltip))
                 .font(.system(.body))
 
             Toggle(coordinator.L(.honeyMode), isOn: $honeyMode)
+                .help(coordinator.L(.honeyModeTooltip))
                 .font(.system(.body))
 
             Toggle(coordinator.L(.hideHintButton), isOn: $hideHintButton)

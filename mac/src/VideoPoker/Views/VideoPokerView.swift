@@ -1121,8 +1121,10 @@ struct VideoPokerOptionsView: View {
             Divider()
 
             Toggle(coordinator.L(.soundEffects),    isOn: $isSoundEnabled).font(.system(.body))
-            Toggle(coordinator.L(.noStressMode),   isOn: $noStressMode).font(.system(.body))
+            Toggle(coordinator.L(.noStressMode), isOn: $noStressMode).font(.system(.body))
+                .help(coordinator.L(.noStressModeTooltip))
             Toggle(coordinator.L(.honeyMode), isOn: $honeyMode).font(.system(.body))
+                .help(coordinator.L(.honeyModeTooltip))
             Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners).font(.system(.body))
             Toggle(coordinator.L(.hideBee), isOn: $hideBee).font(.system(.body))
         }
