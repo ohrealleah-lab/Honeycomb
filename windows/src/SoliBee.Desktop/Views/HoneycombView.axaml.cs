@@ -22,13 +22,23 @@ namespace SoliBee.Desktop.Views;
 public partial class HoneycombView : UserControl
 {
     // See GameView.UpdateBoardScrim — tells MainWindow whether this view's post-match
-    // OverlayPanel is up so it can extend the darkening over the toolbar too.
+    // OverlayPanel or steal-confirmation dialog is up so it can extend the darkening
+    // over the toolbar too. StealConfirmationPanel doubles as its own scrim (it's the
+    // Background="#80000000" Border the confirmation card sits inside) but, unlike
+    // OverlayPanelScrim, was never sized to the real game area — it only ever
+    // Stretch-filled its parent's tight-fit content size, missing the side margins
+    // around a centered board and (since GameAreaGrid excludes the toolbar row) the
+    // menu bar strip, which is what the BoardScrimRequestMessage send below covers.
     private void UpdateBoardScrim()
     {
         OverlayPanelScrim.IsVisible = OverlayPanel.IsVisible;
         if (TopLevel.GetTopLevel(this) is MainWindow mw)
+        {
             mw.SizeElementToGameArea(OverlayPanelScrim);
-        WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this, OverlayPanel.IsVisible));
+            if (StealConfirmationPanel.IsVisible) mw.SizeElementToGameArea(StealConfirmationPanel);
+        }
+        WeakReferenceMessenger.Default.Send(new BoardScrimRequestMessage(this,
+            OverlayPanel.IsVisible || StealConfirmationPanel.IsVisible));
     }
 
     private AppLanguage _language = AppLanguage.English;
