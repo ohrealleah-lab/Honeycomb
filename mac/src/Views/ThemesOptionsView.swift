@@ -1,5 +1,44 @@
 import SwiftUI
 
+/// Wraps `content` in a ScrollView only once its natural height actually exceeds
+/// `maxHeight` — otherwise renders it directly. A ScrollView given a *fixed* height
+/// taller than its content vertically *centers* that content instead of top-aligning
+/// it (a well-known SwiftUI quirk), which is what made faceCardsContent/
+/// cardColorsContent read as mostly empty space on a tall window even though nothing
+/// was actually overflowing. Same measure-then-decide pattern ThemesOptionsView's
+/// main panelContent already uses for its own contentHeight/sidebar sizing, factored
+/// out here since two more screens needed the identical behavior.
+private struct FitToContentScrollView<Content: View>: View {
+    let maxHeight: CGFloat
+    @ViewBuilder let content: () -> Content
+
+    @State private var measuredHeight: CGFloat = 0
+
+    var body: some View {
+        Group {
+            if measuredHeight > maxHeight {
+                ScrollView(.vertical, showsIndicators: true) {
+                    measuredContent
+                }
+                .frame(height: maxHeight)
+            } else {
+                measuredContent
+            }
+        }
+    }
+
+    private var measuredContent: some View {
+        content()
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { measuredHeight = geo.size.height }
+                        .onChange(of: geo.size.height) { _, h in measuredHeight = h }
+                }
+            )
+    }
+}
+
 /// Themes sub-panel that slides over any game's OptionsView.
 /// All theme-related controls live here: vignette, saved themes,
 /// felt color, custom color, card deck + face art.
@@ -39,12 +78,6 @@ struct ThemesOptionsView: View {
     // game window let the panel be taller than the window itself, which combined with
     // the overlay's automatic centering pushed the header off the top edge on a small window.
     let availableHeight: CGFloat
-
-    // Below this width, the two settings columns (390 + 410 + 32 spacing + 48 padding =
-    // 880 exact need) stack vertically instead of sitting side-by-side, so the panel
-    // never gets clipped by a game window narrower than that — plus the ~344pt the
-    // persistent Themes sidebar always occupies alongside them.
-    private static let sideBySideMinWidth: CGFloat = 1210
 
     @State private var contentHeight: CGFloat = 0
     // The 16-slot face card grid and the 3-mock-card color preview both need full panel
@@ -165,10 +198,11 @@ struct ThemesOptionsView: View {
                 }
             }
         }
-        // 880 (leftColumn 390 + spacing 32 + rightColumn 410 + 48 padding, the panel's
-        // pre-sidebar exact-fit width) + 344 (sidebar 300 + its own leading/trailing
-        // padding) = 1224, rounded up slightly for breathing room.
-        .frame(maxWidth: 1240)
+        // 410 (rightColumn, the wider of the two now-always-stacked columns) + 24
+        // (panelContent's trailing padding) + 364 (sidebar's own 300 width, 20 of
+        // padding, and the 24 leading padding it's placed with) = 798, rounded up
+        // slightly for breathing room.
+        .frame(maxWidth: 820)
         .background(
             Color(NSColor.windowBackgroundColor)
                 .overlay(Color.primary.opacity(0.04))
@@ -197,7 +231,7 @@ struct ThemesOptionsView: View {
     }
 
     private var faceCardsContent: some View {
-        ScrollView(.vertical, showsIndicators: true) {
+        FitToContentScrollView(maxHeight: maxPanelContentHeight) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 4) {
                     Text(coordinator.L(.addCustomCardArtHeading))
@@ -213,25 +247,36 @@ struct ThemesOptionsView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 10)
         }
-        .frame(height: maxPanelContentHeight)
+        .background {
+            // Same watermark treatment as OptionsSheetShell's Preferences/Stats/Rules
+            // panels (fixed max size so it doesn't scale with the panel, low opacity,
+            // gated by the same "Hide the Bee" toggle) — applied outside
+            // FitToContentScrollView so it stays fixed in place whether or not that
+            // ends up scrolling. Solibee.png itself was already fixed (see git
+            // history) to have real alpha transparency instead of a baked-in white
+            // background, so this is safe in dark mode with no extra handling needed.
+            if !coordinator.hideBee, let image = NSImage(named: "Solibee") {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 220)
+                    .opacity(0.15)
+            }
+        }
     }
 
     private var panelContent: some View {
         VStack(alignment: .leading, spacing: 20) {
             deckBackgroundPreview
 
-            Group {
-                if availableWidth >= Self.sideBySideMinWidth {
-                    HStack(alignment: .top, spacing: 32) {
-                        leftColumn
-                        rightColumn
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 24) {
-                        leftColumn
-                        rightColumn
-                    }
-                }
+            // Always stacked — this used to switch to a side-by-side HStack once the
+            // game window was wide enough (see git history), but that meant simply
+            // resizing the window bigger, with no other change, could reformat the
+            // panel's own internal layout. Product call: the panel should look the
+            // same regardless of how wide the window happens to be.
+            VStack(alignment: .leading, spacing: 24) {
+                leftColumn
+                rightColumn
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -343,8 +388,24 @@ struct ThemesOptionsView: View {
         ThemesSectionView()
             .padding(10)
             .frame(width: 300)
-            .frame(maxHeight: maxPanelContentHeight)
+            .frame(maxHeight: sidebarTargetHeight)
             .padding(.trailing, 20)
+    }
+
+    // Matches the sidebar to the settings column's actual content height
+    // (contentHeight, measured by panelContent's GeometryReader) instead of always
+    // filling maxPanelContentHeight (the window's available room) — the settings
+    // column used to be a side-by-side layout tall enough that this rarely mattered,
+    // but now that it's always a single stacked column (shorter), filling the
+    // window's full height regardless left most of the panel as bare empty space
+    // below both columns' actual content. Floored so a short/not-yet-measured
+    // content column (contentHeight starts at 0 before the first layout pass)
+    // doesn't squash the theme list to nothing, and still capped at
+    // maxPanelContentHeight so a long theme list scrolls instead of overflowing
+    // the window.
+    private var sidebarTargetHeight: CGFloat {
+        let minHeight: CGFloat = 260
+        return min(max(contentHeight, minHeight), maxPanelContentHeight)
     }
 
     private var leftColumn: some View {
@@ -419,7 +480,7 @@ struct ThemesOptionsView: View {
     }
 
     private var cardColorsContent: some View {
-        ScrollView(.vertical, showsIndicators: true) {
+        FitToContentScrollView(maxHeight: maxPanelContentHeight) {
             VStack(alignment: .leading, spacing: 16) {
                 Text(coordinator.L(.livePreviewNotice))
                     .font(.system(.body))
@@ -433,7 +494,6 @@ struct ThemesOptionsView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
         }
-        .frame(height: maxPanelContentHeight)
     }
 
     // 3 mock cards on the theme's real backdrop: black-suit ace, red-suit ace, and the

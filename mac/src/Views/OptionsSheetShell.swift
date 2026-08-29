@@ -230,17 +230,12 @@ struct OptionsSheetShell<Content: View>: View {
                 .transition(.move(edge: .trailing))
             }
         } // ZStack
-        // ThemesOptionsView itself needs up to 1240 (see its own comment: 390+32+410+48
-        // content + 344 sidebar) now that the persistent Saved Themes sidebar lives
-        // alongside the settings columns — this used to be 880, the pre-sidebar
-        // content-only width, which left the shell's own layout/hit-testing bounds
-        // narrower than what ThemesOptionsView actually renders. That mismatch let the
-        // panel's real (visually correct) content spill outside the width this
-        // container thought it occupied, which desynced hit-testing from what's drawn —
-        // most visibly, clicking the Themes panel's own "Done" button (out past the
-        // stale 880 edge) instead landed on whatever sat underneath at that screen
-        // position.
-        .frame(maxWidth: showingThemes ? 1240 : 440)
+        // Must match ThemesOptionsView's own outer frame (see its comment) — the shell's
+        // bound needs to track whatever that panel actually renders at, or the shell's
+        // layout/hit-testing bounds desync from what's drawn (this previously caused
+        // the Themes panel's own "Done" button to be unclickable, landing on whatever
+        // sat underneath its stale/mismatched edge instead).
+        .frame(maxWidth: showingThemes ? 820 : 440)
         .animation(.easeInOut(duration: 0.2), value: showingThemes)
     }
 

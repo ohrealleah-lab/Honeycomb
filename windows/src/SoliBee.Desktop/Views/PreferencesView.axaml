@@ -267,6 +267,14 @@
              ═══════════════════════════════════════════════════════════════════ -->
         <Grid x:Name="FaceCardsPanel" IsVisible="False" Width="770" Margin="10,10,10,10" RowDefinitions="*">
 
+            <!-- Constrained watermark (matches HoneycombRulesView/MainWindow/ManageDecksView's
+                 treatment) — fixed max size rather than left to scale with the panel, so it
+                 sits behind the content instead of overpowering it. -->
+            <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
+                   MaxWidth="400" MaxHeight="400" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Grid.Row="0" IsHitTestVisible="False"
+                   IsVisible="{Binding !HideBee}" />
+
             <StackPanel Grid.Row="0" Spacing="6">
                 <TextBlock x:Name="TapTileHintText" Text="Tap a tile to upload art. Tap again to adjust." FontSize="12" Foreground="#1A1A1A"/>
                 <v:FaceCardArtSectionView/>
