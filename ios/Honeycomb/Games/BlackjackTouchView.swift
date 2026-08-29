@@ -1132,7 +1132,7 @@ struct BlackjackTouchView: View {
             viewModel.clearBet()
             actionHaptic.impactOccurred()
         } label: {
-            Text(coordinator.L(.btnClear))
+            Text(coordinator.L(.btnClearShort))
                 .font(.system(size: 13 * bettingGridButtonScale, weight: .black, design: .default).width(.condensed))
                 .lineLimit(1)
                 // Safety net — "Clear" (the longest label in this cell) has less width

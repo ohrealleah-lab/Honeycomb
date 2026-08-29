@@ -327,7 +327,7 @@
                         <StackPanel Spacing="4">
                             <TextBlock x:Name="ThemesOptionsHeading" Text="⚙️ Options" Classes="help-heading"/>
                             <TextBlock x:Name="ThemesOptionsBody" Classes="help-body" TextWrapping="Wrap"
-                                       Text="• Enable Banners: Global toggle across all 6 games — controls the &quot;+N&quot;/&quot;-N&quot; score popups and whether flavor/ambiance banners appear. Turn it off for a quieter, more minimal play experience.&#x0a;• Always on Top: Keeps the game window pinned above your other windows.&#x0a;• Sound Effects, Vegas Scoring, and Hide Hint Button are also available here per-game."/>
+                                       Text="• Honey Mode (Flavor): Global toggle across all 6 games — controls the &quot;+N&quot;/&quot;-N&quot; score popups and whether flavor/ambiance banners appear. Turn it off for a quieter, more minimal play experience.&#x0a;• Always on Top: Keeps the game window pinned above your other windows.&#x0a;• Sound Effects, Vegas Scoring, and Hide Hint Button are also available here per-game."/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
