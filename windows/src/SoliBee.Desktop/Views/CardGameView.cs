@@ -145,12 +145,23 @@ public abstract class CardGameView : UserControl
     {
         var overlay = VictoryOverlayControl;
         overlay.IsVisible = true;
+        // Best-effort initial size so the overlay isn't literally 0x0 for the instant
+        // before the deferred pass below — the real, authoritative sizing happens there.
         SizeVictoryOverlayToWindow(overlay);
         if (DataContext is ISolitaireGameViewModel vm)
         {
             string timeDisplay = vm.Options.IsNoStressMode ? "" : vm.TimeDisplay;
             Dispatcher.UIThread.Post(() =>
             {
+                // Re-measure here, not just above — GameAreaGrid.Bounds right after the
+                // winning move can still reflect the board's pre-drain layout (foundations
+                // not yet full width, tableaus not yet emptied), sizing the overlay (and
+                // its scrim Border, see WinAnimationView.axaml) off a stale/undersized area
+                // that doesn't cover the real window. This callback already runs at
+                // DispatcherPriority.Loaded specifically so layout has caught up with that
+                // final move by the time StartAnimation reads foundation positions below —
+                // the same deferral fixes the scrim's sizing for the same reason.
+                SizeVictoryOverlayToWindow(overlay);
                 overlay.StartAnimation(vm.Foundations, ComputeFoundationSpawnPoints(), vm.ScoreDisplay, timeDisplay, ShowsVictoryCascade);
             }, DispatcherPriority.Loaded);
         }

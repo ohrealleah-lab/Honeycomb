@@ -104,10 +104,17 @@ public class HoneycombViewModelTests
         var vm = new HoneycombViewModel(isHeadless: true);
         vm.Options.ForceNormalRules = true;
         vm.StartNewMatch();
+        // StartNewMatch() picks the starting side with a real coin flip — when it
+        // lands on the opponent, StartTurn() immediately fires an async RunAITurn()
+        // in the background (see HoneycombAsyncTestHelpers' own comment). Overwriting
+        // CurrentTurn below without waiting for that to settle first races it: if
+        // it's still mid-flight, _isAnimating is still true and the PlayCard call
+        // further down silently no-ops instead of actually playing a card.
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         vm.State.CurrentTurn = 1;
         var initialHandCount = vm.State.PlayerHand.Count;
-        
+
         int cellIndex = Array.FindIndex(vm.State.Board.Cells, c => c.IsEmpty);
         vm.PlayCard(0, cellIndex); // Play first card to an empty cell
 
