@@ -130,8 +130,21 @@ struct ThemesSectionView: View {
     // just switches which already-saved snapshot is current.
     // Same felt-color resolution the swatch already used — factored out so the active
     // row's background tint (below) can share it instead of duplicating the logic.
+    // When the theme has its own wallpaper (customBackgroundName), prefer that
+    // wallpaper's sampled dominant color over feltColor — feltColor is often just a
+    // stale/default value in that case and has nothing to do with what the theme
+    // actually looks like on screen. dominantColor(for:) is async-cached and returns
+    // nil until sampling finishes; the .onReceive(CustomBackgroundLoaded) below
+    // already forces a redraw once it resolves, so no extra plumbing is needed here.
     private func themeColor(_ theme: SoliBeeTheme) -> Color {
-        theme.feltColor == .custom
+        #if canImport(AppKit)
+        if let backgroundName = theme.customBackgroundName,
+           let background = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == backgroundName }),
+           let sampled = CustomBackgroundManager.shared.dominantColor(for: background.relativePath) {
+            return sampled
+        }
+        #endif
+        return theme.feltColor == .custom
             ? Color(red: theme.customFeltRed, green: theme.customFeltGreen, blue: theme.customFeltBlue)
             : theme.feltColor.primaryColor
     }
@@ -143,10 +156,8 @@ struct ThemesSectionView: View {
         HStack(spacing: 10) {
             // Colour swatch — the active theme's swatch uses currentAccentTint (same as
             // the row background below) so it reflects a sampled wallpaper color too,
-            // not just the felt-color fallback; other rows keep the plain per-theme
-            // felt-color swatch, since sampling every saved theme's own wallpaper here
-            // would mean resolving each one's dominant color, not just the live one
-            // AppCoordinator is already synced to.
+            // not just the felt-color fallback; other rows resolve their own wallpaper's
+            // dominant color the same way via themeColor(_:) below.
             RoundedRectangle(cornerRadius: 3)
                 .fill(manager.activeThemeId == theme.id ? coordinator.currentAccentTint : themeColor(theme))
                 .frame(width: 18, height: 18)
