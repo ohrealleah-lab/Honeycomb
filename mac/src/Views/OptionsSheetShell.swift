@@ -214,10 +214,33 @@ struct OptionsSheetShell<Content: View>: View {
                     availableWidth: availableWidth,
                     availableHeight: availableHeight
                 )
+                // Re-injected explicitly rather than relying on inheriting them from
+                // whatever presents this shell (an inline .overlay in every game's own
+                // view, or a .sheet for Honeycomb) — empirically, CardView's
+                // @Environment(\.activeCardBackTheme) reads inside this panel's hero
+                // preview were still resolving to ActiveCardBackThemeKey's default
+                // ("Solibee") even though the presenting game view sets the real value
+                // earlier in its own modifier chain, and even though the live
+                // cardBackTheme *binding* passed into ThemesOptionsView was correct the
+                // whole time. Scoped to just this view (not the whole shell) so it can't
+                // affect the always-visible Preferences panel's own layout/animation.
+                .environment(\.feltColor, coordinator.feltColor)
+                .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
+                .environment(\.activeCustomCardColors, coordinator.customCardColors)
                 .transition(.move(edge: .trailing))
             }
         } // ZStack
-        .frame(maxWidth: showingThemes ? 880 : 440)
+        // ThemesOptionsView itself needs up to 1240 (see its own comment: 390+32+410+48
+        // content + 344 sidebar) now that the persistent Saved Themes sidebar lives
+        // alongside the settings columns — this used to be 880, the pre-sidebar
+        // content-only width, which left the shell's own layout/hit-testing bounds
+        // narrower than what ThemesOptionsView actually renders. That mismatch let the
+        // panel's real (visually correct) content spill outside the width this
+        // container thought it occupied, which desynced hit-testing from what's drawn —
+        // most visibly, clicking the Themes panel's own "Done" button (out past the
+        // stale 880 edge) instead landed on whatever sat underneath at that screen
+        // position.
+        .frame(maxWidth: showingThemes ? 1240 : 440)
         .animation(.easeInOut(duration: 0.2), value: showingThemes)
     }
 

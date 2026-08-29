@@ -14,8 +14,9 @@ struct ThemesSectionView: View {
     @State private var renameText: String = ""
     @State private var renameError: String? = nil
     @FocusState private var renameFieldFocused: Bool
-    // Forces a re-render once CustomBackgroundManager finishes async-sampling a
-    // wallpaper's dominant color (see coordinator.currentAccentTint), same pattern
+    // Forces a re-render once CustomBackgroundManager finishes its one-time backfill
+    // of a pre-existing background's dominant color (new backgrounds have it the
+    // instant they're imported — see CustomBackground.dominantColor), same pattern
     // BackgroundLayerView already uses for its own async image load.
     @State private var accentColorTrigger: UUID = UUID()
 
@@ -131,16 +132,16 @@ struct ThemesSectionView: View {
     // Same felt-color resolution the swatch already used — factored out so the active
     // row's background tint (below) can share it instead of duplicating the logic.
     // When the theme has its own wallpaper (customBackgroundName), prefer that
-    // wallpaper's sampled dominant color over feltColor — feltColor is often just a
+    // wallpaper's persisted dominant color over feltColor — feltColor is often just a
     // stale/default value in that case and has nothing to do with what the theme
-    // actually looks like on screen. dominantColor(for:) is async-cached and returns
-    // nil until sampling finishes; the .onReceive(CustomBackgroundLoaded) below
-    // already forces a redraw once it resolves, so no extra plumbing is needed here.
+    // actually looks like on screen. dominantColor is nil only for a background saved
+    // before this existed, until CustomBackgroundManager's one-time backfill finishes;
+    // the .onReceive(CustomBackgroundLoaded) below already forces a redraw once it does.
     private func themeColor(_ theme: SoliBeeTheme) -> Color {
         #if canImport(AppKit)
         if let backgroundName = theme.customBackgroundName,
            let background = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == backgroundName }),
-           let sampled = CustomBackgroundManager.shared.dominantColor(for: background.relativePath) {
+           let sampled = background.dominantColor {
             return sampled
         }
         #endif

@@ -3,6 +3,7 @@ import AppKit
 import SwiftUI
 import Observation
 import CoreImage
+import ImageIO
 
 public struct CustomBackground: Codable, Identifiable, Equatable {
     public var id: UUID
@@ -11,19 +12,39 @@ public struct CustomBackground: Codable, Identifiable, Equatable {
     public var scale: Double
     public var offsetX: Double
     public var offsetY: Double
+    // Sampled once (at import time for a new background, or via a one-time backfill
+    // for one saved before this existed — see
+    // CustomBackgroundManager.backfillDominantColorsIfNeeded()) and persisted here,
+    // rather than re-sampled from the decoded image on every access. Lets UI that
+    // wants "this theme's actual on-screen color" (a saved-theme swatch, the active
+    // theme's accent tint) read it instantly with no dependency on that background's
+    // full image being loaded at all.
+    public var dominantColorRed: Double?
+    public var dominantColorGreen: Double?
+    public var dominantColorBlue: Double?
+
+    public var dominantColor: Color? {
+        guard let r = dominantColorRed, let g = dominantColorGreen, let b = dominantColorBlue else { return nil }
+        return Color(red: r, green: g, blue: b)
+    }
 
     public init(id: UUID = UUID(), name: String, relativePath: String, scale: Double = 1.0,
-                offsetX: Double = 0.0, offsetY: Double = 0.0) {
+                offsetX: Double = 0.0, offsetY: Double = 0.0,
+                dominantColorRed: Double? = nil, dominantColorGreen: Double? = nil, dominantColorBlue: Double? = nil) {
         self.id = id
         self.name = name
         self.relativePath = relativePath
         self.scale = scale
         self.offsetX = offsetX
         self.offsetY = offsetY
+        self.dominantColorRed = dominantColorRed
+        self.dominantColorGreen = dominantColorGreen
+        self.dominantColorBlue = dominantColorBlue
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, relativePath, scale, offsetX, offsetY
+        case dominantColorRed, dominantColorGreen, dominantColorBlue
     }
 
     public init(from decoder: Decoder) throws {
@@ -34,6 +55,9 @@ public struct CustomBackground: Codable, Identifiable, Equatable {
         self.scale = try container.decodeIfPresent(Double.self, forKey: .scale) ?? 1.0
         self.offsetX = try container.decodeIfPresent(Double.self, forKey: .offsetX) ?? 0.0
         self.offsetY = try container.decodeIfPresent(Double.self, forKey: .offsetY) ?? 0.0
+        self.dominantColorRed = try container.decodeIfPresent(Double.self, forKey: .dominantColorRed)
+        self.dominantColorGreen = try container.decodeIfPresent(Double.self, forKey: .dominantColorGreen)
+        self.dominantColorBlue = try container.decodeIfPresent(Double.self, forKey: .dominantColorBlue)
     }
 }
 
@@ -45,22 +69,14 @@ public final class CustomBackgroundManager {
     // no downscaling, just a friendly error surfaced by the picker UI.
     public static let maxImportBytes = 25 * 1024 * 1024
 
-    // Ceiling on a "priority" (synchronous, on the calling thread) preload — see
-    // preloadImages(priorityPaths:) below. Above this, even the active background
-    // goes through the async path instead, so a pathologically large file (e.g. one
-    // imported before addCustomBackground started capping resolution, see below)
-    // can't block the main thread at app launch for an unbounded amount of time.
-    private static let maxSynchronousPreloadBytes = 4 * 1024 * 1024
-
     // Excluded from observation so cache writes don't trigger SwiftUI re-renders across the board.
     @ObservationIgnored private var imageCache: [String: NSImage] = [:]
     @ObservationIgnored private var thumbnailCache: [String: NSImage] = [:]
     @ObservationIgnored private var loadsInFlight: Set<String> = []
-    // Sampled once per wallpaper (not recomputed per-frame) — used wherever a solid
-    // "opaque background" tint needs to represent an active wallpaper theme instead of
-    // a plain felt color (see AppCoordinator.currentAccentTint).
-    @ObservationIgnored private var dominantColorCache: [String: Color] = [:]
-    @ObservationIgnored private var dominantColorLoadsInFlight: Set<String> = []
+    // Guards backfillDominantColorsIfNeeded()'s one-time sampling pass for backgrounds
+    // saved before CustomBackground.dominantColor existed — keyed by background id
+    // (not path) since that's what identifies the persisted entry being updated.
+    @ObservationIgnored private var dominantColorBackfillInFlight: Set<UUID> = []
 
     public var imageLoadTick: Int = 0
 
@@ -87,6 +103,7 @@ public final class CustomBackgroundManager {
         }
         pruneOrphanedEntries()
         preloadImages()
+        backfillDominantColorsIfNeeded()
     }
 
     // Satisfies the spec's "Missing File" edge case: if a background's file was
@@ -126,6 +143,9 @@ public final class CustomBackgroundManager {
         // the active background (see preloadImages(priorityPaths:) above).
         let cappedImage = scaled(image, maxDimension: Self.maxDisplayDimension)
         guard let finalPngData = ImageEncoding.pngData(from: cappedImage) else { return false }
+        // Sampled from the image already in hand, before it's even written to disk —
+        // no separate load/decode needed later just to know this theme's color.
+        let dominantColor = Self.averageColorComponents(of: cappedImage)
 
         let id = UUID()
         let filename = "\(id.uuidString).png"
@@ -134,7 +154,10 @@ public final class CustomBackgroundManager {
         do {
             try finalPngData.write(to: fileURL)
             let newBackground = CustomBackground(id: id, name: cleanedName, relativePath: filename, scale: scale,
-                                                  offsetX: offsetX, offsetY: offsetY)
+                                                  offsetX: offsetX, offsetY: offsetY,
+                                                  dominantColorRed: dominantColor?.red,
+                                                  dominantColorGreen: dominantColor?.green,
+                                                  dominantColorBlue: dominantColor?.blue)
             customBackgrounds.append(newBackground)
             saveCustomBackgrounds()
             preloadImages()
@@ -194,6 +217,25 @@ public final class CustomBackgroundManager {
         return result
     }
 
+    // Fast, bounded-time decode for the synchronous "priority" preload path.
+    // ImageIO's thumbnail generator can downsample *during* decode instead of
+    // fully decoding the source at its original resolution first — critical for
+    // a large legacy background (e.g. an uncapped multi-thousand-pixel import
+    // from before addCustomBackground started downscaling on save), where
+    // NSImage(contentsOf:) followed by scaled(_:maxDimension:) would decode
+    // every source pixel before throwing most of them away, slow enough to
+    // visibly flash the felt-color fallback on launch.
+    private static func fastDownscaledImage(at url: URL, maxDimension: CGFloat) -> NSImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxDimension,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+    }
+
     public func image(for relativePath: String) -> NSImage? {
         if let cached = imageCache[relativePath] {
             return cached
@@ -238,39 +280,49 @@ public final class CustomBackgroundManager {
     public func invalidateCache(for relativePath: String) {
         imageCache.removeValue(forKey: relativePath)
         thumbnailCache.removeValue(forKey: relativePath)
-        dominantColorCache.removeValue(forKey: relativePath)
+    }
+
+    // One-time migration for backgrounds saved before CustomBackground.dominantColor
+    // existed — new imports get it computed immediately in addCustomBackground(_:)
+    // from the image already in hand, no reload needed, so this only ever has
+    // work to do for pre-existing entries. Runs off the main thread per entry (a
+    // fresh decode at full-ish resolution, not the already-cached/downscaled
+    // in-memory image) since this is a rare, one-time cost, not something any UI
+    // is blocked waiting on; each result is persisted immediately so it's never
+    // needed again for that entry, then broadcasts the same CustomBackgroundLoaded
+    // notification the Themes sidebar (and anything else showing a swatch) already
+    // listens for to pick up the now-accurate color.
+    private func backfillDominantColorsIfNeeded() {
+        let missing = customBackgrounds.filter { $0.dominantColor == nil }
+        guard !missing.isEmpty else { return }
+        for background in missing {
+            guard !dominantColorBackfillInFlight.contains(background.id) else { continue }
+            dominantColorBackfillInFlight.insert(background.id)
+            let url = appSupportDirectory.appendingPathComponent(background.relativePath)
+            DispatchQueue.global(qos: .utility).async { [weak self] in
+                let components = NSImage(contentsOf: url).flatMap(Self.averageColorComponents(of:))
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.dominantColorBackfillInFlight.remove(background.id)
+                    guard let components,
+                          let idx = self.customBackgrounds.firstIndex(where: { $0.id == background.id })
+                    else { return }
+                    self.customBackgrounds[idx].dominantColorRed = components.red
+                    self.customBackgrounds[idx].dominantColorGreen = components.green
+                    self.customBackgrounds[idx].dominantColorBlue = components.blue
+                    self.saveCustomBackgrounds()
+                    NotificationCenter.default.post(name: NSNotification.Name("CustomBackgroundLoaded"), object: nil)
+                }
+            }
+        }
     }
 
     // Average color of the wallpaper (via CIAreaAverage — a fast, well-established
-    // "dominant color" approximation, not a true color-cluster analysis) so UI
-    // elsewhere can tint an "opaque background" indicator to match a wallpaper theme
-    // instead of falling back to a plain felt color that may have nothing to do with
-    // what's actually on screen. Same nil-until-cached, async-then-cache pattern as
-    // image(for:) — returns nil (caller falls back to felt color) until the sample is
-    // ready, then posts the same CustomBackgroundLoaded notification image(for:) uses
-    // so already-rendered views (BackgroundLayerView's loadTrigger pattern) pick it up.
-    public func dominantColor(for relativePath: String) -> Color? {
-        if let cached = dominantColorCache[relativePath] { return cached }
-        // Needs the already-decoded image; if it's not cached yet, image(for:) is
-        // already fetching it (or about to be asked to) — bail for now, this'll
-        // resolve on the next CustomBackgroundLoaded-triggered re-render.
-        guard let source = imageCache[relativePath] else { return nil }
-        guard !dominantColorLoadsInFlight.contains(relativePath) else { return nil }
-        dominantColorLoadsInFlight.insert(relativePath)
-
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let sampled = Self.averageColor(of: source)
-            DispatchQueue.main.async {
-                guard let self else { return }
-                if let sampled { self.dominantColorCache[relativePath] = sampled }
-                self.dominantColorLoadsInFlight.remove(relativePath)
-                NotificationCenter.default.post(name: NSNotification.Name("CustomBackgroundLoaded"), object: nil)
-            }
-        }
-        return nil
-    }
-
-    private static func averageColor(of image: NSImage) -> Color? {
+    // "dominant color" approximation, not a true color-cluster analysis). Returns raw
+    // components rather than a Color so both the save-time computation (persisted as
+    // CustomBackground.dominantColorRed/Green/Blue) and this backfill path can share
+    // one implementation.
+    private static func averageColorComponents(of image: NSImage) -> (red: Double, green: Double, blue: Double)? {
         guard let tiffData = image.tiffRepresentation, let ciImage = CIImage(data: tiffData) else { return nil }
         let extentVector = CIVector(x: ciImage.extent.origin.x, y: ciImage.extent.origin.y,
                                      z: ciImage.extent.size.width, w: ciImage.extent.size.height)
@@ -283,19 +335,21 @@ public final class CustomBackgroundManager {
         context.render(outputImage, toBitmap: &pixel, rowBytes: 4,
                         bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
                         format: .RGBA8, colorSpace: nil)
-        return Color(red: Double(pixel[0]) / 255.0, green: Double(pixel[1]) / 255.0, blue: Double(pixel[2]) / 255.0)
+        return (Double(pixel[0]) / 255.0, Double(pixel[1]) / 255.0, Double(pixel[2]) / 255.0)
     }
 
     /// Warms the image cache. Any paths in `priorityPaths` are loaded
     /// synchronously on the calling thread first (so the very first SwiftUI
-    /// render already has a non-nil image and skips the Color fallback) — unless
-    /// the file is larger than maxSynchronousPreloadBytes, in which case it's
-    /// treated as deferred instead. Without this, a single oversized background
-    /// (e.g. one imported before addCustomBackground started capping resolution)
-    /// can block the main thread for seconds at app launch, before the first
-    /// SwiftUI Scene even renders — which can trip macOS's "Application Not
-    /// Responding" check even though the app recovers fine once it catches up.
-    /// Everything else is dispatched to a background thread as before.
+    /// render already has a non-nil image and skips the Color fallback), using a
+    /// bounded-time downscaled decode (see fastDownscaledImage(at:maxDimension:))
+    /// regardless of the file's on-disk size — unlike NSImage(contentsOf:), which
+    /// must fully decode a source image at its original resolution before
+    /// anything can downscale it, so a large legacy background (e.g. one
+    /// imported before addCustomBackground started capping resolution) used to
+    /// make this synchronous pass slow enough to visibly flash the felt-color
+    /// fallback on every launch, or previously even get silently excluded from
+    /// this "priority" pass entirely by a since-removed file-size cap. Everything
+    /// not in priorityPaths is still dispatched to a background thread as before.
     public func preloadImages(priorityPaths: Set<String> = []) {
         let toLoad = customBackgrounds
             .filter { imageCache[$0.relativePath] == nil }
@@ -306,16 +360,15 @@ public final class CustomBackgroundManager {
         // SwiftUI render frame already has the active background in cache.
         let (priority, deferred) = toLoad.reduce(
             into: ([(path: String, url: URL)](), [(path: String, url: URL)]())) { result, item in
-            let size = (try? FileManager.default.attributesOfItem(atPath: item.url.path))?[.size] as? Int
-            if priorityPaths.contains(item.path), let size, size <= Self.maxSynchronousPreloadBytes {
+            if priorityPaths.contains(item.path) {
                 result.0.append(item)
             } else {
                 result.1.append(item)
             }
         }
         for item in priority {
-            guard let img = NSImage(contentsOf: item.url) else { continue }
-            imageCache[item.path] = scaled(img, maxDimension: Self.maxDisplayDimension)
+            guard let img = Self.fastDownscaledImage(at: item.url, maxDimension: Self.maxDisplayDimension) else { continue }
+            imageCache[item.path] = img
         }
 
         // Async pass: load everything else without blocking the main thread.

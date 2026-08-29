@@ -553,11 +553,11 @@ public final class AppCoordinator {
     // currentFeltColor when the active background is plain felt, but the wallpaper's
     // own sampled average color when a custom background image is active, since the
     // felt color setting is otherwise unrelated to what's actually showing on screen.
-    // Returns currentFeltColor (not nil) until the async sample finishes, same
-    // graceful-fallback pattern CustomBackgroundManager.image(for:) already uses.
+    // dominantColor is persisted on CustomBackground itself (sampled once at import,
+    // or via a one-time backfill for older ones) — falls back to currentFeltColor only
+    // for the brief window before that backfill finishes for a pre-existing background.
     public var currentAccentTint: Color {
-        guard let background = activeCustomBackground,
-              let sampled = CustomBackgroundManager.shared.dominantColor(for: background.relativePath)
+        guard let background = activeCustomBackground, let sampled = background.dominantColor
         else { return currentFeltColor }
         return sampled
     }

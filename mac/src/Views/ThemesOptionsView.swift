@@ -92,6 +92,13 @@ struct ThemesOptionsView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.accentColor)
+                // .buttonStyle(.plain) shrinks the hit area down to the rendered
+                // glyphs/text rather than the button's full layout frame — a click
+                // near the edge of "Back" (its padding, or the gap next to the
+                // chevron) could miss it entirely and fall through to whatever's
+                // behind. Restoring a rectangular hit region over the button's own
+                // frame makes the whole visible tap target clickable.
+                .contentShape(Rectangle())
 
                 Spacer()
 
@@ -100,14 +107,27 @@ struct ThemesOptionsView: View {
 
                 Spacer()
 
-                Button(coordinator.L(.done)) { onCommit(false); isShowing = false; isOptionsPresented = false }
+                Button(coordinator.L(.done)) {
+                    onCommit(false)
+                    isShowing = false
+                    isOptionsPresented = false
+                    clearPendingEditors()
+                }
                     .font(.system(.body))
                     .buttonStyle(.plain)
                     .foregroundColor(.accentColor)
+                    // Same fix as "Back" above — same .buttonStyle(.plain) hit-area
+                    // shrinkage.
+                    .contentShape(Rectangle())
             }
             .padding(.horizontal, 24)
             .padding(.top, 36) // Clear the macOS traffic light window controls
             .padding(.bottom, 12)
+            // Defensive backstop alongside the deckBackgroundPreview gesture fix
+            // below: guarantees the header always wins hit-testing over anything
+            // rendered later in this VStack, regardless of any future gesture added
+            // further down the panel.
+            .zIndex(1)
 
             Divider()
 
@@ -154,11 +174,26 @@ struct ThemesOptionsView: View {
                 .overlay(Color.primary.opacity(0.04))
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        // OptionsSheetShell's `if showingThemes { ThemesOptionsView(...) }` keeps this
+        // view around (and, by default, still hit-testable) for the full 0.2s
+        // move/width-collapse transition after Done/Back flips isShowing to false — a
+        // second click landing in that window (a habitual double-click on Done, or just
+        // a fast follow-up click) can hit this still-animating-out panel, including the
+        // hero preview's double-tap-to-edit-background gesture, before it's actually
+        // gone. Tying hit-testing directly to isShowing means the instant dismissal is
+        // requested, nothing in here can be clicked again, regardless of how long the
+        // disappearing animation visually takes.
+        .allowsHitTesting(isShowing)
         .onChange(of: cardBackTheme) { _, _ in onCommit(false) }
         .onChange(of: feltColor) { _, _ in onCommit(false) }
         .onChange(of: showFeltVignette) { _, _ in onCommit(false) }
         .onChange(of: customCardColors) { _, _ in onCommit(false) }
         .onChange(of: customBackgroundName) { _, _ in onCommit(false) }
+        // Belt-and-suspenders alongside the Done/cancel resets above: catches this
+        // panel disappearing through any other route (e.g. the outer Options sheet
+        // getting dismissed while an editor sheet was still up) that would otherwise
+        // leave backgroundEditorMode/cardBackEditTarget stuck non-nil for next time.
+        .onDisappear { clearPendingEditors() }
     }
 
     private var faceCardsContent: some View {
@@ -225,7 +260,20 @@ struct ThemesOptionsView: View {
     private var deckBackgroundPreview: some View {
         ZStack {
             ThemeBackdropView(customBackgroundName: customBackgroundName)
+                // Pin the size directly on this view, before defining its hit-test
+                // shape, rather than relying on the outer ZStack's frame (applied
+                // after both children) to constrain it indirectly.
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
                 .contentShape(Rectangle())
+                // A lone .onTapGesture(count: 2) with no matching single-tap handler
+                // on the same view is a known SwiftUI-on-macOS gesture bug: confirmed
+                // here by debug logging showing this double-tap action firing when the
+                // physical click was on the Done button's header, ~200pt away — the
+                // gesture wasn't scoped to its own view's bounds. Pairing it with an
+                // explicit no-op single-tap gesture makes SwiftUI disambiguate 1-vs-2
+                // taps locally on this view instead of it leaking elsewhere.
+                .onTapGesture(count: 1) {}
                 .onTapGesture(count: 2) { openBackgroundEditor() }
                 .help(customBackgroundName != nil ? coordinator.L(.doubleClickAdjustBackgroundTooltip) : "")
 
@@ -253,6 +301,13 @@ struct ThemesOptionsView: View {
     }
 
     private func openBackgroundEditor() {
+        // Belt-and-suspenders alongside .allowsHitTesting(isShowing) above: SwiftUI's
+        // gesture recognizers on a transitioning-out view can still fire a phantom tap
+        // during the exit animation even with hit-testing disabled (e.g. a double-click
+        // on Done — the first click starts the slide-out, the second lands on the
+        // still-animating hero preview underneath). Guarding here at the call site
+        // can't be bypassed by that timing gap the way the hit-testing tree can.
+        guard isShowing else { return }
         guard let name = customBackgroundName,
               let background = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == name }),
               let image = CustomBackgroundManager.shared.image(for: background.relativePath)
@@ -261,6 +316,7 @@ struct ThemesOptionsView: View {
     }
 
     private func openCardBackEditor() {
+        guard isShowing else { return }
         guard !CustomCardBackManager.shared.isDefaultTheme(cardBackTheme),
               let cardBack = CustomCardBackManager.shared.customCardBacks.first(where: { $0.name == cardBackTheme }),
               let image = CustomCardBackManager.shared.image(for: cardBack.relativePath)
@@ -424,5 +480,20 @@ struct ThemesOptionsView: View {
         coordinator.customFeltBlue  = originalBlue
         customCardColors = originalCustomCardColors
         isShowing = false
+        clearPendingEditors()
+    }
+
+    // .sheet(isPresented:) content (this whole Options flow, for Honeycomb) can retain
+    // its @State across a dismiss/re-present instead of resetting fresh each time — so
+    // if backgroundEditorMode/cardBackEditTarget ever end up non-nil when this panel
+    // closes (e.g. the outer Options sheet got dismissed some other way while one of
+    // these editor sheets was still up, bypassing its own onCancel), that stale non-nil
+    // value survives and immediately re-presents the editor the next time this panel
+    // reappears — looking exactly like tapping Done "opens the background/card-back
+    // resize editor" on a totally unrelated later visit. Clearing both on every exit
+    // path (Done and Back/cancel) guarantees neither can carry over.
+    private func clearPendingEditors() {
+        backgroundEditorMode = nil
+        cardBackEditTarget = nil
     }
 }
