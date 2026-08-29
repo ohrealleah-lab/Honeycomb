@@ -75,23 +75,23 @@ public class GameOptions
     // in PreferencesView.axaml + its code-behind) have been removed now that these are final.
     public double KlondikeWatermarkScale   { get; set; } = 1.2956;
     public double FreecellWatermarkScale   { get; set; } = 1.2956;
-    public double SpiderWatermarkScale     { get; set; } = 1.7856;
+    public double SpiderWatermarkScale     { get; set; } = 1.2956;
     public double VideoPokerWatermarkScale { get; set; } = 1.9424;
-    public double BlackjackWatermarkScale  { get; set; } = 1.9424;
-    public double HoneycombWatermarkScale  { get; set; } = 1.3936;
+    public double BlackjackWatermarkScale  { get; set; } = 1.9228;
+    public double HoneycombWatermarkScale  { get; set; } = 1.57;
 
-    public double KlondikeWatermarkOffsetX   { get; set; } = -180.0;
-    public double KlondikeWatermarkOffsetY   { get; set; } = -124.0;
-    public double FreecellWatermarkOffsetX   { get; set; } = -180.0;
-    public double FreecellWatermarkOffsetY   { get; set; } = -124.0;
-    public double SpiderWatermarkOffsetX     { get; set; } = -432.0;
-    public double SpiderWatermarkOffsetY     { get; set; } = -304.0;
+    public double KlondikeWatermarkOffsetX   { get; set; } = -120.0;
+    public double KlondikeWatermarkOffsetY   { get; set; } = -72.0;
+    public double FreecellWatermarkOffsetX   { get; set; } = -120.0;
+    public double FreecellWatermarkOffsetY   { get; set; } = -72.0;
+    public double SpiderWatermarkOffsetX     { get; set; } = -168.0;
+    public double SpiderWatermarkOffsetY     { get; set; } = -72.0;
     public double VideoPokerWatermarkOffsetX { get; set; } = -500.0;
-    public double VideoPokerWatermarkOffsetY { get; set; } = -444.0;
-    public double BlackjackWatermarkOffsetX  { get; set; } = -500.0;
+    public double VideoPokerWatermarkOffsetY { get; set; } = -464.0;
+    public double BlackjackWatermarkOffsetX  { get; set; } = -496.0;
     public double BlackjackWatermarkOffsetY  { get; set; } = -444.0;
-    public double HoneycombWatermarkOffsetX  { get; set; } = -220.0;
-    public double HoneycombWatermarkOffsetY  { get; set; } = -188.0;
+    public double HoneycombWatermarkOffsetX  { get; set; } = -312.0;
+    public double HoneycombWatermarkOffsetY  { get; set; } = -240.0;
 
     public bool IsVignetteEnabled { get; set; } = true;
     // Turns off timers (solitaire) and enables free play (VP/Blackjack — hides the

@@ -5,8 +5,12 @@
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
+        <!-- Anchored Top with the same Margin as BoardPanel below (not Center) — see
+             GameView.axaml's matching comment for why: BoardFeltGrid's own measured size
+             is inflated by sibling elements sized to the full game area, so centering
+             within IT drifts from the actual cards as the window's shape changes. -->
         <Image Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
-               HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+               HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" IsHitTestVisible="False"
                RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
                 <TransformGroup>

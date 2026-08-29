@@ -5,8 +5,15 @@
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
+        <!-- Anchored Top with the same Margin as BoardPanel below (not Center) — BoardFeltGrid's
+             own measured size is inflated by sibling elements sized to the full game area
+             (DragCanvas, WinAnimationView, banner scrims via SizeElementToGameArea/
+             SizeVictoryOverlayToWindow), so centering within IT drifts away from where the
+             actual cards sit as the window's shape changes. Sharing BoardPanel's exact
+             anchor point keeps both pinned together at any window size; OffsetY now shifts
+             down from that shared top edge instead of from a size-dependent center. -->
         <Image Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
-               HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+               HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,30,0,0" IsHitTestVisible="False"
                RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
                 <TransformGroup>

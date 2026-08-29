@@ -5,6 +5,15 @@
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto" ClipToBounds="False">
+        <!-- Reverted to a plain RowSpan="3" sibling, Center/Center-aligned — an earlier
+             attempt shared this Image's Grid.Row/cell with the actual card content to fix
+             positional drift, but with no explicit Width/Height the Image measures at its
+             full native 1024x1024 source size, which balloons whatever Auto/"*" row it
+             shares into something far bigger than intended (shrunk cards, rows pushed
+             off-screen). This position still drifts somewhat as the window resizes, but
+             doesn't break layout — a real fix needs an explicit size cap on the Image
+             itself (with Scale recalibrated to compensate) or a code-behind live-Bounds
+             binding instead of sharing a Grid cell. -->
         <Image Grid.RowSpan="3" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
                HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                RenderTransformOrigin="0.5,0.5">
@@ -15,7 +24,6 @@
                 </TransformGroup>
             </Image.RenderTransform>
         </Image>
-
 
         <!-- ─── Pay Table Popup (revealed on BidBar hover, see BidBar_PointerEntered/Exited) ── -->
         <Popup x:Name="PayTablePopup" PlacementTarget="{Binding ElementName=BidBar}" Placement="Bottom" IsOpen="False" IsLightDismissEnabled="False">

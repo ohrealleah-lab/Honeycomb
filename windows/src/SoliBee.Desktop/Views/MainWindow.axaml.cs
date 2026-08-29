@@ -2117,18 +2117,35 @@ public partial class MainWindow : Window
             naturalH = boardMinH - (TopBarBorder != null && TopBarBorder.Bounds.Height > 0 ? TopBarBorder.Bounds.Height : 80);
         }
 
-        double availableH = Math.Max(1, GameAreaGrid.Bounds.Height);
         // MainContentWrapper carries a 30px Margin on each side (see MainWindow.axaml) so
         // scaled cards never touch the window edge — match that here, otherwise scale-to-fit
         // sizes the board to the full window width and the margin clips the edge cards instead.
         double availableW = Math.Max(1, GameAreaGrid.Bounds.Width - 60);
 
         double scaleX = availableW / naturalW;
-        double scaleY = availableH / naturalH;
 
-        // Remove configuredZoom cap entirely: cards now perfectly scale
-        // up OR down to fill whatever space the window provides.
-        double effectiveZoom = Math.Min(scaleX, scaleY);
+        // Driven by width alone, not the old Math.Min(scaleX, availableH / naturalH) —
+        // on a window wider than the board's natural aspect ratio, height used to be the
+        // binding constraint: scaleX kept climbing as the window widened but Min()
+        // ignored it, so cards stopped growing and the extra width just became side
+        // margin instead. Cards should keep growing with the window's width; the
+        // accepted tradeoff is that a fully-cascaded tableau can run past the bottom of
+        // a short-enough window rather than everything staying capped to whatever height
+        // allows. On a window taller than the board's natural ratio this is a no-op —
+        // scaleX is already the smaller of the two there, same value Math.Min would have
+        // picked anyway.
+        //
+        // Blackjack/Video Poker opt back into the old Math.Min behavior — their layout
+        // stacks vertically (Dealer/VS/Player/buttons for Blackjack; credits bar/cards/
+        // buttons for Video Poker) rather than spreading wide like the solitaire games'
+        // tableau, so on a window wide relative to its height, width-driven scaling grows
+        // them enough that the lower rows run off the bottom of the visible window
+        // entirely (ClipToBounds="False" doesn't even clip it, just renders it there
+        // unseen) — a much worse outcome than a somewhat-small board.
+        bool isVerticallyStackedGame = _currentGameTag == "Blackjack" || _currentGameTag == "VideoPoker";
+        double effectiveZoom = isVerticallyStackedGame
+            ? Math.Min(scaleX, Math.Max(1, GameAreaGrid.Bounds.Height) / naturalH)
+            : scaleX;
 
         _contentScale.ScaleX = effectiveZoom;
         _contentScale.ScaleY = effectiveZoom;

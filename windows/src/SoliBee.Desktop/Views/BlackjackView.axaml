@@ -19,6 +19,15 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
+            <!-- Reverted to RowSpan="6" across the whole grid — anchoring to just row 2
+                 (the VS divider) tracked the cards' vertical center more reliably, but
+                 with no explicit Width/Height this Image measures at its full native
+                 1024x1024 source size, and row 2 is normally tiny (a 1px divider line +
+                 small text) — ballooning it to ~1024px pushed Dealer/Player/buttons far
+                 out of view. Back to the known-safe (if imperfectly centered) baseline;
+                 a real fix needs an explicit size cap on the Image (with Scale
+                 recalibrated to compensate) or a code-behind live-Bounds binding instead
+                 of sharing a Grid cell/row. -->
             <Image Grid.RowSpan="6" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
                    HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                    RenderTransformOrigin="0.5,0.5">
