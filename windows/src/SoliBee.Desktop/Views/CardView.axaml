@@ -35,11 +35,11 @@
                          gets the same hard edge as baked PNG art and can't crowd the
                          corner rank/suit indices either. -->
                     <Border Width="74" Height="119" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True">
-                        <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                        <Image x:Name="FaceCardImage" Width="70" Height="60" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="HighQuality" />
                     </Border>
 
                     <!-- SkiaSharp-rendered pip for Ace (ink-bounds centered) -->
-                    <Image x:Name="AcePipImage" Width="86" Height="86" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                    <Image x:Name="AcePipImage" Width="86" Height="86" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" RenderOptions.BitmapInterpolationMode="HighQuality" />
                 </Grid>
 
                 <!-- Top-Left Value & Suit Display (Horizontal) -->
@@ -128,7 +128,7 @@
                  the border always stays visible on top. -->
             <Border x:Name="InnerCardBack" Margin="0" CornerRadius="9" ClipToBounds="True">
                 <Grid x:Name="CardBackGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                    <Image x:Name="CardBackImage" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
                 </Grid>
             </Border>
         </Border>

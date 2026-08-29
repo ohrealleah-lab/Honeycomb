@@ -30,7 +30,7 @@
                                Width="60" Height="52"
                                Stretch="Uniform"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                               RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
                     </Border>
 
                     <!-- Top-left rank/suit -->

@@ -801,7 +801,7 @@ public partial class CardView : UserControl
             // 90px pip bake resolution but glaringly jagged once that got bumped to
             // 256px (a ~7x downscale to this 36px display size) without ever setting
             // this.
-            RenderOptions.SetBitmapInterpolationMode(pipImage, BitmapInterpolationMode.MediumQuality);
+            RenderOptions.SetBitmapInterpolationMode(pipImage, BitmapInterpolationMode.HighQuality);
 
             var container = new Grid
             {

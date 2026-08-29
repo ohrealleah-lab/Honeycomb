@@ -415,7 +415,7 @@ public partial class WinAnimationView : UserControl
             };
             // Created in code, not XAML — set explicitly for the same reason as the
             // other code-behind-created Image controls (see CardView.PopulateSuitCanvas).
-            RenderOptions.SetBitmapInterpolationMode(ghost, BitmapInterpolationMode.MediumQuality);
+            RenderOptions.SetBitmapInterpolationMode(ghost, BitmapInterpolationMode.HighQuality);
             Canvas.SetLeft(ghost, startX - 1);
             Canvas.SetTop(ghost, startY - 1);
             trailViews.Add(ghost);

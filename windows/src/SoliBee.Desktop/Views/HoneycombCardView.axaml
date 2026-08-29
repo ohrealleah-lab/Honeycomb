@@ -36,7 +36,7 @@
             <Border x:Name="CardFace" BorderBrush="#33000000" BorderThickness="1.5" Background="#F0F0F0" CornerRadius="16" BoxShadow="0 4 10 0 #33000000" ClipToBounds="True">
                 <Grid>
                     <!-- Center Suit Glyph -->
-                    <Image x:Name="SuitImage" Width="150" Height="150" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                    <Image x:Name="SuitImage" Width="150" Height="150" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
                     
                     <!-- Star Rating Layout -->
                     <StackPanel x:Name="StarsPanel" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="1" />
@@ -114,7 +114,7 @@
              Honeycomb's actual 195×276 card, blurring it unconditionally regardless of
              window size — see CardView.ResolveCardBackBitmap's comment). -->
         <Border x:Name="CardBack" BorderBrush="#33000000" BorderThickness="1.5" CornerRadius="16" IsVisible="False" Background="White" RenderTransformOrigin="50%,50%" BoxShadow="0 4 10 0 #33000000" ClipToBounds="True">
-            <Image x:Name="CardBackImage" Width="195" Height="276" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="MediumQuality" />
+            <Image x:Name="CardBackImage" Width="195" Height="276" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
         </Border>
 
         <!-- Steal/Order/Chaos/Swap Highlight Border — a direct CardRoot sibling of

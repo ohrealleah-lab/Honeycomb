@@ -131,7 +131,7 @@ public partial class FaceCardArtSectionView : UserControl
             // in CardView.PopulateSuitCanvas). The source bitmap here is baked at 280x240
             // (FaceArtCacheW/H), roughly a 10x downscale to this tile size, so this
             // matters even more than most.
-            RenderOptions.SetBitmapInterpolationMode(img, BitmapInterpolationMode.MediumQuality);
+            RenderOptions.SetBitmapInterpolationMode(img, BitmapInterpolationMode.HighQuality);
             try
             {
                 img.Source = CardView.GetCachedFaceArtBitmap(FaceCardArtService.GetFullPath(art), art.Scale, art.OffsetX, art.OffsetY);

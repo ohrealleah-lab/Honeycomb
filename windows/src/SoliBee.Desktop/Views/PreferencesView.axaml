@@ -148,7 +148,7 @@
                         ToolTip.Tip="Double-click the card or the background to adjust it">
                     <Grid>
                         <Image x:Name="DeckBackgroundImage" Stretch="UniformToFill" IsVisible="False"
-                               RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
                         <ContentControl x:Name="DeckBackgroundCardMockHost" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
                 </Border>
@@ -283,7 +283,7 @@
             <Border x:Name="CardColorPreviewBackdrop" Grid.Row="0" Height="240" CornerRadius="8" Padding="20" Margin="0,0,0,14" ClipToBounds="True">
                 <Grid>
                     <Image x:Name="CardColorPreviewImage" Stretch="UniformToFill" IsVisible="False"
-                           RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
                     <StackPanel x:Name="CardColorPreviewStack" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
