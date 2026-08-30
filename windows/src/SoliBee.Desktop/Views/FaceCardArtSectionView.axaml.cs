@@ -203,7 +203,7 @@ public partial class FaceCardArtSectionView : UserControl
                 Width = 22, Height = 22,
                 FontSize = 11,
                 Padding = new Thickness(0),
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
                 HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,

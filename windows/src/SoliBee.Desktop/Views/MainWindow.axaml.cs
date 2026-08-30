@@ -1053,8 +1053,15 @@ public partial class MainWindow : Window
     {
         _preferencesView = new PreferencesView();
         PreferencesBackButton.IsVisible = false;
+        // FaceCardsPanel (inside PreferencesView) draws its own dedicated solibee.png
+        // watermark behind the card grid — hide this dialog-chrome copy while it's open so
+        // the two don't both render at once.
+        PreferencesWatermarkWrapper.IsVisible = true;
         _preferencesView.SubPanelVisibilityChanged += (_, _) =>
+        {
             PreferencesBackButton.IsVisible = _preferencesView?.IsSubPanelOpen ?? false;
+            PreferencesWatermarkWrapper.IsVisible = !(_preferencesView?.IsFaceCardsPanelOpen ?? false);
+        };
 
         if (this.DataContext is VideoPokerViewModel vpVm)
         {

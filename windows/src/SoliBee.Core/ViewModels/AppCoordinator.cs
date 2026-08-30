@@ -185,6 +185,16 @@ public partial class AppCoordinator : ObservableObject
     public void ApplyTheme(SoliBeeTheme theme)
     {
         var options = SettingsService.LoadOptions();
+
+        // Mirrors PreferencesView.ApplyThemeNow's two fixes for the theme-switch data-loss
+        // bugs, so this second entry point into ThemeService.ApplyTheme can't reintroduce
+        // them if it's ever wired up to UI: persist the outgoing theme's live face art
+        // before switching, and reconstruct from a fresh disk read of `theme` rather than
+        // whatever (possibly stale) object reference the caller handed in.
+        if (options.ActiveThemeId.HasValue)
+            ThemeService.UpdateTheme(options.ActiveThemeId.Value, options);
+        theme = ThemeService.LoadThemes().Find(t => t.Id == theme.Id) ?? theme;
+
         ThemeService.ApplyTheme(theme, options);
         SettingsService.SaveOptions(options);
         WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(options));

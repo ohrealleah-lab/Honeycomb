@@ -235,12 +235,23 @@
                                  of scaling with however tall a given game's options page is.
                                  Anchored upper-right (below the Language row, over the checkbox
                                  list) rather than centered — Windows-only positioning choice, no
-                                 equivalent change on Mac. -->
-                            <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
-                                   MaxWidth="220" MaxHeight="220" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                   Margin="0,100,0,0"
-                                   Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False"
-                                   IsVisible="{Binding !HideBee}" />
+                                 equivalent change on Mac.
+                                 Wrapped in a Border instead of toggling the Image's own IsVisible
+                                 from code-behind, so the existing {Binding !HideBee} stays live —
+                                 setting IsVisible imperatively would replace that binding outright.
+                                 PreferencesWatermarkWrapper is hidden from code-behind specifically
+                                 while the Face Cards panel is open: that panel's own card grid has
+                                 no opaque background filling the space around it, so this watermark
+                                 was showing through a second time next to the tiles, on top of the
+                                 large one already visible where the board isn't covered by the
+                                 dialog. -->
+                            <Border x:Name="PreferencesWatermarkWrapper" Grid.Row="0" Grid.RowSpan="3">
+                                <Image Source="avares://Honeycomb/Assets/solibee.png" Opacity="0.15" Stretch="Uniform"
+                                       MaxWidth="220" MaxHeight="220" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                       Margin="0,100,0,0"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding !HideBee}" />
+                            </Border>
 
                             <!-- Header row: shared "‹ Back" chip (left, hidden on the main
                                  Preferences page) + centered title — PreferencesView toggles

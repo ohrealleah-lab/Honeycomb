@@ -2,11 +2,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SoliBee.Desktop.Views.FaceCardArtSectionView">
   <Grid>
-    <StackPanel Spacing="10">
-      <StackPanel x:Name="SpadesRow" Orientation="Horizontal" Spacing="10" />
-      <StackPanel x:Name="HeartsRow" Orientation="Horizontal" Spacing="10" />
-      <StackPanel x:Name="DiamondsRow" Orientation="Horizontal" Spacing="10" />
-      <StackPanel x:Name="ClubsRow" Orientation="Horizontal" Spacing="10" />
+    <!-- Each suit is a column (A/J/Q/K stacked vertically), 4 suit-columns laid out
+         side by side. The outer StackPanel hugs its content width instead of a
+         UniformGrid, which would stretch the 4 columns to fill FaceCardsPanel's full
+         770px width and leave large gaps between them — a fixed Spacing keeps the
+         columns close together, centered as a group. UniformGrid per column stacks
+         its 4 tiles (same tile size, avoids the "forces a vertical scrollbar"
+         tradeoff noted in BuildTile's own comment). -->
+    <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Center">
+      <UniformGrid x:Name="SpadesRow" Columns="1" />
+      <UniformGrid x:Name="HeartsRow" Columns="1" />
+      <UniformGrid x:Name="DiamondsRow" Columns="1" />
+      <UniformGrid x:Name="ClubsRow" Columns="1" />
     </StackPanel>
 
     <!-- Confirm delete overlay -->

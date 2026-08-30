@@ -86,14 +86,20 @@ public partial class PreferencesView : UserControl
         // silently lost. This mirrors NotifySettingsChanged's own live-save block below,
         // just triggered by the message FaceCardArtSectionView already sends after every
         // upload/adjust/remove instead of by an options field changing.
+        //
+        // Reads DataContext off the recipient parameter `r`, not a captured `this` —
+        // closing over `this` would keep this instance (and its now-stale DataContext)
+        // alive and firing forever: MainWindow makes a brand-new PreferencesView on every
+        // open and never disposes the old one, so an old instance's leaked handler would
+        // still run on the NEXT instance's edits, live-saving stale field values over
+        // whatever the current session just wrote. Unregistering on Unloaded closes the
+        // same gap FaceCardArtSectionView already closes for its own copy of this pattern.
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
         {
-            if (DataContext is GameOptions options && options.ActiveThemeId.HasValue)
-            {
-                if (!ThemeService.UpdateTheme(options.ActiveThemeId.Value, options))
-                    options.ActiveThemeId = null; // stale id (its theme was deleted) — see UpdateTheme's doc comment
-            }
+            if (r is PreferencesView { DataContext: GameOptions options })
+                SaveLiveArtToActiveTheme(options);
         });
+        this.Unloaded += (_, _) => WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
     }
 
     private void PopulateCardBacks(GameOptions options)
@@ -160,6 +166,11 @@ public partial class PreferencesView : UserControl
     public event EventHandler? SubPanelVisibilityChanged;
 
     public bool IsSubPanelOpen => ThemesPanel.IsVisible || FaceCardsPanel.IsVisible || CardColorsPanel.IsVisible;
+
+    // Lets MainWindow hide its own shared solibee.png dialog watermark specifically while
+    // this panel is open — its card grid has no opaque background filling the space around
+    // the tiles, so that watermark was showing through a second time next to them.
+    public bool IsFaceCardsPanelOpen => FaceCardsPanel.IsVisible;
 
     public void GoBack()
     {
@@ -456,7 +467,18 @@ public partial class PreferencesView : UserControl
     {
         if (_originalGameOptions != null)
         {
-            NotifySettingsChanged(_originalGameOptions);
+            NotifySettingsChanged(_originalGameOptions, syncFaceArtToTheme: false);
+        }
+        else if (DataContext is GameOptions &&
+                 (_originalSharedOptionsForVideoPoker ?? _originalSharedOptionsForBlackjack) is { } originalShared)
+        {
+            // Themes/Face Cards/Card Colors sub-panel is open during a VideoPoker/Blackjack
+            // session — OpenThemes_Click swaps DataContext to a shared GameOptions clone for
+            // as long as it's open, so neither this method's own VP/BJ branches below (which
+            // key off DataContext's type) nor _originalGameOptions (null for a VP/BJ session)
+            // can see a change made while it's open. Revert the shared state directly instead
+            // of falling through every branch and silently discarding nothing.
+            NotifySettingsChanged(originalShared, syncFaceArtToTheme: false);
         }
         else if (_originalVideoPokerOptions != null && DataContext is VideoPokerOptions vpOptions)
         {
@@ -473,7 +495,7 @@ public partial class PreferencesView : UserControl
             VideoPokerVm?.SaveOptions();
 
             if (_originalSharedOptionsForVideoPoker != null)
-                NotifySettingsChanged(_originalSharedOptionsForVideoPoker);
+                NotifySettingsChanged(_originalSharedOptionsForVideoPoker, syncFaceArtToTheme: false);
         }
         else if (_originalBlackjackOptions != null && DataContext is BlackjackOptions bjOptions)
         {
@@ -489,7 +511,7 @@ public partial class PreferencesView : UserControl
             BlackjackVm?.SaveOptions();
 
             if (_originalSharedOptionsForBlackjack != null)
-                NotifySettingsChanged(_originalSharedOptionsForBlackjack);
+                NotifySettingsChanged(_originalSharedOptionsForBlackjack, syncFaceArtToTheme: false);
         }
     }
 
@@ -504,6 +526,14 @@ public partial class PreferencesView : UserControl
         if (_originalGameOptions != null && DataContext is GameOptions options)
         {
             return JsonSerializer.Serialize(options) != JsonSerializer.Serialize(_originalGameOptions);
+        }
+
+        // Themes/Face Cards/Card Colors sub-panel open during a VideoPoker/Blackjack
+        // session — see the matching branch in RevertSettingsChanges.
+        if (DataContext is GameOptions sharedOptions &&
+            (_originalSharedOptionsForVideoPoker ?? _originalSharedOptionsForBlackjack) is { } originalShared)
+        {
+            return JsonSerializer.Serialize(sharedOptions) != JsonSerializer.Serialize(originalShared);
         }
 
         if (_originalVideoPokerOptions != null && DataContext is VideoPokerOptions vpOptions)
@@ -1030,6 +1060,24 @@ public partial class PreferencesView : UserControl
 
     private void ApplyThemeNow(SoliBeeTheme theme, GameOptions options)
     {
+        // Force-persist the outgoing theme's current face art before switching, rather
+        // than trusting that every prior edit's reactive FaceCardArtChangedMessage live-save
+        // already landed. ApplyTheme below unconditionally overwrites the live art set with
+        // the INCOMING theme's own snapshot — if the outgoing theme's snapshot was ever even
+        // briefly out of sync with the live state (a missed/slow live-save), that art is
+        // gone for good the instant this runs, since nothing else remembers it.
+        SaveLiveArtToActiveTheme(options);
+
+        // Re-fetch `theme` fresh from disk by id instead of trusting the object reference
+        // handed in — it came from a theme-list row's Tag, populated whenever
+        // RefreshThemeList() last ran. Uploading face art (FaceCardsPanel) writes straight
+        // to disk without ever calling RefreshThemeList(), so that Tag can be stale —
+        // including for the theme you're already on: re-applying it (e.g. after Back, with
+        // no theme switch in between) would otherwise reconstruct from an old, art-light
+        // snapshot and stomp everything just uploaded, even though UpdateTheme above had
+        // just written the correct one to disk a moment earlier.
+        theme = ThemeService.LoadThemes().Find(t => t.Id == theme.Id) ?? theme;
+
         ThemeService.ApplyTheme(theme, options);
 
         _initializing = true;
@@ -1077,9 +1125,15 @@ public partial class PreferencesView : UserControl
         {
             options.ActiveThemeId = null;
             SettingsService.SaveOptions(options);
-            if (_originalGameOptions != null && _originalGameOptions.ActiveThemeId == _themeToDelete.Id)
-                _originalGameOptions.ActiveThemeId = null;
         }
+
+        // Checked independently of the block above — the theme active when Preferences
+        // opened (_originalGameOptions.ActiveThemeId) isn't necessarily the CURRENTLY
+        // active one (the user may have applied a different theme first), so a delete
+        // that doesn't match `options.ActiveThemeId` could still be deleting the theme
+        // Cancel would otherwise revert back to.
+        if (_originalGameOptions != null && _originalGameOptions.ActiveThemeId == _themeToDelete.Id)
+            _originalGameOptions.ActiveThemeId = null;
 
         ThemeService.DeleteTheme(_themeToDelete.Id);
         _themeToDelete = null;
@@ -2019,7 +2073,26 @@ public partial class PreferencesView : UserControl
 
     // ── Settings broadcast ────────────────────────────────────────────────────
 
-    private void NotifySettingsChanged(GameOptions options)
+    // Single choke point for "persist current live face art into the active theme's
+    // saved snapshot" — every caller (the FaceCardArtChangedMessage hook, this method,
+    // ApplyThemeNow) must route through here instead of duplicating the
+    // UpdateTheme/ActiveThemeId-clearing logic inline. Three near-identical copies of
+    // this is exactly how the theme-switch data-loss bugs happened: one copy stayed
+    // correct while another quietly diverged.
+    private static void SaveLiveArtToActiveTheme(GameOptions options)
+    {
+        if (!options.ActiveThemeId.HasValue) return;
+        if (!ThemeService.UpdateTheme(options.ActiveThemeId.Value, options))
+            options.ActiveThemeId = null; // stale id (its theme was deleted) — see UpdateTheme's doc comment
+    }
+
+    // syncFaceArtToTheme=false is for RevertSettingsChanges only: face card art edits
+    // are already-committed actions (see _originalGameOptions's doc comment — Cancel
+    // never covers them, same as Save/Delete Theme), live-saved into whichever theme
+    // was active at edit time. Reverting other fields must not also re-run that sync,
+    // or it captures whatever art is live NOW under the theme Cancel is reverting TO,
+    // silently overwriting that theme's real saved snapshot with a mismatched one.
+    private void NotifySettingsChanged(GameOptions options, bool syncFaceArtToTheme = true)
     {
         SettingsService.SaveOptions(options);
         WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(options));
@@ -2028,10 +2101,9 @@ public partial class PreferencesView : UserControl
         // so there's never a "Resave" step to remember — the "Active" row is always
         // already up to date. Cheap enough to call unconditionally (small JSON file,
         // user-paced edits, not a hot path).
-        if (options.ActiveThemeId.HasValue)
+        if (syncFaceArtToTheme && options.ActiveThemeId.HasValue)
         {
-            if (!ThemeService.UpdateTheme(options.ActiveThemeId.Value, options))
-                options.ActiveThemeId = null; // stale id (its theme was deleted) — see UpdateTheme's doc comment
+            SaveLiveArtToActiveTheme(options);
             if (ThemesPanel.IsVisible) RefreshThemeList();
         }
 
