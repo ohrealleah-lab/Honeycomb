@@ -71,8 +71,17 @@ public partial class PreferencesView : UserControl
     public bool ShowVegasOption
     {
         get => VegasCheckBox.IsVisible;
-        set => VegasCheckBox.IsVisible = value;
+        set { VegasCheckBox.IsVisible = value; RefreshThisGameSectionVisibility(); }
     }
+
+    // "This Game" (Game Mode + Vegas Scoring) is hidden entirely, header included, when
+    // neither of its two rows applies — Honeycomb has no Game Mode row and no Vegas
+    // Scoring; Video Poker/Blackjack have neither. Called after either row's own
+    // visibility is set, from whichever order they happen to run in (ShowVegasOption is
+    // set once by MainWindow before DataContext is assigned; GameModeSection.IsVisible is
+    // set per-sync-call below), so the section always reflects the current combination.
+    private void RefreshThisGameSectionVisibility() =>
+        ThisGameSection.IsVisible = GameModeSection.IsVisible || VegasCheckBox.IsVisible;
 
     public PreferencesView()
     {
@@ -433,6 +442,9 @@ public partial class PreferencesView : UserControl
         {
             GameModeSection.IsVisible = false;
         }
+        RefreshThisGameSectionVisibility();
+
+        VideoPokerOptionsSection.IsVisible = false;
     }
 
     private void PreferencesView_Loaded(object? sender, RoutedEventArgs e)
@@ -587,44 +599,55 @@ public partial class PreferencesView : UserControl
         return false;
     }
 
-    // Video Poker has its own separate options model — only a handful of settings
-    // (sound) are VP-specific; No Stress Mode/Hide Hint are global (shared
-    // GameOptions) and Visual Themes is available same as every other game.
+    // Video Poker has its own separate options model. Variant/Starting Credits/Default
+    // Bet are genuinely VP-specific (VideoPokerOptionsSection, read from `options`
+    // directly below — no other game has these); everything else here is global
+    // (shared GameOptions), and Visual Themes is available same as every other game.
     private void SyncUIFromVideoPokerOptions(VideoPokerOptions options)
     {
         VegasCheckBox.IsVisible        = false;
         PointHighlightsCheckBox.IsVisible = true;
 
-        SoundCheckBox.IsChecked        = options.IsSoundEnabled;
-
         var shared = SettingsService.LoadOptions();
         SyncLanguageComboBox(shared);
+        SoundCheckBox.IsChecked        = shared.IsSoundEnabled;
         NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
         HideHintCheckBox.IsChecked     = shared.HideHintButton;
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
         PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
         HideBeeCheckBox.IsChecked = shared.HideBee;
+        RefreshThisGameSectionVisibility();
+
+        VideoPokerOptionsSection.IsVisible = true;
+        StartingCreditsUpDown.Value = options.StartingCredits;
+        foreach (var item in DefaultBetComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (item.Tag?.ToString() == options.BetPerHand.ToString()) { DefaultBetComboBox.SelectedItem = item; break; }
+        }
     }
 
-    // Blackjack has its own separate options model, same shape as Video Poker above —
-    // only sound is Blackjack-specific; No Stress Mode/Hide Hint/Honey Mode are global
-    // (shared GameOptions) and Visual Themes is available same as every other game.
+    // Blackjack has its own separate options model, same shape as Video Poker above.
+    // Every checkbox here is global (shared GameOptions) — Vegas Scoring is Klondike-only
+    // so it's hidden, same as every other non-Klondike game — and Visual Themes is
+    // available same as every other game.
     private void SyncUIFromBlackjackOptions(BlackjackOptions options)
     {
         VegasCheckBox.IsVisible        = false;
         PointHighlightsCheckBox.IsVisible = true;
 
-        SoundCheckBox.IsChecked = options.IsSoundEnabled;
-
         var shared = SettingsService.LoadOptions();
         SyncLanguageComboBox(shared);
+        SoundCheckBox.IsChecked = shared.IsSoundEnabled;
         NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
         HideHintCheckBox.IsChecked     = shared.HideHintButton;
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
         PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
         HideBeeCheckBox.IsChecked = shared.HideBee;
+        RefreshThisGameSectionVisibility();
+
+        VideoPokerOptionsSection.IsVisible = false;
     }
 
     // ── Language ──────────────────────────────────────────────────────────────
@@ -644,12 +667,13 @@ public partial class PreferencesView : UserControl
 
     private void ApplyLocalization(AppLanguage language)
     {
-        LanguageLabel.Text = Strings.Get(StringKey.Language, language);
         VisualThemesLabel.Text = Strings.Get(StringKey.VisualThemes, language);
         VisualThemesSubtitleLabel.Text = Strings.Get(StringKey.VisualThemesSubtitle, language);
 
-        EnglishLanguageItem.Content = Strings.Get(StringKey.LanguageEnglish, language);
-        SpanishLanguageItem.Content = Strings.Get(StringKey.LanguageSpanish, language);
+        // EnglishLanguageItem/SpanishLanguageItem intentionally NOT re-localized here —
+        // their XAML content ("English / Inglés", "Spanish / Español") is bilingual by
+        // design so the dropdown stays legible to find your language even when the UI is
+        // currently showing the other one.
 
         NoStressModeCheckBox.Content = Strings.Get(StringKey.NoStressMode, language);
         NoStressModeCheckBox.SetValue(ToolTip.TipProperty, Strings.Get(StringKey.NoStressModeTooltip, language));
@@ -1206,11 +1230,23 @@ public partial class PreferencesView : UserControl
         }
         else if (DataContext is VideoPokerOptions vpOptions)
         {
-            vpOptions.IsSoundEnabled  = SoundCheckBox.IsChecked        ?? false;
+            // Starting Credits/Default Bet are VP-specific — no other game has them, so
+            // they're written straight to vpOptions rather than through the shared-
+            // GameOptions broadcast the global toggles below use. (Variant is set
+            // directly on the board, not here.)
+            vpOptions.StartingCredits = (int)(StartingCreditsUpDown.Value ?? vpOptions.StartingCredits);
+            if (DefaultBetComboBox.SelectedItem is ComboBoxItem betItem &&
+                int.TryParse(betItem.Tag?.ToString(), out var bet))
+                vpOptions.BetPerHand = bet;
 
-            // No Stress Mode/Hide Hint are global — write to the shared GameOptions
-            // so every game (Klondike/Freecell/Spider/Blackjack too) picks up the change.
+            // Sound/No Stress Mode/Hide Hint/etc. are all global — write to the shared
+            // GameOptions so every game (Klondike/Freecell/Spider/Blackjack too) picks up
+            // the change, then let the broadcast below sync it back into vpOptions
+            // (VideoPokerViewModel already does this for every field here, same as
+            // HideBee) rather than also setting vpOptions directly and risking the two
+            // writes disagreeing.
             var shared = SettingsService.LoadOptions();
+            shared.IsSoundEnabled    = SoundCheckBox.IsChecked        ?? false;
             shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
             shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
             shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
@@ -1223,13 +1259,16 @@ public partial class PreferencesView : UserControl
             // above already apply — SaveOptions() persists to disk and notifies the view.
             VideoPokerVm?.SaveOptions();
         }
-        else if (DataContext is BlackjackOptions bjOptions)
+        else if (DataContext is BlackjackOptions)
         {
-            bjOptions.IsSoundEnabled  = SoundCheckBox.IsChecked ?? false;
-
-            // No Stress Mode/Hide Hint are global — write to the shared GameOptions
-            // so every game (Klondike/Freecell/Spider/VideoPoker too) picks up the change.
+            // Sound/No Stress Mode/Hide Hint/etc. are all global — write to the shared
+            // GameOptions so every game (Klondike/Freecell/Spider/VideoPoker too) picks up
+            // the change, then let the broadcast below sync it back into bjOptions
+            // (BlackjackViewModel already does this for every field here, same as HideBee)
+            // rather than also setting bjOptions directly and risking the two writes
+            // disagreeing.
             var shared = SettingsService.LoadOptions();
+            shared.IsSoundEnabled    = SoundCheckBox.IsChecked        ?? false;
             shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
             shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
             shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
@@ -1243,6 +1282,13 @@ public partial class PreferencesView : UserControl
             BlackjackVm?.SaveOptions();
         }
     }
+
+    // Dedicated wrappers (rather than wiring SelectionChanged/ValueChanged to Option_Changed
+    // directly in XAML) so the event-arg types stay explicit and match this file's existing
+    // pattern of named handlers per control (GameMode_Changed, CardBackComboBox_SelectionChanged,
+    // etc.) instead of relying on EventArgs contravariance.
+    private void VideoPokerOption_Changed(object? sender, SelectionChangedEventArgs e) => Option_Changed(sender, e);
+    private void StartingCredits_ValueChanged(object? sender, NumericUpDownValueChangedEventArgs e) => Option_Changed(sender, e);
 
     // ── Card Back helpers ─────────────────────────────────────────────────────
 

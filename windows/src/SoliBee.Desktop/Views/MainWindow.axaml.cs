@@ -1057,10 +1057,15 @@ public partial class MainWindow : Window
         // watermark behind the card grid — hide this dialog-chrome copy while it's open so
         // the two don't both render at once.
         PreferencesWatermarkWrapper.IsVisible = true;
+        ViewStatsText.IsVisible = true;
         _preferencesView.SubPanelVisibilityChanged += (_, _) =>
         {
-            PreferencesBackButton.IsVisible = _preferencesView?.IsSubPanelOpen ?? false;
+            bool subPanelOpen = _preferencesView?.IsSubPanelOpen ?? false;
+            PreferencesBackButton.IsVisible = subPanelOpen;
             PreferencesWatermarkWrapper.IsVisible = !(_preferencesView?.IsFaceCardsPanelOpen ?? false);
+            // View Stats only makes sense on the main Preferences page — Themes, Face
+            // Cards, and Card Colors are all covered by IsSubPanelOpen.
+            ViewStatsText.IsVisible = !subPanelOpen;
         };
 
         if (this.DataContext is VideoPokerViewModel vpVm)
