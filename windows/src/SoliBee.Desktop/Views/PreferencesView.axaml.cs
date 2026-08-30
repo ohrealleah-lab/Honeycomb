@@ -599,11 +599,16 @@ public partial class PreferencesView : UserControl
         return false;
     }
 
-    // Video Poker has its own separate options model. Variant/Starting Credits/Default
-    // Bet are genuinely VP-specific (VideoPokerOptionsSection, read from `options`
-    // directly below — no other game has these); everything else here is global
-    // (shared GameOptions), and Visual Themes is available same as every other game.
-    private void SyncUIFromVideoPokerOptions(VideoPokerOptions options)
+    // StartingCreditsLabel embeds the current value, so it needs re-formatting every time
+    // either the language or the value changes — not just from ApplyLocalization.
+    private void UpdateStartingCreditsLabel(AppLanguage language, int credits) =>
+        StartingCreditsLabel.Text = Strings.Get(StringKey.StartingCreditsFmt, language).Replace("%d", credits.ToString());
+
+    // Shared by SyncUIFromVideoPokerOptions/SyncUIFromBlackjackOptions below — every
+    // field here is global (shared GameOptions), and both methods' sync of it was
+    // byte-identical once Sound moved onto `shared` for both, so this factors out the
+    // duplicate instead of keeping two copies in sync by hand.
+    private GameOptions SyncGlobalCheckboxesFromShared()
     {
         VegasCheckBox.IsVisible        = false;
         PointHighlightsCheckBox.IsVisible = true;
@@ -618,36 +623,45 @@ public partial class PreferencesView : UserControl
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
         HideBeeCheckBox.IsChecked = shared.HideBee;
         RefreshThisGameSectionVisibility();
+        return shared;
+    }
+
+    // Video Poker has its own separate options model. Starting Credits/Default Bet are
+    // genuinely VP-specific (VideoPokerOptionsSection, read from `options` directly below
+    // — no other game has these); everything else is global, via
+    // SyncGlobalCheckboxesFromShared. Visual Themes is available same as every other game.
+    private void SyncUIFromVideoPokerOptions(VideoPokerOptions options)
+    {
+        var shared = SyncGlobalCheckboxesFromShared();
 
         VideoPokerOptionsSection.IsVisible = true;
         StartingCreditsUpDown.Value = options.StartingCredits;
-        foreach (var item in DefaultBetComboBox.Items.OfType<ComboBoxItem>())
-        {
-            if (item.Tag?.ToString() == options.BetPerHand.ToString()) { DefaultBetComboBox.SelectedItem = item; break; }
-        }
+        UpdateStartingCreditsLabel(shared.Language, options.StartingCredits);
+        // Clamped rather than matched as-is: BetPerHand could in principle be outside
+        // 1-5 (a hand-edited settings file, or a future bug elsewhere) — without this,
+        // no ComboBoxItem would match, SelectedItem would stay null, and the value would
+        // silently never get written back on any subsequent save in this session.
+        SelectComboBoxItemByTag(DefaultBetComboBox, Math.Clamp(options.BetPerHand, 1, 5).ToString());
     }
 
     // Blackjack has its own separate options model, same shape as Video Poker above.
-    // Every checkbox here is global (shared GameOptions) — Vegas Scoring is Klondike-only
-    // so it's hidden, same as every other non-Klondike game — and Visual Themes is
-    // available same as every other game.
-    private void SyncUIFromBlackjackOptions(BlackjackOptions options)
+    // Every checkbox here is global, via SyncGlobalCheckboxesFromShared — Vegas Scoring
+    // is Klondike-only so it's hidden, same as every other non-Klondike game — and
+    // Visual Themes is available same as every other game. (VideoPokerOptionsSection
+    // needs no explicit hide here: within one PreferencesView instance, DataContext only
+    // ever toggles between BlackjackOptions and GameOptions, never VideoPokerOptions, so
+    // the section can't have been left visible by this session in the first place.)
+    private void SyncUIFromBlackjackOptions(BlackjackOptions options) =>
+        SyncGlobalCheckboxesFromShared();
+
+    // Loops a ComboBox's items matching by Tag, selects the match — used where
+    // SelectedValue/SelectedValuePath isn't wired up.
+    private static void SelectComboBoxItemByTag(ComboBox combo, string tag)
     {
-        VegasCheckBox.IsVisible        = false;
-        PointHighlightsCheckBox.IsVisible = true;
-
-        var shared = SettingsService.LoadOptions();
-        SyncLanguageComboBox(shared);
-        SoundCheckBox.IsChecked = shared.IsSoundEnabled;
-        NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
-        HideHintCheckBox.IsChecked     = shared.HideHintButton;
-        AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
-        PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
-        ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
-        HideBeeCheckBox.IsChecked = shared.HideBee;
-        RefreshThisGameSectionVisibility();
-
-        VideoPokerOptionsSection.IsVisible = false;
+        foreach (var item in combo.Items.OfType<ComboBoxItem>())
+        {
+            if (item.Tag?.ToString() == tag) { combo.SelectedItem = item; break; }
+        }
     }
 
     // ── Language ──────────────────────────────────────────────────────────────
@@ -674,6 +688,20 @@ public partial class PreferencesView : UserControl
         // their XAML content ("English / Inglés", "Spanish / Español") is bilingual by
         // design so the dropdown stays legible to find your language even when the UI is
         // currently showing the other one.
+
+        GlobalSettingsHeaderText.Text = Strings.Get(StringKey.GlobalSettingsHeader, language);
+
+        DefaultBetLabel.Text = Strings.Get(StringKey.PickerDefaultBetLabel, language);
+        DefaultBet1Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "1").Replace("%@", "");
+        DefaultBet2Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "2").Replace("%@", "s");
+        DefaultBet3Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "3").Replace("%@", "s");
+        DefaultBet4Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "4").Replace("%@", "s");
+        DefaultBet5Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "5").Replace("%@", "s");
+        // StartingCreditsLabel embeds the current value (matches Mac's Stepper label,
+        // which also always shows "Starting Credits: N") — kept in sync separately by
+        // UpdateStartingCreditsLabel wherever StartingCreditsUpDown.Value changes, since
+        // ApplyLocalization can run before that control has today's real value synced in.
+        UpdateStartingCreditsLabel(language, (int)(StartingCreditsUpDown.Value ?? 100));
 
         NoStressModeCheckBox.Content = Strings.Get(StringKey.NoStressMode, language);
         NoStressModeCheckBox.SetValue(ToolTip.TipProperty, Strings.Get(StringKey.NoStressModeTooltip, language));
@@ -1246,14 +1274,9 @@ public partial class PreferencesView : UserControl
             // HideBee) rather than also setting vpOptions directly and risking the two
             // writes disagreeing.
             var shared = SettingsService.LoadOptions();
-            shared.IsSoundEnabled    = SoundCheckBox.IsChecked        ?? false;
-            shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
-            shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
-            shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
-            shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
-            shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
-            shared.HideBee           = HideBeeCheckBox.IsChecked ?? false;
+            WriteGlobalCheckboxesInto(shared);
             NotifySettingsChanged(shared);
+            UpdateStartingCreditsLabel(shared.Language, vpOptions.StartingCredits);
 
             // vpOptions is the live VideoPokerViewModel.Options instance, so mutations
             // above already apply — SaveOptions() persists to disk and notifies the view.
@@ -1268,19 +1291,29 @@ public partial class PreferencesView : UserControl
             // rather than also setting bjOptions directly and risking the two writes
             // disagreeing.
             var shared = SettingsService.LoadOptions();
-            shared.IsSoundEnabled    = SoundCheckBox.IsChecked        ?? false;
-            shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
-            shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
-            shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
-            shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
-            shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
-            shared.HideBee           = HideBeeCheckBox.IsChecked ?? false;
+            WriteGlobalCheckboxesInto(shared);
             NotifySettingsChanged(shared);
 
             // bjOptions is the live BlackjackViewModel.Options instance, so mutations
             // above already apply — SaveOptions() persists to disk and notifies the view.
             BlackjackVm?.SaveOptions();
         }
+    }
+
+    // Shared by Option_Changed's VideoPokerOptions/BlackjackOptions branches above — this
+    // 7-field block was byte-identical between the two after Sound moved onto `shared`
+    // for both; a future copy-paste edit to only one branch would have let Video Poker
+    // and Blackjack silently disagree on which global settings get written, exactly the
+    // "two writes disagreeing" failure the comments above already call out.
+    private void WriteGlobalCheckboxesInto(GameOptions shared)
+    {
+        shared.IsSoundEnabled    = SoundCheckBox.IsChecked        ?? false;
+        shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
+        shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
+        shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
+        shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
+        shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
+        shared.HideBee           = HideBeeCheckBox.IsChecked ?? false;
     }
 
     // Dedicated wrappers (rather than wiring SelectionChanged/ValueChanged to Option_Changed

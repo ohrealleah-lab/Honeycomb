@@ -61,18 +61,23 @@
                  SyncUIFromOptions/SyncUIFromBlackjackOptions each set this section's
                  visibility). -->
             <StackPanel x:Name="VideoPokerOptionsSection" IsVisible="False" Spacing="6">
-                <TextBlock Text="Starting Credits:" FontSize="12" Foreground="#1A1A1A"/>
+                <TextBlock x:Name="StartingCreditsLabel" Text="Starting Credits:" FontSize="12" Foreground="#1A1A1A"/>
+                <!-- ClipValueToMinMax: Avalonia's NumericUpDown does not clamp a directly-
+                     typed value to Minimum/Maximum by default (only the spin buttons
+                     respect the bounds) — without this, typing e.g. "50" would persist an
+                     out-of-range StartingCredits with nothing downstream to catch it. -->
                 <NumericUpDown x:Name="StartingCreditsUpDown" Minimum="100" Maximum="10000" Increment="100"
+                               ClipValueToMinMax="True"
                                FormatString="0" HorizontalAlignment="Stretch"
                                ValueChanged="StartingCredits_ValueChanged"/>
 
-                <TextBlock Text="Default Bet:" FontSize="12" Foreground="#1A1A1A" Margin="0,4,0,0"/>
+                <TextBlock x:Name="DefaultBetLabel" Text="Default Bet:" FontSize="12" Foreground="#1A1A1A" Margin="0,4,0,0"/>
                 <ComboBox x:Name="DefaultBetComboBox" HorizontalAlignment="Stretch" SelectionChanged="VideoPokerOption_Changed">
-                    <ComboBoxItem Content="1 coin" Tag="1"/>
-                    <ComboBoxItem Content="2 coins" Tag="2"/>
-                    <ComboBoxItem Content="3 coins" Tag="3"/>
-                    <ComboBoxItem Content="4 coins" Tag="4"/>
-                    <ComboBoxItem Content="5 coins" Tag="5"/>
+                    <ComboBoxItem x:Name="DefaultBet1Item" Content="1 coin" Tag="1"/>
+                    <ComboBoxItem x:Name="DefaultBet2Item" Content="2 coins" Tag="2"/>
+                    <ComboBoxItem x:Name="DefaultBet3Item" Content="3 coins" Tag="3"/>
+                    <ComboBoxItem x:Name="DefaultBet4Item" Content="4 coins" Tag="4"/>
+                    <ComboBoxItem x:Name="DefaultBet5Item" Content="5 coins" Tag="5"/>
                 </ComboBox>
 
                 <Rectangle Height="1" Fill="#DDDDDD" Margin="0,4,0,0"/>
@@ -84,7 +89,7 @@
                  side stacks instead of one long column — MainPanel's Width above is sized
                  to fit both columns without wrapping. -->
             <StackPanel Spacing="6">
-                <TextBlock Text="Global Settings" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A"/>
+                <TextBlock x:Name="GlobalSettingsHeaderText" Text="Global Settings" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A"/>
 
                 <ComboBox x:Name="LanguageComboBox" HorizontalAlignment="Stretch"
                           SelectionChanged="Language_Changed">

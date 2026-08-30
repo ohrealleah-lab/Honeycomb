@@ -5,7 +5,7 @@
         Title="Honeycomb Card Suite"
         Icon="avares://Honeycomb/Assets/AppIcon.png"
         Width="1120" Height="768"
-        MinWidth="400" MinHeight="300"
+        MinWidth="600" MinHeight="300"
         WindowStartupLocation="Manual"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="-1">
