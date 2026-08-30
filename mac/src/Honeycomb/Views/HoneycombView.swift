@@ -765,6 +765,26 @@ public struct HoneycombView: View {
         .onAppear {
             applyInitialWindowSize()
             viewModel.checkLoadingBanner()
+            // Resync flip state with reality — AppRouterView's `switch` on gameMode
+            // (each case carrying its own .id()) fully unmounts this view when the
+            // player switches to a different game, same as iOS's IOSRouterView, despite
+            // AppCoordinator keeping the underlying viewModel (and its mid-match data)
+            // alive the whole time. Returning here creates a brand-new HoneycombView
+            // with isPlayerCardRevealed/isOpponentCardRevealed reset to their all-false
+            // defaults, and nothing else restores them — .onChange(of: viewModel.gameState)
+            // below only fires on a genuine state *transition*, which doesn't happen
+            // when re-mounting mid-match. Left alone, every hand card stays stuck
+            // showing its face-down front(), including the player's own — unplayable.
+            // All-true (not matching each opponent card's real visibility) mirrors the
+            // .setup-transition handler below: opponentHandCardView already computes
+            // real face-up/down per card internally, so the outer flag only chooses
+            // between that and the generic animated-placeholder — no deal-flip
+            // animation should replay here, so every slot skips straight to "settled".
+            if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
+                isPlayerCardRevealed = Array(repeating: true, count: 5)
+                isOpponentCardRevealed = Array(repeating: true, count: 5)
+                handIdentityToken += 1
+            }
             dragCancelMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown, .otherMouseDown]) { event in
                 if draggedHandCard != nil {
                     draggedHandCard = nil
