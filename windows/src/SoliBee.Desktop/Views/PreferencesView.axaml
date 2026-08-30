@@ -26,7 +26,7 @@
         <!-- ═══════════════════════════════════════════════════════════════════
              MAIN OPTIONS PANEL
              ═══════════════════════════════════════════════════════════════════ -->
-        <StackPanel x:Name="MainPanel" Spacing="12" Width="270" Margin="10,10,20,10">
+        <StackPanel x:Name="MainPanel" Spacing="12" Width="460" Margin="10,10,20,10">
 
             <StackPanel.Styles>
                 <Style Selector="CheckBox">
@@ -35,41 +35,85 @@
                 </Style>
             </StackPanel.Styles>
 
-            <!-- Language — global setting (not per-game), placed at the top of the panel
-                 per product decision so it's always visible regardless of which game's
-                 Options this is, ahead of Game Mode/per-game controls below. -->
-            <StackPanel x:Name="LanguageSection" Spacing="6">
-                <TextBlock x:Name="LanguageLabel" Text="Language" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A"/>
+            <!-- Game Mode + Vegas Scoring — the only two settings that actually vary per
+                 game: Game Mode (Klondike/Freecell/Spider only — draw count / deck count /
+                 suit count) and Vegas Scoring (Klondike only). Whole section is hidden when
+                 neither applies (Honeycomb/Video Poker/Blackjack) via
+                 RefreshThisGameSectionVisibility() in the code-behind — no header of its
+                 own, so there's nothing left to hide alongside it. -->
+            <StackPanel x:Name="ThisGameSection" Spacing="6">
+                <StackPanel x:Name="GameModeSection" IsVisible="False" Spacing="6">
+                    <TextBlock x:Name="GameModeSectionHeaderText" Text="Game Mode" FontSize="12" Foreground="#1A1A1A"/>
+                    <ComboBox x:Name="GameModeCombo" HorizontalAlignment="Stretch"
+                              SelectionChanged="GameMode_Changed"/>
+                </StackPanel>
+
+                <CheckBox x:Name="VegasCheckBox" Content="Vegas Scoring" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+
+                <Rectangle Height="1" Fill="#DDDDDD" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <!-- Video Poker's own per-game settings — Starting Credits/Default Bet.
+                 (Variant is set directly on the board, not here.) Mac/iOS have always had
+                 Starting Credits/Default Bet; the Windows port had the localization strings
+                 scaffolded but the actual controls were never added. Shown only when
+                 DataContext is VideoPokerOptions (SyncUIFromVideoPokerOptions/
+                 SyncUIFromOptions/SyncUIFromBlackjackOptions each set this section's
+                 visibility). -->
+            <StackPanel x:Name="VideoPokerOptionsSection" IsVisible="False" Spacing="6">
+                <TextBlock x:Name="StartingCreditsLabel" Text="Starting Credits:" FontSize="12" Foreground="#1A1A1A"/>
+                <!-- ClipValueToMinMax: Avalonia's NumericUpDown does not clamp a directly-
+                     typed value to Minimum/Maximum by default (only the spin buttons
+                     respect the bounds) — without this, typing e.g. "50" would persist an
+                     out-of-range StartingCredits with nothing downstream to catch it. -->
+                <NumericUpDown x:Name="StartingCreditsUpDown" Minimum="100" Maximum="10000" Increment="100"
+                               ClipValueToMinMax="True"
+                               FormatString="0" HorizontalAlignment="Stretch"
+                               ValueChanged="StartingCredits_ValueChanged"/>
+
+                <TextBlock x:Name="DefaultBetLabel" Text="Default Bet:" FontSize="12" Foreground="#1A1A1A" Margin="0,4,0,0"/>
+                <ComboBox x:Name="DefaultBetComboBox" HorizontalAlignment="Stretch" SelectionChanged="VideoPokerOption_Changed">
+                    <ComboBoxItem x:Name="DefaultBet1Item" Content="1 coin" Tag="1"/>
+                    <ComboBoxItem x:Name="DefaultBet2Item" Content="2 coins" Tag="2"/>
+                    <ComboBoxItem x:Name="DefaultBet3Item" Content="3 coins" Tag="3"/>
+                    <ComboBoxItem x:Name="DefaultBet4Item" Content="4 coins" Tag="4"/>
+                    <ComboBoxItem x:Name="DefaultBet5Item" Content="5 coins" Tag="5"/>
+                </ComboBox>
+
+                <Rectangle Height="1" Fill="#DDDDDD" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <!-- "Global Settings" — every field below is confirmed shared/global across
+                 all 6 games (each VP/Blackjack sync method reads it from the shared
+                 GameOptions, not their own local Options). Checkboxes run in two side-by-
+                 side stacks instead of one long column — MainPanel's Width above is sized
+                 to fit both columns without wrapping. -->
+            <StackPanel Spacing="6">
+                <TextBlock x:Name="GlobalSettingsHeaderText" Text="Global Settings" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A"/>
+
                 <ComboBox x:Name="LanguageComboBox" HorizontalAlignment="Stretch"
                           SelectionChanged="Language_Changed">
-                    <ComboBoxItem x:Name="EnglishLanguageItem" Content="English" Tag="English"/>
-                    <ComboBoxItem x:Name="SpanishLanguageItem" Content="Español" Tag="Spanish"/>
+                    <ComboBoxItem x:Name="EnglishLanguageItem" Content="English / Inglés" Tag="English"/>
+                    <ComboBoxItem x:Name="SpanishLanguageItem" Content="Spanish / Español" Tag="Spanish"/>
                 </ComboBox>
-                <Rectangle Height="1" Fill="#DDDDDD" Margin="0,4,0,0"/>
-            </StackPanel>
 
-            <!-- Game Mode (hidden for Video Poker / Blackjack) -->
-            <StackPanel x:Name="GameModeSection" IsVisible="False" Spacing="6">
-                <TextBlock x:Name="GameModeSectionHeaderText" Text="Game Mode" FontSize="13" FontWeight="SemiBold" Foreground="#1A1A1A"/>
-                <ComboBox x:Name="GameModeCombo" HorizontalAlignment="Stretch"
-                          SelectionChanged="GameMode_Changed"/>
-                <Rectangle Height="1" Fill="#DDDDDD" Margin="0,4,0,0"/>
-            </StackPanel>
-
-            <StackPanel Spacing="2">
-                <CheckBox x:Name="NoStressModeCheckBox" Content="No Stress Mode"     Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                <CheckBox x:Name="VegasCheckBox"        Content="Vegas Scoring"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                <!-- Global, shared across all 6 games — banners/toasts stay up until the
-                     player clicks the toast or a card, instead of auto-dismissing. -->
-                <CheckBox x:Name="ManuallyDismissBannersCheckBox" Content="Manually Dismiss Banners" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                <CheckBox x:Name="AlwaysOnTopCheckBox" Content="Always on Top" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                <!-- Global, shared across all 6 games like the toggles above — controls
-                     both the "+N"/"-N" score popups and whether Repeatable Flavor/Ambiance
-                     banners fire at all. -->
-                <CheckBox x:Name="PointHighlightsCheckBox" Content="Honey Mode (Flavor)" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                <CheckBox x:Name="HideBeeCheckBox" Content="Hide the Bee" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                <Grid ColumnDefinitions="*,20,*" Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                        <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="NoStressModeCheckBox" Content="No Stress Mode"     Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                        <!-- Banners/toasts stay up until the player clicks the toast or a
+                             card, instead of auto-dismissing. -->
+                        <CheckBox x:Name="ManuallyDismissBannersCheckBox" Content="Manually Dismiss Banners" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="2">
+                        <CheckBox x:Name="AlwaysOnTopCheckBox" Content="Always on Top" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                        <!-- Controls both the "+N"/"-N" score popups and whether Repeatable
+                             Flavor/Ambiance banners fire at all. -->
+                        <CheckBox x:Name="PointHighlightsCheckBox" Content="Honey Mode (Flavor)" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="HideBeeCheckBox" Content="Hide the Bee" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                    </StackPanel>
+                </Grid>
             </StackPanel>
 
             <Rectangle x:Name="VisualThemesDivider" Height="1" Fill="#DDDDDD" Margin="0,4,0,4"/>

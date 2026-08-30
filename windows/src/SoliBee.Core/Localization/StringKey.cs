@@ -24,6 +24,7 @@ public enum StringKey
     Language,
     LanguageEnglish,
     LanguageSpanish,
+    GlobalSettingsHeader,
     ResetStatisticsTitle,
     ResetStatisticsBody,
     Reset,

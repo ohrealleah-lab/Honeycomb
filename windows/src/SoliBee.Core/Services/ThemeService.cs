@@ -80,30 +80,42 @@ public static class ThemeService
         },
     }.AsReadOnly();
 
-    public static List<SoliBeeTheme> LoadThemes()
+    // Shared JSON-file load/save shape, used by the theme store below and the tombstone
+    // store further down — factored out so an error-handling change (like the
+    // load-failure guard MergeInDefaultThemes relies on) only has to be made once
+    // instead of once per file this service reads and writes.
+    private static (T Value, bool LoadFailed) LoadJson<T>(string path, Func<T> makeFallback, Func<T, bool>? isValid = null)
     {
-        if (File.Exists(_themesPath))
+        if (File.Exists(path))
         {
             try
             {
-                var json   = File.ReadAllText(_themesPath);
-                var loaded = JsonSerializer.Deserialize<List<SoliBeeTheme>>(json);
-                if (loaded != null && loaded.Count > 0) return loaded;
+                var json   = File.ReadAllText(path);
+                var loaded = JsonSerializer.Deserialize<T>(json);
+                if (loaded != null && (isValid?.Invoke(loaded) ?? true)) return (loaded, false);
             }
-            catch { }
+            catch { return (makeFallback(), true); }
         }
-        return new List<SoliBeeTheme>(DefaultThemes);
+        return (makeFallback(), false);
     }
 
-    public static void SaveThemes(List<SoliBeeTheme> themes)
+    private static bool SaveJson<T>(string path, T value)
     {
         try
         {
             if (!Directory.Exists(_dataDir)) Directory.CreateDirectory(_dataDir);
-            File.WriteAllText(_themesPath, JsonSerializer.Serialize(themes, _jsonOpts));
+            File.WriteAllText(path, JsonSerializer.Serialize(value, _jsonOpts));
+            return true;
         }
-        catch { }
+        catch { return false; }
     }
+
+    private static (List<SoliBeeTheme> Themes, bool LoadFailed) LoadThemesCore() =>
+        LoadJson(_themesPath, () => new List<SoliBeeTheme>(DefaultThemes), loaded => loaded.Count > 0);
+
+    public static List<SoliBeeTheme> LoadThemes() => LoadThemesCore().Themes;
+
+    public static void SaveThemes(List<SoliBeeTheme> themes) => SaveJson(_themesPath, themes);
 
     public static void AddTheme(SoliBeeTheme theme)
     {
@@ -118,50 +130,38 @@ public static class ThemeService
     // custom theme that merely happens to share a preset's name (e.g. "Desert") is never
     // touched, and a preset the user explicitly deleted (tracked in the tombstone file)
     // stays deleted instead of silently reappearing. Never removes or touches anything
-    // else the user saved (a legacy "Dingwall" theme, or their own custom themes).
+    // else the user saved (a legacy "Dingwall" theme, or their own custom themes) — and
+    // never overwrites a preset that's already in the saved list, even to refresh its
+    // definition, since UpdateTheme lets a user customize a default preset in place
+    // (face art, felt color, rename) and this runs on every launch; only missing presets
+    // get added.
     public static void MergeInDefaultThemes()
     {
-        var themes     = LoadThemes();
+        var (themes, loadFailed) = LoadThemesCore();
+        // A transient read/parse failure of themes.json falls back to just the 5 in-code
+        // presets — persisting that back would permanently erase every custom theme over
+        // a failure that might not recur. Skip saving and try again next launch instead.
+        if (loadFailed) return;
+
         var deletedIds = LoadDeletedDefaultThemeIds();
 
+        bool changed = false;
         foreach (var preset in DefaultThemes)
         {
             if (deletedIds.Contains(preset.Id)) continue;
+            if (themes.FindIndex(t => t.Id == preset.Id) >= 0) continue;
 
-            int idx = themes.FindIndex(t => t.Id == preset.Id);
-            if (idx >= 0)
-                themes[idx] = ClonePreset(preset);
-            else
-                themes.Add(ClonePreset(preset));
+            themes.Add(ClonePreset(preset));
+            changed = true;
         }
 
-        SaveThemes(themes);
+        if (changed) SaveThemes(themes);
     }
 
-    private static List<Guid> LoadDeletedDefaultThemeIds()
-    {
-        if (File.Exists(_deletedDefaultsPath))
-        {
-            try
-            {
-                var json    = File.ReadAllText(_deletedDefaultsPath);
-                var loaded  = JsonSerializer.Deserialize<List<Guid>>(json);
-                if (loaded != null) return loaded;
-            }
-            catch { }
-        }
-        return new List<Guid>();
-    }
+    private static List<Guid> LoadDeletedDefaultThemeIds() =>
+        LoadJson(_deletedDefaultsPath, () => new List<Guid>()).Value;
 
-    private static void SaveDeletedDefaultThemeIds(List<Guid> ids)
-    {
-        try
-        {
-            if (!Directory.Exists(_dataDir)) Directory.CreateDirectory(_dataDir);
-            File.WriteAllText(_deletedDefaultsPath, JsonSerializer.Serialize(ids, _jsonOpts));
-        }
-        catch { }
-    }
+    private static bool SaveDeletedDefaultThemeIds(List<Guid> ids) => SaveJson(_deletedDefaultsPath, ids);
 
     // JSON round-trip instead of a hand-listed field copy — SoliBeeTheme has no
     // exhaustiveness check (plain mutable class, not a record), so a manual copy would
@@ -205,16 +205,17 @@ public static class ThemeService
     {
         // If this is a built-in default preset, record the tombstone BEFORE removing it
         // from themes.json (two separate files, no way to write them atomically together)
-        // — if the process dies between the two writes, this ordering means the safe
-        // failure mode is "still shows in the list" rather than "silently resurrected
-        // with reset values", since MergeInDefaultThemes checks the tombstone first.
+        // — if the tombstone write itself fails, abort instead of still removing it from
+        // themes.json, so the safe failure mode stays "still shows in the list" rather
+        // than "looks deleted but silently resurrected on the next launch" (since
+        // MergeInDefaultThemes checks the tombstone first).
         if (DefaultThemes.Any(p => p.Id == id))
         {
             var deletedIds = LoadDeletedDefaultThemeIds();
             if (!deletedIds.Contains(id))
             {
                 deletedIds.Add(id);
-                SaveDeletedDefaultThemeIds(deletedIds);
+                if (!SaveDeletedDefaultThemeIds(deletedIds)) return;
             }
         }
 

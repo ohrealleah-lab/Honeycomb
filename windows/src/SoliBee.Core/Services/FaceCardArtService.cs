@@ -24,15 +24,15 @@ public static class FaceCardArtService
     private static void EnsureLoaded()
     {
         if (_loaded) return;
-        _loaded = true;
         EnsureDir();
-        if (!File.Exists(_configPath)) return;
+        if (!File.Exists(_configPath)) { _loaded = true; return; }
         try
         {
             var json = File.ReadAllText(_configPath);
             _arts = JsonSerializer.Deserialize<List<CustomFaceArt>>(json) ?? new();
+            _loaded = true;
         }
-        catch { _arts = new(); }
+        catch { _arts = new(); } // leave _loaded false — a transient failure (file locked mid-read) should retry next call, not permanently discard the real config
     }
 
     private static void EnsureDir()

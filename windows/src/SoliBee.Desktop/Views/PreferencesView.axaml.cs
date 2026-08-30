@@ -71,8 +71,17 @@ public partial class PreferencesView : UserControl
     public bool ShowVegasOption
     {
         get => VegasCheckBox.IsVisible;
-        set => VegasCheckBox.IsVisible = value;
+        set { VegasCheckBox.IsVisible = value; RefreshThisGameSectionVisibility(); }
     }
+
+    // "This Game" (Game Mode + Vegas Scoring) is hidden entirely, header included, when
+    // neither of its two rows applies — Honeycomb has no Game Mode row and no Vegas
+    // Scoring; Video Poker/Blackjack have neither. Called after either row's own
+    // visibility is set, from whichever order they happen to run in (ShowVegasOption is
+    // set once by MainWindow before DataContext is assigned; GameModeSection.IsVisible is
+    // set per-sync-call below), so the section always reflects the current combination.
+    private void RefreshThisGameSectionVisibility() =>
+        ThisGameSection.IsVisible = GameModeSection.IsVisible || VegasCheckBox.IsVisible;
 
     public PreferencesView()
     {
@@ -86,14 +95,20 @@ public partial class PreferencesView : UserControl
         // silently lost. This mirrors NotifySettingsChanged's own live-save block below,
         // just triggered by the message FaceCardArtSectionView already sends after every
         // upload/adjust/remove instead of by an options field changing.
+        //
+        // Reads DataContext off the recipient parameter `r`, not a captured `this` —
+        // closing over `this` would keep this instance (and its now-stale DataContext)
+        // alive and firing forever: MainWindow makes a brand-new PreferencesView on every
+        // open and never disposes the old one, so an old instance's leaked handler would
+        // still run on the NEXT instance's edits, live-saving stale field values over
+        // whatever the current session just wrote. Unregistering on Unloaded closes the
+        // same gap FaceCardArtSectionView already closes for its own copy of this pattern.
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>
         {
-            if (DataContext is GameOptions options && options.ActiveThemeId.HasValue)
-            {
-                if (!ThemeService.UpdateTheme(options.ActiveThemeId.Value, options))
-                    options.ActiveThemeId = null; // stale id (its theme was deleted) — see UpdateTheme's doc comment
-            }
+            if (r is PreferencesView { DataContext: GameOptions options })
+                SaveLiveArtToActiveTheme(options);
         });
+        this.Unloaded += (_, _) => WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
     }
 
     private void PopulateCardBacks(GameOptions options)
@@ -160,6 +175,11 @@ public partial class PreferencesView : UserControl
     public event EventHandler? SubPanelVisibilityChanged;
 
     public bool IsSubPanelOpen => ThemesPanel.IsVisible || FaceCardsPanel.IsVisible || CardColorsPanel.IsVisible;
+
+    // Lets MainWindow hide its own shared solibee.png dialog watermark specifically while
+    // this panel is open — its card grid has no opaque background filling the space around
+    // the tiles, so that watermark was showing through a second time next to them.
+    public bool IsFaceCardsPanelOpen => FaceCardsPanel.IsVisible;
 
     public void GoBack()
     {
@@ -422,6 +442,9 @@ public partial class PreferencesView : UserControl
         {
             GameModeSection.IsVisible = false;
         }
+        RefreshThisGameSectionVisibility();
+
+        VideoPokerOptionsSection.IsVisible = false;
     }
 
     private void PreferencesView_Loaded(object? sender, RoutedEventArgs e)
@@ -456,7 +479,18 @@ public partial class PreferencesView : UserControl
     {
         if (_originalGameOptions != null)
         {
-            NotifySettingsChanged(_originalGameOptions);
+            NotifySettingsChanged(_originalGameOptions, syncFaceArtToTheme: false);
+        }
+        else if (DataContext is GameOptions &&
+                 (_originalSharedOptionsForVideoPoker ?? _originalSharedOptionsForBlackjack) is { } originalShared)
+        {
+            // Themes/Face Cards/Card Colors sub-panel is open during a VideoPoker/Blackjack
+            // session — OpenThemes_Click swaps DataContext to a shared GameOptions clone for
+            // as long as it's open, so neither this method's own VP/BJ branches below (which
+            // key off DataContext's type) nor _originalGameOptions (null for a VP/BJ session)
+            // can see a change made while it's open. Revert the shared state directly instead
+            // of falling through every branch and silently discarding nothing.
+            NotifySettingsChanged(originalShared, syncFaceArtToTheme: false);
         }
         else if (_originalVideoPokerOptions != null && DataContext is VideoPokerOptions vpOptions)
         {
@@ -473,7 +507,7 @@ public partial class PreferencesView : UserControl
             VideoPokerVm?.SaveOptions();
 
             if (_originalSharedOptionsForVideoPoker != null)
-                NotifySettingsChanged(_originalSharedOptionsForVideoPoker);
+                NotifySettingsChanged(_originalSharedOptionsForVideoPoker, syncFaceArtToTheme: false);
         }
         else if (_originalBlackjackOptions != null && DataContext is BlackjackOptions bjOptions)
         {
@@ -489,7 +523,7 @@ public partial class PreferencesView : UserControl
             BlackjackVm?.SaveOptions();
 
             if (_originalSharedOptionsForBlackjack != null)
-                NotifySettingsChanged(_originalSharedOptionsForBlackjack);
+                NotifySettingsChanged(_originalSharedOptionsForBlackjack, syncFaceArtToTheme: false);
         }
     }
 
@@ -504,6 +538,14 @@ public partial class PreferencesView : UserControl
         if (_originalGameOptions != null && DataContext is GameOptions options)
         {
             return JsonSerializer.Serialize(options) != JsonSerializer.Serialize(_originalGameOptions);
+        }
+
+        // Themes/Face Cards/Card Colors sub-panel open during a VideoPoker/Blackjack
+        // session — see the matching branch in RevertSettingsChanges.
+        if (DataContext is GameOptions sharedOptions &&
+            (_originalSharedOptionsForVideoPoker ?? _originalSharedOptionsForBlackjack) is { } originalShared)
+        {
+            return JsonSerializer.Serialize(sharedOptions) != JsonSerializer.Serialize(originalShared);
         }
 
         if (_originalVideoPokerOptions != null && DataContext is VideoPokerOptions vpOptions)
@@ -557,44 +599,69 @@ public partial class PreferencesView : UserControl
         return false;
     }
 
-    // Video Poker has its own separate options model — only a handful of settings
-    // (sound) are VP-specific; No Stress Mode/Hide Hint are global (shared
-    // GameOptions) and Visual Themes is available same as every other game.
-    private void SyncUIFromVideoPokerOptions(VideoPokerOptions options)
+    // StartingCreditsLabel embeds the current value, so it needs re-formatting every time
+    // either the language or the value changes — not just from ApplyLocalization.
+    private void UpdateStartingCreditsLabel(AppLanguage language, int credits) =>
+        StartingCreditsLabel.Text = Strings.Get(StringKey.StartingCreditsFmt, language).Replace("%d", credits.ToString());
+
+    // Shared by SyncUIFromVideoPokerOptions/SyncUIFromBlackjackOptions below — every
+    // field here is global (shared GameOptions), and both methods' sync of it was
+    // byte-identical once Sound moved onto `shared` for both, so this factors out the
+    // duplicate instead of keeping two copies in sync by hand.
+    private GameOptions SyncGlobalCheckboxesFromShared()
     {
         VegasCheckBox.IsVisible        = false;
         PointHighlightsCheckBox.IsVisible = true;
 
-        SoundCheckBox.IsChecked        = options.IsSoundEnabled;
-
         var shared = SettingsService.LoadOptions();
         SyncLanguageComboBox(shared);
+        SoundCheckBox.IsChecked        = shared.IsSoundEnabled;
         NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
         HideHintCheckBox.IsChecked     = shared.HideHintButton;
         AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
         PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
         HideBeeCheckBox.IsChecked = shared.HideBee;
+        RefreshThisGameSectionVisibility();
+        return shared;
     }
 
-    // Blackjack has its own separate options model, same shape as Video Poker above —
-    // only sound is Blackjack-specific; No Stress Mode/Hide Hint/Honey Mode are global
-    // (shared GameOptions) and Visual Themes is available same as every other game.
-    private void SyncUIFromBlackjackOptions(BlackjackOptions options)
+    // Video Poker has its own separate options model. Starting Credits/Default Bet are
+    // genuinely VP-specific (VideoPokerOptionsSection, read from `options` directly below
+    // — no other game has these); everything else is global, via
+    // SyncGlobalCheckboxesFromShared. Visual Themes is available same as every other game.
+    private void SyncUIFromVideoPokerOptions(VideoPokerOptions options)
     {
-        VegasCheckBox.IsVisible        = false;
-        PointHighlightsCheckBox.IsVisible = true;
+        var shared = SyncGlobalCheckboxesFromShared();
 
-        SoundCheckBox.IsChecked = options.IsSoundEnabled;
+        VideoPokerOptionsSection.IsVisible = true;
+        StartingCreditsUpDown.Value = options.StartingCredits;
+        UpdateStartingCreditsLabel(shared.Language, options.StartingCredits);
+        // Clamped rather than matched as-is: BetPerHand could in principle be outside
+        // 1-5 (a hand-edited settings file, or a future bug elsewhere) — without this,
+        // no ComboBoxItem would match, SelectedItem would stay null, and the value would
+        // silently never get written back on any subsequent save in this session.
+        SelectComboBoxItemByTag(DefaultBetComboBox, Math.Clamp(options.BetPerHand, 1, 5).ToString());
+    }
 
-        var shared = SettingsService.LoadOptions();
-        SyncLanguageComboBox(shared);
-        NoStressModeCheckBox.IsChecked = shared.IsNoStressMode;
-        HideHintCheckBox.IsChecked     = shared.HideHintButton;
-        AlwaysOnTopCheckBox.IsChecked  = shared.IsAlwaysOnTop;
-        PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
-        ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
-        HideBeeCheckBox.IsChecked = shared.HideBee;
+    // Blackjack has its own separate options model, same shape as Video Poker above.
+    // Every checkbox here is global, via SyncGlobalCheckboxesFromShared — Vegas Scoring
+    // is Klondike-only so it's hidden, same as every other non-Klondike game — and
+    // Visual Themes is available same as every other game. (VideoPokerOptionsSection
+    // needs no explicit hide here: within one PreferencesView instance, DataContext only
+    // ever toggles between BlackjackOptions and GameOptions, never VideoPokerOptions, so
+    // the section can't have been left visible by this session in the first place.)
+    private void SyncUIFromBlackjackOptions(BlackjackOptions options) =>
+        SyncGlobalCheckboxesFromShared();
+
+    // Loops a ComboBox's items matching by Tag, selects the match — used where
+    // SelectedValue/SelectedValuePath isn't wired up.
+    private static void SelectComboBoxItemByTag(ComboBox combo, string tag)
+    {
+        foreach (var item in combo.Items.OfType<ComboBoxItem>())
+        {
+            if (item.Tag?.ToString() == tag) { combo.SelectedItem = item; break; }
+        }
     }
 
     // ── Language ──────────────────────────────────────────────────────────────
@@ -614,12 +681,27 @@ public partial class PreferencesView : UserControl
 
     private void ApplyLocalization(AppLanguage language)
     {
-        LanguageLabel.Text = Strings.Get(StringKey.Language, language);
         VisualThemesLabel.Text = Strings.Get(StringKey.VisualThemes, language);
         VisualThemesSubtitleLabel.Text = Strings.Get(StringKey.VisualThemesSubtitle, language);
 
-        EnglishLanguageItem.Content = Strings.Get(StringKey.LanguageEnglish, language);
-        SpanishLanguageItem.Content = Strings.Get(StringKey.LanguageSpanish, language);
+        // EnglishLanguageItem/SpanishLanguageItem intentionally NOT re-localized here —
+        // their XAML content ("English / Inglés", "Spanish / Español") is bilingual by
+        // design so the dropdown stays legible to find your language even when the UI is
+        // currently showing the other one.
+
+        GlobalSettingsHeaderText.Text = Strings.Get(StringKey.GlobalSettingsHeader, language);
+
+        DefaultBetLabel.Text = Strings.Get(StringKey.PickerDefaultBetLabel, language);
+        DefaultBet1Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "1").Replace("%@", "");
+        DefaultBet2Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "2").Replace("%@", "s");
+        DefaultBet3Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "3").Replace("%@", "s");
+        DefaultBet4Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "4").Replace("%@", "s");
+        DefaultBet5Item.Content = Strings.Get(StringKey.OptionCoinCountFmt, language).Replace("%d", "5").Replace("%@", "s");
+        // StartingCreditsLabel embeds the current value (matches Mac's Stepper label,
+        // which also always shows "Starting Credits: N") — kept in sync separately by
+        // UpdateStartingCreditsLabel wherever StartingCreditsUpDown.Value changes, since
+        // ApplyLocalization can run before that control has today's real value synced in.
+        UpdateStartingCreditsLabel(language, (int)(StartingCreditsUpDown.Value ?? 100));
 
         NoStressModeCheckBox.Content = Strings.Get(StringKey.NoStressMode, language);
         NoStressModeCheckBox.SetValue(ToolTip.TipProperty, Strings.Get(StringKey.NoStressModeTooltip, language));
@@ -1030,6 +1112,24 @@ public partial class PreferencesView : UserControl
 
     private void ApplyThemeNow(SoliBeeTheme theme, GameOptions options)
     {
+        // Force-persist the outgoing theme's current face art before switching, rather
+        // than trusting that every prior edit's reactive FaceCardArtChangedMessage live-save
+        // already landed. ApplyTheme below unconditionally overwrites the live art set with
+        // the INCOMING theme's own snapshot — if the outgoing theme's snapshot was ever even
+        // briefly out of sync with the live state (a missed/slow live-save), that art is
+        // gone for good the instant this runs, since nothing else remembers it.
+        SaveLiveArtToActiveTheme(options);
+
+        // Re-fetch `theme` fresh from disk by id instead of trusting the object reference
+        // handed in — it came from a theme-list row's Tag, populated whenever
+        // RefreshThemeList() last ran. Uploading face art (FaceCardsPanel) writes straight
+        // to disk without ever calling RefreshThemeList(), so that Tag can be stale —
+        // including for the theme you're already on: re-applying it (e.g. after Back, with
+        // no theme switch in between) would otherwise reconstruct from an old, art-light
+        // snapshot and stomp everything just uploaded, even though UpdateTheme above had
+        // just written the correct one to disk a moment earlier.
+        theme = ThemeService.LoadThemes().Find(t => t.Id == theme.Id) ?? theme;
+
         ThemeService.ApplyTheme(theme, options);
 
         _initializing = true;
@@ -1077,9 +1177,15 @@ public partial class PreferencesView : UserControl
         {
             options.ActiveThemeId = null;
             SettingsService.SaveOptions(options);
-            if (_originalGameOptions != null && _originalGameOptions.ActiveThemeId == _themeToDelete.Id)
-                _originalGameOptions.ActiveThemeId = null;
         }
+
+        // Checked independently of the block above — the theme active when Preferences
+        // opened (_originalGameOptions.ActiveThemeId) isn't necessarily the CURRENTLY
+        // active one (the user may have applied a different theme first), so a delete
+        // that doesn't match `options.ActiveThemeId` could still be deleting the theme
+        // Cancel would otherwise revert back to.
+        if (_originalGameOptions != null && _originalGameOptions.ActiveThemeId == _themeToDelete.Id)
+            _originalGameOptions.ActiveThemeId = null;
 
         ThemeService.DeleteTheme(_themeToDelete.Id);
         _themeToDelete = null;
@@ -1152,36 +1258,40 @@ public partial class PreferencesView : UserControl
         }
         else if (DataContext is VideoPokerOptions vpOptions)
         {
-            vpOptions.IsSoundEnabled  = SoundCheckBox.IsChecked        ?? false;
+            // Starting Credits/Default Bet are VP-specific — no other game has them, so
+            // they're written straight to vpOptions rather than through the shared-
+            // GameOptions broadcast the global toggles below use. (Variant is set
+            // directly on the board, not here.)
+            vpOptions.StartingCredits = (int)(StartingCreditsUpDown.Value ?? vpOptions.StartingCredits);
+            if (DefaultBetComboBox.SelectedItem is ComboBoxItem betItem &&
+                int.TryParse(betItem.Tag?.ToString(), out var bet))
+                vpOptions.BetPerHand = bet;
 
-            // No Stress Mode/Hide Hint are global — write to the shared GameOptions
-            // so every game (Klondike/Freecell/Spider/Blackjack too) picks up the change.
+            // Sound/No Stress Mode/Hide Hint/etc. are all global — write to the shared
+            // GameOptions so every game (Klondike/Freecell/Spider/Blackjack too) picks up
+            // the change, then let the broadcast below sync it back into vpOptions
+            // (VideoPokerViewModel already does this for every field here, same as
+            // HideBee) rather than also setting vpOptions directly and risking the two
+            // writes disagreeing.
             var shared = SettingsService.LoadOptions();
-            shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
-            shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
-            shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
-            shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
-            shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
-            shared.HideBee           = HideBeeCheckBox.IsChecked ?? false;
+            WriteGlobalCheckboxesInto(shared);
             NotifySettingsChanged(shared);
+            UpdateStartingCreditsLabel(shared.Language, vpOptions.StartingCredits);
 
             // vpOptions is the live VideoPokerViewModel.Options instance, so mutations
             // above already apply — SaveOptions() persists to disk and notifies the view.
             VideoPokerVm?.SaveOptions();
         }
-        else if (DataContext is BlackjackOptions bjOptions)
+        else if (DataContext is BlackjackOptions)
         {
-            bjOptions.IsSoundEnabled  = SoundCheckBox.IsChecked ?? false;
-
-            // No Stress Mode/Hide Hint are global — write to the shared GameOptions
-            // so every game (Klondike/Freecell/Spider/VideoPoker too) picks up the change.
+            // Sound/No Stress Mode/Hide Hint/etc. are all global — write to the shared
+            // GameOptions so every game (Klondike/Freecell/Spider/VideoPoker too) picks up
+            // the change, then let the broadcast below sync it back into bjOptions
+            // (BlackjackViewModel already does this for every field here, same as HideBee)
+            // rather than also setting bjOptions directly and risking the two writes
+            // disagreeing.
             var shared = SettingsService.LoadOptions();
-            shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
-            shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
-            shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
-            shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
-            shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
-            shared.HideBee           = HideBeeCheckBox.IsChecked ?? false;
+            WriteGlobalCheckboxesInto(shared);
             NotifySettingsChanged(shared);
 
             // bjOptions is the live BlackjackViewModel.Options instance, so mutations
@@ -1189,6 +1299,29 @@ public partial class PreferencesView : UserControl
             BlackjackVm?.SaveOptions();
         }
     }
+
+    // Shared by Option_Changed's VideoPokerOptions/BlackjackOptions branches above — this
+    // 7-field block was byte-identical between the two after Sound moved onto `shared`
+    // for both; a future copy-paste edit to only one branch would have let Video Poker
+    // and Blackjack silently disagree on which global settings get written, exactly the
+    // "two writes disagreeing" failure the comments above already call out.
+    private void WriteGlobalCheckboxesInto(GameOptions shared)
+    {
+        shared.IsSoundEnabled    = SoundCheckBox.IsChecked        ?? false;
+        shared.IsNoStressMode    = NoStressModeCheckBox.IsChecked ?? false;
+        shared.HideHintButton    = HideHintCheckBox.IsChecked  ?? false;
+        shared.IsAlwaysOnTop     = AlwaysOnTopCheckBox.IsChecked ?? false;
+        shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
+        shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
+        shared.HideBee           = HideBeeCheckBox.IsChecked ?? false;
+    }
+
+    // Dedicated wrappers (rather than wiring SelectionChanged/ValueChanged to Option_Changed
+    // directly in XAML) so the event-arg types stay explicit and match this file's existing
+    // pattern of named handlers per control (GameMode_Changed, CardBackComboBox_SelectionChanged,
+    // etc.) instead of relying on EventArgs contravariance.
+    private void VideoPokerOption_Changed(object? sender, SelectionChangedEventArgs e) => Option_Changed(sender, e);
+    private void StartingCredits_ValueChanged(object? sender, NumericUpDownValueChangedEventArgs e) => Option_Changed(sender, e);
 
     // ── Card Back helpers ─────────────────────────────────────────────────────
 
@@ -2019,7 +2152,26 @@ public partial class PreferencesView : UserControl
 
     // ── Settings broadcast ────────────────────────────────────────────────────
 
-    private void NotifySettingsChanged(GameOptions options)
+    // Single choke point for "persist current live face art into the active theme's
+    // saved snapshot" — every caller (the FaceCardArtChangedMessage hook, this method,
+    // ApplyThemeNow) must route through here instead of duplicating the
+    // UpdateTheme/ActiveThemeId-clearing logic inline. Three near-identical copies of
+    // this is exactly how the theme-switch data-loss bugs happened: one copy stayed
+    // correct while another quietly diverged.
+    private static void SaveLiveArtToActiveTheme(GameOptions options)
+    {
+        if (!options.ActiveThemeId.HasValue) return;
+        if (!ThemeService.UpdateTheme(options.ActiveThemeId.Value, options))
+            options.ActiveThemeId = null; // stale id (its theme was deleted) — see UpdateTheme's doc comment
+    }
+
+    // syncFaceArtToTheme=false is for RevertSettingsChanges only: face card art edits
+    // are already-committed actions (see _originalGameOptions's doc comment — Cancel
+    // never covers them, same as Save/Delete Theme), live-saved into whichever theme
+    // was active at edit time. Reverting other fields must not also re-run that sync,
+    // or it captures whatever art is live NOW under the theme Cancel is reverting TO,
+    // silently overwriting that theme's real saved snapshot with a mismatched one.
+    private void NotifySettingsChanged(GameOptions options, bool syncFaceArtToTheme = true)
     {
         SettingsService.SaveOptions(options);
         WeakReferenceMessenger.Default.Send(new OptionsChangedMessage(options));
@@ -2028,10 +2180,9 @@ public partial class PreferencesView : UserControl
         // so there's never a "Resave" step to remember — the "Active" row is always
         // already up to date. Cheap enough to call unconditionally (small JSON file,
         // user-paced edits, not a hot path).
-        if (options.ActiveThemeId.HasValue)
+        if (syncFaceArtToTheme && options.ActiveThemeId.HasValue)
         {
-            if (!ThemeService.UpdateTheme(options.ActiveThemeId.Value, options))
-                options.ActiveThemeId = null; // stale id (its theme was deleted) — see UpdateTheme's doc comment
+            SaveLiveArtToActiveTheme(options);
             if (ThemesPanel.IsVisible) RefreshThemeList();
         }
 

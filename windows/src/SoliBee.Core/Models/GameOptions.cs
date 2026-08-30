@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using SoliBee.Core.Localization;
 
 namespace SoliBee.Core.Models;
@@ -140,30 +141,13 @@ public class GameOptions
     public string? ThemeCardShadow { get; set; }
     public string? ThemeHintHighlight { get; set; }
 
-    // Deep-copies CustomCardBacks (not just the list container) so callers can diff
-    // "old vs new" against the live options object — a shallow element copy would let
-    // an in-place edit to an existing entry (e.g. the Card Back Editor adjusting scale/
-    // offset) mutate the "original" snapshot too, silently defeating Preferences' Cancel.
-    public GameOptions Clone()
-    {
-        var clone = (GameOptions)MemberwiseClone();
-        clone.CustomCardBacks = CustomCardBacks.Select(c => new CustomCardBack
-        {
-            Name     = c.Name,
-            FileName = c.FileName,
-            Scale    = c.Scale,
-            OffsetX  = c.OffsetX,
-            OffsetY  = c.OffsetY,
-        }).ToList();
-        clone.HiddenDefaultCardBacks = new List<string>(HiddenDefaultCardBacks);
-        clone.CustomBackgrounds = CustomBackgrounds.Select(b => new CustomBackground
-        {
-            Name     = b.Name,
-            FileName = b.FileName,
-            Scale    = b.Scale,
-            OffsetX  = b.OffsetX,
-            OffsetY  = b.OffsetY,
-        }).ToList();
-        return clone;
-    }
+    // Deep-copies every field via a JSON round-trip (same approach as ThemeService's
+    // ClonePreset, and for the same reason its own comment gives: a hand-listed field-
+    // by-field copy would silently drop any new mutable/reference field added later
+    // instead of failing to compile). Callers rely on this being a true deep copy to diff
+    // "old vs new" against the live options object — a shallow copy would let an in-place
+    // edit to an existing entry (e.g. the Card Back Editor adjusting scale/offset) mutate
+    // the "original" snapshot too, silently defeating Preferences' Cancel.
+    public GameOptions Clone() =>
+        JsonSerializer.Deserialize<GameOptions>(JsonSerializer.Serialize(this))!;
 }
