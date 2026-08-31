@@ -1398,4 +1398,6 @@ public enum StringKey: String, CaseIterable {
     case rankHiveMonarch = "rank_hive_monarch"
     /// Player rank, every card in the collection unlocked
     case rankApiarist = "rank_apiarist"
+    /// Section header, Windows Preferences panel — global (cross-game) settings group
+    case globalSettingsHeader = "global_settings_header"
 }

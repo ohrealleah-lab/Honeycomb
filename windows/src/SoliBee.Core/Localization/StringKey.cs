@@ -24,7 +24,6 @@ public enum StringKey
     Language,
     LanguageEnglish,
     LanguageSpanish,
-    GlobalSettingsHeader,
     ResetStatisticsTitle,
     ResetStatisticsBody,
     Reset,
@@ -706,4 +705,5 @@ public enum StringKey
     RankSwarmLeader,
     RankHiveMonarch,
     RankApiarist,
+    GlobalSettingsHeader,
 }

@@ -32,9 +32,9 @@ public static class Strings
         [StringKey.ViewStats] = "View Stats",
         [StringKey.VisualThemes] = "Visual Themes",
         [StringKey.VisualThemesSubtitle] = "Felt, card back, face card art, colors",
+        [StringKey.Language] = "Language",
         [StringKey.LanguageEnglish] = "English",
         [StringKey.LanguageSpanish] = "Español",
-        [StringKey.GlobalSettingsHeader] = "Global Settings",
         [StringKey.ResetStatisticsTitle] = "Reset Statistics?",
         [StringKey.ResetStatisticsBody] = "This will permanently clear all statistics for the current game. This cannot be undone.",
         [StringKey.Reset] = "Reset",
@@ -716,6 +716,7 @@ public static class Strings
         [StringKey.RankSwarmLeader] = "Swarm Leader",
         [StringKey.RankHiveMonarch] = "Hive Monarch",
         [StringKey.RankApiarist] = "Apiarist",
+        [StringKey.GlobalSettingsHeader] = "Global Settings",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -732,9 +733,9 @@ public static class Strings
         [StringKey.ViewStats] = "Ver Estadísticas",
         [StringKey.VisualThemes] = "Temas Visuales",
         [StringKey.VisualThemesSubtitle] = "Fieltro, reverso de carta, arte de figuras, colores",
+        [StringKey.Language] = "Idioma",
         [StringKey.LanguageEnglish] = "English",
         [StringKey.LanguageSpanish] = "Español",
-        [StringKey.GlobalSettingsHeader] = "Configuración Global",
         [StringKey.ResetStatisticsTitle] = "¿Restablecer Estadísticas?",
         [StringKey.ResetStatisticsBody] = "Esto borrará permanentemente todas las estadísticas del juego actual. Esta acción no se puede deshacer.",
         [StringKey.Reset] = "Restablecer",
@@ -1191,7 +1192,7 @@ public static class Strings
         [StringKey.HelpSpiderObjective] = "Arma ocho secuencias completas del mismo palo desde el Rey hasta el As dentro del tablero. Cada secuencia completa de 13 cartas se elimina automáticamente a la fundación.",
         [StringKey.HelpSpiderLayout] = "• Tablero (10 Columnas): 54 cartas repartidas en 10 columnas (las primeras 4 tienen 6 cartas; las últimas 6 tienen 5 cartas). Solo la carta superior de cada columna está boca arriba.\n• Pila (Abajo/Arriba): Las 50 cartas restantes organizadas en 5 repartos extra de 10 cartas cada uno.",
         [StringKey.HelpSpiderRules] = "• Modos de Dificultad:\n  – 1 Palo (Fácil): Las 104 cartas son Picas.\n  – 2 Palos (Medio): 52 Picas y 52 Corazones.\n  – 4 Palos (Difícil): Se usan los cuatro palos estándar.\n• Construcción del Tablero: Apila cartas en rango descendente sin importar el palo (ej., un 7 de Corazones puede colocarse sobre un 8 de Picas). Excepción Crucial: Solo puedes mover una secuencia de múltiples cartas si todas las cartas de esa secuencia comparten el mismo palo.\n• Repartos desde la Pila: Haz clic en la pila para repartir 1 carta en cada columna del tablero. Requisito: Cada columna debe contener al menos 1 carta antes de que puedas repartir desde la pila.",
-        [StringKey.HelpSpiderStrategy] = "1. Mismo Palo Antes que Palos Mixtos: Siempre prefiere construir rachas del mismo palo. Las pilas de palos mixtos bloquean tus cartas y no pueden moverse juntas.\n2. Columnas Vacías Primero: Las columnas vacías te permiten aislar pilas de palos mixtos y reorganizarlas en limpias rachas del mismo palo.\n3. Retrasa el Reparto: Agota cada movimiento posible en el tablero antes de hacer clic en la pila.",
+        [StringKey.HelpSpiderStrategy] = "1. Mismo Palo Antes que Palos Mixtos: Siempre prioriza construir rachas del mismo palo. Las pilas de palos mixtos bloquean tus cartas y no pueden moverse juntas.\n2. Columnas Vacías Primero: Las columnas vacías te permiten aislar pilas de palos mixtos y reorganizarlas en limpias rachas del mismo palo.\n3. Retrasa el Reparto: Agota cada movimiento posible en el tablero antes de hacer clic en la pila.",
         [StringKey.HelpVideopokerObjective] = "Roba una mano de 5 cartas que coincida con una entrada válida en la tabla de pagos para ganar multiplicadores de créditos.",
         [StringKey.HelpVideopokerHowToPlay] = "1. Apuestas: Selecciona 1 a 5 monedas. Presiona Apuesta Máxima (M) para apostar 5 monedas y repartir de inmediato. (Nota: El premio de 800× por la Escalera Real solo se otorga con una apuesta de 5 monedas).\n2. Repartir y Retener: Presiona Repartir (Espacio). Haz clic en las cartas o presiona 1–5 para alternar RETENER (HOLD) en las cartas que desees guardar.\n3. Robar: Presiona Robar (Espacio). Las cartas no retenidas son reemplazadas. Las ganancias se pagan según la tabla de pagos.\n\nVariantes de Juego:\n• Jacks or Better: Tabla de pagos estándar. La mano mínima para calificar es un par de Jotas, Reinas, Reyes o Ases (1×).\n• Deuces Wild: Los cuatro 2s son comodines. La mano ganadora mínima es Tercia. Pagos especiales por Cuatro Doses (200×) y Escalera Real Comodín (25×).\n• Bonus Poker: Pagos mejorados por Póker (Cuatro Ases paga 80×; Cuatro 2s/3s/4s paga 40×).",
         [StringKey.HelpVideopokerStrategy] = "1. Siempre Haz Apuesta Máxima (5 Monedas): El pago por la Escalera Real salta de 250× a 800× solo con 5 monedas.\n2. Nunca Rompas una Mano Armada (Excepto por 4-para-Escalera Real): Solo rompe una Escalera o Color si estás a 1 carta de una Escalera Real.\n3. En Deuces Wild, Nunca Descartes un 2: Los dos son comodines—¡siempre retén cada 2 que te repartan!",
@@ -1416,5 +1417,6 @@ public static class Strings
         [StringKey.RankSwarmLeader] = "Líder del Enjambre",
         [StringKey.RankHiveMonarch] = "Monarca de la Colmena",
         [StringKey.RankApiarist] = "Apicultor",
+        [StringKey.GlobalSettingsHeader] = "Configuración Global",
     };
 }

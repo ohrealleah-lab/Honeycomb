@@ -700,5 +700,6 @@ enum StringsEnglish {
         .rankSwarmLeader: "Swarm Leader",
         .rankHiveMonarch: "Hive Monarch",
         .rankApiarist: "Apiarist",
+        .globalSettingsHeader: "Global Settings",
     ]
 }
