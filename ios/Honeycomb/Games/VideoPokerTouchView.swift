@@ -181,7 +181,7 @@ struct VideoPokerTouchView: View {
         .queuedFlashBanner(
             trigger: viewModel.flashBannerTrigger,
             latestMessage: viewModel.flashBanner,
-            manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
+            manuallyDismissBanners: coordinator.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
         .onAppear { viewModel.checkLoadingBanner() }

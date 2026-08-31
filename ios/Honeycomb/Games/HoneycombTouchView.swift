@@ -353,7 +353,7 @@ struct HoneycombTouchView: View {
                 .disabled(!viewModel.canUndo)
                 .opacity(viewModel.canUndo ? 1 : 0.35)
 
-                if !viewModel.options.hideHintButton, viewModel.options.difficulty != .ultraHard, viewModel.isPlayerTurn {
+                if !coordinator.hideHintButton, viewModel.options.difficulty != .ultraHard, viewModel.isPlayerTurn {
                     topBarIconButton(systemImage: "lightbulb", accessibilityLabel: coordinator.L(.hint)) {
                         if viewModel.hasHintsAvailable {
                             viewModel.findHint()
@@ -924,7 +924,7 @@ struct HoneycombTouchView: View {
         ruleBannerTask?.cancel()
         ruleBannerText = text
         withAnimation(.easeIn(duration: 0.15)) { showingRuleBanner = true }
-        guard !viewModel.options.manuallyDismissBanners else {
+        guard !coordinator.manuallyDismissBanners else {
             ruleBannerTask = nil
             return
         }
@@ -951,7 +951,7 @@ struct HoneycombTouchView: View {
 
     private var canStealCard: Bool {
         viewModel.matchOutcome == .win
-            && !viewModel.options.noStressMode
+            && !coordinator.noStressMode
             && !viewModel.hasStolenThisMatch
             && !HoneycombProfileManager.shared.isCardBankFull
             && viewModel.hasStealableCard
@@ -981,7 +981,7 @@ struct HoneycombTouchView: View {
                         .foregroundColor(viewModel.matchOutcome == .win || viewModel.matchOutcome == .tie ? .yellow : .white)
                 }
 
-                if viewModel.matchOutcome == .win && !viewModel.options.noStressMode {
+                if viewModel.matchOutcome == .win && !coordinator.noStressMode {
                     if HoneycombProfileManager.shared.isCardBankFull {
                         VStack(spacing: 4) {
                             Text(coordinator.L(.cardBankFullLine1))

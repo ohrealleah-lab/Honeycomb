@@ -274,8 +274,19 @@ struct StatsRegressionTests {
     // one being entered) with an abandoned, unfinished hand still sitting in memory
     // satisfied that same branch's condition too, silently (re)starting a real
     // wall-clock timer for a screen nobody was looking at.
+    // isSoundEnabled/noStressMode/honeyMode/manuallyDismissBanners/hideHintButton are
+    // now backed by one true single-field SharedGameOptions instance shared by every
+    // game (see shared/Models/SharedGameOptions.swift) rather than six independently-
+    // synced per-game copies — so the original version of this test (which mutated
+    // viewModel.options.noStressMode directly, then switched games to trigger the old
+    // broadcast) no longer applies; noStressMode doesn't live on any game's Options
+    // struct at all anymore. What still matters: toggling coordinator.noStressMode
+    // fires every registered game's reaction to the SAME instance synchronously, so a
+    // backgrounded game with an abandoned, unfinished hand could spuriously resume its
+    // stopped timer unless AppCoordinator gates the reaction to only the active game
+    // (see AppCoordinator.init's sharedOptions.onNoStressModeChange registration).
     static func testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync() {
-        let keys = ["selectedGameMode", "solitaire_options", "beecell_options", "honeycomb_options"]
+        let keys = ["selectedGameMode", "global_no_stress_mode"]
         let saved = keys.map { ($0, UserDefaults.standard.object(forKey: $0)) }
         defer {
             for (key, value) in saved {
@@ -285,14 +296,12 @@ struct StatsRegressionTests {
         }
 
         let coordinator = AppCoordinator()
+        coordinator.noStressMode = true
 
         // Klondike: an abandoned, untimed, unfinished hand left sitting in the
-        // background — the exact shape that satisfies handleOptionsChanged's "start
-        // timer" condition once effectiveTimed flips from false to true.
+        // background — the exact shape that satisfies reactToNoStressModeChange's
+        // "start timer" condition once effectiveTimed flips from false to true.
         coordinator.gameMode = .klondike
-        var klondikeOpts = coordinator.klondikeViewModel.options
-        klondikeOpts.noStressMode = true
-        coordinator.klondikeViewModel.options = klondikeOpts
         coordinator.klondikeViewModel.state.movesCount = 1
         coordinator.klondikeViewModel.state.hasWon = false
         coordinator.klondikeViewModel.stopTimer() // matches the real "was backgrounded" state
@@ -304,19 +313,13 @@ struct StatsRegressionTests {
             fatalError("❌ StatsRegressionTests: Klondike's timer should already be stopped after switching away from it")
         }
 
-        // Toggle No Stress Mode off on Beecell directly (not through the coordinator —
-        // an in-game options change doesn't propagate anywhere until the NEXT mode
-        // switch, matching how a player's own Options sheet interaction works).
-        var beecellOpts = coordinator.beecellViewModel.options
-        beecellOpts.noStressMode = false
-        coordinator.beecellViewModel.options = beecellOpts
-
-        // Switch to a THIRD game — this is what broadcasts Beecell's new noStressMode
-        // to every other game, including the backgrounded Klondike.
-        coordinator.gameMode = .honeycomb
+        // Turn No Stress Mode off while looking at Beecell — this is what fires the
+        // shared reaction for every registered game, including the backgrounded
+        // Klondike, since they all observe the identical SharedGameOptions instance.
+        coordinator.noStressMode = false
 
         guard coordinator.klondikeViewModel.state.isTimerActive == false else {
-            fatalError("❌ StatsRegressionTests: switching from Beecell to Honeycomb resumed the backgrounded Klondike game's timer via the cross-game options sync, even though nobody is looking at Klondike")
+            fatalError("❌ StatsRegressionTests: toggling No Stress Mode while looking at Beecell resumed the backgrounded Klondike game's timer, even though nobody is looking at Klondike")
         }
     }
 }

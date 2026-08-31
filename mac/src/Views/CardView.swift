@@ -46,6 +46,7 @@ public struct CardView: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(outlineColor, lineWidth: 0.75)
         )
+        .compositingGroup()
         .shadow(color: Color.black.opacity(0.15), radius: 1.5, x: 0, y: 1.5)
         .modifier(KeyboardFocusHighlightModifier(isFocused: isFocused, isSelected: isSelected))
         .overlay(alignment: .topTrailing) {

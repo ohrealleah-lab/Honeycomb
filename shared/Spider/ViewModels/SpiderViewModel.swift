@@ -11,11 +11,15 @@ public final class SpiderViewModel {
     // depths, since tableau.count never changes for Spider (always 10 columns) and can't
     // serve as that signal the way it does for Klondike/Beecell.
     public private(set) var gameGeneration: Int = 0
-    
+
+    // True single source of truth for isSoundEnabled/noStressMode/honeyMode/
+    // manuallyDismissBanners/hideHintButton — same instance AppCoordinator and every
+    // other game ViewModel hold. See SharedGameOptions.swift.
+    public let sharedOptions: SharedGameOptions
+
     public var options: SpiderOptions {
         didSet {
             saveOptions()
-            UISound.isEnabled = options.isSoundEnabled
             handleOptionsChanged(oldValue: oldValue)
         }
     }
@@ -166,7 +170,7 @@ public final class SpiderViewModel {
     private var pointPopupGeneration: Int = 0
 
     private func showPointPopup(cardId: UUID, displayText: String, isPositive: Bool) {
-        guard options.honeyMode, !isAutoplayRunning else { return }
+        guard sharedOptions.honeyMode, !isAutoplayRunning else { return }
         pointPopupGeneration += 1
         let generation = pointPopupGeneration
         pointPopup = CardPointPopup(cardId: cardId, displayText: displayText, isPositive: isPositive)
@@ -199,23 +203,30 @@ public final class SpiderViewModel {
         }
     }
     
-    private func handleOptionsChanged(oldValue: SpiderOptions) {
-        if effectiveTimed(options) != effectiveTimed(oldValue) {
-            if effectiveTimed(options) {
-                if state.movesCount > 0 && !state.hasWon {
-                    startTimerIfNeeded()
-                }
-            } else if state.isTimerActive {
-                // Only reset elapsed time when we're actually stopping a running timer
-                // (this game was the foreground one). A shared-option change (e.g. No
-                // Stress Mode toggled elsewhere and synced in via AppCoordinator) can
-                // reach a backgrounded game whose timer is already stopped — its saved
-                // elapsed time shouldn't be wiped just because it received the update.
-                stopTimer()
-                state.timerSeconds = 0
+    // Reacts to No Stress Mode toggling. Called only by AppCoordinator, and only for
+    // whichever game is currently active (see AppCoordinator.init's
+    // sharedOptions.onNoStressModeChange registration) — sharedOptions is one instance
+    // shared by every game, so a naive per-ViewModel self-registration here would fire
+    // for backgrounded games too, spuriously resuming a stopped timer on an abandoned
+    // hand nobody is looking at (the exact bug this replaced, see git history:
+    // testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync).
+    public func reactToNoStressModeChange() {
+        if effectiveTimed() {
+            if state.movesCount > 0 && !state.hasWon {
+                startTimerIfNeeded()
             }
+        } else if state.isTimerActive {
+            // Only reset elapsed time when we're actually stopping a running timer
+            // (this game was the foreground one). A shared-option change (e.g. No
+            // Stress Mode toggled elsewhere) can reach a backgrounded game whose timer
+            // is already stopped — its saved elapsed time shouldn't be wiped just
+            // because it received the update.
+            stopTimer()
+            state.timerSeconds = 0
         }
+    }
 
+    private func handleOptionsChanged(oldValue: SpiderOptions) {
         if options.suitCount != oldValue.suitCount {
             // options has already flipped to the NEW suitCount by the time this didSet
             // fires — pass the OLD value explicitly so the abandoned-game streak reset
@@ -231,7 +242,7 @@ public final class SpiderViewModel {
     }
     
     public func playSound(named name: String) {
-        UISound.play(named: name, enabled: options.isSoundEnabled)
+        UISound.play(named: name, enabled: sharedOptions.isSoundEnabled)
     }
     
     public func recordWin(timeInSeconds: Int) {
@@ -252,9 +263,10 @@ public final class SpiderViewModel {
         checkWinMilestones()
     }
 
-    public init(state: SpiderState = SpiderState(stock: Pile(id: "stock", type: .stock), foundations: [], tableau: [], score: 500, movesCount: 0, timerSeconds: 0, isTimerActive: false, hasWon: false)) {
+    public init(state: SpiderState = SpiderState(stock: Pile(id: "stock", type: .stock), foundations: [], tableau: [], score: 500, movesCount: 0, timerSeconds: 0, isTimerActive: false, hasWon: false), sharedOptions: SharedGameOptions = SharedGameOptions()) {
         self.state = state
-        
+        self.sharedOptions = sharedOptions
+
         // Load options
         if let data = UserDefaults.standard.data(forKey: "spider_options"),
            let decoded = try? JSONDecoder().decode(SpiderOptions.self, from: data) {
@@ -270,8 +282,6 @@ public final class SpiderViewModel {
         } else {
             self.statistics = SpiderStatistics()
         }
-
-        UISound.isEnabled = self.options.isSoundEnabled
 
         startNewGame()
     }
@@ -650,12 +660,12 @@ public final class SpiderViewModel {
     // No Stress Mode) so it's intentionally not consulted here — honoring a persisted
     // `false` from before that change would permanently strand upgrading users with no
     // way to turn the timer back on.
-    private func effectiveTimed(_ o: SpiderOptions) -> Bool {
-        !o.noStressMode
+    private func effectiveTimed() -> Bool {
+        !sharedOptions.noStressMode
     }
 
     public func startTimerIfNeeded() {
-        guard effectiveTimed(options) else { return }
+        guard effectiveTimed() else { return }
         gameTimer.start(
             isActive: { state.isTimerActive },
             setActive: { state.isTimerActive = $0 },

@@ -133,7 +133,7 @@ public struct GameView: View {
                     ) { isShowingOptions = true }
 
                     // Hint Button
-                    if !viewModel.options.hideHintButton {
+                    if !coordinator.hideHintButton {
                         GameToolbarButton(
                             label: coordinator.L(.hint), systemImage: "lightbulb",
                             isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
@@ -157,7 +157,7 @@ public struct GameView: View {
 
                     Spacer()
 
-                    if viewModel.options.isStatusBarVisible && !viewModel.options.noStressMode {
+                    if viewModel.options.isStatusBarVisible && !coordinator.noStressMode {
                         HStack(alignment: .bottom, spacing: 20) {
                             // Score / Bankroll
                             if viewModel.options.isVegasScoring {
@@ -802,7 +802,7 @@ public struct GameView: View {
             scheduleIdleStockHint()
             viewModel.scheduleIdleActionCheck()
         }
-        .onChange(of: viewModel.options.hideHintButton) {
+        .onChange(of: coordinator.hideHintButton) {
             scheduleIdleStockHint()
         }
         .onChange(of: viewModel.gameGeneration) {
@@ -883,10 +883,15 @@ public struct GameView: View {
             guard (note.object as? NSWindow) == hostingWindow, !draggedCards.isEmpty else { return }
             cancelDrag()
         }
+        // The board already has its own selection/hint highlighting (KeyboardFocusHighlightModifier);
+        // the system's automatic focus ring is redundant and recomputes an expensive blurred bitmap
+        // (rips_f_BlurRingRoundedDilation) every time the board redraws, which shows up as a
+        // main-thread stall on toolbar controls like the game-selection dropdown.
+        .focusEffectDisabled()
     }
 
     private func scheduleIdleStockHint() {
-        let eligible = !viewModel.options.hideHintButton
+        let eligible = !coordinator.hideHintButton
             && !viewModel.hasDrawnFromStockThisGame
             && !viewModel.hasShownIdleStockHintThisGame
         guard eligible else {
@@ -903,7 +908,7 @@ public struct GameView: View {
         idleStockHintTask?.cancel()
         withAnimation { showIdleStockHint = false }
         let task = DispatchWorkItem {
-            guard !viewModel.options.hideHintButton,
+            guard !coordinator.hideHintButton,
                   !viewModel.hasDrawnFromStockThisGame,
                   !viewModel.hasShownIdleStockHintThisGame else { return }
             viewModel.hasShownIdleStockHintThisGame = true
@@ -944,7 +949,7 @@ public struct GameView: View {
         withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
         // Manually Dismiss Banners: the game is "paused" on this banner — no timer, it
         // stays up until the player taps it or a card (see the board tap-catcher above).
-        guard !viewModel.options.manuallyDismissBanners else {
+        guard !coordinator.manuallyDismissBanners else {
             queuedBannerTask = nil
             return
         }
@@ -1211,7 +1216,7 @@ public struct GameView: View {
         let scorePart = viewModel.options.isVegasScoring
             ? coordinator.L(.bankrollFmt, viewModel.vegasBankrollString)
             : coordinator.L(.scoreFmt, viewModel.scoreString)
-        guard !viewModel.options.noStressMode else { return scorePart }
+        guard !coordinator.noStressMode else { return scorePart }
         return coordinator.L(.winSummaryWithTimeFmt, scorePart, formatTime(viewModel.state.timerSeconds))
     }
 }
@@ -1323,13 +1328,13 @@ struct OptionsView: View {
         self.availableWidth = availableWidth
         self.availableHeight = availableHeight
         _isStatusBarVisible = State(initialValue: viewModel.options.isStatusBarVisible)
-        _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
+        _isSoundEnabled = State(initialValue: coordinator.isSoundEnabled)
         _isVegasScoring = State(initialValue: viewModel.options.isVegasScoring)
         _drawMode = State(initialValue: viewModel.state.drawMode)
-        _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
-        _noStressMode = State(initialValue: viewModel.options.noStressMode)
-        _honeyMode = State(initialValue: viewModel.options.honeyMode)
-        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
+        _hideHintButton = State(initialValue: coordinator.hideHintButton)
+        _noStressMode = State(initialValue: coordinator.noStressMode)
+        _honeyMode = State(initialValue: coordinator.honeyMode)
+        _manuallyDismissBanners = State(initialValue: coordinator.manuallyDismissBanners)
         _hideBee = State(initialValue: coordinator.hideBee)
     }
 
@@ -1343,12 +1348,7 @@ struct OptionsView: View {
             onOK: {
                 var updatedOpts = viewModel.options
                 updatedOpts.isStatusBarVisible = isStatusBarVisible
-                updatedOpts.isSoundEnabled = isSoundEnabled
                 updatedOpts.isVegasScoring = isVegasScoring
-                updatedOpts.hideHintButton = hideHintButton
-                updatedOpts.noStressMode = noStressMode
-                updatedOpts.honeyMode = honeyMode
-                updatedOpts.manuallyDismissBanners = manuallyDismissBanners
 
                 updatedOpts.drawMode = drawMode
                 if viewModel.state.drawMode != drawMode {

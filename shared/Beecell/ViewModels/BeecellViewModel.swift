@@ -5,11 +5,15 @@ import Observation
 public final class BeecellViewModel {
     public var state: BeecellState
     private let gameTimer = GameTimer()
-    
+
+    // True single source of truth for isSoundEnabled/noStressMode/honeyMode/
+    // manuallyDismissBanners/hideHintButton — same instance AppCoordinator and every
+    // other game ViewModel hold. See SharedGameOptions.swift.
+    public let sharedOptions: SharedGameOptions
+
     public var options: BeecellOptions {
         didSet {
             saveOptions()
-            UISound.isEnabled = options.isSoundEnabled
             handleOptionsChanged(oldValue: oldValue)
         }
     }
@@ -151,23 +155,30 @@ public final class BeecellViewModel {
         }
     }
     
-    private func handleOptionsChanged(oldValue: BeecellOptions) {
-        if effectiveTimed(options) != effectiveTimed(oldValue) {
-            if effectiveTimed(options) {
-                if state.movesCount > 0 && !state.hasWon {
-                    startTimerIfNeeded()
-                }
-            } else if state.isTimerActive {
-                // Only reset elapsed time when we're actually stopping a running timer
-                // (this game was the foreground one). A shared-option change (e.g. No
-                // Stress Mode toggled elsewhere and synced in via AppCoordinator) can
-                // reach a backgrounded game whose timer is already stopped — its saved
-                // elapsed time shouldn't be wiped just because it received the update.
-                stopTimer()
-                state.timerSeconds = 0
+    // Reacts to No Stress Mode toggling. Called only by AppCoordinator, and only for
+    // whichever game is currently active (see AppCoordinator.init's
+    // sharedOptions.onNoStressModeChange registration) — sharedOptions is one instance
+    // shared by every game, so a naive per-ViewModel self-registration here would fire
+    // for backgrounded games too, spuriously resuming a stopped timer on an abandoned
+    // hand nobody is looking at (the exact bug this replaced, see git history:
+    // testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync).
+    public func reactToNoStressModeChange() {
+        if effectiveTimed() {
+            if state.movesCount > 0 && !state.hasWon {
+                startTimerIfNeeded()
             }
+        } else if state.isTimerActive {
+            // Only reset elapsed time when we're actually stopping a running timer
+            // (this game was the foreground one). A shared-option change (e.g. No
+            // Stress Mode toggled elsewhere) can reach a backgrounded game whose timer
+            // is already stopped — its saved elapsed time shouldn't be wiped just
+            // because it received the update.
+            stopTimer()
+            state.timerSeconds = 0
         }
+    }
 
+    private func handleOptionsChanged(oldValue: BeecellOptions) {
         if options.deckCount != oldValue.deckCount {
             // options (and therefore currentModeKey) has already flipped to the NEW
             // deck count by the time this didSet fires — pass the OLD mode's key
@@ -185,7 +196,7 @@ public final class BeecellViewModel {
     }
     
     public func playSound(named name: String) {
-        UISound.play(named: name, enabled: options.isSoundEnabled)
+        UISound.play(named: name, enabled: sharedOptions.isSoundEnabled)
     }
     
     public func recordWin(timeInSeconds: Int) {
@@ -206,7 +217,8 @@ public final class BeecellViewModel {
         checkWinMilestones()
     }
 
-    public init() {
+    public init(sharedOptions: SharedGameOptions = SharedGameOptions()) {
+        self.sharedOptions = sharedOptions
         // Initialize all stored properties first with defaults
         self.state = BeecellState(
             freeCells: [],
@@ -235,8 +247,6 @@ public final class BeecellViewModel {
            let decoded = try? JSONDecoder().decode(BeecellStatistics.self, from: data) {
             self.statistics = decoded
         }
-
-        UISound.isEnabled = self.options.isSoundEnabled
 
         startNewGame()
     }
@@ -545,7 +555,7 @@ public final class BeecellViewModel {
 
     // Point Highlights: mirrors adjustScore's branching.
     private func updatePointPopup(anchorCard: Card?, source: Pile.PileType, target: Pile.PileType) {
-        guard options.honeyMode, !isAutoplayRunning, let anchorCard else { return }
+        guard sharedOptions.honeyMode, !isAutoplayRunning, let anchorCard else { return }
         let popup: CardPointPopup?
         if target == .foundation && source != .foundation {
             popup = CardPointPopup(cardId: anchorCard.id, displayText: "+10", isPositive: true)
@@ -570,12 +580,12 @@ public final class BeecellViewModel {
     // No Stress Mode) so it's intentionally not consulted here — honoring a persisted
     // `false` from before that change would permanently strand upgrading users with no
     // way to turn the timer back on.
-    private func effectiveTimed(_ o: BeecellOptions) -> Bool {
-        !o.noStressMode
+    private func effectiveTimed() -> Bool {
+        !sharedOptions.noStressMode
     }
 
     public func startTimerIfNeeded() {
-        guard effectiveTimed(options) else { return }
+        guard effectiveTimed() else { return }
         gameTimer.start(
             isActive: { state.isTimerActive },
             setActive: { state.isTimerActive = $0 },

@@ -127,9 +127,19 @@ struct VideoPokerAndBlackjackTests {
     }
 
     static func testVideoPokerFreePlayDoesNotChargeOrPayCredits() {
+        // noStressMode now lives on SharedGameOptions, which persists to the global
+        // "global_no_stress_mode" UserDefaults key even for a standalone test
+        // instance — restore it so this doesn't leak into later tests that construct
+        // their own default SharedGameOptions() and expect noStressMode == false.
+        let savedNoStressMode = UserDefaults.standard.object(forKey: "global_no_stress_mode")
+        defer {
+            if let savedNoStressMode { UserDefaults.standard.set(savedNoStressMode, forKey: "global_no_stress_mode") }
+            else { UserDefaults.standard.removeObject(forKey: "global_no_stress_mode") }
+        }
+
         let viewModel = VideoPokerViewModel()
         viewModel.options.variant = .jacksOrBetter
-        viewModel.options.noStressMode = true
+        viewModel.sharedOptions.noStressMode = true
         viewModel.state.sessionCredits = 0
         viewModel.state.currentBet = 5
 
@@ -279,8 +289,17 @@ struct VideoPokerAndBlackjackTests {
     }
 
     static func testBlackjackFreePlayBypassesCreditChecks() {
+        // See the matching comment in testVideoPokerFreePlayDoesNotChargeOrPayCredits —
+        // noStressMode now persists to a global UserDefaults key even for a standalone
+        // test instance, so it must be restored to avoid leaking into later tests.
+        let savedNoStressMode = UserDefaults.standard.object(forKey: "global_no_stress_mode")
+        defer {
+            if let savedNoStressMode { UserDefaults.standard.set(savedNoStressMode, forKey: "global_no_stress_mode") }
+            else { UserDefaults.standard.removeObject(forKey: "global_no_stress_mode") }
+        }
+
         let viewModel = BlackjackViewModel()
-        viewModel.options.noStressMode = true
+        viewModel.sharedOptions.noStressMode = true
         viewModel.state.sessionCredits = 0
         viewModel.state.currentBet = 10
 

@@ -64,7 +64,6 @@ struct AppCoordinatorTests {
         coordinator.feltColor = .crimson
         coordinator.cardBackTheme = "Vulpera"
 
-        assert(coordinator.klondikeViewModel.options.isSoundEnabled == coordinator.beecellViewModel.options.isSoundEnabled, "Sound preference should still sync across games")
         assert(coordinator.feltColor == .crimson, "Felt color should be crimson")
         assert(coordinator.cardBackTheme == "Vulpera", "Card back theme should be Vulpera")
 
@@ -88,21 +87,30 @@ struct AppCoordinatorTests {
     // Regression coverage: Sound/No Stress Mode used to be six separate per-game copies,
     // silently re-synced from "whichever game you most recently left" on every mode
     // switch — so simply switching games (with no options edit at all) could flip these
-    // settings in games you never touched. They're now app-wide AppCoordinator
-    // properties; this confirms switching games alone can no longer change them, and an
-    // explicit edit correctly reaches every game.
+    // settings in games you never touched. They're now backed by one true single-field
+    // SharedGameOptions instance that AppCoordinator and every game ViewModel hold —
+    // this confirms every ViewModel really does share the identical instance (not six
+    // separate ones that merely happen to be kept in sync), and that an edit is visible
+    // everywhere immediately with no propagation step, including across game switches.
     static func testSoundAndNoStressModeAreAppWide() {
         UserDefaults.standard.removeObject(forKey: "global_sound_enabled")
         UserDefaults.standard.removeObject(forKey: "global_no_stress_mode")
 
         let coordinator = AppCoordinator()
 
+        assert(coordinator.klondikeViewModel.sharedOptions === coordinator.sharedOptions, "Klondike should share the coordinator's SharedGameOptions instance")
+        assert(coordinator.beecellViewModel.sharedOptions === coordinator.sharedOptions, "Beecell should share the coordinator's SharedGameOptions instance")
+        assert(coordinator.spiderViewModel.sharedOptions === coordinator.sharedOptions, "Spider should share the coordinator's SharedGameOptions instance")
+        assert(coordinator.videoPokerViewModel.sharedOptions === coordinator.sharedOptions, "Video Poker should share the coordinator's SharedGameOptions instance")
+        assert(coordinator.blackjackViewModel.sharedOptions === coordinator.sharedOptions, "Blackjack should share the coordinator's SharedGameOptions instance")
+        assert(coordinator.honeycombViewModel.sharedOptions === coordinator.sharedOptions, "Honeycomb should share the coordinator's SharedGameOptions instance")
+
         // An explicit edit (as if made via one game's Options sheet) reaches every game.
         coordinator.isSoundEnabled = false
         coordinator.noStressMode = true
-        assert(coordinator.klondikeViewModel.options.isSoundEnabled == false, "Explicit edit should reach Klondike")
-        assert(coordinator.beecellViewModel.options.noStressMode == true, "Explicit edit should reach Beecell")
-        assert(coordinator.honeycombViewModel.options.isSoundEnabled == false, "Explicit edit should reach Honeycomb")
+        assert(coordinator.klondikeViewModel.sharedOptions.isSoundEnabled == false, "Explicit edit should reach Klondike")
+        assert(coordinator.beecellViewModel.sharedOptions.noStressMode == true, "Explicit edit should reach Beecell")
+        assert(coordinator.honeycombViewModel.sharedOptions.isSoundEnabled == false, "Explicit edit should reach Honeycomb")
 
         // Switching games — with no options edit at all — must not change the value.
         coordinator.gameMode = .beecell
@@ -111,15 +119,9 @@ struct AppCoordinatorTests {
         coordinator.gameMode = .klondike
         assert(coordinator.isSoundEnabled == false, "Switching games alone must not change Sound")
         assert(coordinator.noStressMode == true, "Switching games alone must not change No Stress Mode")
-        assert(coordinator.beecellViewModel.options.isSoundEnabled == false, "Beecell must still reflect the explicit edit after switching away and back")
-        assert(coordinator.honeycombViewModel.options.noStressMode == true, "Honeycomb must still reflect the explicit edit after switching away and back")
+        assert(coordinator.beecellViewModel.sharedOptions.isSoundEnabled == false, "Beecell must still reflect the explicit edit after switching away and back")
+        assert(coordinator.honeycombViewModel.sharedOptions.noStressMode == true, "Honeycomb must still reflect the explicit edit after switching away and back")
 
-        // Restore every game's options back to their normal defaults before cleaning up
-        // the global keys — applySharedCommonOptionsToAllGames persists isSoundEnabled/
-        // noStressMode into each game's *own* UserDefaults blob too (e.g.
-        // "videopoker_options"), so leaving noStressMode=true there would silently break
-        // any later test that constructs a fresh ViewModel and loads that persisted state
-        // (No Stress Mode changes dealing/betting behavior in several games).
         coordinator.isSoundEnabled = true
         coordinator.noStressMode = false
         UserDefaults.standard.removeObject(forKey: "global_sound_enabled")

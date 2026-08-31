@@ -5,11 +5,15 @@ import Observation
 public final class GameViewModel {
     public var state: GameState
     private let gameTimer = GameTimer()
-    
+
+    // True single source of truth for isSoundEnabled/noStressMode/honeyMode/
+    // manuallyDismissBanners/hideHintButton — same instance AppCoordinator and every
+    // other game ViewModel hold. See SharedGameOptions.swift.
+    public let sharedOptions: SharedGameOptions
+
     public var options: GameOptions {
         didSet {
             saveOptions()
-            UISound.isEnabled = options.isSoundEnabled
             handleOptionsChanged(oldValue: oldValue)
         }
     }
@@ -225,23 +229,30 @@ public final class GameViewModel {
         }
     }
     
-    private func handleOptionsChanged(oldValue: GameOptions) {
-        if effectiveTimed(options) != effectiveTimed(oldValue) {
-            if effectiveTimed(options) {
-                if state.movesCount > 0 && !state.hasWon {
-                    startTimerIfNeeded()
-                }
-            } else if state.isTimerActive {
-                // Only reset elapsed time when we're actually stopping a running timer
-                // (this game was the foreground one). A shared-option change (e.g. No
-                // Stress Mode toggled elsewhere and synced in via AppCoordinator) can
-                // reach a backgrounded game whose timer is already stopped — its saved
-                // elapsed time shouldn't be wiped just because it received the update.
-                stopTimer()
-                state.timerSeconds = 0
+    // Reacts to No Stress Mode toggling. Called only by AppCoordinator, and only for
+    // whichever game is currently active (see AppCoordinator.init's
+    // sharedOptions.onNoStressModeChange registration) — sharedOptions is one instance
+    // shared by every game, so a naive per-ViewModel self-registration here would fire
+    // for backgrounded games too, spuriously resuming a stopped timer on an abandoned
+    // hand nobody is looking at (the exact bug this replaced, see git history:
+    // testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync).
+    public func reactToNoStressModeChange() {
+        if effectiveTimed() {
+            if state.movesCount > 0 && !state.hasWon {
+                startTimerIfNeeded()
             }
+        } else if state.isTimerActive {
+            // Only reset elapsed time when we're actually stopping a running timer
+            // (this game was the foreground one). A shared-option change (e.g. No
+            // Stress Mode toggled elsewhere) can reach a backgrounded game whose timer
+            // is already stopped — its saved elapsed time shouldn't be wiped just
+            // because it received the update.
+            stopTimer()
+            state.timerSeconds = 0
         }
+    }
 
+    private func handleOptionsChanged(oldValue: GameOptions) {
         if options.isVegasScoring != oldValue.isVegasScoring {
             if options.isVegasScoring {
                 if UserDefaults.standard.object(forKey: "highScoreVegas") != nil {
@@ -265,7 +276,7 @@ public final class GameViewModel {
     }
     
     public func playSound(named name: String) {
-        UISound.play(named: name, enabled: options.isSoundEnabled)
+        UISound.play(named: name, enabled: sharedOptions.isSoundEnabled)
     }
     
     public func recordWin(timeInSeconds: Int) {
@@ -289,8 +300,9 @@ public final class GameViewModel {
         checkWinMilestones()
     }
     
-    public init(state: GameState = GameState()) {
+    public init(state: GameState = GameState(), sharedOptions: SharedGameOptions = SharedGameOptions()) {
         self.state = state
+        self.sharedOptions = sharedOptions
         if let data = UserDefaults.standard.data(forKey: "solitaire_options"),
            let decoded = try? JSONDecoder().decode(GameOptions.self, from: data) {
             self.options = decoded
@@ -321,8 +333,6 @@ public final class GameViewModel {
         }
 
         self.vegasBankroll = 0
-
-        UISound.isEnabled = self.options.isSoundEnabled
 
         self.state.drawMode = self.options.drawMode
         startNewGame()
@@ -692,7 +702,7 @@ public final class GameViewModel {
     // and the popup's one slot can only show one at a time; the moved card's own event
     // is the more relevant one to show).
     private func updatePointPopup(anchorCard: Card?, source: Pile.PileType, target: Pile.PileType, revealedFaceDownCard: Bool, revealedCardId: UUID?) {
-        guard options.honeyMode, !isAutoplayRunning else { return }
+        guard sharedOptions.honeyMode, !isAutoplayRunning else { return }
         let popup: CardPointPopup?
         if options.isVegasScoring {
             if target == .foundation, source != .foundation, let anchorCard {
@@ -738,12 +748,12 @@ public final class GameViewModel {
     // No Stress Mode) so it's intentionally not consulted here — honoring a persisted
     // `false` from before that change would permanently strand upgrading users with no
     // way to turn the timer back on.
-    private func effectiveTimed(_ o: GameOptions) -> Bool {
-        !o.noStressMode
+    private func effectiveTimed() -> Bool {
+        !sharedOptions.noStressMode
     }
 
     public func startTimerIfNeeded() {
-        guard effectiveTimed(options) else { return }
+        guard effectiveTimed() else { return }
         gameTimer.start(
             isActive: { state.isTimerActive },
             setActive: { state.isTimerActive = $0 },

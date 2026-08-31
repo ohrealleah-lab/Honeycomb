@@ -35,28 +35,6 @@ public final class AppCoordinator {
             case .blackjack:  blackjackViewModel.resetIfRoundOver()
             default: break
             }
-            // Reassert the real Sound/No Stress Mode/etc. values on every switch —
-            // mainly defensive, since nothing besides applySharedCommonOptionsToAllGames
-            // itself should ever change these per-game fields, but this guarantees
-            // switching games can never be the thing that changes what they're set to
-            // (the exact bug this replaced: a now-removed syncSharedOptions used to
-            // broadcast whichever game you just left onto every other game).
-            applySharedCommonOptionsToAllGames()
-            // The broadcast above reassigns `options` on every backgrounded game too,
-            // which re-fires each one's own handleOptionsChanged — including its "No
-            // Stress Mode just turned off, start the timer" branch. That branch assumes
-            // it's only ever reacting to a change on the game the player is actively
-            // looking at (true for a direct in-game toggle), but a background game with
-            // an abandoned, unfinished hand still sitting in memory (movesCount > 0,
-            // !hasWon) satisfies that same branch's condition too — silently starting a
-            // real wall-clock timer for a screen nobody is looking at, which would
-            // corrupt that hand's eventual time-based stats if the player returns to it
-            // later. Only Klondike/Beecell/Spider have timers; defensively re-stop every
-            // one except whichever just became active, undoing any such spurious start
-            // regardless of what each game's own handleOptionsChanged decided to do.
-            if gameMode != .klondike { klondikeViewModel.stopTimer() }
-            if gameMode != .beecell  { beecellViewModel.stopTimer() }
-            if gameMode != .spider   { spiderViewModel.stopTimer() }
             #if canImport(AppKit)
             applyWindowSizeForCurrentGameMode()
             #endif
@@ -88,12 +66,13 @@ public final class AppCoordinator {
     }
     #endif
 
-    public let klondikeViewModel   = GameViewModel()
-    public let beecellViewModel    = BeecellViewModel()
-    public let spiderViewModel     = SpiderViewModel()
-    public let videoPokerViewModel = VideoPokerViewModel()
-    public let blackjackViewModel  = BlackjackViewModel()
-    public let honeycombViewModel  = HoneycombViewModel()
+    public let sharedOptions: SharedGameOptions
+    public let klondikeViewModel: GameViewModel
+    public let beecellViewModel: BeecellViewModel
+    public let spiderViewModel: SpiderViewModel
+    public let videoPokerViewModel: VideoPokerViewModel
+    public let blackjackViewModel: BlackjackViewModel
+    public let honeycombViewModel: HoneycombViewModel
 
     // MARK: - App-wide theme (single source of truth for all 5 games, live-shared —
     // not per-game, not copy-on-mode-switch). Persisted to the same UserDefaults keys
@@ -440,93 +419,33 @@ public final class AppCoordinator {
         }
     }
 
-    // MARK: - App-wide Sound/No Stress Mode (single source of truth, same pattern as the
-    // theme fields above). These used to live only per-game and get silently overwritten
-    // on every mode switch by syncSharedOptions (whichever game you'd most recently left
-    // "won"), so switching games alone could flip Sound/No Stress Mode in five games you
-    // never touched. Each game's Options struct still carries its own isSoundEnabled/
-    // noStressMode fields (for Codable/backward-compat reasons and because some game
-    // logic reads options.noStressMode directly), but those are now always kept in sync
-    // *from* these coordinator properties via applySharedCommonOptionsToAllGames() —
-    // never the other way around — so there's one real value, not six.
+    // MARK: - App-wide Sound/No Stress Mode/Honey Mode/Manually Dismiss Banners/Hide
+    // Hint Button — true single source of truth via sharedOptions (see
+    // SharedGameOptions.swift). AppCoordinator and all 6 game ViewModels hold the
+    // exact same SharedGameOptions instance, so these are thin passthroughs, not
+    // separate stored state — there's nothing left to keep in sync. (This used to be a
+    // real bug: each game's own Options struct carried an independent duplicate field,
+    // silently overwritten on every mode switch by whichever game you'd most recently
+    // left "won".)
     public var isSoundEnabled: Bool {
-        didSet {
-            UserDefaults.standard.set(isSoundEnabled, forKey: "global_sound_enabled")
-            applySharedCommonOptionsToAllGames()
-        }
+        get { sharedOptions.isSoundEnabled }
+        set { sharedOptions.isSoundEnabled = newValue }
     }
     public var noStressMode: Bool {
-        didSet {
-            UserDefaults.standard.set(noStressMode, forKey: "global_no_stress_mode")
-            applySharedCommonOptionsToAllGames()
-        }
+        get { sharedOptions.noStressMode }
+        set { sharedOptions.noStressMode = newValue }
     }
-    // "Honey Mode (Flavor)" — renamed and repurposed from the old per-game Point
-    // Highlights toggle. Single app-wide switch, same true-single-source pattern as
-    // isSoundEnabled/noStressMode above: controls both the "+N"/"-N" score popups
-    // (each game's own options.honeyMode guard, same spot showPointHighlights used to
-    // gate) and, via BannerCatalog.honeyModeEnabled, whether Repeatable Flavor/Ambiance
-    // banners fire at all. Achievement/Milestone banners are never affected. No
-    // migration from the old per-game showPointHighlights values — everyone gets a
-    // fresh default of on.
     public var honeyMode: Bool {
-        didSet {
-            UserDefaults.standard.set(honeyMode, forKey: "global_honey_mode")
-            applySharedCommonOptionsToAllGames()
-            BannerCatalog.honeyModeEnabled = honeyMode
-        }
+        get { sharedOptions.honeyMode }
+        set { sharedOptions.honeyMode = newValue }
     }
-    // When on, banners/toasts stay up (no auto-dismiss timer) and the game is
-    // effectively paused until the player clicks the banner or a card, at which point
-    // it dismisses and the banner queue resumes. Same true-single-source pattern as
-    // isSoundEnabled/noStressMode/honeyMode above. Default off — preserves the existing
-    // auto-dismiss behavior unless the player opts in.
     public var manuallyDismissBanners: Bool {
-        didSet {
-            UserDefaults.standard.set(manuallyDismissBanners, forKey: "global_manually_dismiss_banners")
-            applySharedCommonOptionsToAllGames()
-        }
+        get { sharedOptions.manuallyDismissBanners }
+        set { sharedOptions.manuallyDismissBanners = newValue }
     }
-    // Same true-single-source pattern as isSoundEnabled/noStressMode/honeyMode above.
-    // Video Poker and Blackjack have no hint feature, so they're skipped in the
-    // broadcast below rather than carrying an unused field.
     public var hideHintButton: Bool {
-        didSet {
-            UserDefaults.standard.set(hideHintButton, forKey: "global_hide_hint_button")
-            applySharedCommonOptionsToAllGames()
-        }
-    }
-
-    private func applySharedCommonOptionsToAllGames() {
-        klondikeViewModel.options.isSoundEnabled   = isSoundEnabled
-        beecellViewModel.options.isSoundEnabled    = isSoundEnabled
-        spiderViewModel.options.isSoundEnabled     = isSoundEnabled
-        videoPokerViewModel.options.isSoundEnabled = isSoundEnabled
-        blackjackViewModel.options.isSoundEnabled  = isSoundEnabled
-        honeycombViewModel.options.isSoundEnabled  = isSoundEnabled
-        klondikeViewModel.options.noStressMode   = noStressMode
-        beecellViewModel.options.noStressMode    = noStressMode
-        spiderViewModel.options.noStressMode     = noStressMode
-        videoPokerViewModel.options.noStressMode = noStressMode
-        blackjackViewModel.options.noStressMode  = noStressMode
-        honeycombViewModel.options.noStressMode  = noStressMode
-        klondikeViewModel.options.honeyMode   = honeyMode
-        beecellViewModel.options.honeyMode    = honeyMode
-        spiderViewModel.options.honeyMode     = honeyMode
-        videoPokerViewModel.options.honeyMode = honeyMode
-        blackjackViewModel.options.honeyMode  = honeyMode
-        honeycombViewModel.options.honeyMode  = honeyMode
-        klondikeViewModel.options.manuallyDismissBanners   = manuallyDismissBanners
-        beecellViewModel.options.manuallyDismissBanners    = manuallyDismissBanners
-        spiderViewModel.options.manuallyDismissBanners     = manuallyDismissBanners
-        videoPokerViewModel.options.manuallyDismissBanners = manuallyDismissBanners
-        blackjackViewModel.options.manuallyDismissBanners  = manuallyDismissBanners
-        honeycombViewModel.options.manuallyDismissBanners  = manuallyDismissBanners
-        klondikeViewModel.options.hideHintButton   = hideHintButton
-        beecellViewModel.options.hideHintButton    = hideHintButton
-        spiderViewModel.options.hideHintButton     = hideHintButton
-        videoPokerViewModel.options.hideHintButton = hideHintButton
-        honeycombViewModel.options.hideHintButton  = hideHintButton
+        get { sharedOptions.hideHintButton }
+        set { sharedOptions.hideHintButton = newValue }
     }
 
     #if canImport(AppKit)
@@ -584,6 +503,15 @@ public final class AppCoordinator {
     #endif
 
     public init() {
+        let sharedOptions = SharedGameOptions()
+        self.sharedOptions = sharedOptions
+        klondikeViewModel   = GameViewModel(sharedOptions: sharedOptions)
+        beecellViewModel    = BeecellViewModel(sharedOptions: sharedOptions)
+        spiderViewModel     = SpiderViewModel(sharedOptions: sharedOptions)
+        videoPokerViewModel = VideoPokerViewModel(sharedOptions: sharedOptions)
+        blackjackViewModel  = BlackjackViewModel(sharedOptions: sharedOptions)
+        honeycombViewModel  = HoneycombViewModel(sharedOptions: sharedOptions)
+
         let saved = UserDefaults.standard.string(forKey: "selectedGameMode") ?? GameMode.klondike.rawValue
         self.gameMode = GameMode(rawValue: saved) ?? .klondike
 
@@ -723,32 +651,9 @@ public final class AppCoordinator {
         self.customFeltBlue  = UserDefaults.standard.double(forKey: "custom_felt_blue")
         self.customBackgroundName = UserDefaults.standard.string(forKey: "custom_background_name")
 
-        // One-time migration: fall back to Klondike's already-persisted per-game value
-        // (rather than a hardcoded default) so existing users don't see a surprise reset
-        // the first time this app-wide value replaces the old six-copies scheme.
-        self.isSoundEnabled = UserDefaults.standard.object(forKey: "global_sound_enabled") != nil
-            ? UserDefaults.standard.bool(forKey: "global_sound_enabled")
-            : klondikeViewModel.options.isSoundEnabled
-        self.noStressMode = UserDefaults.standard.object(forKey: "global_no_stress_mode") != nil
-            ? UserDefaults.standard.bool(forKey: "global_no_stress_mode")
-            : klondikeViewModel.options.noStressMode
-        // No migration from the old per-game showPointHighlights value — always
-        // defaults to on for every install, per product decision.
-        self.honeyMode = UserDefaults.standard.object(forKey: "global_honey_mode") != nil
-            ? UserDefaults.standard.bool(forKey: "global_honey_mode")
-            : true
-        // No migration — always defaults to off, preserving today's auto-dismiss
-        // behavior for everyone unless they explicitly opt in.
-        self.manuallyDismissBanners = UserDefaults.standard.object(forKey: "global_manually_dismiss_banners") != nil
-            ? UserDefaults.standard.bool(forKey: "global_manually_dismiss_banners")
-            : false
-        // Same one-time migration as isSoundEnabled/noStressMode above — falls back to
-        // Klondike's already-persisted per-game value so existing installs don't see a
-        // surprise reset the first time this becomes app-wide.
-        self.hideHintButton = UserDefaults.standard.object(forKey: "global_hide_hint_button") != nil
-            ? UserDefaults.standard.bool(forKey: "global_hide_hint_button")
-            : klondikeViewModel.options.hideHintButton
-        BannerCatalog.honeyModeEnabled = self.honeyMode
+        // isSoundEnabled/noStressMode/honeyMode/manuallyDismissBanners/hideHintButton
+        // need no init here — sharedOptions (constructed above) already loaded them
+        // from UserDefaults itself, and these are just computed passthroughs to it.
         BannerCatalog.currentLanguage = self.language
 
         #if canImport(AppKit)
@@ -771,14 +676,24 @@ public final class AppCoordinator {
         }
         #endif
 
-        // Each view model set UISound.isEnabled from its own (possibly stale, pre-
-        // migration) persisted setting as it initialized above; force every game's
-        // isSoundEnabled/noStressMode to the one real value now that it's been resolved,
-        // which also reasserts UISound.isEnabled from it (see options.didSet in each
-        // ViewModel) so nothing can silently win by being the last one to init.
-        applySharedCommonOptionsToAllGames()
-
         observeFaceArtChangesForLiveSave()
+
+        // No Stress Mode's timer start/stop reaction is dispatched only to whichever
+        // game is currently active — sharedOptions is one instance shared by every
+        // game, so if each ViewModel reacted to its own change independently, toggling
+        // No Stress Mode would also spuriously resume a *backgrounded* game's stopped
+        // timer on an abandoned hand nobody is looking at (the exact bug
+        // testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync guards
+        // against). Video Poker/Blackjack/Honeycomb have no timer, so they're skipped.
+        sharedOptions.onNoStressModeChange { [weak self] in
+            guard let self else { return }
+            switch self.gameMode {
+            case .klondike:   self.klondikeViewModel.reactToNoStressModeChange()
+            case .beecell:    self.beecellViewModel.reactToNoStressModeChange()
+            case .spider:     self.spiderViewModel.reactToNoStressModeChange()
+            case .videoPoker, .blackjack, .honeycomb: break
+            }
+        }
     }
 
     // MARK: - Game actions

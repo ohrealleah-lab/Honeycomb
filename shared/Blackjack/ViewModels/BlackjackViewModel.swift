@@ -3,10 +3,14 @@ import Observation
 
 @Observable
 public final class BlackjackViewModel {
+    // True single source of truth for isSoundEnabled/noStressMode/honeyMode/
+    // manuallyDismissBanners/hideHintButton — same instance AppCoordinator and every
+    // other game ViewModel hold. See SharedGameOptions.swift.
+    public let sharedOptions: SharedGameOptions
+
     public var options: BlackjackOptions {
         didSet {
             saveOptions()
-            UISound.isEnabled = options.isSoundEnabled
         }
     }
 
@@ -17,7 +21,8 @@ public final class BlackjackViewModel {
 
     // MARK: - Init
 
-    public init() {
+    public init(sharedOptions: SharedGameOptions = SharedGameOptions()) {
+        self.sharedOptions = sharedOptions
         self.state = BlackjackState()
         self.options = BlackjackOptions()
         self.statistics = BlackjackStatistics()
@@ -36,8 +41,6 @@ public final class BlackjackViewModel {
 
         state.sessionCredits = options.startingCredits
         state.currentBet = 1
-
-        UISound.isEnabled = self.options.isSoundEnabled
     }
 
     // MARK: - Persistence
@@ -57,7 +60,7 @@ public final class BlackjackViewModel {
     // MARK: - Computed properties
 
     public var isFreePlay: Bool {
-        options.noStressMode
+        sharedOptions.noStressMode
     }
 
     // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
@@ -556,7 +559,7 @@ public final class BlackjackViewModel {
     // MARK: - Sound
 
     public func playSound(named name: String) {
-        UISound.play(named: name, enabled: options.isSoundEnabled, respectHeadlessMode: true)
+        UISound.play(named: name, enabled: sharedOptions.isSoundEnabled, respectHeadlessMode: true)
     }
 
     // Clears a finished round's cards/result before the game becomes visible again,

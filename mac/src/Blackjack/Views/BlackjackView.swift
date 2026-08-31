@@ -207,7 +207,7 @@ public struct BlackjackView: View {
                 applyInitialWindowSize()
             }
         }, onResize: recomputeScale))
-        .onChange(of: viewModel.options.noStressMode) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
+        .onChange(of: coordinator.noStressMode) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
         .onChange(of: measuredBoardHeight) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
@@ -325,7 +325,7 @@ public struct BlackjackView: View {
         queuedBannerTask?.cancel()
         queuedBannerText = text
         withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
-        guard !viewModel.options.manuallyDismissBanners else {
+        guard !coordinator.manuallyDismissBanners else {
             queuedBannerTask = nil
             return
         }
@@ -865,10 +865,10 @@ struct BlackjackOptionsView: View {
         self.availableWidth = availableWidth
         self.availableHeight = availableHeight
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
-        _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
-        _noStressMode    = State(initialValue: viewModel.options.noStressMode)
-        _honeyMode       = State(initialValue: viewModel.options.honeyMode)
-        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
+        _isSoundEnabled  = State(initialValue: coordinator.isSoundEnabled)
+        _noStressMode    = State(initialValue: coordinator.noStressMode)
+        _honeyMode       = State(initialValue: coordinator.honeyMode)
+        _manuallyDismissBanners = State(initialValue: coordinator.manuallyDismissBanners)
         _hideBee = State(initialValue: coordinator.hideBee)
     }
 
@@ -882,13 +882,9 @@ struct BlackjackOptionsView: View {
             fixedSizeHorizontal: false,
             onViewStats: { isShowingStats = true },
             onOK: {
-                let wasNoStressMode = viewModel.options.noStressMode
+                let wasNoStressMode = coordinator.noStressMode
                 var o = viewModel.options
                 o.startingCredits = startingCredits
-                o.isSoundEnabled  = isSoundEnabled
-                o.noStressMode    = noStressMode
-                o.honeyMode       = honeyMode
-                o.manuallyDismissBanners = manuallyDismissBanners
                 viewModel.options = o
                 // Options can now be opened mid-hand — if No Stress Mode just got turned
                 // on while one is in progress, end it and deal fresh instead of leaving a

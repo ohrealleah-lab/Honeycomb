@@ -198,7 +198,7 @@ struct KlondikeTouchView: View {
         .queuedFlashBanner(
             trigger: viewModel.flashBannerTrigger,
             latestMessage: viewModel.flashBanner,
-            manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
+            manuallyDismissBanners: coordinator.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
         .background(IOSBackgroundLayer())
@@ -240,7 +240,7 @@ struct KlondikeTouchView: View {
             .disabled(!viewModel.canUndo)
             .opacity(viewModel.canUndo ? 1 : 0.35)
 
-            if !viewModel.options.hideHintButton {
+            if !coordinator.hideHintButton {
                 topBarIconButton(systemImage: "lightbulb", accessibilityLabel: coordinator.L(.hint)) {
                     if !viewModel.findHint() {
                         flashNoHintsBanner()
@@ -270,7 +270,7 @@ struct KlondikeTouchView: View {
                 viewModel.options.isVegasScoring ? viewModel.vegasBankrollString : viewModel.scoreString,
                 color: .yellow
             )
-            if viewModel.options.isTimed && !viewModel.options.noStressMode {
+            if viewModel.options.isTimed && !coordinator.noStressMode {
                 statusStat(coordinator.L(.timeLabel), formatTime(viewModel.state.timerSeconds), color: .white.opacity(0.85))
             }
         }
@@ -709,7 +709,7 @@ struct KlondikeTouchView: View {
         let scorePart = viewModel.options.isVegasScoring
             ? coordinator.L(.bankrollFmt, viewModel.vegasBankrollString)
             : coordinator.L(.scoreFmt, viewModel.scoreString)
-        guard !viewModel.options.noStressMode else { return scorePart }
+        guard !coordinator.noStressMode else { return scorePart }
         return coordinator.L(.winSummaryWithTimeFmt, scorePart, formatTime(viewModel.state.timerSeconds))
     }
 

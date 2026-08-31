@@ -427,7 +427,7 @@ struct BlackjackTouchView: View {
         .queuedFlashBanner(
             trigger: viewModel.flashBannerTrigger,
             latestMessage: viewModel.flashBanner,
-            manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
+            manuallyDismissBanners: coordinator.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
         // IOSBackgroundLayer calls .ignoresSafeArea() internally. As a plain ZStack

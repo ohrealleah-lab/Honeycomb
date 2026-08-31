@@ -214,7 +214,7 @@ public struct VideoPokerView: View {
             }
         }, onResize: recomputeScale))
         .onChange(of: viewModel.options.playMode) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
-        .onChange(of: viewModel.options.noStressMode) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
+        .onChange(of: coordinator.noStressMode) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
         .onChange(of: measuredBoardHeight) { withAnimation(.easeInOut(duration: 0.2)) { recomputeScale() } }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
@@ -374,7 +374,7 @@ public struct VideoPokerView: View {
         queuedBannerTask?.cancel()
         queuedBannerText = text
         withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
-        guard !viewModel.options.manuallyDismissBanners else {
+        guard !coordinator.manuallyDismissBanners else {
             queuedBannerTask = nil
             return
         }
@@ -1039,11 +1039,11 @@ struct VideoPokerOptionsView: View {
         _playMode        = State(initialValue: viewModel.options.playMode)
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
         _betPerHand      = State(initialValue: viewModel.options.betPerHand)
-        _isSoundEnabled  = State(initialValue: viewModel.options.isSoundEnabled)
-        _hideHintButton  = State(initialValue: viewModel.options.hideHintButton)
-        _noStressMode    = State(initialValue: viewModel.options.noStressMode)
-        _honeyMode       = State(initialValue: viewModel.options.honeyMode)
-        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
+        _isSoundEnabled  = State(initialValue: coordinator.isSoundEnabled)
+        _hideHintButton  = State(initialValue: coordinator.hideHintButton)
+        _noStressMode    = State(initialValue: coordinator.noStressMode)
+        _honeyMode       = State(initialValue: coordinator.honeyMode)
+        _manuallyDismissBanners = State(initialValue: coordinator.manuallyDismissBanners)
         _hideBee = State(initialValue: coordinator.hideBee)
     }
 
@@ -1059,17 +1059,12 @@ struct VideoPokerOptionsView: View {
             onOK: {
                 let variantChanged   = variant  != viewModel.options.variant
                 let playModeChanged  = playMode != viewModel.options.playMode
-                let wasNoStressMode  = viewModel.options.noStressMode
+                let wasNoStressMode  = coordinator.noStressMode
                 var o = viewModel.options
                 o.variant         = variant
                 o.playMode        = playMode
                 o.startingCredits = startingCredits
                 o.betPerHand      = betPerHand
-                o.isSoundEnabled  = isSoundEnabled
-                o.hideHintButton  = hideHintButton
-                o.noStressMode    = noStressMode
-                o.honeyMode       = honeyMode
-                o.manuallyDismissBanners = manuallyDismissBanners
                 viewModel.options = o
                 if variantChanged || playModeChanged {
                     viewModel.resetHandDisplay()

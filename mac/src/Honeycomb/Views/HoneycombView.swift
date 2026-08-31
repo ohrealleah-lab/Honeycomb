@@ -229,7 +229,7 @@ public struct HoneycombView: View {
                     if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
                         // Never shown on Ultra Hard — that difficulty is meant to stay
                         // fully self-directed, no optimal-move assistance.
-                        if !viewModel.options.hideHintButton && viewModel.options.difficulty != .ultraHard {
+                        if !coordinator.hideHintButton && viewModel.options.difficulty != .ultraHard {
                         GameToolbarButton(
                             label: coordinator.L(.hint), systemImage: "lightbulb",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold,
@@ -250,7 +250,7 @@ public struct HoneycombView: View {
                             disabled: !viewModel.canUndo
                         ) { viewModel.undoLastAction() }
                         .keyboardShortcut("z", modifiers: .command)
-                    } else if !viewModel.options.noStressMode {
+                    } else if !coordinator.noStressMode {
                         // Manage Decks edits the player's active deck composition —
                         // meaningless under No Stress Mode, which always deals a
                         // fixed/random hand instead of that deck.
@@ -520,22 +520,22 @@ public struct HoneycombView: View {
                                 .padding(.top, 4)
                         }
 
-                        if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
+                        if viewModel.matchOutcome == .win && !coordinator.noStressMode
                             && HoneycombProfileManager.shared.isCardBankFull {
                             VStack {
                                 Text(coordinator.L(.cardBankFullLine1))
                                 Text(coordinator.L(.cardBankFullLine2))
                             }
                             .foregroundColor(.white).padding()
-                        } else if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
+                        } else if viewModel.matchOutcome == .win && !coordinator.noStressMode
                             && viewModel.hasObtainedAllOpponentCards {
                             Text(coordinator.L(.obtainedAllCardsFmt, honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language)))
                                 .foregroundColor(.white).padding()
-                        } else if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
+                        } else if viewModel.matchOutcome == .win && !coordinator.noStressMode
                             && viewModel.hasStolenThisMatch {
                             Text(coordinator.L(.rematchToTakeAnother))
                                 .foregroundColor(.white).padding()
-                        } else if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
+                        } else if viewModel.matchOutcome == .win && !coordinator.noStressMode
                             && viewModel.stealProtectionActive && viewModel.hasStealableCard {
                             // Only claims a card is available when one actually is —
                             // stealProtectionActive alone doesn't guarantee that (it
@@ -570,7 +570,7 @@ public struct HoneycombView: View {
                             // Hidden once the card bank is full (nothing left to steal)
                             // or once this match's one steal has already been spent —
                             // Rematch is required to steal again.
-                            if viewModel.matchOutcome == .win && !viewModel.options.noStressMode
+                            if viewModel.matchOutcome == .win && !coordinator.noStressMode
                                 && !HoneycombProfileManager.shared.isCardBankFull
                                 && !viewModel.hasStolenThisMatch
                                 && viewModel.hasStealableCard {
@@ -708,7 +708,7 @@ public struct HoneycombView: View {
             }
             // Manually Dismiss Banners: stays up until the player taps it or a card
             // (see the board tap-catcher above) — no auto-dismiss timer in that mode.
-            guard !viewModel.options.manuallyDismissBanners else {
+            guard !coordinator.manuallyDismissBanners else {
                 bannerTask = nil
                 return
             }
@@ -1181,11 +1181,11 @@ struct HoneycombOptionsView: View {
         self.coordinator = coordinator
         self.availableWidth = availableWidth
         self.availableHeight = availableHeight
-        _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
-        _noStressMode = State(initialValue: viewModel.options.noStressMode)
-        _honeyMode = State(initialValue: viewModel.options.honeyMode)
-        _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
-        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
+        _isSoundEnabled = State(initialValue: coordinator.isSoundEnabled)
+        _noStressMode = State(initialValue: coordinator.noStressMode)
+        _honeyMode = State(initialValue: coordinator.honeyMode)
+        _hideHintButton = State(initialValue: coordinator.hideHintButton)
+        _manuallyDismissBanners = State(initialValue: coordinator.manuallyDismissBanners)
         _hideBee = State(initialValue: coordinator.hideBee)
     }
 
@@ -1197,14 +1197,7 @@ struct HoneycombOptionsView: View {
             availableHeight: availableHeight,
             onViewStats: { isShowingStats = true },
             onOK: {
-                let wasNoStressMode = viewModel.options.noStressMode
-                var updatedOpts = viewModel.options
-                updatedOpts.isSoundEnabled = isSoundEnabled
-                updatedOpts.noStressMode = noStressMode
-                updatedOpts.honeyMode = honeyMode
-                updatedOpts.hideHintButton = hideHintButton
-                updatedOpts.manuallyDismissBanners = manuallyDismissBanners
-                viewModel.options = updatedOpts
+                let wasNoStressMode = coordinator.noStressMode
                 // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
                 // edit there (rather than leaving it only on this game's own options)
                 // is what makes it actually apply everywhere instead of getting quietly

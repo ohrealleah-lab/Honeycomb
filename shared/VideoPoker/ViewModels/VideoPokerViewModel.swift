@@ -4,10 +4,14 @@ import Observation
 @Observable
 public final class VideoPokerViewModel {
 
+    // True single source of truth for isSoundEnabled/noStressMode/honeyMode/
+    // manuallyDismissBanners/hideHintButton — same instance AppCoordinator and every
+    // other game ViewModel hold. See SharedGameOptions.swift.
+    public let sharedOptions: SharedGameOptions
+
     public var options: VideoPokerOptions {
         didSet {
             saveOptions()
-            UISound.isEnabled = options.isSoundEnabled
         }
     }
 
@@ -70,7 +74,8 @@ public final class VideoPokerViewModel {
 
     // MARK: - Init
 
-    public init() {
+    public init(sharedOptions: SharedGameOptions = SharedGameOptions()) {
+        self.sharedOptions = sharedOptions
         self.state = VideoPokerState()
         self.options = VideoPokerOptions()
         self.statistics = VideoPokerStatistics()
@@ -93,8 +98,6 @@ public final class VideoPokerViewModel {
 
         state.sessionCredits = options.startingCredits
         state.currentBet = options.betPerHand
-
-        UISound.isEnabled = self.options.isSoundEnabled
     }
 
     // MARK: - Persistence
@@ -114,7 +117,7 @@ public final class VideoPokerViewModel {
     // MARK: - Sound
 
     public func playSound(named name: String) {
-        UISound.play(named: name, enabled: options.isSoundEnabled)
+        UISound.play(named: name, enabled: sharedOptions.isSoundEnabled)
     }
 
     // MARK: - Game flow
@@ -124,7 +127,7 @@ public final class VideoPokerViewModel {
     }
 
     public var isFreePlay: Bool {
-        options.noStressMode
+        sharedOptions.noStressMode
     }
 
     // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb

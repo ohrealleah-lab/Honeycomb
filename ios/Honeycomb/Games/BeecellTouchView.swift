@@ -211,7 +211,7 @@ struct BeecellTouchView: View {
         .queuedFlashBanner(
             trigger: viewModel.flashBannerTrigger,
             latestMessage: viewModel.flashBanner,
-            manuallyDismissBanners: viewModel.options.manuallyDismissBanners,
+            manuallyDismissBanners: coordinator.manuallyDismissBanners,
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
         .background(IOSBackgroundLayer())
@@ -253,7 +253,7 @@ struct BeecellTouchView: View {
             .disabled(!viewModel.canUndo)
             .opacity(viewModel.canUndo ? 1 : 0.35)
 
-            if !viewModel.options.hideHintButton {
+            if !coordinator.hideHintButton {
                 topBarIconButton(systemImage: "lightbulb", accessibilityLabel: coordinator.L(.hint)) {
                     if !viewModel.findHint() {
                         flashNoHintsBanner()
@@ -279,7 +279,7 @@ struct BeecellTouchView: View {
     private var statusCapsule: some View {
         HStack(spacing: 14) {
             statusStat(coordinator.L(.scoreLabel), viewModel.scoreString, color: .yellow)
-            if viewModel.options.isTimed && !viewModel.options.noStressMode {
+            if viewModel.options.isTimed && !coordinator.noStressMode {
                 statusStat(coordinator.L(.timeLabel), formatTime(viewModel.state.timerSeconds), color: .white.opacity(0.85))
             }
         }

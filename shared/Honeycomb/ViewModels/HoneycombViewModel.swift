@@ -5,78 +5,56 @@ import SwiftUI
 @Observable
 public final class HoneycombViewModel {
     public struct Options: Codable, Equatable {
-        public var isSoundEnabled: Bool = true
-        public var noStressMode: Bool = false
         public var difficulty: HoneycombDifficulty = .medium
         public var activeDeckIndex: Int = 0 // 0-4
         public var selectedRules: Set<HoneycombRule> = []
         // Explicitly locks the match to zero active rules — distinct from merely having
         // an empty `selectedRules`, which means "let roulette decide" instead.
         public var forceNormalMode: Bool = false
-        // Flashes the attacker's winning stat right before a capture flips the board.
-        // Driven by AppCoordinator.honeyMode (single app-wide source of truth, see its
-        // own comment) via applySharedCommonOptionsToAllGames — never user-edited here
-        // directly.
-        public var honeyMode: Bool = true
-        // Same true-single-source pattern, driven by AppCoordinator.manuallyDismissBanners.
-        public var manuallyDismissBanners: Bool = false
-        public var hideHintButton: Bool = false
         public var bannedRules: Set<String> = []
 
         public init() {}
 
         // Manual decodeIfPresent-based init (rather than relying on synthesized
-        // Codable) so a new field added later — like honeyMode —
-        // can't cause an old save missing that key to fail decoding this whole struct
-        // (the caller only ever uses `try?`, so any decode error silently resets every
-        // field to its default, not just the missing one).
+        // Codable) so a new field added later can't cause an old save missing that key
+        // to fail decoding this whole struct (the caller only ever uses `try?`, so any
+        // decode error silently resets every field to its default, not just the
+        // missing one).
         private enum CodingKeys: String, CodingKey {
-            case isSoundEnabled, noStressMode, difficulty, activeDeckIndex, selectedRules, forceNormalMode, honeyMode
-            case manuallyDismissBanners
-            case hideHintButton, bannedRules
+            case difficulty, activeDeckIndex, selectedRules, forceNormalMode, bannedRules
         }
 
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            isSoundEnabled = try container.decodeIfPresent(Bool.self, forKey: .isSoundEnabled) ?? true
-            noStressMode = try container.decodeIfPresent(Bool.self, forKey: .noStressMode) ?? false
             difficulty = try container.decodeIfPresent(HoneycombDifficulty.self, forKey: .difficulty) ?? .medium
             activeDeckIndex = try container.decodeIfPresent(Int.self, forKey: .activeDeckIndex) ?? 0
             selectedRules = try container.decodeIfPresent(Set<HoneycombRule>.self, forKey: .selectedRules) ?? []
             forceNormalMode = try container.decodeIfPresent(Bool.self, forKey: .forceNormalMode) ?? false
-            honeyMode = try container.decodeIfPresent(Bool.self, forKey: .honeyMode) ?? true
-            manuallyDismissBanners = try container.decodeIfPresent(Bool.self, forKey: .manuallyDismissBanners) ?? false
-            hideHintButton = try container.decodeIfPresent(Bool.self, forKey: .hideHintButton) ?? false
             bannedRules = try container.decodeIfPresent(Set<String>.self, forKey: .bannedRules) ?? []
         }
 
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(isSoundEnabled, forKey: .isSoundEnabled)
-            try container.encode(noStressMode, forKey: .noStressMode)
             try container.encode(difficulty, forKey: .difficulty)
             try container.encode(activeDeckIndex, forKey: .activeDeckIndex)
             try container.encode(selectedRules, forKey: .selectedRules)
             try container.encode(forceNormalMode, forKey: .forceNormalMode)
-            try container.encode(honeyMode, forKey: .honeyMode)
-            try container.encode(manuallyDismissBanners, forKey: .manuallyDismissBanners)
-            try container.encode(hideHintButton, forKey: .hideHintButton)
             try container.encode(bannedRules, forKey: .bannedRules)
         }
 
         public static func == (lhs: Options, rhs: Options) -> Bool {
-            lhs.isSoundEnabled == rhs.isSoundEnabled
-                && lhs.noStressMode == rhs.noStressMode
-                && lhs.difficulty == rhs.difficulty
+            lhs.difficulty == rhs.difficulty
                 && lhs.activeDeckIndex == rhs.activeDeckIndex
                 && lhs.selectedRules == rhs.selectedRules
                 && lhs.forceNormalMode == rhs.forceNormalMode
-                && lhs.honeyMode == rhs.honeyMode
-                && lhs.manuallyDismissBanners == rhs.manuallyDismissBanners
-                && lhs.hideHintButton == rhs.hideHintButton
                 && lhs.bannedRules == rhs.bannedRules
         }
     }
+
+    // True single source of truth for isSoundEnabled/noStressMode/honeyMode/
+    // manuallyDismissBanners/hideHintButton — same instance AppCoordinator and every
+    // other game ViewModel hold. See SharedGameOptions.swift.
+    public let sharedOptions: SharedGameOptions
 
     public var options = Options() {
         didSet {
@@ -369,7 +347,8 @@ public final class HoneycombViewModel {
         )
     }
     
-    public init() {
+    public init(sharedOptions: SharedGameOptions = SharedGameOptions()) {
+        self.sharedOptions = sharedOptions
         loadStats()
         loadOptions()
     }
@@ -539,7 +518,7 @@ public final class HoneycombViewModel {
             // "whoosh" doesn't exist as its own asset yet — shuffle is the closest
             // existing sound for a lift-off flourish. Swap this out once a
             // dedicated whoosh effect is added.
-            if self.options.isSoundEnabled {
+            if self.sharedOptions.isSoundEnabled {
                 UISound.play(named: "shuffle", enabled: true)
             }
 
@@ -570,7 +549,7 @@ public final class HoneycombViewModel {
                     withAnimation(.easeInOut(duration: Self.swapLandDuration)) {
                         self.swapAnimationPhase = .landing
                     }
-                    if self.options.isSoundEnabled {
+                    if self.sharedOptions.isSoundEnabled {
                         UISound.play(named: "snap", enabled: true)
                     }
 
@@ -709,7 +688,7 @@ public final class HoneycombViewModel {
         }
         checkSameDifficultyStreak()
 
-        if options.isSoundEnabled {
+        if sharedOptions.isSoundEnabled {
             UISound.play(named: "shuffle", enabled: true)
         }
 
@@ -1010,7 +989,7 @@ public final class HoneycombViewModel {
     }
 
     private func setupPlayerHand() {
-        if options.noStressMode {
+        if sharedOptions.noStressMode {
             // Overpowered deck: one 5*, one 4*, three 3* — the strongest composition
             // that still respects the same rarity caps a normal deck must (max one 5*;
             // max one 4* once a 5* is present), rather than the two-5* deal used
@@ -1129,7 +1108,7 @@ public final class HoneycombViewModel {
         // least one stealable card per match without touching deck quality, AI
         // strength, or the rarity composition — one slot is swapped at most, and only
         // when all 5 slots would otherwise be owned already.
-        if !options.noStressMode {
+        if !sharedOptions.noStressMode {
             let owned = HoneycombProfileManager.shared.unlockedCardIds
             let allOwned = deck.allSatisfy { owned.contains($0.id) }
             if allOwned {
@@ -1778,7 +1757,7 @@ public final class HoneycombViewModel {
         flashCaptureAttackers(attackerIds)
         isAnimatingPlacement = true
 
-        if options.honeyMode, !directStatIndices.isEmpty, !UISound.isHeadlessMode {
+        if sharedOptions.honeyMode, !directStatIndices.isEmpty, !UISound.isHeadlessMode {
             // One beat with the attacker's winning stat(s) flashed before the
             // captured neighbors actually flip.
             pointHighlight = (cardId: placedCard.id, statIndices: directStatIndices)
@@ -1845,7 +1824,7 @@ public final class HoneycombViewModel {
     // in the exact same frame as the placed card's own capture.
     private func finishPlacement(flipsCount: Int, excludingBoardIndex: Int, generation: Int, completion: @escaping () -> Void) {
         sessionCardsCaptured += flipsCount
-        if options.isSoundEnabled {
+        if sharedOptions.isSoundEnabled {
             UISound.play(named: "snap", enabled: true)
         }
 
@@ -1873,7 +1852,7 @@ public final class HoneycombViewModel {
                     self.board = revealedBoard
                 }
                 self.flashCaptureAttackers(attackerIds)
-                if self.options.isSoundEnabled {
+                if self.sharedOptions.isSoundEnabled {
                     UISound.play(named: "snap", enabled: true)
                 }
                 self.isAnimatingPlacement = false
@@ -2207,7 +2186,7 @@ public final class HoneycombViewModel {
 
             if starterCell != -1 {
                 let flips = self.board.revealFaceDownCard(at: starterCell, rules: self.activeRules)
-                if !flips.isEmpty && self.options.isSoundEnabled {
+                if !flips.isEmpty && self.sharedOptions.isSoundEnabled {
                     UISound.play(named: "snap", enabled: true)
                 }
                 if let combo = Self.comboBannerText(for: self.board) {
@@ -2230,7 +2209,7 @@ public final class HoneycombViewModel {
 
                 if secondCell != -1 {
                     let flips = self.board.revealFaceDownCard(at: secondCell, rules: self.activeRules)
-                    if !flips.isEmpty && self.options.isSoundEnabled {
+                    if !flips.isEmpty && self.sharedOptions.isSoundEnabled {
                         UISound.play(named: "snap", enabled: true)
                     }
                     if let combo = Self.comboBannerText(for: self.board) {
@@ -2321,7 +2300,7 @@ public final class HoneycombViewModel {
                 matchResult = L(.youWin, language: BannerCatalog.currentLanguage)
                 matchOutcome = .win
                 gameState = .gameOver
-                if options.isSoundEnabled { UISound.play(named: "victory", enabled: true) }
+                if sharedOptions.isSoundEnabled { UISound.play(named: "victory", enabled: true) }
                 let flawless = oScore == 0
                 stats.recordGame(won: true, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: flawless, difficulty: options.difficulty, fallenAceCaptures: board.sessionFallenAceCaptures)
                 checkWinMilestones()

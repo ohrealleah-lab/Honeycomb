@@ -122,7 +122,7 @@ public struct BeecellView: View {
                     ) { isShowingOptions = true }
 
                     // Hint
-                    if !viewModel.options.hideHintButton {
+                    if !coordinator.hideHintButton {
                         GameToolbarButton(
                             label: coordinator.L(.hint), systemImage: "lightbulb",
                             isCompact: toolbarWidth < Self.compactToolbarWidthThreshold,
@@ -146,7 +146,7 @@ public struct BeecellView: View {
 
                     Spacer()
                     
-                    if !viewModel.options.noStressMode {
+                    if !coordinator.noStressMode {
                         HStack(alignment: .bottom, spacing: 20) {
                             StatusItemView(label: coordinator.L(.scoreLabel), value: viewModel.scoreString)
                             StatusItemView(label: coordinator.L(.movesLabel), value: String(viewModel.state.movesCount))
@@ -867,7 +867,7 @@ public struct BeecellView: View {
         queuedBannerTask?.cancel()
         queuedBannerText = text
         withAnimation(.easeIn(duration: 0.15)) { showQueuedBanner = true }
-        guard !viewModel.options.manuallyDismissBanners else {
+        guard !coordinator.manuallyDismissBanners else {
             queuedBannerTask = nil
             return
         }
@@ -1012,7 +1012,7 @@ public struct BeecellView: View {
 
     private var winSummaryText: String {
         let scorePart = coordinator.L(.scoreFmt, viewModel.scoreString)
-        guard !viewModel.options.noStressMode else { return scorePart }
+        guard !coordinator.noStressMode else { return scorePart }
         return coordinator.L(.winSummaryWithTimeFmt, scorePart, formatTime(viewModel.state.timerSeconds))
     }
 
@@ -1043,11 +1043,11 @@ struct BeecellOptionsView: View {
         self.availableWidth = availableWidth
         self.availableHeight = availableHeight
         _deckCount = State(initialValue: viewModel.options.deckCount)
-        _isSoundEnabled = State(initialValue: viewModel.options.isSoundEnabled)
-        _hideHintButton = State(initialValue: viewModel.options.hideHintButton)
-        _noStressMode = State(initialValue: viewModel.options.noStressMode)
-        _honeyMode = State(initialValue: viewModel.options.honeyMode)
-        _manuallyDismissBanners = State(initialValue: viewModel.options.manuallyDismissBanners)
+        _isSoundEnabled = State(initialValue: coordinator.isSoundEnabled)
+        _hideHintButton = State(initialValue: coordinator.hideHintButton)
+        _noStressMode = State(initialValue: coordinator.noStressMode)
+        _honeyMode = State(initialValue: coordinator.honeyMode)
+        _manuallyDismissBanners = State(initialValue: coordinator.manuallyDismissBanners)
         _hideBee = State(initialValue: coordinator.hideBee)
     }
 
@@ -1061,11 +1061,6 @@ struct BeecellOptionsView: View {
             onOK: {
                 var updatedOpts = viewModel.options
                 updatedOpts.deckCount = deckCount
-                updatedOpts.isSoundEnabled = isSoundEnabled
-                updatedOpts.hideHintButton = hideHintButton
-                updatedOpts.noStressMode = noStressMode
-                updatedOpts.honeyMode = honeyMode
-                updatedOpts.manuallyDismissBanners = manuallyDismissBanners
 
                 viewModel.options = updatedOpts
                 // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
