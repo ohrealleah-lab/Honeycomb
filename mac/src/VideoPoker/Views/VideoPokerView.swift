@@ -359,6 +359,9 @@ public struct VideoPokerView: View {
             guard let text = viewModel.flashBanner else { return }
             flashQueuedBanner(text)
         }
+        // See GameView.swift: the system focus ring recomputes an expensive blurred
+        // bitmap on every board redraw, which happens on every state mutation.
+        .focusEffectDisabled()
     }
 
     private func dismissQueuedBanner() {

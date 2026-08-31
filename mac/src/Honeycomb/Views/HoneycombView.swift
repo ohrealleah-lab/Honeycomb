@@ -805,6 +805,9 @@ public struct HoneycombView: View {
             coordinator.activeWindow = window
             applyInitialWindowSize()
         }, onResize: recomputeScale))
+        // See GameView.swift: the system focus ring recomputes an expensive blurred
+        // bitmap on every board redraw, which happens on every state mutation.
+        .focusEffectDisabled()
     }
 
     // Continuously refits the hand/board layout's scale to the window's current content

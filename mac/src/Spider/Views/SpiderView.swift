@@ -621,6 +621,9 @@ public struct SpiderView: View {
             guard (note.object as? NSWindow) == hostingWindow, !draggedCards.isEmpty else { return }
             cancelDrag()
         }
+        // See GameView.swift: the system focus ring recomputes an expensive blurred
+        // bitmap on every board redraw, which happens on every state mutation.
+        .focusEffectDisabled()
     }
 
     // Single choke point for every input path that can try to deal from the stock
