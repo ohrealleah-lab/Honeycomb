@@ -19,16 +19,21 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Reverted to RowSpan="6" across the whole grid — anchoring to just row 2
-                 (the VS divider) tracked the cards' vertical center more reliably, but
-                 with no explicit Width/Height this Image measures at its full native
-                 1024x1024 source size, and row 2 is normally tiny (a 1px divider line +
-                 small text) — ballooning it to ~1024px pushed Dealer/Player/buttons far
-                 out of view. Back to the known-safe (if imperfectly centered) baseline;
-                 a real fix needs an explicit size cap on the Image (with Scale
-                 recalibrated to compensate) or a code-behind live-Bounds binding instead
-                 of sharing a Grid cell/row. -->
-            <Image Grid.RowSpan="6" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
+            <!-- Anchored to row 2 (the VS divider) — tracks the cards' vertical center
+                 reliably since it sits right between Dealer and Player. Previously this
+                 spanned all 6 rows because the Image had no explicit Width/Height and
+                 measured at its full native 1024x1024 source size, ballooning row 2's
+                 Auto height and pushing Player/buttons off-screen when anchored there
+                 directly. Width/Height="1" caps its layout footprint to 1x1 so it can't
+                 affect the Auto row's measurement at all; RenderTransform (Scale then
+                 Translate, both post-layout) draws it back out to full size around that
+                 anchor point without reserving any layout space for it — same technique,
+                 just with the smallest possible reserved box instead of the unconstrained
+                 6-row span. BlackjackWatermarkScale/Offset in GameOptions.cs need
+                 recalibrating against this new anchor; the old values assumed centering
+                 on the whole grid, not row 2. -->
+            <Image Grid.Row="2" Width="1" Height="1" Stretch="Uniform"
+                   Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
                    HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                    RenderTransformOrigin="0.5,0.5">
                 <Image.RenderTransform>
