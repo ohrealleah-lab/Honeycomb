@@ -542,19 +542,19 @@ public final class AppCoordinator {
         let defaultBlackjackScaleLandscape = 1.880, defaultBlackjackOffsetXLandscape = 0.0, defaultBlackjackOffsetYLandscape = 0.0
         let defaultHoneycombScaleLandscape = 1.202, defaultHoneycombOffsetXLandscape = -12.8, defaultHoneycombOffsetYLandscape = 14.7
         #else
-        // Klondike/Beecell/Spider (mac only) now anchor inside their board VStack's
-        // background at a 600x600 base size instead of scaledToFit-ing the whole window
-        // (see GameView.swift/BeecellView.swift/SpiderView.swift) — same fix as
-        // Blackjack/Video Poker/Honeycomb above. The old calibrated values were tuned
-        // against that whole-window layer and mean nothing against the new anchor, so
-        // these reset to a neutral starting point (1.0/0/0) pending a fresh eyeball pass.
-        // iOS's watermarks are untouched, still reading these games' Scale/OffsetX/OffsetY
-        // from the #if os(iOS) branch above.
+        // Klondike/Beecell/Spider/Video Poker/Blackjack (mac only) now anchor inside their
+        // board VStack's background at a 600x600 base size instead of scaledToFit-ing the
+        // whole window (see GameView.swift/BeecellView.swift/SpiderView.swift/
+        // VideoPokerView.swift/BlackjackView.swift) — same fix as Honeycomb below. The old
+        // calibrated values were tuned against that whole-window layer and mean nothing
+        // against the new anchor, so these reset to a neutral starting point (1.0/0/0)
+        // pending a fresh eyeball pass. iOS's watermarks are untouched, still reading these
+        // games' Scale/OffsetX/OffsetY from the #if os(iOS) branch above.
         let defaultKlondikeScale = 1.0, defaultKlondikeOffsetX = 0.0, defaultKlondikeOffsetY = 0.0
         let defaultBeecellScale = 1.0, defaultBeecellOffsetX = 0.0, defaultBeecellOffsetY = 0.0
         let defaultSpiderScale = 1.0, defaultSpiderOffsetX = 0.0, defaultSpiderOffsetY = 0.0
-        let defaultVideoPokerScale = 1.881, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
-        let defaultBlackjackScale = 1.880, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
+        let defaultVideoPokerScale = 1.0, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
+        let defaultBlackjackScale = 1.0, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
         // Honeycomb (mac only) now anchors inside the board VStack's background at a
         // 600x600 base size instead of scaledToFit-ing the whole window (see
         // HoneycombView.swift) — same fix as Blackjack/Video Poker above. 1.202/-12.8/67.2
