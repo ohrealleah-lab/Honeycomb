@@ -102,6 +102,10 @@ public struct GameView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
+            GameWatermarkView()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
             if resolvedShowFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
@@ -364,29 +368,6 @@ public struct GameView: View {
                 .padding(.horizontal, 20)
 
                 Spacer()
-            }
-            .background(alignment: .center) {
-                // Watermark anchored to the board VStack (piles row + tableau row)
-                // instead of as a top-level layer over the whole window — that old layer
-                // never tracked viewModel.zoomScale, so it drifted off the board at any
-                // window size other than the one it was calibrated at. This VStack sits
-                // inside the .scaleEffect(zoomScale) coordinate space applied below, so
-                // the watermark now scales and repositions with the board automatically
-                // on every resize. .background() doesn't propagate this Image's frame
-                // size back into the VStack's own layout, so the 600x600 base has no
-                // effect on surrounding layout. klondikeWatermarkScale/OffsetX/OffsetY
-                // (mac only) reset to 1.0/0/0 pending a fresh eyeball pass against this
-                // new anchor — same fix already applied to Blackjack/Video Poker/Honeycomb.
-                if !coordinator.hideBee, let image = NSImage(named: "hcblack") {
-                    Image(nsImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 600, height: 600)
-                        .scaleEffect(coordinator.klondikeWatermarkScale)
-                        .offset(x: coordinator.klondikeWatermarkOffsetX, y: coordinator.klondikeWatermarkOffsetY)
-                        .opacity(0.15)
-                        .allowsHitTesting(false)
-                }
             }
             .disabled(viewModel.isAutoplayRunning)
             .padding(.top, 20)
@@ -1419,18 +1400,6 @@ struct OptionsView: View {
 
             Toggle(coordinator.L(.hideBee), isOn: $hideBee)
                 .font(.system(.body))
-
-            // Live-updating (bound directly to coordinator, not local @State + onOK) so
-            // the bee visibly resizes on the board behind this sheet while dragging —
-            // matches how the watermark's own scale is stored/persisted (didSet ->
-            // UserDefaults), unlike every other control on this sheet which stages its
-            // edit in @State until OK. Only shown when the bee isn't hidden.
-            if !hideBee {
-                Slider(value: $coordinator.klondikeWatermarkScale, in: 0.5...4.0) {
-                    Text(coordinator.L(.beeSize))
-                }
-                .font(.system(.body))
-            }
         }
     }
 }
