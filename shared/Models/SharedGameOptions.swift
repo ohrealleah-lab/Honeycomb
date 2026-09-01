@@ -23,18 +23,18 @@ public final class SharedGameOptions {
         didSet {
             UserDefaults.standard.set(noStressMode, forKey: "global_no_stress_mode")
             if oldValue != noStressMode {
-                for observer in noStressModeObservers { observer() }
+                onNoStressModeChange?()
             }
         }
     }
-    // Klondike/Beecell/Spider register here (see onNoStressModeChange) to
-    // start/stop their timer immediately when No Stress Mode toggles mid-game —
-    // Video Poker/Blackjack/Honeycomb have no timer and just read the value fresh
-    // wherever they need it, no reaction required.
-    private var noStressModeObservers: [() -> Void] = []
-    public func onNoStressModeChange(_ observer: @escaping () -> Void) {
-        noStressModeObservers.append(observer)
-    }
+    // AppCoordinator registers here (see onNoStressModeChange) to start/stop
+    // whichever timer-having game (Klondike/Beecell/Spider) is currently active when
+    // No Stress Mode toggles mid-game — Video Poker/Blackjack/Honeycomb have no timer
+    // and just read the value fresh wherever they need it, no reaction required. A
+    // single settable closure, not a list — there is deliberately only ever one
+    // subscriber (AppCoordinator itself), so a second assignment is meant to replace
+    // the first, not accumulate alongside it.
+    public var onNoStressModeChange: (() -> Void)?
     // "Honey Mode (Flavor)" — controls both the "+N"/"-N" score popups (each game's
     // own honeyMode guard) and, via BannerCatalog.honeyModeEnabled, whether
     // Repeatable Flavor/Ambiance banners fire at all. Achievement/Milestone banners

@@ -685,7 +685,7 @@ public final class AppCoordinator {
         // timer on an abandoned hand nobody is looking at (the exact bug
         // testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync guards
         // against). Video Poker/Blackjack/Honeycomb have no timer, so they're skipped.
-        sharedOptions.onNoStressModeChange { [weak self] in
+        sharedOptions.onNoStressModeChange = { [weak self] in
             guard let self else { return }
             switch self.gameMode {
             case .klondike:   self.klondikeViewModel.reactToNoStressModeChange()
