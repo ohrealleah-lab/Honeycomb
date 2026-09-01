@@ -373,97 +373,6 @@ public partial class PreferencesView : UserControl
         }
     }
 
-    // TEMPORARY — dev calibration for the bee watermark's per-game scale. Once final
-    // values are known, delete WatermarkScaleSection (AXAML), this pair, and the
-    // WatermarkScaleSlider_ValueChanged handler below, then hardcode the calibrated
-    // constants as the six *WatermarkScale defaults on GameOptions.
-    private double GetWatermarkScale(GameOptions options) => ActiveGameFamily switch
-    {
-        "Klondike"   => options.KlondikeWatermarkScale,
-        "Freecell"   => options.FreecellWatermarkScale,
-        "Spider"     => options.SpiderWatermarkScale,
-        "VideoPoker" => options.VideoPokerWatermarkScale,
-        "Blackjack"  => options.BlackjackWatermarkScale,
-        "Honeycomb"  => options.HoneycombWatermarkScale,
-        _            => 1.0
-    };
-
-    private void SetWatermarkScale(GameOptions options, double value)
-    {
-        switch (ActiveGameFamily)
-        {
-            case "Klondike":   options.KlondikeWatermarkScale = value; break;
-            case "Freecell":   options.FreecellWatermarkScale = value; break;
-            case "Spider":     options.SpiderWatermarkScale = value; break;
-            case "VideoPoker": options.VideoPokerWatermarkScale = value; break;
-            case "Blackjack":  options.BlackjackWatermarkScale = value; break;
-            case "Honeycomb":  options.HoneycombWatermarkScale = value; break;
-        }
-    }
-
-    // TEMPORARY — dev calibration for the bee watermark's per-game position. Same
-    // removal plan as the scale pair above.
-    private double GetWatermarkOffsetX(GameOptions options) => ActiveGameFamily switch
-    {
-        "Klondike"   => options.KlondikeWatermarkOffsetX,
-        "Freecell"   => options.FreecellWatermarkOffsetX,
-        "Spider"     => options.SpiderWatermarkOffsetX,
-        "VideoPoker" => options.VideoPokerWatermarkOffsetX,
-        "Blackjack"  => options.BlackjackWatermarkOffsetX,
-        "Honeycomb"  => options.HoneycombWatermarkOffsetX,
-        _            => 0.0
-    };
-
-    private void SetWatermarkOffsetX(GameOptions options, double value)
-    {
-        switch (ActiveGameFamily)
-        {
-            case "Klondike":   options.KlondikeWatermarkOffsetX = value; break;
-            case "Freecell":   options.FreecellWatermarkOffsetX = value; break;
-            case "Spider":     options.SpiderWatermarkOffsetX = value; break;
-            case "VideoPoker": options.VideoPokerWatermarkOffsetX = value; break;
-            case "Blackjack":  options.BlackjackWatermarkOffsetX = value; break;
-            case "Honeycomb":  options.HoneycombWatermarkOffsetX = value; break;
-        }
-    }
-
-    private double GetWatermarkOffsetY(GameOptions options) => ActiveGameFamily switch
-    {
-        "Klondike"   => options.KlondikeWatermarkOffsetY,
-        "Freecell"   => options.FreecellWatermarkOffsetY,
-        "Spider"     => options.SpiderWatermarkOffsetY,
-        "VideoPoker" => options.VideoPokerWatermarkOffsetY,
-        "Blackjack"  => options.BlackjackWatermarkOffsetY,
-        "Honeycomb"  => options.HoneycombWatermarkOffsetY,
-        _            => 0.0
-    };
-
-    private void SetWatermarkOffsetY(GameOptions options, double value)
-    {
-        switch (ActiveGameFamily)
-        {
-            case "Klondike":   options.KlondikeWatermarkOffsetY = value; break;
-            case "Freecell":   options.FreecellWatermarkOffsetY = value; break;
-            case "Spider":     options.SpiderWatermarkOffsetY = value; break;
-            case "VideoPoker": options.VideoPokerWatermarkOffsetY = value; break;
-            case "Blackjack":  options.BlackjackWatermarkOffsetY = value; break;
-            case "Honeycomb":  options.HoneycombWatermarkOffsetY = value; break;
-        }
-    }
-
-    // Video Poker/Blackjack's watermark Scale is expressed on a 0-2048ish native-pixel
-    // base (see GameOptions' comment on VideoPokerWatermarkScale) instead of the roughly
-    // 0.1-5.0 multiplier the other four games use, so the slider's range has to switch
-    // per game or one end becomes unusable (a VP/Blackjack value like 1968.9 is off the
-    // 0.1-5.0 scale entirely; a Klondike-sized value like 1.3 is an invisible sliver on a
-    // 0-4000 scale). Called from both SyncUIFromOptions and SyncGlobalCheckboxesFromShared,
-    // before the slider's Value is assigned, so the assigned value always lands in range.
-    private void ApplyWatermarkScaleSliderRange()
-    {
-        bool isPixelBased = ActiveGameFamily is "VideoPoker" or "Blackjack";
-        WatermarkScaleSlider.Minimum = isPixelBased ? 100.0 : 0.1;
-        WatermarkScaleSlider.Maximum = isPixelBased ? 4000.0 : 5.0;
-    }
 
     // Syncs all UI controls to match the provided options. Call inside _initializing guard.
     private void SyncUIFromOptions(GameOptions options)
@@ -478,10 +387,6 @@ public partial class PreferencesView : UserControl
         ManuallyDismissBannersCheckBox.IsChecked = options.ManuallyDismissBanners;
         AlwaysOnTopCheckBox.IsChecked  = options.IsAlwaysOnTop;
         HideBeeCheckBox.IsChecked      = options.HideBee;
-        ApplyWatermarkScaleSliderRange();
-        WatermarkScaleSlider.Value     = GetWatermarkScale(options);
-        WatermarkOffsetXSlider.Value   = GetWatermarkOffsetX(options);
-        WatermarkOffsetYSlider.Value   = GetWatermarkOffsetY(options);
 
         PopulateCardBacks(options);
 
@@ -718,10 +623,6 @@ public partial class PreferencesView : UserControl
         PointHighlightsCheckBox.IsChecked = shared.HoneyMode;
         ManuallyDismissBannersCheckBox.IsChecked = shared.ManuallyDismissBanners;
         HideBeeCheckBox.IsChecked = shared.HideBee;
-        ApplyWatermarkScaleSliderRange();
-        WatermarkScaleSlider.Value = GetWatermarkScale(shared);
-        WatermarkOffsetXSlider.Value = GetWatermarkOffsetX(shared);
-        WatermarkOffsetYSlider.Value = GetWatermarkOffsetY(shared);
         RefreshThisGameSectionVisibility();
         return shared;
     }
@@ -1414,85 +1315,6 @@ public partial class PreferencesView : UserControl
         shared.HoneyMode         = PointHighlightsCheckBox.IsChecked ?? true;
         shared.ManuallyDismissBanners = ManuallyDismissBannersCheckBox.IsChecked ?? false;
         shared.HideBee           = HideBeeCheckBox.IsChecked ?? false;
-    }
-
-    // TEMPORARY — dev calibration slider live-saves on every drag tick (unlike the
-    // rest of this panel's controls, which only persist via Option_Changed above), and
-    // updates its own TextBlock so the numeric value is visible while dragging instead
-    // of only after releasing. See the GetWatermarkScale/SetWatermarkScale pair's
-    // removal note.
-    private void WatermarkScaleSlider_ValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
-    {
-        WatermarkScaleValueText.Text = e.NewValue.ToString("0.###");
-        if (_initializing) return;
-
-        if (DataContext is GameOptions options)
-        {
-            SetWatermarkScale(options, e.NewValue);
-            NotifySettingsChanged(options);
-        }
-        else if (DataContext is VideoPokerOptions)
-        {
-            var shared = SettingsService.LoadOptions();
-            SetWatermarkScale(shared, e.NewValue);
-            NotifySettingsChanged(shared);
-        }
-        else if (DataContext is BlackjackOptions)
-        {
-            var shared = SettingsService.LoadOptions();
-            SetWatermarkScale(shared, e.NewValue);
-            NotifySettingsChanged(shared);
-        }
-    }
-
-    // TEMPORARY — dev calibration sliders, same live-save shape as
-    // WatermarkScaleSlider_ValueChanged above. See its removal note.
-    private void WatermarkOffsetXSlider_ValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
-    {
-        WatermarkOffsetXValueText.Text = e.NewValue.ToString("0.###");
-        if (_initializing) return;
-
-        if (DataContext is GameOptions options)
-        {
-            SetWatermarkOffsetX(options, e.NewValue);
-            NotifySettingsChanged(options);
-        }
-        else if (DataContext is VideoPokerOptions)
-        {
-            var shared = SettingsService.LoadOptions();
-            SetWatermarkOffsetX(shared, e.NewValue);
-            NotifySettingsChanged(shared);
-        }
-        else if (DataContext is BlackjackOptions)
-        {
-            var shared = SettingsService.LoadOptions();
-            SetWatermarkOffsetX(shared, e.NewValue);
-            NotifySettingsChanged(shared);
-        }
-    }
-
-    private void WatermarkOffsetYSlider_ValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
-    {
-        WatermarkOffsetYValueText.Text = e.NewValue.ToString("0.###");
-        if (_initializing) return;
-
-        if (DataContext is GameOptions options)
-        {
-            SetWatermarkOffsetY(options, e.NewValue);
-            NotifySettingsChanged(options);
-        }
-        else if (DataContext is VideoPokerOptions)
-        {
-            var shared = SettingsService.LoadOptions();
-            SetWatermarkOffsetY(shared, e.NewValue);
-            NotifySettingsChanged(shared);
-        }
-        else if (DataContext is BlackjackOptions)
-        {
-            var shared = SettingsService.LoadOptions();
-            SetWatermarkOffsetY(shared, e.NewValue);
-            NotifySettingsChanged(shared);
-        }
     }
 
     // Dedicated wrappers (rather than wiring SelectionChanged/ValueChanged to Option_Changed

@@ -116,36 +116,6 @@
                 </Grid>
             </StackPanel>
 
-            <!-- TEMPORARY — dev calibration for the bee watermark's per-game scale/position.
-                 Delete this StackPanel + the WatermarkXSlider_ValueChanged handlers below
-                 once final per-game values are known (see GetWatermarkScale/SetWatermarkScale
-                 and friends), same as the removal this redoes (see c4e5ab8). Each slider's
-                 own TextBlock shows the live numeric value, since eyeballing a bare slider
-                 thumb position isn't precise enough to transcribe into GameOptions' defaults. -->
-            <StackPanel x:Name="WatermarkScaleSection" Spacing="4">
-                <TextBlock Text="Bee Watermark Scale (temporary — dev calibration)" FontSize="11" Foreground="#1A1A1A"/>
-                <Grid ColumnDefinitions="*,50">
-                    <Slider Grid.Column="0" x:Name="WatermarkScaleSlider"
-                            ValueChanged="WatermarkScaleSlider_ValueChanged"/>
-                    <TextBlock Grid.Column="1" x:Name="WatermarkScaleValueText" FontSize="11" Foreground="#1A1A1A"
-                               VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                </Grid>
-                <TextBlock Text="Bee Watermark Horizontal Position (temporary — dev calibration)" FontSize="11" Foreground="#1A1A1A"/>
-                <Grid ColumnDefinitions="*,50">
-                    <Slider Grid.Column="0" x:Name="WatermarkOffsetXSlider" Minimum="-500" Maximum="500"
-                            ValueChanged="WatermarkOffsetXSlider_ValueChanged"/>
-                    <TextBlock Grid.Column="1" x:Name="WatermarkOffsetXValueText" FontSize="11" Foreground="#1A1A1A"
-                               VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                </Grid>
-                <TextBlock Text="Bee Watermark Vertical Position (temporary — dev calibration)" FontSize="11" Foreground="#1A1A1A"/>
-                <Grid ColumnDefinitions="*,50">
-                    <Slider Grid.Column="0" x:Name="WatermarkOffsetYSlider" Minimum="-500" Maximum="500"
-                            ValueChanged="WatermarkOffsetYSlider_ValueChanged"/>
-                    <TextBlock Grid.Column="1" x:Name="WatermarkOffsetYValueText" FontSize="11" Foreground="#1A1A1A"
-                               VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                </Grid>
-            </StackPanel>
-
             <Rectangle x:Name="VisualThemesDivider" Height="1" Fill="#DDDDDD" Margin="0,4,0,4"/>
 
             <!-- Themes navigation row (not applicable to Video Poker) -->
