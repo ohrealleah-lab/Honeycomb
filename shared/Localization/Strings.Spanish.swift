@@ -688,6 +688,7 @@ enum StringsSpanish {
         .btnClearShort: "Borrar",
         .globalOptionsSection: "Global",
         .hideBee: "Ocultar la Abeja",
+        .beeSize: "Tamaño de la Abeja",
         .honeyModeTooltip: "Habilita los anuncios y las animaciones de puntos en los solitarios.",
         .noStressModeTooltip: "¡Sin presión! Sin temporizadores, sin apuestas, y Honeycomb elige tu mazo al azar.",
         .rankNurseBee: "Abeja Nodriza",
