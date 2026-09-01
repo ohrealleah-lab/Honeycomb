@@ -56,7 +56,7 @@ struct UniversalBridge {
         switch gameName {
         case "VideoPoker":
             let vm = VideoPokerViewModel()
-            vm.options.noStressMode = noStress
+            vm.sharedOptions.noStressMode = noStress
             vm.startNewGame()
             if let data = try? encoder.encode(vm.state), let str = String(data: data, encoding: .utf8) {
                 print(str)
@@ -88,7 +88,7 @@ struct UniversalBridge {
 
         case "Blackjack":
             let vm = BlackjackViewModel()
-            vm.options.noStressMode = noStress
+            vm.sharedOptions.noStressMode = noStress
             vm.startNewGame()
             if let data = try? encoder.encode(vm.state), let str = String(data: data, encoding: .utf8) {
                 print(str)
@@ -228,7 +228,7 @@ struct UniversalBridge {
 
         case "Honeycomb":
             let vm = HoneycombViewModel()
-            vm.options.noStressMode = noStress
+            vm.sharedOptions.noStressMode = noStress
             vm.startNewGame()
             if let data = try? encoder.encode(vm.state), let str = String(data: data, encoding: .utf8) {
                 print(str)
