@@ -547,7 +547,14 @@ public final class AppCoordinator {
         let defaultSpiderScale = 1.301, defaultSpiderOffsetX = 0.0, defaultSpiderOffsetY = 93.2
         let defaultVideoPokerScale = 1.881, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
         let defaultBlackjackScale = 1.880, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
-        let defaultHoneycombScale = 1.202, defaultHoneycombOffsetX = -12.8, defaultHoneycombOffsetY = 67.2
+        // Honeycomb (mac only) now anchors inside the board VStack's background at a
+        // 600x600 base size instead of scaledToFit-ing the whole window (see
+        // HoneycombView.swift) — same fix as Blackjack/Video Poker above. 1.202/-12.8/67.2
+        // was calibrated against that old whole-window layer and means nothing against the
+        // new anchor, so this resets to a neutral starting point (1.0/0/0) pending a fresh
+        // eyeball pass. iOS's Honeycomb watermark is untouched, still reading
+        // defaultHoneycombScale/OffsetX/OffsetY from the #if os(iOS) branch above.
+        let defaultHoneycombScale = 1.0, defaultHoneycombOffsetX = 0.0, defaultHoneycombOffsetY = 0.0
 
         // mac has no orientation concept and never reads these — reusing the portrait
         // numbers just gives its copies *a* sane value; never surfaced in mac's UI.
