@@ -1374,6 +1374,8 @@ public enum StringKey: String, CaseIterable {
     case globalOptionsSection = "global_options_section"
     /// Toggle label, reused across every game's Options on Mac/iOS/Windows
     case hideBee = "hide_bee"
+    /// Slider label for the bee watermark's size, reused across every game's Mac Options sheet
+    case beeSize = "bee_size"
     /// Tooltip for the Honey Mode toggle
     case honeyModeTooltip = "honey_mode_tooltip"
     /// Tooltip for the No Stress Mode toggle

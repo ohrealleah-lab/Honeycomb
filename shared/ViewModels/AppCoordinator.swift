@@ -542,19 +542,17 @@ public final class AppCoordinator {
         let defaultBlackjackScaleLandscape = 1.880, defaultBlackjackOffsetXLandscape = 0.0, defaultBlackjackOffsetYLandscape = 0.0
         let defaultHoneycombScaleLandscape = 1.202, defaultHoneycombOffsetXLandscape = -12.8, defaultHoneycombOffsetYLandscape = 14.7
         #else
-        let defaultKlondikeScale = 1.299, defaultKlondikeOffsetX = 0.0, defaultKlondikeOffsetY = 110.2
+        let defaultKlondikeScale = 1.271, defaultKlondikeOffsetX = 0.0, defaultKlondikeOffsetY = 110.2
         let defaultBeecellScale = 1.297, defaultBeecellOffsetX = 0.0, defaultBeecellOffsetY = 110.3
         let defaultSpiderScale = 1.301, defaultSpiderOffsetX = 0.0, defaultSpiderOffsetY = 93.2
         // Video Poker/Blackjack (mac only) anchor inside the cards' own background at a
         // 600x600 base size instead of scaledToFit-ing the whole window (see
-        // VideoPokerView.swift/BlackjackView.swift). 1.959 is the eyeballed size against
-        // that anchor (former "Bee Size" slider, since removed); Blackjack matches Video
-        // Poker's value so both read the same apparent size. iOS's watermarks are
-        // untouched, still reading these games' Scale/OffsetX/OffsetY from the
-        // #if os(iOS) branch above.
+        // VideoPokerView.swift/BlackjackView.swift). Scale values are eyeballed via the
+        // "Bee Size" slider in each game's Options sheet. iOS's watermarks are untouched,
+        // still reading these games' Scale/OffsetX/OffsetY from the #if os(iOS) branch above.
         let defaultVideoPokerScale = 1.959, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
-        let defaultBlackjackScale = 1.959, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
-        let defaultHoneycombScale = 1.202, defaultHoneycombOffsetX = -12.8, defaultHoneycombOffsetY = 67.2
+        let defaultBlackjackScale = 2.912, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
+        let defaultHoneycombScale = 1.248, defaultHoneycombOffsetX = -12.8, defaultHoneycombOffsetY = 67.2
 
         // mac has no orientation concept and never reads these — reusing the portrait
         // numbers just gives its copies *a* sane value; never surfaced in mac's UI.
