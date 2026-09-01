@@ -547,12 +547,13 @@ public final class AppCoordinator {
         let defaultSpiderScale = 1.301, defaultSpiderOffsetX = 0.0, defaultSpiderOffsetY = 93.2
         // Video Poker/Blackjack (mac only) anchor inside the cards' own background at a
         // 600x600 base size instead of scaledToFit-ing the whole window (see
-        // VideoPokerView.swift/BlackjackView.swift). 1.0/0/0 is a neutral starting point
-        // pending a fresh eyeball pass against that anchor. iOS's watermarks are
+        // VideoPokerView.swift/BlackjackView.swift). 1.959 is the eyeballed size against
+        // that anchor (former "Bee Size" slider, since removed); Blackjack matches Video
+        // Poker's value so both read the same apparent size. iOS's watermarks are
         // untouched, still reading these games' Scale/OffsetX/OffsetY from the
         // #if os(iOS) branch above.
-        let defaultVideoPokerScale = 1.0, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
-        let defaultBlackjackScale = 1.0, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
+        let defaultVideoPokerScale = 1.959, defaultVideoPokerOffsetX = 0.0, defaultVideoPokerOffsetY = 0.0
+        let defaultBlackjackScale = 1.959, defaultBlackjackOffsetX = 0.0, defaultBlackjackOffsetY = 0.0
         let defaultHoneycombScale = 1.202, defaultHoneycombOffsetX = -12.8, defaultHoneycombOffsetY = 67.2
 
         // mac has no orientation concept and never reads these — reusing the portrait

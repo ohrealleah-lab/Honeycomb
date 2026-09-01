@@ -688,7 +688,6 @@ enum StringsEnglish {
         .btnClearShort: "Clear",
         .globalOptionsSection: "Global",
         .hideBee: "Hide the Bee",
-        .beeSize: "Bee Size",
         .honeyModeTooltip: "Enables banners and solitaire point animations.",
         .noStressModeTooltip: "Pressure-free! No timers, no betting, and Honeycomb chooses your deck for you at random.",
         .rankNurseBee: "Nurse Bee",
