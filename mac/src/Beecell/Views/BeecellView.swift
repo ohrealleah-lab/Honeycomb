@@ -1029,11 +1029,10 @@ struct BeecellOptionsView: View {
     @Bindable var coordinator: AppCoordinator
 
     @State private var deckCount: Int
-    @State private var isSoundEnabled: Bool
-    @State private var hideHintButton: Bool
+    // noStressMode stays locally buffered (unlike Sound/Honey Mode/Manually Dismiss
+    // Banners/Hide Hint Button, which OptionsSheetShell now live-binds+reverts) —
+    // see OptionsSheetShell's comment on originalIsSoundEnabled for why.
     @State private var noStressMode: Bool
-    @State private var honeyMode: Bool
-    @State private var manuallyDismissBanners: Bool
     @State private var hideBee: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
@@ -1046,11 +1045,7 @@ struct BeecellOptionsView: View {
         self.availableWidth = availableWidth
         self.availableHeight = availableHeight
         _deckCount = State(initialValue: viewModel.options.deckCount)
-        _isSoundEnabled = State(initialValue: coordinator.isSoundEnabled)
-        _hideHintButton = State(initialValue: coordinator.hideHintButton)
         _noStressMode = State(initialValue: coordinator.noStressMode)
-        _honeyMode = State(initialValue: coordinator.honeyMode)
-        _manuallyDismissBanners = State(initialValue: coordinator.manuallyDismissBanners)
         _hideBee = State(initialValue: coordinator.hideBee)
     }
 
@@ -1066,16 +1061,11 @@ struct BeecellOptionsView: View {
                 updatedOpts.deckCount = deckCount
 
                 viewModel.options = updatedOpts
-                // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
-                // edit there (rather than leaving it only on this game's own options)
-                // is what makes it actually apply everywhere instead of getting quietly
-                // reverted the next time any game switch reasserts the coordinator's
-                // value over this one.
-                coordinator.isSoundEnabled = isSoundEnabled
+                // No Stress Mode is app-wide now (AppCoordinator) — pushing the edit
+                // there is what makes it actually apply everywhere. Sound/Honey Mode/
+                // Manually Dismiss Banners/Hide Hint Button/hideBee are already live via
+                // OptionsSheetShell's direct $coordinator.X bindings below.
                 coordinator.noStressMode = noStressMode
-                coordinator.honeyMode = honeyMode
-                coordinator.manuallyDismissBanners = manuallyDismissBanners
-                coordinator.hideHintButton = hideHintButton
                 coordinator.hideBee = hideBee
             }
         ) {
@@ -1087,20 +1077,20 @@ struct BeecellOptionsView: View {
 
             Divider()
 
-            Toggle(coordinator.L(.soundEffects), isOn: $isSoundEnabled)
+            Toggle(coordinator.L(.soundEffects), isOn: $coordinator.isSoundEnabled)
                 .font(.system(.body))
 
-            Toggle(coordinator.L(.hideHintButton), isOn: $hideHintButton)
+            Toggle(coordinator.L(.hideHintButton), isOn: $coordinator.hideHintButton)
                 .font(.system(.body))
 
-            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners)
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners)
                 .font(.system(.body))
 
             Toggle(coordinator.L(.noStressMode), isOn: $noStressMode)
                 .help(coordinator.L(.noStressModeTooltip))
                 .font(.system(.body))
 
-            Toggle(coordinator.L(.honeyMode), isOn: $honeyMode)
+            Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode)
                 .help(coordinator.L(.honeyModeTooltip))
                 .font(.system(.body))
 

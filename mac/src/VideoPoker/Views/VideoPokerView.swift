@@ -1022,11 +1022,11 @@ struct VideoPokerOptionsView: View {
     @State private var playMode: VideoPokerPlayMode
     @State private var startingCredits: Int
     @State private var betPerHand: Int
-    @State private var isSoundEnabled: Bool
-    @State private var hideHintButton: Bool
+    // noStressMode stays locally buffered (unlike Sound/Honey Mode/Manually Dismiss
+    // Banners, which OptionsSheetShell now live-binds+reverts) — see
+    // OptionsSheetShell's comment on originalIsSoundEnabled for why. Video Poker has
+    // no hint button, so hideHintButton isn't tracked here at all (nothing binds it).
     @State private var noStressMode: Bool
-    @State private var honeyMode: Bool
-    @State private var manuallyDismissBanners: Bool
     @State private var hideBee: Bool
     let availableWidth: CGFloat
     let availableHeight: CGFloat
@@ -1042,11 +1042,7 @@ struct VideoPokerOptionsView: View {
         _playMode        = State(initialValue: viewModel.options.playMode)
         _startingCredits = State(initialValue: viewModel.options.startingCredits)
         _betPerHand      = State(initialValue: viewModel.options.betPerHand)
-        _isSoundEnabled  = State(initialValue: coordinator.isSoundEnabled)
-        _hideHintButton  = State(initialValue: coordinator.hideHintButton)
         _noStressMode    = State(initialValue: coordinator.noStressMode)
-        _honeyMode       = State(initialValue: coordinator.honeyMode)
-        _manuallyDismissBanners = State(initialValue: coordinator.manuallyDismissBanners)
         _hideBee = State(initialValue: coordinator.hideBee)
     }
 
@@ -1078,16 +1074,11 @@ struct VideoPokerOptionsView: View {
                 if noStressMode && !wasNoStressMode && !viewModel.canOpenOptions {
                     viewModel.startNewGame()
                 }
-                // Sound/No Stress Mode are app-wide now (AppCoordinator) — pushing the
-                // edit there (rather than leaving it only on this game's own options)
-                // is what makes it actually apply everywhere instead of getting quietly
-                // reverted the next time any game switch reasserts the coordinator's
-                // value over this one.
-                coordinator.isSoundEnabled = isSoundEnabled
+                // No Stress Mode is app-wide now (AppCoordinator) — pushing the edit
+                // there is what makes it actually apply everywhere. Sound/Honey Mode/
+                // Manually Dismiss Banners/hideBee are already live via
+                // OptionsSheetShell's direct $coordinator.X bindings below.
                 coordinator.noStressMode = noStressMode
-                coordinator.honeyMode = honeyMode
-                coordinator.manuallyDismissBanners = manuallyDismissBanners
-                coordinator.hideHintButton = hideHintButton
                 coordinator.hideBee = hideBee
             }
         ) {
@@ -1118,12 +1109,12 @@ struct VideoPokerOptionsView: View {
 
             Divider()
 
-            Toggle(coordinator.L(.soundEffects),    isOn: $isSoundEnabled).font(.system(.body))
+            Toggle(coordinator.L(.soundEffects),    isOn: $coordinator.isSoundEnabled).font(.system(.body))
             Toggle(coordinator.L(.noStressMode), isOn: $noStressMode).font(.system(.body))
                 .help(coordinator.L(.noStressModeTooltip))
-            Toggle(coordinator.L(.honeyMode), isOn: $honeyMode).font(.system(.body))
+            Toggle(coordinator.L(.honeyMode), isOn: $coordinator.honeyMode).font(.system(.body))
                 .help(coordinator.L(.honeyModeTooltip))
-            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $manuallyDismissBanners).font(.system(.body))
+            Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners).font(.system(.body))
             Toggle(coordinator.L(.hideBee), isOn: $hideBee).font(.system(.body))
         }
     }

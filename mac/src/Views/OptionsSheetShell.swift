@@ -30,14 +30,39 @@ struct OptionsSheetShell<Content: View>: View {
     @State private var customSelectedColor: Color
     @State private var showingThemes: Bool = false
 
-    let originalRed: Double
-    let originalGreen: Double
-    let originalBlue: Double
-    let originalFeltColor: FeltColorTheme
-    let originalCardBackTheme: String
-    let originalShowFeltVignette: Bool
-    let originalCustomCardColors: CustomCardColorGroup
-    let originalCustomBackgroundName: String?
+    // @State, not `let` — OptionsSheetShell is a struct, and SwiftUI reconstructs
+    // (re-runs init() on) struct View values considerably more often than "once per
+    // sheet open": any observable change this view's body reads (including these
+    // very fields, once their Toggles/pickers are live-bound below) can cause its
+    // parent to re-evaluate and re-call this init. A plain `let` would silently
+    // re-capture the *already-edited* value as "original" on the very next render
+    // after the first edit, making Cancel a no-op — this bit exactly that way for
+    // isSoundEnabled during testing. @State is SwiftUI's actual mechanism for a value
+    // that's fixed for the view identity's lifetime regardless of how many times
+    // init reruns, matching customSelectedColor's existing pattern below.
+    @State private var originalRed: Double
+    @State private var originalGreen: Double
+    @State private var originalBlue: Double
+    @State private var originalFeltColor: FeltColorTheme
+    @State private var originalCardBackTheme: String
+    @State private var originalShowFeltVignette: Bool
+    @State private var originalCustomCardColors: CustomCardColorGroup
+    @State private var originalCustomBackgroundName: String?
+
+    // Sound/Honey Mode/Manually Dismiss Banners/Hide Hint Button — same capture-once/
+    // revert-on-Cancel treatment as the theme fields above. Every game's content()
+    // Toggle binds straight to $coordinator.X (live, immediate, shared instantly like
+    // the Themes sub-panel already does), so this shell — not each game's own Options
+    // view — is what makes Cancel actually discard the edit. noStressMode is
+    // deliberately NOT here: toggling it on mid-hand has a non-idempotent side effect
+    // in Video Poker/Blackjack/Honeycomb (dealing a fresh hand), so making it live-
+    // preview-then-revert-on-Cancel would deal that fresh hand immediately on toggle
+    // and then leave it dealt even if the player hits Cancel — those 3 games still
+    // buffer noStressMode locally and only commit/react to it on OK.
+    @State private var originalIsSoundEnabled: Bool
+    @State private var originalHoneyMode: Bool
+    @State private var originalManuallyDismissBanners: Bool
+    @State private var originalHideHintButton: Bool
 
     init(
         isPresented: Binding<Bool>,
@@ -70,18 +95,23 @@ struct OptionsSheetShell<Content: View>: View {
         self.onOK = onOK
         self.content = content
 
-        self.originalFeltColor = coordinator.feltColor
-        self.originalCardBackTheme = coordinator.cardBackTheme
-        self.originalShowFeltVignette = coordinator.showFeltVignette
-        self.originalCustomCardColors = coordinator.customCardColors
-        self.originalCustomBackgroundName = coordinator.customBackgroundName
+        _originalFeltColor = State(initialValue: coordinator.feltColor)
+        _originalCardBackTheme = State(initialValue: coordinator.cardBackTheme)
+        _originalShowFeltVignette = State(initialValue: coordinator.showFeltVignette)
+        _originalCustomCardColors = State(initialValue: coordinator.customCardColors)
+        _originalCustomBackgroundName = State(initialValue: coordinator.customBackgroundName)
+
+        _originalIsSoundEnabled = State(initialValue: coordinator.isSoundEnabled)
+        _originalHoneyMode = State(initialValue: coordinator.honeyMode)
+        _originalManuallyDismissBanners = State(initialValue: coordinator.manuallyDismissBanners)
+        _originalHideHintButton = State(initialValue: coordinator.hideHintButton)
 
         let r = coordinator.customFeltRed
         let g = coordinator.customFeltGreen
         let b = coordinator.customFeltBlue
-        self.originalRed = r
-        self.originalGreen = g
-        self.originalBlue = b
+        _originalRed = State(initialValue: r)
+        _originalGreen = State(initialValue: g)
+        _originalBlue = State(initialValue: b)
         let initialColor: Color
         if r == 0 && g == 0 && b == 0 {
             initialColor = Color(red: 0.35, green: 0.15, blue: 0.45)
@@ -143,6 +173,10 @@ struct OptionsSheetShell<Content: View>: View {
                         coordinator.showFeltVignette = originalShowFeltVignette
                         coordinator.customCardColors = originalCustomCardColors
                         coordinator.customBackgroundName = originalCustomBackgroundName
+                        coordinator.isSoundEnabled = originalIsSoundEnabled
+                        coordinator.honeyMode = originalHoneyMode
+                        coordinator.manuallyDismissBanners = originalManuallyDismissBanners
+                        coordinator.hideHintButton = originalHideHintButton
                         isPresented = false
                     }
                     .keyboardShortcut(.cancelAction)
