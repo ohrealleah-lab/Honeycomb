@@ -5,25 +5,6 @@
              ClipToBounds="False">
 
     <Grid x:Name="BoardFeltGrid" RowDefinitions="Auto,*,Auto" ClipToBounds="False">
-        <!-- Reverted to a plain RowSpan="3" sibling, Center/Center-aligned — an earlier
-             attempt shared this Image's Grid.Row/cell with the actual card content to fix
-             positional drift, but with no explicit Width/Height the Image measures at its
-             full native 1024x1024 source size, which balloons whatever Auto/"*" row it
-             shares into something far bigger than intended (shrunk cards, rows pushed
-             off-screen). This position still drifts somewhat as the window resizes, but
-             doesn't break layout — a real fix needs an explicit size cap on the Image
-             itself (with Scale recalibrated to compensate) or a code-behind live-Bounds
-             binding instead of sharing a Grid cell. -->
-        <Image Grid.RowSpan="3" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
-               HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
-               RenderTransformOrigin="0.5,0.5">
-            <Image.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform ScaleX="{Binding VideoPokerWatermarkScale}" ScaleY="{Binding VideoPokerWatermarkScale}"/>
-                    <TranslateTransform X="{Binding VideoPokerWatermarkOffsetX}" Y="{Binding VideoPokerWatermarkOffsetY}"/>
-                </TransformGroup>
-            </Image.RenderTransform>
-        </Image>
 
         <!-- ─── Pay Table Popup (revealed on BidBar hover, see BidBar_PointerEntered/Exited) ── -->
         <Popup x:Name="PayTablePopup" PlacementTarget="{Binding ElementName=BidBar}" Placement="Bottom" IsOpen="False" IsLightDismissEnabled="False">
@@ -111,6 +92,30 @@
             <!-- Cards + overlays — centered in the Auto row -->
             <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
                   Margin="0,28,0,0">
+
+                    <!-- Watermark, anchored here (same Auto row/cell as the actual cards)
+                         instead of RowSpan="3" across the whole BoardFeltGrid — same fix as
+                         Blackjack's (see BlackjackView.axaml): Width/Height="1" caps the
+                         Image's layout footprint to 1x1 so it can't balloon this Auto row
+                         (or the outer "*" row it used to span) the way the unconstrained
+                         native-1024x1024 image did in the earlier attempt this replaces
+                         (see git history for that revert). RenderTransform (Scale then
+                         Translate, both post-layout) still draws it at full size — this
+                         Grid inherits ClipToBounds="False" from BoardFeltGrid, so nothing
+                         clips it. Being in the cards' own cell means it now tracks card
+                         position/scale automatically instead of drifting on resize.
+                         VideoPokerWatermarkScale/Offset need recalibrating against this new
+                         anchor; the old values assumed centering on the whole grid. -->
+                    <Image Width="1" Height="1" Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                           RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform ScaleX="{Binding VideoPokerWatermarkScale}" ScaleY="{Binding VideoPokerWatermarkScale}"/>
+                                <TranslateTransform X="{Binding VideoPokerWatermarkOffsetX}" Y="{Binding VideoPokerWatermarkOffsetY}"/>
+                            </TransformGroup>
+                        </Image.RenderTransform>
+                    </Image>
 
                     <StackPanel x:Name="CardsRow" Orientation="Horizontal" Spacing="0" HorizontalAlignment="Center">
 

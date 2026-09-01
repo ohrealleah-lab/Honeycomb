@@ -96,10 +96,6 @@ public struct VideoPokerView: View {
             BackgroundLayerView()
                 .ignoresSafeArea()
 
-            GameWatermarkView()
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
             if coordinator.showFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
@@ -134,6 +130,25 @@ public struct VideoPokerView: View {
                             // label once cards are actually dealt.
                             actionButtons
                                 .padding(.top, 24)
+                        }
+                        .background(alignment: .center) {
+                            // Watermark anchored to the board VStack so it sits behind all
+                            // game content and tracks zoomScale automatically — replaces the
+                            // old top-level GameWatermarkView() layer, which never tracked
+                            // viewModel.zoomScale and so drifted off the cards at any window
+                            // size other than the one it was calibrated at.
+                            // videoPokerWatermarkScale/OffsetX/OffsetY (mac only) reset to
+                            // 1.0/0/0 pending a fresh eyeball pass against this new anchor.
+                            if !coordinator.hideBee, let image = NSImage(named: "hcblack") {
+                                Image(nsImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 600, height: 600)
+                                    .scaleEffect(coordinator.videoPokerWatermarkScale)
+                                    .offset(x: coordinator.videoPokerWatermarkOffsetX, y: coordinator.videoPokerWatermarkOffsetY)
+                                    .opacity(0.15)
+                                    .allowsHitTesting(false)
+                            }
                         }
                         .padding(.horizontal, 12)
                             .padding(.vertical, 24)

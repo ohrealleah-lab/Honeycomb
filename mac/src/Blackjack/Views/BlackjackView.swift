@@ -80,10 +80,6 @@ public struct BlackjackView: View {
             BackgroundLayerView()
                 .ignoresSafeArea()
 
-            GameWatermarkView()
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
             if coordinator.showFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
@@ -120,6 +116,29 @@ public struct BlackjackView: View {
                                 Color.clear
                                     .contentShape(Rectangle())
                                     .onTapGesture { viewModel.deal() }
+                            }
+                        }
+                        .background(alignment: .center) {
+                            // Watermark anchored to the card VStack (dealer + vs + player)
+                            // instead of as a top-level layer over the whole window — that
+                            // old layer never tracked viewModel.zoomScale, so it drifted off
+                            // the cards at any window size other than the one it was
+                            // calibrated at. This VStack sits behind all three rows so the
+                            // bee can't render on top of the dealer cards (a plain vsLabel
+                            // background did, since vsLabel is a 1pt-tall strip whose own
+                            // background overflows into sibling Z layers), and tracks
+                            // zoomScale automatically on every resize. blackjackWatermarkScale/
+                            // OffsetX/OffsetY (mac only) reset to 1.0/0/0 pending a fresh
+                            // eyeball pass against this new anchor.
+                            if !coordinator.hideBee, let image = NSImage(named: "hcblack") {
+                                Image(nsImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 600, height: 600)
+                                    .scaleEffect(coordinator.blackjackWatermarkScale)
+                                    .offset(x: coordinator.blackjackWatermarkOffsetX, y: coordinator.blackjackWatermarkOffsetY)
+                                    .opacity(0.15)
+                                    .allowsHitTesting(false)
                             }
                         }
 

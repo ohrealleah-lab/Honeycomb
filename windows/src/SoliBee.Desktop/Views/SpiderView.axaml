@@ -8,8 +8,17 @@
     <Grid>
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <Grid x:Name="BoardFeltGrid" ClipToBounds="False">
+                <!-- Anchored with the same alignment/margin as BoardGrid below (not
+                     Center/Center in this Grid) — BoardFeltGrid's own measured size is
+                     inflated by sibling elements sized to the full game area (DragCanvas,
+                     VictoryOverlay), so centering within IT drifts from the actual cards
+                     as the window's shape (and horizontal scroll extent) changes. Same fix
+                     already applied to Klondike/Freecell (see GameView.axaml/
+                     FreecellView.axaml's matching comment) — an earlier commit's message
+                     claimed this was done for Spider too, but its diff never actually
+                     touched this file. -->
                 <Image Source="avares://Honeycomb/Assets/hcblack.png" Opacity="{Binding WatermarkOpacity}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                       HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,10,20,20" IsHitTestVisible="False"
                        RenderTransformOrigin="0.5,0.5">
                     <Image.RenderTransform>
                         <TransformGroup>

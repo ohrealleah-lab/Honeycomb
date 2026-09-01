@@ -77,20 +77,41 @@ public class GameOptions
     public double KlondikeWatermarkScale   { get; set; } = 1.2956;
     public double FreecellWatermarkScale   { get; set; } = 1.2956;
     public double SpiderWatermarkScale     { get; set; } = 1.2956;
-    public double VideoPokerWatermarkScale { get; set; } = 1.9424;
-    public double BlackjackWatermarkScale  { get; set; } = 1.9228;
+    // Video Poker now anchors to the cards' own Auto row/cell via a 1x1-capped Image
+    // instead of spanning the whole grid (see VideoPokerView.axaml) — same fix as
+    // Blackjack below. Scale multiplied by the old 1024px native-size base to hold
+    // roughly the same apparent size (1.9424 * 1024 ≈ 1988.8); OffsetX/Y reset to 0
+    // since the old values compensated for centering on the whole grid, not this anchor.
+    // Needs a fresh eyeball pass.
+    public double VideoPokerWatermarkScale { get; set; } = 1988.8;
+    // Blackjack now anchors to row 2 (the VS divider) via a 1x1-capped Image instead of
+    // spanning the whole grid (see BlackjackView.axaml) — Scale is multiplied by the old
+    // 1024px native-size base to hold the same apparent on-screen size (1.9228 * 1024 ≈
+    // 1968.9), but since the anchor point moved, OffsetX/Y are reset to 0 rather than
+    // carrying over the old whole-grid centering compensation. Needs a fresh eyeball pass
+    // against the new anchor — the old offsets were correcting for a different anchor
+    // entirely and won't mean anything here.
+    public double BlackjackWatermarkScale  { get; set; } = 1968.9;
     public double HoneycombWatermarkScale  { get; set; } = 1.57;
 
     public double KlondikeWatermarkOffsetX   { get; set; } = -120.0;
     public double KlondikeWatermarkOffsetY   { get; set; } = -72.0;
     public double FreecellWatermarkOffsetX   { get; set; } = -120.0;
     public double FreecellWatermarkOffsetY   { get; set; } = -72.0;
-    public double SpiderWatermarkOffsetX     { get; set; } = -168.0;
-    public double SpiderWatermarkOffsetY     { get; set; } = -72.0;
-    public double VideoPokerWatermarkOffsetX { get; set; } = -500.0;
-    public double VideoPokerWatermarkOffsetY { get; set; } = -464.0;
-    public double BlackjackWatermarkOffsetX  { get; set; } = -496.0;
-    public double BlackjackWatermarkOffsetY  { get; set; } = -444.0;
+    // Spider's watermark now anchors to BoardGrid's own HorizontalAlignment="Left"
+    // VerticalAlignment="Top" + Margin (see SpiderView.axaml) instead of centering in
+    // BoardFeltGrid, whose measured size is inflated by DragCanvas/VictoryOverlay siblings
+    // sized to the full game area — same root problem Klondike/Freecell already had fixed
+    // (their comments in GameView.axaml/FreecellView.axaml explain it), just never actually
+    // applied here despite an earlier commit message claiming it was. OffsetX/Y reset to 0
+    // since the old values compensated for centering on the whole grid, not this anchor.
+    // Needs a fresh eyeball pass.
+    public double SpiderWatermarkOffsetX     { get; set; } = 0.0;
+    public double SpiderWatermarkOffsetY     { get; set; } = 0.0;
+    public double VideoPokerWatermarkOffsetX { get; set; } = 0.0;
+    public double VideoPokerWatermarkOffsetY { get; set; } = 0.0;
+    public double BlackjackWatermarkOffsetX  { get; set; } = 0.0;
+    public double BlackjackWatermarkOffsetY  { get; set; } = 0.0;
     public double HoneycombWatermarkOffsetX  { get; set; } = -312.0;
     public double HoneycombWatermarkOffsetY  { get; set; } = -240.0;
 
