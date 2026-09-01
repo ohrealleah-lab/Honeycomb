@@ -127,46 +127,38 @@ struct VideoPokerAndBlackjackTests {
     }
 
     static func testVideoPokerFreePlayDoesNotChargeOrPayCredits() {
-        // noStressMode now lives on SharedGameOptions, which persists to the global
-        // "global_no_stress_mode" UserDefaults key even for a standalone test
-        // instance — restore it so this doesn't leak into later tests that construct
-        // their own default SharedGameOptions() and expect noStressMode == false.
-        let savedNoStressMode = UserDefaults.standard.object(forKey: "global_no_stress_mode")
-        defer {
-            if let savedNoStressMode { UserDefaults.standard.set(savedNoStressMode, forKey: "global_no_stress_mode") }
-            else { UserDefaults.standard.removeObject(forKey: "global_no_stress_mode") }
+        withRestoredSharedGameOptions {
+            let viewModel = VideoPokerViewModel()
+            viewModel.options.variant = .jacksOrBetter
+            viewModel.sharedOptions.noStressMode = true
+            viewModel.state.sessionCredits = 0
+            viewModel.state.currentBet = 5
+
+            viewModel.deal()
+            assert(viewModel.state.phase == .holding, "Free play deal should not be blocked by zero credits")
+            assert(viewModel.state.sessionCredits == 0, "Free play deal should not deduct credits")
+
+            // Force a guaranteed winning hand (royal flush) before drawing.
+            viewModel.state.hand = [
+                Card(suit: .hearts, rank: 1, faceUp: true),
+                Card(suit: .hearts, rank: 13, faceUp: true),
+                Card(suit: .hearts, rank: 12, faceUp: true),
+                Card(suit: .hearts, rank: 11, faceUp: true),
+                Card(suit: .hearts, rank: 10, faceUp: true)
+            ]
+            viewModel.state.heldIndices = [0, 1, 2, 3, 4]
+            let handsWonBefore = viewModel.statistics.handsWon
+            let streakBefore = viewModel.statistics.currentStreak
+            let paidOutBefore = viewModel.statistics.totalPaidOut
+
+            viewModel.draw()
+
+            assert(viewModel.state.lastHandName == "Royal Flush", "Hand name should still be computed in free play")
+            assert(viewModel.state.sessionCredits == 0, "Free play should never award credits")
+            assert(viewModel.statistics.handsWon == handsWonBefore + 1, "Free play should still count the win")
+            assert(viewModel.statistics.currentStreak == streakBefore + 1, "Free play should still track win streaks")
+            assert(viewModel.statistics.totalPaidOut == paidOutBefore, "Free play should not report credits as paid out")
         }
-
-        let viewModel = VideoPokerViewModel()
-        viewModel.options.variant = .jacksOrBetter
-        viewModel.sharedOptions.noStressMode = true
-        viewModel.state.sessionCredits = 0
-        viewModel.state.currentBet = 5
-
-        viewModel.deal()
-        assert(viewModel.state.phase == .holding, "Free play deal should not be blocked by zero credits")
-        assert(viewModel.state.sessionCredits == 0, "Free play deal should not deduct credits")
-
-        // Force a guaranteed winning hand (royal flush) before drawing.
-        viewModel.state.hand = [
-            Card(suit: .hearts, rank: 1, faceUp: true),
-            Card(suit: .hearts, rank: 13, faceUp: true),
-            Card(suit: .hearts, rank: 12, faceUp: true),
-            Card(suit: .hearts, rank: 11, faceUp: true),
-            Card(suit: .hearts, rank: 10, faceUp: true)
-        ]
-        viewModel.state.heldIndices = [0, 1, 2, 3, 4]
-        let handsWonBefore = viewModel.statistics.handsWon
-        let streakBefore = viewModel.statistics.currentStreak
-        let paidOutBefore = viewModel.statistics.totalPaidOut
-
-        viewModel.draw()
-
-        assert(viewModel.state.lastHandName == "Royal Flush", "Hand name should still be computed in free play")
-        assert(viewModel.state.sessionCredits == 0, "Free play should never award credits")
-        assert(viewModel.statistics.handsWon == handsWonBefore + 1, "Free play should still count the win")
-        assert(viewModel.statistics.currentStreak == streakBefore + 1, "Free play should still track win streaks")
-        assert(viewModel.statistics.totalPaidOut == paidOutBefore, "Free play should not report credits as paid out")
     }
 
     static func testBlackjackDealerTurnPhaseGuard() {
@@ -289,39 +281,32 @@ struct VideoPokerAndBlackjackTests {
     }
 
     static func testBlackjackFreePlayBypassesCreditChecks() {
-        // See the matching comment in testVideoPokerFreePlayDoesNotChargeOrPayCredits —
-        // noStressMode now persists to a global UserDefaults key even for a standalone
-        // test instance, so it must be restored to avoid leaking into later tests.
-        let savedNoStressMode = UserDefaults.standard.object(forKey: "global_no_stress_mode")
-        defer {
-            if let savedNoStressMode { UserDefaults.standard.set(savedNoStressMode, forKey: "global_no_stress_mode") }
-            else { UserDefaults.standard.removeObject(forKey: "global_no_stress_mode") }
+        withRestoredSharedGameOptions {
+            let viewModel = BlackjackViewModel()
+            viewModel.sharedOptions.noStressMode = true
+            viewModel.state.sessionCredits = 0
+            viewModel.state.currentBet = 10
+
+            viewModel.deal()
+            assert(viewModel.state.phase == .playing || viewModel.state.phase == .result,
+                   "Free play deal should not be blocked by zero credits")
+            assert(viewModel.state.sessionCredits == 0, "Free play deal should not deduct credits")
+
+            viewModel.state.phase = .playing
+            viewModel.state.activeHandIndex = 0
+            viewModel.state.playerHands = [
+                BlackjackHand(cards: [
+                    Card(suit: .hearts, rank: 5, faceUp: true),
+                    Card(suit: .spades, rank: 5, faceUp: true)
+                ], bet: 10)
+            ]
+            assert(viewModel.canSplit == true, "canSplit should bypass the credit check in free play")
+            assert(viewModel.canDouble == true, "canDouble should bypass the credit check in free play")
+
+            viewModel.split()
+            assert(viewModel.state.sessionCredits == 0, "Free play split should not deduct credits")
+            assert(viewModel.state.playerHands.count == 2, "Split should still create two hands in free play")
         }
-
-        let viewModel = BlackjackViewModel()
-        viewModel.sharedOptions.noStressMode = true
-        viewModel.state.sessionCredits = 0
-        viewModel.state.currentBet = 10
-
-        viewModel.deal()
-        assert(viewModel.state.phase == .playing || viewModel.state.phase == .result,
-               "Free play deal should not be blocked by zero credits")
-        assert(viewModel.state.sessionCredits == 0, "Free play deal should not deduct credits")
-
-        viewModel.state.phase = .playing
-        viewModel.state.activeHandIndex = 0
-        viewModel.state.playerHands = [
-            BlackjackHand(cards: [
-                Card(suit: .hearts, rank: 5, faceUp: true),
-                Card(suit: .spades, rank: 5, faceUp: true)
-            ], bet: 10)
-        ]
-        assert(viewModel.canSplit == true, "canSplit should bypass the credit check in free play")
-        assert(viewModel.canDouble == true, "canDouble should bypass the credit check in free play")
-
-        viewModel.split()
-        assert(viewModel.state.sessionCredits == 0, "Free play split should not deduct credits")
-        assert(viewModel.state.playerHands.count == 2, "Split should still create two hands in free play")
     }
 
     static func testBlackjackActionsBlockedDuringDealerBlackjackPendingWindow() {
