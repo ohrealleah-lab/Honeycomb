@@ -1538,6 +1538,14 @@ public partial class MainWindow : Window
         if (isNewView && activeView is Control newView)
             newView.Loaded += (_, _) => SettleResponsiveLayout();
 
+        // Video Poker's board is much shorter than the solitaire tableau, so top-anchoring
+        // it (the default, shared with every other game) leaves a large dead gap below the
+        // buttons and crowds the credits bar right up against the title bar. Centering it
+        // vertically instead spreads that leftover space evenly above and below.
+        MainContentWrapper.VerticalAlignment = tag == "VideoPoker"
+            ? Avalonia.Layout.VerticalAlignment.Center
+            : Avalonia.Layout.VerticalAlignment.Top;
+
         this.DataContext = _coordinator.ActiveViewModel;
         RestoreWindowSizeForGame(tag);
         // RestoreWindowSizeForGame is the authoritative final size for this game switch,
