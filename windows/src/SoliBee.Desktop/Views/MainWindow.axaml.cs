@@ -1523,8 +1523,20 @@ public partial class MainWindow : Window
         // Only wired up the first time a view enters the cache — Loaded fires on every
         // reattach, so subscribing unconditionally here would stack a duplicate handler
         // onto the same cached instance on every subsequent switch back to this game.
+        //
+        // Goes through SettleResponsiveLayout(), not a bare UpdateResponsiveLayout() call —
+        // this Loaded event and the SettleResponsiveLayout() call below (triggered by the
+        // same game switch, for RestoreWindowSizeForGame's own async resize) were previously
+        // two independent, uncoordinated writers to the same _contentScale fields. If the
+        // window resize landed in the gap between two of the settle loop's 100ms ticks, the
+        // loop could read the same stale pre-resize size twice in a row, call it "stable",
+        // and stop — silently overwriting whatever correct value this Loaded handler had
+        // just written a moment earlier. First-launch-into-Video-Poker reproduced this
+        // reliably: cards rendered small until a manual window resize forced a fresh read.
+        // Routing both through the same retry loop means there's one stabilization pass
+        // instead of two racing ones.
         if (isNewView && activeView is Control newView)
-            newView.Loaded += (_, _) => UpdateResponsiveLayout();
+            newView.Loaded += (_, _) => SettleResponsiveLayout();
 
         this.DataContext = _coordinator.ActiveViewModel;
         RestoreWindowSizeForGame(tag);
@@ -2056,34 +2068,54 @@ public partial class MainWindow : Window
         // };
     }
 
-    // Retries UpdateResponsiveLayout every 100ms (up to 1s) until two consecutive
-    // attempts agree on the same scale. A single recompute right after a game/mode
-    // switch has repeatedly proven unreliable — Freecell 1-deck→2-deck switched while
-    // the window is already at its minimum size is a reproducible example: the first
-    // attempt sometimes measures a not-yet-settled layout and computes a wrong scale
-    // that nothing else corrects, even though a plain window resize afterward (which
-    // re-runs UpdateResponsiveLayout with fresh data) fixes it instantly. Rather than
-    // keep chasing the exact single right moment to recompute, retry until the result
-    // stops changing — whichever attempt lands after everything has actually settled is
-    // what sticks. onSettled (optional) runs once, when the loop stops for any reason.
+    // Retries UpdateResponsiveLayout until two consecutive attempts agree on the same
+    // scale. A single recompute right after a game/mode switch has repeatedly proven
+    // unreliable — Freecell 1-deck→2-deck switched while the window is already at its
+    // minimum size is a reproducible example: the first attempt sometimes measures a
+    // not-yet-settled layout and computes a wrong scale that nothing else corrects,
+    // even though a plain window resize afterward (which re-runs UpdateResponsiveLayout
+    // with fresh data) fixes it instantly. Rather than keep chasing the exact single
+    // right moment to recompute, retry until the result stops changing — whichever
+    // attempt lands after everything has actually settled is what sticks. onSettled
+    // (optional) runs once, when the loop stops for any reason.
+    //
+    // Driven by this.LayoutUpdated, not a blind DispatcherTimer tick — a wall-clock poll
+    // can land in the gap before RestoreWindowSizeForGame's async OS-level resize (only
+    // fires once per session — first launch or first game switch) has actually applied,
+    // read the same stale pre-resize Bounds twice in a row, and call that "stable" before
+    // the real resize is ever captured. LayoutUpdated only fires once Avalonia has
+    // actually finished a real layout pass, so a tick here always reflects the resize
+    // landing rather than a guess about how long it takes. Reproduced by Video Poker
+    // rendering undersized on first launch/switch until a manual window resize forced a
+    // fresh read; the same attempts>=4 floor is kept as a defensive minimum in case two
+    // early layout passes coincidentally agree before the resize's own pass arrives.
     private void SettleResponsiveLayout(Action? onSettled = null)
     {
         int attempts = 0;
         double? lastScale = null;
-        var settleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        settleTimer.Tick += (_, _) =>
+
+        // Establish a baseline immediately — LayoutUpdated only fires in response to an
+        // actual subsequent layout pass, so if the resize this is waiting on has already
+        // landed by the time we get here (or nothing else changes afterward), the loop
+        // below would otherwise never run at all.
+        UpdateResponsiveLayout();
+        attempts++;
+        lastScale = _contentScale.ScaleX;
+
+        EventHandler? handler = null;
+        handler = (_, _) =>
         {
             UpdateResponsiveLayout();
             attempts++;
             bool stable = lastScale.HasValue && Math.Abs(lastScale.Value - _contentScale.ScaleX) < 0.001;
             lastScale = _contentScale.ScaleX;
-            if (stable || attempts >= 10)
+            if ((stable && attempts >= 4) || attempts >= 10)
             {
-                settleTimer.Stop();
+                this.LayoutUpdated -= handler;
                 onSettled?.Invoke();
             }
         };
-        settleTimer.Start();
+        this.LayoutUpdated += handler;
     }
 
     private void UpdateResponsiveLayout()
@@ -2160,6 +2192,21 @@ public partial class MainWindow : Window
         double effectiveZoom = isVerticallyStackedGame
             ? Math.Min(scaleX, Math.Max(1, GameAreaGrid.Bounds.Height) / naturalH)
             : scaleX;
+
+        // Blackjack/Video Poker's content is much narrower than the solitaire tableau, so
+        // pure width-driven scaling stretches them edge-to-edge on a wide window — unlike
+        // Mac, which centers a fixed-width board and lets leftover space become margin
+        // instead of growing the board to fill it. Capping the board to at most 75% of the
+        // available width mimics that: the board (MainContentWrapper is
+        // HorizontalAlignment="Center") is centered in the remainder instead of stretching
+        // all the way to the 30px edge margins. Honeycomb is deliberately excluded — its
+        // sizing was already correct and shouldn't change.
+        bool capsBoardWidth = _currentGameTag == "Blackjack" || _currentGameTag == "VideoPoker";
+        if (capsBoardWidth)
+        {
+            double maxWidthCapZoom = (GameAreaGrid.Bounds.Width * 0.75) / naturalW;
+            effectiveZoom = Math.Min(effectiveZoom, maxWidthCapZoom);
+        }
 
         _contentScale.ScaleX = effectiveZoom;
         _contentScale.ScaleY = effectiveZoom;
