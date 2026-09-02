@@ -932,18 +932,6 @@ struct BlackjackOptionsView: View {
                 .help(coordinator.L(.honeyModeTooltip))
             Toggle(coordinator.L(.manuallyDismissBanners), isOn: $coordinator.manuallyDismissBanners).font(.system(.body))
             Toggle(coordinator.L(.hideBee), isOn: $hideBee).font(.system(.body))
-
-            // Live-updating (bound directly to coordinator, not local @State + onOK) so
-            // the bee visibly resizes on the board behind this sheet while dragging —
-            // matches how the watermark's own scale is stored/persisted (didSet ->
-            // UserDefaults), unlike every other control on this sheet which stages its
-            // edit in @State until OK. Only shown when the bee isn't hidden.
-            if !hideBee {
-                Slider(value: $coordinator.blackjackWatermarkScale, in: 0.5...4.0) {
-                    Text(coordinator.L(.beeSize))
-                }
-                .font(.system(.body))
-            }
         }
     }
 }
