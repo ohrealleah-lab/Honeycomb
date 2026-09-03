@@ -98,6 +98,8 @@ public enum StringKey
     CardBankFullLine2,
     ObtainedAllCardsFmt,
     RematchToTakeAnother,
+    CardToSteal,
+    CardsToStealFmt,
     StealProtectionLine,
     StealCard,
     ConfirmStealTitle,

@@ -2251,6 +2251,21 @@ public partial class HoneycombViewModel : ObservableObject
         return true;
     }
 
+    // Count of THIS opponent's frozen deck not yet in the player's global card bank —
+    // shown alongside RematchToTakeAnother so the "one steal per rematch" cooldown
+    // message also says how many are left to go. Mirrors the Swift port's
+    // opponentCardsRemainingCount.
+    public int OpponentCardsRemainingCount()
+    {
+        if (_rematchOpponentDeck == null) return 0;
+        int count = 0;
+        foreach (var card in _rematchOpponentDeck)
+        {
+            if (!HoneycombProfileManager.Shared.UnlockedCardIds.Contains(card.Id)) count++;
+        }
+        return count;
+    }
+
     // Steal Protection: covers the case where a rematch's frozen opponent pool
     // happens to include a card that's realistically never capturable (e.g. a 5★
     // with an Ace on every side) — without this, the player could keep winning

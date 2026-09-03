@@ -533,8 +533,12 @@ public struct HoneycombView: View {
                                 .foregroundColor(.white).padding()
                         } else if viewModel.matchOutcome == .win && !coordinator.noStressMode
                             && viewModel.hasStolenThisMatch {
-                            Text(coordinator.L(.rematchToTakeAnother))
-                                .foregroundColor(.white).padding()
+                            VStack {
+                                Text(coordinator.L(.rematchToTakeAnother))
+                                let remaining = viewModel.opponentCardsRemainingCount
+                                Text(remaining == 1 ? coordinator.L(.cardToSteal) : coordinator.L(.cardsToStealFmt, remaining))
+                            }
+                            .foregroundColor(.white).padding()
                         } else if viewModel.matchOutcome == .win && !coordinator.noStressMode
                             && viewModel.stealProtectionActive && viewModel.hasStealableCard {
                             // Only claims a card is available when one actually is —

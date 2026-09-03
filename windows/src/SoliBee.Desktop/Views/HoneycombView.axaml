@@ -225,6 +225,7 @@
                     <TextBlock x:Name="BankFullWarningText" Text="Your card bank is full. Start over in manage decks to steal again." IsVisible="False" FontSize="14" Foreground="#FF9999" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     <TextBlock x:Name="AllSecretsWarningText" Text="All of their secrets, yours. There's nothing left to steal." IsVisible="False" FontSize="14" Foreground="#FFFFFF" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     <TextBlock x:Name="AlreadyStolenWarningText" Text="Rematch to take another." IsVisible="False" FontSize="14" Foreground="#FF9999" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                    <TextBlock x:Name="CardsToStealText" IsVisible="False" FontSize="14" Foreground="#FF9999" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     <TextBlock x:Name="StealProtectionText" Text="The hive takes pity on you — a rare card finds its way home." IsVisible="False" FontSize="14" Foreground="#FFFFFF" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     <TextBlock x:Name="ObtainedAllOpponentCardsText" IsVisible="False" FontSize="14" Foreground="#FFFFFF" HorizontalAlignment="Center" TextWrapping="Wrap" />
                 </StackPanel>

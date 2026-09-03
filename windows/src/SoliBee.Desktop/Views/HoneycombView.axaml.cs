@@ -607,6 +607,7 @@ public partial class HoneycombView : UserControl
                 BankFullWarningText.IsVisible = bankFull;
                 AllSecretsWarningText.IsVisible = bankFull;
                 AlreadyStolenWarningText.IsVisible = false;
+                CardsToStealText.IsVisible = false;
                 // Distinct from the bank-full case above: every card FROM THIS OPPONENT
                 // specifically is already owned, even though the player's overall bank
                 // isn't full. hasStealableCard is necessarily false whenever this is
@@ -628,13 +629,21 @@ public partial class HoneycombView : UserControl
                 BankFullWarningText.IsVisible = !globalOpts.IsNoStressMode && won && bankFull;
                 AllSecretsWarningText.IsVisible = !globalOpts.IsNoStressMode && won && bankFull;
                 StealProtectionText.IsVisible = false;
-                
+
                 ObtainedAllOpponentCardsText.Text = Strings.Get(StringKey.ObtainedAllCardsFmt, _language).Replace("%@", vm.OpponentNameDisplay);
                 ObtainedAllOpponentCardsText.IsVisible = !globalOpts.IsNoStressMode && won && obtainedAllOpponentCards;
-                
+
                 // Only the "already stolen" scenario gets its own message here — a
                 // loss/draw or No Stress Mode has nothing steal-related to explain.
-                AlreadyStolenWarningText.IsVisible = !globalOpts.IsNoStressMode && won && state.HasStolenThisMatch && !bankFull && !obtainedAllOpponentCards;
+                bool showAlreadyStolen = !globalOpts.IsNoStressMode && won && state.HasStolenThisMatch && !bankFull && !obtainedAllOpponentCards;
+                AlreadyStolenWarningText.IsVisible = showAlreadyStolen;
+                // Says how many of this opponent's cards are still left to steal across
+                // future rematches — mirrors the Swift port's opponentCardsRemainingCount.
+                int remaining = vm.OpponentCardsRemainingCount();
+                CardsToStealText.Text = remaining == 1
+                    ? Strings.Get(StringKey.CardToSteal, _language)
+                    : Strings.Get(StringKey.CardsToStealFmt, _language).Replace("%d", remaining.ToString());
+                CardsToStealText.IsVisible = showAlreadyStolen;
             }
         }
         

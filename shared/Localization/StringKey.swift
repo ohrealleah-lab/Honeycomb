@@ -184,6 +184,10 @@ public enum StringKey: String, CaseIterable {
     case obtainedAllCardsFmt = "obtained_all_cards_fmt"
     /// Post-game overlay note, reused Mac/iOS Honeycomb
     case rematchToTakeAnother = "rematch_to_take_another"
+    /// Appended below rematch_to_take_another when exactly 1 card remains uncollected from this opponent
+    case cardToSteal = "card_to_steal"
+    /// Appended below rematch_to_take_another when 2+ cards remain uncollected from this opponent; %d = count
+    case cardsToStealFmt = "cards_to_steal_fmt"
     /// Post-game overlay flavor line, reused Mac/iOS/Windows Honeycomb
     case stealProtectionLine = "steal_protection_line"
     /// Post-game action button, shared Mac/Windows/iOS
@@ -1374,8 +1378,6 @@ public enum StringKey: String, CaseIterable {
     case globalOptionsSection = "global_options_section"
     /// Toggle label, reused across every game's Options on Mac/iOS/Windows
     case hideBee = "hide_bee"
-    /// Slider label for the bee watermark's size, reused across every game's Mac Options sheet
-    case beeSize = "bee_size"
     /// Tooltip for the Honey Mode toggle
     case honeyModeTooltip = "honey_mode_tooltip"
     /// Tooltip for the No Stress Mode toggle

@@ -998,9 +998,13 @@ struct HoneycombTouchView: View {
                             .font(.footnote).foregroundColor(.white)
                             .multilineTextAlignment(.center)
                     } else if viewModel.hasStolenThisMatch {
-                        Text(coordinator.L(.rematchToTakeAnother))
-                            .font(.footnote).foregroundColor(.white)
-                            .multilineTextAlignment(.center)
+                        VStack(spacing: 4) {
+                            Text(coordinator.L(.rematchToTakeAnother))
+                            let remaining = viewModel.opponentCardsRemainingCount
+                            Text(remaining == 1 ? coordinator.L(.cardToSteal) : coordinator.L(.cardsToStealFmt, remaining))
+                        }
+                        .font(.footnote).foregroundColor(.white)
+                        .multilineTextAlignment(.center)
                     } else if viewModel.stealProtectionActive && viewModel.hasStealableCard {
                         // Matches mac's own guard (HoneycombView.swift) — only claims a
                         // card is available when one actually is. stealProtectionActive
