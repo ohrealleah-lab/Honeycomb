@@ -770,7 +770,8 @@ struct BlackjackTouchView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
                 .padding(.vertical, 36)
-                .background(Color.black.opacity(0.5))
+                // 0.75 matches mac/Windows and the other games' win banners.
+                .background(Color.black.opacity(0.75))
                 .cornerRadius(24)
                 .shadow(color: isWin ? Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5) : .clear, radius: 32)
                 .padding(.horizontal, 16)

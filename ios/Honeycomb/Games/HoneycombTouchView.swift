@@ -201,7 +201,11 @@ struct HoneycombTouchView: View {
                 .allowsHitTesting(showingRuleBanner)
                 .onTapGesture { dismissRuleBanner() }
 
-            if isStealingCard {
+            // Hidden once a steal is staged (pendingSteal != nil) — the confirmation
+            // alert ("Are you sure you want to steal this card?") takes over from here,
+            // and leaving this instruction toast up underneath it stacked two banners
+            // on screen at once. Matches mac's rulesBanner (HoneycombView.swift).
+            if isStealingCard && viewModel.pendingSteal == nil {
                 stealInstructionBar
             }
 
@@ -1048,7 +1052,10 @@ struct HoneycombTouchView: View {
             // shadow) rather than the frosted .ultraThinMaterial look this had before —
             // that translucent glass let the board show through and didn't match any
             // other banner in the app.
-            .background(Color.black.opacity(0.8))
+            // 0.75 matches mac/Windows and the other five games' win banners (mac
+            // normalized all of them from a mix of 0.5/0.8 to 0.75 — see
+            // HoneycombView.swift).
+            .background(Color.black.opacity(0.75))
             .cornerRadius(16)
             .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
             // Dismiss lives on the overlay card itself (not the screen corner) so it
