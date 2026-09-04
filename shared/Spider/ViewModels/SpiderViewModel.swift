@@ -425,7 +425,12 @@ public final class SpiderViewModel {
         if hasEmptyTableauColumn {
             return
         }
-        
+
+        // Dealing changes what's on top of every tableau column — an active hint may
+        // reference a card that's about to be buried. Matches moveCards/undoLastAction/
+        // startNewGame's own unconditional clearHint() for the same reason.
+        clearHint()
+
         saveStateForUndo()
         startTimerIfNeeded()
         playSound(named: "shuffle")

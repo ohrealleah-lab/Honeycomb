@@ -494,6 +494,11 @@ public final class GameViewModel {
             return
         }
 
+        // Drawing changes what's on top of waste — an active hint may reference a card
+        // that's about to be buried. Matches moveCards/undoLastAction/startNewGame's own
+        // unconditional clearHint() for the same reason (board state changed under the hint).
+        clearHint()
+
         saveStateForUndo()
         hasDrawnFromStockThisGame = true
 
@@ -522,7 +527,11 @@ public final class GameViewModel {
     public func recycleStock() {
         guard state.stock.isEmpty && !state.waste.isEmpty else { return }
         guard canRecycleStock else { return }
-        
+
+        // Recycling empties waste entirely — an active hint may reference a card that's
+        // about to disappear from view. See drawCard()'s clearHint() for the same reason.
+        clearHint()
+
         saveStateForUndo()
         state.recyclesCount += 1
         playSound(named: "shuffle")
