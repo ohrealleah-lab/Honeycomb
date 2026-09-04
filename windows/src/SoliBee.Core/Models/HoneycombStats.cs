@@ -24,6 +24,19 @@ public class HoneycombStats
     public int SuddenDeathCount { get; set; }
     public List<int> CollectedCardIds { get; set; } = new List<int> { 1, 2, 3, 4, 5 }; // default starter deck
 
+    // Win % of decisive games (draws excluded from the denominator) — was
+    // independently reimplemented identically in MainWindow.axaml.cs (and again on
+    // mac/iOS, now fixed to share shared/Honeycomb/Models/HoneycombStats.swift's
+    // winRate). Now the one shared source all three read.
+    public double WinRate
+    {
+        get
+        {
+            int decisiveGames = GamesPlayed - MatchesDrawn;
+            return decisiveGames > 0 ? 100.0 * MatchesWon / decisiveGames : 0.0;
+        }
+    }
+
     public void RecordGame(bool won, bool drawn, int captures, int sessionCombos, bool flawless, HoneycombDifficulty difficulty, int fallenAceCaptures)
     {
         GamesPlayed++;

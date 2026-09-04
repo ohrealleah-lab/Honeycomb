@@ -856,8 +856,6 @@ public partial class MainWindow : Window
         StatsTitleText.Text = Strings.Get(StringKey.HoneycombStatistics, _language);
 
         var s = vm.Stats;
-        int decisiveGames = s.GamesPlayed - s.MatchesDrawn;
-        double winRate = decisiveGames > 0 ? 100.0 * s.MatchesWon / decisiveGames : 0.0;
 
         StatsDynamicRowsCol1.Children.Clear();
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.GamesPlayed, _language),            s.GamesPlayed.ToString()));
@@ -865,7 +863,7 @@ public partial class MainWindow : Window
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatMatchesLost, _language),        s.MatchesLost.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatMatchesDrawn, _language),       s.MatchesDrawn.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatSwarmsToDeath, _language),      s.SuddenDeathCount.ToString()));
-        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),                $"{winRate:0.0}%"));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),                $"{s.WinRate:0.0}%"));
 
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatCurrentWinStreak, _language),       s.CurrentWinStreak.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatLongestWinStreak, _language),       s.LongestWinStreak.ToString()));

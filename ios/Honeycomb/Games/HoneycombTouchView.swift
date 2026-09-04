@@ -1203,11 +1203,6 @@ struct HoneycombStatsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppCoordinator.self) private var coordinator
 
-    private var winRate: Double {
-        let decisiveGames = stats.gamesPlayed - stats.matchesDrawn
-        return decisiveGames > 0 ? Double(stats.matchesWon) / Double(decisiveGames) * 100 : 0
-    }
-
     var body: some View {
         NavigationStack {
             List {
@@ -1218,7 +1213,7 @@ struct HoneycombStatsSheet: View {
                 HStack {
                     Text(coordinator.L(.winRate))
                     Spacer()
-                    Text(String(format: "%.1f%%", winRate)).foregroundStyle(.secondary)
+                    Text(String(format: "%.1f%%", stats.winRate)).foregroundStyle(.secondary)
                 }
                 statRow(coordinator.L(.statCardsCaptured), stats.cardsCaptured)
                 statRow(coordinator.L(.statCardsStolen), stats.cardsStolen)

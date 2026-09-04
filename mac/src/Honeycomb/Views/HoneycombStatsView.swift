@@ -27,8 +27,6 @@ public struct HoneycombStatsView: View {
 
     public var body: some View {
         let stats = viewModel.stats
-        let decisiveGames = stats.gamesPlayed - stats.matchesDrawn
-        let winRate = decisiveGames > 0 ? Double(stats.matchesWon) / Double(decisiveGames) * 100 : 0
         let totalUnlocked = profile.unlockedCardIds.count
         let totalCards = db.allCards.count
         let unlockedPercent = totalCards > 0 ? Double(totalUnlocked) / Double(totalCards) * 100 : 0
@@ -52,7 +50,7 @@ public struct HoneycombStatsView: View {
                         StatRowView(label: coordinator.L(.statMatchesLost), value: "\(stats.matchesLost)")
                         StatRowView(label: coordinator.L(.statMatchesDrawn), value: "\(stats.matchesDrawn)")
                         StatRowView(label: coordinator.L(.statSwarmsToDeath), value: "\(stats.suddenDeathCount)")
-                        StatRowView(label: coordinator.L(.winRate), value: String(format: "%.1f%%", winRate))
+                        StatRowView(label: coordinator.L(.winRate), value: String(format: "%.1f%%", stats.winRate))
 
                         Divider()
 

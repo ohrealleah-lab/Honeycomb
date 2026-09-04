@@ -24,6 +24,15 @@ public struct HoneycombStats: Codable, Equatable {
 
     public init() {}
 
+    // Win % of decisive games (draws excluded from the denominator) — was
+    // independently reimplemented identically on mac (HoneycombStatsView.swift) and
+    // iOS (HoneycombTouchView.swift), risking silent drift if only one side got
+    // edited later. Now the one shared source both read.
+    public var winRate: Double {
+        let decisiveGames = gamesPlayed - matchesDrawn
+        return decisiveGames > 0 ? Double(matchesWon) / Double(decisiveGames) * 100 : 0
+    }
+
     private enum CodingKeys: String, CodingKey {
         case gamesPlayed, matchesWon, matchesLost, matchesDrawn, cardsCaptured
         case currentWinStreak, longestWinStreak, flawlessVictories, samePlusTriggers
