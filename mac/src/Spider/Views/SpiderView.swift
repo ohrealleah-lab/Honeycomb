@@ -951,10 +951,10 @@ struct SpiderStatsView: View {
                             coordinator.L(.longestStreakColon), "\(stats.longestStreak)")
                 Divider()
                 statPairRow(coordinator.L(.highScoreColon), viewModel.highScoreString,
-                            coordinator.L(.avgWinningTimeColon), stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : coordinator.L(.noTimePlaceholder))
+                            coordinator.L(.avgWinningTimeColon), stats.winningGamesCount > 0 ? formatTime(Int(stats.averageWinningTime)) : coordinator.L(.noTimePlaceholder))
                 Divider()
-                statPairRow(coordinator.L(.winPercentageColon), String(format: "%.1f%%", stats.winPercentage),
-                            coordinator.L(.fastestWinColon), stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : coordinator.L(.noTimePlaceholder))
+                statPairRow(coordinator.L(.winPercentageColon), String(format: "%.0f%%", stats.winPercentage),
+                            coordinator.L(.fastestWinColon), stats.shortestWinTime > 0 ? formatTime(stats.shortestWinTime) : coordinator.L(.noTimePlaceholder))
             }
             .padding(.horizontal, 24)
 
@@ -1015,5 +1015,9 @@ struct SpiderStatsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 10)
+    }
+
+    private func formatTime(_ totalSeconds: Int) -> String {
+        String(format: "%02d:%02d", totalSeconds / 60, totalSeconds % 60)
     }
 }

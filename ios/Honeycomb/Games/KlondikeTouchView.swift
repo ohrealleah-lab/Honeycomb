@@ -863,6 +863,15 @@ struct KlondikeStatsSheet: View {
                 if stats.shortestWinTime > 0 {
                     row(coordinator.L(.fastestWin), String(format: "%02d:%02d", stats.shortestWinTime / 60, stats.shortestWinTime % 60))
                 }
+                // Matches mac's GameView stats sheet — only shown in Vegas Scoring mode.
+                if viewModel.options.isVegasScoring {
+                    HStack {
+                        Text(coordinator.L(.vegasBankrollLabel))
+                        Spacer()
+                        Text(viewModel.vegasBankrollString)
+                            .foregroundStyle(viewModel.vegasBankroll >= 0 ? .green : .red)
+                    }
+                }
             }
             .navigationTitle(coordinator.L(.klondikeStatisticsTitle))
             .navigationBarTitleDisplayMode(.inline)

@@ -1125,10 +1125,10 @@ struct BeecellStatsView: View {
                             coordinator.L(.longestStreakColon), "\(stats.longestStreak)")
                 Divider()
                 statPairRow(coordinator.L(.highScoreColon), viewModel.highScoreString,
-                            coordinator.L(.avgWinningTimeColon), stats.winningGamesCount > 0 ? String(format: "%.0fs", stats.averageWinningTime) : "--")
+                            coordinator.L(.avgWinningTimeColon), stats.winningGamesCount > 0 ? formatTime(Int(stats.averageWinningTime)) : "--")
                 Divider()
-                statPairRow(coordinator.L(.winPercentageColon), String(format: "%.1f%%", stats.winPercentage),
-                            coordinator.L(.fastestWinColon), stats.shortestWinTime > 0 ? "\(stats.shortestWinTime)s" : "--")
+                statPairRow(coordinator.L(.winPercentageColon), String(format: "%.0f%%", stats.winPercentage),
+                            coordinator.L(.fastestWinColon), stats.shortestWinTime > 0 ? formatTime(stats.shortestWinTime) : "--")
             }
             .padding(.horizontal, 24)
 
@@ -1185,5 +1185,9 @@ struct BeecellStatsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 10)
+    }
+
+    private func formatTime(_ totalSeconds: Int) -> String {
+        String(format: "%02d:%02d", totalSeconds / 60, totalSeconds % 60)
     }
 }

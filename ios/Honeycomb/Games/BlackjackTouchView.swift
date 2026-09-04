@@ -1280,8 +1280,6 @@ struct BlackjackStatsSheet: View {
                 row(coordinator.L(.biggestPay), "\(viewModel.statistics.biggestPayout)")
                 row(coordinator.L(.rtpStat), String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100))
                 row(coordinator.L(.rebuysStat), "\(viewModel.statistics.rebuyCount)")
-                row(coordinator.L(.touchHandsDealtStat), "\(viewModel.state.handsDealt)")
-                row(coordinator.L(.touchSessionCreditsStat), "\(viewModel.state.sessionCredits)")
             }
             .navigationTitle(coordinator.L(.blackjackStatistics))
             .navigationBarTitleDisplayMode(.inline)

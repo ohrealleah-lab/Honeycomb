@@ -800,8 +800,6 @@ struct VideoPokerStatsSheet: View {
                 row(coordinator.L(.rtpStat), String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100))
                 row(coordinator.L(.royalFlushes), "\(viewModel.statistics.royalFlushCount)")
                 row(coordinator.L(.rebuysStat), "\(viewModel.statistics.rebuyCount)")
-                row(coordinator.L(.touchHandsDealtStat), "\(viewModel.state.handsDealt)")
-                row(coordinator.L(.touchSessionCreditsStat), "\(viewModel.state.sessionCredits)")
             }
             .navigationTitle(coordinator.L(.videoPokerStatistics))
             .navigationBarTitleDisplayMode(.inline)

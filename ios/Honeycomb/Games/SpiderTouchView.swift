@@ -806,8 +806,14 @@ struct SpiderStatsSheet: View {
                 row(coordinator.L(.winRate), String(format: "%.0f%%", stats.winPercentage))
                 row(coordinator.L(.currentStreak), "\(stats.currentStreak)")
                 row(coordinator.L(.longestStreak), "\(stats.longestStreak)")
-                row(coordinator.L(.statAverageWinTime), formatTime(Int(viewModel.averageWinningTime)))
-                row(coordinator.L(.fastestWin), formatTime(viewModel.shortestWinTime))
+                // Gated the same as mac's SpiderStatsView — with 0 wins these would
+                // otherwise show a meaningless "00:00".
+                if stats.winningGamesCount > 0 {
+                    row(coordinator.L(.statAverageWinTime), formatTime(Int(viewModel.averageWinningTime)))
+                }
+                if viewModel.shortestWinTime > 0 {
+                    row(coordinator.L(.fastestWin), formatTime(viewModel.shortestWinTime))
+                }
             }
             .navigationTitle(coordinator.L(.spiderStatisticsFmt, viewModel.options.suitCount, viewModel.options.suitCount == 1 ? coordinator.L(.labelSuitSingular) : coordinator.L(.labelSuitPlural)))
             .navigationBarTitleDisplayMode(.inline)
