@@ -34,15 +34,37 @@ public struct HoneycombDecksView: View {
     @State private var filterStatRight: String = ""
     @State private var filterStatBottom: String = ""
 
+    // Suit tie-break order matches the game's own canonical suit order
+    // (HoneycombCardGenerator's `suits` array), not alphabetical.
+    private static let suitSortOrder = ["S", "H", "D", "C"]
+
     private var filteredCardBank: [Int] {
         let db = HoneycombDatabase.shared
-        return Array(profile.unlockedCardIds).sorted().filter { id in
-            guard let card = db.card(id: id) else { return false }
-            if let star = filterStar, card.stars != star { return false }
-            if let suit = filterSuit, card.suit != suit { return false }
-            if filterFavoritesOnly && !profile.favoriteCardIds.contains(id) { return false }
-            return true
-        }
+        return Array(profile.unlockedCardIds)
+            .filter { id in
+                guard let card = db.card(id: id) else { return false }
+                if let star = filterStar, card.stars != star { return false }
+                if let suit = filterSuit, card.suit != suit { return false }
+                if filterFavoritesOnly && !profile.favoriteCardIds.contains(id) { return false }
+                return true
+            }
+            // Rank (stars) first, descending — rarest/best cards lead — then suit in
+            // canonical order, then id as a final stable tiebreak within the same
+            // star+suit. Was a bare `.sorted()` on id, which (since ids are assigned
+            // suit-major, star-minor at generation time — see HoneycombCardGenerator)
+            // sorted the bank by suit first and rank second, the reverse of what this
+            // screen should show.
+            .sorted { a, b in
+                let cardA = db.card(id: a)
+                let cardB = db.card(id: b)
+                let starsA = cardA?.stars ?? 0
+                let starsB = cardB?.stars ?? 0
+                if starsA != starsB { return starsA > starsB }
+                let suitIndexA = cardA.flatMap { Self.suitSortOrder.firstIndex(of: $0.suit) } ?? Self.suitSortOrder.count
+                let suitIndexB = cardB.flatMap { Self.suitSortOrder.firstIndex(of: $0.suit) } ?? Self.suitSortOrder.count
+                if suitIndexA != suitIndexB { return suitIndexA < suitIndexB }
+                return a < b
+            }
     }
 
     // "A"/"a" = 10 (matches HoneycombCardView's own statString), 1-9 parse directly;
