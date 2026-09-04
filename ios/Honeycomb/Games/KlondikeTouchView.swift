@@ -342,6 +342,17 @@ struct KlondikeTouchView: View {
         // the undo/hint slot next door.
         let fanStep = cardW * 0.16
 
+        // The stock/waste "draw" and "recycle" hints are modeled as stock↔waste
+        // source/target pairs (see GameViewModel's hint scoring), so a plain
+        // hintTouches(waste.id) check also lights up waste whenever stock is the
+        // hint's source or target — even though stock already rings itself (see
+        // stockView above). Excluding those two cases here matches mac's
+        // GameView (isHinted's stock exclusion) so only the stock pile rings for
+        // a draw/recycle hint, not both.
+        let isHinted = hintTouches(viewModel.state.waste.id)
+            && viewModel.activeHint?.sourcePileId != viewModel.state.stock.id
+            && viewModel.activeHint?.targetPileId != viewModel.state.stock.id
+
         return ZStack(alignment: .topLeading) {
             emptySlot(cardW: cardW, cardH: cardH, symbol: nil)
             ForEach(Array(visible.enumerated()), id: \.element.id) { i, card in
@@ -354,18 +365,27 @@ struct KlondikeTouchView: View {
                         if isTop { viewModel.doubleClickMoveToFoundation(card: card, from: viewModel.state.waste) }
                     }
             }
+            // Ring drawn as its own sibling, positioned with the same offset math as
+            // the top card, rather than chained onto the card view itself — see the
+            // identical fix/comment in tableauColumn below. Chaining TouchHintHighlight
+            // directly onto an already-offset per-card view renders with stale/cached
+            // geometry from TouchHintAnimatable (an AnimatableModifier), not the card's
+            // actual offset position, which is what made the ring visually engulf the
+            // whole fan instead of tightly bordering just the top card.
+            //
+            // Always mounted (not `if !visible.isEmpty { ... }`) — TouchHintHighlight's
+            // pulse only starts on an isHighlighted false->true *transition* (driven by
+            // .onChange). A conditionally-inserted view is born with isHighlighted
+            // already true, so there's no transition to observe and the ring never
+            // animates in. See the matching comment on tableauColumn's own ring sibling.
+            Color.clear
+                .frame(width: cardW, height: cardH)
+                .modifier(TouchHintHighlight(isHighlighted: !visible.isEmpty && isHinted))
+                .offset(x: CGFloat(max(0, visible.count - 1)) * fanStep)
+                .allowsHitTesting(false)
         }
         .frame(width: cardW, height: cardH, alignment: .topLeading)
-        // The stock/waste "draw" and "recycle" hints are modeled as stock↔waste
-        // source/target pairs (see GameViewModel's hint scoring), so a plain
-        // hintTouches(waste.id) check also lights up waste whenever stock is the
-        // hint's source or target — even though stock already rings itself (see
-        // stockView above). Excluding those two cases here matches mac's
-        // GameView (isHinted's stock exclusion) so only the stock pile rings for
-        // a draw/recycle hint, not both.
-        .modifier(TouchHintHighlight(isHighlighted: hintTouches(viewModel.state.waste.id)
-            && viewModel.activeHint?.sourcePileId != viewModel.state.stock.id
-            && viewModel.activeHint?.targetPileId != viewModel.state.stock.id))
+        .modifier(TouchHintHighlight(isHighlighted: visible.isEmpty && isHinted))
         .background(frameTracker(id: viewModel.state.waste.id))
         .zIndex(2)
     }
@@ -422,9 +442,17 @@ struct KlondikeTouchView: View {
         }
         let columnHeight = (pile.cards.isEmpty ? cardH : (offsets.last ?? 0) + cardH)
 
-        let hintIndex = hintTouches(pile.id)
-            ? pile.cards.firstIndex(where: { $0.id == viewModel.activeHint?.card.id })
-            : nil
+        // The hinted card lives only in the *source* pile's cards array, so
+        // matching on its id finds nothing when this pile is the *target* —
+        // fall back to the top card in that case, mirroring mac's isTarget
+        // branch that highlights the destination's top card.
+        let hintIndex: Int? = {
+            guard hintTouches(pile.id) else { return nil }
+            if viewModel.activeHint?.sourcePileId == pile.id {
+                return pile.cards.firstIndex(where: { $0.id == viewModel.activeHint?.card.id })
+            }
+            return pile.cards.isEmpty ? nil : pile.cards.count - 1
+        }()
 
         return ZStack(alignment: .top) {
             emptySlot(cardW: cardW, cardH: cardH, symbol: nil)

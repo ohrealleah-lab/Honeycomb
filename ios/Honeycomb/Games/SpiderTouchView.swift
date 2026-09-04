@@ -380,9 +380,17 @@ struct SpiderTouchView: View {
             running += card.faceUp ? upStep : downStep
         }
         let columnHeight = (pile.cards.isEmpty ? cardH : (offsets.last ?? 0) + cardH)
-        let hintIndex = hintTouches(pile.id)
-            ? pile.cards.firstIndex(where: { $0.id == viewModel.activeHint?.card.id })
-            : nil
+        // The hinted card lives only in the *source* pile's cards array, so
+        // matching on its id finds nothing when this pile is the *target* —
+        // fall back to the top card in that case, mirroring mac's isTarget
+        // branch (SpiderViews.swift) that highlights the destination's top card.
+        let hintIndex: Int? = {
+            guard hintTouches(pile.id) else { return nil }
+            if viewModel.activeHint?.sourcePileId == pile.id {
+                return pile.cards.firstIndex(where: { $0.id == viewModel.activeHint?.card.id })
+            }
+            return pile.cards.isEmpty ? nil : pile.cards.count - 1
+        }()
 
         return ZStack(alignment: .top) {
             RoundedRectangle(cornerRadius: cardW * 0.07)
