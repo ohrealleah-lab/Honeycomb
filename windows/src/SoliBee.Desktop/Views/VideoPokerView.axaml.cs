@@ -938,7 +938,7 @@ public partial class VideoPokerView : UserControl
                 DoDealOrDraw(vm); e.Handled = true; break;
             case Key.H:
                 if (vm.IsHolding) { vm.HoldAll(); Refresh(vm); } e.Handled = true; break;
-            case Key.Q:
+            case Key.C:
                 if (vm.IsHolding) { vm.ClearHolds(); Refresh(vm); } e.Handled = true; break;
             case Key.D1: case Key.NumPad1: HoldByKey(vm, 0); e.Handled = true; break;
             case Key.D2: case Key.NumPad2: HoldByKey(vm, 1); e.Handled = true; break;

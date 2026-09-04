@@ -33,7 +33,6 @@ public partial class MainWindow : Window
     private bool _revertingSelection = false;
     private PreferencesView? _preferencesView;
     private ManageDecksView? _manageDecksView;
-    private bool _closePreferencesAfterModeConfirm;
     private INotifyPropertyChanged? _hintTrackedVm;
     private AppLanguage _language = AppLanguage.English;
     // Keyed by game family ("Game"/"Freecell"/"Spider"/...), not by tag — variants like
@@ -561,8 +560,8 @@ public partial class MainWindow : Window
         if (IsGameInProgress())
         {
             _pendingAction = "NewGame";
-            ConfirmActionTitle.Text = "Start New Game?";
-            ConfirmActionMessage.Text = "Are you sure you want to abandon the current game and start a new one?";
+            ConfirmActionTitle.Text = Strings.Get(StringKey.NewGameConfirmTitle, _language);
+            ConfirmActionMessage.IsVisible = false;
             ConfirmActionButton.Content = Strings.Get(StringKey.NewGame, _language);
             ConfirmActionOverlay.IsVisible = true;
         }
@@ -577,9 +576,9 @@ public partial class MainWindow : Window
         if (IsGameInProgress())
         {
             _pendingAction = "RestartGame";
-            ConfirmActionTitle.Text = "Restart Game?";
-            ConfirmActionMessage.Text = "Are you sure you want to restart the current game?";
-            ConfirmActionButton.Content = Strings.Get(StringKey.Restart, _language);
+            ConfirmActionTitle.Text = Strings.Get(StringKey.RestartConfirmTitle, _language);
+            ConfirmActionMessage.IsVisible = false;
+            ConfirmActionButton.Content = Strings.Get(StringKey.RestartGame, _language);
             ConfirmActionOverlay.IsVisible = true;
         }
         else
@@ -598,25 +597,6 @@ public partial class MainWindow : Window
         else if (_pendingAction == "RestartGame")
         {
             ExecuteRestartGame();
-        }
-        else if (_pendingAction.StartsWith("GameMode:"))
-        {
-            string newTag = _pendingAction.Substring("GameMode:".Length);
-            _preferencesView?.CommitGameModeCombo();
-            ApplyGameModeChange(newTag);
-            if (_closePreferencesAfterModeConfirm)
-            {
-                _closePreferencesAfterModeConfirm = false;
-                SlideOutAndClosePreferences();
-            }
-        }
-        else if (_pendingAction.StartsWith("SwitchVariant:"))
-        {
-            int idx = int.Parse(_pendingAction.Substring("SwitchVariant:".Length));
-            _variantInitializing = true;
-            PokerVariantBox.SelectedIndex = idx;
-            _variantInitializing = false;
-            ApplyVariantSwitch((VideoPokerVariant)idx);
         }
         else if (_pendingAction == "CancelPreferences")
         {
@@ -639,13 +619,6 @@ public partial class MainWindow : Window
     private void CancelConfirmAction_Click(object? sender, RoutedEventArgs e)
     {
         ConfirmActionOverlay.IsVisible = false;
-        if (_pendingAction.StartsWith("GameMode:"))
-        {
-            // The Preferences panel is still open behind this dialog (see
-            // ClosePreferences_Click) — just snap the combo back, keep it open.
-            _preferencesView?.RevertGameModeCombo();
-            _closePreferencesAfterModeConfirm = false;
-        }
         _pendingAction = "";
     }
 
@@ -742,6 +715,7 @@ public partial class MainWindow : Window
         _pendingAction = "ResetStats";
         ConfirmActionTitle.Text     = Strings.Get(StringKey.ResetStatisticsTitle, _language);
         ConfirmActionMessage.Text   = Strings.Get(StringKey.ResetStatisticsBodyGeneric, _language);
+        ConfirmActionMessage.IsVisible = true;
         ConfirmActionButton.Content = Strings.Get(StringKey.Reset, _language);
         ConfirmActionOverlay.IsVisible = true;
     }
@@ -1227,21 +1201,9 @@ public partial class MainWindow : Window
         // a different mode while browsing Preferences doesn't itself trigger a reset.
         if (_preferencesView != null && _preferencesView.TryGetPendingGameModeChange(out string? newTag))
         {
-            if (!IsGameInProgress())
-            {
-                _preferencesView.CommitGameModeCombo();
-                ApplyGameModeChange(newTag!);
-                SlideOutAndClosePreferences();
-            }
-            else
-            {
-                _closePreferencesAfterModeConfirm = true;
-                _pendingAction = "GameMode:" + newTag;
-                ConfirmActionTitle.Text     = "Change Game Mode?";
-                ConfirmActionMessage.Text   = "Are you sure you want to abandon the current game and change mode?";
-                ConfirmActionButton.Content = "Change Mode";
-                ConfirmActionOverlay.IsVisible = true;
-            }
+            _preferencesView.CommitGameModeCombo();
+            ApplyGameModeChange(newTag!);
+            SlideOutAndClosePreferences();
             return;
         }
 
@@ -1272,6 +1234,7 @@ public partial class MainWindow : Window
             _pendingAction = "CancelPreferences";
             ConfirmActionTitle.Text     = "Discard Changes?";
             ConfirmActionMessage.Text   = "You have pending changes which will be lost. Are you sure you want to cancel?";
+            ConfirmActionMessage.IsVisible = true;
             ConfirmActionButton.Content = Strings.Get(StringKey.Yes, _language);
             ConfirmActionOverlay.IsVisible = true;
             return;
@@ -1303,26 +1266,6 @@ public partial class MainWindow : Window
         if (_variantInitializing) return;
         if (PokerVariantBox.SelectedIndex < 0) return;
         var variant = (VideoPokerVariant)PokerVariantBox.SelectedIndex;
-
-        var vpVm = _coordinator.VideoPokerViewModel;
-        if (vpVm.State != null && vpVm.State.Phase == VideoPokerPhase.Holding)
-        {
-            // A hand is in progress (dealt but not yet drawn) — switching variants here
-            // calls StartNewGame(), which silently resets SessionCredits back to
-            // Options.StartingCredits and discards the wagered bet with no confirmation.
-            // Snap the box back and ask first, same as every other game-abandoning action.
-            int currentIndex = (int)vpVm.Options.Variant;
-            _variantInitializing = true;
-            PokerVariantBox.SelectedIndex = currentIndex;
-            _variantInitializing = false;
-
-            _pendingAction = "SwitchVariant:" + (int)variant;
-            ConfirmActionTitle.Text     = "Switch Variant?";
-            ConfirmActionMessage.Text   = "Are you sure you want to abandon the current hand and switch variants?";
-            ConfirmActionButton.Content = "Switch Variant";
-            ConfirmActionOverlay.IsVisible = true;
-            return;
-        }
 
         ApplyVariantSwitch(variant);
     }

@@ -809,7 +809,7 @@ struct SpiderStatsSheet: View {
                 // Gated the same as mac's SpiderStatsView — with 0 wins these would
                 // otherwise show a meaningless "00:00".
                 if stats.winningGamesCount > 0 {
-                    row(coordinator.L(.statAverageWinTime), formatTime(Int(viewModel.averageWinningTime)))
+                    row(coordinator.L(.avgWinningTimeColon), formatTime(Int(viewModel.averageWinningTime)))
                 }
                 if viewModel.shortestWinTime > 0 {
                     row(coordinator.L(.fastestWin), formatTime(viewModel.shortestWinTime))
