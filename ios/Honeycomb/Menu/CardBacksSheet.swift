@@ -115,10 +115,16 @@ struct CardBacksSheet: View {
 @ViewBuilder
 func cardBackThumbnailView(_ name: String) -> some View {
     if let image = BundledCardBackImage.uiImage(for: name) {
+        // Matches HoneycombSimpleCardBack's white backing — bundled art like Solibee's
+        // heart-outline/bee or Vulpera's priest.png is a transparent-canvas illustration,
+        // not full-bleed. Without this the thumbnail shows the logo floating directly on
+        // the sheet/felt background instead of on a white card.
         Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+            .background(Color.white)
     } else if let entry = IOSCustomCardBackManager.shared.entry(named: name),
               let image = IOSCustomCardBackManager.shared.image(for: entry) {
         CroppedCardBackImage(image: image, entry: entry)
+            .background(Color.white)
     } else {
         Color.gray.opacity(0.3)
     }
