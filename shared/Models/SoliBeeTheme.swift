@@ -107,9 +107,9 @@ public final class ThemeManager {
                          group.outlineGreen = 0
                          group.outlineBlue = 0
                          group.outlineAlpha = 0.85
-                         group.blackSuitRed = 0.7106840014457703
-                         group.blackSuitGreen = 0.1873437464237213
-                         group.blackSuitBlue = 0.14731520414352417
+                         group.blackSuitRed = 0.22427189350128174
+                         group.blackSuitGreen = 0.06267625838518143
+                         group.blackSuitBlue = 0.04864334315061569
                          group.blackSuitAlpha = 1
                          group.redSuitRed = 0.7748149037361145
                          group.redSuitGreen = 0.11090389639139175
