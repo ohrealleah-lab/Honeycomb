@@ -69,6 +69,7 @@ struct HoneycombTouchView: View {
     @State private var showingThemes = false
     @State private var showingStats = false
     @State private var showingDecks = false
+    @State private var isShowingQuitMatchConfirm = false
     @State private var showNoHintsBanner = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
     @State private var showingRuleBanner = false
@@ -224,6 +225,16 @@ struct HoneycombTouchView: View {
                 postGameOverlay
             }
         }
+        // Matches mac's Cmd+N confirmation (HoneycombView.swift) — mac's own toolbar
+        // "Quit Match" button skips this and only its keyboard shortcut confirms, but
+        // iOS has no keyboard-shortcut escape hatch, so the toolbar button here is the
+        // only path and should confirm before discarding an in-progress match.
+        .alert(coordinator.L(.newMatchConfirmTitle), isPresented: $isShowingQuitMatchConfirm) {
+            Button(coordinator.L(.cancel), role: .cancel) {}
+            Button(coordinator.L(.newMatch), role: .destructive) {
+                viewModel.gameState = .setup
+            }
+        }
         .sheet(isPresented: $showingDecks) { HoneycombDecksSheet(viewModel: viewModel) }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
@@ -368,7 +379,7 @@ struct HoneycombTouchView: View {
                     }
                 }
 
-                Button(coordinator.L(.quitButton)) { viewModel.gameState = .setup }
+                Button(coordinator.L(.quitButton)) { isShowingQuitMatchConfirm = true }
                     .buttonStyle(.bordered)
                     .tint(.white)
             } else {
