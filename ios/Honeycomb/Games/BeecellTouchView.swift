@@ -318,6 +318,11 @@ struct BeecellTouchView: View {
             emptySlot(cardW: cardW, cardH: cardH, letterSymbol: "A")
             if let top = pile.cards.last {
                 TouchCardView(card: top, width: cardW)
+                    .opacity(draggedCards.contains(where: { $0.id == top.id }) ? 0 : 1)
+                    .gesture(cardDragGesture(pile: pile, stack: [top]))
+                    .onTapGesture(count: 2) {
+                        viewModel.doubleClickMove(card: top, from: pile)
+                    }
             }
         }
         .frame(width: cardW, height: cardH)
