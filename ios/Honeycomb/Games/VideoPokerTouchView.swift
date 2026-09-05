@@ -185,22 +185,6 @@ struct VideoPokerTouchView: View {
             onAdvanceQueue: viewModel.advanceBannerQueue
         )
         .onAppear { viewModel.checkLoadingBanner() }
-        // Debug-only trigger handler — mirrors mac's VideoPokerView.swift onChange(of:
-        // viewModel.debugBannerRequest). viewModel.debugSetupBannerState(kind) is shared
-        // code that builds the actual hand/result state; this just resets the transient
-        // result-banner UI state around it, same as the phase == .result branch below does.
-        .onChange(of: viewModel.debugBannerRequest) { _, kind in
-            guard let kind else { return }
-            viewModel.debugBannerRequest = nil
-            resultBannerShowTask?.cancel()
-            resultWinFlashTask?.cancel()
-            resultAnimationTask?.cancel()
-            resultHideTask?.cancel()
-            showResultBanner = false
-            winFlash = false
-            viewModel.debugSetupBannerState(kind)
-            showResultBanner = true
-        }
         .onChange(of: viewModel.state.phase) { _, newPhase in
             // Re-arms the idle-nudge timer on every phase change, matching mac
             // (VideoPokerView.swift:235) — previously only armed once via
@@ -305,9 +289,6 @@ struct VideoPokerTouchView: View {
         HStack(spacing: 10) {
             topBarIconButton(systemImage: "square.grid.2x2", accessibilityLabel: coordinator.L(.menuTabGameSelection)) {
                 isMenuOpen = true
-            }
-            debugMenuButton(items: [("Win", .win), ("Loss", .loss)]) {
-                viewModel.debugBannerRequest = $0
             }
 
             Spacer()

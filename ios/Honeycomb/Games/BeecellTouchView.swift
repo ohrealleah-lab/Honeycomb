@@ -25,6 +25,7 @@ struct BeecellTouchView: View {
     @State private var showingThemes = false
     @State private var showingStats = false
     @State private var dismissedStuckBanner = false
+    @State private var isShowingNewGameConfirm = false
     @State private var dismissedAutocompleteBanner = false
     @State private var showParticles = false
     @State private var showNoHintsBanner = false
@@ -127,6 +128,13 @@ struct BeecellTouchView: View {
         .environment(\.feltColor, coordinator.feltColor)
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)
         .environment(\.activeCustomCardColors, coordinator.customCardColors)
+        .alert(coordinator.L(.newGameConfirmTitle), isPresented: $isShowingNewGameConfirm) {
+            Button(coordinator.L(.cancel), role: .cancel) {}
+            Button(coordinator.L(.newGame), role: .destructive) {
+                dismissedStuckBanner = false
+                viewModel.startNewGame()
+            }
+        }
         .sheet(isPresented: $isMenuOpen) { GameSelectionFullScreenView(coordinator: coordinator) }
         .sheet(isPresented: $showingStats) { BeecellStatsSheet(viewModel: viewModel) }
         .sheet(isPresented: $showingThemes) { ThemesFullScreenView(coordinator: coordinator) }
@@ -171,34 +179,6 @@ struct BeecellTouchView: View {
         .onChange(of: viewModel.isAutocompleteAvailable) { _, newVal in
             if newVal { dismissedAutocompleteBanner = false }
         }
-        // Debug-only trigger handler — mirrors mac's BeecellView.swift onChange(of:
-        // viewModel.debugBannerRequest), minus dismissedWinBanner (this view doesn't
-        // have that flag — its win UI shows unconditionally off hasWon).
-        .onChange(of: viewModel.debugBannerRequest) { _, kind in
-            guard let kind else { return }
-            viewModel.debugBannerRequest = nil
-            switch kind {
-            case .win:
-                let suits: [Card.Suit] = [.spades, .clubs, .diamonds, .hearts]
-                let count = max(viewModel.state.foundations.count, 4)
-                viewModel.state.foundations = (0..<count).map { i in
-                    let suit = suits[i % suits.count]
-                    let cards = (1...13).map { Card(suit: suit, rank: $0, faceUp: true) }
-                    return Pile(id: "foundation_\(i)", type: .foundation, cards: cards)
-                }
-                viewModel.state.hasWon = true
-            case .stuck:
-                viewModel.state.hasWon = false
-                dismissedStuckBanner = false
-                viewModel.isStuck = true
-            case .autocomplete:
-                viewModel.state.hasWon = false
-                dismissedAutocompleteBanner = false
-                viewModel.isAutocompleteAvailable = true
-            case .loss, .same, .plus, .suddenDeath:
-                break
-            }
-        }
         // Mirrors the mac view's NSWindow.didResignKeyNotification safety net: SwiftUI's
         // DragGesture has no "cancelled" callback, so a drag interrupted by the app
         // backgrounding (Control Center, an incoming call, the home gesture, etc.) never
@@ -227,8 +207,8 @@ struct BeecellTouchView: View {
         // overlay centers it on the full bar width regardless of how wide either side
         // is. Portrait has height to spare, so statusCapsule instead renders as its own
         // row below topBar (see body) rather than overlapping the menu icons.
-        // Tightened from spacing:10 — six 44pt icon buttons (menu/options/palette/
-        // debug/undo/hint) plus the New Deal/Quit button no longer fit an iPhone's
+        // Tightened from spacing:10 — five 44pt icon buttons (menu/options/palette/
+        // undo/hint) plus the New Deal/Quit button no longer fit an iPhone's
         // width at the old spacing once undo/hint moved up here from the board; the
         // bar's own ideal width exceeding the screen made it the VStack's widest
         // child, silently pulling every other (exactly screen-width) row a few points
@@ -236,9 +216,6 @@ struct BeecellTouchView: View {
         // right margin on the whole board, not just the top bar.
         HStack(spacing: 6) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
-            debugMenuButton(items: [("Win", .win), ("Loss (Stuck)", .stuck), ("Autocomplete", .autocomplete)]) {
-                viewModel.debugBannerRequest = $0
-            }
 
             Spacer()
 
@@ -262,8 +239,7 @@ struct BeecellTouchView: View {
             }
 
             Button {
-                dismissedStuckBanner = false
-                viewModel.startNewGame()
+                requestNewGame()
             } label: {
                 Label(coordinator.L(.touchNewDealLabel), systemImage: "play.fill")
             }
@@ -273,6 +249,18 @@ struct BeecellTouchView: View {
             if isLandscape {
                 statusCapsule
             }
+        }
+    }
+
+    // Matches mac's BeecellView.requestNewGame() — a no-progress board (nothing
+    // dealt yet, or dealt but untouched) starts over silently; anything past that
+    // confirms first, since it's about to discard real progress.
+    private func requestNewGame() {
+        if viewModel.state.movesCount == 0 {
+            dismissedStuckBanner = false
+            viewModel.startNewGame()
+        } else {
+            isShowingNewGameConfirm = true
         }
     }
 
