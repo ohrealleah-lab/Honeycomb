@@ -3,8 +3,9 @@ import UIKit
 
 /// Full-screen Themes sheet — replaces the old in-slide-down-menu Themes tab. Sections:
 /// Saved Themes, Background & Felt (unified grid, mirrors mac's BackgroundSelectorView
-/// merging felt presets + backgrounds into one picker), Card Backs, Card Colors, and
-/// Face Card Art.
+/// merging felt presets + backgrounds into one picker), Card Backs, and Card Colors.
+/// (Face Card Art also exists as a sheet but its entry point is commented out below —
+/// not ready to ship yet.)
 struct ThemesFullScreenView: View {
     // @Bindable (not @Environment) — several sections below need $coordinator.xxx
     // bindings (Toggle, ColorPicker) in their own computed properties, not just inside
@@ -24,7 +25,10 @@ struct ThemesFullScreenView: View {
     @State private var backgroundPendingDelete: IOSCustomBackgroundManager.Entry? = nil
     @State private var isEditingBackgrounds = false
 
-    @State private var showingFaceArtSheet = false
+    // Face Card Art is pulled from iOS for now — not ready to ship — but left in place
+    // (not deleted) so it's a one-line revert to bring back. See the matching comments
+    // at this sheet's .sheet(isPresented:) and its customizationRow entry below.
+    // @State private var showingFaceArtSheet = false
     @State private var showingCardBacksSheet = false
     @State private var showingCardColorsSheet = false
 
@@ -58,7 +62,8 @@ struct ThemesFullScreenView: View {
                 coordinator.customBackgroundName = name
             }
         }
-        .sheet(isPresented: $showingFaceArtSheet) { CustomFaceCardArtSheet() }
+        // Face Card Art sheet wiring — disabled for now, see the @State declaration above.
+        // .sheet(isPresented: $showingFaceArtSheet) { CustomFaceCardArtSheet() }
         .sheet(isPresented: $showingCardBacksSheet) { CardBacksSheet(coordinator: coordinator) }
         .sheet(isPresented: $showingCardColorsSheet) { CustomCardColorsSheet(coordinator: coordinator) }
         .alert(coordinator.L(.themeNameFieldPlaceholder), isPresented: $showingSaveThemeAlert) {
@@ -418,10 +423,13 @@ struct ThemesFullScreenView: View {
             customizationRow(systemImage: "paintpalette", title: coordinator.L(.customCardColorHeading)) {
                 showingCardColorsSheet = true
             }
-            Divider().padding(.leading, 44)
-            customizationRow(systemImage: "person.crop.rectangle", title: coordinator.L(.faceCardArtNavRow)) {
-                showingFaceArtSheet = true
-            }
+            // Face Card Art — not ready to ship, disabled for now (see the @State
+            // declaration and .sheet wiring above). Divider dropped along with it so
+            // Card Colors doesn't end with a trailing divider to nothing.
+            // Divider().padding(.leading, 44)
+            // customizationRow(systemImage: "person.crop.rectangle", title: coordinator.L(.faceCardArtNavRow)) {
+            //     showingFaceArtSheet = true
+            // }
         }
         .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
     }
