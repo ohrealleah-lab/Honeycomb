@@ -96,33 +96,52 @@ struct VideoPokerTouchView: View {
                     // centering here (rather than top-aligning, like Blackjack) reads as
                     // the cards sitting in the middle of the available space instead of
                     // stuck to its top edge.
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            holdHint
+                    // GeometryReader here (rather than reusing the outer geo.size.height)
+                    // measures the space actually left over after topBar and, in
+                    // portrait, creditDisplay above it — using the full screen height
+                    // instead left the ScrollView's forced minHeight taller than its
+                    // real viewport whenever creditDisplay was showing (portrait only),
+                    // which made .basedOnSize see that as "overflow" and allow a small
+                    // drag on the cards. Landscape hides creditDisplay, so the old
+                    // height happened to match there and stayed locked — this makes
+                    // both orientations match by construction instead of by accident.
+                    GeometryReader { scrollGeo in
+                        ScrollView {
+                            VStack(spacing: 12) {
+                                holdHint
 
-                            handRow(cardW: cardW, spacing: handSpacing)
-                                .padding(.horizontal, 12)
+                                handRow(cardW: cardW, spacing: handSpacing)
+                                    .padding(.horizontal, 12)
+                            }
+                            // Reserves room at the bottom for the fixed controls bar
+                            // (measured live below) so the cards never end up scrolled
+                            // underneath it — +16 beyond the exact measured height as a
+                            // visible buffer, since exactly matching it still read as
+                            // touching/overlapping (this box's own .center alignment can
+                            // shift how the measured gap actually lands).
+                            .padding(.bottom, controlsHeight + 16)
+                            // maxWidth: .infinity here isn't just for the height fix
+                            // above — without an explicit width, this content (only as
+                            // wide as the card row itself, well short of a wide
+                            // landscape screen) fell back on ScrollView's own default
+                            // cross-axis alignment for positioning, which left-anchored
+                            // it instead of centering it now that a GeometryReader sits
+                            // between the ScrollView and the VStack that used to hand it
+                            // the full width directly.
+                            .frame(maxWidth: .infinity, minHeight: scrollGeo.size.height, alignment: .center)
                         }
-                        // Reserves room at the bottom for the fixed controls bar
-                        // (measured live below) so the cards never end up scrolled
-                        // underneath it — +16 beyond the exact measured height as a
-                        // visible buffer, since exactly matching it still read as
-                        // touching/overlapping (this box's own .center alignment can
-                        // shift how the measured gap actually lands).
-                        .padding(.bottom, controlsHeight + 16)
-                        .frame(minHeight: geo.size.height - 44, alignment: .center)
+                        // This ScrollView is a fallback for content that doesn't fit (a
+                        // short landscape height), not a surface meant to invite scrolling —
+                        // hiding the indicator wasn't enough on its own, since a plain
+                        // ScrollView still lets you drag/rubber-band the content up (with
+                        // nothing to snap back to but empty space) even when it already
+                        // fits. .basedOnSize disables that drag entirely whenever content
+                        // fits within the viewport, and only re-enables real scrolling once
+                        // content actually overflows it — exactly the fallback-only
+                        // behavior wanted.
+                        .scrollBounceBehavior(.basedOnSize)
+                        .scrollIndicators(.hidden)
                     }
-                    // This ScrollView is a fallback for content that doesn't fit (a
-                    // short landscape height), not a surface meant to invite scrolling —
-                    // hiding the indicator wasn't enough on its own, since a plain
-                    // ScrollView still lets you drag/rubber-band the content up (with
-                    // nothing to snap back to but empty space) even when it already
-                    // fits. .basedOnSize disables that drag entirely whenever content
-                    // fits within the viewport, and only re-enables real scrolling once
-                    // content actually overflows it — exactly the fallback-only
-                    // behavior wanted.
-                    .scrollBounceBehavior(.basedOnSize)
-                    .scrollIndicators(.hidden)
                 }
 
                 // Overlay, not part of the ScrollView's flow — centers on the whole
@@ -287,21 +306,13 @@ struct VideoPokerTouchView: View {
 
     private func topBar(isLandscape: Bool) -> some View {
         HStack(spacing: 10) {
-            topBarIconButton(systemImage: "square.grid.2x2", accessibilityLabel: coordinator.L(.menuTabGameSelection)) {
-                isMenuOpen = true
-            }
+            // Game Selection/Options/Themes grouped together on the left, matching
+            // every other game's topBar (see menuBarButtons) — reverted from a
+            // right-aligned Options/Themes arrangement made to avoid overlapping
+            // creditDisplay's landscape overlay below; left-aligned per request again.
+            menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
 
             Spacer()
-
-            // Options/Themes right-aligned, per request — previously bunched with Game
-            // Selection on the left, which put them directly under creditDisplay's
-            // overlay (see below) and read as visually cramped/overlapping.
-            topBarIconButton(systemImage: "gearshape", accessibilityLabel: coordinator.L(.options)) {
-                showingOptions = true
-            }
-            topBarIconButton(systemImage: "paintpalette", accessibilityLabel: coordinator.L(.themesPanelTitle)) {
-                showingThemes = true
-            }
         }
         // Landscape only: overlay on the whole bar, not a third HStack element flanked
         // by Spacers, matching Klondike's identical statusCapsule placement — reclaims
