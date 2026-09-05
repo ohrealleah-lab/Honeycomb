@@ -442,23 +442,6 @@ struct BlackjackTouchView: View {
         // reported size out past the safe area with it.
         .background(IOSBackgroundLayer(intensity: 0.6))
         .onAppear { viewModel.checkLoadingBanner() }
-        // Debug-only trigger handler — mirrors mac's BlackjackView.swift onChange(of:
-        // viewModel.debugBannerRequest). viewModel.debugSetupBannerState(kind) is shared
-        // code that builds the actual hand/result state; this just resets the transient
-        // result-banner/card UI state around it.
-        .onChange(of: viewModel.debugBannerRequest) { _, kind in
-            guard let kind else { return }
-            viewModel.debugBannerRequest = nil
-            resultBannerShowTask?.cancel()
-            resultHideTask?.cancel()
-            resultCardHideTask?.cancel()
-            showResultBanner = false
-            cardsVisible = true
-            showCardBackPlaceholders = false
-            dealerFlipped = true
-            viewModel.debugSetupBannerState(kind)
-            showResultBanner = true
-        }
         .onChange(of: viewModel.state.phase) { _, newPhase in
             // Re-arms the idle-nudge timer on every phase change, matching mac
             // (BlackjackView.swift:211) — previously only armed once via
@@ -533,9 +516,6 @@ struct BlackjackTouchView: View {
     private func topBar(isLandscape: Bool) -> some View {
         HStack(spacing: 10) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
-            debugMenuButton(items: [("Win", .win), ("Loss", .loss)]) {
-                viewModel.debugBannerRequest = $0
-            }
 
             Spacer()
 
@@ -1190,25 +1170,37 @@ struct BlackjackTouchView: View {
     }
 
     private func actionControls(compact: Bool) -> some View {
-        HStack(spacing: 10) {
-            casinoButton(coordinator.L(.touchActionHit), color: .green.opacity(0.85), compact: compact) {
-                viewModel.hit()
-                actionHaptic.impactOccurred()
-            }
-            casinoButton(coordinator.L(.touchActionStand), color: .red.opacity(0.75), compact: compact) {
-                viewModel.stand()
-                actionHaptic.impactOccurred()
-            }
-            if viewModel.canDouble {
-                casinoButton(coordinator.L(.touchActionDouble), color: .blue.opacity(0.75), compact: compact) {
-                    viewModel.doubleDown()
+        // Portrait iPhone's full-size padding left all four buttons together wider
+        // than the screen, squeezing labels below their content width and wrapping
+        // them onto two lines. Split by role instead of shrinking further: Hit/Stand
+        // are always exactly 2 and always present, so they get their own full-size
+        // row; Double/Split are situational (0-2 of them) and go on a second row
+        // that simply doesn't render when neither applies.
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                casinoButton(coordinator.L(.touchActionHit), color: .green.opacity(0.85), compact: compact) {
+                    viewModel.hit()
+                    actionHaptic.impactOccurred()
+                }
+                casinoButton(coordinator.L(.touchActionStand), color: .red.opacity(0.75), compact: compact) {
+                    viewModel.stand()
                     actionHaptic.impactOccurred()
                 }
             }
-            if viewModel.canSplit {
-                casinoButton(coordinator.L(.touchActionSplit), color: .purple.opacity(0.75), compact: compact) {
-                    viewModel.split()
-                    actionHaptic.impactOccurred()
+            if viewModel.canDouble || viewModel.canSplit {
+                HStack(spacing: 10) {
+                    if viewModel.canDouble {
+                        casinoButton(coordinator.L(.touchActionDouble), color: .blue.opacity(0.75), compact: compact) {
+                            viewModel.doubleDown()
+                            actionHaptic.impactOccurred()
+                        }
+                    }
+                    if viewModel.canSplit {
+                        casinoButton(coordinator.L(.touchActionSplit), color: .purple.opacity(0.75), compact: compact) {
+                            viewModel.split()
+                            actionHaptic.impactOccurred()
+                        }
+                    }
                 }
             }
         }
