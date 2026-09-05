@@ -1,9 +1,12 @@
 import SwiftUI
 import UIKit
 
-/// Full-screen Themes sheet — replaces the old in-slide-down-menu Themes tab. Sections:
-/// Saved Themes, Background & Felt (unified grid, mirrors mac's BackgroundSelectorView
-/// merging felt presets + backgrounds into one picker), Card Backs, and Card Colors.
+/// Full-screen Themes sheet — replaces the old in-slide-down-menu Themes tab. Sections,
+/// top to bottom: Saved Themes (carousel), Card Back (carousel), Background & Felt
+/// (unified grid, mirrors mac's BackgroundSelectorView merging felt presets +
+/// backgrounds into one picker), Custom Card Color (grid). Card Back and Custom Card
+/// Color used to be separate pushed sheets reached via a nav-row list; they're inline
+/// sections now, each with its own header like Background & Felt.
 /// (Face Card Art also exists as a sheet but its entry point is commented out below —
 /// not ready to ship yet.)
 struct ThemesFullScreenView: View {
@@ -26,21 +29,28 @@ struct ThemesFullScreenView: View {
     @State private var isEditingBackgrounds = false
 
     // Face Card Art is pulled from iOS for now — not ready to ship — but left in place
-    // (not deleted) so it's a one-line revert to bring back. See the matching comments
-    // at this sheet's .sheet(isPresented:) and its customizationRow entry below.
+    // (not deleted) so it's a one-line revert to bring back. See the matching comment
+    // at this sheet's .sheet(isPresented:) below. Its former home (a grouped row list
+    // alongside Card Back/Card Colors) went away when those two became their own
+    // inline sections — reviving Face Card Art will need a new presentation spot.
     // @State private var showingFaceArtSheet = false
-    @State private var showingCardBacksSheet = false
-    @State private var showingCardColorsSheet = false
 
-    private let gridColumns = [GridItem(.adaptive(minimum: 74), spacing: 12)]
+    @State private var customCardBacks = IOSCustomCardBackManager.shared
+    @State private var showingCardBackImportSheet = false
+    // Name, not an Entry — deletion now covers bundled defaults too (no Entry exists
+    // for those, just a name string), routed through IOSCustomCardBackManager's
+    // unified deleteCardBack(name:).
+    @State private var cardBackNamePendingDelete: String? = nil
+    @State private var isEditingCardBacks = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     savedThemesSection
-                    customizationSection
+                    cardBackSection
                     backgroundAndFeltSection
+                    customCardColorSection
                     if coordinator.feltColor == .custom && coordinator.customBackgroundName == nil {
                         feltColorSection
                     }
@@ -64,8 +74,11 @@ struct ThemesFullScreenView: View {
         }
         // Face Card Art sheet wiring — disabled for now, see the @State declaration above.
         // .sheet(isPresented: $showingFaceArtSheet) { CustomFaceCardArtSheet() }
-        .sheet(isPresented: $showingCardBacksSheet) { CardBacksSheet(coordinator: coordinator) }
-        .sheet(isPresented: $showingCardColorsSheet) { CustomCardColorsSheet(coordinator: coordinator) }
+        .sheet(isPresented: $showingCardBackImportSheet) {
+            CustomCardBackImportSheet { name in
+                coordinator.cardBackTheme = name
+            }
+        }
         .alert(coordinator.L(.themeNameFieldPlaceholder), isPresented: $showingSaveThemeAlert) {
             TextField(coordinator.L(.themeNameFieldPlaceholder), text: $newThemeName)
             Button(coordinator.L(.cancel), role: .cancel) { newThemeName = "" }
@@ -105,6 +118,36 @@ struct ThemesFullScreenView: View {
         } message: {
             Text(coordinator.L(.removeImportedImageBody))
         }
+        // Matches mac's CustomCardArtSectionView exactly (deleteCardBackTitle +
+        // deleteNamedCardBackConfirmFmt) — now shared by bundled and custom card backs
+        // alike, not just custom ("This removes the imported image" doesn't apply to a
+        // bundled default, since nothing was imported).
+        .alert(coordinator.L(.deleteCardBackTitle), isPresented: .init(
+            get: { cardBackNamePendingDelete != nil },
+            set: { if !$0 { cardBackNamePendingDelete = nil } }
+        )) {
+            Button(coordinator.L(.cancel), role: .cancel) {}
+            Button(coordinator.L(.delete), role: .destructive) {
+                if let name = cardBackNamePendingDelete {
+                    deleteCardBack(named: name)
+                }
+            }
+        } message: {
+            Text(coordinator.L(.deleteNamedCardBackConfirmFmt, cardBackNamePendingDelete ?? ""))
+        }
+    }
+
+    // Matches mac's CustomCardArtSectionView.deleteDeckByName(_:) — reassign the active
+    // selection to another still-available deck *before* deleting, mirroring mac's own
+    // fallback-to-first-other-active-deck (not a hardcoded name, since any bundled
+    // default including "Solibee" can now be deleted too).
+    private func deleteCardBack(named name: String) {
+        let active = customCardBacks.activeDeckNames
+        guard active.count > 1 else { return }
+        if coordinator.cardBackTheme == name, let firstOther = active.first(where: { $0 != name }) {
+            coordinator.cardBackTheme = firstOther
+        }
+        customCardBacks.deleteCardBack(name: name)
     }
 
     // MARK: Saved Themes
@@ -146,6 +189,10 @@ struct ThemesFullScreenView: View {
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.3), lineWidth: 1))
 
                 if isEditingSavedThemes {
+                    // .buttonStyle(.plain) — see cardBackTile/backgroundTile's identical
+                    // delete buttons: without it, iOS's default style pads the hit-testing
+                    // region out to a 44x44pt minimum regardless of the icon's own size,
+                    // which reaches into the neighboring tile in this same tight carousel.
                     Button {
                         themeToDelete = theme
                     } label: {
@@ -153,6 +200,7 @@ struct ThemesFullScreenView: View {
                             .foregroundStyle(.white, .red)
                             .font(.title3)
                     }
+                    .buttonStyle(.plain)
                     .padding(4)
                 }
             }
@@ -254,15 +302,20 @@ struct ThemesFullScreenView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 10) {
-                LazyVGrid(columns: gridColumns, spacing: 14) {
-                    ForEach(FeltColorTheme.allCases.filter { $0 != .custom }, id: \.self) { theme in
-                        feltTile(theme)
+                // Carousel, matching Saved Themes/Card Back above — was a LazyVGrid
+                // wrapping onto multiple rows; a single scrolling row per request.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 14) {
+                        ForEach(FeltColorTheme.allCases.filter { $0 != .custom }, id: \.self) { theme in
+                            feltTile(theme)
+                        }
+                        customFeltTile
+                        ForEach(customBackgrounds.backgrounds) { entry in
+                            backgroundTile(entry)
+                        }
+                        addBackgroundTile
                     }
-                    customFeltTile
-                    ForEach(customBackgrounds.backgrounds) { entry in
-                        backgroundTile(entry)
-                    }
-                    addBackgroundTile
+                    .padding(.vertical, 2)
                 }
                 Toggle(coordinator.L(.feltVignetteToggle), isOn: $coordinator.showFeltVignette)
             }
@@ -277,13 +330,10 @@ struct ThemesFullScreenView: View {
             coordinator.feltColor = theme
             coordinator.customBackgroundName = nil
         } label: {
-            VStack(spacing: 4) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(theme.primaryColor)
-                    .frame(width: 70, height: 70)
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
-                Text(localizedFeltName(theme)).font(.caption2).foregroundStyle(.primary).lineLimit(1)
-            }
+            RoundedRectangle(cornerRadius: 10)
+                .fill(theme.primaryColor)
+                .frame(width: 70, height: 70)
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
         }
         .buttonStyle(.plain)
     }
@@ -294,54 +344,56 @@ struct ThemesFullScreenView: View {
             coordinator.feltColor = .custom
             coordinator.customBackgroundName = nil
         } label: {
-            VStack(spacing: 4) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(FeltColorTheme.custom.primaryColor)
-                    .frame(width: 70, height: 70)
-                    .overlay(Image(systemName: "paintbrush.pointed.fill").foregroundStyle(.white))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
-                Text(coordinator.L(.feltCustomShort)).font(.caption2).foregroundStyle(.primary).lineLimit(1)
-            }
+            RoundedRectangle(cornerRadius: 10)
+                .fill(FeltColorTheme.custom.primaryColor)
+                .frame(width: 70, height: 70)
+                .overlay(Image(systemName: "paintbrush.pointed.fill").foregroundStyle(.white))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
         }
         .buttonStyle(.plain)
     }
 
     private func backgroundTile(_ entry: IOSCustomBackgroundManager.Entry) -> some View {
         let isSelected = coordinator.customBackgroundName == entry.name
-        return VStack(spacing: 4) {
-            ZStack(alignment: .topTrailing) {
-                Button {
-                    coordinator.customBackgroundName = entry.name
-                } label: {
-                    Group {
-                        if let image = customBackgrounds.image(for: entry) {
-                            Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
-                        } else {
-                            Color.gray.opacity(0.3)
-                        }
+        return ZStack(alignment: .topTrailing) {
+            Button {
+                coordinator.customBackgroundName = entry.name
+            } label: {
+                Group {
+                    if let image = customBackgrounds.image(for: entry) {
+                        Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Color.gray.opacity(0.3)
                     }
-                    .frame(width: 70, height: 70)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
+                }
+                .frame(width: 70, height: 70)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                // See cardBackTile — .clipShape alone doesn't reliably constrain a
+                // Button's hit-testing to the clipped shape; needs this too.
+                .contentShape(Rectangle())
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
+            }
+            .buttonStyle(.plain)
+
+            if isEditingBackgrounds {
+                // .buttonStyle(.plain) — without it this Button falls back to
+                // iOS's default style, which pads its hit-testing region out to a
+                // 44x44pt minimum tap target regardless of the icon's own size.
+                // Same fix as cardBackTile's delete button, for the same reason:
+                // in a tight 70pt-tile/14pt-gap carousel, that invisible inflation
+                // reaches into the neighboring tile.
+                Button {
+                    backgroundPendingDelete = entry
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.white, .red)
+                        .font(.title3)
                 }
                 .buttonStyle(.plain)
-
-                if isEditingBackgrounds {
-                    Button {
-                        backgroundPendingDelete = entry
-                    } label: {
-                        Image(systemName: "minus.circle.fill")
-                            .foregroundStyle(.white, .red)
-                            .font(.title3)
-                    }
-                    .padding(4)
-                }
+                .padding(4)
             }
-            // No caption — unlike card backs, custom backgrounds are never shown
-            // with a name anywhere; this blank line just keeps row heights aligned
-            // with the felt-color tiles beside it, which do have captions.
-            Text(" ").font(.caption2)
         }
+        .frame(width: 70, height: 70)
     }
 
     private var addBackgroundTile: some View {
@@ -408,58 +460,162 @@ struct ThemesFullScreenView: View {
         )
     }
 
-    // MARK: Customization (Card Backs / Card Colors / Face Card Art)
+    // MARK: Card Back
 
-    // One grouped card of nav rows instead of three sections each repeating their own
-    // row's label as a bold heading above it — the row's own text already says what it
-    // is, the same reasoning that dropped Options' per-game caption text (see
-    // OptionsFullScreenView).
-    private var customizationSection: some View {
-        VStack(spacing: 0) {
-            customizationRow(systemImage: "rectangle.stack", title: coordinator.L(.menuSectionCardBack)) {
-                showingCardBacksSheet = true
+    // Same carousel shape as savedThemesSection above (horizontal ScrollView, add-tile
+    // last) rather than the grid backgroundAndFeltSection uses — a card back's own
+    // aspect ratio reads better as a single scrolling row than wrapped into a grid.
+    private var cardBackSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                // Trailing colon added here, not in the localized string itself — the
+                // same key is also used as a plain (colon-less) navigation title by the
+                // now-dormant CardBacksSheet.
+                sectionHeading(coordinator.L(.menuSectionCardBack) + ":")
+                Spacer()
+                // Only worth showing once there's something to restore — a bundled
+                // default deleted via the (–) below. Matches mac's
+                // resetDefaultCardBacks(), which has the same underlying method but
+                // never got its own UI there either.
+                if isEditingCardBacks && !customCardBacks.deletedDefaultDecks.isEmpty {
+                    Button(coordinator.L(.reset)) {
+                        customCardBacks.resetDeletedDefaults()
+                    }
+                    .font(.subheadline)
+                    .padding(.trailing, 8)
+                }
+                Button {
+                    isEditingCardBacks.toggle()
+                } label: {
+                    Image(systemName: "pencil")
+                }
             }
-            Divider().padding(.leading, 44)
-            customizationRow(systemImage: "paintpalette", title: coordinator.L(.customCardColorHeading)) {
-                showingCardColorsSheet = true
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(customCardBacks.activeDeckNames, id: \.self) { name in
+                        cardBackTile(name)
+                    }
+                    addCardBackTile
+                }
+                .padding(.vertical, 2)
             }
-            // Face Card Art — not ready to ship, disabled for now (see the @State
-            // declaration and .sheet wiring above). Divider dropped along with it so
-            // Card Colors doesn't end with a trailing divider to nothing.
-            // Divider().padding(.leading, 44)
-            // customizationRow(systemImage: "person.crop.rectangle", title: coordinator.L(.faceCardArtNavRow)) {
-            //     showingFaceArtSheet = true
-            // }
         }
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
     }
 
-    private func customizationRow(systemImage: String, title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: systemImage).frame(width: 24)
-                Text(title)
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+    private func cardBackTile(_ name: String) -> some View {
+        let isSelected = coordinator.cardBackTheme == name
+        // Matches mac's hide-the-delete-button-once-only-one-remains pattern — rather
+        // than a "last card back" warning nobody can ever trigger, the (–) itself just
+        // isn't offered on whichever tile would leave zero behind.
+        let canDelete = customCardBacks.activeDeckNames.count > 1
+        // Explicit frame on the ZStack itself, not just the image inside it — a
+        // custom card back's thumbnail (CroppedCardBackImage) wraps its content in
+        // a GeometryReader, which reports size to the surrounding HStack
+        // differently than a bundled tile's plain Image does. Without pinning the
+        // whole tile to a known width, the row's layout math can drift right at
+        // the boundary between a plain-Image tile and a GeometryReader one next to
+        // it — the drawn position stays correct but hit-testing shifts onto the
+        // neighboring tile, which is exactly what made Solibee's delete button
+        // (sitting right before the custom card backs) register taps on the tile
+        // to its right instead.
+        return ZStack(alignment: .topTrailing) {
+            Button {
+                coordinator.cardBackTheme = name
+            } label: {
+                cardBackThumbnailView(name)
+                    .frame(width: 70, height: 70 * CardDimensions.aspectRatio)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    // Belt-and-suspenders: .clipShape above already constrains hit-testing
+                    // to this same shape, but pin it explicitly in case that's not holding
+                    // for some reason not yet identified.
+                    .contentShape(Rectangle())
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.accentColor, lineWidth: isSelected ? 3 : 0))
             }
-            .padding(12)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+
+            if isEditingCardBacks && canDelete {
+                // .buttonStyle(.plain) here too — without it, this Button falls back
+                // to iOS's default style, which pads its hit-testing region out to
+                // (at least) a 44x44pt minimum tap target regardless of how small
+                // the icon itself is drawn. Centered on a topTrailing icon this size
+                // in a 70pt-wide tile with only 14pt between tiles, that inflated
+                // region reached a few points into the neighboring tile — the
+                // residual overlap left after pinning the tile's own width above,
+                // which only fixed the *layout* drift, not this separate hit-area
+                // inflation.
+                Button {
+                    cardBackNamePendingDelete = name
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.white, .red)
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .padding(4)
+            }
+        }
+        .frame(width: 70, height: 70 * CardDimensions.aspectRatio)
+    }
+
+    private var addCardBackTile: some View {
+        Button {
+            showingCardBackImportSheet = true
+        } label: {
+            VStack(spacing: 4) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.black.opacity(0.15))
+                    .frame(width: 70, height: 70 * CardDimensions.aspectRatio)
+                    .overlay(Image(systemName: "plus").font(.title3.weight(.bold)).foregroundStyle(.secondary))
+                Text(coordinator.L(.addShort)).font(.caption2).foregroundStyle(.primary)
+            }
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: Shared helpers
+    // MARK: Custom Card Color
 
-    private func localizedFeltName(_ theme: FeltColorTheme) -> String {
-        switch theme {
-        case .feltGreen:  return coordinator.L(.feltGreen)
-        case .crimson:    return coordinator.L(.feltCrimson)
-        case .royalBlue:  return coordinator.L(.feltRoyalBlue)
-        case .charcoal:   return coordinator.L(.feltCharcoal)
-        case .desert:     return coordinator.L(.feltDesert)
-        case .custom:     return coordinator.L(.feltCustomColor)
+    private var customCardColorSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                // Trailing colon added here, not in the localized string itself — the
+                // same key is also used as a plain (colon-less) navigation title by the
+                // now-dormant CustomCardColorsSheet.
+                sectionHeading(coordinator.L(.customCardColorHeading) + ":")
+                Spacer()
+                Button(coordinator.L(.reset)) {
+                    coordinator.customCardColors.reset()
+                }
+                .font(.subheadline)
+            }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 16)], spacing: 16) {
+                cardColorSwatch(coordinator.L(.cardBackgroundLabel), binding: $coordinator.customCardColors.backgroundColor)
+                cardColorSwatch(coordinator.L(.cardOutlineLabel), binding: $coordinator.customCardColors.outlineColor)
+                cardColorSwatch(coordinator.L(.blackSuitTextLabel), binding: $coordinator.customCardColors.blackSuitColor)
+                cardColorSwatch(coordinator.L(.redSuitTextLabel), binding: $coordinator.customCardColors.redSuitColor)
+                cardColorSwatch(coordinator.L(.hintHighlightLabel), binding: $coordinator.customCardColors.hintHighlightColor)
+            }
+            .padding(12)
+            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
         }
     }
+
+    private func cardColorSwatch(_ label: String, binding: Binding<Color>) -> some View {
+        VStack(spacing: 6) {
+            ZStack {
+                Circle().fill(binding.wrappedValue).frame(width: 54, height: 54)
+                    .overlay(Circle().stroke(Color.primary.opacity(0.15), lineWidth: 1))
+                ColorPicker("", selection: binding)
+                    .labelsHidden()
+                    .opacity(0.02)
+                    .frame(width: 54, height: 54)
+                    .contentShape(Rectangle())
+            }
+            Text(label).font(.caption2.weight(.semibold)).multilineTextAlignment(.center).lineLimit(2)
+            Text(themeHexString(binding.wrappedValue)).font(.caption2.monospaced()).foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: Shared helpers
 
     private func sectionHeading(_ text: String) -> some View {
         Text(text).font(.title3.weight(.bold))

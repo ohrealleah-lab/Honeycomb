@@ -158,8 +158,16 @@ public final class IOSCustomCardBackManager {
 
     public private(set) var customCardBacks: [Entry] = []
 
+    // Bundled defaults the player has deleted — mirrors mac's CustomCardBackManager
+    // .deletedDefaultDecks exactly: a bundled card back is never actually removed
+    // (it's compiled into the app), just hidden by name. Nothing else on iOS had a
+    // concept of "hide a bundled theme" before this — bundled names used to be a
+    // fixed, always-present list (BundledCardBackImage.allThemeNames).
+    public private(set) var deletedDefaultDecks: [String] = []
+
     @ObservationIgnored private var imageCache: [String: UIImage] = [:]
     private let defaultsKey = "ios_custom_card_backs"
+    private let deletedDefaultsKey = "ios_deleted_default_card_backs"
 
     private var storageDirectory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -169,10 +177,59 @@ public final class IOSCustomCardBackManager {
         return dir
     }
 
+    // Every card back currently offered — bundled defaults not yet deleted, plus
+    // every custom import. Matches mac's activeDecks; the "must always have one"
+    // guard on deleteCardBack(name:) is keyed off this combined count, not either
+    // kind separately, so deleting can freely eat into either bucket as long as at
+    // least one card back (bundled or custom) survives overall.
+    public var activeDeckNames: [String] {
+        BundledCardBackImage.allThemeNames.filter { !deletedDefaultDecks.contains($0) } + customCardBacks.map(\.name)
+    }
+
+    public func isDefaultTheme(_ name: String) -> Bool {
+        BundledCardBackImage.allThemeNames.contains(name)
+    }
+
+    // Single entry point for deleting either kind, matching mac's
+    // CustomCardBackManager.deleteDeck(name:) — routes to hiding a bundled default or
+    // to removeCustomCardBack for a custom one. Returns false (a no-op) if this would
+    // leave zero card backs; callers are expected to have already hidden the delete
+    // affordance in that case (see ThemesFullScreenView.cardBackTile), so this is a
+    // defensive backstop, not the primary way the "always at least one" rule is kept.
+    @discardableResult
+    public func deleteCardBack(name: String) -> Bool {
+        guard activeDeckNames.count > 1 else { return false }
+        if isDefaultTheme(name) {
+            guard !deletedDefaultDecks.contains(name) else { return false }
+            deletedDefaultDecks.append(name)
+            persistDeletedDefaults()
+            return true
+        } else if let existing = entry(named: name) {
+            removeCustomCardBack(existing)
+            return true
+        }
+        return false
+    }
+
+    /// Restores every bundled default hidden via deleteCardBack(name:) — matches mac's
+    /// CustomCardBackManager.resetDefaultCardBacks() (which mac itself never wired up
+    /// to any UI; ThemesFullScreenView.cardBackSection gives iOS one).
+    public func resetDeletedDefaults() {
+        deletedDefaultDecks = []
+        persistDeletedDefaults()
+    }
+
+    private func persistDeletedDefaults() {
+        UserDefaults.standard.set(deletedDefaultDecks, forKey: deletedDefaultsKey)
+    }
+
     private init() {
         if let data = UserDefaults.standard.data(forKey: defaultsKey),
            let decoded = try? JSONDecoder().decode([Entry].self, from: data) {
             customCardBacks = decoded
+        }
+        if let savedDeletedDefaults = UserDefaults.standard.array(forKey: deletedDefaultsKey) as? [String] {
+            deletedDefaultDecks = savedDeletedDefaults
         }
         // Drop any entry whose backing file has gone missing rather than let it linger
         // as a theme name that silently falls back to the procedural design forever.

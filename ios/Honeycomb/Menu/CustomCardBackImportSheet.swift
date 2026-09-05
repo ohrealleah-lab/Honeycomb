@@ -17,13 +17,10 @@ struct CustomCardBackImportSheet: View {
 
     @State private var photoItem: PhotosPickerItem? = nil
     @State private var previewImage: UIImage? = nil
+    // Auto-generated, never shown or edited — the row itself no longer labels tiles
+    // by name, so there's nothing for the player to name.
     @State private var name: String = ""
-    // True while `name` still holds the auto-generated "Default"/"Default N" value the
-    // field was seeded with — first tap into the field clears it so the player gets a
-    // blank space to type instead of having to select-all first.
-    @State private var isDefaultName = true
     @State private var errorMessage: String? = nil
-    @FocusState private var nameFieldFocused: Bool
 
     // Crop state, edited live by ImageCropEditor's pinch/drag gestures.
     @State private var scale: CGFloat = 1.0
@@ -35,16 +32,6 @@ struct CustomCardBackImportSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    TextField(coordinator.L(.touchNameFieldPlaceholder), text: $name)
-                        .focused($nameFieldFocused)
-                        .onChange(of: name) { errorMessage = nil }
-                        .onChange(of: nameFieldFocused) { _, focused in
-                            if focused && isDefaultName { name = "" }
-                            isDefaultName = false
-                        }
-                }
-
                 Section {
                     PhotosPicker(selection: $photoItem, matching: .images) {
                         Label(previewImage == nil ? coordinator.L(.touchChoosePhoto) : coordinator.L(.touchChooseDifferentPhoto),
@@ -94,7 +81,7 @@ struct CustomCardBackImportSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(coordinator.L(.addShort)) { save() }
-                        .disabled(previewImage == nil || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(previewImage == nil)
                 }
             }
         }
