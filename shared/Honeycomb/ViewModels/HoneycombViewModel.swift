@@ -1438,6 +1438,8 @@ public final class HoneycombViewModel {
 
         if UISound.isHeadlessMode {
             activeHint = Self.computeHintMove(inputs)
+            precomputedHint = activeHint
+            precomputedHintGeneration = generation
             if activeHint != nil { scheduleHintClear() }
             return
         }
@@ -1447,6 +1449,13 @@ public final class HoneycombViewModel {
             DispatchQueue.main.async {
                 guard let self, self.hintGeneration == generation else { return }
                 self.activeHint = hint
+                // Feeds this on-demand result back into the same cache prewarmHint()
+                // populates, so a second Hint tap on the same board (whether the hint
+                // is still showing or already auto-cleared) hits findHint()'s fast path
+                // above instead of re-running the ~2.6s worst-case minimax search again
+                // — previously only the speculative prewarm ever wrote this cache.
+                self.precomputedHint = hint
+                self.precomputedHintGeneration = generation
                 if hint != nil { self.scheduleHintClear() }
             }
         }
