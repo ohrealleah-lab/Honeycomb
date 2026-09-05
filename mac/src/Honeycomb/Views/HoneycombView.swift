@@ -264,7 +264,12 @@ public struct HoneycombView: View {
 
                     if viewModel.gameState != .setup {
                         HStack {
-                            StatusItemView(label: coordinator.L(.statusYouLabel), value: "\(viewModel.board.playerScore + viewModel.playerHand.count)")
+                            // Rank name (not a static "You"), same source as the hand-side
+                            // label below — this row was missed when that label was added.
+                            StatusItemView(label: honeycombLocalizedPlayerRankName(
+                                cardsCollected: HoneycombProfileManager.shared.unlockedCardIds.count,
+                                totalCards: HoneycombDatabase.shared.allCards.count,
+                                language: coordinator.language), value: "\(viewModel.board.playerScore + viewModel.playerHand.count)")
                             StatusItemView(label: honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language), value: "\(viewModel.board.opponentScore + viewModel.opponentHand.count)")
                         }
                     }

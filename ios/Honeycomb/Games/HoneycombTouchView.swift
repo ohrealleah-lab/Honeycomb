@@ -689,7 +689,16 @@ struct HoneycombTouchView: View {
         // Wide fixed gap (not a "–" separator) per request — reads as two distinct
         // "label: score" stats rather than one "X – Y" scoreline.
         return HStack(spacing: 28) {
-            Text(coordinator.L(.scoreYouFmt, viewModel.board.playerScore + viewModel.playerHand.count))
+            // Rank name (not a static "You"), same source as the landscape hand-side
+            // label — mac's equivalent score row had the identical gap, fixed alongside
+            // this. Reuses scoreDealerFmt's "%@ %d" shape (name, score), same as the
+            // opponent side below, rather than the old count-only scoreYouFmt.
+            Text(coordinator.L(.scoreDealerFmt,
+                                honeycombLocalizedPlayerRankName(
+                                    cardsCollected: HoneycombProfileManager.shared.unlockedCardIds.count,
+                                    totalCards: HoneycombDatabase.shared.allCards.count,
+                                    language: coordinator.language),
+                                viewModel.board.playerScore + viewModel.playerHand.count))
             // Not "DEALER" — shows the opponent's actual name (e.g. "Baby Bee"), same
             // fix as the hand-side label above the opponent's cards. Name comes first
             // to match "You: N" on the left — scoreDealerFmt is "%@ %d" to match this
