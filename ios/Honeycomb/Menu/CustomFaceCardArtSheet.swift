@@ -13,7 +13,10 @@ struct CustomFaceCardArtSheet: View {
     @State private var isEditingFaceArt = false
     @State private var slotPendingDelete: FaceCardSlot? = nil
 
-    private static let columns = [GridItem(.adaptive(minimum: 80), spacing: 12)]
+    // Fixed 4 columns (not .adaptive) — FaceCardSlot.allCases is already suit-major (all
+    // 4 spades, then clubs, hearts, diamonds), so exactly 4 columns lines each suit up on
+    // its own row instead of an adaptive column count splitting suits across row breaks.
+    private static let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 4)
 
     var body: some View {
         NavigationStack {
@@ -27,6 +30,10 @@ struct CustomFaceCardArtSheet: View {
             }
             .navigationTitle(coordinator.L(.faceCardArtNavRow))
             .navigationBarTitleDisplayMode(.inline)
+            // Fewer, wider columns need more vertical room for all 4 rows to sit
+            // comfortably — the default iPad form-sheet size (fixed, not content-driven)
+            // otherwise leaves the bottom row cramped against the sheet's edge.
+            .presentationDetents([.large])
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(coordinator.L(.back)) { dismiss() }
