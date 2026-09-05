@@ -69,6 +69,7 @@ struct HoneycombTouchView: View {
     @State private var showingThemes = false
     @State private var showingStats = false
     @State private var showingDecks = false
+    @State private var showingRules = false
     @State private var isShowingQuitMatchConfirm = false
     @State private var showNoHintsBanner = false
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
@@ -248,11 +249,13 @@ struct HoneycombTouchView: View {
                 hideHintBinding: Bindable(coordinator).hideHintButton,
                 onNoStressModeChange: { viewModel.startNewGame() },
                 isGlobalSectionDisabled: isMidMatch,
-                globalSectionUnlockNote: coordinator.L(.settingsUnlockNote)
+                globalSectionUnlockNote: coordinator.L(.settingsUnlockNote),
+                showsGameSection: false
             ) {
-                HoneycombSettingsSection(viewModel: viewModel, isMidMatch: isMidMatch, coordinator: coordinator)
+                EmptyView()
             }
         }
+        .sheet(isPresented: $showingRules) { HoneycombRulesSheet(viewModel: viewModel) }
         // Headless-testing hook: `simctl launch ... -honeycombAutostart 1` starts a match
         // immediately, so match-state rendering can be screenshotted without tap input.
         .onAppear {
@@ -352,6 +355,14 @@ struct HoneycombTouchView: View {
             if !isMidMatch {
                 topBarIconButton(systemImage: "rectangle.stack", accessibilityLabel: coordinator.L(.manageDecks)) {
                     showingDecks = true
+                }
+                // Opponent + Rules — previously bolted into Options (see the comment on
+                // the now-deleted HoneycombSettingsSection), moved back to their own
+                // top-bar icon + screen. Hidden mid-match same as Manage Decks: both
+                // Opponent and Rules are locked once a match starts, so there's nothing
+                // to show or edit until it ends.
+                topBarIconButton(systemImage: "hexagon", accessibilityLabel: coordinator.L(.toolbarRules)) {
+                    showingRules = true
                 }
             }
 
@@ -1169,79 +1180,6 @@ private struct ConditionalClip: ViewModifier {
         } else {
             content
         }
-    }
-}
-
-// MARK: - Settings section shown inside the slide-down menu
-
-struct HoneycombSettingsSection: View {
-    @Bindable var viewModel: HoneycombViewModel
-    let isMidMatch: Bool
-    @Bindable var coordinator: AppCoordinator
-
-    @State private var showingRules = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Opponent, Match Rules, and Ban List used to live in their own sheet behind
-            // a dedicated top-bar "Rules" icon. They're game options like any other
-            // per-game setting, so they moved into Options instead — the top-bar icon is
-            // gone, and the rules banner's own tap-for-explanation popover (unaffected by
-            // this move) is still how a mid-match player reads the active rules, without
-            // needing to come into Options at all.
-            // .pickerStyle(.menu) outside a Form/List only renders the selected value
-            // + chevron as a button — the Picker's own label text is silently dropped
-            // (same issue found and fixed in Video Poker's Variant/Default Bet pickers).
-            //
-            // Extra .padding(.bottom, 8) on this row (on top of the VStack's own
-            // spacing: 8) — Toggle's default style carries its own built-in vertical
-            // padding that this plain HStack row doesn't have, so matching Toggle's
-            // visual row-to-row gap needs more than the flat 8 that's already correct
-            // between toggles.
-            HStack {
-                Text(coordinator.L(.opponentPickerLabel))
-                Spacer()
-                Picker(coordinator.L(.opponentPickerLabel), selection: $viewModel.options.difficulty) {
-                    ForEach(HoneycombDifficulty.allCases, id: \.self) { d in
-                        Text(honeycombLocalizedDifficultyName(d, language: coordinator.language)).tag(d)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-            }
-            .disabled(isMidMatch)
-            .opacity(isMidMatch ? 0.5 : 1)
-            .padding(.bottom, 8)
-
-            // Rules (game choice + ban list, merged into one screen) sits directly under
-            // Opponent — the other game-relevant setting. Sound/No Stress Mode/Honey
-            // Mode/Hide Hint/Manually Dismiss Banners live in OptionsFullScreenView's
-            // own Global section now, not here — this card is Honeycomb-specific only.
-            rulesNavRow
-                .disabled(isMidMatch)
-                .opacity(isMidMatch ? 0.5 : 1)
-
-            if isMidMatch {
-                Text(coordinator.L(.settingsUnlockNote))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .sheet(isPresented: $showingRules) { HoneycombRulesSheet(viewModel: viewModel) }
-    }
-
-    private var rulesNavRow: some View {
-        Button {
-            showingRules = true
-        } label: {
-            HStack {
-                Text(coordinator.L(.toolbarRules))
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 

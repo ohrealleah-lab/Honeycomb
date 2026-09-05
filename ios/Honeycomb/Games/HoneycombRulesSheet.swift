@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// Rules — game choice and ban list merged into one screen, its own full-screen sheet
-/// opened from a nav row inside HoneycombSettingsSection (Options), not from a dedicated
-/// top-bar icon. Rules/Ban List/Opponent are game options like any other, so they live in
-/// Options like every other per-game setting; the row itself is disabled mid-match (mac's
-/// mid-match lock), same as this sheet's own content used to be when it still opened
-/// directly. Each rule gets one Auto/Pick/Ban control instead of two separate toggles
-/// (Game Choice's Toggle + Ban List's Toggle) living in two separate screens — mirrors
-/// mac's HoneycombRulesView, sharing its validation via HoneycombRuleSelection.
+/// Opponent + Rules — its own top-bar icon and full-screen sheet, only ever reachable
+/// out of play (the icon that opens this is hidden mid-match, same as Manage Decks), so
+/// nothing in here needs its own mid-match disabled/dimmed state the way it did for the
+/// brief period both lived inside Options instead. Opponent sits at the top, above the
+/// existing rules content (game choice + ban list merged into one screen). Each rule
+/// gets one Auto/Pick/Ban control instead of two separate toggles (Game Choice's Toggle
+/// + Ban List's Toggle) living in two separate screens — mirrors mac's
+/// HoneycombRulesView, sharing its validation via HoneycombRuleSelection.
 struct HoneycombRulesSheet: View {
     @Bindable var viewModel: HoneycombViewModel
     @Environment(\.dismiss) private var dismiss
@@ -17,6 +17,27 @@ struct HoneycombRulesSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
+                    // .pickerStyle(.menu) outside a Form/List only renders the selected
+                    // value + chevron as a button — the Picker's own label text is
+                    // silently dropped (same issue found and fixed in Video Poker's
+                    // Variant/Default Bet pickers).
+                    HStack {
+                        Text(coordinator.L(.opponentPickerLabel))
+                        Spacer()
+                        Picker(coordinator.L(.opponentPickerLabel), selection: $viewModel.options.difficulty) {
+                            ForEach(HoneycombDifficulty.allCases, id: \.self) { d in
+                                Text(honeycombLocalizedDifficultyName(d, language: coordinator.language)).tag(d)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                    }
+                    // Matches ruleRow's own .padding(.horizontal, 12) below — without
+                    // this, Opponent's label sits flush with the outer VStack's edge
+                    // while every rule row's label is inset an extra 12pt, reading as
+                    // misaligned against the card directly beneath it.
+                    .padding(.horizontal, 12)
+
                     VStack(spacing: 0) {
                         ForEach(HoneycombRuleRowID.banListOrder, id: \.self) { id in
                             ruleRow(id)
@@ -31,6 +52,19 @@ struct HoneycombRulesSheet: View {
                     Text(coordinator.L(.matchRulesHint))
                         .font(.caption)
                         .foregroundColor(.secondary)
+
+                    // Visible explanation of what each rule/Normal Mode does — every row
+                    // above already has this text via rowExplanation(id), but on mac
+                    // that's only ever surfaced as a .help() hover tooltip, which has no
+                    // touch equivalent, so iOS never showed it anywhere. Same "• Name:
+                    // explanation" format as HoneycombHelpView's own Match Modifiers
+                    // section (shared/Views/HelpGuideView.swift) for consistency.
+                    Text(HoneycombRuleRowID.banListOrder.map { id in
+                        "• \(rowTitle(id)): \(rowExplanation(id))"
+                    }.joined(separator: "\n"))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     if viewModel.options.bannedRules.count == HoneycombRuleRowID.banListOrder.count - 1 {
                         Text(coordinator.L(.sillyBeeWarning))
