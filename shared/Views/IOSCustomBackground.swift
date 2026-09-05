@@ -131,11 +131,30 @@ public struct IOSBackgroundLayer: View {
                     // instead of the image. Clamping to a 1.0 floor here — rather than
                     // only in the crop editor's pinch handler — also self-heals any
                     // background saved before this fix, with no re-crop needed.
+                    let effectiveScale = max(entry.scale, 1.0)
+                    // The crop editor's pan gesture (CustomBackgroundImportSheet) saves
+                    // offsetXFraction/YFraction with no clamp of its own — it's a fraction
+                    // of *that editor's own preview frame*, which is a fixed aspect ratio.
+                    // Reapplied here as a fraction of geo.size (whatever the actual game
+                    // screen's aspect ratio is), the same fraction is a different absolute
+                    // pixel shift, and at exactly 1.0x scale (bare minimum cover) any pan
+                    // at all — let alone one scaled up for a wider/taller screen — pushes
+                    // part of the image past an edge with nothing behind it but the felt
+                    // color. Clamping to the actual overscan margin this scale provides
+                    // (same fill-scale math .aspectRatio(.fill) uses internally) guarantees
+                    // full coverage in any orientation, regardless of where/how the pan was
+                    // originally set.
+                    let rawOffsetX = entry.offsetXFraction * geo.size.width
+                    let rawOffsetY = entry.offsetYFraction * geo.size.height
+                    let clampedOffset = Self.clampedBackgroundOffset(
+                        imageSize: image.size, containerSize: geo.size, scale: effectiveScale,
+                        rawOffsetX: rawOffsetX, rawOffsetY: rawOffsetY)
+
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .scaleEffect(max(entry.scale, 1.0))
-                        .offset(x: entry.offsetXFraction * geo.size.width, y: entry.offsetYFraction * geo.size.height)
+                        .scaleEffect(effectiveScale)
+                        .offset(x: clampedOffset.x, y: clampedOffset.y)
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
                 } else {
@@ -166,6 +185,30 @@ public struct IOSBackgroundLayer: View {
             }
         }
         .ignoresSafeArea()
+    }
+
+    // Mirrors the scaling math .aspectRatio(contentMode: .fill) applies internally
+    // (scale by whichever axis needs it more, so both fully cover containerSize),
+    // then finds how much overscan that leaves in each axis at the given zoom level
+    // and clamps the raw pixel offset into that range — so a pan can never uncover
+    // an edge, no matter what aspect ratio it was originally set against.
+    private static func clampedBackgroundOffset(
+        imageSize: CGSize, containerSize: CGSize, scale: CGFloat,
+        rawOffsetX: CGFloat, rawOffsetY: CGFloat
+    ) -> (x: CGFloat, y: CGFloat) {
+        guard imageSize.width > 0, imageSize.height > 0,
+              containerSize.width > 0, containerSize.height > 0 else {
+            return (0, 0)
+        }
+        let fillScale = max(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
+        let renderedWidth = imageSize.width * fillScale * scale
+        let renderedHeight = imageSize.height * fillScale * scale
+        let marginX = max(0, (renderedWidth - containerSize.width) / 2)
+        let marginY = max(0, (renderedHeight - containerSize.height) / 2)
+        return (
+            x: min(max(rawOffsetX, -marginX), marginX),
+            y: min(max(rawOffsetY, -marginY), marginY)
+        )
     }
 }
 #endif
