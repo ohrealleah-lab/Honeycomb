@@ -67,7 +67,14 @@ private struct HelpShell<Content: View>: View {
                 .padding(24)
             }
         }
+        // Fixed size matches mac's popover-style presentation. iOS presents these via a
+        // plain .sheet() (OptionsFullScreenView) that already sizes itself to the
+        // device — a hardcoded 520pt width there overflowed a narrower iPhone portrait
+        // screen instead of adapting, so text read as unwrapped/cut off at the screen
+        // edge rather than actually failing to wrap.
+        #if os(macOS)
         .frame(width: 520, height: 560)
+        #endif
     }
 }
 
