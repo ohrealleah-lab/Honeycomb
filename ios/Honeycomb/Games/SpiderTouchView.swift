@@ -308,6 +308,11 @@ struct SpiderTouchView: View {
             }
         }
         .frame(width: cardW + CGFloat(max(dealsLeft - 1, 0)) * 6, height: cardH, alignment: .topLeading)
+        // Missing entirely before this fix — a "deal from stock" hint (SpiderViewModel
+        // sets sourcePileId to the stock pile itself whenever that's the best/only move)
+        // never rang anything, matching mac's identical modifier on its own stock pile
+        // view (SpiderView.swift).
+        .modifier(TouchHintHighlight(isHighlighted: viewModel.activeHint?.sourcePileId == viewModel.state.stock.id))
         .contentShape(Rectangle())
         .onTapGesture { performDeal() }
         .accessibilityLabel(coordinator.L(.touchDealA11y))
