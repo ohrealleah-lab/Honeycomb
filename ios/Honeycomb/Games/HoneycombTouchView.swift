@@ -161,7 +161,18 @@ struct HoneycombTouchView: View {
                     // upward into the topBar above (same root cause as the "Start"
                     // button overflow fixed earlier). Clip so the board never visually
                     // escapes its allocated space regardless of scale-math precision.
-                    .clipped()
+                    //
+                    // Suspended during a Nectar Exchange swap — intrinsicSize's formulas
+                    // budget essentially no slack (1-4%) for SwapLiftEffect's 1.5x scale,
+                    // so a lifted hand card sitting near the top or bottom edge of this
+                    // box (the opponent/player rows are the outermost content, right
+                    // against this box's own top/bottom) got its enlarged portion sliced
+                    // off exactly at those edges — visually right at the board's own top/
+                    // bottom border, since the board sits flush between the two rows.
+                    // Swaps never happen outside an active match, so there's no risk of
+                    // this reintroducing the placeholder-hand overflow the clip guards
+                    // against.
+                    .modifier(ConditionalClip(isClipped: viewModel.swapAnimationPhase == .idle))
                 }
 
                 // Fixed row, like rulesCapsule — living inside gameContent meant this
@@ -324,24 +335,14 @@ struct HoneycombTouchView: View {
         HStack(spacing: 6) {
             menuBarButtons(isMenuOpen: $isMenuOpen, showingOptions: $showingOptions, showingThemes: $showingThemes, coordinator: coordinator)
 
-            topBarIconButton(systemImage: "rectangle.stack", accessibilityLabel: coordinator.L(.manageDecks)) {
-                showingDecks = true
+            // Hidden (not just disabled) mid-match — meaningless once a match is under
+            // way, matching mac's HoneycombView (Manage Decks sits in the else-if branch
+            // of the .playing/.suddenDeath check, not merely grayed out).
+            if !isMidMatch {
+                topBarIconButton(systemImage: "rectangle.stack", accessibilityLabel: coordinator.L(.manageDecks)) {
+                    showingDecks = true
+                }
             }
-            .disabled(isMidMatch)
-
-            // No onChange(of: viewModel.debugBannerRequest) needed here — unlike the
-            // other five games, HoneycombViewModel's debugBannerRequest didSet (shared/
-            // Honeycomb/ViewModels/HoneycombViewModel.swift) is fully self-contained and
-            // already fires on iOS for free.
-            debugMenuButton(
-                items: [
-                    ("Win", .win), ("Loss", .loss),
-                    ("Same", .same), ("Plus", .plus), ("Sudden Death", .suddenDeath)
-                ],
-                catalogSections: DebugBannerCatalogMenu.sections,
-                onSelect: { viewModel.debugBannerRequest = $0 },
-                onSelectCatalog: { viewModel.debugFireCatalogBanner($0) }
-            )
 
             Spacer()
 
@@ -505,7 +506,12 @@ struct HoneycombTouchView: View {
                 }
                 .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
 
+                // Permanently recessed below both hand rows (whose own zIndex only
+                // toggles 0<->100 during a swap) rather than relying on that dynamic
+                // toggle to reliably out-rank boardGrid's implicit 0 every time — see
+                // the identical fix in the portrait branch below for why.
                 boardGrid(cardSize: landscapeHandCardSize)
+                    .zIndex(-1)
 
                 VStack(spacing: 6) {
                     // Not "Dealer" — Honeycomb's opponent is a named AI difficulty
@@ -543,7 +549,14 @@ struct HoneycombTouchView: View {
                 }
                 .zIndex(viewModel.swapAnimationPhase == .idle ? 0 : 100)
 
+                // Permanently recessed below both hand rows during a Nectar Exchange
+                // swap — a Nectar Exchange card flying between hand and board otherwise
+                // got visually clipped behind board cells mid-flight, since boardGrid
+                // sat at the implicit default zIndex 0 and had to rely on the hand
+                // rows' dynamic 0<->100 toggle to reliably out-rank it on every frame
+                // instead of always sitting beneath them.
                 boardGrid()
+                    .zIndex(-1)
                     .padding(.vertical, 4)
 
                 rowHand(cards: playerDisplayHand, size: Self.playerCardSize) { i, card in
@@ -1128,6 +1141,22 @@ struct HoneycombTouchView: View {
                 guard handIdentityToken == generation else { return }
                 isOpponentCardRevealed[i] = true
             }
+        }
+    }
+}
+
+// Applies .clipped() only when isClipped is true — lets a caller suspend clipping
+// conditionally (e.g. while an oversized animated child would otherwise get sliced
+// at the container's edge) without duplicating the whole modifier chain in an
+// if/else at the call site.
+private struct ConditionalClip: ViewModifier {
+    let isClipped: Bool
+
+    func body(content: Content) -> some View {
+        if isClipped {
+            content.clipped()
+        } else {
+            content
         }
     }
 }
