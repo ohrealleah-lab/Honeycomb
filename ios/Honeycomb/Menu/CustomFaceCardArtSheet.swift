@@ -104,7 +104,7 @@ struct CustomFaceCardArtSheet: View {
                     .padding(4)
                 }
             }
-            Text(slot.displayName).font(.caption2).foregroundStyle(.primary)
+            Text(slot.displayName).font(.caption2).foregroundStyle(slot.isRed ? .red : .primary)
         }
     }
 }
