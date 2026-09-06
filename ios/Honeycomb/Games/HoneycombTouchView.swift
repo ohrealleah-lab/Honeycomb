@@ -233,7 +233,19 @@ struct HoneycombTouchView: View {
         .alert(coordinator.L(.newMatchConfirmTitle), isPresented: $isShowingQuitMatchConfirm) {
             Button(coordinator.L(.cancel), role: .cancel) {}
             Button(coordinator.L(.newMatch), role: .destructive) {
-                viewModel.gameState = .setup
+                // Was `viewModel.gameState = .setup` directly — that bypasses
+                // quitMatch()'s handSetupGeneration bump, so a Sudden Death match
+                // quit during the 2.5s window before triggerSuddenDeath() fires left
+                // that closure's generation guard still valid. It ran anyway after
+                // the quit, rebuilding opponentHand from board+hand (easily >5 cards)
+                // and flipping gameState straight to .playing — observed by SwiftUI
+                // as a .setup -> .playing transition (since this had already moved
+                // gameState to .setup), not .suddenDeath -> .playing, so
+                // isOpponentCardRevealed got reset to a fixed size 5 instead of sized
+                // to the real (>5) hand count. Indexing it at i>=5 next render
+                // crashed. quitMatch() bumps handSetupGeneration, invalidating that
+                // stale dispatch like every other interrupt path already does.
+                viewModel.quitMatch()
             }
         }
         .sheet(isPresented: $showingDecks) { HoneycombDecksSheet(viewModel: viewModel) }

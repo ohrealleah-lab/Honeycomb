@@ -59,7 +59,7 @@ targets:
         # CURRENT_PROJECT_VERSION for every build you upload, even within the same
         # version (TestFlight/App Store reject a re-upload with the same build #).
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: true
