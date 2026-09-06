@@ -60,4 +60,10 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         CODE_SIGN_STYLE: Automatic
-        CODE_SIGNING_ALLOWED: "NO"
+        # Simulator builds don't need a signing identity, and this used to be
+        # unconditional — fine for CI/simulator, but it also blocked Xcode from
+        # signing (and therefore installing) the app when running on a real device.
+        # Scoped to the simulator SDK only so device builds fall through to
+        # Automatic signing against whatever team is selected in Xcode's own
+        # Signing & Capabilities pane.
+        CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]: "NO"

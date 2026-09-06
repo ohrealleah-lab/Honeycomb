@@ -399,18 +399,38 @@ struct HoneycombTouchView: View {
                 // dismissed (its "x") to look at the finished board, so there's still a
                 // way back to the same opponent instead of only Start Match rolling a
                 // fresh one.
+                // Icon-only in portrait — this row already has 4-6 fixed-size icon
+                // buttons ahead of it plus a Spacer(), and once those ate the width,
+                // SwiftUI truncated Rematch's/Start's text labels instead of wrapping
+                // ("Rematch" -> "R…", "Start" -> "▶S") rather than actually reserving
+                // room for them. Landscape has enough width to spare for both icon and
+                // text, so only portrait drops it. Kept their existing bordered/
+                // borderedProminent + tint chrome either way so Start still reads as
+                // the primary CTA.
                 if viewModel.gameState == .gameOver && viewModel.canRematch {
-                    Button(coordinator.L(.rematch)) { viewModel.rematch() }
-                        .buttonStyle(.bordered)
-                        .tint(.white)
+                    Button { viewModel.rematch() } label: {
+                        if isLandscape {
+                            Label(coordinator.L(.rematch), systemImage: "arrow.counterclockwise")
+                        } else {
+                            Image(systemName: "arrow.counterclockwise")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                    .accessibilityLabel(coordinator.L(.rematch))
                 }
 
                 Button {
                     viewModel.startNewGame()
                 } label: {
-                    Label(coordinator.L(.startButton), systemImage: "play.fill")
+                    if isLandscape {
+                        Label(coordinator.L(.startButton), systemImage: "play.fill")
+                    } else {
+                        Image(systemName: "play.fill")
+                    }
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel(coordinator.L(.startButton))
             }
         }
         // Landscape only — see rulesCapsuleCompact for why this is a distinct, shorter
