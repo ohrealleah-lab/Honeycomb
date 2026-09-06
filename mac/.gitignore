@@ -15,6 +15,9 @@ SoliBee.zip
 # CI-only release build byproduct (DMG output)
 dist/
 
+# App Store submission build byproduct (signed pkg)
+appstore-dist/
+
 # QA Simulation Scripts
 qa_sim.py
 massive_sim.py

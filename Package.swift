@@ -29,6 +29,7 @@ let package = Package(
                 "README.md",
                 // Resource files living inside the compiled source dirs.
                 "mac/src/Info.plist",
+                "mac/src/Honeycomb.entitlements",
                 "mac/src/AppIcon.icns",
                 "mac/src/priest.png",
                 "mac/src/moogle.jpg",
