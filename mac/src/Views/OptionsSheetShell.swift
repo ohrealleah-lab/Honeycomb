@@ -48,6 +48,13 @@ struct OptionsSheetShell<Content: View>: View {
     @State private var originalShowFeltVignette: Bool
     @State private var originalCustomCardColors: CustomCardColorGroup
     @State private var originalCustomBackgroundName: String?
+    // Snapshotted so Cancel can undo liveSaveActiveTheme()'s immediate, unbuffered
+    // writes into ThemeManager — see AppCoordinator.revertThemeEditing()'s comment.
+    // Without these, resetting the coordinator's own display fields on Cancel doesn't
+    // touch whatever theme got live-saved-over during the edit (including a theme
+    // switched to mid-session via Apply).
+    @State private var originalActiveThemeId: UUID?
+    @State private var originalActiveThemeSnapshot: SoliBeeTheme?
 
     // Sound/Honey Mode/Manually Dismiss Banners/Hide Hint Button — same capture-once/
     // revert-on-Cancel treatment as the theme fields above. Every game's content()
@@ -100,6 +107,9 @@ struct OptionsSheetShell<Content: View>: View {
         _originalShowFeltVignette = State(initialValue: coordinator.showFeltVignette)
         _originalCustomCardColors = State(initialValue: coordinator.customCardColors)
         _originalCustomBackgroundName = State(initialValue: coordinator.customBackgroundName)
+        let activeId = ThemeManager.shared.activeThemeId
+        _originalActiveThemeId = State(initialValue: activeId)
+        _originalActiveThemeSnapshot = State(initialValue: ThemeManager.shared.themes.first(where: { $0.id == activeId }))
 
         _originalIsSoundEnabled = State(initialValue: coordinator.isSoundEnabled)
         _originalHoneyMode = State(initialValue: coordinator.honeyMode)
@@ -164,15 +174,21 @@ struct OptionsSheetShell<Content: View>: View {
 
                 HStack {
                     Button(coordinator.L(.cancel)) {
-                        // Revert any theme changes that were live-previewed via the Themes sub-panel.
-                        coordinator.customFeltRed = originalRed
-                        coordinator.customFeltGreen = originalGreen
-                        coordinator.customFeltBlue = originalBlue
-                        coordinator.feltColor = originalFeltColor
-                        coordinator.cardBackTheme = originalCardBackTheme
-                        coordinator.showFeltVignette = originalShowFeltVignette
-                        coordinator.customCardColors = originalCustomCardColors
-                        coordinator.customBackgroundName = originalCustomBackgroundName
+                        // Revert any theme changes that were live-previewed via the Themes sub-panel,
+                        // including undoing any liveSaveActiveTheme() writes already baked into
+                        // whichever theme was active during the edit.
+                        coordinator.revertThemeEditing(
+                            feltColor: originalFeltColor,
+                            cardBackTheme: originalCardBackTheme,
+                            showFeltVignette: originalShowFeltVignette,
+                            customCardColors: originalCustomCardColors,
+                            customBackgroundName: originalCustomBackgroundName,
+                            customFeltRed: originalRed,
+                            customFeltGreen: originalGreen,
+                            customFeltBlue: originalBlue,
+                            activeThemeId: originalActiveThemeId,
+                            activeThemeSnapshot: originalActiveThemeSnapshot
+                        )
                         coordinator.isSoundEnabled = originalIsSoundEnabled
                         coordinator.honeyMode = originalHoneyMode
                         coordinator.manuallyDismissBanners = originalManuallyDismissBanners
@@ -243,7 +259,13 @@ struct OptionsSheetShell<Content: View>: View {
                     originalRed: originalRed,
                     originalGreen: originalGreen,
                     originalBlue: originalBlue,
+                    originalFeltColor: originalFeltColor,
+                    originalCardBackTheme: originalCardBackTheme,
+                    originalShowFeltVignette: originalShowFeltVignette,
                     originalCustomCardColors: originalCustomCardColors,
+                    originalCustomBackgroundName: originalCustomBackgroundName,
+                    originalActiveThemeId: originalActiveThemeId,
+                    originalActiveThemeSnapshot: originalActiveThemeSnapshot,
                     onCommit: { _ in },
                     availableWidth: availableWidth,
                     availableHeight: availableHeight

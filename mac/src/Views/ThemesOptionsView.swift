@@ -57,7 +57,13 @@ struct ThemesOptionsView: View {
     let originalRed: Double
     let originalGreen: Double
     let originalBlue: Double
+    let originalFeltColor: FeltColorTheme
+    let originalCardBackTheme: String
+    let originalShowFeltVignette: Bool
     let originalCustomCardColors: CustomCardColorGroup
+    let originalCustomBackgroundName: String?
+    let originalActiveThemeId: UUID?
+    let originalActiveThemeSnapshot: SoliBeeTheme?
     // Theme fields are bound straight through to AppCoordinator now, so edits are
     // already live on the board the instant they're made. This hook only remains for
     // any non-theme reconciliation a hosting Options sheet still wants on change.
@@ -535,10 +541,26 @@ struct ThemesOptionsView: View {
     }
 
     private func cancel() {
-        coordinator.customFeltRed   = originalRed
-        coordinator.customFeltGreen = originalGreen
-        coordinator.customFeltBlue  = originalBlue
-        customCardColors = originalCustomCardColors
+        // Full revert, matching OptionsSheetShell's own Cancel button — this panel's
+        // Back chevron is the only cancel affordance while inside the Themes sub-panel,
+        // so it has to undo everything a Themes edit can touch, including any
+        // liveSaveActiveTheme() write already baked into whichever theme was active
+        // during the edit (see AppCoordinator.revertThemeEditing()). Previously this
+        // only reverted the custom felt RGB and card colors, silently leaving
+        // feltColor/cardBackTheme/customBackgroundName changes — and any theme they'd
+        // already been live-saved into — in place after Back was pressed.
+        coordinator.revertThemeEditing(
+            feltColor: originalFeltColor,
+            cardBackTheme: originalCardBackTheme,
+            showFeltVignette: originalShowFeltVignette,
+            customCardColors: originalCustomCardColors,
+            customBackgroundName: originalCustomBackgroundName,
+            customFeltRed: originalRed,
+            customFeltGreen: originalGreen,
+            customFeltBlue: originalBlue,
+            activeThemeId: originalActiveThemeId,
+            activeThemeSnapshot: originalActiveThemeSnapshot
+        )
         isShowing = false
         clearPendingEditors()
     }

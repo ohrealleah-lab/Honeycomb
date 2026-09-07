@@ -787,6 +787,64 @@ public final class AppCoordinator {
         ThemeManager.shared.activeThemeId = theme.id
     }
 
+    // Undoes every live-previewed theme edit made during a Preferences/Themes session
+    // — called from ThemesOptionsView's Back button and OptionsSheetShell's Cancel
+    // button. Simply setting the coordinator fields back to their pre-edit values
+    // isn't enough on its own: every one of those fields' didSet calls
+    // liveSaveActiveTheme() immediately, with no buffering, so by the time Cancel is
+    // pressed any tweak already got baked into whichever theme was active *while the
+    // edit happened* (see liveSaveActiveTheme() below) — including a theme the user
+    // switched to mid-session via Apply, which never gets reverted just by resetting
+    // these display fields. Restoring activeThemeSnapshot (a copy of that theme taken
+    // when the session opened) and activeThemeId (in case Apply switched it) undoes
+    // that corruption instead of just hiding it behind reverted on-screen fields.
+    // Wrapped in the same isApplyingTheme reentrancy guard as applyTheme() so these
+    // reverting writes don't themselves re-trigger liveSaveActiveTheme() and re-save
+    // over the snapshot being restored.
+    public func revertThemeEditing(
+        feltColor: FeltColorTheme,
+        cardBackTheme: String,
+        showFeltVignette: Bool,
+        customCardColors: CustomCardColorGroup,
+        customBackgroundName: String?,
+        customFeltRed: Double,
+        customFeltGreen: Double,
+        customFeltBlue: Double,
+        activeThemeId: UUID?,
+        activeThemeSnapshot: SoliBeeTheme?
+    ) {
+        isApplyingTheme = true
+        defer { isApplyingTheme = false }
+
+        self.feltColor = feltColor
+        self.cardBackTheme = cardBackTheme
+        self.showFeltVignette = showFeltVignette
+        self.customCardColors = customCardColors
+        self.customBackgroundName = customBackgroundName
+        self.customFeltRed = customFeltRed
+        self.customFeltGreen = customFeltGreen
+        self.customFeltBlue = customFeltBlue
+
+        ThemeManager.shared.activeThemeId = activeThemeId
+        if var activeThemeSnapshot {
+            // Face art is deliberately NOT part of this revert (matching Windows'
+            // RevertSettingsChanges, which explicitly passes syncFaceArtToTheme: false
+            // for the same reason): a face-art edit writes straight to
+            // CustomFaceCardArtManager's own files/UserDefaults with no snapshot taken
+            // here to restore it from, so it's treated as already-committed, like Save/
+            // Delete Theme. Overwriting activeThemeSnapshot.faceArts with its pre-edit
+            // value here would restore the *theme record's* faceArts out from under the
+            // still-live (edited, uncommitted-by-this-revert) CustomFaceCardArtManager
+            // state — the next unrelated theme-field edit's liveSaveActiveTheme() would
+            // just overwrite it right back with the live value anyway, but until then
+            // the theme record and the live face art would silently disagree.
+            #if canImport(AppKit)
+            activeThemeSnapshot.faceArts = CustomFaceCardArtManager.shared.faceArts
+            #endif
+            ThemeManager.shared.updateTheme(activeThemeSnapshot)
+        }
+    }
+
     // MARK: - Live-save into the active theme (mirrors Windows' NotifySettingsChanged ->
     // ThemeService.UpdateTheme live-save). Called from every theme-relevant field's
     // didSet above, and from CustomFaceCardArtManager's mutators via
