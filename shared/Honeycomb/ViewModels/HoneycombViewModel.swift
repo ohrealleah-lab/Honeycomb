@@ -5,7 +5,7 @@ import SwiftUI
 @Observable
 public final class HoneycombViewModel {
     public struct Options: Codable, Equatable {
-        public var difficulty: HoneycombDifficulty = .medium
+        public var difficulty: HoneycombDifficulty = .easy
         public var activeDeckIndex: Int = 0 // 0-4
         public var selectedRules: Set<HoneycombRule> = []
         // Explicitly locks the match to zero active rules — distinct from merely having
@@ -26,7 +26,7 @@ public final class HoneycombViewModel {
 
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            difficulty = try container.decodeIfPresent(HoneycombDifficulty.self, forKey: .difficulty) ?? .medium
+            difficulty = try container.decodeIfPresent(HoneycombDifficulty.self, forKey: .difficulty) ?? .easy
             activeDeckIndex = try container.decodeIfPresent(Int.self, forKey: .activeDeckIndex) ?? 0
             selectedRules = try container.decodeIfPresent(Set<HoneycombRule>.self, forKey: .selectedRules) ?? []
             forceNormalMode = try container.decodeIfPresent(Bool.self, forKey: .forceNormalMode) ?? false

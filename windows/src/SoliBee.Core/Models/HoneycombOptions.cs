@@ -6,7 +6,7 @@ public class HoneycombOptions
 {
     public bool ForceNormalRules { get; set; } = false;
     public HashSet<HoneycombRule> ManualRules { get; set; } = new HashSet<HoneycombRule>();
-    public HoneycombDifficulty Difficulty { get; set; } = HoneycombDifficulty.Medium;
+    public HoneycombDifficulty Difficulty { get; set; } = HoneycombDifficulty.Easy;
     public HashSet<string> BannedRules { get; set; } = new HashSet<string>();
 
     // Mac parity options. IsSoundEnabled/NoStressMode/ActiveDeckIndex/HoneyMode are
