@@ -8,6 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -121,58 +124,90 @@ fun KlondikeBoard(
 
     Box(modifier = Modifier.fillMaxSize()) {
         
-        Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-            // Top Bar
-            Row(
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row {
-                    IconButton(onClick = onMenuTap) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
-                    }
-                    IconButton(onClick = onOptionsTap) {
-                        Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
-                    }
-                    IconButton(onClick = onThemesTap) {
-                        Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isLandscape = maxWidth > maxHeight
+            
+            val scoreCapsule = @Composable {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(if (options.isVegasScoring) "BANKROLL" else "SCORE", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
+                        Text(if (options.isVegasScoring) "BANKROLL" else "SCORE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                         Text(if (options.isVegasScoring) String.format("$%.2f", state.score / 100.0) else "${state.score}", fontWeight = FontWeight.Bold, color = Color.Yellow)
                     }
                     if (!noStressMode) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("TIME", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
+                            Text("TIME", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                             val mins = state.timerSeconds / 60
                             val secs = state.timerSeconds % 60
                             Text(String.format("%02d:%02d", mins, secs), fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
+            }
+            
+            Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                // Top Bar
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row {
+                        IconButton(onClick = onMenuTap) {
+                            Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
+                        }
+                        IconButton(onClick = onOptionsTap) {
+                            Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
+                        }
+                        IconButton(onClick = onThemesTap) {
+                            Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
+                        }
+                    }
 
-                Row {
-                    IconButton(onClick = { viewModel.findHint() }) {
-                        Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
+                    if (isLandscape) {
+                        scoreCapsule()
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
                     }
-                    IconButton(
-                        onClick = { viewModel.undoLastAction() },
-                        enabled = viewModel.canUndo
-                    ) {
-                        Icon(Icons.Default.Undo, contentDescription = "Undo", tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
-                    }
-                    IconButton(onClick = {
-                        if (state.movesCount == 0) viewModel.startNewGame()
-                        else showQuitConfirm = true
-                    }) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "New Game", tint = Color.White)
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { viewModel.undoLastAction() },
+                            enabled = viewModel.canUndo
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
+                        }
+                        IconButton(onClick = { viewModel.findHint() }) {
+                            Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(Color(0xFF2196F3), CircleShape)
+                                .clickable {
+                                    if (state.movesCount == 0) viewModel.startNewGame()
+                                    else showQuitConfirm = true
+                                }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "New", tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("New", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
                     }
                 }
-            }
+                
+                if (!isLandscape) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                        scoreCapsule()
+                    }
+                }
 
             if (hintSourceId != null && hintTargetId != null) {
                 Text(
@@ -185,7 +220,7 @@ fun KlondikeBoard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 val widthCardW = (maxWidth.value - 6 * 6) / 7f
                 val baseCardW = widthCardW.coerceAtMost(110f)
                 val baseCardH = baseCardW * 1.4f
@@ -410,6 +445,7 @@ fun KlondikeBoard(
                 }
             }
         }
+            } // Close BoxWithConstraints for landscape root
 
         if (state.hasWon) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
