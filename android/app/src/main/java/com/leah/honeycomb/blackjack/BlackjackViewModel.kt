@@ -443,6 +443,9 @@ class BlackjackViewModel(
             playerBust -> BlackjackRoundOutcome.Bust
             else -> BlackjackRoundOutcome.Loss
         }
+        if (outcome == BlackjackRoundOutcome.Blackjack || outcome == BlackjackRoundOutcome.Win) {
+            com.leah.honeycomb.audio.UISound.play("victory")
+        }
         
         _state.value = _state.value.copy(
             playerHands = hands,

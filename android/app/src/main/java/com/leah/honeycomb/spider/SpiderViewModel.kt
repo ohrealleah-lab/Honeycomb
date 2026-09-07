@@ -280,6 +280,7 @@ class SpiderViewModel(
     fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile) {
         if (!isValidMove(cards, targetPile)) return
 
+        com.leah.honeycomb.audio.UISound.play("snap")
         saveStateForUndo()
         clearHint()
         startTimerIfNeeded()
@@ -432,6 +433,7 @@ class SpiderViewModel(
         if (WinDetection.hasWon(totalFoundationCards, 104, _state.value.hasWon)) {
             _state.update { it.copy(hasWon = true) }
             stopTimer()
+            com.leah.honeycomb.audio.UISound.play("victory")
 
             val timeInSeconds = _state.value.timerSeconds
             val finalScore = _state.value.score

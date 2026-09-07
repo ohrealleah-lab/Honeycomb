@@ -223,6 +223,7 @@ class VideoPokerViewModel(
                 longestStreak = max(stats.longestStreak, stats.currentStreak + 1)
             )
             if (payout > 0) {
+                com.leah.honeycomb.audio.UISound.play("victory")
                 stats = stats.copy(handsWon = stats.handsWon + 1)
                 if (rank == PokerHandRank.RoyalFlush) {
                     stats = stats.copy(royalFlushCount = stats.royalFlushCount + 1)
