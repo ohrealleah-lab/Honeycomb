@@ -383,9 +383,9 @@ fun StarsView(cardData: HoneycombCardData, sizeWidth: Float, modifier: Modifier 
 }
 
 fun suitSymbol(suit: String): String = when (suit) {
-    "S" -> "♠"
-    "H" -> "♥"
-    "D" -> "♦"
-    "C" -> "♣"
+    "S" -> "♠\uFE0E"
+    "H" -> "♥\uFE0E"
+    "D" -> "♦\uFE0E"
+    "C" -> "♣\uFE0E"
     else -> "?"
 }
