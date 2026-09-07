@@ -39,7 +39,7 @@ data class CustomFaceArt(
 
 @Serializable
 enum class FeltColorType {
-    FeltGreen, Custom, Desert
+    FeltGreen, Crimson, RoyalBlue, Charcoal, Desert, Custom
 }
 
 @Serializable

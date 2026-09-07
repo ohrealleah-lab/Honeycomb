@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,12 +19,16 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
     private val themesKey = stringPreferencesKey("solibee_themes")
     private val activeThemeIdKey = stringPreferencesKey("solibee_active_theme_id")
     private val deletedDefaultThemesKey = stringPreferencesKey("solibee_deleted_default_themes")
+    private val showFeltVignetteKey = booleanPreferencesKey("solibee_show_felt_vignette")
 
     private val _themes = MutableStateFlow<List<SoliBeeTheme>>(emptyList())
     val themes: StateFlow<List<SoliBeeTheme>> = _themes
 
     private val _activeThemeId = MutableStateFlow<String?>(null)
     val activeThemeId: StateFlow<String?> = _activeThemeId
+
+    private val _showFeltVignette = MutableStateFlow<Boolean>(true)
+    val showFeltVignette: StateFlow<Boolean> = _showFeltVignette
 
     private var deletedDefaultThemes: MutableSet<String> = mutableSetOf()
 
@@ -87,6 +92,7 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
 
         _themes.value = loadedThemes
         _activeThemeId.value = prefs[activeThemeIdKey]
+        _showFeltVignette.value = prefs[showFeltVignetteKey] ?: true
 
         // Ensure we save the merged list back
         save()
@@ -98,8 +104,48 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
                 prefs[themesKey] = Json.encodeToString(_themes.value)
                 prefs[deletedDefaultThemesKey] = Json.encodeToString(deletedDefaultThemes.toList())
                 _activeThemeId.value?.let { prefs[activeThemeIdKey] = it } ?: prefs.remove(activeThemeIdKey)
+                prefs[showFeltVignetteKey] = _showFeltVignette.value
             }
         }
+    }
+
+    fun setShowFeltVignette(show: Boolean) {
+        _showFeltVignette.value = show
+        save()
+    }
+
+    private fun getOrCreateActiveTheme(): SoliBeeTheme {
+        val currentId = _activeThemeId.value
+        val currentTheme = if (currentId != null) {
+            _themes.value.find { it.id == currentId }
+        } else null
+        
+        if (currentTheme != null) return currentTheme
+        
+        val newTheme = SoliBeeTheme(
+            id = java.util.UUID.randomUUID().toString(),
+            name = "Custom",
+            cardBackTheme = "Solibee",
+            feltColor = FeltColorType.FeltGreen
+        )
+        addTheme(newTheme)
+        setActiveTheme(newTheme.id)
+        return newTheme
+    }
+
+    fun updateActiveThemeCardBack(cardBackTheme: String) {
+        val theme = getOrCreateActiveTheme()
+        updateTheme(theme.copy(cardBackTheme = cardBackTheme))
+    }
+
+    fun updateActiveThemeBackground(feltColor: FeltColorType, customBgName: String? = null) {
+        val theme = getOrCreateActiveTheme()
+        updateTheme(theme.copy(feltColor = feltColor, customBackgroundName = customBgName))
+    }
+
+    fun updateActiveThemeCustomColors(colors: CustomCardColorGroup) {
+        val theme = getOrCreateActiveTheme()
+        updateTheme(theme.copy(customCardColors = colors))
     }
 
     fun setActiveTheme(id: String) {

@@ -90,8 +90,8 @@ fun CardView(
 
         Box(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .requiredSize(CardDimensions.width, CardDimensions.height)
+                .wrapContentSize(align = Alignment.TopStart, unbounded = true)
+                .size(CardDimensions.width, CardDimensions.height)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
@@ -196,7 +196,7 @@ fun CardCenterSuitView(card: Card, suitColor: Color, modifier: Modifier = Modifi
 
     // Default Face Rendering
     if (card.rank == 1) {
-        Text(text = card.suit.symbol, color = suitColor, fontSize = 61.sp, modifier = modifier)
+        Text(text = card.suit.symbol, color = suitColor, fontSize = 52.sp, modifier = modifier)
     } else if (card.isFaceCard) {
         // Draw the default face art image instead of just text
         val drawableId = when (card.rank) {
@@ -209,7 +209,7 @@ fun CardCenterSuitView(card: Card, suitColor: Color, modifier: Modifier = Modifi
             Image(
                 painter = painterResource(id = drawableId),
                 contentDescription = null,
-                modifier = modifier.fillMaxSize(0.8f),
+                modifier = modifier.fillMaxSize(0.55f),
                 contentScale = ContentScale.Fit
             )
         } else {
@@ -222,7 +222,7 @@ fun CardCenterSuitView(card: Card, suitColor: Color, modifier: Modifier = Modifi
                 Text(
                     text = card.suit.symbol,
                     color = suitColor,
-                    fontSize = 32.sp,
+                    fontSize = 20.sp, // Reduced to match iOS visual weight
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .align(Alignment.Center)

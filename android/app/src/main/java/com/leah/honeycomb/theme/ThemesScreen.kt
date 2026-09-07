@@ -3,21 +3,23 @@ package com.leah.honeycomb.theme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import com.leah.honeycomb.StringKey
-import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import com.leah.honeycomb.CardBackView
 import com.leah.honeycomb.LocalAppContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,8 +29,12 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}) {
     val themeManager = appContainer.themeManager
     val themes by themeManager.themes.collectAsState()
     val activeThemeId by themeManager.activeThemeId.collectAsState()
+    val showFeltVignette by themeManager.showFeltVignette.collectAsState()
 
-    var showCreateDialog by remember { mutableStateOf(false) }
+    val customCardBacks by appContainer.customCardBackManager.cardBacks.collectAsState()
+    val customBackgrounds by appContainer.customBackgroundManager.backgrounds.collectAsState()
+
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -40,178 +46,273 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onAbout() }) {
+                    IconButton(onClick = onAbout) {
                         Icon(Icons.Default.Info, contentDescription = "About")
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showCreateDialog = true }) {
-                Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = "Create Theme")
-            }
         }
     ) { padding ->
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(100.dp),
-            modifier = Modifier.padding(padding).padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            items(themes) { theme ->
-                ThemeTile(
-                    theme = theme,
-                    isActive = theme.id == activeThemeId,
-                    onSelect = { themeManager.setActiveTheme(theme.id) }
+            // Saved Themes
+            Text("Saved Themes", style = MaterialTheme.typography.titleMedium)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(themes) { theme ->
+                    ThemePreviewItem(
+                        theme = theme,
+                        isActive = theme.id == activeThemeId,
+                        onApply = { themeManager.setActiveTheme(theme.id) }
+                    )
+                }
+            }
+
+            // Card Back
+            Text("Card Back", style = MaterialTheme.typography.titleMedium)
+            val allCardBacks = listOf("Solibee", "Pareidolic", "Vulpera", "Forest") + customCardBacks.map { it.name }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(allCardBacks) { cbName ->
+                    CardBackSelectorItem(
+                        name = cbName,
+                        onClick = { themeManager.updateActiveThemeCardBack(cbName) }
+                    )
+                }
+            }
+
+            // Background
+            Text("Background", style = MaterialTheme.typography.titleMedium)
+            val builtinFelts = listOf("Green Felt", "Crimson", "Royal Blue", "Charcoal", "Desert Felt")
+            val allBackgrounds = builtinFelts + customBackgrounds.map { it.name }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(allBackgrounds) { bgName ->
+                    BackgroundSelectorItem(
+                        name = bgName,
+                        onClick = {
+                            val feltColor = when (bgName) {
+                                "Green Felt" -> FeltColorType.FeltGreen
+                                "Crimson" -> FeltColorType.Crimson
+                                "Royal Blue" -> FeltColorType.RoyalBlue
+                                "Charcoal" -> FeltColorType.Charcoal
+                                "Desert Felt" -> FeltColorType.Desert
+                                else -> FeltColorType.FeltGreen
+                            }
+                            val customBg = if (bgName !in builtinFelts) bgName else null
+                            themeManager.updateActiveThemeBackground(feltColor, customBg)
+                        }
+                    )
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Show Vignette")
+                Spacer(modifier = Modifier.width(8.dp))
+                Switch(
+                    checked = showFeltVignette,
+                    onCheckedChange = { themeManager.setShowFeltVignette(it) }
                 )
             }
-        }
-        
-        if (showCreateDialog) {
-            CreateThemeDialog(onDismiss = { showCreateDialog = false })
+
+            // Custom Card Color
+            Text("Custom Card Color", style = MaterialTheme.typography.titleMedium)
+            CustomCardColorSection(themeManager)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateThemeDialog(onDismiss: () -> Unit) {
-    val appContainer = LocalAppContainer.current
-    var name by remember { mutableStateOf("") }
-    
-    val customBackgrounds by appContainer.customBackgroundManager.backgrounds.collectAsState()
-    val backgroundOptions = listOf("Green Felt", "Desert Felt") + customBackgrounds.map { it.name }
-    var selectedBackground by remember { mutableStateOf(backgroundOptions.first()) }
-    var bgDropdownExpanded by remember { mutableStateOf(false) }
-
-    val customCardBacks by appContainer.customCardBackManager.cardBacks.collectAsState()
-    val cardBackOptions = listOf("Solibee", "Pareidolic", "Pareidolic 2", "Vulpera", "Forest") + customCardBacks.map { it.name }
-    var selectedCardBack by remember { mutableStateOf(cardBackOptions.first()) }
-    var cbDropdownExpanded by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Create Theme") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Theme Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                ExposedDropdownMenuBox(
-                    expanded = bgDropdownExpanded,
-                    onExpandedChange = { bgDropdownExpanded = !bgDropdownExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = selectedBackground,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Background") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bgDropdownExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = bgDropdownExpanded,
-                        onDismissRequest = { bgDropdownExpanded = false }
-                    ) {
-                        backgroundOptions.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option) },
-                                onClick = {
-                                    selectedBackground = option
-                                    bgDropdownExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-                
-                ExposedDropdownMenuBox(
-                    expanded = cbDropdownExpanded,
-                    onExpandedChange = { cbDropdownExpanded = !cbDropdownExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = selectedCardBack,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Card Back") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cbDropdownExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = cbDropdownExpanded,
-                        onDismissRequest = { cbDropdownExpanded = false }
-                    ) {
-                        cardBackOptions.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option) },
-                                onClick = {
-                                    selectedCardBack = option
-                                    cbDropdownExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
+fun ThemePreviewItem(theme: SoliBeeTheme, isActive: Boolean, onApply: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(80.dp, 120.dp)
+                .clip(RoundedCornerShape(8.dp))
+        ) {
+            CompositionLocalProvider(LocalSoliBeeTheme provides theme) {
+                AppBackground(modifier = Modifier.fillMaxSize())
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val isCustomBg = selectedBackground !in listOf("Green Felt", "Desert Felt")
-                    val feltColor = when (selectedBackground) {
-                        "Green Felt" -> FeltColorType.FeltGreen
-                        "Desert Felt" -> FeltColorType.Desert
-                        else -> FeltColorType.FeltGreen
-                    }
-                    val customBgName = if (isCustomBg) selectedBackground else null
-                    
-                    appContainer.themeManager.addTheme(
-                        SoliBeeTheme(
-                            name = name.ifBlank { "My Theme" },
-                            cardBackTheme = selectedCardBack,
-                            feltColor = feltColor,
-                            customBackgroundName = customBgName
-                        )
-                    )
-                    onDismiss()
-                }
+            Box(
+                modifier = Modifier
+                    .requiredSize(114.dp, 160.dp)
+                    .wrapContentSize(unbounded = true, align = Alignment.Center)
+                    .graphicsLayer { scaleX = 0.5f; scaleY = 0.5f }
             ) {
-                Text("Create")
+                CardBackView(themeName = theme.cardBackTheme, isAnimated = false)
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
-    )
+        Spacer(modifier = Modifier.height(8.dp))
+        if (isActive) {
+            Text("Active", color = MaterialTheme.colorScheme.primary)
+        } else {
+            Button(onClick = onApply) {
+                Text("Apply")
+            }
+        }
+    }
 }
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
-fun ThemeTile(theme: SoliBeeTheme, isActive: Boolean, onSelect: () -> Unit) {
-    // Implementing checkpoint 4.12-4.14: fixed size and explicit clickable hit region
-    Box {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+fun CardBackSelectorItem(name: String, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
             modifier = Modifier
-                .width(100.dp)
-                .clickable(onClick = onSelect)
+                .requiredSize(114.dp, 160.dp)
+                .wrapContentSize(unbounded = true, align = Alignment.Center)
+                .graphicsLayer { scaleX = 0.6f; scaleY = 0.6f }
         ) {
-            Box(
-                modifier = Modifier
-                    .size(100.dp, 140.dp)
-                    .background(if (isActive) Color.Yellow.copy(alpha = 0.3f) else Color.Transparent)
-            ) {
-                // Mini preview of the theme
-                CompositionLocalProvider(LocalSoliBeeTheme provides theme) {
-                    AppBackground(modifier = Modifier.fillMaxSize())
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(theme.name, style = MaterialTheme.typography.bodySmall)
+            CardBackView(themeName = name, isAnimated = false)
         }
+        Text(name, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+fun BackgroundSelectorItem(name: String, onClick: () -> Unit) {
+    val dummyTheme = SoliBeeTheme(
+        name = "Dummy",
+        cardBackTheme = "Solibee",
+        feltColor = when (name) {
+            "Green Felt" -> FeltColorType.FeltGreen
+            "Crimson" -> FeltColorType.Crimson
+            "Royal Blue" -> FeltColorType.RoyalBlue
+            "Charcoal" -> FeltColorType.Charcoal
+            "Desert Felt" -> FeltColorType.Desert
+            else -> FeltColorType.FeltGreen
+        },
+        customBackgroundName = if (name !in listOf("Green Felt", "Crimson", "Royal Blue", "Charcoal", "Desert Felt")) name else null
+    )
+    Column(
+        modifier = Modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(60.dp, 60.dp)
+                .clip(RoundedCornerShape(8.dp))
+        ) {
+            CompositionLocalProvider(LocalSoliBeeTheme provides dummyTheme) {
+                AppBackground(modifier = Modifier.fillMaxSize())
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(name, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun CustomCardColorSection(themeManager: ThemeManager) {
+    val activeThemeId by themeManager.activeThemeId.collectAsState()
+    val themes by themeManager.themes.collectAsState()
+    val activeTheme = themes.find { it.id == activeThemeId }
+    val colors = activeTheme?.customCardColors ?: CustomCardColorGroup()
+
+    var colorToEdit by remember { mutableStateOf<String?>(null) }
+    var currentRed by remember { mutableStateOf(0.0) }
+    var currentGreen by remember { mutableStateOf(0.0) }
+    var currentBlue by remember { mutableStateOf(0.0) }
+    var currentAlpha by remember { mutableStateOf(1.0) }
+
+    val openDialog = { name: String, r: Double, g: Double, b: Double, a: Double ->
+        colorToEdit = name
+        currentRed = r
+        currentGreen = g
+        currentBlue = b
+        currentAlpha = a
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Enable Custom Colors")
+        Spacer(modifier = Modifier.width(8.dp))
+        Switch(
+            checked = colors.isEnabled,
+            onCheckedChange = { themeManager.updateActiveThemeCustomColors(colors.copy(isEnabled = it)) }
+        )
+    }
+
+    if (colors.isEnabled) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            ColorSwatch("Background", colors.bgRed, colors.bgGreen, colors.bgBlue, colors.bgAlpha) {
+                openDialog("Background", colors.bgRed, colors.bgGreen, colors.bgBlue, colors.bgAlpha)
+            }
+            ColorSwatch("Outline", colors.outlineRed, colors.outlineGreen, colors.outlineBlue, colors.outlineAlpha) {
+                openDialog("Outline", colors.outlineRed, colors.outlineGreen, colors.outlineBlue, colors.outlineAlpha)
+            }
+            ColorSwatch("Black Suit", colors.blackSuitRed, colors.blackSuitGreen, colors.blackSuitBlue, colors.blackSuitAlpha) {
+                openDialog("Black Suit", colors.blackSuitRed, colors.blackSuitGreen, colors.blackSuitBlue, colors.blackSuitAlpha)
+            }
+            ColorSwatch("Red Suit", colors.redSuitRed, colors.redSuitGreen, colors.redSuitBlue, colors.redSuitAlpha) {
+                openDialog("Red Suit", colors.redSuitRed, colors.redSuitGreen, colors.redSuitBlue, colors.redSuitAlpha)
+            }
+            ColorSwatch("Shadow", colors.shadowRed, colors.shadowGreen, colors.shadowBlue, colors.shadowAlpha) {
+                openDialog("Shadow", colors.shadowRed, colors.shadowGreen, colors.shadowBlue, colors.shadowAlpha)
+            }
+        }
+    }
+
+    if (colorToEdit != null) {
+        AlertDialog(
+            onDismissRequest = { colorToEdit = null },
+            title = { Text("Edit $colorToEdit") },
+            text = {
+                Column {
+                    Text("Red")
+                    Slider(value = currentRed.toFloat(), onValueChange = { currentRed = it.toDouble() })
+                    Text("Green")
+                    Slider(value = currentGreen.toFloat(), onValueChange = { currentGreen = it.toDouble() })
+                    Text("Blue")
+                    Slider(value = currentBlue.toFloat(), onValueChange = { currentBlue = it.toDouble() })
+                    Text("Alpha")
+                    Slider(value = currentAlpha.toFloat(), onValueChange = { currentAlpha = it.toDouble() })
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val newColors = colors.copy()
+                        when (colorToEdit) {
+                            "Background" -> { newColors.bgRed = currentRed; newColors.bgGreen = currentGreen; newColors.bgBlue = currentBlue; newColors.bgAlpha = currentAlpha }
+                            "Outline" -> { newColors.outlineRed = currentRed; newColors.outlineGreen = currentGreen; newColors.outlineBlue = currentBlue; newColors.outlineAlpha = currentAlpha }
+                            "Black Suit" -> { newColors.blackSuitRed = currentRed; newColors.blackSuitGreen = currentGreen; newColors.blackSuitBlue = currentBlue; newColors.blackSuitAlpha = currentAlpha }
+                            "Red Suit" -> { newColors.redSuitRed = currentRed; newColors.redSuitGreen = currentGreen; newColors.redSuitBlue = currentBlue; newColors.redSuitAlpha = currentAlpha }
+                            "Shadow" -> { newColors.shadowRed = currentRed; newColors.shadowGreen = currentGreen; newColors.shadowBlue = currentBlue; newColors.shadowAlpha = currentAlpha }
+                        }
+                        themeManager.updateActiveThemeCustomColors(newColors)
+                        colorToEdit = null
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { colorToEdit = null }) { Text("Cancel") }
+            }
+        )
+    }
+}
+
+@Composable
+fun ColorSwatch(name: String, r: Double, g: Double, b: Double, a: Double, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(r.toFloat(), g.toFloat(), b.toFloat(), a.toFloat()))
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(name, style = MaterialTheme.typography.bodySmall)
     }
 }
