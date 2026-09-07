@@ -57,6 +57,7 @@ fun BeecellBoard(
     val language by com.leah.honeycomb.LocalAppContainer.current.language.collectAsState()
     val state by viewModel.state.collectAsState()
     val isStuck by viewModel.isStuck.collectAsState()
+    val isAutocompleteAvailable by viewModel.isAutocompleteAvailable.collectAsState()
     var dragState by remember { mutableStateOf(DragState()) }
     val pileFrames = remember { mutableStateMapOf<String, Rect>() }
     
@@ -303,6 +304,18 @@ fun BeecellBoard(
                         Button(onClick = { viewModel.restartCurrentGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.Restart, language)) }
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = { viewModel.startNewGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.NewGame, language)) }
+                    }
+                }
+            }
+
+            if (isAutocompleteAvailable && !state.hasWon) {
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
+                    Card {
+                        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Victory Guaranteed!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { viewModel.runAutocomplete() }) { Text("Auto-complete") }
+                        }
                     }
                 }
             }

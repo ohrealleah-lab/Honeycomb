@@ -285,6 +285,16 @@ fun SpiderBoard(
                     }
                 }
             }
+        } else if (isAutocompleteAvailable) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
+                Card {
+                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Victory Guaranteed!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = { viewModel.runAutocomplete() }) { Text("Auto-complete") }
+                    }
+                }
+            }
         }
     }
 }

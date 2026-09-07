@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.util.UUID
 
 class SpiderViewModel(
@@ -212,6 +213,7 @@ class SpiderViewModel(
         )
 
         checkCompletedRuns()
+        checkAutocompleteState()
         checkStuckState()
     }
 
@@ -272,6 +274,7 @@ class SpiderViewModel(
         )
 
         checkCompletedRuns()
+        checkAutocompleteState()
         checkStuckState()
     }
 
@@ -396,7 +399,10 @@ class SpiderViewModel(
     }
 
     private fun checkStuckState() {
-        if (_state.value.hasWon) return
+        if (_state.value.hasWon || _isAutocompleteAvailable.value) {
+            _isStuck.value = false
+            return
+        }
         var hasValidMove = false
         if (!_state.value.stock.isEmpty && !hasEmptyTableauColumn) {
             hasValidMove = true
@@ -435,6 +441,167 @@ class SpiderViewModel(
         _isStuck.value = !hasValidMove
     }
 
+    fun checkAutocompleteState() {
+        val totalFoundationCards = _state.value.foundations.sumOf { it.cards.size }
+        if (totalFoundationCards >= 104 || !_state.value.stock.isEmpty) {
+            _isAutocompleteAvailable.value = false
+            return
+        }
+        _isAutocompleteAvailable.value = !_state.value.hasWon && canSimulateAutocompleteWin()
+    }
+
+    private fun getLongestValidSequence(pile: Pile): List<Card> {
+        if (pile.cards.isEmpty()) return emptyList()
+        val last = pile.cards.last()
+        if (!last.faceUp) return emptyList()
+        var start = pile.cards.size - 1
+        while (start > 0) {
+            val card = pile.cards[start - 1]
+            val prevCard = pile.cards[start]
+            if (card.faceUp && card.suit == prevCard.suit && card.rank == prevCard.rank + 1) {
+                start--
+            } else break
+        }
+        return pile.cards.subList(start, pile.cards.size)
+    }
+
+    // Simulates forward using only tableau-to-tableau moves (mirroring isValidMove()'s
+    // rank-only landing rule, and a same-suit-descending fallback park onto an empty
+    // column) to answer "does the rest of this game play itself out automatically from
+    // here," without mutating any real state. Ported from Swift's
+    // canSimulateAutocompleteWin().
+    private fun canSimulateAutocompleteWin(): Boolean {
+        if (!_state.value.stock.isEmpty) return false
+        var simTableau = _state.value.tableau.map { it.copy(cards = it.cards.toList()) }
+        var didMove = true
+
+        while (didMove) {
+            didMove = false
+            var nextMove: Triple<List<Card>, Int, Int>? = null
+            var fallbackMove: Triple<List<Card>, Int, Int>? = null
+
+            outer@ for (srcIdx in simTableau.indices) {
+                if (simTableau[srcIdx].cards.isEmpty()) continue
+                val seq = getLongestValidSequence(simTableau[srcIdx])
+                if (seq.isEmpty()) continue
+
+                for (tgtIdx in simTableau.indices) {
+                    if (tgtIdx == srcIdx) continue
+                    val target = simTableau[tgtIdx]
+                    if (!target.isEmpty && isValidMove(seq, target)) {
+                        nextMove = Triple(seq, srcIdx, tgtIdx)
+                        break@outer
+                    }
+                }
+
+                if (fallbackMove == null && seq.size < simTableau[srcIdx].cards.size) {
+                    for (tgtIdx in simTableau.indices) {
+                        if (tgtIdx != srcIdx && simTableau[tgtIdx].cards.isEmpty()) {
+                            fallbackMove = Triple(seq, srcIdx, tgtIdx)
+                            break
+                        }
+                    }
+                }
+            }
+
+            val move = nextMove ?: fallbackMove
+            if (move != null) {
+                didMove = true
+                val (cards, srcIdx, tgtIdx) = move
+                val cardIds = cards.map { it.id }.toSet()
+                val tableau = simTableau.toMutableList()
+
+                var srcCards = tableau[srcIdx].cards.filterNot { it.id in cardIds }
+                if (srcCards.isNotEmpty() && !srcCards.last().faceUp) {
+                    srcCards = srcCards.dropLast(1) + srcCards.last().copy(faceUp = true)
+                }
+                tableau[srcIdx] = tableau[srcIdx].copy(cards = srcCards)
+                tableau[tgtIdx] = tableau[tgtIdx].copy(cards = tableau[tgtIdx].cards + cards)
+
+                var completedRunFound: Boolean
+                do {
+                    completedRunFound = false
+                    for (i in tableau.indices) {
+                        val cards2 = tableau[i].cards
+                        if (cards2.size < 13) continue
+                        val subrange = cards2.takeLast(13)
+                        if (subrange[0].rank != 13) continue
+                        val suit = subrange[0].suit
+                        val isValidRun = (0 until 13).all { j -> subrange[j].rank == 13 - j && subrange[j].suit == suit && subrange[j].faceUp }
+                        if (isValidRun) {
+                            completedRunFound = true
+                            val completedIds = subrange.map { it.id }.toSet()
+                            var newCards = cards2.filterNot { it.id in completedIds }
+                            if (newCards.isNotEmpty() && !newCards.last().faceUp) {
+                                newCards = newCards.dropLast(1) + newCards.last().copy(faceUp = true)
+                            }
+                            tableau[i] = tableau[i].copy(cards = newCards)
+                            break
+                        }
+                    }
+                } while (completedRunFound)
+
+                simTableau = tableau
+            }
+        }
+
+        return simTableau.all { it.cards.isEmpty() }
+    }
+
+    private fun findNextAutocompleteMove(): Triple<List<Card>, Pile, Pile>? {
+        var fallbackSource: Pile? = null
+        var fallbackCards: List<Card>? = null
+        var fallbackTarget: Pile? = null
+
+        for (source in _state.value.tableau) {
+            val seq = getLongestValidSequence(source)
+            if (seq.isEmpty()) continue
+
+            for (target in _state.value.tableau) {
+                if (target.id == source.id || target.cards.isEmpty()) continue
+                if (isValidMove(seq, target)) {
+                    return Triple(seq, source, target)
+                }
+            }
+
+            if (fallbackSource == null && seq.size < source.cards.size) {
+                for (target in _state.value.tableau) {
+                    if (target.id == source.id || !target.cards.isEmpty()) continue
+                    fallbackSource = source
+                    fallbackCards = seq
+                    fallbackTarget = target
+                    break
+                }
+            }
+        }
+
+        return if (fallbackSource != null && fallbackCards != null && fallbackTarget != null) {
+            Triple(fallbackCards, fallbackSource, fallbackTarget)
+        } else null
+    }
+
+    fun runAutocomplete() {
+        if (!_isAutocompleteAvailable.value || _isAutoplayRunning.value) return
+        saveStateForUndo()
+        _isAutoplayRunning.value = true
+        animateNextAutocompleteMove()
+    }
+
+    private fun animateNextAutocompleteMove() {
+        if (!_isAutoplayRunning.value) return
+        val nextMove = findNextAutocompleteMove()
+        if (nextMove != null) {
+            moveCards(nextMove.first, nextMove.second, nextMove.third)
+            viewModelScope.launch {
+                delay(150)
+                animateNextAutocompleteMove()
+            }
+        } else {
+            _isAutoplayRunning.value = false
+            checkWinState()
+        }
+    }
+
     fun undoLastAction() {
         if (_state.value.hasWon) return
         if (!undoStack.canUndo) return
@@ -448,6 +615,7 @@ class SpiderViewModel(
         )
         _isStuck.value = false
         checkWinState()
+        checkAutocompleteState()
         checkStuckState()
     }
 }

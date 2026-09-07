@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.util.UUID
 import kotlin.math.max
 
@@ -383,10 +384,119 @@ class BeecellViewModel(
     }
     
     private fun checkAutocompleteState() {
-        // Implementation simplified for android port parity, usually checks safe foundation moves
-        val expected = 52
-        val fCards = _state.value.foundations.sumOf { it.cards.size }
-        _isAutocompleteAvailable.value = (fCards != expected && !_state.value.hasWon && false) // TODO actual autocomplete
+        _isAutocompleteAvailable.value = !_state.value.hasWon && canAutocompleteToCompletion()
+    }
+
+    // A card ranked 1-2 is always safe to send to its foundation immediately. A higher
+    // card is safe only once both opposite-color foundations have climbed to at least
+    // (this card's rank - 2) — otherwise sending it up now could strand a lower
+    // opposite-color card that still needs it as a landing spot in the tableau. Android
+    // is 1-deck only (see plan §3), so each suit has exactly one foundation pile.
+    private fun minFoundationRank(suit: Suit, foundations: List<Pile>): Int {
+        return foundations.firstOrNull { it.topCard?.suit == suit }?.topCard?.rank ?: 0
+    }
+
+    private fun isSafeFoundationMove(card: Card, foundations: List<Pile>): Boolean {
+        if (card.rank <= 2) return true
+        val oppositeSuits = if (card.isRed) listOf(Suit.Spades, Suit.Clubs) else listOf(Suit.Hearts, Suit.Diamonds)
+        for (suit in oppositeSuits) {
+            if (minFoundationRank(suit, foundations) < card.rank - 2) return false
+        }
+        return true
+    }
+
+    private fun isValidFoundationMove(card: Card, foundation: Pile): Boolean {
+        return if (foundation.isEmpty) {
+            card.rank == 1
+        } else {
+            val top = foundation.topCard ?: return false
+            card.suit == top.suit && card.rank == top.rank + 1
+        }
+    }
+
+    // Simulates forward from `simState` using only safe foundation moves, to answer
+    // "does the rest of this game play itself out automatically from here" without
+    // mutating any real state. Ported from Swift's canAutocompleteToCompletion().
+    private fun canAutocompleteToCompletion(): Boolean {
+        var freeCells = _state.value.freeCells
+        var tableau = _state.value.tableau
+        var foundations = _state.value.foundations
+        val expectedCards = 52
+
+        if (foundations.sumOf { it.cards.size } == expectedCards) return false
+
+        while (true) {
+            if (foundations.sumOf { it.cards.size } == expectedCards) return true
+
+            var moved = false
+            for ((idx, cell) in freeCells.withIndex()) {
+                val top = cell.topCard ?: continue
+                val fIdx = foundations.indexOfFirst { isValidFoundationMove(top, it) && isSafeFoundationMove(top, foundations) }
+                if (fIdx != -1) {
+                    freeCells = freeCells.toMutableList().also { it[idx] = it[idx].copy(cards = it[idx].cards.dropLast(1)) }
+                    foundations = foundations.toMutableList().also { it[fIdx] = it[fIdx].copy(cards = it[fIdx].cards + top) }
+                    moved = true
+                    break
+                }
+            }
+            if (moved) continue
+
+            for ((idx, col) in tableau.withIndex()) {
+                val top = col.topCard ?: continue
+                val fIdx = foundations.indexOfFirst { isValidFoundationMove(top, it) && isSafeFoundationMove(top, foundations) }
+                if (fIdx != -1) {
+                    tableau = tableau.toMutableList().also { it[idx] = it[idx].copy(cards = it[idx].cards.dropLast(1)) }
+                    foundations = foundations.toMutableList().also { it[fIdx] = it[fIdx].copy(cards = it[fIdx].cards + top) }
+                    moved = true
+                    break
+                }
+            }
+            if (!moved) return false
+        }
+    }
+
+    // Real (non-simulated) version of the same search, used move-by-move while actually
+    // executing the autoplay below.
+    private fun findNextFoundationMove(): Triple<Card, Pile, Pile>? {
+        for (cell in _state.value.freeCells) {
+            val top = cell.topCard ?: continue
+            for (foundation in _state.value.foundations) {
+                if (isValidFoundationMove(top, foundation) && isSafeFoundationMove(top, _state.value.foundations)) {
+                    return Triple(top, cell, foundation)
+                }
+            }
+        }
+        for (col in _state.value.tableau) {
+            val top = col.topCard ?: continue
+            for (foundation in _state.value.foundations) {
+                if (isValidFoundationMove(top, foundation) && isSafeFoundationMove(top, _state.value.foundations)) {
+                    return Triple(top, col, foundation)
+                }
+            }
+        }
+        return null
+    }
+
+    fun runAutocomplete() {
+        if (!_isAutocompleteAvailable.value || _isAutoplayRunning.value) return
+        saveStateForUndo()
+        _isAutoplayRunning.value = true
+        animateNextAutocompleteMove()
+    }
+
+    private fun animateNextAutocompleteMove() {
+        if (!_isAutoplayRunning.value) return
+        val nextMove = findNextFoundationMove()
+        if (nextMove != null) {
+            moveCards(listOf(nextMove.first), nextMove.second, nextMove.third)
+            viewModelScope.launch {
+                delay(150)
+                animateNextAutocompleteMove()
+            }
+        } else {
+            _isAutoplayRunning.value = false
+            checkWinState()
+        }
     }
 
     fun undoLastAction() {
