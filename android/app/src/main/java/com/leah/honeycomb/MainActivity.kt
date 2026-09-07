@@ -1,0 +1,199 @@
+package com.leah.honeycomb
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import com.leah.honeycomb.StringKey
+import com.leah.honeycomb.AppLanguage
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.*
+import com.leah.honeycomb.klondike.KlondikeBoard
+import com.leah.honeycomb.klondike.KlondikeOptionsSheet
+import com.leah.honeycomb.spider.SpiderBoard
+import com.leah.honeycomb.spider.SpiderOptionsScreen
+import com.leah.honeycomb.beecell.BeecellBoard
+import com.leah.honeycomb.beecell.BeecellOptionsScreen
+import com.leah.honeycomb.blackjack.BlackjackBoard
+import com.leah.honeycomb.blackjack.BlackjackOptionsScreen
+import com.leah.honeycomb.honeycomb.HoneycombMatchUI
+import com.leah.honeycomb.videopoker.VideoPokerBoard
+import com.leah.honeycomb.videopoker.VideoPokerOptionsScreen
+
+class MainActivity : ComponentActivity() {
+    private lateinit var appContainer: AppContainer
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        appContainer = AppContainer(applicationContext)
+
+        setContent {
+            val themes by appContainer.themeManager.themes.collectAsState()
+            val activeThemeId by appContainer.themeManager.activeThemeId.collectAsState()
+            val activeTheme = themes.find { it.id == activeThemeId } ?: com.leah.honeycomb.theme.ThemeManager.defaultThemes.first()
+
+            MaterialTheme {
+                CompositionLocalProvider(
+                    LocalAppContainer provides appContainer,
+                    com.leah.honeycomb.theme.LocalSoliBeeTheme provides activeTheme
+                ) {
+                    val navController = rememberNavController()
+                    var showGameSelection by remember { mutableStateOf(false) }
+                    var currentRoute by remember { mutableStateOf(appContainer.initialGameMode) }
+                    
+                    LaunchedEffect(Unit) {
+                        if (appContainer.initialGameMode != "home") {
+                            navController.navigate(appContainer.initialGameMode)
+                        }
+                    }
+                    
+                    LaunchedEffect(navController) {
+                        navController.addOnDestinationChangedListener { _, destination, _ ->
+                            val route = destination.route
+                            if (route in listOf("klondike", "spider", "beecell", "blackjack", "videopoker", "honeycomb")) {
+                                appContainer.setLastGameMode(route!!)
+                                currentRoute = route
+                            }
+                        }
+                    }
+                    
+                    NavHost(navController = navController, startDestination = "home") {
+                        composable("home") {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text("Honeycomb Casino", style = MaterialTheme.typography.headlineLarge)
+                                Spacer(modifier = Modifier.height(32.dp))
+                                Button(onClick = { navController.navigate("klondike") }) { Text("Play Klondike") }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(onClick = { navController.navigate("spider") }) { Text("Play Spider") }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(onClick = { navController.navigate("beecell") }) { Text("Play Beecell") }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(onClick = { navController.navigate("blackjack") }) { Text("Play Blackjack") }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(onClick = { navController.navigate("videopoker") }) { Text("Play Video Poker") }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(onClick = { navController.navigate("honeycomb") }) { Text("Play Honeycomb") }
+                                Spacer(modifier = Modifier.height(32.dp))
+                                Button(onClick = { navController.navigate("themes") }) { Text("Themes") }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(onClick = { navController.navigate("custom_art_import") }) { Text("Import Custom Art") }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(onClick = { navController.navigate("shared_options") }) { Text("Shared Options") }
+                            }
+                        }
+                        composable("about") {
+                            com.leah.honeycomb.theme.AboutScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable("themes") {
+                            com.leah.honeycomb.theme.ThemesScreen(onBack = { navController.popBackStack() }, onAbout = { navController.navigate("about") })
+                        }
+                        composable("custom_art_import") {
+                            com.leah.honeycomb.theme.CustomArtImportScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable("shared_options") {
+                            com.leah.honeycomb.SharedOptionsScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable("klondike") {
+                            KlondikeBoard(
+                                viewModel = appContainer.klondikeViewModel,
+                                onOptionsTap = { navController.navigate("klondike_options") },
+                                onMenuTap = { showGameSelection = true }
+                            )
+                        }
+                        composable("klondike_options") {
+                            KlondikeOptionsSheet(
+                                viewModel = appContainer.klondikeViewModel,
+                                onDismiss = { navController.popBackStack() }
+                            )
+                        }
+                        composable("spider") {
+                            SpiderBoard(
+                                viewModel = appContainer.spiderViewModel,
+                                onMenuTap = { showGameSelection = true },
+                                onOptions = { navController.navigate("spider_options") }
+                            )
+                        }
+                        composable("spider_options") {
+                            SpiderOptionsScreen(
+                                viewModel = appContainer.spiderViewModel,
+                                onBack = { navController.popBackStack() },
+                                onOpenThemes = { navController.navigate("themes") },
+                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                            )
+                        }
+                        composable("beecell") {
+                            BeecellBoard(
+                                viewModel = appContainer.beecellViewModel,
+                                onMenuTap = { showGameSelection = true },
+                                onOptions = { navController.navigate("beecell_options") }
+                            )
+                        }
+                        composable("beecell_options") {
+                            BeecellOptionsScreen(
+                                viewModel = appContainer.beecellViewModel,
+                                onBack = { navController.popBackStack() },
+                                onOpenThemes = { navController.navigate("themes") },
+                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                            )
+                        }
+                        composable("blackjack") {
+                            BlackjackBoard(
+                                viewModel = appContainer.blackjackViewModel,
+                                onMenuTap = { showGameSelection = true },
+                                onOptions = { navController.navigate("blackjack_options") }
+                            )
+                        }
+                        composable("blackjack_options") {
+                            BlackjackOptionsScreen(
+                                viewModel = appContainer.blackjackViewModel,
+                                onBack = { navController.popBackStack() },
+                                onOpenThemes = { navController.navigate("themes") },
+                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                            )
+                        }
+                        composable("videopoker") {
+                            VideoPokerBoard(
+                                viewModel = appContainer.videoPokerViewModel,
+                                onMenuTap = { showGameSelection = true },
+                                onOptions = { navController.navigate("videopoker_options") }
+                            )
+                        }
+                        composable("videopoker_options") {
+                            VideoPokerOptionsScreen(
+                                viewModel = appContainer.videoPokerViewModel,
+                                onBack = { navController.popBackStack() },
+                                onOpenThemes = { navController.navigate("themes") },
+                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                            )
+                        }
+                        
+                        composable("honeycomb") {
+                            HoneycombMatchUI(appContainer.honeycombViewModel, onMenuTap = { showGameSelection = true })
+                        }
+                    }
+                    
+                    if (showGameSelection) {
+                        GameSelectionSheet(
+                            currentRoute = currentRoute,
+                            onNavigate = { route ->
+                                navController.navigate(route) {
+                                    popUpTo("home")
+                                }
+                            },
+                            onDismiss = { showGameSelection = false }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

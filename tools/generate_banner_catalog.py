@@ -77,6 +77,8 @@ OUT_JSON = REPO_ROOT / "shared/Honeycomb/Resources/HoneycombBannerCatalog.json"
 OUT_JSON_WINDOWS = REPO_ROOT / "windows/src/SoliBee.Desktop/Assets/HoneycombBannerCatalog.json"
 OUT_SWIFT = REPO_ROOT / "shared/Honeycomb/Models/BannerID.swift"
 OUT_CS = REPO_ROOT / "windows/src/SoliBee.Core/Models/BannerId.cs"
+OUT_JSON_ANDROID = REPO_ROOT / "android/app/src/main/assets/HoneycombBannerCatalog.json"
+OUT_KT = REPO_ROOT / "android/app/src/main/java/com/leah/honeycomb/BannerId.kt"
 
 EXPECTED_HEADERS = ["Category", "Trigger", "Message", "Type", "Location", "Spanish"]
 
@@ -335,6 +337,34 @@ def write_cs(catalog: list[dict], path: Path) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_kt(catalog: list[dict], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "// GENERATED FILE — do not hand-edit.",
+        "// Regenerate via `python3 tools/generate_banner_catalog.py` from",
+        "// Honeycomb_Localization.xlsx (BannerFlavorText sheet).",
+        "",
+        "package com.leah.honeycomb",
+        "",
+        "import kotlinx.serialization.Serializable",
+        "",
+        "enum class BannerId {",
+    ]
+    pascal_names = [snake_to_pascal(entry["id"]) for entry in catalog]
+    for name in pascal_names:
+        lines.append(f"    {name},")
+    lines.append("}")
+    lines.append("")
+    lines.append("object BannerIdExtensions {")
+    lines.append("    private val ById = mapOf(")
+    for entry, name in zip(catalog, pascal_names):
+        lines.append(f'        "{entry["id"]}" to BannerId.{name},')
+    lines.append("    )")
+    lines.append("    fun parse(id: String): BannerId = ById[id] ?: error(\"Unknown BannerId: $id\")")
+    lines.append("}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     source = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_SOURCE
     if not source.exists():
@@ -347,13 +377,15 @@ def main() -> None:
 
     write_json(catalog, OUT_JSON)
     write_json(catalog, OUT_JSON_WINDOWS)
+    write_json(catalog, OUT_JSON_ANDROID)
     write_swift(catalog, OUT_SWIFT)
     write_cs(catalog, OUT_CS)
+    write_kt(catalog, OUT_KT)
 
     gated_count = sum(1 for e in catalog if e["gated"])
     print(f"Read {len(rows)} spreadsheet rows -> {len(catalog)} catalog entries "
           f"({gated_count} gated, {len(catalog) - gated_count} always-fire).")
-    for out in (OUT_JSON, OUT_JSON_WINDOWS, OUT_SWIFT, OUT_CS):
+    for out in (OUT_JSON, OUT_JSON_WINDOWS, OUT_JSON_ANDROID, OUT_SWIFT, OUT_CS, OUT_KT):
         print(f"Wrote {out.relative_to(REPO_ROOT)}")
 
 

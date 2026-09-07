@@ -215,6 +215,54 @@ def write_cs_strings(rows: list[dict], path: Path) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_kt_key(rows: list[dict], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "// GENERATED FILE — do not hand-edit.",
+        "// Regenerate via `python3 tools/generate_localization.py` from",
+        "// Honeycomb_Localization.xlsx.",
+        "",
+        "package com.leah.honeycomb",
+        "",
+        "enum class StringKey {",
+    ]
+    for row in rows:
+        lines.append(f"    {snake_to_pascal(row['key'])},")
+    lines.append("}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_kt_strings(rows: list[dict], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "// GENERATED FILE — do not hand-edit.",
+        "// Regenerate via `python3 tools/generate_localization.py` from",
+        "// Honeycomb_Localization.xlsx.",
+        "",
+        "package com.leah.honeycomb",
+        "",
+        "enum class AppLanguage { English, Spanish }",
+        "",
+        "object Strings {",
+        "    fun get(key: StringKey, language: AppLanguage): String {",
+        "        val table = if (language == AppLanguage.Spanish) Spanish else English",
+        "        return table[key] ?: (English[key] ?: \"?$key?\")",
+        "    }",
+        "",
+        "    private val English = mapOf(",
+    ]
+    for row in rows:
+        lines.append(f'        StringKey.{snake_to_pascal(row["key"])} to "{cs_escape(row["english"])}",')
+    lines.append("    )")
+    lines.append("")
+    lines.append("    private val Spanish = mapOf(")
+    for row in rows:
+        lines.append(f'        StringKey.{snake_to_pascal(row["key"])} to "{cs_escape(row["spanish"])}",')
+    lines.append("    )")
+    lines.append("}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     source = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_SOURCE
     if not source.exists():
@@ -229,10 +277,15 @@ def main() -> None:
     write_cs_key(rows, OUT_CS_KEY)
     write_cs_strings(rows, OUT_CS_STRINGS)
 
+    OUT_KT_KEY = REPO_ROOT / "android/app/src/main/java/com/leah/honeycomb/StringKey.kt"
+    OUT_KT_STRINGS = REPO_ROOT / "android/app/src/main/java/com/leah/honeycomb/Strings.kt"
+    write_kt_key(rows, OUT_KT_KEY)
+    write_kt_strings(rows, OUT_KT_STRINGS)
+
     untranslated = sum(1 for r in rows if not r["translate"])
     print(f"Read {len(rows)} spreadsheet rows ({untranslated} marked Translate=FALSE, "
           "kept identical by design).")
-    for out in (OUT_SWIFT_KEY, OUT_SWIFT_EN, OUT_SWIFT_ES, OUT_CS_KEY, OUT_CS_STRINGS):
+    for out in (OUT_SWIFT_KEY, OUT_SWIFT_EN, OUT_SWIFT_ES, OUT_CS_KEY, OUT_CS_STRINGS, OUT_KT_KEY, OUT_KT_STRINGS):
         print(f"Wrote {out.relative_to(REPO_ROOT)}")
 
 
