@@ -145,28 +145,60 @@ class GameViewModel(
     private val _hintTargetId = MutableStateFlow<String?>(null)
     val hintTargetId: StateFlow<String?> = _hintTargetId.asStateFlow()
 
+    // Mirrors hasValidMoves()'s search space exactly (waste + every tableau sub-run,
+    // filtered to progressive moves, plus a stock-draw fallback) so Hint can never
+    // report nothing on a board hasValidMoves() knows isn't stuck. Still a first-match
+    // search, not iOS's ranked/lookahead HintCycling — that upgrade is a separate,
+    // larger follow-up.
     fun findHint() {
         val st = _state.value
         val targets = st.foundations + st.tableau
+
         val topWaste = st.waste.topCard
         if (topWaste != null) {
-            val target = targets.firstOrNull { isValidMove(listOf(topWaste), it) }
+            val target = targets.firstOrNull {
+                isValidMove(listOf(topWaste), it) && isProgressiveMove(listOf(topWaste), st.waste, it)
+            }
             if (target != null) {
                 _hintSourceId.value = st.waste.id
                 _hintTargetId.value = target.id
                 return
             }
         }
+
         for (col in st.tableau) {
-            val top = col.topCard ?: continue
-            if (!top.faceUp) continue
-            val target = targets.firstOrNull { it.id != col.id && isValidMove(listOf(top), it) }
-            if (target != null) {
-                _hintSourceId.value = col.id
-                _hintTargetId.value = target.id
-                return
+            val top = col.topCard
+            if (top != null && top.faceUp) {
+                val target = targets.firstOrNull {
+                    it.id != col.id && isValidMove(listOf(top), it) && isProgressiveMove(listOf(top), col, it)
+                }
+                if (target != null) {
+                    _hintSourceId.value = col.id
+                    _hintTargetId.value = target.id
+                    return
+                }
+            }
+            for (startIdx in col.cards.indices) {
+                if (!col.cards[startIdx].faceUp) continue
+                val seq = col.cards.subList(startIdx, col.cards.size)
+                if (seq.size < 2) continue
+                val target = st.tableau.firstOrNull {
+                    it.id != col.id && isValidMove(seq, it) && isProgressiveMove(seq, col, it)
+                }
+                if (target != null) {
+                    _hintSourceId.value = col.id
+                    _hintTargetId.value = target.id
+                    return
+                }
             }
         }
+
+        if (hasPlayableStockCard() || (canRecycleStock && hasPlayableWasteCard())) {
+            _hintSourceId.value = st.stock.id
+            _hintTargetId.value = st.waste.id
+            return
+        }
+
         _hintSourceId.value = null
         _hintTargetId.value = null
     }

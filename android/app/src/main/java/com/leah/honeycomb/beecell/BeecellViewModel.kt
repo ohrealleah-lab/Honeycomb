@@ -77,19 +77,51 @@ class BeecellViewModel(
     private val _hintTargetId = MutableStateFlow<String?>(null)
     val hintTargetId: StateFlow<String?> = _hintTargetId.asStateFlow()
 
+    // Mirrors checkStuckState()'s search space exactly (single top card against every
+    // pile, plus every tableau sub-run — including supermoves via isValidMove's own
+    // limit check — against every tableau target) so Hint can never report nothing on
+    // a board checkStuckState() knows isn't stuck. Still a first-match search, not
+    // iOS's ranked/lookahead HintCycling — that upgrade is a separate, larger follow-up.
     fun findHint() {
         val st = _state.value
-        val targets = st.foundations + st.freeCells + st.tableau
-        val sources = st.freeCells + st.tableau
-        for (source in sources) {
-            val top = source.topCard ?: continue
-            val target = targets.firstOrNull { it.id != source.id && isValidMove(listOf(top), it) }
-            if (target != null) {
-                _hintSourceId.value = source.id
-                _hintTargetId.value = target.id
-                return
+        val allPiles = st.freeCells + st.foundations + st.tableau
+
+        for (source in allPiles) {
+            val top = source.topCard
+            if (top != null) {
+                val target = allPiles.firstOrNull {
+                    it.id != source.id && isValidMove(listOf(top), it) && isProgressiveMove(listOf(top), source, it)
+                }
+                if (target != null) {
+                    _hintSourceId.value = source.id
+                    _hintTargetId.value = target.id
+                    return
+                }
+            }
+
+            if (source.type == PileType.Tableau) {
+                var seqStart = source.cards.size - 1
+                while (seqStart > 0) {
+                    val upper = source.cards[seqStart - 1]
+                    val lower = source.cards[seqStart]
+                    if (upper.rank == lower.rank + 1 && upper.suit.isRed != lower.suit.isRed) {
+                        seqStart--
+                    } else break
+                }
+                for (idx in seqStart until source.cards.size) {
+                    val seq = source.cards.subList(idx, source.cards.size)
+                    val target = st.tableau.firstOrNull {
+                        it.id != source.id && isValidMove(seq, it) && isProgressiveMove(seq, source, it)
+                    }
+                    if (target != null) {
+                        _hintSourceId.value = source.id
+                        _hintTargetId.value = target.id
+                        return
+                    }
+                }
             }
         }
+
         _hintSourceId.value = null
         _hintTargetId.value = null
     }

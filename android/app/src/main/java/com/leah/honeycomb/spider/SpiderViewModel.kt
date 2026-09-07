@@ -76,17 +76,53 @@ class SpiderViewModel(
     private val _hintTargetId = MutableStateFlow<String?>(null)
     val hintTargetId: StateFlow<String?> = _hintTargetId.asStateFlow()
 
+    // Mirrors checkStuckState()'s search space exactly (every sub-sequence of each
+    // column's trailing same-suit run, not just the single longest one) so Hint can
+    // never report nothing on a board checkStuckState() knows isn't stuck. Still a
+    // first-match search, not iOS's ranked/lookahead HintCycling — that upgrade is a
+    // separate, larger follow-up.
     fun findHint() {
-        for (source in _state.value.tableau) {
-            val seq = getLongestValidSequence(source)
-            if (seq.isEmpty()) continue
-            val target = _state.value.tableau.firstOrNull { it.id != source.id && isValidMove(seq, it) }
-            if (target != null) {
-                _hintSourceId.value = source.id
-                _hintTargetId.value = target.id
-                return
+        val tableau = _state.value.tableau
+        val hasEmpty = hasEmptyTableauColumn
+
+        for (colIdx in tableau.indices) {
+            val col = tableau[colIdx]
+            if (col.isEmpty) continue
+
+            var seqStart = col.cards.size - 1
+            while (seqStart > 0) {
+                val upper = col.cards[seqStart - 1]
+                val lower = col.cards[seqStart]
+                if (upper.faceUp && upper.rank == lower.rank + 1 && upper.suit == lower.suit) {
+                    seqStart--
+                } else break
+            }
+
+            for (start in seqStart until col.cards.size) {
+                val seq = col.cards.subList(start, col.cards.size)
+                if (hasEmpty && seq.first().faceUp) {
+                    val emptyTarget = tableau.firstOrNull { it.id != col.id && it.isEmpty }
+                    if (emptyTarget != null) {
+                        _hintSourceId.value = col.id
+                        _hintTargetId.value = emptyTarget.id
+                        return
+                    }
+                }
+                val target = tableau.firstOrNull { it.id != col.id && isValidMove(seq, it) }
+                if (target != null) {
+                    _hintSourceId.value = col.id
+                    _hintTargetId.value = target.id
+                    return
+                }
             }
         }
+
+        if (!_state.value.stock.isEmpty && !hasEmpty) {
+            _hintSourceId.value = _state.value.stock.id
+            _hintTargetId.value = "a new row"
+            return
+        }
+
         _hintSourceId.value = null
         _hintTargetId.value = null
     }
