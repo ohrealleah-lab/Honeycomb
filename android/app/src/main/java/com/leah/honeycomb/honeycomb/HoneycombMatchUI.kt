@@ -639,13 +639,25 @@ private fun SharedTransitionScope.BoardGrid(animatedVisibilityScope: AnimatedVis
 private fun SharedTransitionScope.OpponentHandRow(animatedVisibilityScope: AnimatedVisibilityScope, state: HoneycombState, cardWidth: Dp) {
     val cardHeight = cardWidth * HoneycombLayout.cardAspect
     Row(horizontalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
-        state.opponentHand.forEach { card ->
-            Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
-                HoneycombCardView(
-                    card = card,
-                    isFlipped = !state.openOpponentCardIds.contains(card.data.id.toString()),
-                    modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.data.id.toString()), animatedVisibilityScope = animatedVisibilityScope)
-                )
+        if (state.opponentHand.isEmpty()) {
+            repeat(5) {
+                Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
+                    HoneycombCardView(
+                        card = HoneycombCard(data = HoneycombCardData(-1, "", 1, listOf(1,1,1,1), "H"), owner = CardOwner.Opponent),
+                        isFlipped = true,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        } else {
+            state.opponentHand.forEach { card ->
+                Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
+                    HoneycombCardView(
+                        card = card,
+                        isFlipped = !state.openOpponentCardIds.contains(card.data.id.toString()),
+                        modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.data.id.toString()), animatedVisibilityScope = animatedVisibilityScope)
+                    )
+                }
             }
         }
     }
@@ -657,20 +669,37 @@ private fun SharedTransitionScope.OpponentHandPyramid(animatedVisibilityScope: A
     val cardHeight = cardWidth * HoneycombLayout.cardAspect
     val cards = state.opponentHand
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
-            for (i in 0 until min(3, cards.size)) {
-                val card = cards[i]
-                Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
-                    HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.data.id.toString()), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.data.id.toString()), animatedVisibilityScope = animatedVisibilityScope))
+        if (cards.isEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
+                repeat(3) {
+                    Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
+                        HoneycombCardView(card = HoneycombCard(data = HoneycombCardData(-1, "", 1, listOf(1,1,1,1), "H"), owner = CardOwner.Opponent), isFlipped = true, modifier = Modifier.fillMaxSize())
+                    }
                 }
             }
-        }
-        if (cards.size > 3) {
             Row(horizontalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
-                for (i in 3 until cards.size) {
+                repeat(2) {
+                    Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
+                        HoneycombCardView(card = HoneycombCard(data = HoneycombCardData(-1, "", 1, listOf(1,1,1,1), "H"), owner = CardOwner.Opponent), isFlipped = true, modifier = Modifier.fillMaxSize())
+                    }
+                }
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
+                for (i in 0 until min(3, cards.size)) {
                     val card = cards[i]
                     Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
                         HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.data.id.toString()), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.data.id.toString()), animatedVisibilityScope = animatedVisibilityScope))
+                    }
+                }
+            }
+            if (cards.size > 3) {
+                Row(horizontalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
+                    for (i in 3 until cards.size) {
+                        val card = cards[i]
+                        Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
+                            HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.data.id.toString()), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.data.id.toString()), animatedVisibilityScope = animatedVisibilityScope))
+                        }
                     }
                 }
             }
@@ -693,15 +722,27 @@ private fun SharedTransitionScope.PlayerHandRow(animatedVisibilityScope: Animate
 ) {
     val cardHeight = cardWidth * HoneycombLayout.cardAspect
     Row(horizontalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
-        state.playerHand.forEachIndexed { index, card ->
-            PlayerHandCard(
-                animatedVisibilityScope = animatedVisibilityScope, index = index, card = card, cardWidth = cardWidth, cardHeight = cardHeight,
-                isHinted = hintMove?.first == index,
-                isMandated = state.mandatedPlayerHandIndex == index,
-                canDrag = state.isPlayerTurn && (state.mandatedPlayerHandIndex == null || state.mandatedPlayerHandIndex == index),
-                scale = scale, draggedIndex = draggedCardInfo?.index,
-                onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd, onDragCancel = onDragCancel
-            )
+        if (state.playerHand.isEmpty()) {
+            repeat(5) {
+                Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
+                    HoneycombCardView(
+                        card = HoneycombCard(data = HoneycombCardData(-1, "", 1, listOf(1,1,1,1), "H"), owner = CardOwner.Player),
+                        isFlipped = true,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        } else {
+            state.playerHand.forEachIndexed { index, card ->
+                PlayerHandCard(
+                    animatedVisibilityScope = animatedVisibilityScope, index = index, card = card, cardWidth = cardWidth, cardHeight = cardHeight,
+                    isHinted = hintMove?.first == index,
+                    isMandated = state.mandatedPlayerHandIndex == index,
+                    canDrag = state.isPlayerTurn && (state.mandatedPlayerHandIndex == null || state.mandatedPlayerHandIndex == index),
+                    scale = scale, draggedIndex = draggedCardInfo?.index,
+                    onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd, onDragCancel = onDragCancel
+                )
+            }
         }
     }
 }

@@ -157,7 +157,7 @@ fun VideoPokerBoard(
                 val cardH = cardW * 1.4f
                 if (state.hand.isEmpty()) {
                     repeat(5) {
-                        Box(modifier = Modifier.size(cardW, cardH).border(1.dp, Color.Black.copy(alpha=0.3f), RoundedCornerShape(4.dp)))
+                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
                     }
                 } else {
                     state.hand.forEachIndexed { index, card ->

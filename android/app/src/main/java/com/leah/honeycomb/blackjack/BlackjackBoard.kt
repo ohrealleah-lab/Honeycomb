@@ -140,7 +140,8 @@ fun BlackjackBoard(
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy((-40).dp)) {
                     if (state.dealerCards.isEmpty()) {
-                        Box(modifier = Modifier.size(100.dp, 140.dp))
+                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(100.dp, 140.dp))
+                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(100.dp, 140.dp))
                     } else {
                         state.dealerCards.forEach { card ->
                             CardView(card = card, modifier = Modifier.size(100.dp, 140.dp))
@@ -184,7 +185,10 @@ fun BlackjackBoard(
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     if (state.playerHands.isEmpty()) {
-                        Box(modifier = Modifier.size(100.dp, 140.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy((-40).dp)) {
+                            CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(100.dp, 140.dp))
+                            CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(100.dp, 140.dp))
+                        }
                     } else {
                         state.playerHands.forEachIndexed { index, hand ->
                             Row(horizontalArrangement = Arrangement.spacedBy((-40).dp)) {
