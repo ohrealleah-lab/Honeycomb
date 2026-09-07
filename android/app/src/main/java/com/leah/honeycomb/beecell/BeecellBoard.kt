@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -112,52 +115,90 @@ fun BeecellBoard(
         )
     }
 
-    Scaffold(containerColor = Color.Transparent, 
-        topBar = {
-            TopAppBar(
-                title = { 
-                    Column {
-                        Text("Beecell", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Row {
-                            Text("Score: ${state.score}  ", fontSize = 12.sp)
-                            Text("Moves: ${state.movesCount}  ", fontSize = 12.sp)
-                            Text("Time: ${state.timerSeconds}s", fontSize = 12.sp)
-                        }
-                    }
-                },
-                navigationIcon = {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isLandscape = maxWidth > maxHeight
+        
+        val scoreCapsule = @Composable {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                modifier = Modifier
+                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("SCORE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                        Text("${state.score}", fontWeight = FontWeight.Bold, color = Color.Yellow)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("TIME", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    val mins = state.timerSeconds / 60
+                        val secs = state.timerSeconds % 60
+                        Text(String.format("%02d:%02d", mins, secs), fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+        }
+        
+        Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+            // Top Bar
+            Row(
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row {
                     IconButton(onClick = onMenuTap) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onThemes) {
-                        Icon(Icons.Filled.Palette, contentDescription = "Themes")
-                    }
-                    IconButton(onClick = { viewModel.findHint() }) {
-                        Icon(Icons.Filled.Lightbulb, contentDescription = "Hint")
-                    }
-                    IconButton(onClick = { viewModel.undoLastAction() }, enabled = viewModel.canUndo) {
-                        Icon(Icons.Filled.Undo, contentDescription = "Undo")
-                    }
-                    IconButton(onClick = {
-                        if (state.movesCount == 0) viewModel.startNewGame() else showQuitDialog = true
-                    }) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = "New Deal")
+                        Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
                     }
                     IconButton(onClick = onOptions) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Options")
+                        Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF003366), titleContentColor = Color.White, actionIconContentColor = Color.White, navigationIconContentColor = Color.White)
-            )
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+                    IconButton(onClick = onThemes) {
+                        Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
+                    }
+                }
+
+                if (isLandscape) {
+                    scoreCapsule()
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { viewModel.undoLastAction() },
+                        enabled = viewModel.canUndo
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
+                    }
+                    IconButton(onClick = { viewModel.findHint() }) {
+                        Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .background(Color(0xFF2196F3), CircleShape)
+                            .clickable {
+                                if (state.movesCount == 0) viewModel.startNewGame()
+                                else showQuitDialog = true
+                            }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = "New", tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("New", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                }
+            }
+            
+            if (!isLandscape) {
+                Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                    scoreCapsule()
+                }
+            }
+            
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
             val config = LocalConfiguration.current
             val screenWidth = config.screenWidthDp.dp
             val cardW = ((screenWidth.value - 18f) / 8f).coerceAtMost(90f).dp
@@ -313,7 +354,8 @@ fun BeecellBoard(
                     }
                 }
             }
-        }
+        }        } // Close inner BoxWithConstraints
+
         
         // End Game Overlays
         if (state.hasWon) {
