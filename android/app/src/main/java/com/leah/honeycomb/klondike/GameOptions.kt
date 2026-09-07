@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class GameOptions(
-    val isTimed: Boolean = true,
     val isStatusBarVisible: Boolean = true,
     val isVegasScoring: Boolean = false,
     val isDrawConstraintsEnabled: Boolean = false,

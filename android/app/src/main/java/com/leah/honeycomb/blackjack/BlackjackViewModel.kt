@@ -34,8 +34,17 @@ class BlackjackViewModel(
     )
     val options: StateFlow<BlackjackOptions> = _options.asStateFlow()
 
-    private val _statistics = MutableStateFlow(BlackjackStatistics())
+    private val _statistics = MutableStateFlow(
+        PreferencesHelper.getObjectSync(dataStore, "blackjack_statistics", BlackjackStatistics.serializer(), BlackjackStatistics())
+    )
     val statistics: StateFlow<BlackjackStatistics> = _statistics.asStateFlow()
+
+    private fun persistStatistics() {
+        val snapshot = _statistics.value
+        viewModelScope.launch {
+            PreferencesHelper.setObject(dataStore, "blackjack_statistics", BlackjackStatistics.serializer(), snapshot)
+        }
+    }
 
     private var handGeneration = 0
 
@@ -129,6 +138,7 @@ class BlackjackViewModel(
             handsPlayed = stats.handsPlayed + 1,
             totalWagered = newTotalWagered
         )
+        persistStatistics()
 
         _state.value = s.copy(
             sessionCredits = newSessionCredits,
@@ -218,7 +228,8 @@ class BlackjackViewModel(
         val newTotalWagered = if (!isFreePlay) _statistics.value.totalWagered + hand.bet else _statistics.value.totalWagered
         
         _statistics.value = _statistics.value.copy(totalWagered = newTotalWagered)
-        
+        persistStatistics()
+
         val card = popCard(faceUp = true) ?: return
         
         val hands = s.playerHands.toMutableList()
@@ -249,7 +260,8 @@ class BlackjackViewModel(
             totalWagered = newTotalWagered,
             handsPlayed = _statistics.value.handsPlayed + 1
         )
-        
+        persistStatistics()
+
         val card0 = s.playerHands[0].cards[0]
         val card1 = s.playerHands[0].cards[1]
         val isAces = card0.rank == 1
@@ -305,6 +317,7 @@ class BlackjackViewModel(
     fun rebuy() {
         _state.value = _state.value.copy(sessionCredits = _state.value.sessionCredits + _options.value.startingCredits)
         _statistics.value = _statistics.value.copy(rebuyCount = _statistics.value.rebuyCount + 1)
+        persistStatistics()
     }
 
     private fun advanceHand() {
@@ -450,8 +463,9 @@ class BlackjackViewModel(
         }
         
         _statistics.value = stats
+        persistStatistics()
     }
-    
+
     fun resetIfRoundOver() {
         if (_state.value.phase != BlackjackPhase.Result) return
         _state.value = _state.value.copy(
@@ -471,5 +485,6 @@ class BlackjackViewModel(
             currentBet = 1
         )
         _statistics.value = _statistics.value.copy(currentStreak = 0)
+        persistStatistics()
     }
 }

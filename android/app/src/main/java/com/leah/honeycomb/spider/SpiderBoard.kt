@@ -106,7 +106,7 @@ fun SpiderBoard(
         )
     }
 
-    Scaffold(
+    Scaffold(containerColor = Color.Transparent, 
         topBar = {
             TopAppBar(
                 title = { 
@@ -150,7 +150,6 @@ fun SpiderBoard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF006600))
                 .padding(padding)
         ) {
             val config = LocalConfiguration.current

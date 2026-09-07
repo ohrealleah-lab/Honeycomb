@@ -46,7 +46,8 @@ data class HoneycombState(
     val mandatedPlayerHandIndex: Int? = null,
     val mandatedOpponentHandIndex: Int? = null,
     val chaosPlayerIndex: Int? = null,
-    val chaosOpponentIndex: Int? = null
+    val chaosOpponentIndex: Int? = null,
+    val showSuddenDeathBanner: Boolean = false
 )
 
 class HoneycombViewModel(
@@ -182,6 +183,24 @@ class HoneycombViewModel(
     private var isRematchMatch: Boolean = false
     private var consecutiveNoStealWins: Int = 0
     private var stealProtectionActive: Boolean = false
+    private val _statistics = MutableStateFlow(
+        PreferencesHelper.getObjectSync(dataStore, "honeycomb_statistics", HoneycombStats.serializer(), HoneycombStats())
+    )
+    val statistics: StateFlow<HoneycombStats> = _statistics.asStateFlow()
+
+    private fun updateStatistics(transform: (HoneycombStats) -> HoneycombStats) {
+        val newStats = transform(_statistics.value)
+        _statistics.value = newStats
+        viewModelScope.launch {
+            PreferencesHelper.setObject(dataStore, "honeycomb_statistics", HoneycombStats.serializer(), newStats)
+        }
+    }
+
+    // Cumulative capture-flip count for the current match — mirrors Swift's
+    // sessionCardsCaptured, incremented by each placeCard() call's flip count and reset
+    // at the start of every new match/rematch.
+    private var sessionCardsCaptured: Int = 0
+
     private var hasStolenThisMatch: Boolean = false
     private var starterStreak: Int = 0
     private var lastMatchStarterWasPlayer: Boolean? = null
@@ -198,6 +217,7 @@ class HoneycombViewModel(
         consecutiveNoStealWins = 0
         stealProtectionActive = false
         hasStolenThisMatch = false
+        sessionCardsCaptured = 0
 
         var rolledRules = emptyList<HoneycombRule>()
         var rolledSuits = emptySet<String>()
@@ -256,6 +276,7 @@ class HoneycombViewModel(
         isRematchMatch = true
         aiMoveGeneration++
         hasStolenThisMatch = false
+        sessionCardsCaptured = 0
         
         val opponentHand = rematchOpponentDeck.map { HoneycombCard(it, CardOwner.Opponent) }
         
@@ -429,7 +450,7 @@ class HoneycombViewModel(
         val card = newPlayerHand.removeAt(handIndex)
 
         val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
-        newBoard.placeCard(card, boardIndex, st.activeRules)
+        sessionCardsCaptured += newBoard.placeCard(card, boardIndex, st.activeRules).size
 
         _state.update {
             it.copy(
@@ -491,7 +512,7 @@ class HoneycombViewModel(
                 val cardToPlay = newOpponentHand.removeAt(move.first)
                 
                 val newBoard = _state.value.board.copy(cells = _state.value.board.cells.map { it.copy(card = it.card?.copy()) })
-                newBoard.placeCard(cardToPlay, move.second, _state.value.activeRules)
+                sessionCardsCaptured += newBoard.placeCard(cardToPlay, move.second, _state.value.activeRules).size
 
                 _state.update {
                     it.copy(
@@ -528,6 +549,16 @@ class HoneycombViewModel(
                     showPostGamePrompt = true
                 )
             }
+            updateStatistics {
+                it.recordGame(
+                    won = true, drawn = false,
+                    captures = sessionCardsCaptured,
+                    sessionCombos = st.board.sessionSamePlusTriggers,
+                    flawless = oScore == 0,
+                    difficulty = _options.value.difficulty,
+                    fallenAceCaptures = st.board.sessionFallenAceCaptures
+                )
+            }
         } else if (oScore > pScore) {
             _state.update {
                 it.copy(
@@ -535,6 +566,15 @@ class HoneycombViewModel(
                     matchOutcome = HoneycombMatchOutcome.Loss,
                     gameState = HoneycombGameState.GameOver,
                     showPostGamePrompt = true
+                )
+            }
+            updateStatistics {
+                it.recordGame(
+                    won = false, drawn = false,
+                    captures = sessionCardsCaptured,
+                    sessionCombos = st.board.sessionSamePlusTriggers,
+                    flawless = false,
+                    fallenAceCaptures = st.board.sessionFallenAceCaptures
                 )
             }
         } else if (st.activeRules.contains(HoneycombRule.SuddenDeath)) {
@@ -545,6 +585,21 @@ class HoneycombViewModel(
                     gameState = HoneycombGameState.SuddenDeath,
                 )
             }
+            // Entering Sudden Death is not itself a decisive result — do not call
+            // recordGame here; only the eventual win/loss/draw resolution records stats.
+            // suddenDeathCount is incremented in triggerSuddenDeath() instead, once the
+            // overtime round actually begins (matches Swift/C# reference timing) — not
+            // here, since a quit/new-game during the delay below should not count it.
+            val gen = aiMoveGeneration
+            viewModelScope.launch {
+                delay(2500)
+                if (aiMoveGeneration != gen) return@launch
+                _state.update { it.copy(showSuddenDeathBanner = true) }
+                delay(1500)
+                if (aiMoveGeneration != gen) return@launch
+                _state.update { it.copy(showSuddenDeathBanner = false) }
+                triggerSuddenDeath()
+            }
         } else {
             _state.update {
                 it.copy(
@@ -553,6 +608,58 @@ class HoneycombViewModel(
                     gameState = HoneycombGameState.GameOver,
                     showPostGamePrompt = true
                 )
+            }
+            updateStatistics {
+                it.recordGame(
+                    won = false, drawn = true,
+                    captures = sessionCardsCaptured,
+                    sessionCombos = st.board.sessionSamePlusTriggers,
+                    flawless = false,
+                    fallenAceCaptures = st.board.sessionFallenAceCaptures
+                )
+            }
+        }
+    }
+
+    // Ported from Swift's triggerSuddenDeath()/C#'s TriggerSuddenDeathAsync() — a tied
+    // match with the Sudden Death rule active continues into overtime rather than
+    // ending in a draw. This is NOT rematch(): it keeps the same match (same
+    // activeRules/ascensionDescensionSuits, no fresh opponent deck) and every card
+    // either side currently owns — whether still in hand or captured on the board —
+    // becomes that side's new hand for the next round. Can repeat indefinitely if the
+    // overtime round ties again.
+    private fun triggerSuddenDeath() {
+        updateStatistics { it.copy(suddenDeathCount = it.suddenDeathCount + 1) }
+        undoHistory.clear()
+
+        val st = _state.value
+        val playerCards = (st.board.cells.mapNotNull { it.card }.filter { it.owner == CardOwner.Player } + st.playerHand)
+            .map { it.copy(modifier = 0) }
+        val opponentCards = (st.board.cells.mapNotNull { it.card }.filter { it.owner == CardOwner.Opponent } + st.opponentHand)
+            .map { it.copy(modifier = 0) }
+
+        val newBoard = HoneycombBoard().apply { ascensionDescensionSuits = st.ascensionDescensionSuits }
+        val nextPlayerTurn = !st.isPlayerTurn
+
+        aiMoveGeneration++
+        _state.update {
+            it.copy(
+                playerHand = playerCards,
+                opponentHand = opponentCards,
+                board = newBoard,
+                gameState = HoneycombGameState.Playing,
+                isPlayerTurn = nextPlayerTurn,
+                matchOutcome = HoneycombMatchOutcome.None,
+                matchResult = "",
+                chaosPlayerIndex = null,
+                chaosOpponentIndex = null
+            )
+        }
+
+        if (!nextPlayerTurn) {
+            viewModelScope.launch {
+                delay(2500)
+                aiPlayTurn()
             }
         }
     }
@@ -574,9 +681,11 @@ class HoneycombViewModel(
         val card = _state.value.board.cells[pending.boardIndex].card ?: return
         hasStolenThisMatch = true
         _state.update { it.copy(pendingSteal = null) }
+        updateStatistics { it.copy(cardsStolen = it.cardsStolen + 1) }
     }
 
     fun startOver() {
         updateOptions(_options.value.copy(activeDeckIndex = 0))
+        updateStatistics { it.copy(timesStartedOver = it.timesStartedOver + 1) }
     }
 }

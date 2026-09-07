@@ -20,6 +20,7 @@ class SharedGameOptions(
     private val globalHoneyModeKey = booleanPreferencesKey("global_honey_mode")
     private val globalManuallyDismissBannersKey = booleanPreferencesKey("global_manually_dismiss_banners")
     private val globalHideHintButtonKey = booleanPreferencesKey("global_hide_hint_button")
+    private val globalHideBeeKey = booleanPreferencesKey("global_hide_bee")
 
     private val _isSoundEnabled = MutableStateFlow(true)
     val isSoundEnabled: StateFlow<Boolean> = _isSoundEnabled
@@ -36,6 +37,9 @@ class SharedGameOptions(
     private val _hideHintButton = MutableStateFlow(false)
     val hideHintButton: StateFlow<Boolean> = _hideHintButton
 
+    private val _hideBee = MutableStateFlow(false)
+    val hideBee: StateFlow<Boolean> = _hideBee
+
     var onNoStressModeChange: (() -> Unit)? = null
 
     init {
@@ -46,6 +50,7 @@ class SharedGameOptions(
         _honeyMode.value = prefs[globalHoneyModeKey] ?: true
         _manuallyDismissBanners.value = prefs[globalManuallyDismissBannersKey] ?: false
         _hideHintButton.value = prefs[globalHideHintButtonKey] ?: false
+        _hideBee.value = prefs[globalHideBeeKey] ?: false
     }
 
     fun setSoundEnabled(enabled: Boolean) {
@@ -84,6 +89,13 @@ class SharedGameOptions(
         _hideHintButton.value = hide
         coroutineScope.launch {
             dataStore.edit { it[globalHideHintButtonKey] = hide }
+        }
+    }
+
+    fun setHideBee(hide: Boolean) {
+        _hideBee.value = hide
+        coroutineScope.launch {
+            dataStore.edit { it[globalHideBeeKey] = hide }
         }
     }
 }

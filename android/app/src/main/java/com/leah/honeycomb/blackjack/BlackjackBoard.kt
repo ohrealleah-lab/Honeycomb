@@ -50,7 +50,7 @@ fun BlackjackBoard(
         )
     }
 
-    Scaffold(
+    Scaffold(containerColor = Color.Transparent, 
         topBar = {
             TopAppBar(
                 title = { 
@@ -83,7 +83,6 @@ fun BlackjackBoard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF880000))
                 .padding(padding)
         ) {
             Column(

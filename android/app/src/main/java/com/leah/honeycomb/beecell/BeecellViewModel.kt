@@ -32,8 +32,22 @@ class BeecellViewModel(
     private val _options = MutableStateFlow(loadOptions())
     val options: StateFlow<BeecellOptions> = _options.asStateFlow()
 
-    private val _statistics = MutableStateFlow(BeecellStatistics())
+    private val _statistics = MutableStateFlow(
+        PreferencesHelper.getObjectSync(dataStore, "beecell_statistics", BeecellStatistics.serializer(), BeecellStatistics())
+    )
     val statistics: StateFlow<BeecellStatistics> = _statistics.asStateFlow()
+
+    private fun updateModeStats(freeCellCount: Int, transform: (BeecellModeStats) -> BeecellModeStats) {
+        val stats = _statistics.value
+        val newStatsMap = stats.statsByFreeCells.toMutableMap()
+        val modeStats = newStatsMap[freeCellCount] ?: BeecellModeStats()
+        newStatsMap[freeCellCount] = transform(modeStats)
+        val newStats = stats.copy(statsByFreeCells = newStatsMap)
+        _statistics.value = newStats
+        viewModelScope.launch {
+            PreferencesHelper.setObject(dataStore, "beecell_statistics", BeecellStatistics.serializer(), newStats)
+        }
+    }
 
     private val _isAutocompleteAvailable = MutableStateFlow(false)
     val isAutocompleteAvailable: StateFlow<Boolean> = _isAutocompleteAvailable.asStateFlow()
@@ -126,13 +140,11 @@ class BeecellViewModel(
 
         val currentState = _state.value
         if (currentState.movesCount > 0 && !currentState.hasWon) {
-            val cellCount = abandonedModeKey ?: _options.value.freeCellCount
-            val stats = _statistics.value
-            val newStatsMap = stats.statsByFreeCells.toMutableMap()
-            val modeStats = newStatsMap[cellCount] ?: BeecellModeStats()
-            newStatsMap[cellCount] = modeStats.copy(currentStreak = 0)
-            _statistics.value = stats.copy(statsByFreeCells = newStatsMap)
+            val abandonedCount = abandonedModeKey ?: _options.value.freeCellCount
+            updateModeStats(abandonedCount) { it.copy(currentStreak = 0) }
         }
+
+        updateModeStats(_options.value.freeCellCount) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
 
         undoStack.clear()
         
@@ -173,6 +185,7 @@ class BeecellViewModel(
             freeCells = freeCells,
             foundations = foundations,
             tableau = tableau,
+            score = 0,
             movesCount = 0,
             timerSeconds = 0,
             isTimerActive = false,
@@ -306,13 +319,20 @@ class BeecellViewModel(
             else -> {}
         }
         
+        val scoreDelta = when {
+            targetPile.type == PileType.Foundation && sourcePile.type != PileType.Foundation -> 10
+            sourcePile.type == PileType.Foundation && targetPile.type != PileType.Foundation -> -15
+            else -> 0
+        }
+
         _state.value = currentState.copy(
             freeCells = freeCells,
             foundations = foundations,
             tableau = tableau,
+            score = maxOf(0, currentState.score + scoreDelta),
             movesCount = currentState.movesCount + 1
         )
-        
+
         checkWinState()
         checkAutocompleteState()
         checkStuckState()
@@ -351,6 +371,27 @@ class BeecellViewModel(
         if (WinDetection.hasWon(totalFoundationCards, 52, _state.value.hasWon)) {
             _state.update { it.copy(hasWon = true) }
             stopTimer()
+
+            val timeInSeconds = _state.value.timerSeconds
+            val finalScore = _state.value.score
+            updateModeStats(_options.value.freeCellCount) { stats ->
+                val newStreak = stats.currentStreak + 1
+                var updated = stats.copy(
+                    gamesWon = stats.gamesWon + 1,
+                    currentStreak = newStreak,
+                    longestStreak = maxOf(stats.longestStreak, newStreak),
+                    highScore = maxOf(stats.highScore, finalScore)
+                )
+                if (timeInSeconds > 0) {
+                    val newShortest = if (stats.shortestWinTime == 0) timeInSeconds else minOf(stats.shortestWinTime, timeInSeconds)
+                    updated = updated.copy(
+                        totalWinningTime = updated.totalWinningTime + timeInSeconds,
+                        winningGamesCount = updated.winningGamesCount + 1,
+                        shortestWinTime = newShortest
+                    )
+                }
+                updated
+            }
         }
     }
     

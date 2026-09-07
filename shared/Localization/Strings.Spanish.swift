@@ -703,5 +703,8 @@ enum StringsSpanish {
         .rankHiveMonarch: "Monarca de la Colmena",
         .rankApiarist: "Apicultor",
         .globalSettingsHeader: "Configuración Global",
+        .statShortestWinTime: "Tiempo Más Corto de Victoria",
+        .statTotalPaidOut: "Total Pagado",
+        .statBiggestPayout: "Mayor Pago",
     ]
 }

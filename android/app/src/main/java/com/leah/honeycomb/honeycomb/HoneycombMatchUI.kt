@@ -27,9 +27,12 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.leah.honeycomb.StringKey
@@ -293,6 +296,23 @@ fun HoneycombMatchUI(
             }
             
             Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        if (state.showSuddenDeathBanner) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .zIndex(300f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Sudden Death!",
+                    color = Color.Yellow,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         // Overlay for dragged card

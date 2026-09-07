@@ -1404,4 +1404,10 @@ public enum StringKey: String, CaseIterable {
     case rankApiarist = "rank_apiarist"
     /// Section header, Windows Preferences panel — global (cross-game) settings group
     case globalSettingsHeader = "global_settings_header"
+    /// Stat row label, Klondike/Spider/Beecell — shortest winning-game time
+    case statShortestWinTime = "stat_shortest_win_time"
+    /// Stat row label, Blackjack/Video Poker
+    case statTotalPaidOut = "stat_total_paid_out"
+    /// Stat row label, Blackjack/Video Poker
+    case statBiggestPayout = "stat_biggest_payout"
 }

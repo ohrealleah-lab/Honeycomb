@@ -53,7 +53,7 @@ fun VideoPokerBoard(
         )
     }
 
-    Scaffold(
+    Scaffold(containerColor = Color.Transparent, 
         topBar = {
             TopAppBar(
                 title = { 
@@ -86,7 +86,6 @@ fun VideoPokerBoard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF000088))
                 .padding(padding)
         ) {
             Column(

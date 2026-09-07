@@ -14,15 +14,21 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.*
 import com.leah.honeycomb.klondike.KlondikeBoard
 import com.leah.honeycomb.klondike.KlondikeOptionsSheet
+import com.leah.honeycomb.klondike.KlondikeStatsScreen
 import com.leah.honeycomb.spider.SpiderBoard
 import com.leah.honeycomb.spider.SpiderOptionsScreen
+import com.leah.honeycomb.spider.SpiderStatsScreen
 import com.leah.honeycomb.beecell.BeecellBoard
 import com.leah.honeycomb.beecell.BeecellOptionsScreen
+import com.leah.honeycomb.beecell.BeecellStatsScreen
 import com.leah.honeycomb.blackjack.BlackjackBoard
 import com.leah.honeycomb.blackjack.BlackjackOptionsScreen
+import com.leah.honeycomb.blackjack.BlackjackStatsScreen
 import com.leah.honeycomb.honeycomb.HoneycombMatchUI
+import com.leah.honeycomb.honeycomb.HoneycombStatsScreen
 import com.leah.honeycomb.videopoker.VideoPokerBoard
 import com.leah.honeycomb.videopoker.VideoPokerOptionsScreen
+import com.leah.honeycomb.videopoker.VideoPokerStatsScreen
 
 class MainActivity : ComponentActivity() {
     private lateinit var appContainer: AppContainer
@@ -62,7 +68,11 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     
-                    NavHost(navController = navController, startDestination = "home") {
+                    androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
+                        val intensity = if (currentRoute.startsWith("blackjack") || currentRoute.startsWith("videopoker")) 0.6f else 0.45f
+                        com.leah.honeycomb.theme.AppBackground(intensity = intensity)
+                        
+                        NavHost(navController = navController, startDestination = "home", modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
                         composable("home") {
                             Column(
                                 modifier = Modifier.fillMaxSize(),
@@ -113,6 +123,13 @@ class MainActivity : ComponentActivity() {
                         composable("klondike_options") {
                             KlondikeOptionsSheet(
                                 viewModel = appContainer.klondikeViewModel,
+                                onDismiss = { navController.popBackStack() },
+                                onShowStats = { navController.navigate("klondike_stats") }
+                            )
+                        }
+                        composable("klondike_stats") {
+                            KlondikeStatsScreen(
+                                viewModel = appContainer.klondikeViewModel,
                                 onDismiss = { navController.popBackStack() }
                             )
                         }
@@ -129,7 +146,14 @@ class MainActivity : ComponentActivity() {
                                 viewModel = appContainer.spiderViewModel,
                                 onBack = { navController.popBackStack() },
                                 onOpenThemes = { navController.navigate("themes") },
-                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                                onOpenSharedOptions = { navController.navigate("shared_options") },
+                                onShowStats = { navController.navigate("spider_stats") }
+                            )
+                        }
+                        composable("spider_stats") {
+                            SpiderStatsScreen(
+                                viewModel = appContainer.spiderViewModel,
+                                onBack = { navController.popBackStack() }
                             )
                         }
                         composable("beecell") {
@@ -145,7 +169,14 @@ class MainActivity : ComponentActivity() {
                                 viewModel = appContainer.beecellViewModel,
                                 onBack = { navController.popBackStack() },
                                 onOpenThemes = { navController.navigate("themes") },
-                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                                onOpenSharedOptions = { navController.navigate("shared_options") },
+                                onShowStats = { navController.navigate("beecell_stats") }
+                            )
+                        }
+                        composable("beecell_stats") {
+                            BeecellStatsScreen(
+                                viewModel = appContainer.beecellViewModel,
+                                onBack = { navController.popBackStack() }
                             )
                         }
                         composable("blackjack") {
@@ -161,7 +192,14 @@ class MainActivity : ComponentActivity() {
                                 viewModel = appContainer.blackjackViewModel,
                                 onBack = { navController.popBackStack() },
                                 onOpenThemes = { navController.navigate("themes") },
-                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                                onOpenSharedOptions = { navController.navigate("shared_options") },
+                                onShowStats = { navController.navigate("blackjack_stats") }
+                            )
+                        }
+                        composable("blackjack_stats") {
+                            BlackjackStatsScreen(
+                                viewModel = appContainer.blackjackViewModel,
+                                onBack = { navController.popBackStack() }
                             )
                         }
                         composable("videopoker") {
@@ -177,7 +215,14 @@ class MainActivity : ComponentActivity() {
                                 viewModel = appContainer.videoPokerViewModel,
                                 onBack = { navController.popBackStack() },
                                 onOpenThemes = { navController.navigate("themes") },
-                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                                onOpenSharedOptions = { navController.navigate("shared_options") },
+                                onShowStats = { navController.navigate("videopoker_stats") }
+                            )
+                        }
+                        composable("videopoker_stats") {
+                            VideoPokerStatsScreen(
+                                viewModel = appContainer.videoPokerViewModel,
+                                onBack = { navController.popBackStack() }
                             )
                         }
                         
@@ -196,7 +241,14 @@ class MainActivity : ComponentActivity() {
                                 viewModel = appContainer.honeycombViewModel,
                                 onBack = { navController.popBackStack() },
                                 onOpenThemes = { navController.navigate("themes") },
-                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                                onOpenSharedOptions = { navController.navigate("shared_options") },
+                                onShowStats = { navController.navigate("honeycomb_stats") }
+                            )
+                        }
+                        composable("honeycomb_stats") {
+                            HoneycombStatsScreen(
+                                viewModel = appContainer.honeycombViewModel,
+                                onBack = { navController.popBackStack() }
                             )
                         }
                         composable("honeycomb_decks") {
@@ -226,6 +278,7 @@ class MainActivity : ComponentActivity() {
                             onDismiss = { showGameSelection = false }
                         )
                     }
+                    } // close Box
                 }
             }
         }

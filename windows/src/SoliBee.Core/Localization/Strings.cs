@@ -719,6 +719,9 @@ public static class Strings
         [StringKey.RankHiveMonarch] = "Hive Monarch",
         [StringKey.RankApiarist] = "Apiarist",
         [StringKey.GlobalSettingsHeader] = "Global Settings",
+        [StringKey.StatShortestWinTime] = "Shortest Win Time",
+        [StringKey.StatTotalPaidOut] = "Total Paid Out",
+        [StringKey.StatBiggestPayout] = "Biggest Payout",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1422,5 +1425,8 @@ public static class Strings
         [StringKey.RankHiveMonarch] = "Monarca de la Colmena",
         [StringKey.RankApiarist] = "Apicultor",
         [StringKey.GlobalSettingsHeader] = "Configuración Global",
+        [StringKey.StatShortestWinTime] = "Tiempo Más Corto de Victoria",
+        [StringKey.StatTotalPaidOut] = "Total Pagado",
+        [StringKey.StatBiggestPayout] = "Mayor Pago",
     };
 }

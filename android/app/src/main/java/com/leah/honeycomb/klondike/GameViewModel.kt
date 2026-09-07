@@ -71,8 +71,18 @@ class GameViewModel(
     private val _options = MutableStateFlow(loadOptions())
     val options: StateFlow<GameOptions> = _options.asStateFlow()
 
-    private val _statistics = MutableStateFlow(GameStatistics())
+    private val _statistics = MutableStateFlow(
+        com.leah.honeycomb.PreferencesHelper.getObjectSync(dataStore, "klondike_statistics", GameStatistics.serializer(), GameStatistics())
+    )
     val statistics: StateFlow<GameStatistics> = _statistics.asStateFlow()
+
+    private fun updateStatistics(transform: (GameStatistics) -> GameStatistics) {
+        val newStats = transform(_statistics.value)
+        _statistics.value = newStats
+        viewModelScope.launch {
+            com.leah.honeycomb.PreferencesHelper.setObject(dataStore, "klondike_statistics", GameStatistics.serializer(), newStats)
+        }
+    }
 
     // Vegas and non-Vegas high scores are tracked separately (Vegas floors at -5200,
     // the buy-in for a fresh deal, rather than 0) — matches Swift's init.
@@ -212,11 +222,11 @@ class GameViewModel(
 
         val currentState = _state.value
         if (currentState.movesCount > 0 && !currentState.hasWon) {
-            _statistics.update { it.copy(currentStreak = 0) }
+            updateStatistics { it.copy(currentStreak = 0) }
         }
 
         if (countAsNewGame) {
-            _statistics.update { it.copy(gamesPlayed = it.gamesPlayed + 1) }
+            updateStatistics { it.copy(gamesPlayed = it.gamesPlayed + 1) }
         } else {
             if (_options.value.isVegasScoring && currentState.movesCount > 0) {
                 _vegasBankroll.update { it - -5200 }
@@ -579,6 +589,26 @@ class GameViewModel(
             if (_state.value.score > _highScore.value) {
                 _highScore.value = _state.value.score
                 saveHighScore(_highScore.value)
+            }
+
+            // Gate the time fields on timeInSeconds > 0 so a No-Stress zero-time win
+            // doesn't skew averageWinningTime/shortestWinTime — matches iOS.
+            updateStatistics { stats ->
+                val newStreak = stats.currentStreak + 1
+                var updated = stats.copy(
+                    gamesWon = stats.gamesWon + 1,
+                    currentStreak = newStreak,
+                    longestStreak = maxOf(stats.longestStreak, newStreak)
+                )
+                if (timeInSeconds > 0) {
+                    val newShortest = if (stats.winningGamesCount == 0) timeInSeconds else minOf(stats.shortestWinTime, timeInSeconds)
+                    updated = updated.copy(
+                        totalWinningTime = updated.totalWinningTime + timeInSeconds,
+                        winningGamesCount = updated.winningGamesCount + 1,
+                        shortestWinTime = newShortest
+                    )
+                }
+                updated
             }
         }
     }

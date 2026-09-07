@@ -703,5 +703,8 @@ enum StringsEnglish {
         .rankHiveMonarch: "Hive Monarch",
         .rankApiarist: "Apiarist",
         .globalSettingsHeader: "Global Settings",
+        .statShortestWinTime: "Shortest Win Time",
+        .statTotalPaidOut: "Total Paid Out",
+        .statBiggestPayout: "Biggest Payout",
     ]
 }

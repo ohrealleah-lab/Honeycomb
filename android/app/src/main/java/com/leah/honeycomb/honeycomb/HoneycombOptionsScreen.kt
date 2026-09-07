@@ -1,71 +1,54 @@
 package com.leah.honeycomb.honeycomb
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.leah.honeycomb.OptionsFullScreenView
+import com.leah.honeycomb.SegmentedControl
+import com.leah.honeycomb.Strings
+import com.leah.honeycomb.StringKey
+import com.leah.honeycomb.LocalAppContainer
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HoneycombOptionsScreen(
     viewModel: HoneycombViewModel,
     onBack: () -> Unit,
     onOpenThemes: () -> Unit = {},
-    onOpenSharedOptions: () -> Unit = {}
+    onOpenSharedOptions: () -> Unit = {},
+    onShowStats: () -> Unit = {}
 ) {
     val options by viewModel.options.collectAsState()
+    val appContainer = LocalAppContainer.current
+    val language by appContainer.language.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Honeycomb Options") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+    OptionsFullScreenView(
+        title = Strings.get(StringKey.Options, language),
+        gameSectionTitle = "Honeycomb",
+        helpText = Strings.get(StringKey.HelpHoneycombObjective, language) + "\n\n" + Strings.get(StringKey.HelpHoneycombMechanics, language),
+        onDismiss = onBack,
+        onShowStats = onShowStats,
+        gameSettings = {
+            SegmentedControl(
+                items = listOf(
+                    HoneycombDifficulty.Easy,
+                    HoneycombDifficulty.Medium,
+                    HoneycombDifficulty.Hard,
+                    HoneycombDifficulty.UltraHard
+                ),
+                selectedItem = options.difficulty,
+                onItemSelection = { viewModel.updateOptions(options.copy(difficulty = it)) },
+                itemLabel = {
+                    when (it) {
+                        HoneycombDifficulty.Easy -> "Baby"
+                        HoneycombDifficulty.Medium -> "Honey"
+                        HoneycombDifficulty.Hard -> "Queen"
+                        HoneycombDifficulty.UltraHard -> "Killer"
                     }
                 }
             )
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            Text("Opponent Difficulty", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val difficulties = listOf(
-                HoneycombDifficulty.Easy to "Baby Bee (Easy)",
-                HoneycombDifficulty.Medium to "Honey Bee (Medium)",
-                HoneycombDifficulty.Hard to "Queen Bee (Hard)",
-                HoneycombDifficulty.UltraHard to "Killer Bee (Ultra Hard)"
-            )
-            difficulties.forEach { (difficulty, label) ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = options.difficulty == difficulty,
-                        onClick = { viewModel.updateOptions(options.copy(difficulty = difficulty)) }
-                    )
-                    Text(label)
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            OutlinedButton(onClick = onOpenThemes, modifier = Modifier.fillMaxWidth()) {
-                Text("Themes & Customization")
-            }
-            OutlinedButton(onClick = onOpenSharedOptions, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Text("Global Settings")
-            }
-        }
-    }
+    )
 }

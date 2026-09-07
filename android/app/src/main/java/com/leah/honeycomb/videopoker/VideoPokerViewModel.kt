@@ -31,8 +31,17 @@ class VideoPokerViewModel(
     )
     val options: StateFlow<VideoPokerOptions> = _options.asStateFlow()
 
-    private val _statistics = MutableStateFlow(VideoPokerStatistics())
+    private val _statistics = MutableStateFlow(
+        PreferencesHelper.getObjectSync(dataStore, "videopoker_statistics", VideoPokerStatistics.serializer(), VideoPokerStatistics())
+    )
     val statistics: StateFlow<VideoPokerStatistics> = _statistics.asStateFlow()
+
+    private fun persistStatistics() {
+        val snapshot = _statistics.value
+        viewModelScope.launch {
+            PreferencesHelper.setObject(dataStore, "videopoker_statistics", VideoPokerStatistics.serializer(), snapshot)
+        }
+    }
 
     init {
         startNewGame()
@@ -105,6 +114,7 @@ class VideoPokerViewModel(
             handsPlayed = _statistics.value.handsPlayed + 1,
             totalWagered = newWagered
         )
+        persistStatistics()
 
         val deck = mutableListOf<Card>()
         for (suit in Suit.values()) {
@@ -218,6 +228,7 @@ class VideoPokerViewModel(
         }
         
         _statistics.value = stats
+        persistStatistics()
     }
 
     private fun matches(result: PokerHandResult, hand: List<Card>, entry: VideoPokerPayEntry): Boolean {
@@ -295,6 +306,7 @@ class VideoPokerViewModel(
     fun startNewGame() {
         if (_state.value.phase == VideoPokerPhase.Holding) {
             _statistics.value = _statistics.value.copy(currentStreak = 0)
+            persistStatistics()
         }
         _state.value = VideoPokerState(
             sessionCredits = _options.value.startingCredits,

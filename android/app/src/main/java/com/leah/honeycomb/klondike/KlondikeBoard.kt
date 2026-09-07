@@ -69,6 +69,7 @@ fun KlondikeBoard(
     val isAutocompleteAvailable by viewModel.isAutocompleteAvailable.collectAsState()
     val pointPopup by viewModel.pointPopup.collectAsState()
     val isStockExhausted by viewModel.isStockExhausted.collectAsState()
+    val noStressMode by viewModel.sharedOptions.noStressMode.collectAsState()
 
     var dragState by remember { mutableStateOf(DragState()) }
     val pileFrames = remember { mutableMapOf<String, Rect>() }
@@ -87,6 +88,7 @@ fun KlondikeBoard(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    var activeCardW by remember { mutableStateOf(0.dp) }
     var showQuitConfirm by remember { mutableStateOf(false) }
 
     BackHandler(enabled = state.movesCount > 0 && !state.hasWon) {
@@ -115,7 +117,7 @@ fun KlondikeBoard(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        com.leah.honeycomb.theme.AppBackground()
+        
         Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
             // Top Bar
             Row(
@@ -140,7 +142,7 @@ fun KlondikeBoard(
                         Text(if (options.isVegasScoring) "BANKROLL" else "SCORE", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                         Text(if (options.isVegasScoring) String.format("$%.2f", state.score / 100.0) else "${state.score}", fontWeight = FontWeight.Bold, color = Color.Yellow)
                     }
-                    if (options.isTimed) {
+                    if (!noStressMode) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("TIME", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                             val mins = state.timerSeconds / 60
@@ -181,8 +183,26 @@ fun KlondikeBoard(
             Spacer(modifier = Modifier.height(16.dp))
 
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val cardWidth = (maxWidth.value - 6 * 6) / 7f
-                val cardW = cardWidth.coerceAtMost(110f).dp
+                val widthCardW = (maxWidth.value - 6 * 6) / 7f
+                val baseCardW = widthCardW.coerceAtMost(110f)
+                val baseCardH = baseCardW * 1.4f
+                
+                val upStepTest = baseCardH * 0.24f
+                val downStepTest = baseCardH * 0.12f
+                val deepestTableau = state.tableau.maxOfOrNull { pile ->
+                    if (pile.cards.isEmpty()) return@maxOfOrNull baseCardH
+                    var running = 0f
+                    for (i in 0 until pile.cards.size - 1) {
+                        running += if (pile.cards[i].faceUp) upStepTest else downStepTest
+                    }
+                    running + baseCardH
+                } ?: baseCardH
+                
+                val neededHeight = baseCardH + 16f + deepestTableau + 20f
+                val heightShrink = if (neededHeight > maxHeight.value) maxHeight.value / neededHeight else 1.0f
+                
+                val cardW = (baseCardW * heightShrink).dp
+                LaunchedEffect(cardW) { activeCardW = cardW }
                 val cardH = cardW * 1.4f
 
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -354,7 +374,7 @@ fun KlondikeBoard(
         
         // Full screen Drag Overlay
         if (dragState.cards.isNotEmpty()) {
-            val cardW = ((LocalConfiguration.current.screenWidthDp - 6 * 6 - 16) / 7f).coerceAtMost(110f).dp
+            val cardW = activeCardW
             val cardH = cardW * 1.4f
             val upStep = cardH * 0.24f
             Box(modifier = Modifier.fillMaxSize().zIndex(100f)) {

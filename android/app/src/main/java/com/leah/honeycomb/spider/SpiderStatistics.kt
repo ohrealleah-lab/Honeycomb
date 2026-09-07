@@ -2,15 +2,25 @@ package com.leah.honeycomb.spider
 
 import kotlinx.serialization.Serializable
 
+// Field set matches shared/Spider/Models/SpiderStatistics.swift's SpiderModeStats
+// (dropped the old bestScore/bestTime/bestStreak fields, which didn't match iOS).
 @Serializable
 data class SpiderModeStats(
     val gamesPlayed: Int = 0,
     val gamesWon: Int = 0,
-    val bestScore: Int = 0,
-    val bestTime: Int = Int.MAX_VALUE,
     val currentStreak: Int = 0,
-    val bestStreak: Int = 0
-)
+    val longestStreak: Int = 0,
+    val highScore: Int = 500,
+    val totalWinningTime: Int = 0,
+    val winningGamesCount: Int = 0,
+    val shortestWinTime: Int = 0
+) {
+    val winPercentage: Double
+        get() = if (gamesPlayed > 0) (gamesWon.toDouble() / gamesPlayed.toDouble()) * 100.0 else 0.0
+
+    val averageWinningTime: Double
+        get() = if (winningGamesCount > 0) totalWinningTime.toDouble() / winningGamesCount.toDouble() else 0.0
+}
 
 @Serializable
 data class SpiderStatistics(

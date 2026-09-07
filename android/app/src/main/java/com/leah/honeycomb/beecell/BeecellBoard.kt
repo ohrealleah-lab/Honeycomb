@@ -64,6 +64,7 @@ fun BeecellBoard(
     val state by viewModel.state.collectAsState()
     val isStuck by viewModel.isStuck.collectAsState()
     val isAutocompleteAvailable by viewModel.isAutocompleteAvailable.collectAsState()
+    var activeCardW by remember { mutableStateOf(0.dp) }
     var dragState by remember { mutableStateOf(DragState()) }
     val pileFrames = remember { mutableStateMapOf<String, Rect>() }
     
@@ -107,13 +108,14 @@ fun BeecellBoard(
         )
     }
 
-    Scaffold(
+    Scaffold(containerColor = Color.Transparent, 
         topBar = {
             TopAppBar(
                 title = { 
                     Column {
                         Text("Beecell", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Row {
+                            Text("Score: ${state.score}  ", fontSize = 12.sp)
                             Text("Moves: ${state.movesCount}  ", fontSize = 12.sp)
                             Text("Time: ${state.timerSeconds}s", fontSize = 12.sp)
                         }
@@ -150,7 +152,6 @@ fun BeecellBoard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF004488))
                 .padding(padding)
         ) {
             val config = LocalConfiguration.current
@@ -281,12 +282,11 @@ fun BeecellBoard(
                 }
             }
         }
+        } // close BoxWithConstraints
         
         // Full screen Drag Overlay
         if (dragState.cards.isNotEmpty()) {
-            val config = LocalConfiguration.current
-            val screenWidth = config.screenWidthDp.dp
-            val cardW = ((screenWidth.value - 18f) / 8f).coerceAtMost(90f).dp
+            val cardW = activeCardW
             val cardH = cardW * 1.4f
             val downStep = cardH * 0.24f
             Box(modifier = Modifier.fillMaxSize().zIndex(100f)) {
@@ -308,6 +308,7 @@ fun BeecellBoard(
                 Card {
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("You Win!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+                        Text("Score: ${state.score}")
                         Text("Time: ${state.timerSeconds}s")
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.startNewGame() }) { Text("Play Again") }
@@ -341,7 +342,6 @@ fun BeecellBoard(
             }
         }
     }
-}
 
 private fun handleDragEnd(
     dragState: DragState,

@@ -712,6 +712,9 @@ object Strings {
         StringKey.RankHiveMonarch to "Hive Monarch",
         StringKey.RankApiarist to "Apiarist",
         StringKey.GlobalSettingsHeader to "Global Settings",
+        StringKey.StatShortestWinTime to "Shortest Win Time",
+        StringKey.StatTotalPaidOut to "Total Paid Out",
+        StringKey.StatBiggestPayout to "Biggest Payout",
     )
 
     private val Spanish = mapOf(
@@ -1414,5 +1417,8 @@ object Strings {
         StringKey.RankHiveMonarch to "Monarca de la Colmena",
         StringKey.RankApiarist to "Apicultor",
         StringKey.GlobalSettingsHeader to "Configuración Global",
+        StringKey.StatShortestWinTime to "Tiempo Más Corto de Victoria",
+        StringKey.StatTotalPaidOut to "Total Pagado",
+        StringKey.StatBiggestPayout to "Mayor Pago",
     )
 }

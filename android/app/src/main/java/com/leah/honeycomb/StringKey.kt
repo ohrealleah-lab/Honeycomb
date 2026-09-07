@@ -704,4 +704,7 @@ enum class StringKey {
     RankHiveMonarch,
     RankApiarist,
     GlobalSettingsHeader,
+    StatShortestWinTime,
+    StatTotalPaidOut,
+    StatBiggestPayout,
 }

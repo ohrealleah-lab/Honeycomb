@@ -9,48 +9,33 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.leah.honeycomb.OptionsFullScreenView
+import com.leah.honeycomb.Strings
+import com.leah.honeycomb.LocalAppContainer
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlackjackOptionsScreen(
     viewModel: BlackjackViewModel,
     onBack: () -> Unit,
     onOpenThemes: () -> Unit = {},
-    onOpenSharedOptions: () -> Unit = {}
+    onOpenSharedOptions: () -> Unit = {},
+    onShowStats: () -> Unit = {}
 ) {
     val options by viewModel.options.collectAsState()
+    val appContainer = LocalAppContainer.current
+    val language by appContainer.language.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Blackjack Options") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Text("<")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            Text("Starting Credits", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            // Option to rebuy manually would go here in a full implementation
-            Text("Current starting credits setting: ${options.startingCredits}")
-
-            Spacer(modifier = Modifier.weight(1f))
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            OutlinedButton(onClick = onOpenThemes, modifier = Modifier.fillMaxWidth()) {
-                Text("Themes & Customization")
-            }
-            OutlinedButton(onClick = onOpenSharedOptions, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Text("Global Settings")
+    OptionsFullScreenView(
+        title = Strings.get(StringKey.Options, language),
+        gameSectionTitle = "Blackjack",
+        helpText = Strings.get(StringKey.HelpBlackjackRules, language),
+        onDismiss = onBack,
+        onShowStats = onShowStats,
+        gameSettings = {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                // Option to rebuy manually would go here in a full implementation
+                Text("Current starting credits setting: ${options.startingCredits}")
             }
         }
-    }
+    )
 }

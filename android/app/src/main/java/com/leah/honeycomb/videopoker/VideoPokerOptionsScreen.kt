@@ -7,59 +7,37 @@ import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.leah.honeycomb.OptionsFullScreenView
+import com.leah.honeycomb.SegmentedControl
+import com.leah.honeycomb.Strings
+import com.leah.honeycomb.LocalAppContainer
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoPokerOptionsScreen(
     viewModel: VideoPokerViewModel,
     onBack: () -> Unit,
     onOpenThemes: () -> Unit = {},
-    onOpenSharedOptions: () -> Unit = {}
+    onOpenSharedOptions: () -> Unit = {},
+    onShowStats: () -> Unit = {}
 ) {
     val options by viewModel.options.collectAsState()
+    val appContainer = LocalAppContainer.current
+    val language by appContainer.language.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Video Poker Options") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Text("<")
-                    }
-                }
+    OptionsFullScreenView(
+        title = Strings.get(StringKey.Options, language),
+        gameSectionTitle = "Video Poker",
+        helpText = "",
+        onDismiss = onBack,
+        onShowStats = onShowStats,
+        gameSettings = {
+            SegmentedControl(
+                items = VideoPokerVariant.values().toList(),
+                selectedItem = options.variant,
+                onItemSelection = { viewModel.updateVariant(it) },
+                itemLabel = { it.name }
             )
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            Text("Variant", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            VideoPokerVariant.values().forEach { variant ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = options.variant == variant,
-                        onClick = { viewModel.updateVariant(variant) }
-                    )
-                    Text(variant.name)
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            OutlinedButton(onClick = onOpenThemes, modifier = Modifier.fillMaxWidth()) {
-                Text("Themes & Customization")
-            }
-            OutlinedButton(onClick = onOpenSharedOptions, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Text("Global Settings")
-            }
-        }
-    }
+    )
 }

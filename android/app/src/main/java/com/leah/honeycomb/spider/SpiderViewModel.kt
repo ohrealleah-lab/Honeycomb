@@ -31,8 +31,22 @@ class SpiderViewModel(
     private val _options = MutableStateFlow(loadOptions())
     val options: StateFlow<SpiderOptions> = _options.asStateFlow()
 
-    private val _statistics = MutableStateFlow(SpiderStatistics())
+    private val _statistics = MutableStateFlow(
+        PreferencesHelper.getObjectSync(dataStore, "spider_statistics", SpiderStatistics.serializer(), SpiderStatistics())
+    )
     val statistics: StateFlow<SpiderStatistics> = _statistics.asStateFlow()
+
+    private fun updateModeStats(suitCount: Int, transform: (SpiderModeStats) -> SpiderModeStats) {
+        val stats = _statistics.value
+        val newStatsMap = stats.statsBySuits.toMutableMap()
+        val modeStats = newStatsMap[suitCount] ?: SpiderModeStats()
+        newStatsMap[suitCount] = transform(modeStats)
+        val newStats = stats.copy(statsBySuits = newStatsMap)
+        _statistics.value = newStats
+        viewModelScope.launch {
+            PreferencesHelper.setObject(dataStore, "spider_statistics", SpiderStatistics.serializer(), newStats)
+        }
+    }
 
     private val _isAutocompleteAvailable = MutableStateFlow(false)
     val isAutocompleteAvailable: StateFlow<Boolean> = _isAutocompleteAvailable.asStateFlow()
@@ -123,13 +137,11 @@ class SpiderViewModel(
 
         val currentState = _state.value
         if (currentState.movesCount > 0 && !currentState.hasWon) {
-            val suitCount = abandonedSuitCount ?: _options.value.suitCount
-            val stats = _statistics.value
-            val newStatsMap = stats.statsBySuits.toMutableMap()
-            val modeStats = newStatsMap[suitCount] ?: SpiderModeStats()
-            newStatsMap[suitCount] = modeStats.copy(currentStreak = 0)
-            _statistics.value = stats.copy(statsBySuits = newStatsMap)
+            val abandonedCount = abandonedSuitCount ?: _options.value.suitCount
+            updateModeStats(abandonedCount) { it.copy(currentStreak = 0) }
         }
+
+        updateModeStats(_options.value.suitCount) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
 
         undoStack.clear()
 
@@ -420,7 +432,27 @@ class SpiderViewModel(
         if (WinDetection.hasWon(totalFoundationCards, 104, _state.value.hasWon)) {
             _state.update { it.copy(hasWon = true) }
             stopTimer()
-            // In a real app we update statistics here
+
+            val timeInSeconds = _state.value.timerSeconds
+            val finalScore = _state.value.score
+            updateModeStats(_options.value.suitCount) { stats ->
+                val newStreak = stats.currentStreak + 1
+                var updated = stats.copy(
+                    gamesWon = stats.gamesWon + 1,
+                    currentStreak = newStreak,
+                    longestStreak = maxOf(stats.longestStreak, newStreak),
+                    highScore = maxOf(stats.highScore, finalScore)
+                )
+                if (timeInSeconds > 0) {
+                    val newShortest = if (stats.shortestWinTime == 0) timeInSeconds else minOf(stats.shortestWinTime, timeInSeconds)
+                    updated = updated.copy(
+                        totalWinningTime = updated.totalWinningTime + timeInSeconds,
+                        winningGamesCount = updated.winningGamesCount + 1,
+                        shortestWinTime = newShortest
+                    )
+                }
+                updated
+            }
         }
     }
 

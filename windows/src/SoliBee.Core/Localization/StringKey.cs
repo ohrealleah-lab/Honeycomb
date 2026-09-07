@@ -708,4 +708,7 @@ public enum StringKey
     RankHiveMonarch,
     RankApiarist,
     GlobalSettingsHeader,
+    StatShortestWinTime,
+    StatTotalPaidOut,
+    StatBiggestPayout,
 }

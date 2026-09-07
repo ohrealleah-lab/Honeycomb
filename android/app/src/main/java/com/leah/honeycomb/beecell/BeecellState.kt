@@ -8,6 +8,7 @@ data class BeecellState(
     val freeCells: List<Pile> = emptyList(),
     val foundations: List<Pile> = emptyList(),
     val tableau: List<Pile> = emptyList(),
+    val score: Int = 0,
     val movesCount: Int = 0,
     val hasWon: Boolean = false,
     val timerSeconds: Int = 0,
