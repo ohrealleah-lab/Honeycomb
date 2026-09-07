@@ -2,6 +2,7 @@ package com.leah.honeycomb.honeycomb
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -64,6 +65,30 @@ fun HoneycombMatchUI(
 
     var showQuitConfirm by remember { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = isMidMatch) { showQuitConfirm = true }
+
+    var isStealingCard by remember { mutableStateOf(false) }
+    LaunchedEffect(state.showPostGamePrompt) {
+        if (!state.showPostGamePrompt) isStealingCard = false
+    }
+
+    if (state.pendingSteal != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelPendingSteal() },
+            title = { Text(com.leah.honeycomb.Strings.get(StringKey.ConfirmStealTitle, language)) },
+            text = { Text(state.pendingSteal?.cardName ?: "") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.confirmPendingSteal()
+                    isStealingCard = false
+                }) { Text(com.leah.honeycomb.Strings.get(StringKey.Ok, language)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelPendingSteal() }) {
+                    Text(com.leah.honeycomb.Strings.get(StringKey.Cancel, language))
+                }
+            }
+        )
+    }
 
     if (showQuitConfirm) {
         AlertDialog(
@@ -169,6 +194,36 @@ fun HoneycombMatchUI(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            if (state.showPostGamePrompt) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        state.matchResult,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    state.matchResultFlavorText?.let {
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    if (isStealingCard) {
+                        Text(
+                            com.leah.honeycomb.Strings.get(StringKey.StealInstruction, language),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Yellow
+                        )
+                    } else if (viewModel.canStealCard) {
+                        Button(onClick = { isStealingCard = true }) {
+                            Text(com.leah.honeycomb.Strings.get(StringKey.StealCard, language))
+                        }
+                    } else if (viewModel.stealProtectionActive && viewModel.hasStealableCard) {
+                        Text(
+                            com.leah.honeycomb.Strings.get(StringKey.StealProtectionLine, language),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             val playerScore = state.board.playerScore + state.playerHand.size
             val opponentScore = state.board.opponentScore + state.opponentHand.size
             Text(
@@ -203,7 +258,8 @@ fun HoneycombMatchUI(
                         for (col in 0 until 3) {
                             val index = row * 3 + col
                             val cell = state.board.cells[index]
-                            
+                            val stealEligible = isStealingCard && cell.card?.let { viewModel.isStealEligible(it) } == true
+
                             Box(
                                 modifier = Modifier
                                     .size(100.dp)
@@ -211,6 +267,12 @@ fun HoneycombMatchUI(
                                     .background(Color.Black.copy(alpha = 0.2f))
                                     .let {
                                         if (hintMove?.second == index) it.border(2.dp, Color.Yellow) else it
+                                    }
+                                    .let {
+                                        if (stealEligible) it.border(3.dp, Color(0xFFFFD700)) else it
+                                    }
+                                    .let {
+                                        if (stealEligible) it.clickable { viewModel.requestSteal(index) } else it
                                     }
                                     .onGloballyPositioned { coords ->
                                         dropTargets[index] = coords.boundsInRoot()
@@ -248,6 +310,9 @@ fun HoneycombMatchUI(
                             .aspectRatio(0.7f)
                             .let {
                                 if (hintMove?.first == index) it.border(2.dp, Color.Yellow) else it
+                            }
+                            .let {
+                                if (state.mandatedPlayerHandIndex == index) it.border(3.dp, Color(0xFFFF9800)) else it
                             }
                             .onGloballyPositioned { coords ->
                                 cardPosition = coords.positionInRoot()

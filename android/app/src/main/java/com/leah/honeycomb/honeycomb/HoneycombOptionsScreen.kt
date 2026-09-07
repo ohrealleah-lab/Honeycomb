@@ -40,14 +40,7 @@ fun HoneycombOptionsScreen(
                 ),
                 selectedItem = options.difficulty,
                 onItemSelection = { viewModel.updateOptions(options.copy(difficulty = it)) },
-                itemLabel = {
-                    when (it) {
-                        HoneycombDifficulty.Easy -> "Baby"
-                        HoneycombDifficulty.Medium -> "Honey"
-                        HoneycombDifficulty.Hard -> "Queen"
-                        HoneycombDifficulty.UltraHard -> "Killer"
-                    }
-                }
+                itemLabel = { it.displayName }
             )
         }
     )

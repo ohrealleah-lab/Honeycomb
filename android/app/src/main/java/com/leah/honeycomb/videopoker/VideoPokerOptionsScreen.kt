@@ -28,7 +28,12 @@ fun VideoPokerOptionsScreen(
     OptionsFullScreenView(
         title = Strings.get(StringKey.Options, language),
         gameSectionTitle = "Video Poker",
-        helpText = "",
+        helpText = listOf(
+            StringKey.HelpVideopokerObjective,
+            StringKey.HelpVideopokerHowToPlay,
+            StringKey.HelpVideopokerStrategy,
+            StringKey.HelpVideopokerNoStress
+        ).joinToString("\n\n") { Strings.get(it, language) },
         onDismiss = onBack,
         onShowStats = onShowStats,
         gameSettings = {

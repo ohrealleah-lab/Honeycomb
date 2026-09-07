@@ -102,6 +102,18 @@ class VideoPokerViewModel(
             VideoPokerVariant.BonusPoker -> bonusPokerTable
         }
 
+    fun rebuy() {
+        val s = _state.value
+        if (s.phase != VideoPokerPhase.Deal && s.phase != VideoPokerPhase.Result) return
+        _state.value = s.copy(
+            sessionCredits = s.sessionCredits + _options.value.startingCredits
+        )
+        _statistics.value = _statistics.value.copy(
+            rebuyCount = _statistics.value.rebuyCount + 1
+        )
+        persistStatistics()
+    }
+
     fun deal() {
         val s = _state.value
         if (s.phase != VideoPokerPhase.Deal && s.phase != VideoPokerPhase.Result) return

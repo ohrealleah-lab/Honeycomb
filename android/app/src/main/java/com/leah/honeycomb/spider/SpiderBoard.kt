@@ -8,9 +8,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.PlayArrow
@@ -67,6 +66,16 @@ fun SpiderBoard(
     val isAutoplayRunning by viewModel.isAutoplayRunning.collectAsState()
     val isStuck by viewModel.isStuck.collectAsState()
     val pointPopup by viewModel.pointPopup.collectAsState()
+    val hintSourceId by viewModel.hintSourceId.collectAsState()
+    val hintTargetId by viewModel.hintTargetId.collectAsState()
+
+    var showEmptyStockWarning by remember { mutableStateOf(false) }
+    LaunchedEffect(showEmptyStockWarning) {
+        if (showEmptyStockWarning) {
+            kotlinx.coroutines.delay(2000)
+            showEmptyStockWarning = false
+        }
+    }
 
     var dragState by remember { mutableStateOf(DragState()) }
     val pileFrames = remember { mutableStateMapOf<String, Rect>() }
@@ -121,7 +130,7 @@ fun SpiderBoard(
                 },
                 navigationIcon = {
                     IconButton(onClick = onMenuTap) {
-                        Icon(Icons.Default.Menu, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -152,6 +161,29 @@ fun SpiderBoard(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            if (showEmptyStockWarning) {
+                Text(
+                    "Fill every empty column before dealing again",
+                    color = Color.Yellow,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 4.dp)
+                        .zIndex(10f)
+                )
+            }
+            if (hintSourceId != null && hintTargetId != null) {
+                Text(
+                    "Hint: move from ${hintSourceId} to ${hintTargetId}".replace("_", " "),
+                    color = Color.Yellow,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 4.dp)
+                        .clickable { viewModel.clearHint() }
+                        .zIndex(10f)
+                )
+            }
             val config = LocalConfiguration.current
             val screenWidth = config.screenWidthDp.dp
             // We have 10 columns in Spider, need to fit them in width
@@ -168,7 +200,13 @@ fun SpiderBoard(
                     Box(modifier = Modifier
                         .size(cardW, cardH)
                         .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-                        .clickable { viewModel.drawFromStock() }
+                        .clickable {
+                            if (!state.stock.isEmpty && viewModel.hasEmptyTableauColumn) {
+                                showEmptyStockWarning = true
+                            } else {
+                                viewModel.drawFromStock()
+                            }
+                        }
                     ) {
                         if (!state.stock.isEmpty) {
                             // Draw stock backing

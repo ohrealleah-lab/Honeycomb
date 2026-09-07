@@ -8,6 +8,14 @@ enum class HoneycombDifficulty {
     Easy, Medium, Hard, UltraHard
 }
 
+val HoneycombDifficulty.displayName: String
+    get() = when (this) {
+        HoneycombDifficulty.Easy -> "Baby Bee"
+        HoneycombDifficulty.Medium -> "Honey Bee"
+        HoneycombDifficulty.Hard -> "Queen Bee"
+        HoneycombDifficulty.UltraHard -> "Killer Bee"
+    }
+
 object HoneycombAI {
     fun computeMove(
         difficulty: HoneycombDifficulty,

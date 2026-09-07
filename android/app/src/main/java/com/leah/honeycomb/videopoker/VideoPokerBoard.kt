@@ -22,6 +22,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leah.honeycomb.CardView
 
+// Display-only translation for a poker hand name — internal comparisons (pay-table row
+// highlighting) stay keyed on the English name from the paytable; this only swaps in
+// translated text at the point of rendering, mirroring iOS's localizedHandName. Variant
+// names (Jacks or Better, Deuces Wild, Bonus Poker) are deliberately left untranslated,
+// matching iOS's localizedVariantName — they're the actual names of these game variants.
+private fun localizedHandName(handName: String, language: AppLanguage): String {
+    val key = when (handName) {
+        "Royal Flush" -> StringKey.HandRoyalFlush
+        "Jacks or Better" -> StringKey.HandJacksOrBetter
+        "High Card" -> StringKey.HandHighCard
+        "One Pair" -> StringKey.HandOnePair
+        "Two Pair" -> StringKey.HandTwoPair
+        "Three of a Kind" -> StringKey.HandThreeOfAKind
+        "Flush" -> StringKey.HandFlush
+        "Straight" -> StringKey.HandStraight
+        "Straight Flush" -> StringKey.HandStraightFlush
+        "Four of a Kind" -> StringKey.HandFourOfAKind
+        "Full House" -> StringKey.HandFullHouse
+        "Five of a Kind" -> StringKey.HandFiveOfAKind
+        "Four Aces" -> StringKey.HandFourAces
+        "Four 2s–4s" -> StringKey.HandFour2s4s
+        "Four Deuces" -> StringKey.HandFourDeuces
+        "Natural Royal Flush" -> StringKey.HandNaturalRoyalFlush
+        "Wild Royal Flush" -> StringKey.HandWildRoyalFlush
+        "No Win" -> StringKey.HandNoWin
+        else -> return handName
+    }
+    return com.leah.honeycomb.Strings.get(key, language)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoPokerBoard(
@@ -105,7 +135,7 @@ fun VideoPokerBoard(
                                 modifier = Modifier.fillMaxWidth().background(if (isWin) Color.Yellow.copy(alpha=0.3f) else Color.Transparent),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(entry.handName, color = if (isWin) Color.Yellow else Color.White, fontSize = 12.sp)
+                                Text(localizedHandName(entry.handName, language), color = if (isWin) Color.Yellow else Color.White, fontSize = 12.sp)
                                 Text(payout.toString(), color = if (isWin) Color.Yellow else Color.White, fontSize = 12.sp)
                             }
                         }
@@ -117,10 +147,10 @@ fun VideoPokerBoard(
                 // Result Banner
                 if (state.phase == VideoPokerPhase.Result) {
                     if (state.lastPayout > 0) {
-                        Text(state.lastHandName, color = Color.Yellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(localizedHandName(state.lastHandName, language), color = Color.Yellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         Text("Win $${state.lastPayout}", color = Color.Yellow, fontSize = 20.sp)
                     } else {
-                        Text("Game Over", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(com.leah.honeycomb.Strings.get(StringKey.GameOver, language), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 
@@ -166,11 +196,19 @@ fun VideoPokerBoard(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Button(onClick = { viewModel.decreaseBet() }) { Text("Bet -") }
-                        Button(onClick = { viewModel.increaseBet() }) { Text("Bet +") }
-                        Button(onClick = { viewModel.maxBet() }) { Text("Max Bet") }
-                        Button(onClick = { viewModel.deal() }, enabled = (viewModel.isFreePlay || state.sessionCredits >= state.currentBet)) { 
-                            Text(if (state.phase == VideoPokerPhase.Result) "Re-Deal" else "Deal") 
+                        if (!viewModel.isFreePlay) {
+                            Button(onClick = { viewModel.decreaseBet() }) { Text("Bet -") }
+                            Button(onClick = { viewModel.increaseBet() }) { Text("Bet +") }
+                            Button(onClick = { viewModel.maxBet() }) { Text("Max Bet") }
+                        }
+                        if (!viewModel.isFreePlay && state.sessionCredits < state.currentBet) {
+                            Button(onClick = { viewModel.rebuy() }) { 
+                                Text("Rebuy") 
+                            }
+                        } else {
+                            Button(onClick = { viewModel.deal() }) { 
+                                Text(if (state.phase == VideoPokerPhase.Result) "Re-Deal" else "Deal") 
+                            }
                         }
                     }
                 } else if (state.phase == VideoPokerPhase.Holding) {

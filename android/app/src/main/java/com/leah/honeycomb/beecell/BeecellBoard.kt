@@ -364,7 +364,7 @@ private fun handleDragEnd(
         val margin = 40f
         if (releaseX >= frame.left - margin && releaseX <= frame.right + margin && releaseY >= frame.top - margin) {
             val dist = Math.abs(releaseX - frame.center.x) + Math.abs(releaseY - frame.top)
-            val isValid = viewModel.isValidMove(dragState.cards, tab)
+            val isValid = SmartDrop.resolve(dragState.cards) { viewModel.isValidMove(it, tab) } != null
             if (isValid && dist < bestDist) {
                 bestDist = dist
                 dropTarget = tab
@@ -373,6 +373,9 @@ private fun handleDragEnd(
     }
 
     if (dropTarget != null) {
-        viewModel.moveCards(dragState.cards, dragState.sourcePile, dropTarget)
+        val resolved = SmartDrop.resolve(dragState.cards) { viewModel.isValidMove(it, dropTarget!!) }
+        if (resolved != null) {
+            viewModel.moveCards(resolved, dragState.sourcePile, dropTarget)
+        }
     }
 }

@@ -91,7 +91,7 @@ fun BlackjackBoard(
             ) {
                 // Dealer Area
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Dealer: ${if (state.phase == BlackjackPhase.Playing) "?" else state.dealerValue}", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("${com.leah.honeycomb.Strings.get(StringKey.DealerLabel, language)}: ${if (state.phase == BlackjackPhase.Playing) "?" else state.dealerValue}", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.Center) {
                     state.dealerCards.forEach { card ->
@@ -113,12 +113,12 @@ fun BlackjackBoard(
                         ) {
                             Text(
                                 text = when (state.resultOutcome) {
-                                    BlackjackRoundOutcome.Blackjack -> "Blackjack!"
-                                    BlackjackRoundOutcome.Win -> "You Win!"
-                                    BlackjackRoundOutcome.Push -> "Push"
-                                    BlackjackRoundOutcome.Bust -> "Bust"
-                                    BlackjackRoundOutcome.Loss -> "Dealer Wins"
-                                    else -> "Result"
+                                    BlackjackRoundOutcome.Blackjack -> com.leah.honeycomb.Strings.get(StringKey.TouchResultBlackjack, language)
+                                    BlackjackRoundOutcome.Win -> com.leah.honeycomb.Strings.get(StringKey.TouchResultWin, language)
+                                    BlackjackRoundOutcome.Push -> com.leah.honeycomb.Strings.get(StringKey.TouchResultPush, language)
+                                    BlackjackRoundOutcome.Bust -> com.leah.honeycomb.Strings.get(StringKey.TouchResultBust, language)
+                                    BlackjackRoundOutcome.Loss -> com.leah.honeycomb.Strings.get(StringKey.TouchResultLoss, language)
+                                    else -> ""
                                 },
                                 color = Color.White,
                                 fontSize = 32.sp,
@@ -176,11 +176,13 @@ fun BlackjackBoard(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Button(onClick = { viewModel.clearBet() }) { Text("Clear") }
-                        Button(onClick = { viewModel.addToBet(1) }) { Text("+1") }
-                        Button(onClick = { viewModel.addToBet(5) }) { Text("+5") }
-                        Button(onClick = { viewModel.doubleBet() }) { Text("x2") }
-                        Button(onClick = { viewModel.deal() }, enabled = (viewModel.isFreePlay || state.sessionCredits >= state.currentBet)) { 
+                        if (!viewModel.isFreePlay) {
+                            Button(onClick = { viewModel.clearBet() }) { Text("Clear") }
+                            Button(onClick = { viewModel.addToBet(1) }) { Text("+1") }
+                            Button(onClick = { viewModel.addToBet(5) }) { Text("+5") }
+                            Button(onClick = { viewModel.doubleBet() }) { Text("x2") }
+                        }
+                        Button(onClick = { viewModel.deal() }, enabled = (viewModel.isFreePlay || state.sessionCredits >= state.currentBet)) {
                             Text(if (state.phase == BlackjackPhase.Result) "Re-Deal" else "Deal") 
                         }
                     }
@@ -189,10 +191,10 @@ fun BlackjackBoard(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Button(onClick = { viewModel.hit() }, enabled = !viewModel.isDealerBlackjackPending) { Text("Hit") }
-                        Button(onClick = { viewModel.stand() }, enabled = !viewModel.isDealerBlackjackPending) { Text("Stand") }
-                        Button(onClick = { viewModel.doubleDown() }, enabled = viewModel.canDouble && !viewModel.isDealerBlackjackPending) { Text("Double") }
-                        Button(onClick = { viewModel.split() }, enabled = viewModel.canSplit && !viewModel.isDealerBlackjackPending) { Text("Split") }
+                        Button(onClick = { viewModel.hit() }, enabled = !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionHit, language)) }
+                        Button(onClick = { viewModel.stand() }, enabled = !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionStand, language)) }
+                        Button(onClick = { viewModel.doubleDown() }, enabled = viewModel.canDouble && !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionDouble, language)) }
+                        Button(onClick = { viewModel.split() }, enabled = viewModel.canSplit && !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionSplit, language)) }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))

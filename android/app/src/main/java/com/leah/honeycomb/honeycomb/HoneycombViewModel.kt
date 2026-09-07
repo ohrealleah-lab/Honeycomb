@@ -43,12 +43,23 @@ data class HoneycombState(
     val matchResult: String = "",
     val matchResultFlavorText: String? = null,
     val pendingSteal: PendingSteal? = null,
-    val mandatedPlayerHandIndex: Int? = null,
-    val mandatedOpponentHandIndex: Int? = null,
     val chaosPlayerIndex: Int? = null,
     val chaosOpponentIndex: Int? = null,
     val showSuddenDeathBanner: Boolean = false
-)
+) {
+    val mandatedPlayerHandIndex: Int?
+        get() {
+            if (activeRules.contains(HoneycombRule.Order) && playerHand.isNotEmpty()) return 0
+            if (activeRules.contains(HoneycombRule.Chaos)) return chaosPlayerIndex
+            return null
+        }
+    val mandatedOpponentHandIndex: Int?
+        get() {
+            if (activeRules.contains(HoneycombRule.Order) && opponentHand.isNotEmpty()) return 0
+            if (activeRules.contains(HoneycombRule.Chaos)) return chaosOpponentIndex
+            return null
+        }
+}
 
 class HoneycombViewModel(
     val sharedOptions: SharedGameOptions,
@@ -182,7 +193,8 @@ class HoneycombViewModel(
 
     private var isRematchMatch: Boolean = false
     private var consecutiveNoStealWins: Int = 0
-    private var stealProtectionActive: Boolean = false
+    var stealProtectionActive: Boolean = false
+        private set
     private val _statistics = MutableStateFlow(
         PreferencesHelper.getObjectSync(dataStore, "honeycomb_statistics", HoneycombStats.serializer(), HoneycombStats())
     )
@@ -300,10 +312,42 @@ class HoneycombViewModel(
         val deckIds = if (activeDeckIndex in savedDecks.indices) savedDecks[activeDeckIndex].cardIds else emptyList()
         
         val pDeckData = deckIds.mapNotNull { database.card(it) }
-        val pDeck = pDeckData.map { HoneycombCard(it, CardOwner.Player) }
+        val pDeck = pDeckData.map { HoneycombCard(it, CardOwner.Player) }.toMutableList()
         
-        val openPlayerCardIds = if (rematchActiveRules.contains(HoneycombRule.AllOpen) || rematchActiveRules.contains(HoneycombRule.ThreeOpen)) pDeckData.map { it.id.toString() }.toSet() else emptySet()
-        _state.update { it.copy(playerHand = pDeck, playerStartingDeck = pDeck, openPlayerCardIds = openPlayerCardIds) }
+        val oDeck = _state.value.opponentHand.toMutableList()
+        
+        if (rematchActiveRules.contains(HoneycombRule.Swap) && pDeck.isNotEmpty() && oDeck.isNotEmpty()) {
+            val pIdx = pDeck.indices.random()
+            val oIdx = oDeck.indices.random()
+            
+            val pCard = pDeck[pIdx]
+            val oCard = oDeck[oIdx]
+            
+            pDeck[pIdx] = HoneycombCard(oCard.data, CardOwner.Player, CardOwner.Opponent, oCard.id)
+            oDeck[oIdx] = HoneycombCard(pCard.data, CardOwner.Opponent, CardOwner.Player, pCard.id)
+        }
+        
+        var openOppIds = emptySet<String>()
+        if (rematchActiveRules.contains(HoneycombRule.AllOpen)) {
+            openOppIds = oDeck.map { it.id }.toSet()
+        } else if (rematchActiveRules.contains(HoneycombRule.ThreeOpen)) {
+            openOppIds = oDeck.shuffled().take(3).map { it.id }.toSet()
+        }
+        
+        var openPlayerIds = emptySet<String>()
+        if (rematchActiveRules.contains(HoneycombRule.AllOpen)) {
+            openPlayerIds = pDeck.map { it.id }.toSet()
+        } else if (rematchActiveRules.contains(HoneycombRule.ThreeOpen)) {
+            openPlayerIds = pDeck.shuffled().take(3).map { it.id }.toSet()
+        }
+        
+        _state.update { it.copy(
+            playerHand = pDeck, 
+            playerStartingDeck = pDeck, 
+            openPlayerCardIds = openPlayerIds,
+            opponentHand = oDeck,
+            openOpponentCardIds = openOppIds
+        ) }
     }
 
     private fun rollOpponentDeck(difficulty: HoneycombDifficulty, rules: List<HoneycombRule>, suits: Set<String>): List<HoneycombCardData> {
@@ -406,7 +450,7 @@ class HoneycombViewModel(
     fun findHint() {
         if (!hasHintsAvailable) return
         val st = _state.value
-        val eligibleHands = if (st.mandatedPlayerHandIndex != null) listOf(st.mandatedPlayerHandIndex) else st.playerHand.indices.toList()
+        val eligibleHands = if (st.mandatedPlayerHandIndex != null) listOfNotNull(st.mandatedPlayerHandIndex) else st.playerHand.indices.toList()
         val empties = st.board.cells.indices.filter { st.board.cells[it].card == null }
         viewModelScope.launch {
             val move = withContext(Dispatchers.Default) {
@@ -449,8 +493,15 @@ class HoneycombViewModel(
         val newPlayerHand = st.playerHand.toMutableList()
         val card = newPlayerHand.removeAt(handIndex)
 
+        val isFirstCard = st.board.cells.all { it.card == null }
+        if (st.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard) {
+            card.isFaceDown = true
+            card.bombShelterTurnsRemaining = 3
+        }
+
         val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
         sessionCardsCaptured += newBoard.placeCard(card, boardIndex, st.activeRules).size
+        processBombShelter(newBoard, boardIndex, st.activeRules)
 
         _state.update {
             it.copy(
@@ -484,7 +535,7 @@ class HoneycombViewModel(
         val playerDeckData = st.playerHand.filter { st.openPlayerCardIds.contains(it.id) }.map { it.data }
         val unknownPlayerCardCount = st.playerHand.size - playerDeckData.size
         
-        val eligibleHands = if (st.mandatedOpponentHandIndex != null) listOf(st.mandatedOpponentHandIndex) else st.opponentHand.indices.toList()
+        val eligibleHands = if (st.mandatedOpponentHandIndex != null) listOfNotNull(st.mandatedOpponentHandIndex) else st.opponentHand.indices.toList()
         val empties = board.cells.indices.filter { board.cells[it].card == null }
         val rules = st.activeRules
 
@@ -511,8 +562,15 @@ class HoneycombViewModel(
                 val newOpponentHand = _state.value.opponentHand.toMutableList()
                 val cardToPlay = newOpponentHand.removeAt(move.first)
                 
+                val isFirstCard = _state.value.board.cells.all { it.card == null }
+                if (_state.value.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard) {
+                    cardToPlay.isFaceDown = true
+                    cardToPlay.bombShelterTurnsRemaining = 3
+                }
+
                 val newBoard = _state.value.board.copy(cells = _state.value.board.cells.map { it.copy(card = it.card?.copy()) })
                 sessionCardsCaptured += newBoard.placeCard(cardToPlay, move.second, _state.value.activeRules).size
+                processBombShelter(newBoard, move.second, _state.value.activeRules)
 
                 _state.update {
                     it.copy(
@@ -559,6 +617,7 @@ class HoneycombViewModel(
                     fallenAceCaptures = st.board.sessionFallenAceCaptures
                 )
             }
+            applyStealProtection()
         } else if (oScore > pScore) {
             _state.update {
                 it.copy(
@@ -664,28 +723,97 @@ class HoneycombViewModel(
         }
     }
 
+    fun isStealEligible(card: HoneycombCard): Boolean {
+        if (profileManager.unlockedCardIds.value.contains(card.data.id)) return false
+        if (stealProtectionActive) return true
+        return card.originalOwner == CardOwner.Opponent && card.owner == CardOwner.Player
+    }
+
+    val hasStealableCard: Boolean
+        get() = _state.value.board.cells.any { cell -> cell.card?.let { isStealEligible(it) } ?: false }
+
+    val canStealCard: Boolean
+        get() = _state.value.matchOutcome == HoneycombMatchOutcome.Win
+            && !sharedOptions.noStressMode.value
+            && !hasStolenThisMatch
+            && !profileManager.isCardBankFull
+            && hasStealableCard
+
+    // Covers a rematch chain whose frozen opponent deck happens to include a card
+    // that's realistically never capturable — without this, the player could keep
+    // winning against that exact opponent forever with no legitimate shot at
+    // unlocking it. Mirrors iOS's applyStealProtection(): only wins count as
+    // evidence of being stuck, only within a rematch chain, and once tripped it
+    // stays active until startNewGame() resets it.
+    private fun applyStealProtection() {
+        if (!isRematchMatch) return
+        if (stealProtectionActive) return
+        if (hasStealableCard) {
+            consecutiveNoStealWins = 0
+            return
+        }
+        consecutiveNoStealWins += 1
+        if (consecutiveNoStealWins < 2) return
+        consecutiveNoStealWins = 0
+        stealProtectionActive = true
+    }
+
     fun requestSteal(boardIndex: Int) {
         if (hasStolenThisMatch) return
         val card = _state.value.board.cells[boardIndex].card ?: return
-        
-        if (card.owner != CardOwner.Player || card.originalOwner != CardOwner.Opponent) return
-        
-        _state.update { 
-            it.copy(pendingSteal = PendingSteal(boardIndex = boardIndex, cardName = card.data.name)) 
+        if (!isStealEligible(card)) return
+
+        _state.update {
+            it.copy(pendingSteal = PendingSteal(boardIndex = boardIndex, cardName = card.data.name))
         }
+    }
+
+    fun cancelPendingSteal() {
+        _state.update { it.copy(pendingSteal = null) }
     }
 
     fun confirmPendingSteal() {
         val pending = _state.value.pendingSteal ?: return
-        
-        val card = _state.value.board.cells[pending.boardIndex].card ?: return
-        hasStolenThisMatch = true
         _state.update { it.copy(pendingSteal = null) }
+
+        val card = _state.value.board.cells[pending.boardIndex].card ?: return
+        if (!isStealEligible(card)) return
+        hasStolenThisMatch = true
+
+        viewModelScope.launch {
+            profileManager.unlockCard(card.data.id)
+        }
+
         updateStatistics { it.copy(cardsStolen = it.cardsStolen + 1) }
     }
 
     fun startOver() {
         updateOptions(_options.value.copy(activeDeckIndex = 0))
         updateStatistics { it.copy(timesStartedOver = it.timesStartedOver + 1) }
+    }
+
+    private fun processBombShelter(board: HoneycombBoard, justPlacedIndex: Int, rules: List<HoneycombRule>) {
+        val pendingReveals = mutableListOf<Int>()
+        for (i in board.cells.indices) {
+            if (i == justPlacedIndex) continue
+            val card = board.cells[i].card ?: continue
+            if (!card.isFaceDown || card.bombShelterTurnsRemaining == null) continue
+            
+            val newRemaining = card.bombShelterTurnsRemaining!! - 1
+            if (newRemaining <= 0) {
+                pendingReveals.add(i)
+            } else {
+                card.bombShelterTurnsRemaining = newRemaining
+            }
+        }
+        
+        for (i in pendingReveals) {
+            val card = board.cells[i].card ?: continue
+            card.bombShelterTurnsRemaining = null
+            val flips = board.revealFaceDownCard(i, rules)
+            if (card.owner == CardOwner.Player) {
+                sessionCardsCaptured += flips.size
+            }
+        }
     }
 }
