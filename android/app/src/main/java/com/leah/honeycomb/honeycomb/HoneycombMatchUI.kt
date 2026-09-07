@@ -392,6 +392,7 @@ fun HoneycombMatchUI(
                     val scale = min(2.0f, max(0.2f, min(scaleX, scaleY)))
 
                     Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .requiredSize(intrinsicWidth, intrinsicHeight)
                             .graphicsLayer(scaleX = scale, scaleY = scale)
