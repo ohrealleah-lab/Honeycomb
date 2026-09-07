@@ -8,8 +8,13 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
@@ -52,7 +57,8 @@ private data class DragState(
 fun BeecellBoard(
     viewModel: BeecellViewModel,
     onMenuTap: () -> Unit,
-    onOptions: () -> Unit
+    onOptions: () -> Unit,
+    onThemes: () -> Unit = {}
 ) {
     val language by com.leah.honeycomb.LocalAppContainer.current.language.collectAsState()
     val state by viewModel.state.collectAsState()
@@ -79,13 +85,17 @@ fun BeecellBoard(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    androidx.activity.compose.BackHandler(enabled = state.movesCount > 0 && !state.hasWon) {
+        showQuitDialog = true
+    }
+
     if (showQuitDialog) {
         AlertDialog(
             onDismissRequest = { showQuitDialog = false },
             title = { Text(com.leah.honeycomb.Strings.get(StringKey.ToolbarQuitMatch, language)) },
             text = { Text(com.leah.honeycomb.Strings.get(StringKey.NewMatchConfirmTitle, language)) },
             confirmButton = {
-                TextButton(onClick = { showQuitDialog = false; onMenuTap() }) {
+                TextButton(onClick = { showQuitDialog = false; viewModel.startNewGame() }) {
                     Text(com.leah.honeycomb.Strings.get(StringKey.QuitButton, language))
                 }
             },
@@ -111,13 +121,23 @@ fun BeecellBoard(
                 },
                 navigationIcon = {
                     IconButton(onClick = onMenuTap) {
-                        // Avoid AutoMirrored warning by using generic icon or text
-                        Text("<")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
+                    IconButton(onClick = onThemes) {
+                        Icon(Icons.Filled.Palette, contentDescription = "Themes")
+                    }
+                    IconButton(onClick = { viewModel.findHint() }) {
+                        Icon(Icons.Filled.Lightbulb, contentDescription = "Hint")
+                    }
                     IconButton(onClick = { viewModel.undoLastAction() }, enabled = viewModel.canUndo) {
-                        Text(com.leah.honeycomb.Strings.get(StringKey.Undo, language))
+                        Icon(Icons.Filled.Undo, contentDescription = "Undo")
+                    }
+                    IconButton(onClick = {
+                        if (state.movesCount == 0) viewModel.startNewGame() else showQuitDialog = true
+                    }) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = "New Deal")
                     }
                     IconButton(onClick = onOptions) {
                         Icon(Icons.Filled.Settings, contentDescription = "Options")

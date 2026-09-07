@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
@@ -55,12 +57,15 @@ data class DragState(
 fun KlondikeBoard(
     viewModel: GameViewModel,
     onOptionsTap: () -> Unit,
-    onMenuTap: () -> Unit
+    onMenuTap: () -> Unit,
+    onThemesTap: () -> Unit = {}
 ) {
     val language by com.leah.honeycomb.LocalAppContainer.current.language.collectAsState()
     val state by viewModel.state.collectAsState()
     val options by viewModel.options.collectAsState()
     val isStuck by viewModel.isStuck.collectAsState()
+    val hintSourceId by viewModel.hintSourceId.collectAsState()
+    val hintTargetId by viewModel.hintTargetId.collectAsState()
     val isAutocompleteAvailable by viewModel.isAutocompleteAvailable.collectAsState()
     val pointPopup by viewModel.pointPopup.collectAsState()
     val isStockExhausted by viewModel.isStockExhausted.collectAsState()
@@ -125,6 +130,9 @@ fun KlondikeBoard(
                     IconButton(onClick = onOptionsTap) {
                         Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
                     }
+                    IconButton(onClick = onThemesTap) {
+                        Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -143,8 +151,8 @@ fun KlondikeBoard(
                 }
 
                 Row {
-                    IconButton(onClick = onMenuTap) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                    IconButton(onClick = { viewModel.findHint() }) {
+                        Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
                     }
                     IconButton(
                         onClick = { viewModel.undoLastAction() },
@@ -152,13 +160,22 @@ fun KlondikeBoard(
                     ) {
                         Icon(Icons.Default.Undo, contentDescription = "Undo", tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
                     }
-                    IconButton(onClick = { 
+                    IconButton(onClick = {
                         if (state.movesCount == 0) viewModel.startNewGame()
                         else showQuitConfirm = true
                     }) {
                         Icon(Icons.Default.PlayArrow, contentDescription = "New Game", tint = Color.White)
                     }
                 }
+            }
+
+            if (hintSourceId != null && hintTargetId != null) {
+                Text(
+                    "Hint: move from ${hintSourceId} to ${hintTargetId}".replace("_", " "),
+                    color = Color.Yellow,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp).clickable { viewModel.clearHint() }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

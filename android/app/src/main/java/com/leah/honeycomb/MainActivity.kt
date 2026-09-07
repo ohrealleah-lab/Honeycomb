@@ -106,7 +106,8 @@ class MainActivity : ComponentActivity() {
                             KlondikeBoard(
                                 viewModel = appContainer.klondikeViewModel,
                                 onOptionsTap = { navController.navigate("klondike_options") },
-                                onMenuTap = { showGameSelection = true }
+                                onMenuTap = { showGameSelection = true },
+                                onThemesTap = { navController.navigate("themes") }
                             )
                         }
                         composable("klondike_options") {
@@ -119,7 +120,8 @@ class MainActivity : ComponentActivity() {
                             SpiderBoard(
                                 viewModel = appContainer.spiderViewModel,
                                 onMenuTap = { showGameSelection = true },
-                                onOptions = { navController.navigate("spider_options") }
+                                onOptions = { navController.navigate("spider_options") },
+                                onThemes = { navController.navigate("themes") }
                             )
                         }
                         composable("spider_options") {
@@ -134,7 +136,8 @@ class MainActivity : ComponentActivity() {
                             BeecellBoard(
                                 viewModel = appContainer.beecellViewModel,
                                 onMenuTap = { showGameSelection = true },
-                                onOptions = { navController.navigate("beecell_options") }
+                                onOptions = { navController.navigate("beecell_options") },
+                                onThemes = { navController.navigate("themes") }
                             )
                         }
                         composable("beecell_options") {
@@ -149,7 +152,8 @@ class MainActivity : ComponentActivity() {
                             BlackjackBoard(
                                 viewModel = appContainer.blackjackViewModel,
                                 onMenuTap = { showGameSelection = true },
-                                onOptions = { navController.navigate("blackjack_options") }
+                                onOptions = { navController.navigate("blackjack_options") },
+                                onThemes = { navController.navigate("themes") }
                             )
                         }
                         composable("blackjack_options") {
@@ -164,7 +168,8 @@ class MainActivity : ComponentActivity() {
                             VideoPokerBoard(
                                 viewModel = appContainer.videoPokerViewModel,
                                 onMenuTap = { showGameSelection = true },
-                                onOptions = { navController.navigate("videopoker_options") }
+                                onOptions = { navController.navigate("videopoker_options") },
+                                onThemes = { navController.navigate("themes") }
                             )
                         }
                         composable("videopoker_options") {
@@ -177,7 +182,36 @@ class MainActivity : ComponentActivity() {
                         }
                         
                         composable("honeycomb") {
-                            HoneycombMatchUI(appContainer.honeycombViewModel, onMenuTap = { showGameSelection = true })
+                            HoneycombMatchUI(
+                                viewModel = appContainer.honeycombViewModel,
+                                onMenuTap = { showGameSelection = true },
+                                onOptionsTap = { navController.navigate("honeycomb_options") },
+                                onThemesTap = { navController.navigate("themes") },
+                                onManageDecksTap = { navController.navigate("honeycomb_decks") },
+                                onRulesTap = { navController.navigate("honeycomb_rules") }
+                            )
+                        }
+                        composable("honeycomb_options") {
+                            com.leah.honeycomb.honeycomb.HoneycombOptionsScreen(
+                                viewModel = appContainer.honeycombViewModel,
+                                onBack = { navController.popBackStack() },
+                                onOpenThemes = { navController.navigate("themes") },
+                                onOpenSharedOptions = { navController.navigate("shared_options") }
+                            )
+                        }
+                        composable("honeycomb_decks") {
+                            com.leah.honeycomb.honeycomb.HoneycombDecksScreen(
+                                viewModel = appContainer.honeycombViewModel,
+                                profileManager = appContainer.honeycombProfileManager,
+                                database = appContainer.honeycombDatabase,
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable("honeycomb_rules") {
+                            com.leah.honeycomb.honeycomb.HoneycombRulesScreen(
+                                viewModel = appContainer.honeycombViewModel,
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                     }
                     

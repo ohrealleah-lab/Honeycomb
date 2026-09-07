@@ -175,6 +175,7 @@ class HoneycombViewModel(
     }
 
     private var rematchOpponentDeck: List<HoneycombCardData> = emptyList()
+    val canRematch: Boolean get() = rematchOpponentDeck.isNotEmpty()
     private var rematchActiveRules: List<HoneycombRule> = emptyList()
     private var rematchAscensionDescensionSuits: Set<String> = emptySet()
 
@@ -345,12 +346,84 @@ class HoneycombViewModel(
         }
     }
 
+    // Snapshotted right before a player move, popped on undo — reverts both the
+    // player's move and the AI's subsequent response in one step, since undo is only
+    // ever available again once it's the player's turn (matching Swift's
+    // `canUndo: !undoStack.isEmpty && gameState == .playing && isPlayerTurn`).
+    private val undoHistory = ArrayDeque<HoneycombState>()
+
+    private fun snapshotForUndo() {
+        val st = _state.value
+        undoHistory.addLast(
+            st.copy(
+                board = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) }),
+                playerHand = st.playerHand.map { it.copy() },
+                opponentHand = st.opponentHand.map { it.copy() }
+            )
+        )
+    }
+
+    val canUndo: Boolean
+        get() = undoHistory.isNotEmpty() && _state.value.gameState == HoneycombGameState.Playing && _state.value.isPlayerTurn
+
+    fun undoLastAction() {
+        if (!canUndo) return
+        aiMoveGeneration++ // invalidate any pending delayed AI-turn closure from the move being undone
+        _state.value = undoHistory.removeLast()
+    }
+
+    val hasHintsAvailable: Boolean
+        get() = _state.value.gameState == HoneycombGameState.Playing && _state.value.isPlayerTurn && _state.value.playerHand.isNotEmpty()
+
+    private val _hintMove = MutableStateFlow<Pair<Int, Int>?>(null)
+    val hintMove: StateFlow<Pair<Int, Int>?> = _hintMove.asStateFlow()
+
+    // Suggests the player's best move by reusing the same minimax search the AI opponent
+    // uses, framed with the player's own hand passed as the "deck to move" — the board
+    // evaluation itself has no notion of which side is "the AI," so this is a legitimate
+    // reuse rather than a hack specific to hinting.
+    fun findHint() {
+        if (!hasHintsAvailable) return
+        val st = _state.value
+        val eligibleHands = if (st.mandatedPlayerHandIndex != null) listOf(st.mandatedPlayerHandIndex) else st.playerHand.indices.toList()
+        val empties = st.board.cells.indices.filter { st.board.cells[it].card == null }
+        viewModelScope.launch {
+            val move = withContext(Dispatchers.Default) {
+                HoneycombAI.computeMove(
+                    difficulty = HoneycombDifficulty.Hard,
+                    board = st.board,
+                    opponentDeck = st.playerHand.map { it.data },
+                    playerDeck = st.opponentHand.map { it.data },
+                    unknownPlayerCardCount = 0,
+                    eligibleHands = eligibleHands,
+                    empties = empties,
+                    rules = st.activeRules
+                )
+            }
+            _hintMove.value = move
+        }
+    }
+
+    fun clearHint() {
+        _hintMove.value = null
+    }
+
+    fun quitMatch() {
+        aiMoveGeneration++
+        undoHistory.clear()
+        _hintMove.value = null
+        _state.value = HoneycombState()
+    }
+
     fun playerPlayCard(handIndex: Int, boardIndex: Int): Boolean {
         val st = _state.value
         if (st.gameState != HoneycombGameState.Playing || !st.isPlayerTurn) return false
         if (handIndex !in 0 until st.playerHand.size) return false
         if (st.board.cells[boardIndex].card != null) return false
         if (st.mandatedPlayerHandIndex != null && st.mandatedPlayerHandIndex != handIndex) return false
+
+        snapshotForUndo()
+        clearHint()
 
         val newPlayerHand = st.playerHand.toMutableList()
         val card = newPlayerHand.removeAt(handIndex)

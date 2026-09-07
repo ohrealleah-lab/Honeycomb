@@ -6,8 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
@@ -25,7 +27,8 @@ import com.leah.honeycomb.CardView
 fun VideoPokerBoard(
     viewModel: VideoPokerViewModel,
     onMenuTap: () -> Unit,
-    onOptions: () -> Unit
+    onOptions: () -> Unit,
+    onThemes: () -> Unit = {}
 ) {
     val language by com.leah.honeycomb.LocalAppContainer.current.language.collectAsState()
     val state by viewModel.state.collectAsState()
@@ -65,10 +68,13 @@ fun VideoPokerBoard(
                 },
                 navigationIcon = {
                     IconButton(onClick = onMenuTap) {
-                        Text("<")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
+                    IconButton(onClick = onThemes) {
+                        Icon(Icons.Filled.Palette, contentDescription = "Themes")
+                    }
                     IconButton(onClick = onOptions, enabled = viewModel.canOpenOptions) {
                         Icon(Icons.Filled.Settings, contentDescription = "Options")
                     }

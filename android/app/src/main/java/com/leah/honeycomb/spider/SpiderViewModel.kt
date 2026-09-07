@@ -57,6 +57,31 @@ class SpiderViewModel(
     val canUndo: Boolean
         get() = undoStack.canUndo && !_state.value.hasWon
 
+    private val _hintSourceId = MutableStateFlow<String?>(null)
+    val hintSourceId: StateFlow<String?> = _hintSourceId.asStateFlow()
+    private val _hintTargetId = MutableStateFlow<String?>(null)
+    val hintTargetId: StateFlow<String?> = _hintTargetId.asStateFlow()
+
+    fun findHint() {
+        for (source in _state.value.tableau) {
+            val seq = getLongestValidSequence(source)
+            if (seq.isEmpty()) continue
+            val target = _state.value.tableau.firstOrNull { it.id != source.id && isValidMove(seq, it) }
+            if (target != null) {
+                _hintSourceId.value = source.id
+                _hintTargetId.value = target.id
+                return
+            }
+        }
+        _hintSourceId.value = null
+        _hintTargetId.value = null
+    }
+
+    fun clearHint() {
+        _hintSourceId.value = null
+        _hintTargetId.value = null
+    }
+
     init {
         startNewGame()
     }
@@ -242,8 +267,9 @@ class SpiderViewModel(
 
     fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile) {
         if (!isValidMove(cards, targetPile)) return
-        
+
         saveStateForUndo()
+        clearHint()
         startTimerIfNeeded()
         
         val cardIds = cards.map { it.id }.toSet()

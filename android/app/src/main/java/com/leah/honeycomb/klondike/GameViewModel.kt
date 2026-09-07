@@ -127,6 +127,45 @@ class GameViewModel(
     val canUndo: Boolean
         get() = undoStack.canUndo && !_state.value.hasWon
 
+    // Highlights one legal move (source + target pile id) rather than porting Swift's
+    // full ranked/cycling HintCycling system — a real, useful hint, just not a ranked
+    // sequence of alternatives on repeated taps.
+    private val _hintSourceId = MutableStateFlow<String?>(null)
+    val hintSourceId: StateFlow<String?> = _hintSourceId.asStateFlow()
+    private val _hintTargetId = MutableStateFlow<String?>(null)
+    val hintTargetId: StateFlow<String?> = _hintTargetId.asStateFlow()
+
+    fun findHint() {
+        val st = _state.value
+        val targets = st.foundations + st.tableau
+        val topWaste = st.waste.topCard
+        if (topWaste != null) {
+            val target = targets.firstOrNull { isValidMove(listOf(topWaste), it) }
+            if (target != null) {
+                _hintSourceId.value = st.waste.id
+                _hintTargetId.value = target.id
+                return
+            }
+        }
+        for (col in st.tableau) {
+            val top = col.topCard ?: continue
+            if (!top.faceUp) continue
+            val target = targets.firstOrNull { it.id != col.id && isValidMove(listOf(top), it) }
+            if (target != null) {
+                _hintSourceId.value = col.id
+                _hintTargetId.value = target.id
+                return
+            }
+        }
+        _hintSourceId.value = null
+        _hintTargetId.value = null
+    }
+
+    fun clearHint() {
+        _hintSourceId.value = null
+        _hintTargetId.value = null
+    }
+
     val maxRecycles: Int?
         get() = if (_options.value.isVegasScoring) {
             if (_state.value.drawMode == DrawMode.DrawThree) 2 else 0
@@ -364,6 +403,7 @@ class GameViewModel(
     fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile) {
         if (!isValidMove(cards, targetPile)) return
         saveStateForUndo()
+        clearHint()
         startTimerIfNeeded()
 
         val cardIds = cards.map { it.id }.toSet()

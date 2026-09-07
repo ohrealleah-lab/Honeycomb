@@ -58,6 +58,33 @@ class BeecellViewModel(
     val canUndo: Boolean
         get() = undoStack.canUndo && !_state.value.hasWon
 
+    private val _hintSourceId = MutableStateFlow<String?>(null)
+    val hintSourceId: StateFlow<String?> = _hintSourceId.asStateFlow()
+    private val _hintTargetId = MutableStateFlow<String?>(null)
+    val hintTargetId: StateFlow<String?> = _hintTargetId.asStateFlow()
+
+    fun findHint() {
+        val st = _state.value
+        val targets = st.foundations + st.freeCells + st.tableau
+        val sources = st.freeCells + st.tableau
+        for (source in sources) {
+            val top = source.topCard ?: continue
+            val target = targets.firstOrNull { it.id != source.id && isValidMove(listOf(top), it) }
+            if (target != null) {
+                _hintSourceId.value = source.id
+                _hintTargetId.value = target.id
+                return
+            }
+        }
+        _hintSourceId.value = null
+        _hintTargetId.value = null
+    }
+
+    fun clearHint() {
+        _hintSourceId.value = null
+        _hintTargetId.value = null
+    }
+
     init {
         startNewGame()
     }
@@ -236,8 +263,9 @@ class BeecellViewModel(
     
     fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile) {
         if (!isValidMove(cards, targetPile)) return
-        
+
         saveStateForUndo()
+        clearHint()
         startTimerIfNeeded()
         
         val cardIds = cards.map { it.id }.toSet()

@@ -1,10 +1,19 @@
 package com.leah.honeycomb.honeycomb
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Redo
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.Hexagon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +32,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.leah.honeycomb.StringKey
 import kotlin.math.roundToInt
 
 data class DragInfo(
@@ -33,13 +43,42 @@ data class DragInfo(
 )
 
 @Composable
-fun HoneycombMatchUI(viewModel: HoneycombViewModel, onMenuTap: () -> Unit) {
+fun HoneycombMatchUI(
+    viewModel: HoneycombViewModel,
+    onMenuTap: () -> Unit,
+    onOptionsTap: () -> Unit = {},
+    onThemesTap: () -> Unit = {},
+    onManageDecksTap: () -> Unit = {},
+    onRulesTap: () -> Unit = {}
+) {
     val state by viewModel.state.collectAsState()
+    val options by viewModel.options.collectAsState()
+    val hintMove by viewModel.hintMove.collectAsState()
+    val language by com.leah.honeycomb.LocalAppContainer.current.language.collectAsState()
+    val hideHintButton by com.leah.honeycomb.LocalAppContainer.current.sharedOptions.hideHintButton.collectAsState()
 
-    LaunchedEffect(Unit) {
-        if (state.gameState == HoneycombGameState.Setup) {
-            viewModel.startNewGame()
-        }
+    val isMidMatch = state.gameState == HoneycombGameState.Playing || state.gameState == HoneycombGameState.SuddenDeath
+
+    var showQuitConfirm by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = isMidMatch) { showQuitConfirm = true }
+
+    if (showQuitConfirm) {
+        AlertDialog(
+            onDismissRequest = { showQuitConfirm = false },
+            title = { Text(com.leah.honeycomb.Strings.get(StringKey.ToolbarQuitMatch, language)) },
+            text = { Text(com.leah.honeycomb.Strings.get(StringKey.NewMatchConfirmTitle, language)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showQuitConfirm = false
+                    viewModel.quitMatch()
+                }) { Text(com.leah.honeycomb.Strings.get(StringKey.QuitButton, language)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showQuitConfirm = false }) {
+                    Text(com.leah.honeycomb.Strings.get(StringKey.Cancel, language))
+                }
+            }
+        )
     }
 
     var draggedCardInfo by remember { mutableStateOf<DragInfo?>(null) }
@@ -67,29 +106,74 @@ fun HoneycombMatchUI(viewModel: HoneycombViewModel, onMenuTap: () -> Unit) {
             modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. Top Bar
+            // 1. Top Bar — leading cluster (Menu/Options/Themes always; Manage Decks/
+            // Rules pre- and post-match only, matching iOS's isMidMatch gating) and a
+            // trailing cluster (Undo/Hint/Quit mid-match, or Rematch/Start otherwise).
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onMenuTap) { 
-                    Icon(Icons.Default.Menu, contentDescription = "Menu") 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onMenuTap) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                    IconButton(onClick = onOptionsTap) {
+                        Icon(Icons.Default.Settings, contentDescription = "Options")
+                    }
+                    IconButton(onClick = onThemesTap) {
+                        Icon(Icons.Default.Palette, contentDescription = "Themes")
+                    }
+                    if (!isMidMatch) {
+                        IconButton(onClick = onManageDecksTap) {
+                            Icon(Icons.Default.Style, contentDescription = "Manage Decks")
+                        }
+                        IconButton(onClick = onRulesTap) {
+                            Icon(Icons.Default.Hexagon, contentDescription = "Rules")
+                        }
+                    }
                 }
-                
-                val playerScore = state.board.playerScore + state.playerHand.size
-                val opponentScore = state.board.opponentScore + state.opponentHand.size
-                
-                Text(
-                    text = "Opponent: $opponentScore | You: $playerScore", 
-                    style = MaterialTheme.typography.titleLarge
-                )
-                
-                // Placeholder to balance the Row
-                Spacer(modifier = Modifier.width(48.dp))
+
+                if (isMidMatch) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { viewModel.undoLastAction() }, enabled = viewModel.canUndo) {
+                            Icon(Icons.Default.Undo, contentDescription = "Undo")
+                        }
+                        if (!hideHintButton && options.difficulty != HoneycombDifficulty.UltraHard && state.isPlayerTurn) {
+                            IconButton(onClick = { viewModel.findHint() }) {
+                                Icon(Icons.Default.Lightbulb, contentDescription = "Hint")
+                            }
+                        }
+                        TextButton(onClick = { showQuitConfirm = true }) {
+                            Text(com.leah.honeycomb.Strings.get(StringKey.QuitButton, language), color = Color.White)
+                        }
+                    }
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (state.gameState == HoneycombGameState.GameOver && viewModel.canRematch) {
+                            IconButton(onClick = { viewModel.rematch() }) {
+                                Icon(Icons.Default.Redo, contentDescription = "Rematch")
+                            }
+                        }
+                        Button(onClick = { viewModel.startNewGame() }) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(com.leah.honeycomb.Strings.get(StringKey.StartButton, language))
+                        }
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val playerScore = state.board.playerScore + state.playerHand.size
+            val opponentScore = state.board.opponentScore + state.opponentHand.size
+            Text(
+                text = "Opponent: $opponentScore | You: $playerScore",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // 2. Opponent Hand
             Row(
@@ -122,6 +206,9 @@ fun HoneycombMatchUI(viewModel: HoneycombViewModel, onMenuTap: () -> Unit) {
                                     .size(100.dp)
                                     .padding(4.dp)
                                     .background(Color.Black.copy(alpha = 0.2f))
+                                    .let {
+                                        if (hintMove?.second == index) it.border(2.dp, Color.Yellow) else it
+                                    }
                                     .onGloballyPositioned { coords ->
                                         dropTargets[index] = coords.boundsInRoot()
                                     },
@@ -156,6 +243,9 @@ fun HoneycombMatchUI(viewModel: HoneycombViewModel, onMenuTap: () -> Unit) {
                         modifier = Modifier
                             .padding(4.dp)
                             .aspectRatio(0.7f)
+                            .let {
+                                if (hintMove?.first == index) it.border(2.dp, Color.Yellow) else it
+                            }
                             .onGloballyPositioned { coords ->
                                 cardPosition = coords.positionInRoot()
                                 cardSize = coords.size
