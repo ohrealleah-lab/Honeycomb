@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import java.util.UUID
 import kotlin.math.max
 
@@ -72,63 +73,236 @@ class BeecellViewModel(
     val canUndo: Boolean
         get() = undoStack.canUndo && !_state.value.hasWon
 
-    private val _hintSourceId = MutableStateFlow<String?>(null)
-    val hintSourceId: StateFlow<String?> = _hintSourceId.asStateFlow()
-    private val _hintTargetId = MutableStateFlow<String?>(null)
-    val hintTargetId: StateFlow<String?> = _hintTargetId.asStateFlow()
+    // Ported from shared/Beecell/ViewModels/BeecellViewModel.swift:804-1013 — ranked/
+    // scored hint candidates with 1-ply lookahead, cycling through the ranked queue on
+    // repeated taps (via the shared HintCycling engine), auto-clearing after 2s.
+    data class HintMove(
+        val card: Card,
+        val sourcePileId: String,
+        val targetPileId: String,
+        val description: String
+    )
 
-    // Mirrors checkStuckState()'s search space exactly (single top card against every
-    // pile, plus every tableau sub-run — including supermoves via isValidMove's own
-    // limit check — against every tableau target) so Hint can never report nothing on
-    // a board checkStuckState() knows isn't stuck. Still a first-match search, not
-    // iOS's ranked/lookahead HintCycling — that upgrade is a separate, larger follow-up.
+    private val _activeHint = MutableStateFlow<HintMove?>(null)
+    val activeHint: StateFlow<HintMove?> = _activeHint.asStateFlow()
+
+    private var hintQueue: List<HintMove> = emptyList()
+    private var hintQueueIndex: Int = 0
+    private var hintClearJob: Job? = null
+    private var lastMoveSourceId: String? = null
+    private var lastMoveTargetId: String? = null
+
     fun findHint() {
-        val st = _state.value
-        val allPiles = st.freeCells + st.foundations + st.tableau
+        hintClearJob?.cancel()
+        val cycled = HintCycling.findHint(
+            current = HintCycleState(activeHint = _activeHint.value, hintQueue = hintQueue, hintQueueIndex = hintQueueIndex),
+            collectHints = { collectHints() },
+            label = { hint, index, total -> labeled(hint, index, total) },
+            noHintFallback = {
+                HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = true), "", "", "No moves available. Try restarting or starting a new game.")
+            }
+        )
+        _activeHint.value = cycled.activeHint
+        hintQueue = cycled.hintQueue
+        hintQueueIndex = cycled.hintQueueIndex
+        scheduleHintClear()
+    }
 
-        for (source in allPiles) {
-            val top = source.topCard
+    fun clearHint() {
+        hintClearJob?.cancel()
+        _activeHint.value = null
+        hintQueue = emptyList()
+        hintQueueIndex = 0
+        lastMoveSourceId = null
+        lastMoveTargetId = null
+    }
+
+    private fun scheduleHintClear() {
+        hintClearJob?.cancel()
+        hintClearJob = viewModelScope.launch {
+            delay(2000)
+            _activeHint.value = null
+            hintQueue = emptyList()
+            hintQueueIndex = 0
+        }
+    }
+
+    private fun labeled(hint: HintMove, index: Int, total: Int): HintMove {
+        val prefix = if (total > 1) "[${index + 1}/$total] " else ""
+        return hint.copy(description = prefix + hint.description)
+    }
+
+    // Android is 1-deck only (see the port plan §3) — the "2 opposite-color foundations
+    // per deck" iOS formula (`2 * options.deckCount`) collapses to the 1-deck constant 2,
+    // since BeecellOptions.kt has no deckCount field to multiply by.
+    private fun isSafeFoundationMove(card: Card): Boolean {
+        if (card.rank <= 2) return true
+        val isRed = card.suit == Suit.Hearts || card.suit == Suit.Diamonds
+        val reqRank = card.rank - 1
+        var safeCount = 0
+        for (foundation in _state.value.foundations) {
+            val top = foundation.topCard
             if (top != null) {
-                val target = allPiles.firstOrNull {
-                    it.id != source.id && isValidMove(listOf(top), it) && isProgressiveMove(listOf(top), source, it)
-                }
-                if (target != null) {
-                    _hintSourceId.value = source.id
-                    _hintTargetId.value = target.id
-                    return
+                val topIsRed = top.suit == Suit.Hearts || top.suit == Suit.Diamonds
+                if (topIsRed != isRed && top.rank >= reqRank) safeCount++
+            }
+        }
+        return safeCount == 2
+    }
+
+    // Ported from evaluateImmediateMoves(depth:) — free-cell/tableau-to-foundation, a
+    // supermove-length search (maxDraggable via the descending alternating-color run,
+    // trying lengths longest-first), free-cell-to-tableau, tableau-to-free-cell as a
+    // scored last resort, 1-ply lookahead at depth 0.
+    private fun evaluateImmediateMoves(depth: Int = 0): List<Pair<HintMove, Int>> {
+        val st = _state.value
+        var scored = mutableListOf<Pair<HintMove, Int>>()
+
+        for (cell in st.freeCells) {
+            val top = cell.topCard ?: continue
+            for (foundation in st.foundations) {
+                if (isValidMove(listOf(top), foundation)) {
+                    val score = if (isSafeFoundationMove(top)) 1000 else 200
+                    scored.add(HintMove(top, cell.id, foundation.id, "Move ${top.rankString}${top.suit.symbol} from Free Cell to Foundation.") to score)
                 }
             }
-
-            if (source.type == PileType.Tableau) {
-                var seqStart = source.cards.size - 1
-                while (seqStart > 0) {
-                    val upper = source.cards[seqStart - 1]
-                    val lower = source.cards[seqStart]
-                    if (upper.rank == lower.rank + 1 && upper.suit.isRed != lower.suit.isRed) {
-                        seqStart--
-                    } else break
-                }
-                for (idx in seqStart until source.cards.size) {
-                    val seq = source.cards.subList(idx, source.cards.size)
-                    val target = st.tableau.firstOrNull {
-                        it.id != source.id && isValidMove(seq, it) && isProgressiveMove(seq, source, it)
-                    }
-                    if (target != null) {
-                        _hintSourceId.value = source.id
-                        _hintTargetId.value = target.id
-                        return
-                    }
+        }
+        for (col in st.tableau) {
+            val top = col.topCard ?: continue
+            for (foundation in st.foundations) {
+                if (isValidMove(listOf(top), foundation)) {
+                    val score = if (isSafeFoundationMove(top)) 1000 else 200
+                    scored.add(HintMove(top, col.id, foundation.id, "Move ${top.rankString}${top.suit.symbol} to Foundation.") to score)
                 }
             }
         }
 
-        _hintSourceId.value = null
-        _hintTargetId.value = null
+        for (sourceCol in st.tableau) {
+            if (sourceCol.isEmpty) continue
+
+            var maxDraggable = 1
+            for (i in (1 until sourceCol.cards.size).reversed()) {
+                if (sourceCol.cards[i].rank == sourceCol.cards[i - 1].rank - 1 && sourceCol.cards[i].isRed != sourceCol.cards[i - 1].isRed) {
+                    maxDraggable++
+                } else break
+            }
+
+            for (targetCol in st.tableau) {
+                if (targetCol.id == sourceCol.id) continue
+                for (len in maxDraggable downTo 1) {
+                    val dragStack = sourceCol.cards.subList(sourceCol.cards.size - len, sourceCol.cards.size)
+                    if (!isValidMove(dragStack, targetCol)) continue
+                    if (!isProgressiveMove(dragStack, sourceCol, targetCol)) continue
+                    val freesColumn = dragStack.size == sourceCol.cards.size
+                    val score = if (freesColumn) 700 else 400 + dragStack.size * 20
+                    scored.add(HintMove(dragStack.first(), sourceCol.id, targetCol.id, "Move ${dragStack.first().rankString}${dragStack.first().suit.symbol} sequence to Tableau.") to score)
+                    break
+                }
+            }
+        }
+
+        for (cell in st.freeCells) {
+            val top = cell.topCard ?: continue
+            for (targetCol in st.tableau) {
+                if (isValidMove(listOf(top), targetCol)) {
+                    scored.add(HintMove(top, cell.id, targetCol.id, "Move ${top.rankString}${top.suit.symbol} from Free Cell to Tableau.") to 500)
+                }
+            }
+        }
+
+        for (sourceCol in st.tableau) {
+            val top = sourceCol.topCard ?: continue
+            val emptyCell = st.freeCells.firstOrNull { it.isEmpty }
+            if (emptyCell != null) {
+                scored.add(HintMove(top, sourceCol.id, emptyCell.id, "Move ${top.rankString}${top.suit.symbol} to Free Cell to clear space.") to 100)
+            }
+        }
+
+        if (depth == 0) {
+            val originalState = _state.value
+            val enhanced = mutableListOf<Pair<HintMove, Int>>()
+
+            for ((move, baseScore) in scored) {
+                var validSource = false
+                var dragStack: List<Card> = emptyList()
+                var working = originalState
+
+                val cellIdx = working.freeCells.indexOfFirst { it.id == move.sourcePileId }
+                if (cellIdx != -1) {
+                    val cellTop = working.freeCells[cellIdx].cards.lastOrNull()
+                    if (cellTop != null && cellTop.id == move.card.id) {
+                        dragStack = listOf(cellTop)
+                        val newCells = working.freeCells.toMutableList()
+                        newCells[cellIdx] = newCells[cellIdx].copy(cards = newCells[cellIdx].cards.dropLast(1))
+                        working = working.copy(freeCells = newCells)
+                        validSource = true
+                    }
+                } else {
+                    val srcIdx = working.tableau.indexOfFirst { it.id == move.sourcePileId }
+                    if (srcIdx != -1) {
+                        val cardIdx = working.tableau[srcIdx].cards.indexOfFirst { it.id == move.card.id }
+                        if (cardIdx != -1) {
+                            dragStack = working.tableau[srcIdx].cards.subList(cardIdx, working.tableau[srcIdx].cards.size)
+                            val newTableau = working.tableau.toMutableList()
+                            newTableau[srcIdx] = newTableau[srcIdx].copy(cards = newTableau[srcIdx].cards.subList(0, cardIdx))
+                            working = working.copy(tableau = newTableau)
+                            validSource = true
+                        }
+                    }
+                }
+
+                if (!validSource) {
+                    enhanced.add(move to baseScore)
+                    continue
+                }
+
+                val tgtTabIdx = working.tableau.indexOfFirst { it.id == move.targetPileId }
+                working = if (tgtTabIdx != -1) {
+                    val newTableau = working.tableau.toMutableList()
+                    newTableau[tgtTabIdx] = newTableau[tgtTabIdx].copy(cards = newTableau[tgtTabIdx].cards + dragStack)
+                    working.copy(tableau = newTableau)
+                } else {
+                    val tgtFoundIdx = working.foundations.indexOfFirst { it.id == move.targetPileId }
+                    if (tgtFoundIdx != -1) {
+                        val newFoundations = working.foundations.toMutableList()
+                        newFoundations[tgtFoundIdx] = newFoundations[tgtFoundIdx].copy(cards = newFoundations[tgtFoundIdx].cards + dragStack)
+                        working.copy(foundations = newFoundations)
+                    } else {
+                        val tgtCellIdx = working.freeCells.indexOfFirst { it.id == move.targetPileId }
+                        if (tgtCellIdx != -1) {
+                            val newCells = working.freeCells.toMutableList()
+                            newCells[tgtCellIdx] = newCells[tgtCellIdx].copy(cards = newCells[tgtCellIdx].cards + dragStack)
+                            working.copy(freeCells = newCells)
+                        } else working
+                    }
+                }
+
+                _state.value = working
+                val nextLevel = evaluateImmediateMoves(depth = 1)
+                _state.value = originalState
+
+                val bestNext = nextLevel.maxByOrNull { it.second }
+                if (bestNext != null) {
+                    enhanced.add(move to (baseScore + (bestNext.second * 0.8).toInt()))
+                } else {
+                    enhanced.add(move to baseScore)
+                }
+            }
+            scored = enhanced
+        }
+
+        return scored
     }
 
-    fun clearHint() {
-        _hintSourceId.value = null
-        _hintTargetId.value = null
+    private fun collectHints(): List<HintMove> {
+        val scored = evaluateImmediateMoves(depth = 0)
+        val src = lastMoveSourceId
+        val tgt = lastMoveTargetId
+        val filtered = if (src != null && tgt != null) {
+            scored.filter { (hint, _) -> !(hint.sourcePileId == tgt && hint.targetPileId == src) }
+        } else scored
+        val candidates = filtered.ifEmpty { scored }
+        return candidates.sortedByDescending { it.second }.map { it.first }
     }
 
     init {
@@ -311,8 +485,10 @@ class BeecellViewModel(
 
         saveStateForUndo()
         clearHint()
+        lastMoveSourceId = sourcePile.id
+        lastMoveTargetId = targetPile.id
         startTimerIfNeeded()
-        
+
         val cardIds = cards.map { it.id }.toSet()
         val currentState = _state.value
         val freeCells = currentState.freeCells.toMutableList()

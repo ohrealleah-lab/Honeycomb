@@ -225,6 +225,7 @@ class HoneycombViewModel(
 
     fun startNewGame() {
         aiMoveGeneration++
+        hintGeneration++
         isRematchMatch = false
         consecutiveNoStealWins = 0
         stealProtectionActive = false
@@ -287,6 +288,7 @@ class HoneycombViewModel(
         }
         isRematchMatch = true
         aiMoveGeneration++
+        hintGeneration++
         hasStolenThisMatch = false
         sessionCardsCaptured = 0
         
@@ -408,6 +410,8 @@ class HoneycombViewModel(
                 delay(2500)
                 aiPlayTurn()
             }
+        } else {
+            prewarmHint()
         }
     }
 
@@ -434,6 +438,7 @@ class HoneycombViewModel(
     fun undoLastAction() {
         if (!canUndo) return
         aiMoveGeneration++ // invalidate any pending delayed AI-turn closure from the move being undone
+        hintGeneration++
         _state.value = undoHistory.removeLast()
     }
 
@@ -443,40 +448,112 @@ class HoneycombViewModel(
     private val _hintMove = MutableStateFlow<Pair<Int, Int>?>(null)
     val hintMove: StateFlow<Pair<Int, Int>?> = _hintMove.asStateFlow()
 
-    // Suggests the player's best move by reusing the same minimax search the AI opponent
-    // uses, framed with the player's own hand passed as the "deck to move" — the board
-    // evaluation itself has no notion of which side is "the AI," so this is a legitimate
-    // reuse rather than a hack specific to hinting.
-    fun findHint() {
-        if (!hasHintsAvailable) return
+    // Bumped every time the board changes (any placement) and every fresh findHint()
+    // search — mirrors iOS's hintGeneration. Guards both the on-demand search and the
+    // prewarm cache so a result computed against a now-stale board is never applied.
+    private var hintGeneration: Int = 0
+    private var precomputedHint: Pair<Int, Int>? = null
+    private var precomputedHintGeneration: Int = -1
+
+    private data class HintSearchInputs(
+        val board: HoneycombBoard,
+        val playerDeck: List<HoneycombCardData>,
+        val opponentDeck: List<HoneycombCardData>,
+        val unknownOpponentCardCount: Int,
+        val eligibleHands: List<Int>,
+        val empties: List<Int>,
+        val rules: List<HoneycombRule>
+    )
+
+    private fun snapshotHintInputs(): HintSearchInputs {
         val st = _state.value
         val eligibleHands = if (st.mandatedPlayerHandIndex != null) listOfNotNull(st.mandatedPlayerHandIndex) else st.playerHand.indices.toList()
         val empties = st.board.cells.indices.filter { st.board.cells[it].card == null }
+        val opponentDeckData = st.opponentHand.filter { st.openOpponentCardIds.contains(it.id) }.map { it.data }
+        val unknownOpponentCardCount = st.opponentHand.size - opponentDeckData.size
+        return HintSearchInputs(
+            board = st.board,
+            playerDeck = st.playerHand.map { it.data },
+            opponentDeck = opponentDeckData,
+            unknownOpponentCardCount = unknownOpponentCardCount,
+            eligibleHands = eligibleHands,
+            empties = empties,
+            rules = st.activeRules
+        )
+    }
+
+    private fun computeHintMove(inputs: HintSearchInputs): Pair<Int, Int>? =
+        HoneycombAI.computeHint(
+            board = inputs.board,
+            playerDeck = inputs.playerDeck,
+            opponentDeck = inputs.opponentDeck,
+            unknownOpponentCardCount = inputs.unknownOpponentCardCount,
+            eligibleHands = inputs.eligibleHands,
+            empties = inputs.empties,
+            rules = inputs.rules
+        )
+
+    // Speculatively computes the hint the instant it becomes the player's turn (called
+    // from finishMatchSetup/right after aiPlayTurn flips isPlayerTurn), so findHint()
+    // can usually serve an already-ready result instantly instead of paying the up-to-
+    // ~2.6s Ultra-Hard-depth search cost live.
+    fun prewarmHint() {
+        if (!hasHintsAvailable) return
+        val inputs = snapshotHintInputs()
+        val generation = hintGeneration
         viewModelScope.launch {
-            val move = withContext(Dispatchers.Default) {
-                HoneycombAI.computeMove(
-                    difficulty = HoneycombDifficulty.Hard,
-                    board = st.board,
-                    opponentDeck = st.playerHand.map { it.data },
-                    playerDeck = st.opponentHand.map { it.data },
-                    unknownPlayerCardCount = 0,
-                    eligibleHands = eligibleHands,
-                    empties = empties,
-                    rules = st.activeRules
-                )
-            }
-            _hintMove.value = move
+            val hint = withContext(Dispatchers.Default) { computeHintMove(inputs) }
+            if (hintGeneration != generation) return@launch
+            precomputedHint = hint
+            precomputedHintGeneration = generation
+        }
+    }
+
+    // Reuses the AI opponent's own minimax search (HoneycombAI.computeHint mirrors board
+    // ownership so the same machinery optimizes for the player instead) at Ultra Hard's
+    // 6-ply depth regardless of match difficulty — a hint is meant to be the
+    // mathematically best move, not merely as good as whatever difficulty was picked.
+    fun findHint() {
+        if (!hasHintsAvailable) return
+
+        if (precomputedHint != null && precomputedHintGeneration == hintGeneration) {
+            _hintMove.value = precomputedHint
+            scheduleHintClear()
+            return
+        }
+
+        hintGeneration++
+        val generation = hintGeneration
+        val inputs = snapshotHintInputs()
+        viewModelScope.launch {
+            val hint = withContext(Dispatchers.Default) { computeHintMove(inputs) }
+            if (hintGeneration != generation) return@launch
+            _hintMove.value = hint
+            precomputedHint = hint
+            precomputedHintGeneration = generation
+            if (hint != null) scheduleHintClear()
+        }
+    }
+
+    private var hintClearJob: kotlinx.coroutines.Job? = null
+    private fun scheduleHintClear() {
+        hintClearJob?.cancel()
+        hintClearJob = viewModelScope.launch {
+            delay(2000)
+            _hintMove.value = null
         }
     }
 
     fun clearHint() {
+        hintClearJob?.cancel()
+        hintGeneration++
         _hintMove.value = null
     }
 
     fun quitMatch() {
         aiMoveGeneration++
         undoHistory.clear()
-        _hintMove.value = null
+        clearHint()
         _state.value = HoneycombState()
     }
 
@@ -581,11 +658,15 @@ class HoneycombViewModel(
                         chaosPlayerIndex = if (it.activeRules.contains(HoneycombRule.Chaos) && it.playerHand.isNotEmpty()) (0 until it.playerHand.size).random() else null,
                     )
                 }
+                hintGeneration++
                 checkWinCondition()
+                if (_state.value.gameState == HoneycombGameState.Playing && _state.value.isPlayerTurn) {
+                    prewarmHint()
+                }
             }
         }
     }
-    
+
     private fun checkWinCondition() {
         val st = _state.value
         if (st.board.isFull) {
@@ -701,6 +782,7 @@ class HoneycombViewModel(
         val nextPlayerTurn = !st.isPlayerTurn
 
         aiMoveGeneration++
+        hintGeneration++
         _state.update {
             it.copy(
                 playerHand = playerCards,

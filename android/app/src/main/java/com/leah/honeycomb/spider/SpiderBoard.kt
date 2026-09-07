@@ -47,6 +47,7 @@ import com.leah.honeycomb.Card
 import com.leah.honeycomb.CardView
 import com.leah.honeycomb.Pile
 import com.leah.honeycomb.SmartDrop
+import com.leah.honeycomb.hintHighlight
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -73,8 +74,9 @@ fun SpiderBoard(
     val isAutoplayRunning by viewModel.isAutoplayRunning.collectAsState()
     val isStuck by viewModel.isStuck.collectAsState()
     val pointPopup by viewModel.pointPopup.collectAsState()
-    val hintSourceId by viewModel.hintSourceId.collectAsState()
-    val hintTargetId by viewModel.hintTargetId.collectAsState()
+    val activeHint by viewModel.activeHint.collectAsState()
+    val hintSourceId = activeHint?.sourcePileId
+    val hintTargetId = activeHint?.targetPileId
 
     var showEmptyStockWarning by remember { mutableStateOf(false) }
     LaunchedEffect(showEmptyStockWarning) {
@@ -218,18 +220,6 @@ fun SpiderBoard(
                         .zIndex(10f)
                 )
             }
-            if (hintSourceId != null && hintTargetId != null) {
-                Text(
-                    "Hint: move from ${hintSourceId} to ${hintTargetId}".replace("_", " "),
-                    color = Color.Yellow,
-                    fontSize = 12.sp,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 4.dp)
-                        .clickable { viewModel.clearHint() }
-                        .zIndex(10f)
-                )
-            }
             val config = LocalConfiguration.current
             val screenWidth = config.screenWidthDp.dp
             // We have 10 columns in Spider, need to fit them in width
@@ -246,6 +236,7 @@ fun SpiderBoard(
                     Box(modifier = Modifier
                         .size(cardW, cardH)
                         .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                        .hintHighlight(isHighlighted = hintSourceId == state.stock.id, cornerRadius = 4.dp)
                         .clickable {
                             if (!state.stock.isEmpty && viewModel.hasEmptyTableauColumn) {
                                 showEmptyStockWarning = true
@@ -272,6 +263,7 @@ fun SpiderBoard(
                                 .size(cardW, cardH)
                                 .onGloballyPositioned { pileFrames[fdn.id] = it.boundsInRoot() }
                                 .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                .hintHighlight(isHighlighted = fdn.id == hintSourceId || fdn.id == hintTargetId, cornerRadius = 4.dp)
                             ) {
                                 if (!fdn.isEmpty) {
                                     CardView(card = fdn.topCard!!, modifier = Modifier.fillMaxSize())
@@ -291,6 +283,7 @@ fun SpiderBoard(
                                 .width(cardW)
                                 .fillMaxHeight()
                                 .onGloballyPositioned { pileFrames[pile.id] = it.boundsInRoot() }
+                                .hintHighlight(isHighlighted = pile.id == hintSourceId || pile.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
                             if (pile.isEmpty) {
                                 Box(modifier = Modifier.size(cardW, cardH).border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp)))

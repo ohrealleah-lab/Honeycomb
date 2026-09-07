@@ -70,8 +70,9 @@ fun KlondikeBoard(
     val state by viewModel.state.collectAsState()
     val options by viewModel.options.collectAsState()
     val isStuck by viewModel.isStuck.collectAsState()
-    val hintSourceId by viewModel.hintSourceId.collectAsState()
-    val hintTargetId by viewModel.hintTargetId.collectAsState()
+    val activeHint by viewModel.activeHint.collectAsState()
+    val hintSourceId = activeHint?.sourcePileId
+    val hintTargetId = activeHint?.targetPileId
     val isAutocompleteAvailable by viewModel.isAutocompleteAvailable.collectAsState()
     val pointPopup by viewModel.pointPopup.collectAsState()
     val isStockExhausted by viewModel.isStockExhausted.collectAsState()
@@ -210,15 +211,6 @@ fun KlondikeBoard(
                     }
                 }
 
-            if (hintSourceId != null && hintTargetId != null) {
-                Text(
-                    "Hint: move from ${hintSourceId} to ${hintTargetId}".replace("_", " "),
-                    color = Color.Yellow,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 4.dp).clickable { viewModel.clearHint() }
-                )
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -253,6 +245,7 @@ fun KlondikeBoard(
                             .onGloballyPositioned { pileFrames[state.stock.id] = it.boundsInRoot() }
                             .clip(RoundedCornerShape(4.dp))
                             .clickable { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); viewModel.drawCard() }
+                            .hintHighlight(isHighlighted = state.stock.id == hintSourceId || state.stock.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
                             Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.2f)))
                             if (state.stock.cards.isNotEmpty()) {
@@ -266,6 +259,7 @@ fun KlondikeBoard(
                         Box(modifier = Modifier
                             .size(cardW, cardH)
                             .onGloballyPositioned { pileFrames[state.waste.id] = it.boundsInRoot() }
+                            .hintHighlight(isHighlighted = state.waste.id == hintSourceId || state.waste.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
                             Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.2f)))
                             val wasteCards = state.waste.cards.takeLast(state.wasteDisplayCount)
@@ -316,6 +310,7 @@ fun KlondikeBoard(
                             Box(modifier = Modifier
                                 .size(cardW, cardH)
                                 .onGloballyPositioned { pileFrames[pile.id] = it.boundsInRoot() }
+                                .hintHighlight(isHighlighted = pile.id == hintSourceId || pile.id == hintTargetId, cornerRadius = 4.dp)
                             ) {
                                 Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.2f)))
                                 val topCard = pile.cards.lastOrNull()
@@ -353,6 +348,7 @@ fun KlondikeBoard(
                                 .width(cardW)
                                 .fillMaxHeight()
                                 .onGloballyPositioned { pileFrames[pile.id] = it.boundsInRoot() }
+                                .hintHighlight(isHighlighted = pile.id == hintSourceId || pile.id == hintTargetId, cornerRadius = 4.dp)
                             ) {
                                 Box(modifier = Modifier.size(cardW, cardH).background(Color.Black.copy(alpha = 0.2f)))
                                 var runningY = 0.dp

@@ -49,6 +49,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.Strings
+import com.leah.honeycomb.hintHighlight
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -618,7 +619,7 @@ private fun SharedTransitionScope.BoardGrid(animatedVisibilityScope: AnimatedVis
                             .width(cardWidth)
                             .height(cardHeight)
                             .background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                            .let { if (hintMove?.second == index) it.border(2.dp, Color.Yellow) else it }
+                            .hintHighlight(isHighlighted = hintMove?.second == index)
                             .let { if (stealEligible) it.border(3.dp, Color(0xFFFFD700)) else it }
                             .let { if (stealEligible) it.clickable { viewModel.requestSteal(index) } else it }
                             .onGloballyPositioned { coords -> dropTargets[index] = coords.boundsInRoot() },
@@ -816,7 +817,7 @@ private fun SharedTransitionScope.PlayerHandCard(animatedVisibilityScope: Animat
         modifier = Modifier
             .width(cardWidth)
             .height(cardHeight)
-            .let { if (isHinted) it.border(2.dp, Color.Yellow) else it }
+            .hintHighlight(isHighlighted = isHinted)
             .let { if (isMandated) it.border(3.dp, Color(0xFFFFD700)) else it }
             .onGloballyPositioned { coords ->
                 cardPosition = coords.positionInRoot()

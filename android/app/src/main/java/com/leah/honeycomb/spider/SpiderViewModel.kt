@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import java.util.UUID
 
 class SpiderViewModel(
@@ -71,65 +72,205 @@ class SpiderViewModel(
     val canUndo: Boolean
         get() = undoStack.canUndo && !_state.value.hasWon
 
-    private val _hintSourceId = MutableStateFlow<String?>(null)
-    val hintSourceId: StateFlow<String?> = _hintSourceId.asStateFlow()
-    private val _hintTargetId = MutableStateFlow<String?>(null)
-    val hintTargetId: StateFlow<String?> = _hintTargetId.asStateFlow()
+    // Ported from shared/Spider/ViewModels/SpiderViewModel.swift:938-1162 — ranked/scored
+    // hint candidates with 1-ply lookahead, cycling through the ranked queue on repeated
+    // taps (via the shared HintCycling engine), auto-clearing after 2s.
+    data class HintMove(
+        val card: Card,
+        val sourcePileId: String,
+        val targetPileId: String,
+        val description: String
+    )
 
-    // Mirrors checkStuckState()'s search space exactly (every sub-sequence of each
-    // column's trailing same-suit run, not just the single longest one) so Hint can
-    // never report nothing on a board checkStuckState() knows isn't stuck. Still a
-    // first-match search, not iOS's ranked/lookahead HintCycling — that upgrade is a
-    // separate, larger follow-up.
+    private val _activeHint = MutableStateFlow<HintMove?>(null)
+    val activeHint: StateFlow<HintMove?> = _activeHint.asStateFlow()
+
+    private var hintQueue: List<HintMove> = emptyList()
+    private var hintQueueIndex: Int = 0
+    private var hintClearJob: Job? = null
+    private var lastMoveSourceId: String? = null
+    private var lastMoveTargetId: String? = null
+
     fun findHint() {
-        val tableau = _state.value.tableau
-        val hasEmpty = hasEmptyTableauColumn
-
-        for (colIdx in tableau.indices) {
-            val col = tableau[colIdx]
-            if (col.isEmpty) continue
-
-            var seqStart = col.cards.size - 1
-            while (seqStart > 0) {
-                val upper = col.cards[seqStart - 1]
-                val lower = col.cards[seqStart]
-                if (upper.faceUp && upper.rank == lower.rank + 1 && upper.suit == lower.suit) {
-                    seqStart--
-                } else break
+        hintClearJob?.cancel()
+        val cycled = HintCycling.findHint(
+            current = HintCycleState(activeHint = _activeHint.value, hintQueue = hintQueue, hintQueueIndex = hintQueueIndex),
+            collectHints = { collectHints() },
+            label = { hint, index, total -> labeled(hint, index, total) },
+            noHintFallback = {
+                HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", "No moves available. Replay or deal a new game!")
             }
-
-            for (start in seqStart until col.cards.size) {
-                val seq = col.cards.subList(start, col.cards.size)
-                if (hasEmpty && seq.first().faceUp) {
-                    val emptyTarget = tableau.firstOrNull { it.id != col.id && it.isEmpty }
-                    if (emptyTarget != null) {
-                        _hintSourceId.value = col.id
-                        _hintTargetId.value = emptyTarget.id
-                        return
-                    }
-                }
-                val target = tableau.firstOrNull { it.id != col.id && isValidMove(seq, it) }
-                if (target != null) {
-                    _hintSourceId.value = col.id
-                    _hintTargetId.value = target.id
-                    return
-                }
-            }
-        }
-
-        if (!_state.value.stock.isEmpty && !hasEmpty) {
-            _hintSourceId.value = _state.value.stock.id
-            _hintTargetId.value = "a new row"
-            return
-        }
-
-        _hintSourceId.value = null
-        _hintTargetId.value = null
+        )
+        _activeHint.value = cycled.activeHint
+        hintQueue = cycled.hintQueue
+        hintQueueIndex = cycled.hintQueueIndex
+        scheduleHintClear()
     }
 
     fun clearHint() {
-        _hintSourceId.value = null
-        _hintTargetId.value = null
+        hintClearJob?.cancel()
+        _activeHint.value = null
+        hintQueue = emptyList()
+        hintQueueIndex = 0
+        lastMoveSourceId = null
+        lastMoveTargetId = null
+    }
+
+    private fun scheduleHintClear() {
+        hintClearJob?.cancel()
+        hintClearJob = viewModelScope.launch {
+            delay(2000)
+            _activeHint.value = null
+            hintQueue = emptyList()
+            hintQueueIndex = 0
+        }
+    }
+
+    private fun labeled(hint: HintMove, index: Int, total: Int): HintMove {
+        val prefix = if (total > 1) "[${index + 1}/$total] " else ""
+        return hint.copy(description = prefix + hint.description)
+    }
+
+    // Ported from evaluateImmediateMoves(depth:) — same-suit run extension scoring,
+    // cross-suit build with a clean-stack penalty, empty-column priority (only worthwhile
+    // if it reveals a face-down card), stock-deal fallback, 1-ply lookahead at depth 0.
+    private fun evaluateImmediateMoves(depth: Int = 0): List<Pair<HintMove, Int>> {
+        val st = _state.value
+        var scored = mutableListOf<Pair<HintMove, Int>>()
+
+        for (col in st.tableau) {
+            if (col.isEmpty) continue
+
+            val firstFaceUpIdx = col.cards.indexOfFirst { it.faceUp }.let { if (it == -1) col.cards.size else it }
+
+            var minValidK = col.cards.size - 1
+            while (minValidK > 0 && isValidDragSequence(col.cards.subList(minValidK - 1, col.cards.size))) {
+                minValidK--
+            }
+
+            for (targetCol in st.tableau) {
+                if (targetCol.id == col.id) continue
+
+                for (k in minValidK until col.cards.size) {
+                    val dragStack = col.cards.subList(k, col.cards.size)
+                    val faceDownBelow = if (k == firstFaceUpIdx) firstFaceUpIdx else 0
+                    val freesColumn = k == 0
+                    val first = dragStack.first()
+
+                    if (targetCol.isEmpty) {
+                        if (faceDownBelow > 0) {
+                            scored.add(HintMove(first, col.id, targetCol.id, "Move ${first.rankString}${first.suit.symbol} to empty column — Reveal 1 face-down card.") to (350 + faceDownBelow * 150))
+                            break
+                        } else if (!freesColumn) {
+                            val breaksCrossSuit = k > 0 && col.cards[k - 1].faceUp && col.cards[k - 1].suit != first.suit
+                            val score = if (breaksCrossSuit) 150 else 50
+                            scored.add(HintMove(first, col.id, targetCol.id, "Move ${first.rankString}${first.suit.symbol} sequence to empty column.") to score)
+                            break
+                        }
+                    } else {
+                        val topCard = targetCol.topCard
+                        if (topCard != null && topCard.rank == first.rank + 1) {
+                            if (k > 0 && col.cards[k - 1].faceUp && col.cards[k - 1].suit == topCard.suit && col.cards[k - 1].rank == topCard.rank) {
+                                continue
+                            }
+
+                            val sameSuit = topCard.suit == first.suit
+                            val faceDownBonus = faceDownBelow * 150
+                            val vacateBonus = if (freesColumn) 250 else 0
+
+                            var targetIsClean = true
+                            val faceUpTargetCards = targetCol.cards.filter { it.faceUp }
+                            if (faceUpTargetCards.size > 1) {
+                                for (i in 0 until faceUpTargetCards.size - 1) {
+                                    if (faceUpTargetCards[i].suit != faceUpTargetCards[i + 1].suit) {
+                                        targetIsClean = false
+                                        break
+                                    }
+                                }
+                            }
+                            val cleanStackPenalty = if (!sameSuit && targetIsClean) -100 else 0
+
+                            if (sameSuit) {
+                                val score = if (faceDownBelow > 0) 1000 + faceDownBonus + vacateBonus else 900 + vacateBonus
+                                val label = if (faceDownBelow > 0) " — Reveal 1 face-down card." else "."
+                                scored.add(HintMove(first, col.id, targetCol.id, "Move ${first.rankString}${first.suit.symbol} onto ${topCard.rankString}${topCard.suit.symbol}$label") to score)
+                            } else {
+                                val score = if (faceDownBelow > 0) 600 + faceDownBonus + vacateBonus + cleanStackPenalty else 400 + vacateBonus + cleanStackPenalty
+                                val label = if (faceDownBelow > 0) " — Reveal 1 face-down card." else "."
+                                scored.add(HintMove(first, col.id, targetCol.id, "Move ${first.rankString}${first.suit.symbol} to ${topCard.rankString}${topCard.suit.symbol}$label") to score)
+                            }
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!st.stock.isEmpty) {
+            if (hasEmptyTableauColumn) {
+                scored.add(HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", "Fill all empty columns before dealing cards.") to 25)
+            } else {
+                scored.add(HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), st.stock.id, "", "Deal cards from the Stock pile.") to 50)
+            }
+        }
+
+        if (depth == 0) {
+            val originalState = _state.value
+            val enhanced = mutableListOf<Pair<HintMove, Int>>()
+
+            for ((move, baseScore) in scored) {
+                if (move.sourcePileId.isEmpty() || move.sourcePileId == st.stock.id) {
+                    enhanced.add(move to baseScore)
+                    continue
+                }
+                val srcIdx = originalState.tableau.indexOfFirst { it.id == move.sourcePileId }
+                val tgtIdx = originalState.tableau.indexOfFirst { it.id == move.targetPileId }
+                if (srcIdx == -1 || tgtIdx == -1) {
+                    enhanced.add(move to baseScore)
+                    continue
+                }
+
+                val cardIdx = originalState.tableau[srcIdx].cards.indexOfFirst { it.id == move.card.id }
+                if (cardIdx == -1) {
+                    enhanced.add(move to baseScore)
+                    continue
+                }
+
+                val dragStack = originalState.tableau[srcIdx].cards.subList(cardIdx, originalState.tableau[srcIdx].cards.size)
+                val newTableau = originalState.tableau.toMutableList()
+                var remaining = newTableau[srcIdx].cards.subList(0, cardIdx).toMutableList()
+                if (remaining.isNotEmpty() && !remaining.last().faceUp) {
+                    remaining[remaining.size - 1] = remaining.last().copy(faceUp = true)
+                }
+                newTableau[srcIdx] = newTableau[srcIdx].copy(cards = remaining)
+                newTableau[tgtIdx] = newTableau[tgtIdx].copy(cards = newTableau[tgtIdx].cards + dragStack)
+
+                _state.value = originalState.copy(tableau = newTableau)
+                val nextLevel = evaluateImmediateMoves(depth = 1)
+                _state.value = originalState
+
+                val bestNext = nextLevel.maxByOrNull { it.second }
+                if (bestNext != null) {
+                    enhanced.add(move to (baseScore + (bestNext.second * 0.8).toInt()))
+                } else {
+                    enhanced.add(move to baseScore)
+                }
+            }
+            scored = enhanced
+        }
+
+        return scored
+    }
+
+    private fun collectHints(): List<HintMove> {
+        val scored = evaluateImmediateMoves(depth = 0)
+        val src = lastMoveSourceId
+        val tgt = lastMoveTargetId
+        val filtered = if (src != null && tgt != null) {
+            scored.filter { (hint, _) -> !(hint.sourcePileId == tgt && hint.targetPileId == src) }
+        } else scored
+        val candidates = filtered.ifEmpty { scored }
+        return candidates.sortedByDescending { it.second }.map { it.first }
     }
 
     init {
@@ -320,6 +461,8 @@ class SpiderViewModel(
         com.leah.honeycomb.audio.UISound.play("snap")
         saveStateForUndo()
         clearHint()
+        lastMoveSourceId = sourcePile.id
+        lastMoveTargetId = targetPile.id
         startTimerIfNeeded()
         
         val cardIds = cards.map { it.id }.toSet()

@@ -48,6 +48,7 @@ import com.leah.honeycomb.Card
 import com.leah.honeycomb.CardView
 import com.leah.honeycomb.Pile
 import com.leah.honeycomb.SmartDrop
+import com.leah.honeycomb.hintHighlight
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -71,6 +72,9 @@ fun BeecellBoard(
     val state by viewModel.state.collectAsState()
     val isStuck by viewModel.isStuck.collectAsState()
     val isAutocompleteAvailable by viewModel.isAutocompleteAvailable.collectAsState()
+    val activeHint by viewModel.activeHint.collectAsState()
+    val hintSourceId = activeHint?.sourcePileId
+    val hintTargetId = activeHint?.targetPileId
     var activeCardW by remember { mutableStateOf(0.dp) }
     var dragState by remember { mutableStateOf(DragState()) }
     val pileFrames = remember { mutableStateMapOf<String, Rect>() }
@@ -216,6 +220,7 @@ fun BeecellBoard(
                                 .size(cardW, cardH)
                                 .onGloballyPositioned { pileFrames[cell.id] = it.boundsInRoot() }
                                 .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                .hintHighlight(isHighlighted = cell.id == hintSourceId || cell.id == hintTargetId, cornerRadius = 4.dp)
                             ) {
                                 if (!cell.isEmpty) {
                                     val card = cell.topCard!!
@@ -258,6 +263,7 @@ fun BeecellBoard(
                                 .size(cardW, cardH)
                                 .onGloballyPositioned { pileFrames[fdn.id] = it.boundsInRoot() }
                                 .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                .hintHighlight(isHighlighted = fdn.id == hintSourceId || fdn.id == hintTargetId, cornerRadius = 4.dp)
                             ) {
                                 if (!fdn.isEmpty) {
                                     CardView(card = fdn.topCard!!, modifier = Modifier.fillMaxSize())
@@ -277,6 +283,7 @@ fun BeecellBoard(
                                 .width(cardW)
                                 .fillMaxHeight()
                                 .onGloballyPositioned { pileFrames[pile.id] = it.boundsInRoot() }
+                                .hintHighlight(isHighlighted = pile.id == hintSourceId || pile.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
                             if (pile.isEmpty) {
                                 Box(modifier = Modifier.size(cardW, cardH).border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp)))

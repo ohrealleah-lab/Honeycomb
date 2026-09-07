@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.leah.honeycomb.Card
 import com.leah.honeycomb.Suit
+import com.leah.honeycomb.HintCycling
+import com.leah.honeycomb.HintCycleState
 
 
 
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import java.util.UUID
 
 class GameViewModel(
@@ -137,75 +140,240 @@ class GameViewModel(
     val canUndo: Boolean
         get() = undoStack.canUndo && !_state.value.hasWon
 
-    // Highlights one legal move (source + target pile id) rather than porting Swift's
-    // full ranked/cycling HintCycling system — a real, useful hint, just not a ranked
-    // sequence of alternatives on repeated taps.
-    private val _hintSourceId = MutableStateFlow<String?>(null)
-    val hintSourceId: StateFlow<String?> = _hintSourceId.asStateFlow()
-    private val _hintTargetId = MutableStateFlow<String?>(null)
-    val hintTargetId: StateFlow<String?> = _hintTargetId.asStateFlow()
+    // Ported from shared/ViewModels/GameViewModel.swift:972-1191 — ranked/scored hint
+    // candidates with 1-ply lookahead, cycling through the ranked queue on repeated taps
+    // (via the shared HintCycling engine), auto-clearing after 2s.
+    data class HintMove(
+        val card: Card,
+        val sourcePileId: String,
+        val targetPileId: String,
+        val description: String
+    )
 
-    // Mirrors hasValidMoves()'s search space exactly (waste + every tableau sub-run,
-    // filtered to progressive moves, plus a stock-draw fallback) so Hint can never
-    // report nothing on a board hasValidMoves() knows isn't stuck. Still a first-match
-    // search, not iOS's ranked/lookahead HintCycling — that upgrade is a separate,
-    // larger follow-up.
+    private val _activeHint = MutableStateFlow<HintMove?>(null)
+    val activeHint: StateFlow<HintMove?> = _activeHint.asStateFlow()
+
+    private var hintQueue: List<HintMove> = emptyList()
+    private var hintQueueIndex: Int = 0
+    private var hintClearJob: Job? = null
+    private var lastMoveSourceId: String? = null
+    private var lastMoveTargetId: String? = null
+
     fun findHint() {
-        val st = _state.value
-        val targets = st.foundations + st.tableau
-
-        val topWaste = st.waste.topCard
-        if (topWaste != null) {
-            val target = targets.firstOrNull {
-                isValidMove(listOf(topWaste), it) && isProgressiveMove(listOf(topWaste), st.waste, it)
+        hintClearJob?.cancel()
+        val cycled = HintCycling.findHint(
+            current = HintCycleState(activeHint = _activeHint.value, hintQueue = hintQueue, hintQueueIndex = hintQueueIndex),
+            collectHints = { collectHints() },
+            label = { hint, index, total -> labeled(hint, index, total) },
+            noHintFallback = {
+                HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", "No such luck, friend! Try a new game!")
             }
-            if (target != null) {
-                _hintSourceId.value = st.waste.id
-                _hintTargetId.value = target.id
-                return
-            }
-        }
-
-        for (col in st.tableau) {
-            val top = col.topCard
-            if (top != null && top.faceUp) {
-                val target = targets.firstOrNull {
-                    it.id != col.id && isValidMove(listOf(top), it) && isProgressiveMove(listOf(top), col, it)
-                }
-                if (target != null) {
-                    _hintSourceId.value = col.id
-                    _hintTargetId.value = target.id
-                    return
-                }
-            }
-            for (startIdx in col.cards.indices) {
-                if (!col.cards[startIdx].faceUp) continue
-                val seq = col.cards.subList(startIdx, col.cards.size)
-                if (seq.size < 2) continue
-                val target = st.tableau.firstOrNull {
-                    it.id != col.id && isValidMove(seq, it) && isProgressiveMove(seq, col, it)
-                }
-                if (target != null) {
-                    _hintSourceId.value = col.id
-                    _hintTargetId.value = target.id
-                    return
-                }
-            }
-        }
-
-        if (hasPlayableStockCard() || (canRecycleStock && hasPlayableWasteCard())) {
-            _hintSourceId.value = st.stock.id
-            _hintTargetId.value = st.waste.id
-            return
-        }
-
-        _hintSourceId.value = null
-        _hintTargetId.value = null
+        )
+        _activeHint.value = cycled.activeHint
+        hintQueue = cycled.hintQueue
+        hintQueueIndex = cycled.hintQueueIndex
+        scheduleHintClear()
     }
 
     fun clearHint() {
-        _hintSourceId.value = null
-        _hintTargetId.value = null
+        hintClearJob?.cancel()
+        _activeHint.value = null
+        hintQueue = emptyList()
+        hintQueueIndex = 0
+        lastMoveSourceId = null
+        lastMoveTargetId = null
+    }
+
+    private fun scheduleHintClear() {
+        hintClearJob?.cancel()
+        hintClearJob = viewModelScope.launch {
+            delay(2000)
+            _activeHint.value = null
+            hintQueue = emptyList()
+            hintQueueIndex = 0
+        }
+    }
+
+    private fun labeled(hint: HintMove, index: Int, total: Int): HintMove {
+        val prefix = if (total > 1) "[${index + 1}/$total] " else ""
+        return hint.copy(description = prefix + hint.description)
+    }
+
+    private fun isSafeFoundationMove(card: Card): Boolean {
+        if (card.rank <= 2) return true
+        val isRed = card.suit == Suit.Hearts || card.suit == Suit.Diamonds
+        val reqRank = card.rank - 1
+        var safeCount = 0
+        for (foundation in _state.value.foundations) {
+            val top = foundation.topCard
+            if (top != null) {
+                val topIsRed = top.suit == Suit.Hearts || top.suit == Suit.Diamonds
+                if (topIsRed != isRed && top.rank >= reqRank) safeCount++
+            }
+        }
+        return safeCount == 2
+    }
+
+    // Ported from evaluateImmediateMoves(depth:) — depth 0 does the real 1-ply lookahead
+    // (mutate a copy of state, recurse at depth 1, discount the best follow-up score by
+    // 0.8, restore state); depth 1 is just the base scored-candidate list, no recursion.
+    private fun evaluateImmediateMoves(depth: Int = 0): List<Pair<HintMove, Int>> {
+        val st = _state.value
+        var scored = mutableListOf<Pair<HintMove, Int>>()
+
+        val topWaste = st.waste.topCard
+        if (topWaste != null) {
+            for (foundation in st.foundations) {
+                if (isValidMove(listOf(topWaste), foundation)) {
+                    val score = if (isSafeFoundationMove(topWaste)) 1000 else 200
+                    scored.add(HintMove(topWaste, st.waste.id, foundation.id, "Move ${topWaste.rankString}${topWaste.suit.symbol} from Waste to Foundation.") to score)
+                }
+            }
+        }
+        for (col in st.tableau) {
+            val top = col.topCard ?: continue
+            for (foundation in st.foundations) {
+                if (isValidMove(listOf(top), foundation)) {
+                    val score = if (isSafeFoundationMove(top)) 1000 else 200
+                    scored.add(HintMove(top, col.id, foundation.id, "Move ${top.rankString}${top.suit.symbol} to Foundation.") to score)
+                }
+            }
+        }
+
+        if (topWaste != null) {
+            for (targetCol in st.tableau) {
+                if (isValidMove(listOf(topWaste), targetCol)) {
+                    scored.add(HintMove(topWaste, st.waste.id, targetCol.id, "Move ${topWaste.rankString}${topWaste.suit.symbol} from Waste to Tableau.") to 300)
+                }
+            }
+        }
+
+        // Tableau-to-tableau — every sub-run start within the face-up portion, matching
+        // hasValidMoves()'s own search exactly (not just the whole face-up run).
+        for (col in st.tableau) {
+            val firstFaceUpIdx = col.cards.indexOfFirst { it.faceUp }
+            if (firstFaceUpIdx == -1) continue
+            for (startIdx in firstFaceUpIdx until col.cards.size) {
+                val dragStack = col.cards.subList(startIdx, col.cards.size)
+                for (targetCol in st.tableau) {
+                    if (targetCol.id == col.id) continue
+                    if (!isValidMove(dragStack, targetCol)) continue
+                    if (!isProgressiveMove(dragStack, col, targetCol)) continue
+
+                    val emptiesColumn = startIdx == 0
+                    val revealsHidden = startIdx == firstFaceUpIdx && firstFaceUpIdx > 0
+                    val vacateBonus = if (emptiesColumn) 250 else 0
+                    val first = dragStack.first()
+
+                    when {
+                        revealsHidden -> {
+                            val faceDownCount = firstFaceUpIdx
+                            scored.add(HintMove(first, col.id, targetCol.id, "Move ${first.rankString}${first.suit.symbol} — Reveal 1 face-down card.") to (500 + faceDownCount * 150 + vacateBonus))
+                        }
+                        !targetCol.isEmpty -> {
+                            val targetTop = targetCol.topCard!!
+                            scored.add(HintMove(first, col.id, targetCol.id, "Move ${first.rankString}${first.suit.symbol} to ${targetTop.rankString}${targetTop.suit.symbol}.") to (150 + vacateBonus))
+                        }
+                        else -> {
+                            val score = if (emptiesColumn) 50 else 150
+                            scored.add(HintMove(first, col.id, targetCol.id, "Move ${first.rankString}${first.suit.symbol} to an empty column.") to score)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Stock / recycle — only suggested if it actually reaches a playable card.
+        if (!st.stock.isEmpty && hasPlayableStockCard()) {
+            scored.add(HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), st.stock.id, st.waste.id, "Draw from Stock pile.") to 50)
+        } else if (canRecycleStock && hasPlayableWasteCard()) {
+            scored.add(HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), st.waste.id, st.stock.id, "Recycle Waste pile to Stock.") to 20)
+        }
+
+        if (depth == 0) {
+            val originalState = _state.value
+            val enhanced = mutableListOf<Pair<HintMove, Int>>()
+
+            for ((move, baseScore) in scored) {
+                if (move.sourcePileId.isEmpty() || move.sourcePileId == st.stock.id || (move.sourcePileId == st.waste.id && move.targetPileId == st.stock.id)) {
+                    enhanced.add(move to baseScore)
+                    continue
+                }
+
+                var validSource = false
+                var dragStack: List<Card> = emptyList()
+                var working = originalState
+
+                if (move.sourcePileId == working.waste.id) {
+                    val wasteTop = working.waste.cards.lastOrNull()
+                    if (wasteTop != null && wasteTop.id == move.card.id) {
+                        dragStack = listOf(wasteTop)
+                        working = working.copy(waste = working.waste.copy(cards = working.waste.cards.dropLast(1)))
+                        validSource = true
+                    }
+                } else {
+                    val srcIdx = working.tableau.indexOfFirst { it.id == move.sourcePileId }
+                    if (srcIdx != -1) {
+                        val cardIdx = working.tableau[srcIdx].cards.indexOfFirst { it.id == move.card.id }
+                        if (cardIdx != -1) {
+                            dragStack = working.tableau[srcIdx].cards.subList(cardIdx, working.tableau[srcIdx].cards.size)
+                            val newTableau = working.tableau.toMutableList()
+                            var remaining = newTableau[srcIdx].cards.subList(0, cardIdx).toMutableList()
+                            if (remaining.isNotEmpty() && !remaining.last().faceUp) {
+                                remaining[remaining.size - 1] = remaining.last().copy(faceUp = true)
+                            }
+                            newTableau[srcIdx] = newTableau[srcIdx].copy(cards = remaining)
+                            working = working.copy(tableau = newTableau)
+                            validSource = true
+                        }
+                    }
+                }
+
+                if (!validSource) {
+                    enhanced.add(move to baseScore)
+                    continue
+                }
+
+                val tgtTabIdx = working.tableau.indexOfFirst { it.id == move.targetPileId }
+                working = if (tgtTabIdx != -1) {
+                    val newTableau = working.tableau.toMutableList()
+                    newTableau[tgtTabIdx] = newTableau[tgtTabIdx].copy(cards = newTableau[tgtTabIdx].cards + dragStack)
+                    working.copy(tableau = newTableau)
+                } else {
+                    val tgtFoundIdx = working.foundations.indexOfFirst { it.id == move.targetPileId }
+                    if (tgtFoundIdx != -1) {
+                        val newFoundations = working.foundations.toMutableList()
+                        newFoundations[tgtFoundIdx] = newFoundations[tgtFoundIdx].copy(cards = newFoundations[tgtFoundIdx].cards + dragStack)
+                        working.copy(foundations = newFoundations)
+                    } else working
+                }
+
+                _state.value = working
+                val nextLevel = evaluateImmediateMoves(depth = 1)
+                _state.value = originalState
+
+                val bestNext = nextLevel.maxByOrNull { it.second }
+                if (bestNext != null) {
+                    enhanced.add(move to (baseScore + (bestNext.second * 0.8).toInt()))
+                } else {
+                    enhanced.add(move to baseScore)
+                }
+            }
+            scored = enhanced
+        }
+
+        return scored
+    }
+
+    private fun collectHints(): List<HintMove> {
+        val scored = evaluateImmediateMoves(depth = 0)
+        val src = lastMoveSourceId
+        val tgt = lastMoveTargetId
+        val filtered = if (src != null && tgt != null) {
+            scored.filter { (hint, _) -> !(hint.sourcePileId == tgt && hint.targetPileId == src) }
+        } else scored
+        val candidates = filtered.ifEmpty { scored }
+        return candidates.sortedByDescending { it.second }.map { it.first }
     }
 
     val maxRecycles: Int?
@@ -444,8 +612,12 @@ class GameViewModel(
 
     fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile): Boolean {
         if (!isValidMove(cards, targetPile)) return false
-        saveStateForUndo()
+        // Board state is about to change under any still-showing hint — clear it first,
+        // then record this move so the next findHint() can filter out its exact reverse.
         clearHint()
+        lastMoveSourceId = sourcePile.id
+        lastMoveTargetId = targetPile.id
+        saveStateForUndo()
         startTimerIfNeeded()
 
         val cardIds = cards.map { it.id }.toSet()
