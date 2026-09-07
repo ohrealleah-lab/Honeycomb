@@ -75,11 +75,22 @@ fun CardView(
     
     val cornerRadius = 10.dp
 
-    BoxWithConstraints(modifier = modifier) {
+    // The inner Box below deliberately lays itself out at a fixed CardDimensions size
+    // (114x160dp) via requiredSize, then visually scales down to fit whatever size this
+    // CardView was actually given (via the graphicsLayer scaleX/scaleY below). A
+    // requiredSize child larger than its parent does NOT get placed at the parent's
+    // TopStart origin by default despite BoxWithConstraints' own contentAlignment saying
+    // so — Box centers an over-sized child regardless, so the visible (post-scale) card
+    // was rendering centered on, and bleeding symmetrically outside, its actual slot
+    // (e.g. a Klondike tableau card ~38x54dp) instead of filling it — explicit
+    // Modifier.align(Alignment.TopStart) on the child itself is what actually forces the
+    // TopStart placement scale is anchored from.
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.TopStart) {
         val scale = maxWidth / CardDimensions.width
-        
+
         Box(
             modifier = Modifier
+                .align(Alignment.TopStart)
                 .requiredSize(CardDimensions.width, CardDimensions.height)
                 .graphicsLayer {
                     scaleX = scale
