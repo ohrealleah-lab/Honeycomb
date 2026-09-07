@@ -32,6 +32,8 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -72,6 +74,7 @@ fun KlondikeBoard(
     val noStressMode by viewModel.sharedOptions.noStressMode.collectAsState()
 
     var dragState by remember { mutableStateOf(DragState()) }
+    val haptics = LocalHapticFeedback.current
     val pileFrames = remember { mutableMapOf<String, Rect>() }
 
     // A DragGesture has no guaranteed "cancelled" callback if the app is backgrounded
@@ -213,7 +216,7 @@ fun KlondikeBoard(
                             .size(cardW, cardH)
                             .onGloballyPositioned { pileFrames[state.stock.id] = it.boundsInRoot() }
                             .clip(RoundedCornerShape(4.dp))
-                            .clickable { viewModel.drawCard() }
+                            .clickable { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); viewModel.drawCard() }
                         ) {
                             Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.2f)))
                             if (state.stock.cards.isNotEmpty()) {
@@ -256,14 +259,14 @@ fun KlondikeBoard(
                                                             launch {
                                                                 detectTapGestures(
                                                                     onTap = {},
-                                                                    onDoubleTap = { viewModel.doubleClickMoveToFoundation(card, state.waste) }
+                                                                    onDoubleTap = { if (viewModel.doubleClickMoveToFoundation(card, state.waste)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                                 )
                                                             }
                                                             launch {
                                                                 detectDragGestures(
-                                                                    onDragStart = { _ -> dragState = DragState(listOf(card), state.waste, layoutPos, Offset.Zero) },
+                                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), state.waste, layoutPos, Offset.Zero) },
                                                                     onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel); dragState = DragState() },
+                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
                                                                     onDragCancel = { dragState = DragState() }
                                                                 )
                                                             }
@@ -298,9 +301,9 @@ fun KlondikeBoard(
                                                 .onGloballyPositioned { layoutPos = it.positionInRoot() }
                                                 .pointerInput(topCard.id) {
                                                     detectDragGestures(
-                                                        onDragStart = { _ -> dragState = DragState(listOf(topCard), pile, layoutPos, Offset.Zero) },
+                                                        onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(topCard), pile, layoutPos, Offset.Zero) },
                                                         onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                        onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel); dragState = DragState() },
+                                                        onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
                                                         onDragCancel = { dragState = DragState() }
                                                     )
                                                 }
@@ -345,14 +348,14 @@ fun KlondikeBoard(
                                                             launch {
                                                                 detectTapGestures(
                                                                     onTap = {},
-                                                                    onDoubleTap = { viewModel.doubleClickMoveToFoundation(card, pile) }
+                                                                    onDoubleTap = { if (viewModel.doubleClickMoveToFoundation(card, pile)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                                 )
                                                             }
                                                             launch {
                                                                 detectDragGestures(
-                                                                    onDragStart = { _ -> dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
+                                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
                                                                     onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel); dragState = DragState() },
+                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
                                                                     onDragCancel = { dragState = DragState() }
                                                                 )
                                                             }
@@ -441,7 +444,8 @@ fun KlondikeBoard(
 private fun handleDragEnd(
     dragState: DragState,
     pileFrames: Map<String, Rect>,
-    viewModel: GameViewModel
+    viewModel: GameViewModel,
+    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback
 ) {
     if (dragState.cards.isEmpty() || dragState.sourcePile == null) return
     val releaseX = dragState.startPosition.x + dragState.offset.x + 50f

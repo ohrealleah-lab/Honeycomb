@@ -19,6 +19,7 @@ import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
+import com.leah.honeycomb.WinAnimationView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -29,6 +30,8 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -69,6 +72,7 @@ fun BeecellBoard(
     val pileFrames = remember { mutableStateMapOf<String, Rect>() }
     
     var showQuitDialog by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
     
     // A DragGesture has no guaranteed "cancelled" callback if the app is backgrounded
     // mid-drag — this must be a real ON_STOP lifecycle observer, not composition-dispose
@@ -185,14 +189,14 @@ fun BeecellBoard(
                                                         launch {
                                                             detectTapGestures(
                                                                 onTap = {},
-                                                                onDoubleTap = { viewModel.doubleClickMove(card, cell) }
+                                                                onDoubleTap = { if (viewModel.doubleClickMove(card, cell)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                             )
                                                         }
                                                         launch {
                                                             detectDragGestures(
-                                                                onDragStart = { _ -> dragState = DragState(listOf(card), cell, layoutPos, Offset.Zero) },
+                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), cell, layoutPos, Offset.Zero) },
                                                                 onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel); dragState = DragState() },
+                                                                onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
                                                                 onDragCancel = { dragState = DragState() }
                                                             )
                                                         }
@@ -255,15 +259,15 @@ fun BeecellBoard(
                                                         launch {
                                                             detectTapGestures(
                                                                 onTap = {},
-                                                                onDoubleTap = { viewModel.doubleClickMove(card, pile) }
+                                                                onDoubleTap = { if (viewModel.doubleClickMove(card, pile)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                             )
                                                         }
                                                         launch {
                                                             if (viewModel.isValidDragSequence(stack)) {
                                                                 detectDragGestures(
-                                                                    onDragStart = { _ -> dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
+                                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
                                                                     onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel); dragState = DragState() },
+                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
                                                                     onDragCancel = { dragState = DragState() }
                                                                 )
                                                             }
@@ -284,6 +288,15 @@ fun BeecellBoard(
         }
         } // close BoxWithConstraints
         
+        if (state.hasWon) {
+            WinAnimationView(
+                foundations = state.foundations,
+                pileFrames = pileFrames,
+                zoomScale = 1f,
+                onFinished = {}
+            )
+        }
+
         // Full screen Drag Overlay
         if (dragState.cards.isNotEmpty()) {
             val cardW = activeCardW
@@ -346,7 +359,8 @@ fun BeecellBoard(
 private fun handleDragEnd(
     dragState: DragState,
     pileFrames: Map<String, Rect>,
-    viewModel: BeecellViewModel
+    viewModel: BeecellViewModel,
+    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback
 ) {
     if (dragState.cards.isEmpty() || dragState.sourcePile == null) return
     val releaseX = dragState.startPosition.x + dragState.offset.x + 40f

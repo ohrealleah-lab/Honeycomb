@@ -257,9 +257,9 @@ class SpiderViewModel(
     val hasEmptyTableauColumn: Boolean
         get() = _state.value.tableau.any { it.isEmpty }
 
-    fun drawFromStock() {
+    fun drawFromStock(): Boolean {
         val currentState = _state.value
-        if (currentState.stock.isEmpty || hasEmptyTableauColumn) return
+        if (currentState.stock.isEmpty || hasEmptyTableauColumn) return false
 
         saveStateForUndo()
         startTimerIfNeeded()
@@ -288,6 +288,7 @@ class SpiderViewModel(
         checkCompletedRuns()
         checkAutocompleteState()
         checkStuckState()
+        return true
     }
 
     fun isValidDragSequence(cards: List<Card>): Boolean {
@@ -313,8 +314,8 @@ class SpiderViewModel(
         return firstCard.rank == topCard.rank - 1
     }
 
-    fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile) {
-        if (!isValidMove(cards, targetPile)) return
+    fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile): Boolean {
+        if (!isValidMove(cards, targetPile)) return false
 
         com.leah.honeycomb.audio.UISound.play("snap")
         saveStateForUndo()
@@ -351,20 +352,21 @@ class SpiderViewModel(
         checkCompletedRuns()
         checkAutocompleteState()
         checkStuckState()
+        return true
     }
 
-    fun doubleClickMove(card: Card, sourcePile: Pile) {
+    fun doubleClickMove(card: Card, sourcePile: Pile): Boolean {
         val currentState = _state.value
         val tableau = currentState.tableau
         val colIdx = tableau.indexOfFirst { it.id == sourcePile.id }
-        if (colIdx == -1) return
+        if (colIdx == -1) return false
         
         val col = tableau[colIdx]
         val cardIdx = col.cards.indexOfFirst { it.id == card.id }
-        if (cardIdx == -1) return
+        if (cardIdx == -1) return false
         
         val dragStack = col.cards.subList(cardIdx, col.cards.size)
-        if (!isValidDragSequence(dragStack)) return
+        if (!isValidDragSequence(dragStack)) return false
         
         var targetCol: Pile? = null
         
@@ -403,8 +405,9 @@ class SpiderViewModel(
         }
         
         if (targetCol != null) {
-            moveCards(dragStack, sourcePile, targetCol)
+            return moveCards(dragStack, sourcePile, targetCol)
         }
+        return false
     }
 
     private fun checkCompletedRuns() {
@@ -698,11 +701,11 @@ class SpiderViewModel(
         }
     }
 
-    fun undoLastAction() {
-        if (_state.value.hasWon) return
-        if (!undoStack.canUndo) return
+    fun undoLastAction(): Boolean {
+        if (_state.value.hasWon) return false
+        if (!undoStack.canUndo) return false
         
-        val previous = undoStack.pop() ?: return
+        val previous = undoStack.pop() ?: return false
         val currentTimer = _state.value.timerSeconds
         val currentActive = _state.value.isTimerActive
         _state.value = previous.copy(
@@ -713,5 +716,6 @@ class SpiderViewModel(
         checkWinState()
         checkAutocompleteState()
         checkStuckState()
+        return true
     }
 }

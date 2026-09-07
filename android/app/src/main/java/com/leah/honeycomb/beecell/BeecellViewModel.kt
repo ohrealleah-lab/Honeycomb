@@ -306,8 +306,8 @@ class BeecellViewModel(
         }
     }
     
-    fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile) {
-        if (!isValidMove(cards, targetPile)) return
+    fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile): Boolean {
+        if (!isValidMove(cards, targetPile)) return false
 
         saveStateForUndo()
         clearHint()
@@ -368,34 +368,33 @@ class BeecellViewModel(
         checkWinState()
         checkAutocompleteState()
         checkStuckState()
+        return true
     }
     
-    fun doubleClickMove(card: Card, sourcePile: Pile) {
-        if (sourcePile.topCard?.id != card.id) return
+    fun doubleClickMove(card: Card, sourcePile: Pile): Boolean {
+        if (sourcePile.topCard?.id != card.id) return false
         
         val foundations = _state.value.foundations
         for (f in foundations) {
             if (isValidMove(listOf(card), f)) {
-                moveCards(listOf(card), sourcePile, f)
-                return
+                return moveCards(listOf(card), sourcePile, f)
             }
         }
         
         val freeCells = _state.value.freeCells
         for (cell in freeCells) {
             if (cell.isEmpty && isValidMove(listOf(card), cell)) {
-                moveCards(listOf(card), sourcePile, cell)
-                return
+                return moveCards(listOf(card), sourcePile, cell)
             }
         }
         
         val tableau = _state.value.tableau
         for (col in tableau) {
             if (isValidMove(listOf(card), col)) {
-                moveCards(listOf(card), sourcePile, col)
-                return
+                return moveCards(listOf(card), sourcePile, col)
             }
         }
+        return false
     }
     
     private fun checkWinState() {

@@ -14,6 +14,9 @@ import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,6 +67,7 @@ fun VideoPokerBoard(
     val state by viewModel.state.collectAsState()
     val options by viewModel.options.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
 
     if (showQuitDialog) {
         AlertDialog(

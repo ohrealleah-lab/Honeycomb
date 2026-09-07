@@ -12,6 +12,9 @@ import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,6 +34,7 @@ fun BlackjackBoard(
     val language by com.leah.honeycomb.LocalAppContainer.current.language.collectAsState()
     val state by viewModel.state.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
     
     if (showQuitDialog) {
         AlertDialog(
@@ -163,12 +167,12 @@ fun BlackjackBoard(
                 // Controls
                 if (state.phase == BlackjackPhase.Betting || state.phase == BlackjackPhase.Result) {
                     if (state.phase == BlackjackPhase.Result) {
-                        Button(onClick = { viewModel.resetIfRoundOver() }) {
+                        Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.resetIfRoundOver() }) {
                             Text("New Bet")
                         }
                     }
                     if (viewModel.canRebuy) {
-                        Button(onClick = { viewModel.rebuy() }) {
+                        Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.rebuy() }) {
                             Text("Rebuy")
                         }
                     }
@@ -177,12 +181,12 @@ fun BlackjackBoard(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         if (!viewModel.isFreePlay) {
-                            Button(onClick = { viewModel.clearBet() }) { Text("Clear") }
-                            Button(onClick = { viewModel.addToBet(1) }) { Text("+1") }
-                            Button(onClick = { viewModel.addToBet(5) }) { Text("+5") }
-                            Button(onClick = { viewModel.doubleBet() }) { Text("x2") }
+                            Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.clearBet() }) { Text("Clear") }
+                            Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.addToBet(1) }) { Text("+1") }
+                            Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.addToBet(5) }) { Text("+5") }
+                            Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.doubleBet() }) { Text("x2") }
                         }
-                        Button(onClick = { viewModel.deal() }, enabled = (viewModel.isFreePlay || state.sessionCredits >= state.currentBet)) {
+                        Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.deal() }, enabled = (viewModel.isFreePlay || state.sessionCredits >= state.currentBet)) {
                             Text(if (state.phase == BlackjackPhase.Result) "Re-Deal" else "Deal") 
                         }
                     }
@@ -191,10 +195,10 @@ fun BlackjackBoard(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Button(onClick = { viewModel.hit() }, enabled = !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionHit, language)) }
-                        Button(onClick = { viewModel.stand() }, enabled = !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionStand, language)) }
-                        Button(onClick = { viewModel.doubleDown() }, enabled = viewModel.canDouble && !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionDouble, language)) }
-                        Button(onClick = { viewModel.split() }, enabled = viewModel.canSplit && !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionSplit, language)) }
+                        Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.hit() }, enabled = !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionHit, language)) }
+                        Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.stand() }, enabled = !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionStand, language)) }
+                        Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.doubleDown() }, enabled = viewModel.canDouble && !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionDouble, language)) }
+                        Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.split() }, enabled = viewModel.canSplit && !viewModel.isDealerBlackjackPending) { Text(com.leah.honeycomb.Strings.get(StringKey.TouchActionSplit, language)) }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))

@@ -442,8 +442,8 @@ class GameViewModel(
         }
     }
 
-    fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile) {
-        if (!isValidMove(cards, targetPile)) return
+    fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile): Boolean {
+        if (!isValidMove(cards, targetPile)) return false
         saveStateForUndo()
         clearHint()
         startTimerIfNeeded()
@@ -529,16 +529,17 @@ class GameViewModel(
         checkWinState()
         checkAutocompleteState()
         checkStuckState()
+        return true
     }
 
-    fun doubleClickMoveToFoundation(card: Card, sourcePile: Pile) {
-        if (sourcePile.topCard?.id != card.id) return
+    fun doubleClickMoveToFoundation(card: Card, sourcePile: Pile): Boolean {
+        if (sourcePile.topCard?.id != card.id) return false
         for (foundation in _state.value.foundations) {
             if (isValidMove(listOf(card), foundation)) {
-                moveCards(listOf(card), sourcePile, foundation)
-                break
+                return moveCards(listOf(card), sourcePile, foundation)
             }
         }
+        return false
     }
 
     private fun adjustScore(source: PileType, target: PileType, revealedFaceDownCard: Boolean) {

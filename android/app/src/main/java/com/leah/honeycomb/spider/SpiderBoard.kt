@@ -18,6 +18,9 @@ import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -78,6 +81,7 @@ fun SpiderBoard(
     }
 
     var dragState by remember { mutableStateOf(DragState()) }
+    val haptics = LocalHapticFeedback.current
     val pileFrames = remember { mutableStateMapOf<String, Rect>() }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -268,15 +272,15 @@ fun SpiderBoard(
                                                             launch {
                                                                 detectTapGestures(
                                                                     onTap = {},
-                                                                    onDoubleTap = { viewModel.doubleClickMove(card, pile) }
+                                                                    onDoubleTap = { viewModel.doubleClickMove(card, pile); haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                                 )
                                                             }
                                                             launch {
                                                                 if (viewModel.isValidDragSequence(stack)) {
                                                                     detectDragGestures(
-                                                                        onDragStart = { _ -> dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
+                                                                        onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
                                                                         onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                        onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel); dragState = DragState() },
+                                                                        onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
                                                                         onDragCancel = { dragState = DragState() }
                                                                     )
                                                                 }
@@ -359,7 +363,8 @@ fun SpiderBoard(
 private fun handleDragEnd(
     dragState: DragState,
     pileFrames: Map<String, Rect>,
-    viewModel: SpiderViewModel
+    viewModel: SpiderViewModel,
+    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback
 ) {
     if (dragState.cards.isEmpty() || dragState.sourcePile == null) return
     val releaseX = dragState.startPosition.x + dragState.offset.x + 40f

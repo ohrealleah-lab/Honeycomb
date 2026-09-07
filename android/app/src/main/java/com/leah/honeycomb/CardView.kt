@@ -7,6 +7,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +60,16 @@ fun CardView(
     isSelected: Boolean = false,
     pointPopupText: String? = null
 ) {
+    var flipTarget by remember { mutableFloatStateOf(if (card.faceUp) 0f else 180f) }
+    val flipDegrees by animateFloatAsState(
+        targetValue = flipTarget,
+        animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+    )
+
+    LaunchedEffect(card.faceUp) {
+        flipTarget = if (card.faceUp) 0f else 180f
+    }
+    val isPastFlipMidpoint = flipDegrees > 90f
     val theme = LocalSoliBeeTheme.current
     
     val outlineColor = if (theme.customCardColors.isEnabled) 
