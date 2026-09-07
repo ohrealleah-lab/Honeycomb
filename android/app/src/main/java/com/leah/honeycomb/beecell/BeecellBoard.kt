@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import com.leah.honeycomb.WinAnimationView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -219,33 +220,31 @@ fun BeecellBoard(
                                 if (!cell.isEmpty) {
                                     val card = cell.topCard!!
                                     val isDragging = dragState.cards.any { it.id == card.id }
-                                    if (!isDragging) {
-                                        var layoutPos by remember { mutableStateOf(Offset.Zero) }
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .onGloballyPositioned { layoutPos = it.positionInRoot() }
-                                                .pointerInput(card.id) {
-                                                    coroutineScope {
-                                                        launch {
-                                                            detectTapGestures(
-                                                                onTap = {},
-                                                                onDoubleTap = { if (viewModel.doubleClickMove(card, cell)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
-                                                            )
-                                                        }
-                                                        launch {
-                                                            detectDragGestures(
-                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), cell, layoutPos, Offset.Zero) },
-                                                                onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
-                                                                onDragCancel = { dragState = DragState() }
-                                                            )
-                                                        }
+                                    var layoutPos by remember { mutableStateOf(Offset.Zero) }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .onGloballyPositioned { layoutPos = it.positionInRoot() }
+                                            .pointerInput(card.id) {
+                                                coroutineScope {
+                                                    launch {
+                                                        detectTapGestures(
+                                                            onTap = {},
+                                                            onDoubleTap = { if (viewModel.doubleClickMove(card, cell)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                                        )
+                                                    }
+                                                    launch {
+                                                        detectDragGestures(
+                                                            onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), cell, layoutPos, Offset.Zero) },
+                                                            onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
+                                                            onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                            onDragCancel = { dragState = DragState() }
+                                                        )
                                                     }
                                                 }
-                                        ) {
-                                            CardView(card = card, modifier = Modifier.fillMaxSize())
-                                        }
+                                            }
+                                    ) {
+                                        CardView(card = card, modifier = Modifier.fillMaxSize().alpha(if (isDragging) 0f else 1f))
                                     }
                                 }
                             }
@@ -287,37 +286,35 @@ fun BeecellBoard(
                                     val currentY = runningY
                                     val stack = pile.cards.subList(i, pile.cards.size)
                                     val isDragging = dragState.cards.any { it.id == card.id }
-                                    
-                                    if (!isDragging) {
-                                        var layoutPos by remember { mutableStateOf(Offset.Zero) }
-                                        Box(
-                                            modifier = Modifier
-                                                .offset(y = currentY)
-                                                .zIndex(i.toFloat())
-                                                .onGloballyPositioned { layoutPos = it.positionInRoot() }
-                                                .pointerInput(card.id) {
-                                                    coroutineScope {
-                                                        launch {
-                                                            detectTapGestures(
-                                                                onTap = {},
-                                                                onDoubleTap = { if (viewModel.doubleClickMove(card, pile)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                    var layoutPos by remember { mutableStateOf(Offset.Zero) }
+                                    Box(
+                                        modifier = Modifier
+                                            .offset(y = currentY)
+                                            .size(cardW, cardH)
+                                            .zIndex(i.toFloat())
+                                            .onGloballyPositioned { layoutPos = it.positionInRoot() }
+                                            .pointerInput(card.id) {
+                                                coroutineScope {
+                                                    launch {
+                                                        detectTapGestures(
+                                                            onTap = {},
+                                                            onDoubleTap = { if (viewModel.doubleClickMove(card, pile)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                                        )
+                                                    }
+                                                    launch {
+                                                        if (viewModel.isValidDragSequence(stack)) {
+                                                            detectDragGestures(
+                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
+                                                                onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
+                                                                onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                                onDragCancel = { dragState = DragState() }
                                                             )
-                                                        }
-                                                        launch {
-                                                            if (viewModel.isValidDragSequence(stack)) {
-                                                                detectDragGestures(
-                                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
-                                                                    onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
-                                                                    onDragCancel = { dragState = DragState() }
-                                                                )
-                                                            }
                                                         }
                                                     }
                                                 }
-                                        ) {
-                                            CardView(card = card, modifier = Modifier.size(cardW, cardH))
-                                        }
+                                            }
+                                    ) {
+                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f))
                                     }
                                     runningY += downStep
                                 }

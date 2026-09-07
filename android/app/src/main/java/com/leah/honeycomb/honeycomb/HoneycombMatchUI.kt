@@ -480,6 +480,8 @@ fun HoneycombMatchUI(
             }
         }
 
+        }
+
         // Overlay for dragged card
         draggedCardInfo?.let { info ->
             Box(
@@ -494,15 +496,15 @@ fun HoneycombMatchUI(
                         with(LocalDensity.current) { info.size.width.toDp() },
                         with(LocalDensity.current) { info.size.height.toDp() }
                     )
+                    .zIndex(500f)
             ) {
                 HoneycombCardView(
                     card = info.card,
                     isFlipped = false,
-                    modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = info.card.id.toString()), animatedVisibilityScope = animatedVisibilityScope)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
-    }
         }
     }
 }
@@ -803,7 +805,7 @@ private fun SharedTransitionScope.PlayerHandCard(animatedVisibilityScope: Animat
             }
     ) {
         if (draggedIndex != index) {
-            HoneycombCardView(card = card, isFlipped = false, modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id.toString()), animatedVisibilityScope = animatedVisibilityScope))
+            HoneycombCardView(card = card, isFlipped = false, modifier = Modifier.fillMaxSize())
         }
     }
 }

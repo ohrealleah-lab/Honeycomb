@@ -26,6 +26,7 @@ import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -275,42 +276,34 @@ fun KlondikeBoard(
                                     .offset(x = fanStep * i)
                                     .zIndex(i.toFloat())
                                 ) {
-                                    if (dragState.cards.any { it.id == card.id }) {
-                                        // Hide card if dragged
-                                    } else {
-                                        var layoutPos by remember { mutableStateOf(Offset.Zero) }
-                                        Box(
-                                            modifier = Modifier
-                                                .onGloballyPositioned { layoutPos = it.positionInRoot() }
-                                                // Single pointerInput block: drag and double-tap detection run as two
-                                                // coroutines launched inside the SAME PointerInputScope (not two separate
-                                                // .pointerInput modifiers, which each independently process the raw
-                                                // pointer stream and can race on consumption). onTap is a required no-op
-                                                // pairing for onDoubleTap so Compose can locally disambiguate 1-vs-2 taps
-                                                // on this node instead of a bare double-tap detector misbehaving.
-                                                .pointerInput(card.id) {
-                                                    if (isTop) {
-                                                        coroutineScope {
-                                                            launch {
-                                                                detectTapGestures(
-                                                                    onTap = {},
-                                                                    onDoubleTap = { if (viewModel.doubleClickMoveToFoundation(card, state.waste)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
-                                                                )
-                                                            }
-                                                            launch {
-                                                                detectDragGestures(
-                                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), state.waste, layoutPos, Offset.Zero) },
-                                                                    onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
-                                                                    onDragCancel = { dragState = DragState() }
-                                                                )
-                                                            }
+                                    val isDragging = dragState.cards.any { it.id == card.id }
+                                    var layoutPos by remember { mutableStateOf(Offset.Zero) }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(cardW, cardH)
+                                            .onGloballyPositioned { layoutPos = it.positionInRoot() }
+                                            .pointerInput(card.id) {
+                                                if (isTop) {
+                                                    coroutineScope {
+                                                        launch {
+                                                            detectTapGestures(
+                                                                onTap = {},
+                                                                onDoubleTap = { if (viewModel.doubleClickMoveToFoundation(card, state.waste)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                                            )
+                                                        }
+                                                        launch {
+                                                            detectDragGestures(
+                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), state.waste, layoutPos, Offset.Zero) },
+                                                                onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
+                                                                onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                                onDragCancel = { dragState = DragState() }
+                                                            )
                                                         }
                                                     }
                                                 }
-                                        ) {
-                                            CardView(card = card, modifier = Modifier.size(cardW, cardH))
-                                        }
+                                            }
+                                    ) {
+                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f))
                                     }
                                 }
                             }
@@ -327,24 +320,22 @@ fun KlondikeBoard(
                                 Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.2f)))
                                 val topCard = pile.cards.lastOrNull()
                                 if (topCard != null) {
-                                    if (dragState.cards.any { it.id == topCard.id }) {
-                                        // hidden
-                                    } else {
-                                        var layoutPos by remember { mutableStateOf(Offset.Zero) }
-                                        Box(
-                                            modifier = Modifier
-                                                .onGloballyPositioned { layoutPos = it.positionInRoot() }
-                                                .pointerInput(topCard.id) {
-                                                    detectDragGestures(
-                                                        onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(topCard), pile, layoutPos, Offset.Zero) },
-                                                        onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                        onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
-                                                        onDragCancel = { dragState = DragState() }
-                                                    )
-                                                }
-                                        ) {
-                                            CardView(card = topCard, modifier = Modifier.size(cardW, cardH))
-                                        }
+                                    val isDragging = dragState.cards.any { it.id == topCard.id }
+                                    var layoutPos by remember { mutableStateOf(Offset.Zero) }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(cardW, cardH)
+                                            .onGloballyPositioned { layoutPos = it.positionInRoot() }
+                                            .pointerInput(topCard.id) {
+                                                detectDragGestures(
+                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(topCard), pile, layoutPos, Offset.Zero) },
+                                                    onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
+                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                    onDragCancel = { dragState = DragState() }
+                                                )
+                                            }
+                                    ) {
+                                        CardView(card = topCard, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f))
                                     }
                                 }
                             }
@@ -368,38 +359,36 @@ fun KlondikeBoard(
                                 pile.cards.forEachIndexed { i, card ->
                                     val currentY = runningY
                                     val stack = pile.cards.subList(i, pile.cards.size)
-                                    if (dragState.cards.any { it.id == card.id }) {
-                                        // hidden
-                                    } else {
-                                        var layoutPos by remember { mutableStateOf(Offset.Zero) }
-                                        Box(
-                                            modifier = Modifier
-                                                .offset(y = currentY)
-                                                .zIndex(i.toFloat())
-                                                .onGloballyPositioned { layoutPos = it.positionInRoot() }
-                                                .pointerInput(card.id) {
-                                                    if (card.faceUp) {
-                                                        coroutineScope {
-                                                            launch {
-                                                                detectTapGestures(
-                                                                    onTap = {},
-                                                                    onDoubleTap = { if (viewModel.doubleClickMoveToFoundation(card, pile)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
-                                                                )
-                                                            }
-                                                            launch {
-                                                                detectDragGestures(
-                                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
-                                                                    onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
-                                                                    onDragCancel = { dragState = DragState() }
-                                                                )
-                                                            }
+                                    val isDragging = dragState.cards.any { it.id == card.id }
+                                    var layoutPos by remember { mutableStateOf(Offset.Zero) }
+                                    Box(
+                                        modifier = Modifier
+                                            .offset(y = currentY)
+                                            .size(cardW, cardH)
+                                            .zIndex(i.toFloat())
+                                            .onGloballyPositioned { layoutPos = it.positionInRoot() }
+                                            .pointerInput(card.id) {
+                                                if (card.faceUp) {
+                                                    coroutineScope {
+                                                        launch {
+                                                            detectTapGestures(
+                                                                onTap = {},
+                                                                onDoubleTap = { if (viewModel.doubleClickMoveToFoundation(card, pile)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                                            )
+                                                        }
+                                                        launch {
+                                                            detectDragGestures(
+                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
+                                                                onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
+                                                                onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                                onDragCancel = { dragState = DragState() }
+                                                            )
                                                         }
                                                     }
                                                 }
-                                        ) {
-                                            CardView(card = card, modifier = Modifier.size(cardW, cardH))
-                                        }
+                                            }
+                                    ) {
+                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f))
                                     }
                                     runningY += if (card.faceUp) upStep else downStep
                                 }
