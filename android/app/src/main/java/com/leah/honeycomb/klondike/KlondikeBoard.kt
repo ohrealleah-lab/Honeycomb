@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
@@ -423,10 +424,19 @@ fun KlondikeBoard(
         }
         
         // Banners
-        if (isAutocompleteAvailable && !state.hasWon) {
+        var autocompleteDismissed by remember { mutableStateOf(false) }
+        LaunchedEffect(isAutocompleteAvailable) {
+            if (!isAutocompleteAvailable) autocompleteDismissed = false
+        }
+        if (isAutocompleteAvailable && !state.hasWon && !autocompleteDismissed) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
                 Card {
                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            IconButton(onClick = { autocompleteDismissed = true }) {
+                                Icon(Icons.Default.Close, contentDescription = "Dismiss")
+                            }
+                        }
                         Text("Victory Guaranteed!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = { viewModel.runAutocomplete() }) { Text("Auto-complete") }

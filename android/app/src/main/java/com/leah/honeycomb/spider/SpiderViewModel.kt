@@ -304,6 +304,19 @@ class SpiderViewModel(
         gameTimer.stop(onSetActive = { active -> _state.update { it.copy(isTimerActive = active) } })
     }
 
+    // Reacts to No Stress Mode toggling mid-game — only starts/stops the timer, never
+    // touches the board. Matches Klondike's reactToNoStressModeChange / Swift's original.
+    fun reactToNoStressModeChange() {
+        if (!sharedOptions.noStressMode.value) {
+            if (_state.value.movesCount > 0 && !_state.value.hasWon) {
+                startTimerIfNeeded()
+            }
+        } else if (_state.value.isTimerActive) {
+            stopTimer()
+            _state.update { it.copy(timerSeconds = 0) }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         stopTimer()

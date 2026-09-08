@@ -27,7 +27,7 @@ fun KlondikeOptionsSheet(
     val language by appContainer.language.collectAsState()
 
     DisposableEffect(viewModel) {
-        sharedOptions.onNoStressModeChange = { viewModel.startNewGame() }
+        sharedOptions.onNoStressModeChange = { viewModel.reactToNoStressModeChange() }
         onDispose { sharedOptions.onNoStressModeChange = null }
     }
 

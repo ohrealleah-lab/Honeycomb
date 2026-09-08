@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -23,7 +24,13 @@ fun SpiderOptionsScreen(
 ) {
     val options by viewModel.options.collectAsState()
     val appContainer = LocalAppContainer.current
+    val sharedOptions = appContainer.sharedOptions
     val language by appContainer.language.collectAsState()
+
+    DisposableEffect(viewModel) {
+        sharedOptions.onNoStressModeChange = { viewModel.reactToNoStressModeChange() }
+        onDispose { sharedOptions.onNoStressModeChange = null }
+    }
 
     OptionsFullScreenView(
         title = Strings.get(StringKey.Options, language),

@@ -26,6 +26,7 @@ import com.leah.honeycomb.WinDetection
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -48,14 +49,16 @@ class GameViewModel(
         // what the score even means) — unrelated settings like Draw Mode or Timed Match
         // must not discard an in-progress game. Matches Swift's handleOptionsChanged.
         if (newOptions.isVegasScoring != oldOptions.isVegasScoring) {
-            if (newOptions.isVegasScoring) {
-                _highScore.value = com.leah.honeycomb.PreferencesHelper.getObjectSync(
-                    dataStore, "high_score_vegas", kotlinx.serialization.serializer(), -5200
-                )
-            } else {
-                _highScore.value = com.leah.honeycomb.PreferencesHelper.getObjectSync(
-                    dataStore, "high_score", kotlinx.serialization.serializer(), 0
-                )
+            viewModelScope.launch {
+                _highScore.value = if (newOptions.isVegasScoring) {
+                    com.leah.honeycomb.PreferencesHelper.getObject(
+                        dataStore, "high_score_vegas", kotlinx.serialization.serializer(), -5200
+                    ).first()
+                } else {
+                    com.leah.honeycomb.PreferencesHelper.getObject(
+                        dataStore, "high_score", kotlinx.serialization.serializer(), 0
+                    ).first()
+                }
             }
             _vegasBankroll.value = 0
             startNewGame(countAsNewGame = false)
@@ -199,12 +202,12 @@ class GameViewModel(
         return hint.copy(description = prefix + hint.description)
     }
 
-    private fun isSafeFoundationMove(card: Card): Boolean {
+    private fun isSafeFoundationMove(card: Card, foundations: List<Pile>): Boolean {
         if (card.rank <= 2) return true
         val isRed = card.suit == Suit.Hearts || card.suit == Suit.Diamonds
         val reqRank = card.rank - 1
         var safeCount = 0
-        for (foundation in _state.value.foundations) {
+        for (foundation in foundations) {
             val top = foundation.topCard
             if (top != null) {
                 val topIsRed = top.suit == Suit.Hearts || top.suit == Suit.Diamonds
@@ -217,15 +220,15 @@ class GameViewModel(
     // Ported from evaluateImmediateMoves(depth:) — depth 0 does the real 1-ply lookahead
     // (mutate a copy of state, recurse at depth 1, discount the best follow-up score by
     // 0.8, restore state); depth 1 is just the base scored-candidate list, no recursion.
-    private fun evaluateImmediateMoves(depth: Int = 0): List<Pair<HintMove, Int>> {
-        val st = _state.value
+    private fun evaluateImmediateMoves(depth: Int = 0, stateOverride: GameState? = null): List<Pair<HintMove, Int>> {
+        val st = stateOverride ?: _state.value
         var scored = mutableListOf<Pair<HintMove, Int>>()
 
         val topWaste = st.waste.topCard
         if (topWaste != null) {
             for (foundation in st.foundations) {
                 if (isValidMove(listOf(topWaste), foundation)) {
-                    val score = if (isSafeFoundationMove(topWaste)) 1000 else 200
+                    val score = if (isSafeFoundationMove(topWaste, st.foundations)) 1000 else 200
                     scored.add(HintMove(topWaste, st.waste.id, foundation.id, "Move ${topWaste.rankString}${topWaste.suit.symbol} from Waste to Foundation.") to score)
                 }
             }
@@ -234,7 +237,7 @@ class GameViewModel(
             val top = col.topCard ?: continue
             for (foundation in st.foundations) {
                 if (isValidMove(listOf(top), foundation)) {
-                    val score = if (isSafeFoundationMove(top)) 1000 else 200
+                    val score = if (isSafeFoundationMove(top, st.foundations)) 1000 else 200
                     scored.add(HintMove(top, col.id, foundation.id, "Move ${top.rankString}${top.suit.symbol} to Foundation.") to score)
                 }
             }
@@ -258,7 +261,7 @@ class GameViewModel(
                 for (targetCol in st.tableau) {
                     if (targetCol.id == col.id) continue
                     if (!isValidMove(dragStack, targetCol)) continue
-                    if (!isProgressiveMove(dragStack, col, targetCol)) continue
+                    if (!isProgressiveMove(dragStack, col, targetCol, st.tableau, st.foundations)) continue
 
                     val emptiesColumn = startIdx == 0
                     val revealsHidden = startIdx == firstFaceUpIdx && firstFaceUpIdx > 0
@@ -348,9 +351,7 @@ class GameViewModel(
                     } else working
                 }
 
-                _state.value = working
-                val nextLevel = evaluateImmediateMoves(depth = 1)
-                _state.value = originalState
+                val nextLevel = evaluateImmediateMoves(depth = 1, stateOverride = working)
 
                 val bestNext = nextLevel.maxByOrNull { it.second }
                 if (bestNext != null) {
@@ -410,6 +411,19 @@ class GameViewModel(
 
     fun stopTimer() {
         gameTimer.stop(onSetActive = { active -> _state.update { it.copy(isTimerActive = active) } })
+    }
+
+    // Reacts to No Stress Mode toggling mid-game — only starts/stops the timer, never
+    // touches the board. Matches Swift's reactToNoStressModeChange.
+    fun reactToNoStressModeChange() {
+        if (!sharedOptions.noStressMode.value) {
+            if (_state.value.movesCount > 0 && !_state.value.hasWon) {
+                startTimerIfNeeded()
+            }
+        } else if (_state.value.isTimerActive) {
+            stopTimer()
+            _state.update { it.copy(timerSeconds = 0) }
+        }
     }
 
     override fun onCleared() {
@@ -963,16 +977,22 @@ class GameViewModel(
         return reachable.any { card -> targets.any { isValidMove(listOf(card), it) } }
     }
 
-    private fun isProgressiveMove(cards: List<Card>, source: Pile, target: Pile): Boolean {
+    private fun isProgressiveMove(
+        cards: List<Card>,
+        source: Pile,
+        target: Pile,
+        tableau: List<Pile> = _state.value.tableau,
+        foundations: List<Pile> = _state.value.foundations
+    ): Boolean {
         if (target.type == PileType.Foundation) return true
         if (source.type == PileType.Waste) return true
         if (source.type == PileType.Tableau) {
-            val col = _state.value.tableau.find { it.id == source.id } ?: return false
+            val col = tableau.find { it.id == source.id } ?: return false
             val remainingCount = col.cards.size - cards.size
             if (remainingCount == 0) return !target.isEmpty
             val exposedCard = col.cards[remainingCount - 1]
             if (!exposedCard.faceUp) return true
-            if (_state.value.foundations.any { isValidMove(listOf(exposedCard), it) }) return true
+            if (foundations.any { isValidMove(listOf(exposedCard), it) }) return true
         }
         return false
     }
