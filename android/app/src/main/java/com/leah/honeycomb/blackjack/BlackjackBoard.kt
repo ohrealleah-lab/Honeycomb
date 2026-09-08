@@ -120,7 +120,7 @@ fun BlackjackBoard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row {
-                    IconButton(onClick = onMenuTap) {
+                    IconButton(onClick = { if (!viewModel.canOpenOptions) showQuitDialog = true else onMenuTap() }) {
                         Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
                     }
                     IconButton(onClick = onOptions) {

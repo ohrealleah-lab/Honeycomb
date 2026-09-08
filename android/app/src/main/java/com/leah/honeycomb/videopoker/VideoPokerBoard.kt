@@ -177,7 +177,7 @@ fun VideoPokerBoard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row {
-                    IconButton(onClick = onMenuTap) {
+                    IconButton(onClick = { if (state.phase == VideoPokerPhase.Holding) showQuitDialog = true else onMenuTap() }) {
                         Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
                     }
                     IconButton(onClick = onOptions) {
@@ -202,7 +202,7 @@ fun VideoPokerBoard(
                 }
             } else if (state.phase == VideoPokerPhase.Holding) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("Tap cards to hold, then Draw", color = Color.White, fontSize = 16.sp)
+                    Text(com.leah.honeycomb.Strings.get(StringKey.TapHoldDrawHint, language), color = Color.White, fontSize = 16.sp)
                 }
             }
         }
