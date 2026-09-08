@@ -707,4 +707,5 @@ enum class StringKey {
     StatShortestWinTime,
     StatTotalPaidOut,
     StatBiggestPayout,
+    BeecellStatisticsTitle,
 }

@@ -722,6 +722,7 @@ public static class Strings
         [StringKey.StatShortestWinTime] = "Shortest Win Time",
         [StringKey.StatTotalPaidOut] = "Total Paid Out",
         [StringKey.StatBiggestPayout] = "Biggest Payout",
+        [StringKey.BeecellStatisticsTitle] = "Beecell Statistics",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1428,5 +1429,6 @@ public static class Strings
         [StringKey.StatShortestWinTime] = "Tiempo Más Corto de Victoria",
         [StringKey.StatTotalPaidOut] = "Total Pagado",
         [StringKey.StatBiggestPayout] = "Mayor Pago",
+        [StringKey.BeecellStatisticsTitle] = "Estadísticas de Beecell",
     };
 }

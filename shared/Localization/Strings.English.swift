@@ -706,5 +706,6 @@ enum StringsEnglish {
         .statShortestWinTime: "Shortest Win Time",
         .statTotalPaidOut: "Total Paid Out",
         .statBiggestPayout: "Biggest Payout",
+        .beecellStatisticsTitle: "Beecell Statistics",
     ]
 }

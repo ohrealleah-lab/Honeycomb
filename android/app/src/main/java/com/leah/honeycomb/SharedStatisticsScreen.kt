@@ -22,14 +22,14 @@ fun formatSeconds(totalSeconds: Int): String {
 // Mirrors SwitchOptionRow/NavigationRow's shape — a plain label/value pair, no
 // interaction, meant to sit inside a RoundedContainer just like the options rows.
 @Composable
-fun StatRow(label: String, value: String) {
+fun StatRow(label: String, value: String, valueColor: Color = Color.Unspecified) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
-        Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = valueColor)
     }
 }
 

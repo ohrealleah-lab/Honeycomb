@@ -711,4 +711,5 @@ public enum StringKey
     StatShortestWinTime,
     StatTotalPaidOut,
     StatBiggestPayout,
+    BeecellStatisticsTitle,
 }

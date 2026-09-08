@@ -1410,4 +1410,6 @@ public enum StringKey: String, CaseIterable {
     case statTotalPaidOut = "stat_total_paid_out"
     /// Stat row label, Blackjack/Video Poker
     case statBiggestPayout = "stat_biggest_payout"
+    /// Stats screen title for Beecell
+    case beecellStatisticsTitle = "beecell_statistics_title"
 }

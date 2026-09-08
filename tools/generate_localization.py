@@ -215,6 +215,14 @@ def write_cs_strings(rows: list[dict], path: Path) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+
+def kt_escape(s: str) -> str:
+    s = s.replace('\\', '\\\\')
+    s = s.replace('"', '\\"')
+    s = s.replace('\n', '\\n')
+    s = s.replace('$', '\\$')
+    return s
+
 def write_kt_key(rows: list[dict], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -252,12 +260,12 @@ def write_kt_strings(rows: list[dict], path: Path) -> None:
         "    private val English = mapOf(",
     ]
     for row in rows:
-        lines.append(f'        StringKey.{snake_to_pascal(row["key"])} to "{cs_escape(row["english"])}",')
+        lines.append(f'        StringKey.{snake_to_pascal(row["key"])} to "{kt_escape(row["english"])}",')
     lines.append("    )")
     lines.append("")
     lines.append("    private val Spanish = mapOf(")
     for row in rows:
-        lines.append(f'        StringKey.{snake_to_pascal(row["key"])} to "{cs_escape(row["spanish"])}",')
+        lines.append(f'        StringKey.{snake_to_pascal(row["key"])} to "{kt_escape(row["spanish"])}",')
     lines.append("    )")
     lines.append("}")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
