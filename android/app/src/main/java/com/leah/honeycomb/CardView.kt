@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -238,26 +240,18 @@ fun CardCenterSuitView(card: Card, suitColor: Color, modifier: Modifier = Modifi
     }
 
     // Default Face Rendering
-    if (card.rank == 1) {
-        Text(text = card.suit.symbol, color = suitColor, fontSize = 52.sp, modifier = modifier)
-    } else if (card.isFaceCard) {
-        // Draw the default face art image instead of just text
-        val drawableId = when (card.rank) {
-            11 -> if (card.isRed) R.drawable.face_red_j else R.drawable.face_j
-            12 -> if (card.isRed) R.drawable.face_red_q else R.drawable.face_q
-            13 -> if (card.isRed) R.drawable.face_red_k else R.drawable.face_k
-            else -> 0
-        }
-        if (drawableId != 0) {
-            Image(
-                painter = painterResource(id = drawableId),
-                contentDescription = null,
-                modifier = modifier.fillMaxSize(0.55f),
-                contentScale = ContentScale.Fit
-            )
-        } else {
-            Text(text = card.rankString, color = suitColor, fontSize = 48.sp, modifier = modifier)
-        }
+    if (card.rank == 1 || card.isFaceCard) {
+        val marckScriptFont = FontFamily(Font(R.font.marckscript))
+        val baseSize = CardDimensions.width.value * 0.56f
+        val fontSize = if (card.rank == 12) (baseSize * 1.1875f).sp else baseSize.sp
+        
+        Text(
+            text = card.rankString,
+            color = suitColor,
+            fontFamily = marckScriptFont,
+            fontSize = fontSize,
+            modifier = modifier
+        )
     } else {
         Box(modifier = modifier.size(86.dp, 138.dp)) {
             val positions = suitPositions[card.rank] ?: emptyList()
