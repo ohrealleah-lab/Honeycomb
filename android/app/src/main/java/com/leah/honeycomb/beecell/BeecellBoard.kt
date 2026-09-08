@@ -209,7 +209,19 @@ fun BeecellBoard(
             BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
             val config = LocalConfiguration.current
             val screenWidth = config.screenWidthDp.dp
-            val cardW = ((maxWidth.value - 32f) / 8f).coerceAtMost(90f).dp
+            val baseCardW = ((maxWidth.value - 32f) / 8f).coerceAtMost(90f)
+            val baseCardH = baseCardW * 1.4f
+            
+            val stepTest = baseCardH * 0.24f
+            val deepestTableau = state.tableau.maxOfOrNull { pile ->
+                if (pile.cards.isEmpty()) return@maxOfOrNull baseCardH
+                (pile.cards.size - 1) * stepTest + baseCardH
+            } ?: baseCardH
+            
+            val neededHeight = baseCardH + 16f + deepestTableau + 20f
+            val heightShrink = if (neededHeight > maxHeight.value) maxHeight.value / neededHeight else 1.0f
+            
+            val cardW = (baseCardW * heightShrink).dp
             val cardH = cardW * 1.4f
             val downStep = cardH * 0.24f
             activeCardW = cardW

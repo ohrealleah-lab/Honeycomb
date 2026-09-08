@@ -232,7 +232,24 @@ fun SpiderBoard(
             val screenWidth = config.screenWidthDp.dp
             // We have 10 columns in Spider, need to fit them in width
             // 9 gaps of 4.dp = 36dp. Plus 4dp total horizontal padding = 40dp.
-            val cardW = ((maxWidth.value - 40f) / 10f).coerceAtMost(90f).dp
+            val baseCardW = ((maxWidth.value - 40f) / 10f).coerceAtMost(90f)
+            val baseCardH = baseCardW * 1.4f
+            
+            val upStepTest = baseCardH * 0.24f
+            val downStepTest = baseCardH * 0.12f
+            val deepestTableau = state.tableau.maxOfOrNull { pile ->
+                if (pile.cards.isEmpty()) return@maxOfOrNull baseCardH
+                var running = 0f
+                for (i in 0 until pile.cards.size - 1) {
+                    running += if (pile.cards[i].faceUp) upStepTest else downStepTest
+                }
+                running + baseCardH
+            } ?: baseCardH
+            
+            val neededHeight = baseCardH + 16f + deepestTableau + 20f
+            val heightShrink = if (neededHeight > maxHeight.value) maxHeight.value / neededHeight else 1.0f
+            
+            val cardW = (baseCardW * heightShrink).dp
             activeCardW = cardW
             val cardH = cardW * 1.4f
             val downStep = cardH * 0.12f
