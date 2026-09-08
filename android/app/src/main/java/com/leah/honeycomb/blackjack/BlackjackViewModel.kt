@@ -194,7 +194,8 @@ class BlackjackViewModel(
         if (s.playerHands[s.activeHandIndex].isSplitAce) return
         
         val card = popCard(faceUp = true) ?: return
-        
+        com.leah.honeycomb.audio.UISound.play("snap")
+
         val hands = s.playerHands.toMutableList()
         val hand = hands[s.activeHandIndex]
         hands[s.activeHandIndex] = hand.copy(cards = hand.cards + card)
@@ -231,7 +232,8 @@ class BlackjackViewModel(
         persistStatistics()
 
         val card = popCard(faceUp = true) ?: return
-        
+        com.leah.honeycomb.audio.UISound.play("snap")
+
         val hands = s.playerHands.toMutableList()
         hands[s.activeHandIndex] = hand.copy(
             bet = hand.bet * 2,
@@ -268,6 +270,7 @@ class BlackjackViewModel(
         
         val extra0 = popCard(faceUp = true) ?: card0
         val extra1 = popCard(faceUp = true) ?: card1
+        com.leah.honeycomb.audio.UISound.play("snap")
         
         val hand0 = BlackjackHand(cards = listOf(card0, extra0), bet = originalBet, isSplitAce = isAces)
         val hand1 = BlackjackHand(cards = listOf(card1, extra1), bet = originalBet, isSplitAce = isAces)
@@ -349,6 +352,7 @@ class BlackjackViewModel(
         
         while (BlackjackState.handValue(_state.value.dealerCards) < 17) {
             val card = popCard(faceUp = true) ?: break
+            com.leah.honeycomb.audio.UISound.play("snap")
             val currentDealerCards = _state.value.dealerCards.toMutableList()
             currentDealerCards.add(card)
             _state.value = _state.value.copy(dealerCards = currentDealerCards)
