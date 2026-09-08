@@ -37,7 +37,7 @@ fun HoneycombRulesScreen(viewModel: HoneycombViewModel, onBack: () -> Unit) {
         }
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            items(HoneycombRuleRowID.allCases) { id ->
+            items(HoneycombRuleRowID.allCases, key = { it }) { id ->
                 val label = when (id) {
                     is HoneycombRuleRowID.NormalMode -> Strings.get(StringKey.ForceNormalRulesToggle, language)
                     is HoneycombRuleRowID.Rule -> id.rule.displayName

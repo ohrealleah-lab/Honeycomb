@@ -349,8 +349,14 @@ fun HoneycombMatchUI(
 
                 if (state.showPostGamePrompt) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val resultTitle = when (state.matchOutcome) {
+                            HoneycombMatchOutcome.Win -> Strings.get(StringKey.YouWin, language)
+                            HoneycombMatchOutcome.Loss -> Strings.get(StringKey.YouLose, language)
+                            HoneycombMatchOutcome.Draw -> Strings.get(StringKey.TieResult, language)
+                            else -> state.matchResult
+                        }
                         Text(
-                            state.matchResult,
+                            resultTitle,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )

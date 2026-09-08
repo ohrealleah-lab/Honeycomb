@@ -78,7 +78,7 @@ fun HoneycombDecksScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(unlockedIds.toList().sorted()) { cardId ->
+                    items(unlockedIds.toList().sorted(), key = { it }) { cardId ->
                         val cardData = database.card(cardId) ?: return@items
                         val isSelected = selectedCardIds.contains(cardId)
                         Box(
