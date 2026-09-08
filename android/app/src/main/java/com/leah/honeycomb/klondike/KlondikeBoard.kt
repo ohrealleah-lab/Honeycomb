@@ -154,53 +154,57 @@ fun KlondikeBoard(
             
             Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
                 // Top Bar
-                Row(
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row {
-                        IconButton(onClick = onMenuTap) {
-                            Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
+                Box(modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row {
+                            IconButton(onClick = onMenuTap) {
+                                Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
+                            }
+                            IconButton(onClick = onOptionsTap) {
+                                Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
+                            }
+                            IconButton(onClick = onThemesTap) {
+                                Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
+                            }
                         }
-                        IconButton(onClick = onOptionsTap) {
-                            Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
-                        }
-                        IconButton(onClick = onThemesTap) {
-                            Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
-                        }
-                    }
 
-                    if (isLandscape) {
-                        scoreCapsule()
-                    } else {
                         Spacer(modifier = Modifier.weight(1f))
-                    }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = { viewModel.undoLastAction() },
-                            enabled = viewModel.canUndo
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
-                        }
-                        IconButton(onClick = { viewModel.findHint() }) {
-                            Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .background(Color(0xFF2196F3), CircleShape)
-                                .clickable {
-                                    if (state.movesCount == 0) viewModel.startNewGame()
-                                    else showQuitConfirm = true
-                                }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "New", tint = Color.White, modifier = Modifier.size(16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = { viewModel.undoLastAction() },
+                                enabled = viewModel.canUndo
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
+                            }
+                            IconButton(onClick = { viewModel.findHint() }) {
+                                Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
+                            }
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("New", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .background(Color(0xFF2196F3), CircleShape)
+                                    .clickable {
+                                        if (state.movesCount == 0) viewModel.startNewGame()
+                                        else showQuitConfirm = true
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = "New", tint = Color.White, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("New", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                    
+                    if (isLandscape) {
+                        Box(modifier = Modifier.align(Alignment.Center)) {
+                            scoreCapsule()
                         }
                     }
                 }

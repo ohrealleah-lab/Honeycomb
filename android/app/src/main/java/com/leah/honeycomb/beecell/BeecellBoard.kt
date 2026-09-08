@@ -146,53 +146,56 @@ fun BeecellBoard(
         
         Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
             // Top Bar
-            Row(
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row {
-                    IconButton(onClick = onMenuTap) {
-                        Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
+            Box(modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row {
+                        IconButton(onClick = onMenuTap) {
+                            Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
+                        }
+                        IconButton(onClick = onOptions) {
+                            Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
+                        }
+                        IconButton(onClick = onThemes) {
+                            Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
+                        }
                     }
-                    IconButton(onClick = onOptions) {
-                        Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
-                    }
-                    IconButton(onClick = onThemes) {
-                        Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
-                    }
-                }
 
-                if (isLandscape) {
-                    scoreCapsule()
-                } else {
                     Spacer(modifier = Modifier.weight(1f))
-                }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { viewModel.undoLastAction() },
-                        enabled = viewModel.canUndo
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
-                    }
-                    IconButton(onClick = { viewModel.findHint() }) {
-                        Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .background(Color(0xFF2196F3), CircleShape)
-                            .clickable {
-                                if (state.movesCount == 0) viewModel.startNewGame()
-                                else showQuitDialog = true
-                            }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "New", tint = Color.White, modifier = Modifier.size(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { viewModel.undoLastAction() },
+                            enabled = viewModel.canUndo
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
+                        }
+                        IconButton(onClick = { viewModel.findHint() }) {
+                            Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
+                        }
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("New", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(Color(0xFF2196F3), CircleShape)
+                                .clickable {
+                                    if (state.movesCount == 0) viewModel.startNewGame()
+                                    else showQuitDialog = true
+                                }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "New", tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("New", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
+                }
+                if (isLandscape) {
+                    Box(modifier = Modifier.align(Alignment.Center)) {
+                        scoreCapsule()
                     }
                 }
             }
@@ -212,62 +215,56 @@ fun BeecellBoard(
 
             Column(modifier = Modifier.padding(top = 8.dp)) {
                 // Top Row: Free Cells on left, Foundations on right
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    // Free Cells
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        state.freeCells.forEach { cell ->
-                            Box(modifier = Modifier
-                                .size(cardW, cardH)
-                                .onGloballyPositioned { pileFrames[cell.id] = it.boundsInRoot() }
-                                .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-                                .hintHighlight(isHighlighted = cell.id == hintSourceId || cell.id == hintTargetId, cornerRadius = 4.dp)
-                            ) {
-                                if (!cell.isEmpty) {
-                                    val card = cell.topCard!!
-                                    val isDragging = dragState.cards.any { it.id == card.id }
-                                    var layoutPos by remember { mutableStateOf(Offset.Zero) }
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .onGloballyPositioned { layoutPos = it.positionInRoot() }
-                                            .pointerInput(card.id) {
-                                                coroutineScope {
-                                                    launch {
-                                                        detectTapGestures(
-                                                            onTap = {},
-                                                            onDoubleTap = { if (viewModel.doubleClickMove(card, cell)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
-                                                        )
-                                                    }
-                                                    launch {
-                                                        detectDragGestures(
-                                                            onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), cell, layoutPos, Offset.Zero) },
-                                                            onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                            onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
-                                                            onDragCancel = { dragState = DragState() }
-                                                        )
-                                                    }
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
+                    state.freeCells.forEach { cell ->
+                        Box(modifier = Modifier
+                            .size(cardW, cardH)
+                            .onGloballyPositioned { pileFrames[cell.id] = it.boundsInRoot() }
+                            .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                            .hintHighlight(isHighlighted = cell.id == hintSourceId || cell.id == hintTargetId, cornerRadius = 4.dp)
+                        ) {
+                            if (!cell.isEmpty) {
+                                val card = cell.topCard!!
+                                val isDragging = dragState.cards.any { it.id == card.id }
+                                var layoutPos by remember { mutableStateOf(Offset.Zero) }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .onGloballyPositioned { layoutPos = it.positionInRoot() }
+                                        .pointerInput(card.id) {
+                                            coroutineScope {
+                                                launch {
+                                                    detectTapGestures(
+                                                        onTap = {},
+                                                        onDoubleTap = { if (viewModel.doubleClickMove(card, cell)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                                    )
+                                                }
+                                                launch {
+                                                    detectDragGestures(
+                                                        onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), cell, layoutPos, Offset.Zero) },
+                                                        onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
+                                                        onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                        onDragCancel = { dragState = DragState() }
+                                                    )
                                                 }
                                             }
-                                    ) {
-                                        CardView(card = card, modifier = Modifier.fillMaxSize().alpha(if (isDragging) 0f else 1f))
-                                    }
+                                        }
+                                ) {
+                                    CardView(card = card, modifier = Modifier.fillMaxSize().alpha(if (isDragging) 0f else 1f))
                                 }
                             }
                         }
                     }
                     
-                    // Foundations
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        state.foundations.forEach { fdn ->
-                            Box(modifier = Modifier
-                                .size(cardW, cardH)
-                                .onGloballyPositioned { pileFrames[fdn.id] = it.boundsInRoot() }
-                                .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-                                .hintHighlight(isHighlighted = fdn.id == hintSourceId || fdn.id == hintTargetId, cornerRadius = 4.dp)
-                            ) {
-                                if (!fdn.isEmpty) {
-                                    CardView(card = fdn.topCard!!, modifier = Modifier.fillMaxSize())
-                                }
+                    state.foundations.forEach { fdn ->
+                        Box(modifier = Modifier
+                            .size(cardW, cardH)
+                            .onGloballyPositioned { pileFrames[fdn.id] = it.boundsInRoot() }
+                            .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                            .hintHighlight(isHighlighted = fdn.id == hintSourceId || fdn.id == hintTargetId, cornerRadius = 4.dp)
+                        ) {
+                            if (!fdn.isEmpty) {
+                                CardView(card = fdn.topCard!!, modifier = Modifier.fillMaxSize())
                             }
                         }
                     }
@@ -276,7 +273,7 @@ fun BeecellBoard(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Tableau (8 columns)
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
                     state.tableau.forEach { pile ->
                         Box(
                             modifier = Modifier

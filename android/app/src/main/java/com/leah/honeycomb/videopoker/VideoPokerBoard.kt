@@ -82,6 +82,7 @@ fun VideoPokerBoard(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isLandscape = maxWidth > maxHeight
         val scoreCapsule = @Composable {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -105,8 +106,7 @@ fun VideoPokerBoard(
             }
         }
 
-        Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-            // Top Bar
+        val topBar = @Composable {
             Row(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -124,14 +124,9 @@ fun VideoPokerBoard(
                     }
                 }
             }
+        }
 
-            Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                scoreCapsule()
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Result Text
+        val resultText = @Composable {
             if (state.phase == VideoPokerPhase.Result) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     if (state.lastPayout > 0) {
@@ -142,12 +137,13 @@ fun VideoPokerBoard(
                     }
                 }
             } else if (state.phase == VideoPokerPhase.Holding) {
-                Text("Tap cards to hold, then Draw", color = Color.White, fontSize = 16.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Tap cards to hold, then Draw", color = Color.White, fontSize = 16.sp)
+                }
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
+        }
 
-            // Cards
+        val cardsRow = @Composable {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy((-8).dp, Alignment.CenterHorizontally)
@@ -180,10 +176,9 @@ fun VideoPokerBoard(
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Bottom Controls
+        val bottomControls = @Composable {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (state.phase == VideoPokerPhase.Deal || state.phase == VideoPokerPhase.Result) {
                     if (!viewModel.isFreePlay) {
@@ -238,6 +233,43 @@ fun VideoPokerBoard(
                         .padding(horizontal = 48.dp, vertical = 16.dp)
                     ) {
                         Text("DRAW", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                    }
+                }
+            }
+        }
+
+        if (!isLandscape) {
+            Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                topBar()
+                Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                    scoreCapsule()
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                resultText()
+                Spacer(modifier = Modifier.height(16.dp))
+                cardsRow()
+                Spacer(modifier = Modifier.weight(1f))
+                bottomControls()
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        topBar()
+                    }
+                    Box(modifier = Modifier.padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                        scoreCapsule()
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                Row(modifier = Modifier.fillMaxSize().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        cardsRow()
+                    }
+                    Column(modifier = Modifier.width(300.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        resultText()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        bottomControls()
                     }
                 }
             }

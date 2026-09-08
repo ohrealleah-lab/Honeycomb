@@ -1,4 +1,6 @@
 package com.leah.honeycomb.blackjack
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -83,6 +85,11 @@ fun BlackjackBoard(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isLandscape = maxWidth > maxHeight
+        val cardW = minOf(100.dp, maxWidth / 5, maxHeight / 3)
+        val cardH = cardW * 1.4f
+        val cardSpacing = -cardW * 0.4f
+
         val scoreCapsule = @Composable {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -106,8 +113,7 @@ fun BlackjackBoard(
             }
         }
 
-        Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-            // Top Bar
+        val topBar = @Composable {
             Row(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -126,33 +132,27 @@ fun BlackjackBoard(
                 }
                 Text("Blackjack", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 16.dp))
             }
+        }
 
-            Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                scoreCapsule()
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Dealer Area
+        val dealerArea = @Composable {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 val dealerText = if (state.phase == BlackjackPhase.Betting) "DEALER" else "DEALER ${state.dealerVisibleValue}"
                 Text(dealerText, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy((-40).dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(cardSpacing)) {
                     if (state.dealerCards.isEmpty()) {
-                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(100.dp, 140.dp))
-                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(100.dp, 140.dp))
+                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
+                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
                     } else {
                         state.dealerCards.forEach { card ->
-                            CardView(card = card, modifier = Modifier.size(100.dp, 140.dp))
+                            CardView(card = card, modifier = Modifier.size(cardW, cardH))
                         }
                     }
                 }
             }
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            // Result Overlay (if round over)
+        }
+
+        val resultOverlay = @Composable {
             if (state.phase == BlackjackPhase.Result) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     val outcomeText = when (state.resultOutcome) {
@@ -174,10 +174,9 @@ fun BlackjackBoard(
                     }
                 }
             }
-            
-            Spacer(modifier = Modifier.weight(1f))
+        }
 
-            // Player Area
+        val playerArea = @Composable {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 val activeHand = state.playerHands.getOrNull(state.activeHandIndex)
                 val playerText = if (state.phase == BlackjackPhase.Betting || activeHand == null) "YOU" else "YOU ${activeHand.value}" + (if (activeHand.isBust) " (Bust)" else "")
@@ -185,25 +184,24 @@ fun BlackjackBoard(
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     if (state.playerHands.isEmpty()) {
-                        Row(horizontalArrangement = Arrangement.spacedBy((-40).dp)) {
-                            CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(100.dp, 140.dp))
-                            CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(100.dp, 140.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(cardSpacing)) {
+                            CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
+                            CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
                         }
                     } else {
                         state.playerHands.forEachIndexed { index, hand ->
-                            Row(horizontalArrangement = Arrangement.spacedBy((-40).dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(cardSpacing)) {
                                 hand.cards.forEach { card ->
-                                    CardView(card = card, modifier = Modifier.size(100.dp, 140.dp))
+                                    CardView(card = card, modifier = Modifier.size(cardW, cardH))
                                 }
                             }
                         }
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Controls
+        val controlsArea = @Composable {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (state.phase == BlackjackPhase.Betting || state.phase == BlackjackPhase.Result) {
                     if (state.phase == BlackjackPhase.Result) {
@@ -218,7 +216,7 @@ fun BlackjackBoard(
                     }
                     
                     if (!viewModel.isFreePlay) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 16.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 16.dp) .horizontalScroll(rememberScrollState())) {
                             BetChip("1", Color.White, { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.addToBet(1) })
                             BetChip("5", Color(0xFFF44336), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.addToBet(5) })
                             BetChip("10", Color(0xFF2196F3), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.addToBet(10) })
@@ -238,29 +236,72 @@ fun BlackjackBoard(
                         }
                     }
                 } else if (state.phase == BlackjackPhase.Playing) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth(0.9f)) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            ActionButton("Hit", Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.hit() }, enabled = !viewModel.isDealerBlackjackPending)
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth(0.9f)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                ActionButton("Hit", Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.hit() }, enabled = !viewModel.isDealerBlackjackPending)
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                ActionButton("Stand", Color(0xFFF44336), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.stand() }, enabled = !viewModel.isDealerBlackjackPending)
+                            }
                         }
-                        Box(modifier = Modifier.weight(1f)) {
-                            ActionButton("Stand", Color(0xFFF44336), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.stand() }, enabled = !viewModel.isDealerBlackjackPending)
+                        if (viewModel.canDouble || viewModel.canSplit) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                                if (viewModel.canDouble) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ActionButton("Double", Color(0xFF2196F3), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.doubleDown() }, enabled = !viewModel.isDealerBlackjackPending)
+                                    }
+                                }
+                                if (viewModel.canSplit) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ActionButton("Split", Color(0xFF9C27B0), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.split() }, enabled = !viewModel.isDealerBlackjackPending)
+                                    }
+                                }
+                            }
                         }
                     }
-                    
-                    if (viewModel.canDouble || viewModel.canSplit) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth(0.9f)) {
-                            if (viewModel.canDouble) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    ActionButton("Double", Color(0xFF2196F3), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.doubleDown() }, enabled = !viewModel.isDealerBlackjackPending)
-                                }
-                            }
-                            if (viewModel.canSplit) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    ActionButton("Split", Color(0xFF9C27B0), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.split() }, enabled = !viewModel.isDealerBlackjackPending)
-                                }
-                            }
+                }
+            }
+        }
+
+        if (!isLandscape) {
+            Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                topBar()
+                Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                    scoreCapsule()
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                dealerArea()
+                Spacer(modifier = Modifier.weight(1f))
+                resultOverlay()
+                Spacer(modifier = Modifier.weight(1f))
+                playerArea()
+                Spacer(modifier = Modifier.height(24.dp))
+                controlsArea()
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        topBar()
+                    }
+                    Box(modifier = Modifier.padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                        scoreCapsule()
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                Row(modifier = Modifier.fillMaxSize().padding(top = 16.dp)) {
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopEnd) {
+                        playerArea()
+                    }
+                    Box(modifier = Modifier.width(180.dp), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            resultOverlay()
+                            controlsArea()
                         }
+                    }
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopStart) {
+                        dealerArea()
                     }
                 }
             }
