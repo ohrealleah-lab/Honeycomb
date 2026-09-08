@@ -207,10 +207,12 @@ fun BlackjackBoard(
                             CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
                         }
                     } else {
-                        state.playerHands.forEachIndexed { index, hand ->
+                        state.playerHands.forEach { hand ->
                             Row(horizontalArrangement = Arrangement.spacedBy(cardSpacing)) {
                                 hand.cards.forEach { card ->
-                                    CardView(card = card, modifier = Modifier.size(cardW, cardH))
+                                    key(card.id) {
+                                        CardView(card = card, modifier = Modifier.size(cardW, cardH))
+                                    }
                                 }
                             }
                         }

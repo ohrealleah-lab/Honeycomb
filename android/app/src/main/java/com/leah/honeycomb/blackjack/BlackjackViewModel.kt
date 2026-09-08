@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.max
+import kotlin.math.min
 
 class BlackjackViewModel(
     val sharedOptions: SharedGameOptions,
@@ -299,16 +300,16 @@ class BlackjackViewModel(
         val s = _state.value
         if (s.phase != BlackjackPhase.Betting && s.phase != BlackjackPhase.Result) return
         if (amount != 1 && s.currentBet == 1) {
-            _state.value = s.copy(currentBet = max(1, Math.min(amount, s.sessionCredits)))
+            _state.value = s.copy(currentBet = max(1, min(amount, s.sessionCredits)))
         } else {
-            _state.value = s.copy(currentBet = max(1, Math.min(s.currentBet + amount, s.sessionCredits)))
+            _state.value = s.copy(currentBet = max(1, min(s.currentBet + amount, s.sessionCredits)))
         }
     }
 
     fun doubleBet() {
         val s = _state.value
         if (s.phase != BlackjackPhase.Betting && s.phase != BlackjackPhase.Result) return
-        _state.value = s.copy(currentBet = max(1, Math.min(s.currentBet * 2, s.sessionCredits)))
+        _state.value = s.copy(currentBet = max(1, min(s.currentBet * 2, s.sessionCredits)))
     }
 
     fun clearBet() {
@@ -396,9 +397,8 @@ class BlackjackViewModel(
                 stats = stats.copy(pushes = stats.pushes + 1)
             } else if (playerBJ) {
                 result = BlackjackHandResult.Blackjack
-                payout = hand.bet * 4 // Pays 3:1 (bet + 3*bet) -> Wait, swift says: payout = hand.bet * 4
-                // Actually Swift code says: payout = hand.bet * 4 but comment says "profit 3x bet".
-                // If it's 3:1 payout, you get your bet back (1) + 3 profit = 4x bet.
+                // 3:1 payout: bet back (1x) + 3x profit = 4x bet total.
+                payout = hand.bet * 4
                 stats = stats.copy(
                     blackjacks = stats.blackjacks + 1,
                     handsWon = stats.handsWon + 1
