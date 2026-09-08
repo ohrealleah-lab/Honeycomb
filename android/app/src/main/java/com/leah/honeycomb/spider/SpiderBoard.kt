@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
@@ -370,26 +371,43 @@ fun SpiderBoard(
                     }
                 }
             }
-        } else if (isStuck) {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
-                Card {
-                    Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Game Over", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
-                        Text("No moves remaining")
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.restartCurrentGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.Restart, language)) }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.startNewGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.NewGame, language)) }
+        } else {
+            var stuckDismissed by remember { mutableStateOf(false) }
+            LaunchedEffect(isStuck) { if (!isStuck) stuckDismissed = false }
+            var autocompleteDismissed by remember { mutableStateOf(false) }
+            LaunchedEffect(isAutocompleteAvailable) { if (!isAutocompleteAvailable) autocompleteDismissed = false }
+
+            if (isStuck && !stuckDismissed) {
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
+                    Card {
+                        Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                IconButton(onClick = { stuckDismissed = true }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Dismiss")
+                                }
+                            }
+                            Text("Game Over", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+                            Text("No moves remaining")
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { viewModel.restartCurrentGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.Restart, language)) }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { viewModel.startNewGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.NewGame, language)) }
+                        }
                     }
                 }
-            }
-        } else if (isAutocompleteAvailable) {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
-                Card {
-                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Victory Guaranteed!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.runAutocomplete() }) { Text("Auto-complete") }
+            } else if (isAutocompleteAvailable && !autocompleteDismissed) {
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
+                    Card {
+                        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                IconButton(onClick = { autocompleteDismissed = true }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Dismiss")
+                                }
+                            }
+                            Text("Victory Guaranteed!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { viewModel.runAutocomplete() }) { Text("Auto-complete") }
+                        }
                     }
                 }
             }

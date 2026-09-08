@@ -90,25 +90,37 @@ class SpiderViewModel(
     private var hintClearJob: Job? = null
     private var lastMoveSourceId: String? = null
     private var lastMoveTargetId: String? = null
+    private var hintGeneration = 0
 
+    // The underlying search is O(columns² × drag-lengths) with a 1-ply lookahead, so it's
+    // backgrounded on Dispatchers.Default rather than run on the UI thread from onClick.
+    // hintGeneration guards against a slow search landing after the board changed underneath it.
     fun findHint() {
         hintClearJob?.cancel()
-        val cycled = HintCycling.findHint(
-            current = HintCycleState(activeHint = _activeHint.value, hintQueue = hintQueue, hintQueueIndex = hintQueueIndex),
-            collectHints = { collectHints() },
-            label = { hint, index, total -> labeled(hint, index, total) },
-            noHintFallback = {
-                HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", "No moves available. Replay or deal a new game!")
-            }
-        )
-        _activeHint.value = cycled.activeHint
-        hintQueue = cycled.hintQueue
-        hintQueueIndex = cycled.hintQueueIndex
-        scheduleHintClear()
+        val generation = ++hintGeneration
+        val currentActiveHint = _activeHint.value
+        val currentQueue = hintQueue
+        val currentIndex = hintQueueIndex
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            val cycled = HintCycling.findHint(
+                current = HintCycleState(activeHint = currentActiveHint, hintQueue = currentQueue, hintQueueIndex = currentIndex),
+                collectHints = { collectHints() },
+                label = { hint, index, total -> labeled(hint, index, total) },
+                noHintFallback = {
+                    HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", "No moves available. Replay or deal a new game!")
+                }
+            )
+            if (generation != hintGeneration) return@launch
+            _activeHint.value = cycled.activeHint
+            hintQueue = cycled.hintQueue
+            hintQueueIndex = cycled.hintQueueIndex
+            scheduleHintClear()
+        }
     }
 
     fun clearHint() {
         hintClearJob?.cancel()
+        hintGeneration++
         _activeHint.value = null
         hintQueue = emptyList()
         hintQueueIndex = 0
@@ -134,8 +146,8 @@ class SpiderViewModel(
     // Ported from evaluateImmediateMoves(depth:) — same-suit run extension scoring,
     // cross-suit build with a clean-stack penalty, empty-column priority (only worthwhile
     // if it reveals a face-down card), stock-deal fallback, 1-ply lookahead at depth 0.
-    private fun evaluateImmediateMoves(depth: Int = 0): List<Pair<HintMove, Int>> {
-        val st = _state.value
+    private fun evaluateImmediateMoves(depth: Int = 0, stateOverride: SpiderState? = null): List<Pair<HintMove, Int>> {
+        val st = stateOverride ?: _state.value
         var scored = mutableListOf<Pair<HintMove, Int>>()
 
         for (col in st.tableau) {
@@ -207,7 +219,7 @@ class SpiderViewModel(
         }
 
         if (!st.stock.isEmpty) {
-            if (hasEmptyTableauColumn) {
+            if (st.tableau.any { it.isEmpty }) {
                 scored.add(HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", "Fill all empty columns before dealing cards.") to 25)
             } else {
                 scored.add(HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), st.stock.id, "", "Deal cards from the Stock pile.") to 50)
@@ -245,9 +257,7 @@ class SpiderViewModel(
                 newTableau[srcIdx] = newTableau[srcIdx].copy(cards = remaining)
                 newTableau[tgtIdx] = newTableau[tgtIdx].copy(cards = newTableau[tgtIdx].cards + dragStack)
 
-                _state.value = originalState.copy(tableau = newTableau)
-                val nextLevel = evaluateImmediateMoves(depth = 1)
-                _state.value = originalState
+                val nextLevel = evaluateImmediateMoves(depth = 1, stateOverride = originalState.copy(tableau = newTableau))
 
                 val bestNext = nextLevel.maxByOrNull { it.second }
                 if (bestNext != null) {
@@ -868,6 +878,7 @@ class SpiderViewModel(
             timerSeconds = currentTimer,
             isTimerActive = currentActive
         )
+        _isAutoplayRunning.value = false
         _isStuck.value = false
         checkWinState()
         checkAutocompleteState()
