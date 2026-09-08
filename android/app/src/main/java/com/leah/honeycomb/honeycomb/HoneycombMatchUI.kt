@@ -831,8 +831,25 @@ private fun SharedTransitionScope.PlayerHandPyramid(animatedVisibilityScope: Ani
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
-        row(0 until min(3, cards.size))
-        if (cards.size > 3) row(3 until cards.size)
+        if (cards.isEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
+                repeat(3) {
+                    Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
+                        HoneycombCardView(card = HoneycombCard(data = HoneycombCardData(-1, "", 1, listOf(1,1,1,1), "H"), owner = CardOwner.Player), isFlipped = true, modifier = Modifier.fillMaxSize())
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
+                repeat(2) {
+                    Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
+                        HoneycombCardView(card = HoneycombCard(data = HoneycombCardData(-1, "", 1, listOf(1,1,1,1), "H"), owner = CardOwner.Player), isFlipped = true, modifier = Modifier.fillMaxSize())
+                    }
+                }
+            }
+        } else {
+            row(0 until min(3, cards.size))
+            if (cards.size > 3) row(3 until cards.size)
+        }
     }
 }
 
