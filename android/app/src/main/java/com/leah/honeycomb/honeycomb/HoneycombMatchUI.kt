@@ -279,20 +279,20 @@ fun HoneycombMatchUI(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = onMenuTap) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                             }
                             IconButton(onClick = onOptionsTap) {
-                                Icon(Icons.Default.Settings, contentDescription = "Options")
+                                Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
                             }
                             IconButton(onClick = onThemesTap) {
-                                Icon(Icons.Default.Palette, contentDescription = "Themes")
+                                Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
                             }
                             if (!isMidMatch) {
                                 IconButton(onClick = onManageDecksTap) {
-                                    Icon(Icons.Default.Style, contentDescription = "Manage Decks")
+                                    Icon(Icons.Default.Style, contentDescription = "Manage Decks", tint = Color.White)
                                 }
                                 IconButton(onClick = onRulesTap) {
-                                    Icon(Icons.Default.Hexagon, contentDescription = "Rules")
+                                    Icon(Icons.Default.Hexagon, contentDescription = "Rules", tint = Color.White)
                                 }
                             }
                         }
@@ -300,11 +300,11 @@ fun HoneycombMatchUI(
                         if (isMidMatch) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = { viewModel.undoLastAction() }, enabled = viewModel.canUndo) {
-                                    Icon(Icons.Default.Undo, contentDescription = "Undo")
+                                    Icon(Icons.Default.Undo, contentDescription = "Undo", tint = Color.White)
                                 }
                                 if (!hideHintButton && options.difficulty != HoneycombDifficulty.UltraHard && state.isPlayerTurn) {
                                     IconButton(onClick = { viewModel.findHint() }) {
-                                        Icon(Icons.Default.Lightbulb, contentDescription = "Hint")
+                                        Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
                                     }
                                 }
                                 TextButton(onClick = { showQuitConfirm = true }) {
@@ -315,7 +315,7 @@ fun HoneycombMatchUI(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (state.gameState == HoneycombGameState.GameOver && viewModel.canRematch) {
                                     IconButton(onClick = { viewModel.rematch() }) {
-                                        Icon(Icons.Default.Redo, contentDescription = "Rematch")
+                                        Icon(Icons.Default.Redo, contentDescription = "Rematch", tint = Color.White)
                                     }
                                 }
                                 Button(onClick = { viewModel.startNewGame() }) {
