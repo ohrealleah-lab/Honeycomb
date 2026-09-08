@@ -45,7 +45,7 @@ val builtinCardBackNames = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}) {
+fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -> Unit = {}) {
     val appContainer = LocalAppContainer.current
     val themeManager = appContainer.themeManager
     val themes by themeManager.themes.collectAsState()
@@ -89,6 +89,9 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}) {
                     }
                 },
                 actions = {
+                    TextButton(onClick = onImportArt) {
+                        Text("Import Art")
+                    }
                     IconButton(onClick = onAbout) {
                         Icon(Icons.Default.Info, contentDescription = "About")
                     }

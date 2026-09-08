@@ -54,11 +54,7 @@ class MainActivity : ComponentActivity() {
                     var showGameSelection by remember { mutableStateOf(false) }
                     var currentRoute by remember { mutableStateOf(appContainer.initialGameMode) }
                     
-                    LaunchedEffect(Unit) {
-                        if (appContainer.initialGameMode != "home") {
-                            navController.navigate(appContainer.initialGameMode)
-                        }
-                    }
+
                     
                     DisposableEffect(navController) {
                         val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
@@ -78,39 +74,13 @@ class MainActivity : ComponentActivity() {
                         val intensity = if (currentRoute.startsWith("blackjack") || currentRoute.startsWith("videopoker")) 0.6f else 0.45f
                         com.leah.honeycomb.theme.AppBackground(intensity = intensity)
                         
-                        NavHost(navController = navController, startDestination = "home", modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
-                        composable("home") {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text("Honeycomb Casino", style = MaterialTheme.typography.headlineLarge)
-                                Spacer(modifier = Modifier.height(32.dp))
-                                Button(onClick = { navController.navigate("klondike") }) { Text("Play Klondike") }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = { navController.navigate("spider") }) { Text("Play Spider") }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = { navController.navigate("beecell") }) { Text("Play Beecell") }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = { navController.navigate("blackjack") }) { Text("Play Blackjack") }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = { navController.navigate("videopoker") }) { Text("Play Video Poker") }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = { navController.navigate("honeycomb") }) { Text("Play Honeycomb") }
-                                Spacer(modifier = Modifier.height(32.dp))
-                                Button(onClick = { navController.navigate("themes") }) { Text("Themes") }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = { navController.navigate("custom_art_import") }) { Text("Import Custom Art") }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = { navController.navigate("shared_options") }) { Text("Shared Options") }
-                            }
-                        }
+                        NavHost(navController = navController, startDestination = appContainer.initialGameMode.takeIf { it != "home" } ?: "klondike", modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
+
                         composable("about") {
                             com.leah.honeycomb.theme.AboutScreen(onBack = { navController.popBackStack() })
                         }
                         composable("themes") {
-                            com.leah.honeycomb.theme.ThemesScreen(onBack = { navController.popBackStack() }, onAbout = { navController.navigate("about") })
+                            com.leah.honeycomb.theme.ThemesScreen(onBack = { navController.popBackStack() }, onAbout = { navController.navigate("about") }, onImportArt = { navController.navigate("custom_art_import") })
                         }
                         composable("custom_art_import") {
                             com.leah.honeycomb.theme.CustomArtImportScreen(onBack = { navController.popBackStack() })
@@ -278,7 +248,8 @@ class MainActivity : ComponentActivity() {
                             currentRoute = currentRoute,
                             onNavigate = { route ->
                                 navController.navigate(route) {
-                                    popUpTo("home")
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
                                 }
                             },
                             onDismiss = { showGameSelection = false }
