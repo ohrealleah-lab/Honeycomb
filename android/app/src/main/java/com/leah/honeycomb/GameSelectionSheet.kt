@@ -31,37 +31,37 @@ data class GameInfo(
 
 val gamesList = listOf(
     GameInfo(
-        route = "klondike",
+        route = AppRoute.Klondike.Board.route,
         title = "Klondike Solibee",
         description = "Classic single-deck solitaire with Draw 1, Draw 3, and Vegas scoring options.",
         textIcon = "♠"
     ),
     GameInfo(
-        route = "beecell",
+        route = AppRoute.Beecell.Board.route,
         title = "Beecell",
         description = "The ultimate strategic solitaire game—99.9% of all deals are solvable.",
         textIcon = "♥"
     ),
     GameInfo(
-        route = "spider",
+        route = AppRoute.Spider.Board.route,
         title = "Spider Solibee",
         description = "A deep, two-deck game of sequence building across 1, 2, or 4 suits.",
         textIcon = "♣"
     ),
     GameInfo(
-        route = "videopoker",
+        route = AppRoute.VideoPoker.Board.route,
         title = "Video Poker",
         description = "Classic casino poker with Jacks or Better, Deuces Wild, and Bonus Poker pay tables.",
         textIcon = "♦"
     ),
     GameInfo(
-        route = "blackjack",
+        route = AppRoute.Blackjack.Board.route,
         title = "Video Blackjack",
         description = "Beat the dealer by getting closer to 21 without going over.",
         textIcon = "21"
     ),
     GameInfo(
-        route = "honeycomb",
+        route = AppRoute.Honeycomb.Board.route,
         title = "Honeycomb",
         description = "A tactical 3x3 grid card battle inspired by Triple Triad.",
         textIcon = "⬢"
