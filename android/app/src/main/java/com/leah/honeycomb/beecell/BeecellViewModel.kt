@@ -91,25 +91,38 @@ class BeecellViewModel(
     private var hintClearJob: Job? = null
     private var lastMoveSourceId: String? = null
     private var lastMoveTargetId: String? = null
+    private var hintGeneration = 0
 
+    // The underlying search is O(free cells × foundations + tableau² × supermove-length)
+    // with a 1-ply lookahead, so it's backgrounded on Dispatchers.Default rather than run
+    // on the UI thread from onClick. hintGeneration guards against a slow search landing
+    // after the board changed underneath it.
     fun findHint() {
         hintClearJob?.cancel()
-        val cycled = HintCycling.findHint(
-            current = HintCycleState(activeHint = _activeHint.value, hintQueue = hintQueue, hintQueueIndex = hintQueueIndex),
-            collectHints = { collectHints() },
-            label = { hint, index, total -> labeled(hint, index, total) },
-            noHintFallback = {
-                HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = true), "", "", "No moves available. Try restarting or starting a new game.")
-            }
-        )
-        _activeHint.value = cycled.activeHint
-        hintQueue = cycled.hintQueue
-        hintQueueIndex = cycled.hintQueueIndex
-        scheduleHintClear()
+        val generation = ++hintGeneration
+        val currentActiveHint = _activeHint.value
+        val currentQueue = hintQueue
+        val currentIndex = hintQueueIndex
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            val cycled = HintCycling.findHint(
+                current = HintCycleState(activeHint = currentActiveHint, hintQueue = currentQueue, hintQueueIndex = currentIndex),
+                collectHints = { collectHints() },
+                label = { hint, index, total -> labeled(hint, index, total) },
+                noHintFallback = {
+                    HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = true), "", "", "No moves available. Try restarting or starting a new game.")
+                }
+            )
+            if (generation != hintGeneration) return@launch
+            _activeHint.value = cycled.activeHint
+            hintQueue = cycled.hintQueue
+            hintQueueIndex = cycled.hintQueueIndex
+            scheduleHintClear()
+        }
     }
 
     fun clearHint() {
         hintClearJob?.cancel()
+        hintGeneration++
         _activeHint.value = null
         hintQueue = emptyList()
         hintQueueIndex = 0
@@ -340,6 +353,7 @@ class BeecellViewModel(
 
     fun startNewGame() {
         stopTimer()
+        clearHint()
 
         val currentState = _state.value
         if (currentState.movesCount > 0 && !currentState.hasWon) {
@@ -407,6 +421,7 @@ class BeecellViewModel(
     fun restartCurrentGame() {
         val initial = initialState ?: return
         stopTimer()
+        clearHint()
         undoStack.clear()
         _state.value = initial
         _isAutocompleteAvailable.value = false
@@ -485,6 +500,7 @@ class BeecellViewModel(
     fun moveCards(cards: List<Card>, sourcePile: Pile, targetPile: Pile): Boolean {
         if (!isValidMove(cards, targetPile)) return false
 
+        com.leah.honeycomb.audio.UISound.play("snap")
         saveStateForUndo()
         clearHint()
         lastMoveSourceId = sourcePile.id
@@ -580,6 +596,7 @@ class BeecellViewModel(
         if (WinDetection.hasWon(totalFoundationCards, 52, _state.value.hasWon)) {
             _state.update { it.copy(hasWon = true) }
             stopTimer()
+            com.leah.honeycomb.audio.UISound.play("victory")
 
             val timeInSeconds = _state.value.timerSeconds
             val finalScore = _state.value.score

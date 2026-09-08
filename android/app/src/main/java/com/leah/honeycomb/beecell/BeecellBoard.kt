@@ -358,17 +358,32 @@ fun BeecellBoard(
             }
         }        } // Close inner BoxWithConstraints
 
+        // "No hints available" toast — the fallback HintMove has an empty source pile id.
+        activeHint?.let { hint ->
+            if (hint.sourcePileId.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize().padding(bottom = 32.dp), contentAlignment = Alignment.BottomCenter) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(hint.description, color = Color.White)
+                    }
+                }
+            }
+        }
+
         
         // End Game Overlays
         if (state.hasWon) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
                 Card {
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("You Win!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
-                        Text("Score: ${state.score}")
-                        Text("Time: ${state.timerSeconds}s")
+                        Text(com.leah.honeycomb.Strings.get(StringKey.YouWin, language), color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+                        Text("${com.leah.honeycomb.Strings.get(StringKey.ScoreLabel, language)}: ${state.score}")
+                        Text("${com.leah.honeycomb.Strings.get(StringKey.TimeLabel, language)}: ${com.leah.honeycomb.formatSeconds(state.timerSeconds)}")
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.startNewGame() }) { Text("Play Again") }
+                        Button(onClick = { viewModel.startNewGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.NewGame, language)) }
                     }
                 }
             }
@@ -376,8 +391,8 @@ fun BeecellBoard(
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
                 Card {
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Game Over", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
-                        Text("No moves remaining")
+                        Text(com.leah.honeycomb.Strings.get(StringKey.GameOver, language), color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+                        Text(com.leah.honeycomb.Strings.get(StringKey.NoMovesRemaining, language))
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.restartCurrentGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.Restart, language)) }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -389,9 +404,9 @@ fun BeecellBoard(
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
                 Card {
                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Victory Guaranteed!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                        Text(com.leah.honeycomb.Strings.get(StringKey.VictoryGuaranteed, language), color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.runAutocomplete() }) { Text("Auto-complete") }
+                        Button(onClick = { viewModel.runAutocomplete() }) { Text(com.leah.honeycomb.Strings.get(StringKey.AutocompleteGame, language)) }
                     }
                 }
             }
