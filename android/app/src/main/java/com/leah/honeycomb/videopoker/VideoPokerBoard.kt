@@ -213,7 +213,7 @@ fun VideoPokerBoard(
                 horizontalArrangement = Arrangement.spacedBy((-8).dp, Alignment.CenterHorizontally)
             ) {
                 val config = androidx.compose.ui.platform.LocalConfiguration.current
-                val cardW = ((config.screenWidthDp.dp - 32.dp) / 5).coerceAtMost(100.dp)
+                val cardW = remember(config.screenWidthDp) { ((config.screenWidthDp.dp - 32.dp) / 5).coerceAtMost(100.dp) }
                 val cardH = cardW * 1.4f
                 if (state.hand.isEmpty()) {
                     repeat(5) {
@@ -221,20 +221,23 @@ fun VideoPokerBoard(
                     }
                 } else {
                     state.hand.forEachIndexed { index, card ->
-                        val isHeld = state.heldIndices.contains(index)
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            if (isHeld) {
-                                Text("HELD", color = Color.Yellow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            } else {
-                                Text(" ", fontSize = 12.sp)
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .clickable(enabled = state.phase == VideoPokerPhase.Holding) {
-                                        viewModel.toggleHold(index)
-                                    }
-                            ) {
-                                CardView(card = card, modifier = Modifier.size(cardW, cardH))
+                        key(card.id) {
+                            val isHeld = state.heldIndices.contains(index)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                if (isHeld) {
+                                    Text("HELD", color = Color.Yellow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                } else {
+                                    Text(" ", fontSize = 12.sp)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clickable(enabled = state.phase == VideoPokerPhase.Holding) {
+                                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            viewModel.toggleHold(index)
+                                        }
+                                ) {
+                                    CardView(card = card, modifier = Modifier.size(cardW, cardH))
+                                }
                             }
                         }
                     }
@@ -284,7 +287,7 @@ fun VideoPokerBoard(
                     } else {
                         Box(modifier = Modifier
                             .background(Color(0xFFFFC107), RoundedCornerShape(12.dp))
-                            .clickable { viewModel.deal() }
+                            .clickable { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.deal() }
                             .padding(horizontal = 48.dp, vertical = 16.dp)
                         ) {
                             Text("Deal", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 24.sp)
@@ -293,7 +296,7 @@ fun VideoPokerBoard(
                 } else if (state.phase == VideoPokerPhase.Holding) {
                     Box(modifier = Modifier
                         .background(Color(0xFF4CAF50), RoundedCornerShape(12.dp))
-                        .clickable { viewModel.draw() }
+                        .clickable { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.draw() }
                         .padding(horizontal = 48.dp, vertical = 16.dp)
                     ) {
                         Text("DRAW", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)

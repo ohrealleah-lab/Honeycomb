@@ -189,6 +189,7 @@ class VideoPokerViewModel(
             hand = hand,
             deck = deck
         )
+        com.leah.honeycomb.audio.UISound.play("snap")
 
         val generation = ++drawGeneration
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
@@ -308,6 +309,7 @@ class VideoPokerViewModel(
     fun maxBet() {
         val s = _state.value
         if (s.phase != VideoPokerPhase.Deal && s.phase != VideoPokerPhase.Result) return
+        if (!isFreePlay && s.sessionCredits < 1) return
         _state.value = s.copy(currentBet = max(1, Math.min(5, s.sessionCredits)))
         deal()
     }

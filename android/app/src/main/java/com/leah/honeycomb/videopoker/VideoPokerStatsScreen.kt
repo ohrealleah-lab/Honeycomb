@@ -19,6 +19,7 @@ fun VideoPokerStatsScreen(viewModel: VideoPokerViewModel, onBack: () -> Unit) {
         RoundedContainer {
             StatRow(Strings.get(StringKey.HandsPlayed, language), "${stats.handsPlayed}")
             StatRow(Strings.get(StringKey.HandsWon, language), "${stats.handsWon}")
+            StatRow(Strings.get(StringKey.WinRate, language), "%.1f%%".format(stats.winRate * 100.0))
             StatRow(Strings.get(StringKey.StatBiggestPayout, language), "${stats.biggestPayout}")
             StatRow(Strings.get(StringKey.TotalWagered, language), "${stats.totalWagered}")
             StatRow(Strings.get(StringKey.StatTotalPaidOut, language), "${stats.totalPaidOut}")
