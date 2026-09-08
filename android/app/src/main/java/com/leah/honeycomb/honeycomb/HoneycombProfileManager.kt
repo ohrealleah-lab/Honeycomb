@@ -11,6 +11,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.leah.honeycomb.PreferencesHelper
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 
 @Serializable
 data class HoneycombDeckState(
@@ -162,14 +165,14 @@ class HoneycombProfileManager(
     }
 
     private suspend fun saveUnlockedCards() {
-        dataStore.edit { it[unlockedKey] = Json.encodeToString(_unlockedCardIds.value.toList()) }
+        PreferencesHelper.setObject(dataStore, "honeycomb_unlocked_cards", ListSerializer(Int.serializer()), _unlockedCardIds.value.toList())
     }
 
     private suspend fun saveFavorites() {
-        dataStore.edit { it[favoritesKey] = Json.encodeToString(_favoriteCardIds.value.toList()) }
+        PreferencesHelper.setObject(dataStore, "honeycomb_favorite_cards", ListSerializer(Int.serializer()), _favoriteCardIds.value.toList())
     }
 
     private suspend fun saveDecks() {
-        dataStore.edit { it[decksKey] = Json.encodeToString(_savedDecks.value) }
+        PreferencesHelper.setObject(dataStore, "honeycomb_saved_decks", ListSerializer(HoneycombDeckState.serializer()), _savedDecks.value)
     }
 }

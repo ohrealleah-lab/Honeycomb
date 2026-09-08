@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.SetSerializer
@@ -34,6 +36,8 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
     val showFeltVignette: StateFlow<Boolean> = _showFeltVignette
 
     private var deletedDefaultThemes: MutableSet<String> = mutableSetOf()
+
+    private val saveMutex = Mutex()
 
     companion object {
         val defaultThemes = listOf(
@@ -96,17 +100,25 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
         _activeThemeId.value = prefs[activeThemeIdKey]
         _showFeltVignette.value = prefs[showFeltVignetteKey] ?: true
 
-        // Ensure we save the merged list back
-        save()
+        // Ensure we save the merged list back if there were changes
+        val persistedHasAllDefaults = defaultThemes.none { defaultTheme -> 
+            !deletedDefaultThemes.contains(defaultTheme.name.lowercase()) && 
+            persistedThemes.none { it.name.lowercase() == defaultTheme.name.lowercase() }
+        }
+        if (!persistedHasAllDefaults) {
+            save()
+        }
     }
 
     private fun save() {
         coroutineScope.launch {
-            PreferencesHelper.setObject(dataStore, themesKey, themeListSerializer, _themes.value)
-            PreferencesHelper.setObject(dataStore, deletedDefaultThemesKey, stringSetSerializer, deletedDefaultThemes)
-            dataStore.edit { prefs ->
-                _activeThemeId.value?.let { prefs[activeThemeIdKey] = it } ?: prefs.remove(activeThemeIdKey)
-                prefs[showFeltVignetteKey] = _showFeltVignette.value
+            saveMutex.withLock {
+                PreferencesHelper.setObject(dataStore, themesKey, themeListSerializer, _themes.value)
+                PreferencesHelper.setObject(dataStore, deletedDefaultThemesKey, stringSetSerializer, deletedDefaultThemes)
+                dataStore.edit { prefs ->
+                    _activeThemeId.value?.let { prefs[activeThemeIdKey] = it } ?: prefs.remove(activeThemeIdKey)
+                    prefs[showFeltVignetteKey] = _showFeltVignette.value
+                }
             }
         }
     }
