@@ -6,6 +6,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.datastore.preferences.core.emptyPreferences
+import kotlinx.coroutines.flow.catch
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -13,7 +17,10 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "honeycomb_prefs")
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "honeycomb_prefs",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() }
+)
 
 object PreferencesHelper {
     private val json = Json {
@@ -28,7 +35,13 @@ object PreferencesHelper {
         defaultValue: T
     ): Flow<T> {
         val prefKey = stringPreferencesKey(key)
-        return dataStore.data.map { preferences ->
+        return dataStore.data.catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }.map { preferences ->
             val jsonString = preferences[prefKey]
             if (jsonString != null) {
                 try {
@@ -53,14 +66,14 @@ object PreferencesHelper {
         defaultValue: T
     ): T {
         val prefKey = stringPreferencesKey(key)
-        val jsonString = runBlocking { dataStore.data.first() }[prefKey]
-        return if (jsonString != null) {
-            try {
+        return try {
+            val jsonString = runBlocking { dataStore.data.first() }[prefKey]
+            if (jsonString != null) {
                 json.decodeFromString(serializer, jsonString)
-            } catch (e: Exception) {
+            } else {
                 defaultValue
             }
-        } else {
+        } catch (e: Exception) {
             defaultValue
         }
     }

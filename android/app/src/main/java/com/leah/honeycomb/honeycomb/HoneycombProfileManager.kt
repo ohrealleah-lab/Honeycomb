@@ -40,12 +40,23 @@ class HoneycombProfileManager(
     }
 
     private suspend fun loadProfile() {
-        val prefs = dataStore.data.first()
+        val prefs = try {
+            dataStore.data.first()
+        } catch (e: Exception) {
+            null
+        }
         
-        val unlockedStr = prefs[unlockedKey]
+        val unlockedStr = prefs?.get(unlockedKey)
+        var decodeUnlockedFailed = false
         if (unlockedStr != null) {
-            _unlockedCardIds.value = Json.decodeFromString<List<Int>>(unlockedStr).toSet()
-        } else {
+            try {
+                _unlockedCardIds.value = Json.decodeFromString<List<Int>>(unlockedStr).toSet()
+            } catch (e: Exception) {
+                decodeUnlockedFailed = true
+            }
+        }
+        
+        if (unlockedStr == null || decodeUnlockedFailed) {
             val ones = database.randomCards(1, 3).map { it.id }
             val twos = database.randomCards(2, 2).map { it.id }
             val starters = (ones + twos).toSet()
@@ -53,10 +64,17 @@ class HoneycombProfileManager(
             saveUnlockedCards()
         }
 
-        val decksStr = prefs[decksKey]
+        val decksStr = prefs?.get(decksKey)
+        var decodeDecksFailed = false
         if (decksStr != null) {
-            _savedDecks.value = Json.decodeFromString<List<HoneycombDeckState>>(decksStr)
-        } else {
+            try {
+                _savedDecks.value = Json.decodeFromString<List<HoneycombDeckState>>(decksStr)
+            } catch (e: Exception) {
+                decodeDecksFailed = true
+            }
+        }
+        
+        if (decksStr == null || decodeDecksFailed) {
             val decks = MutableList(5) { HoneycombDeckState() }
             val starters = _unlockedCardIds.value.toList()
             if (starters.size == 5) {
@@ -67,9 +85,11 @@ class HoneycombProfileManager(
             saveDecks()
         }
 
-        val favStr = prefs[favoritesKey]
+        val favStr = prefs?.get(favoritesKey)
         if (favStr != null) {
-            _favoriteCardIds.value = Json.decodeFromString<List<Int>>(favStr).toSet()
+            try {
+                _favoriteCardIds.value = Json.decodeFromString<List<Int>>(favStr).toSet()
+            } catch (e: Exception) {}
         }
     }
 
