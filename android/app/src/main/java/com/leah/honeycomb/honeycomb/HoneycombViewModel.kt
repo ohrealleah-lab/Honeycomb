@@ -45,7 +45,14 @@ data class HoneycombState(
     val pendingSteal: PendingSteal? = null,
     val chaosPlayerIndex: Int? = null,
     val chaosOpponentIndex: Int? = null,
-    val showSuddenDeathBanner: Boolean = false
+    val showSuddenDeathBanner: Boolean = false,
+    // Transient capture-feedback state — which card(s) just directly caused a capture
+    // (pop animation) and which of the attacker's stats won it (gold flash). Cleared
+    // shortly after being set; not part of undo snapshots. Mirrors iOS's
+    // captureAttackerIds/pointHighlight in shared/Honeycomb/ViewModels/HoneycombViewModel.swift.
+    val captureAttackerIds: Set<String> = emptySet(),
+    val pointHighlightCardId: String? = null,
+    val pointHighlightStatIndices: Set<Int> = emptySet()
 ) {
     val mandatedPlayerHandIndex: Int?
         get() {
@@ -353,19 +360,24 @@ class HoneycombViewModel(
     }
 
     private fun rollOpponentDeck(difficulty: HoneycombDifficulty, rules: List<HoneycombRule>, suits: Set<String>): List<HoneycombCardData> {
+        // Matches shared/Honeycomb/ViewModels/HoneycombViewModel.swift's
+        // normalComposition/reverseComposition exactly — Medium and Hard's star tiers
+        // here previously diverged from iOS (Medium included a 1★ slot iOS's Medium never
+        // deals; Hard never included a 4★/5★ card at all), making Hard trivially easier
+        // than iOS and denying players the higher-tier steal rewards iOS guarantees there.
         val preferLowStats = rules.contains(HoneycombRule.Reverse)
         val composition = if (preferLowStats) {
             when (difficulty) {
                 HoneycombDifficulty.Easy -> listOf(Pair(1, 3), Pair(2, 1), Pair(if (Math.random() < 0.2) 3 else 2, 1))
-                HoneycombDifficulty.Medium -> listOf(Pair(1, 1), Pair(2, 2), Pair(3, 1), Pair(if (Math.random() < 0.2) 4 else 3, 1))
+                HoneycombDifficulty.Medium -> listOf(Pair(2, 4), Pair(if (Math.random() < 0.2) 4 else 3, 1))
                 HoneycombDifficulty.Hard -> listOf(Pair(1, 2), Pair(2, 3))
                 HoneycombDifficulty.UltraHard -> listOf(Pair(1, 5))
             }
         } else {
             when (difficulty) {
                 HoneycombDifficulty.Easy -> listOf(Pair(1, 3), Pair(2, 1), Pair(if (Math.random() < 0.2) 3 else 2, 1))
-                HoneycombDifficulty.Medium -> listOf(Pair(1, 1), Pair(2, 2), Pair(3, 1), Pair(if (Math.random() < 0.2) 4 else 3, 1))
-                HoneycombDifficulty.Hard -> listOf(Pair(2, 2), Pair(3, 3))
+                HoneycombDifficulty.Medium -> listOf(Pair(2, 4), Pair(if (Math.random() < 0.2) 4 else 3, 1))
+                HoneycombDifficulty.Hard -> listOf(Pair(3, 3), Pair(4, 1), Pair(5, 1))
                 HoneycombDifficulty.UltraHard -> listOf(Pair(3, 2), Pair(4, 1), Pair(5, 2))
             }
         }
@@ -374,11 +386,69 @@ class HoneycombViewModel(
         for ((stars, count) in composition) {
             deck.addAll(database.rulesAwareCards(stars, count, preferLowStats))
         }
-        
+
         deck.shuffle()
         com.leah.honeycomb.audio.UISound.play("shuffle")
-        
-        return deck
+
+        // Favor New Cards (always on, not a toggle): if every card in the assembled deck
+        // is already owned by the player, swap the first owned card for an unowned card
+        // from the same star tier (if one exists) — guarantees at least one stealable
+        // card per match without touching deck quality or rarity composition.
+        if (!sharedOptions.noStressMode.value) {
+            val owned = profileManager.unlockedCardIds.value
+            val allOwned = deck.all { owned.contains(it.id) }
+            if (allOwned) {
+                for (i in deck.indices) {
+                    val tier = deck[i].stars
+                    val unownedInTier = database.allCards.filter { it.stars == tier && !owned.contains(it.id) }
+                    val substitute = unownedInTier.randomOrNull()
+                    if (substitute != null) {
+                        deck[i] = substitute
+                        break
+                    }
+                }
+            }
+        }
+
+        return ensureAscensionCoverage(deck, difficulty, rules, suits)
+    }
+
+    // Ultra Hard only: a player can stack their own deck with cards of the rolled
+    // Ascension suit(s) to farm the +1-per-suit-card-on-board bonus, while the
+    // opponent's deck is otherwise assembled with no awareness of which suits are even
+    // in play. Guarantees at least 3 of the opponent's 5 cards match an active Ascension
+    // suit so the AI can benefit from the same bonus the player is exploiting. Descension
+    // is deliberately left alone — it's a penalty, so forcing more Descension-suited
+    // cards into the AI's hand would only hurt it, not balance anything.
+    private fun ensureAscensionCoverage(
+        deck: List<HoneycombCardData>,
+        difficulty: HoneycombDifficulty,
+        rules: List<HoneycombRule>,
+        suits: Set<String>
+    ): List<HoneycombCardData> {
+        if (difficulty != HoneycombDifficulty.UltraHard || !rules.contains(HoneycombRule.Ascension) || suits.isEmpty()) {
+            return deck
+        }
+
+        val result = deck.toMutableList()
+        var matchingCount = result.count { suits.contains(it.suit) }
+        if (matchingCount >= 3) return result
+
+        val nonMatchingIndices = result.indices
+            .filter { !suits.contains(result[it].suit) }
+            .sortedBy { result[it].stars }
+
+        for (idx in nonMatchingIndices) {
+            if (matchingCount >= 3) break
+            val tier = result[idx].stars
+            val usedIds = result.map { it.id }.toSet()
+            val candidates = database.allCards.filter { it.stars == tier && suits.contains(it.suit) && !usedIds.contains(it.id) }
+            val substitute = candidates.randomOrNull() ?: continue
+            result[idx] = substitute
+            matchingCount++
+        }
+
+        return result
     }
 
     private fun finishMatchSetup(forceAlternateStarter: Boolean = false) {
@@ -577,7 +647,8 @@ class HoneycombViewModel(
         }
 
         val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
-        sessionCardsCaptured += newBoard.placeCard(card, boardIndex, st.activeRules).size
+        val flips = newBoard.placeCard(card, boardIndex, st.activeRules)
+        sessionCardsCaptured += flips.size
         processBombShelter(newBoard, boardIndex, st.activeRules)
 
         _state.update {
@@ -589,6 +660,7 @@ class HoneycombViewModel(
                 chaosOpponentIndex = if (it.activeRules.contains(HoneycombRule.Chaos) && it.opponentHand.isNotEmpty()) (0 until it.opponentHand.size).random() else null,
             )
         }
+        flashCapture(card.id, boardIndex, flips)
 
         checkWinCondition()
 
@@ -646,7 +718,8 @@ class HoneycombViewModel(
                 }
 
                 val newBoard = _state.value.board.copy(cells = _state.value.board.cells.map { it.copy(card = it.card?.copy()) })
-                sessionCardsCaptured += newBoard.placeCard(cardToPlay, move.second, _state.value.activeRules).size
+                val flips = newBoard.placeCard(cardToPlay, move.second, _state.value.activeRules)
+                sessionCardsCaptured += flips.size
                 processBombShelter(newBoard, move.second, _state.value.activeRules)
 
                 _state.update {
@@ -658,11 +731,52 @@ class HoneycombViewModel(
                         chaosPlayerIndex = if (it.activeRules.contains(HoneycombRule.Chaos) && it.playerHand.isNotEmpty()) (0 until it.playerHand.size).random() else null,
                     )
                 }
+                flashCapture(cardToPlay.id, move.second, flips)
                 hintGeneration++
                 checkWinCondition()
                 if (_state.value.gameState == HoneycombGameState.Playing && _state.value.isPlayerTurn) {
                     prewarmHint()
                 }
+            }
+        }
+    }
+
+    // Maps a captured neighbor's board index to which of the attacker's 4 stats faces
+    // it — same neighbor layout as HoneycombBoard.resolveCaptures (3x3 grid, row-major).
+    // Returns null if the two indices aren't actually adjacent. Ported from
+    // shared/Honeycomb/ViewModels/HoneycombViewModel.swift's neighborDirection.
+    private fun neighborDirection(attackerIndex: Int, neighborIndex: Int): Int? {
+        val row = attackerIndex / 3
+        val col = attackerIndex % 3
+        if (neighborIndex == attackerIndex - 3 && row > 0) return 0 // Top
+        if (neighborIndex == attackerIndex + 1 && col < 2) return 1 // Right
+        if (neighborIndex == attackerIndex + 3 && row < 2) return 2 // Bottom
+        if (neighborIndex == attackerIndex - 1 && col > 0) return 3 // Left
+        return null
+    }
+
+    // Pops the attacking card and flashes its winning stat(s) gold, briefly, right after
+    // a capture — ported from iOS's flashCaptureAttackers/pointHighlight. Only the
+    // directly-placed card's own direct captures are highlighted; secondary combo/chain
+    // flips just flip along with everything else, no separate highlight cycle.
+    private fun flashCapture(cardId: String, boardIndex: Int, flips: List<Int>) {
+        if (flips.isEmpty()) return
+        val directStatIndices = flips.mapNotNull { neighborDirection(boardIndex, it) }.toSet()
+        _state.update {
+            it.copy(
+                captureAttackerIds = it.captureAttackerIds + cardId,
+                pointHighlightCardId = cardId,
+                pointHighlightStatIndices = directStatIndices
+            )
+        }
+        viewModelScope.launch {
+            delay(600)
+            _state.update {
+                it.copy(
+                    captureAttackerIds = it.captureAttackerIds - cardId,
+                    pointHighlightCardId = if (it.pointHighlightCardId == cardId) null else it.pointHighlightCardId,
+                    pointHighlightStatIndices = if (it.pointHighlightCardId == cardId) emptySet() else it.pointHighlightStatIndices
+                )
             }
         }
     }
@@ -870,6 +984,10 @@ class HoneycombViewModel(
     }
 
     fun startOver() {
+        viewModelScope.launch {
+            profileManager.startOver()
+            database.reseed()
+        }
         updateOptions(_options.value.copy(activeDeckIndex = 0))
         updateStatistics { it.copy(timesStartedOver = it.timesStartedOver + 1) }
     }

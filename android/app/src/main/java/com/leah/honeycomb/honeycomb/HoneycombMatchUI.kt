@@ -372,6 +372,15 @@ fun HoneycombMatchUI(
                                 Strings.get(StringKey.StealProtectionLine, language),
                                 style = MaterialTheme.typography.bodySmall
                             )
+                        } else if (viewModel.profileManager.isCardBankFull && viewModel.hasStealableCard) {
+                            Text(
+                                Strings.get(StringKey.CardBankFullLine1, language),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                Strings.get(StringKey.CardBankFullLine2, language),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -626,7 +635,13 @@ private fun SharedTransitionScope.BoardGrid(animatedVisibilityScope: AnimatedVis
                         contentAlignment = Alignment.Center
                     ) {
                         cell.card?.let { c ->
-                            HoneycombCardView(card = c, isFlipped = false, modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = c.id.toString()), animatedVisibilityScope = animatedVisibilityScope))
+                            HoneycombCardView(
+                                card = c,
+                                isFlipped = false,
+                                highlightedStatIndices = if (state.pointHighlightCardId == c.id) state.pointHighlightStatIndices else emptySet(),
+                                isCaptureAttacker = state.captureAttackerIds.contains(c.id),
+                                modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = c.id.toString()), animatedVisibilityScope = animatedVisibilityScope)
+                            )
                         }
                     }
                 }
