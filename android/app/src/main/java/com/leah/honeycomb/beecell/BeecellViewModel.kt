@@ -635,7 +635,7 @@ class BeecellViewModel(
     }
     
     private fun checkStuckState() {
-        if (_state.value.hasWon) {
+        if (_state.value.hasWon || _isAutocompleteAvailable.value) {
             _isStuck.value = false
             return
         }
