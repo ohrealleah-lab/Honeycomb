@@ -135,12 +135,12 @@ class BeecellViewModel(
     // Android is 1-deck only (see the port plan §3) — the "2 opposite-color foundations
     // per deck" iOS formula (`2 * options.deckCount`) collapses to the 1-deck constant 2,
     // since BeecellOptions.kt has no deckCount field to multiply by.
-    private fun isSafeFoundationMove(card: Card): Boolean {
+    private fun isSafeFoundationMoveForHint(card: Card, foundations: List<Pile>): Boolean {
         if (card.rank <= 2) return true
         val isRed = card.suit == Suit.Hearts || card.suit == Suit.Diamonds
         val reqRank = card.rank - 1
         var safeCount = 0
-        for (foundation in _state.value.foundations) {
+        for (foundation in foundations) {
             val top = foundation.topCard
             if (top != null) {
                 val topIsRed = top.suit == Suit.Hearts || top.suit == Suit.Diamonds
@@ -154,15 +154,15 @@ class BeecellViewModel(
     // supermove-length search (maxDraggable via the descending alternating-color run,
     // trying lengths longest-first), free-cell-to-tableau, tableau-to-free-cell as a
     // scored last resort, 1-ply lookahead at depth 0.
-    private fun evaluateImmediateMoves(depth: Int = 0): List<Pair<HintMove, Int>> {
-        val st = _state.value
+    private fun evaluateImmediateMoves(depth: Int = 0, stateOverride: BeecellState? = null): List<Pair<HintMove, Int>> {
+        val st = stateOverride ?: _state.value
         var scored = mutableListOf<Pair<HintMove, Int>>()
 
         for (cell in st.freeCells) {
             val top = cell.topCard ?: continue
             for (foundation in st.foundations) {
                 if (isValidMove(listOf(top), foundation)) {
-                    val score = if (isSafeFoundationMove(top)) 1000 else 200
+                    val score = if (isSafeFoundationMoveForHint(top, st.foundations)) 1000 else 200
                     scored.add(HintMove(top, cell.id, foundation.id, "Move ${top.rankString}${top.suit.symbol} from Free Cell to Foundation.") to score)
                 }
             }
@@ -171,7 +171,7 @@ class BeecellViewModel(
             val top = col.topCard ?: continue
             for (foundation in st.foundations) {
                 if (isValidMove(listOf(top), foundation)) {
-                    val score = if (isSafeFoundationMove(top)) 1000 else 200
+                    val score = if (isSafeFoundationMoveForHint(top, st.foundations)) 1000 else 200
                     scored.add(HintMove(top, col.id, foundation.id, "Move ${top.rankString}${top.suit.symbol} to Foundation.") to score)
                 }
             }
@@ -187,11 +187,13 @@ class BeecellViewModel(
                 } else break
             }
 
+            val stEmptyFreeCells = st.freeCells.count { it.isEmpty }
+            val stEmptyTableauColumns = st.tableau.count { it.isEmpty }
             for (targetCol in st.tableau) {
                 if (targetCol.id == sourceCol.id) continue
                 for (len in maxDraggable downTo 1) {
                     val dragStack = sourceCol.cards.subList(sourceCol.cards.size - len, sourceCol.cards.size)
-                    if (!isValidMove(dragStack, targetCol)) continue
+                    if (!isValidMove(dragStack, targetCol, stEmptyFreeCells, stEmptyTableauColumns)) continue
                     if (!isProgressiveMove(dragStack, sourceCol, targetCol)) continue
                     val freesColumn = dragStack.size == sourceCol.cards.size
                     val score = if (freesColumn) 700 else 400 + dragStack.size * 20
@@ -277,9 +279,7 @@ class BeecellViewModel(
                     }
                 }
 
-                _state.value = working
-                val nextLevel = evaluateImmediateMoves(depth = 1)
-                _state.value = originalState
+                val nextLevel = evaluateImmediateMoves(depth = 1, stateOverride = working)
 
                 val bestNext = nextLevel.maxByOrNull { it.second }
                 if (bestNext != null) {
@@ -421,9 +421,9 @@ class BeecellViewModel(
     val emptyTableauColumnsCount: Int
         get() = _state.value.tableau.count { it.isEmpty }
         
-    fun maxMoveLimit(toEmptyTableau: Boolean): Int {
-        val e = emptyFreeCellsCount
-        val c = emptyTableauColumnsCount
+    fun maxMoveLimit(toEmptyTableau: Boolean, emptyFreeCells: Int = emptyFreeCellsCount, emptyTableauColumns: Int = emptyTableauColumnsCount): Int {
+        val e = emptyFreeCells
+        val c = emptyTableauColumns
         return if (toEmptyTableau) {
             (e + 1) * (1 shl max(0, c - 1))
         } else {
@@ -444,10 +444,15 @@ class BeecellViewModel(
         return true
     }
     
-    fun isValidMove(cards: List<Card>, targetPile: Pile): Boolean {
+    fun isValidMove(
+        cards: List<Card>,
+        targetPile: Pile,
+        emptyFreeCells: Int = emptyFreeCellsCount,
+        emptyTableauColumns: Int = emptyTableauColumnsCount
+    ): Boolean {
         val firstCard = cards.firstOrNull() ?: return false
         if (!isValidDragSequence(cards)) return false
-        
+
         when (targetPile.type) {
             PileType.FreeCell -> {
                 return cards.size == 1 && targetPile.isEmpty
@@ -463,7 +468,7 @@ class BeecellViewModel(
             }
             PileType.Tableau -> {
                 val isTargetEmpty = targetPile.isEmpty
-                val limit = maxMoveLimit(toEmptyTableau = isTargetEmpty)
+                val limit = maxMoveLimit(toEmptyTableau = isTargetEmpty, emptyFreeCells = emptyFreeCells, emptyTableauColumns = emptyTableauColumns)
                 if (cards.size > limit) return false
                 
                 if (isTargetEmpty) {
@@ -784,6 +789,8 @@ class BeecellViewModel(
             isTimerActive = currentActive
         )
         _isStuck.value = false
+        checkWinState()
+        checkAutocompleteState()
         checkStuckState()
     }
 }

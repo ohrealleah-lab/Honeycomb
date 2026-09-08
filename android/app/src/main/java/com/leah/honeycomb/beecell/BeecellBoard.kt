@@ -212,6 +212,7 @@ fun BeecellBoard(
             val cardW = ((screenWidth.value - 18f) / 8f).coerceAtMost(90f).dp
             val cardH = cardW * 1.4f
             val downStep = cardH * 0.24f
+            activeCardW = cardW
 
             Column(modifier = Modifier.padding(top = 8.dp)) {
                 // Top Row: Free Cells on left, Foundations on right
@@ -384,15 +385,13 @@ fun BeecellBoard(
                     }
                 }
             }
-
-            if (isAutocompleteAvailable && !state.hasWon) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
-                    Card {
-                        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Victory Guaranteed!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = { viewModel.runAutocomplete() }) { Text("Auto-complete") }
-                        }
+        } else if (isAutocompleteAvailable) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
+                Card {
+                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Victory Guaranteed!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = { viewModel.runAutocomplete() }) { Text("Auto-complete") }
                     }
                 }
             }
