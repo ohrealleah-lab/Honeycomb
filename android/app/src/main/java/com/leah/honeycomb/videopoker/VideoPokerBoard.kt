@@ -216,8 +216,9 @@ fun VideoPokerBoard(
                 val cardW = remember(config.screenWidthDp) { ((config.screenWidthDp.dp - 32.dp) / 5).coerceAtMost(100.dp) }
                 val cardH = cardW * 1.4f
                 if (state.hand.isEmpty()) {
+                    val placeholder = remember { com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false) }
                     repeat(5) {
-                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
+                        CardView(card = placeholder, modifier = Modifier.size(cardW, cardH))
                     }
                 } else {
                     state.hand.forEachIndexed { index, card ->

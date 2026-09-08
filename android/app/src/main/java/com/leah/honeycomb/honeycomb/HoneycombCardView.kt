@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leah.honeycomb.CardBackView
+import com.leah.honeycomb.rememberCardColors
 import com.leah.honeycomb.CardDimensions
 import com.leah.honeycomb.theme.LocalSoliBeeTheme
 import kotlinx.coroutines.delay
@@ -139,49 +140,11 @@ fun HoneycombCardView(
         card.data.suit == "H" || card.data.suit == "D"
     }
 
-    val currentColor = if (theme.customCardColors.isEnabled) {
-        if (isRed) Color(
-            theme.customCardColors.redSuitRed.toFloat(),
-            theme.customCardColors.redSuitGreen.toFloat(),
-            theme.customCardColors.redSuitBlue.toFloat(),
-            theme.customCardColors.redSuitAlpha.toFloat()
-        )
-        else Color(
-            theme.customCardColors.blackSuitRed.toFloat(),
-            theme.customCardColors.blackSuitGreen.toFloat(),
-            theme.customCardColors.blackSuitBlue.toFloat(),
-            theme.customCardColors.blackSuitAlpha.toFloat()
-        )
-    } else {
-        if (isRed) Color(0.8f, 0.1f, 0.1f) else Color(0.1f, 0.1f, 0.1f)
-    }
-
-    val outlineColor = if (theme.customCardColors.isEnabled)
-        Color(
-            theme.customCardColors.outlineRed.toFloat(),
-            theme.customCardColors.outlineGreen.toFloat(),
-            theme.customCardColors.outlineBlue.toFloat(),
-            theme.customCardColors.outlineAlpha.toFloat()
-        )
-    else Color.Black.copy(alpha = 0.85f)
-
-    val cardBackgroundColor = if (theme.customCardColors.isEnabled)
-        Color(
-            theme.customCardColors.bgRed.toFloat(),
-            theme.customCardColors.bgGreen.toFloat(),
-            theme.customCardColors.bgBlue.toFloat(),
-            theme.customCardColors.bgAlpha.toFloat()
-        )
-    else Color.White
-
-    val shadowColor = if (theme.customCardColors.isEnabled)
-        Color(
-            theme.customCardColors.shadowRed.toFloat(),
-            theme.customCardColors.shadowGreen.toFloat(),
-            theme.customCardColors.shadowBlue.toFloat(),
-            theme.customCardColors.shadowAlpha.toFloat()
-        )
-    else Color.Black.copy(alpha = 0.15f)
+    val colors = rememberCardColors(theme, isRed)
+    val currentColor = colors.suitColor
+    val outlineColor = colors.outlineColor
+    val cardBackgroundColor = colors.backgroundColor
+    val shadowColor = colors.shadowColor
 
     BoxWithConstraints(
         modifier = modifier

@@ -145,8 +145,9 @@ fun BlackjackBoard(
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(cardSpacing)) {
                     if (state.dealerCards.isEmpty()) {
-                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
-                        CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
+                        val placeholder = remember { com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false) }
+                        CardView(card = placeholder, modifier = Modifier.size(cardW, cardH))
+                        CardView(card = placeholder, modifier = Modifier.size(cardW, cardH))
                     } else {
                         state.dealerCards.forEach { card ->
                             CardView(card = card, modifier = Modifier.size(cardW, cardH))
@@ -223,8 +224,9 @@ fun BlackjackBoard(
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     if (state.playerHands.isEmpty()) {
                         Row(horizontalArrangement = Arrangement.spacedBy(cardSpacing)) {
-                            CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
-                            CardView(card = com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false), modifier = Modifier.size(cardW, cardH))
+                            val placeholder = remember { com.leah.honeycomb.Card(suit = com.leah.honeycomb.Suit.Spades, rank = 1, faceUp = false) }
+                            CardView(card = placeholder, modifier = Modifier.size(cardW, cardH))
+                            CardView(card = placeholder, modifier = Modifier.size(cardW, cardH))
                         }
                     } else {
                         state.playerHands.forEach { hand ->

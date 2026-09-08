@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.leah.honeycomb.theme.LocalSoliBeeTheme
+import com.leah.honeycomb.theme.SoliBeeTheme
 import java.io.File
 import androidx.compose.ui.platform.LocalContext
 
@@ -52,6 +53,39 @@ private val suitPositions = mapOf(
     10 to listOf(SuitPosition(-26, -42, false), SuitPosition(26, -42, false), SuitPosition(-26, -14, false), SuitPosition(26, -14, false), SuitPosition(-26, 14, true), SuitPosition(26, 14, true), SuitPosition(-26, 42, true), SuitPosition(26, 42, true), SuitPosition(0, -27, false), SuitPosition(0, 27, true))
 )
 
+data class CardColors(
+    val outlineColor: Color,
+    val backgroundColor: Color,
+    val shadowColor: Color,
+    val suitColor: Color
+)
+
+@Composable
+fun rememberCardColors(theme: SoliBeeTheme, isRed: Boolean): CardColors {
+    return remember(theme.customCardColors, isRed) {
+        val outlineColor = if (theme.customCardColors.isEnabled) 
+            Color(theme.customCardColors.outlineRed.toFloat(), theme.customCardColors.outlineGreen.toFloat(), theme.customCardColors.outlineBlue.toFloat(), theme.customCardColors.outlineAlpha.toFloat())
+        else Color.Black.copy(alpha = 0.85f)
+        
+        val backgroundColor = if (theme.customCardColors.isEnabled)
+            Color(theme.customCardColors.bgRed.toFloat(), theme.customCardColors.bgGreen.toFloat(), theme.customCardColors.bgBlue.toFloat(), theme.customCardColors.bgAlpha.toFloat())
+        else Color.White
+        
+        val shadowColor = if (theme.customCardColors.isEnabled)
+            Color(theme.customCardColors.shadowRed.toFloat(), theme.customCardColors.shadowGreen.toFloat(), theme.customCardColors.shadowBlue.toFloat(), theme.customCardColors.shadowAlpha.toFloat())
+        else Color.Black.copy(alpha = 0.15f)
+        
+        val suitColor = if (theme.customCardColors.isEnabled) {
+            if (isRed) Color(theme.customCardColors.redSuitRed.toFloat(), theme.customCardColors.redSuitGreen.toFloat(), theme.customCardColors.redSuitBlue.toFloat(), theme.customCardColors.redSuitAlpha.toFloat())
+            else Color(theme.customCardColors.blackSuitRed.toFloat(), theme.customCardColors.blackSuitGreen.toFloat(), theme.customCardColors.blackSuitBlue.toFloat(), theme.customCardColors.blackSuitAlpha.toFloat())
+        } else {
+            if (isRed) Color(0.8f, 0.1f, 0.1f) else Color(0.1f, 0.1f, 0.1f)
+        }
+
+        CardColors(outlineColor, backgroundColor, shadowColor, suitColor)
+    }
+}
+
 @Composable
 fun CardView(
     card: Card,
@@ -73,24 +107,11 @@ fun CardView(
     val isPastFlipMidpoint = flipDegrees > 90f
     val theme = LocalSoliBeeTheme.current
     
-    val outlineColor = if (theme.customCardColors.isEnabled) 
-        Color(theme.customCardColors.outlineRed.toFloat(), theme.customCardColors.outlineGreen.toFloat(), theme.customCardColors.outlineBlue.toFloat(), theme.customCardColors.outlineAlpha.toFloat())
-    else Color.Black.copy(alpha = 0.85f)
-    
-    val cardBackgroundColor = if (theme.customCardColors.isEnabled)
-        Color(theme.customCardColors.bgRed.toFloat(), theme.customCardColors.bgGreen.toFloat(), theme.customCardColors.bgBlue.toFloat(), theme.customCardColors.bgAlpha.toFloat())
-    else Color.White
-    
-    val shadowColor = if (theme.customCardColors.isEnabled)
-        Color(theme.customCardColors.shadowRed.toFloat(), theme.customCardColors.shadowGreen.toFloat(), theme.customCardColors.shadowBlue.toFloat(), theme.customCardColors.shadowAlpha.toFloat())
-    else Color.Black.copy(alpha = 0.15f)
-    
-    val suitColor = if (theme.customCardColors.isEnabled) {
-        if (card.isRed) Color(theme.customCardColors.redSuitRed.toFloat(), theme.customCardColors.redSuitGreen.toFloat(), theme.customCardColors.redSuitBlue.toFloat(), theme.customCardColors.redSuitAlpha.toFloat())
-        else Color(theme.customCardColors.blackSuitRed.toFloat(), theme.customCardColors.blackSuitGreen.toFloat(), theme.customCardColors.blackSuitBlue.toFloat(), theme.customCardColors.blackSuitAlpha.toFloat())
-    } else {
-        if (card.isRed) Color(0.8f, 0.1f, 0.1f) else Color(0.1f, 0.1f, 0.1f)
-    }
+    val colors = rememberCardColors(theme, card.isRed)
+    val outlineColor = colors.outlineColor
+    val cardBackgroundColor = colors.backgroundColor
+    val shadowColor = colors.shadowColor
+    val suitColor = colors.suitColor
     
     val cornerRadius = 10.dp
 
@@ -191,13 +212,16 @@ fun CardCenterSuitView(card: Card, suitColor: Color, modifier: Modifier = Modifi
     
     // Check if there is custom face art for this card slot
     val slotName = "${card.rankString}${card.suit.symbol}" // simplistic slot matching
-    val customArt = theme.faceArts.find { it.slot == slotName || it.slot == card.rankString }
+    val customArt = remember(theme.faceArts, slotName) { theme.faceArts.find { it.slot == slotName || it.slot == card.rankString } }
     
     if (customArt != null) {
-        val file = File(File(context.filesDir, "FaceArt"), customArt.relativePath)
-        if (file.exists()) {
+        val fileData = remember(customArt.relativePath) {
+            val f = File(File(context.filesDir, "FaceArt"), customArt.relativePath)
+            f to f.exists()
+        }
+        if (fileData.second) {
             AsyncImage(
-                model = file,
+                model = fileData.first,
                 contentDescription = null,
                 modifier = modifier
                     .fillMaxSize()
@@ -281,12 +305,15 @@ fun CardBackView(themeName: String, isAnimated: Boolean) {
         // Assume it's a custom card back
         val appContainer = LocalAppContainer.current
         val customBacks by appContainer.customCardBackManager.cardBacks.collectAsState()
-        val customBg = customBacks.find { it.id == themeName }
+        val customBg = remember(customBacks, themeName) { customBacks.find { it.id == themeName } }
         if (customBg != null) {
-            val file = File(File(context.filesDir, "CardBacks"), customBg.relativePath)
-            if (file.exists()) {
+            val fileData = remember(customBg.relativePath) {
+                val f = File(File(context.filesDir, "CardBacks"), customBg.relativePath)
+                f to f.exists()
+            }
+            if (fileData.second) {
                 AsyncImage(
-                    model = file,
+                    model = fileData.first,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize()
                         .graphicsLayer {
