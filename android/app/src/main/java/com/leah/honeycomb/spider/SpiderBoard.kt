@@ -70,6 +70,7 @@ fun SpiderBoard(
 ) {
     val language by com.leah.honeycomb.LocalAppContainer.current.language.collectAsState()
     val state by viewModel.state.collectAsState()
+    val noStressMode by viewModel.sharedOptions.noStressMode.collectAsState()
     val options by viewModel.options.collectAsState()
     val isAutocompleteAvailable by viewModel.isAutocompleteAvailable.collectAsState()
     val isAutoplayRunning by viewModel.isAutoplayRunning.collectAsState()
@@ -141,11 +142,13 @@ fun SpiderBoard(
                     Text("SCORE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                         Text("${state.score}", fontWeight = FontWeight.Bold, color = Color.Yellow)
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("TIME", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
-                    val mins = state.timerSeconds / 60
+                if (!noStressMode) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("TIME", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                        val mins = state.timerSeconds / 60
                         val secs = state.timerSeconds % 60
                         Text(String.format("%02d:%02d", mins, secs), fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
         }
@@ -297,7 +300,7 @@ fun SpiderBoard(
                                     val currentY = runningY
                                     val stack = pile.cards.subList(i, pile.cards.size)
                                     val isDragging = dragState.cards.any { it.id == card.id }
-                                    var layoutPos by remember { mutableStateOf(Offset.Zero) }
+                                    var layoutPos by remember(card.id) { mutableStateOf(Offset.Zero) }
                                     Box(
                                         modifier = Modifier
                                             .offset(y = currentY)

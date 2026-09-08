@@ -425,6 +425,7 @@ class SpiderViewModel(
         val currentState = _state.value
         if (currentState.stock.isEmpty || hasEmptyTableauColumn) return false
 
+        clearHint()
         saveStateForUndo()
         startTimerIfNeeded()
 
