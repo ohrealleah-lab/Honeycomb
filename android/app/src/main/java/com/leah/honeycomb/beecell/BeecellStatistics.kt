@@ -2,11 +2,6 @@ package com.leah.honeycomb.beecell
 
 import kotlinx.serialization.Serializable
 
-// Field set matches shared/Beecell/Models/BeecellStatistics.swift's ModeStats (dropped
-// the old bestTime/bestStreak fields). Keyed by free-cell count on Android (1-4) rather
-// than iOS's deck-count ("1deck"/"2deck") key, since Android is single-deck only (see
-// the port plan §3) and has no deck-count option to key by — BeecellOptions.kt has only
-// freeCellCount, no deckCount field.
 @Serializable
 data class BeecellModeStats(
     val gamesPlayed: Int = 0,
@@ -28,9 +23,6 @@ data class BeecellModeStats(
 @Serializable
 data class BeecellStatistics(
     val statsByFreeCells: Map<Int, BeecellModeStats> = mapOf(
-        1 to BeecellModeStats(),
-        2 to BeecellModeStats(),
-        3 to BeecellModeStats(),
         4 to BeecellModeStats()
     )
 )

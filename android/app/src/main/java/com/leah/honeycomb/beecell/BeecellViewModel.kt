@@ -38,11 +38,11 @@ class BeecellViewModel(
     )
     val statistics: StateFlow<BeecellStatistics> = _statistics.asStateFlow()
 
-    private fun updateModeStats(freeCellCount: Int, transform: (BeecellModeStats) -> BeecellModeStats) {
+    private fun updateModeStats(modeKey: Int, transform: (BeecellModeStats) -> BeecellModeStats) {
         val stats = _statistics.value
         val newStatsMap = stats.statsByFreeCells.toMutableMap()
-        val modeStats = newStatsMap[freeCellCount] ?: BeecellModeStats()
-        newStatsMap[freeCellCount] = transform(modeStats)
+        val modeStats = newStatsMap[modeKey] ?: BeecellModeStats()
+        newStatsMap[modeKey] = transform(modeStats)
         val newStats = stats.copy(statsByFreeCells = newStatsMap)
         _statistics.value = newStats
         viewModelScope.launch {
@@ -313,9 +313,6 @@ class BeecellViewModel(
         val oldOptions = _options.value
         _options.value = newOptions
         saveOptions(newOptions)
-        if (oldOptions.freeCellCount != newOptions.freeCellCount) {
-            startNewGame(abandonedModeKey = oldOptions.freeCellCount)
-        }
     }
 
     private fun saveStateForUndo() {
@@ -341,16 +338,16 @@ class BeecellViewModel(
         stopTimer()
     }
 
-    fun startNewGame(abandonedModeKey: Int? = null) {
+    fun startNewGame() {
         stopTimer()
 
         val currentState = _state.value
         if (currentState.movesCount > 0 && !currentState.hasWon) {
-            val abandonedCount = abandonedModeKey ?: _options.value.freeCellCount
-            updateModeStats(abandonedCount) { it.copy(currentStreak = 0) }
+            
+            updateModeStats(4) { it.copy(currentStreak = 0) }
         }
 
-        updateModeStats(_options.value.freeCellCount) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
+        updateModeStats(4) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
 
         undoStack.clear()
         
@@ -378,7 +375,7 @@ class BeecellViewModel(
         }
 
         val freeCells = mutableListOf<Pile>()
-        for (i in 0 until _options.value.freeCellCount) {
+        for (i in 0 until 4) {
             freeCells.add(Pile(id = "freecell_$i", type = PileType.FreeCell, cards = emptyList()))
         }
 
@@ -581,7 +578,7 @@ class BeecellViewModel(
 
             val timeInSeconds = _state.value.timerSeconds
             val finalScore = _state.value.score
-            updateModeStats(_options.value.freeCellCount) { stats ->
+            updateModeStats(4) { stats ->
                 val newStreak = stats.currentStreak + 1
                 var updated = stats.copy(
                     gamesWon = stats.gamesWon + 1,

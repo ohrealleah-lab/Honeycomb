@@ -11,16 +11,11 @@ import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.Strings
 import com.leah.honeycomb.formatSeconds
 
-// Statistics are still stored per free-cell-count mode under the hood (see
-// BeecellStatistics.kt), but the picker UI for switching between modes was confusing
-// with no clear benefit — this screen just shows whichever mode is currently selected
-// in Beecell's own options, with no picker exposed.
 @Composable
 fun BeecellStatsScreen(viewModel: BeecellViewModel, onBack: () -> Unit) {
     val statistics by viewModel.statistics.collectAsState()
-    val options by viewModel.options.collectAsState()
     val language by LocalAppContainer.current.language.collectAsState()
-    val stats = statistics.statsByFreeCells[options.freeCellCount] ?: BeecellModeStats()
+    val stats = statistics.statsByFreeCells[4] ?: BeecellModeStats()
 
     StatisticsFullScreenView(title = "Beecell Statistics", onDismiss = onBack) {
         RoundedContainer {

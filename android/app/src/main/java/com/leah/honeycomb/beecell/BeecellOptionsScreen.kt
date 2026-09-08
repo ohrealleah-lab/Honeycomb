@@ -27,17 +27,10 @@ fun BeecellOptionsScreen(
 
     OptionsFullScreenView(
         title = Strings.get(StringKey.Options, language),
-        gameSectionTitle = "Beecell",
+        gameSectionTitle = null,
         helpText = Strings.get(StringKey.HelpBeecellRules, language),
         onDismiss = onBack,
         onShowStats = onShowStats,
-        gameSettings = {
-            SegmentedControl(
-                items = listOf(1, 2, 3, 4),
-                selectedItem = options.freeCellCount,
-                onItemSelection = { viewModel.updateOptions(options.copy(freeCellCount = it)) },
-                itemLabel = { "$it" }
-            )
-        }
+        gameSettings = null
     )
 }
