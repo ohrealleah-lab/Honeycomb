@@ -53,7 +53,13 @@ data class HoneycombState(
     // captureAttackerIds/pointHighlight in shared/Honeycomb/ViewModels/HoneycombViewModel.swift.
     val captureAttackerIds: Set<String> = emptySet(),
     val pointHighlightCardId: String? = null,
-    val pointHighlightStatIndices: Set<Int> = emptySet()
+    val pointHighlightStatIndices: Set<Int> = emptySet(),
+    // Which two cards (by id) just traded hands under the Nectar Exchange (Swap) rule —
+    // highlighted with the same pop/border treatment as a capture. Simplified stand-in
+    // for iOS's 3-beat lift/fly/land matchedGeometryEffect choreography (swapAnimationPhase
+    // in shared/Honeycomb/ViewModels/HoneycombViewModel.swift): a real, working "something
+    // changed here" cue, not a byte-faithful port of that animation.
+    val swapHighlightCardIds: Set<String> = emptySet()
 ) {
     val mandatedPlayerHandIndex: Int?
         get() {
@@ -361,14 +367,25 @@ class HoneycombViewModel(
             openPlayerIds = pDeck.shuffled().take(3).map { it.id }.toSet()
         }
         swappedPlayerCardId?.let { openPlayerIds = openPlayerIds + it }
-        
+
+        val swapIds = setOfNotNull(swappedOppCardId, swappedPlayerCardId)
+
         _state.update { it.copy(
-            playerHand = pDeck, 
-            playerStartingDeck = pDeck, 
+            playerHand = pDeck,
+            playerStartingDeck = pDeck,
             openPlayerCardIds = openPlayerIds,
             opponentHand = oDeck,
-            openOpponentCardIds = openOppIds
+            openOpponentCardIds = openOppIds,
+            swapHighlightCardIds = swapIds
         ) }
+
+        if (swapIds.isNotEmpty()) {
+            enqueueBanner("${HoneycombRule.Swap.displayName}!")
+            viewModelScope.launch {
+                delay(2000)
+                _state.update { it.copy(swapHighlightCardIds = emptySet()) }
+            }
+        }
     }
 
     private fun rollOpponentDeck(difficulty: HoneycombDifficulty, rules: List<HoneycombRule>, suits: Set<String>): List<HoneycombCardData> {

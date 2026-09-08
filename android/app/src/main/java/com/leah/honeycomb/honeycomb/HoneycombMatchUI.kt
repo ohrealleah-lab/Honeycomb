@@ -702,6 +702,7 @@ private fun SharedTransitionScope.OpponentHandRow(animatedVisibilityScope: Anima
                     HoneycombCardView(
                         card = card,
                         isFlipped = !state.openOpponentCardIds.contains(card.id),
+                        isCaptureAttacker = state.swapHighlightCardIds.contains(card.id),
                         modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope)
                     )
                 }
@@ -736,7 +737,7 @@ private fun SharedTransitionScope.OpponentHandPyramid(animatedVisibilityScope: A
                 for (i in 0 until min(3, cards.size)) {
                     val card = cards[i]
                     Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
-                        HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.id), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope))
+                        HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.id), isCaptureAttacker = state.swapHighlightCardIds.contains(card.id), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope))
                     }
                 }
             }
@@ -745,7 +746,7 @@ private fun SharedTransitionScope.OpponentHandPyramid(animatedVisibilityScope: A
                     for (i in 3 until cards.size) {
                         val card = cards[i]
                         Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
-                            HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.id), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope))
+                            HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.id), isCaptureAttacker = state.swapHighlightCardIds.contains(card.id), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope))
                         }
                     }
                 }
@@ -785,6 +786,7 @@ private fun SharedTransitionScope.PlayerHandRow(animatedVisibilityScope: Animate
                     animatedVisibilityScope = animatedVisibilityScope, index = index, card = card, cardWidth = cardWidth, cardHeight = cardHeight,
                     isHinted = hintMove?.first == index,
                     isMandated = state.mandatedPlayerHandIndex == index,
+                    isSwapped = state.swapHighlightCardIds.contains(card.id),
                     canDrag = state.isPlayerTurn && (state.mandatedPlayerHandIndex == null || state.mandatedPlayerHandIndex == index),
                     scale = scale, draggedIndex = draggedCardInfo?.index,
                     onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd, onDragCancel = onDragCancel
@@ -796,7 +798,7 @@ private fun SharedTransitionScope.PlayerHandRow(animatedVisibilityScope: Animate
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun SharedTransitionScope.PlayerHandPyramid(animatedVisibilityScope: AnimatedVisibilityScope, 
+private fun SharedTransitionScope.PlayerHandPyramid(animatedVisibilityScope: AnimatedVisibilityScope,
     state: HoneycombState,
     hintMove: Pair<Int, Int>?,
     cardWidth: Dp,
@@ -819,6 +821,7 @@ private fun SharedTransitionScope.PlayerHandPyramid(animatedVisibilityScope: Ani
                     animatedVisibilityScope = animatedVisibilityScope, index = index, card = card, cardWidth = cardWidth, cardHeight = cardHeight,
                     isHinted = hintMove?.first == index,
                     isMandated = state.mandatedPlayerHandIndex == index,
+                    isSwapped = state.swapHighlightCardIds.contains(card.id),
                     canDrag = state.isPlayerTurn && (state.mandatedPlayerHandIndex == null || state.mandatedPlayerHandIndex == index),
                     scale = scale, draggedIndex = draggedCardInfo?.index,
                     onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd, onDragCancel = onDragCancel
@@ -842,6 +845,7 @@ private fun SharedTransitionScope.PlayerHandCard(animatedVisibilityScope: Animat
     cardHeight: Dp,
     isHinted: Boolean,
     isMandated: Boolean,
+    isSwapped: Boolean = false,
     canDrag: Boolean,
     scale: Float,
     draggedIndex: Int?,
@@ -894,7 +898,7 @@ private fun SharedTransitionScope.PlayerHandCard(animatedVisibilityScope: Animat
             }
     ) {
         if (draggedIndex != index) {
-            HoneycombCardView(card = card, isFlipped = false, modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope))
+            HoneycombCardView(card = card, isFlipped = false, isCaptureAttacker = isSwapped, modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope))
         }
     }
 }
