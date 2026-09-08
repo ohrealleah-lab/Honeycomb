@@ -13,23 +13,27 @@ import androidx.compose.ui.unit.dp
 import com.leah.honeycomb.LocalAppContainer
 import kotlinx.coroutines.launch
 
+// Face Card art import doesn't exist on Android — mobile screens are too small for it to
+// be worth the space it takes in a card, unlike Mac's larger canvas. Only Background and
+// Card Back remain, and neither takes a name anymore — custom art is identified purely by
+// its generated id and picked by thumbnail, so there's no name to collide with a bundled
+// asset's.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomArtImportScreen(onBack: () -> Unit) {
     val appContainer = LocalAppContainer.current
     val coroutineScope = rememberCoroutineScope()
-    
+
     var selectedType by remember { mutableStateOf("Background") }
-    var name by remember { mutableStateOf("") }
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
-    
+
     var showDropdown by remember { mutableStateOf(false) }
-    val types = listOf("Background", "Card Back", "Face Card")
-    
+    val types = listOf("Background", "Card Back")
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         selectedUri = uri
     }
-    
+
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -88,15 +92,6 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                 }
             }
 
-            if (selectedType != "Face Card") {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
             Button(
                 onClick = { launcher.launch("image/*") },
                 modifier = Modifier.fillMaxWidth()
@@ -113,22 +108,16 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                         snackbarMessage = "Please select an image first."
                         return@Button
                     }
-                    if (selectedType != "Face Card" && name.isBlank()) {
-                        snackbarMessage = "Please enter a name."
-                        return@Button
-                    }
 
                     coroutineScope.launch {
                         val result = when (selectedType) {
-                            "Background" -> appContainer.customBackgroundManager.addBackground(uri, name)
-                            "Card Back" -> appContainer.customCardBackManager.addCardBack(uri, name)
-                            "Face Card" -> appContainer.customFaceCardArtManager.addFaceArt(uri).map { }
+                            "Background" -> appContainer.customBackgroundManager.addBackground(uri)
+                            "Card Back" -> appContainer.customCardBackManager.addCardBack(uri)
                             else -> Result.failure(Exception("Unknown type"))
                         }
 
                         if (result.isSuccess) {
                             snackbarMessage = "Import successful!"
-                            name = ""
                             selectedUri = null
                         } else {
                             snackbarMessage = "Error: ${result.exceptionOrNull()?.message}"
@@ -136,7 +125,7 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = selectedUri != null && (selectedType == "Face Card" || name.isNotBlank())
+                enabled = selectedUri != null
             ) {
                 Text("Save")
             }

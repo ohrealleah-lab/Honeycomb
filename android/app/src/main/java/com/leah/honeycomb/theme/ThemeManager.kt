@@ -70,12 +70,22 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
         
         val deletedJson = prefs[deletedDefaultThemesKey]
         if (!deletedJson.isNullOrEmpty()) {
-            deletedDefaultThemes = Json.decodeFromString<List<String>>(deletedJson).toMutableSet()
+            deletedDefaultThemes = try {
+                Json.decodeFromString<List<String>>(deletedJson).toMutableSet()
+            } catch (e: Exception) {
+                mutableSetOf()
+            }
         }
 
         val themesJson = prefs[themesKey]
+        // A decode failure falls back to the default theme set instead of throwing out of
+        // init — an uncaught exception here would crash the app on every subsequent launch.
         val loadedThemes = if (!themesJson.isNullOrEmpty()) {
-            Json.decodeFromString<List<SoliBeeTheme>>(themesJson).toMutableList()
+            try {
+                Json.decodeFromString<List<SoliBeeTheme>>(themesJson).toMutableList()
+            } catch (e: Exception) {
+                defaultThemes.filter { !deletedDefaultThemes.contains(it.name.lowercase()) }.toMutableList()
+            }
         } else {
             defaultThemes.filter { !deletedDefaultThemes.contains(it.name.lowercase()) }.toMutableList()
         }
@@ -138,9 +148,9 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
         updateTheme(theme.copy(cardBackTheme = cardBackTheme))
     }
 
-    fun updateActiveThemeBackground(feltColor: FeltColorType, customBgName: String? = null) {
+    fun updateActiveThemeBackground(feltColor: FeltColorType, customBackgroundId: String? = null) {
         val theme = getOrCreateActiveTheme()
-        updateTheme(theme.copy(feltColor = feltColor, customBackgroundName = customBgName))
+        updateTheme(theme.copy(feltColor = feltColor, customBackgroundName = customBackgroundId))
     }
 
     fun updateActiveThemeCustomColors(colors: CustomCardColorGroup) {
@@ -188,11 +198,13 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
         save()
     }
 
-    fun clearBackgroundReferences(name: String) {
+    // `backgroundId` matches SoliBeeTheme.customBackgroundName, which stores a custom
+    // background's generated id (custom backgrounds have no user-visible name).
+    fun clearBackgroundReferences(backgroundId: String) {
         var changed = false
         val newThemes = _themes.value.toMutableList()
         for (i in newThemes.indices) {
-            if (newThemes[i].customBackgroundName == name) {
+            if (newThemes[i].customBackgroundName == backgroundId) {
                 newThemes[i] = newThemes[i].copy(customBackgroundName = null)
                 changed = true
             }
@@ -203,28 +215,15 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
         }
     }
 
-    fun clearCardBackReferences(name: String, fallback: String = "Solibee") {
+    // `value` matches SoliBeeTheme.cardBackTheme, which stores either a built-in deck's
+    // fixed name or a custom card back's generated id (custom card backs have no
+    // user-visible name) — this function clears either kind identically.
+    fun clearCardBackReferences(value: String, fallback: String = "Solibee") {
         var changed = false
         val newThemes = _themes.value.toMutableList()
         for (i in newThemes.indices) {
-            if (newThemes[i].cardBackTheme == name) {
+            if (newThemes[i].cardBackTheme == value) {
                 newThemes[i] = newThemes[i].copy(cardBackTheme = fallback)
-                changed = true
-            }
-        }
-        if (changed) {
-            _themes.value = newThemes
-            save()
-        }
-    }
-
-    fun clearFaceArtReferences(relativePath: String) {
-        var changed = false
-        val newThemes = _themes.value.toMutableList()
-        for (i in newThemes.indices) {
-            val faceArts = newThemes[i].faceArts.toMutableList()
-            if (faceArts.removeAll { it.relativePath == relativePath }) {
-                newThemes[i] = newThemes[i].copy(faceArts = faceArts)
                 changed = true
             }
         }

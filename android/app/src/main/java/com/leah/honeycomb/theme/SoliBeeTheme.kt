@@ -48,9 +48,11 @@ data class SoliBeeTheme(
     var name: String,
     var cardBackTheme: String,
     var feltColor: FeltColorType,
-    var customFeltRed: Double = 0.0,
-    var customFeltGreen: Double = 0.0,
-    var customFeltBlue: Double = 0.0,
+    // null means "no custom color chosen yet" — distinct from a genuinely black (0,0,0)
+    // custom color, which an all-zero-defaults sentinel couldn't represent.
+    var customFeltRed: Double? = null,
+    var customFeltGreen: Double? = null,
+    var customFeltBlue: Double? = null,
     var faceArts: MutableList<CustomFaceArt> = mutableListOf(),
     var customCardColors: CustomCardColorGroup = CustomCardColorGroup(),
     var customBackgroundName: String? = null

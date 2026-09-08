@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -279,8 +280,8 @@ fun CardBackView(themeName: String, isAnimated: Boolean) {
     } else {
         // Assume it's a custom card back
         val appContainer = LocalAppContainer.current
-        val customBacks = appContainer.customCardBackManager.cardBacks.value
-        val customBg = customBacks.find { it.name == themeName }
+        val customBacks by appContainer.customCardBackManager.cardBacks.collectAsState()
+        val customBg = customBacks.find { it.id == themeName }
         if (customBg != null) {
             val file = File(File(context.filesDir, "CardBacks"), customBg.relativePath)
             if (file.exists()) {

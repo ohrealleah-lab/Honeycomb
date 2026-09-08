@@ -32,23 +32,22 @@ fun AppBackground(modifier: Modifier = Modifier, intensity: Float = 0.45f) {
         FeltColorType.Charcoal -> Color(0.18f, 0.18f, 0.18f)
         FeltColorType.Desert -> Color(0.76f, 0.59f, 0.48f)
         FeltColorType.Custom -> {
-            if (theme.customFeltRed == 0.0 && theme.customFeltGreen == 0.0 && theme.customFeltBlue == 0.0) {
+            val r = theme.customFeltRed
+            val g = theme.customFeltGreen
+            val b = theme.customFeltBlue
+            if (r == null || g == null || b == null) {
                 Color(0.35f, 0.15f, 0.45f)
             } else {
-                Color(
-                    theme.customFeltRed.toFloat(),
-                    theme.customFeltGreen.toFloat(),
-                    theme.customFeltBlue.toFloat()
-                )
+                Color(r.toFloat(), g.toFloat(), b.toFloat())
             }
         }
     }
 
     Box(modifier = modifier.fillMaxSize().background(bgColor)) {
-        val customBgName = theme.customBackgroundName
-        if (customBgName != null) {
-            val backgrounds = appContainer.customBackgroundManager.backgrounds.value
-            val bg = backgrounds.find { it.name == customBgName }
+        val customBgId = theme.customBackgroundName
+        if (customBgId != null) {
+            val backgrounds by appContainer.customBackgroundManager.backgrounds.collectAsState()
+            val bg = backgrounds.find { it.id == customBgId }
             if (bg != null) {
                 val file = File(File(context.filesDir, "Backgrounds"), bg.relativePath)
                 if (file.exists()) {

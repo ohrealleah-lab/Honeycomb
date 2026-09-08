@@ -238,7 +238,7 @@ fun KlondikeBoard(
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Top Row
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
                         // Stock
                         Box(modifier = Modifier
                             .size(cardW, cardH)
@@ -340,7 +340,7 @@ fun KlondikeBoard(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Tableau
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
                         val upStep = cardH * 0.24f
                         val downStep = cardH * 0.12f
                         state.tableau.forEach { pile ->

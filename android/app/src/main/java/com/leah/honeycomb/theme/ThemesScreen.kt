@@ -22,6 +22,27 @@ import androidx.compose.ui.unit.dp
 import com.leah.honeycomb.CardBackView
 import com.leah.honeycomb.LocalAppContainer
 
+// Single source of truth for the built-in felt names <-> FeltColorType mapping — was
+// previously duplicated (and had drifted from CardView.kt's actual bundled card-back set).
+val builtinFeltNames = listOf("Green Felt", "Crimson", "Royal Blue", "Charcoal", "Desert Felt")
+
+fun feltColorForName(name: String): FeltColorType = when (name) {
+    "Green Felt" -> FeltColorType.FeltGreen
+    "Crimson" -> FeltColorType.Crimson
+    "Royal Blue" -> FeltColorType.RoyalBlue
+    "Charcoal" -> FeltColorType.Charcoal
+    "Desert Felt" -> FeltColorType.Desert
+    else -> FeltColorType.FeltGreen
+}
+
+// Every name CardView.kt's CardBackView actually knows how to render as a bundled asset —
+// previously only a 4-name subset was offered here, silently hiding decks a saved theme
+// (e.g. the default "Pareidolic 2" theme) could still be using.
+val builtinCardBackNames = listOf(
+    "Solibee", "Pareidolic", "Pareidolic 2", "Vulpera", "Forest",
+    "Moogle", "Dingwall", "On The Water", "Red Sky", "Sunset"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}) {
@@ -73,38 +94,43 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}) {
                 }
             }
 
-            // Card Back
+            // Card Back — built-ins keep their display name; custom imports are identified
+            // by id and shown as an unlabeled thumbnail (no name to show).
             Text("Card Back", style = MaterialTheme.typography.titleMedium)
-            val allCardBacks = listOf("Solibee", "Pareidolic", "Vulpera", "Forest") + customCardBacks.map { it.name }
             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(allCardBacks) { cbName ->
+                items(builtinCardBackNames) { cbName ->
                     CardBackSelectorItem(
-                        name = cbName,
+                        cardBackId = cbName,
+                        label = cbName,
                         onClick = { themeManager.updateActiveThemeCardBack(cbName) }
+                    )
+                }
+                items(customCardBacks, key = { it.id }) { custom ->
+                    CardBackSelectorItem(
+                        cardBackId = custom.id,
+                        label = null,
+                        onClick = { themeManager.updateActiveThemeCardBack(custom.id) }
                     )
                 }
             }
 
-            // Background
+            // Background — same built-in-vs-custom split as Card Back above.
             Text("Background", style = MaterialTheme.typography.titleMedium)
-            val builtinFelts = listOf("Green Felt", "Crimson", "Royal Blue", "Charcoal", "Desert Felt")
-            val allBackgrounds = builtinFelts + customBackgrounds.map { it.name }
             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(allBackgrounds) { bgName ->
+                items(builtinFeltNames) { bgName ->
                     BackgroundSelectorItem(
-                        name = bgName,
-                        onClick = {
-                            val feltColor = when (bgName) {
-                                "Green Felt" -> FeltColorType.FeltGreen
-                                "Crimson" -> FeltColorType.Crimson
-                                "Royal Blue" -> FeltColorType.RoyalBlue
-                                "Charcoal" -> FeltColorType.Charcoal
-                                "Desert Felt" -> FeltColorType.Desert
-                                else -> FeltColorType.FeltGreen
-                            }
-                            val customBg = if (bgName !in builtinFelts) bgName else null
-                            themeManager.updateActiveThemeBackground(feltColor, customBg)
-                        }
+                        label = bgName,
+                        feltColor = feltColorForName(bgName),
+                        customBackgroundId = null,
+                        onClick = { themeManager.updateActiveThemeBackground(feltColorForName(bgName), null) }
+                    )
+                }
+                items(customBackgrounds, key = { it.id }) { custom ->
+                    BackgroundSelectorItem(
+                        label = null,
+                        feltColor = FeltColorType.Custom,
+                        customBackgroundId = custom.id,
+                        onClick = { themeManager.updateActiveThemeBackground(FeltColorType.Custom, custom.id) }
                     )
                 }
             }
@@ -156,7 +182,7 @@ fun ThemePreviewItem(theme: SoliBeeTheme, isActive: Boolean, onApply: () -> Unit
 }
 
 @Composable
-fun CardBackSelectorItem(name: String, onClick: () -> Unit) {
+fun CardBackSelectorItem(cardBackId: String, label: String?, onClick: () -> Unit) {
     Column(
         modifier = Modifier.clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -167,26 +193,21 @@ fun CardBackSelectorItem(name: String, onClick: () -> Unit) {
                 .wrapContentSize(unbounded = true, align = Alignment.Center)
                 .graphicsLayer { scaleX = 0.6f; scaleY = 0.6f }
         ) {
-            CardBackView(themeName = name, isAnimated = false)
+            CardBackView(themeName = cardBackId, isAnimated = false)
         }
-        Text(name, style = MaterialTheme.typography.bodySmall)
+        if (label != null) {
+            Text(label, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 
 @Composable
-fun BackgroundSelectorItem(name: String, onClick: () -> Unit) {
+fun BackgroundSelectorItem(label: String?, feltColor: FeltColorType, customBackgroundId: String?, onClick: () -> Unit) {
     val dummyTheme = SoliBeeTheme(
         name = "Dummy",
         cardBackTheme = "Solibee",
-        feltColor = when (name) {
-            "Green Felt" -> FeltColorType.FeltGreen
-            "Crimson" -> FeltColorType.Crimson
-            "Royal Blue" -> FeltColorType.RoyalBlue
-            "Charcoal" -> FeltColorType.Charcoal
-            "Desert Felt" -> FeltColorType.Desert
-            else -> FeltColorType.FeltGreen
-        },
-        customBackgroundName = if (name !in listOf("Green Felt", "Crimson", "Royal Blue", "Charcoal", "Desert Felt")) name else null
+        feltColor = feltColor,
+        customBackgroundName = customBackgroundId
     )
     Column(
         modifier = Modifier.clickable(onClick = onClick),
@@ -201,8 +222,10 @@ fun BackgroundSelectorItem(name: String, onClick: () -> Unit) {
                 AppBackground(modifier = Modifier.fillMaxSize())
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(name, style = MaterialTheme.typography.bodySmall)
+        if (label != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(label, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 

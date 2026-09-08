@@ -41,7 +41,6 @@ class AppContainer(private val context: Context) {
     val themeManager = com.leah.honeycomb.theme.ThemeManager(context.dataStore, coroutineScope)
     val customBackgroundManager = com.leah.honeycomb.theme.CustomBackgroundManager(context, context.dataStore, coroutineScope, themeManager)
     val customCardBackManager = com.leah.honeycomb.theme.CustomCardBackManager(context, context.dataStore, coroutineScope, themeManager)
-    val customFaceCardArtManager = com.leah.honeycomb.theme.CustomFaceCardArtManager(context, coroutineScope, themeManager)
 
     private val appLanguageKey = stringPreferencesKey("appLanguage")
     private val lastGameModeKey = stringPreferencesKey("lastGameMode")
