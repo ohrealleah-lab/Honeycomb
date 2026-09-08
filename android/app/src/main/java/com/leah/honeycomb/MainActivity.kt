@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
                     DisposableEffect(navController) {
                         val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
                             val route = destination.route
-                            if (route in listOf("klondike", "spider", "beecell", "blackjack", "videopoker", "honeycomb")) {
+                            if (route in gamesList.map { it.route }) {
                                 appContainer.setLastGameMode(route!!)
                                 currentRoute = route
                             }
