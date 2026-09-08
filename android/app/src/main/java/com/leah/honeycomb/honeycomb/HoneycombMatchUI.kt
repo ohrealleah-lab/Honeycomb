@@ -153,6 +153,7 @@ fun HoneycombMatchUI(
     val haptics = LocalHapticFeedback.current
     val options by viewModel.options.collectAsState()
     val hintMove by viewModel.hintMove.collectAsState()
+    val activeBanner by viewModel.activeBanner.collectAsState()
     val language by com.leah.honeycomb.LocalAppContainer.current.language.collectAsState()
     val hideHintButton by com.leah.honeycomb.LocalAppContainer.current.sharedOptions.hideHintButton.collectAsState()
     val unlockedCardIds by viewModel.profileManager.unlockedCardIds.collectAsState()
@@ -477,6 +478,30 @@ fun HoneycombMatchUI(
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
+            }
+        }
+
+        // Same!/Plus!/Fallen Ace! capture-rule announcement banner. See
+        // HoneycombViewModel.enqueueCaptureBanners/showFrontBanner for the queue.
+        Box(modifier = Modifier.fillMaxWidth().zIndex(250f), contentAlignment = Alignment.TopCenter) {
+            AnimatedVisibility(
+                visible = activeBanner != null,
+                enter = fadeIn(animationSpec = tween(150)),
+                exit = fadeOut(animationSpec = tween(300))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 18.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        activeBanner ?: "",
+                        color = Color.Yellow,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 

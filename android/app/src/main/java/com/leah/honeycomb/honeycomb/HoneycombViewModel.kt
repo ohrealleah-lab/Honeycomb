@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.leah.honeycomb.SharedGameOptions
 import com.leah.honeycomb.PreferencesHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -238,6 +239,7 @@ class HoneycombViewModel(
         stealProtectionActive = false
         hasStolenThisMatch = false
         sessionCardsCaptured = 0
+        clearBanners()
 
         var rolledRules = emptyList<HoneycombRule>()
         var rolledSuits = emptySet<String>()
@@ -298,6 +300,7 @@ class HoneycombViewModel(
         hintGeneration++
         hasStolenThisMatch = false
         sessionCardsCaptured = 0
+        clearBanners()
         
         val opponentHand = rematchOpponentDeck.map { HoneycombCard(it, CardOwner.Opponent) }
         
@@ -525,6 +528,7 @@ class HoneycombViewModel(
         hintGeneration++
         _state.value = undoHistory.removeLast()
         sessionCardsCaptured = undoSessionCardsCaptured.removeLast()
+        clearBanners()
     }
 
     val hasHintsAvailable: Boolean
@@ -532,6 +536,56 @@ class HoneycombViewModel(
 
     private val _hintMove = MutableStateFlow<Pair<Int, Int>?>(null)
     val hintMove: StateFlow<Pair<Int, Int>?> = _hintMove.asStateFlow()
+
+    // Foundational port of iOS's bannerQueue/enqueueBanner/advanceBannerQueue — a simple
+    // FIFO of rule-trigger announcements (Same!/Plus!/Fallen Ace!). Durations match iOS:
+    // 1.2s visible + 0.3s fade for a normal banner. iOS's much larger BannerCatalog
+    // (dozens of spreadsheet-driven flavor-text alternates, win-milestone celebrations,
+    // first-launch/idle-nudge banners) is NOT ported here — this covers only the
+    // mechanical "a capture rule just fired" announcements the parity audit called out
+    // as Honeycomb's most-cited missing feedback.
+    private data class BannerEntry(val text: String)
+    private val bannerQueue = ArrayDeque<BannerEntry>()
+    private val _activeBanner = MutableStateFlow<String?>(null)
+    val activeBanner: StateFlow<String?> = _activeBanner.asStateFlow()
+    private var bannerAdvanceJob: Job? = null
+
+    private fun enqueueBanner(text: String) {
+        bannerQueue.addLast(BannerEntry(text))
+        if (bannerQueue.size == 1) {
+            showFrontBanner()
+        }
+    }
+
+    private fun clearBanners() {
+        bannerAdvanceJob?.cancel()
+        bannerQueue.clear()
+        _activeBanner.value = null
+    }
+
+    private fun showFrontBanner() {
+        val front = bannerQueue.firstOrNull() ?: return
+        _activeBanner.value = front.text
+        bannerAdvanceJob?.cancel()
+        bannerAdvanceJob = viewModelScope.launch {
+            delay(1200)
+            _activeBanner.value = null
+            delay(300)
+            bannerQueue.removeFirstOrNull()
+            if (bannerQueue.isNotEmpty()) showFrontBanner()
+        }
+    }
+
+    // Fires the basic Same!/Plus!/Fallen Ace! rule-name banners for a placement's own
+    // direct captures — mirrors the mechanical (non-flavor-text) subset of iOS's
+    // bannerText(placedCard:for:flips:directFlipsCount:).
+    private fun enqueueCaptureBanners(board: HoneycombBoard, rules: List<HoneycombRule>) {
+        if (board.lastSameTriggered) enqueueBanner("${HoneycombRule.Same.displayName}!")
+        if (board.lastPlusTriggered) enqueueBanner("${HoneycombRule.Plus.displayName}!")
+        if (board.lastFallenAceTriggered && rules.contains(HoneycombRule.FallenAce)) {
+            enqueueBanner("${HoneycombRule.FallenAce.displayName}!")
+        }
+    }
 
     // Bumped every time the board changes (any placement) and every fresh findHint()
     // search — mirrors iOS's hintGeneration. Guards both the on-demand search and the
@@ -665,6 +719,7 @@ class HoneycombViewModel(
         val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
         val flips = newBoard.placeCard(card, boardIndex, st.activeRules)
         sessionCardsCaptured += flips.size
+        enqueueCaptureBanners(newBoard, st.activeRules)
         processBombShelter(newBoard, boardIndex, st.activeRules)
 
         _state.update {
@@ -741,6 +796,7 @@ class HoneycombViewModel(
                 val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
                 val flips = newBoard.placeCard(cardToPlay, move.second, st.activeRules)
                 sessionCardsCaptured += flips.size
+                enqueueCaptureBanners(newBoard, st.activeRules)
                 processBombShelter(newBoard, move.second, st.activeRules)
 
                 _state.update {
