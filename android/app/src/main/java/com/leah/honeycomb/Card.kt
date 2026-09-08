@@ -1,5 +1,6 @@
 package com.leah.honeycomb
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -19,6 +20,7 @@ enum class Suit {
         }
 }
 
+@Immutable
 @Serializable
 data class Card(
     @Serializable(with = UUIDSerializer::class)
