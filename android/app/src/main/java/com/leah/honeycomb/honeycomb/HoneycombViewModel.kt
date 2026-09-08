@@ -324,31 +324,40 @@ class HoneycombViewModel(
         val pDeck = pDeckData.map { HoneycombCard(it, CardOwner.Player) }.toMutableList()
         
         val oDeck = _state.value.opponentHand.toMutableList()
-        
+
+        var swappedOppCardId: String? = null
+        var swappedPlayerCardId: String? = null
         if (rematchActiveRules.contains(HoneycombRule.Swap) && pDeck.isNotEmpty() && oDeck.isNotEmpty()) {
             val pIdx = pDeck.indices.random()
             val oIdx = oDeck.indices.random()
-            
+
             val pCard = pDeck[pIdx]
             val oCard = oDeck[oIdx]
-            
+
             pDeck[pIdx] = HoneycombCard(oCard.data, CardOwner.Player, CardOwner.Opponent, oCard.id)
             oDeck[oIdx] = HoneycombCard(pCard.data, CardOwner.Opponent, CardOwner.Player, pCard.id)
+            // The swapped-in card is always known to the AI regardless of All Open/Three
+            // Open, matching iOS's applyOpponentDeck — otherwise minimaxScore treats the
+            // player's swapped slot as unknown and falls back to a shallow leaf evaluation.
+            swappedOppCardId = oCard.id
+            swappedPlayerCardId = pCard.id
         }
-        
+
         var openOppIds = emptySet<String>()
         if (rematchActiveRules.contains(HoneycombRule.AllOpen)) {
             openOppIds = oDeck.map { it.id }.toSet()
         } else if (rematchActiveRules.contains(HoneycombRule.ThreeOpen)) {
             openOppIds = oDeck.shuffled().take(3).map { it.id }.toSet()
         }
-        
+        swappedOppCardId?.let { openOppIds = openOppIds + it }
+
         var openPlayerIds = emptySet<String>()
         if (rematchActiveRules.contains(HoneycombRule.AllOpen)) {
             openPlayerIds = pDeck.map { it.id }.toSet()
         } else if (rematchActiveRules.contains(HoneycombRule.ThreeOpen)) {
             openPlayerIds = pDeck.shuffled().take(3).map { it.id }.toSet()
         }
+        swappedPlayerCardId?.let { openPlayerIds = openPlayerIds + it }
         
         _state.update { it.copy(
             playerHand = pDeck, 
@@ -490,6 +499,10 @@ class HoneycombViewModel(
     // ever available again once it's the player's turn (matching Swift's
     // `canUndo: !undoStack.isEmpty && gameState == .playing && isPlayerTurn`).
     private val undoHistory = ArrayDeque<HoneycombState>()
+    // sessionCardsCaptured lives outside HoneycombState, so it needs its own parallel undo
+    // stack, pushed/popped in lockstep with undoHistory — matches iOS's HoneycombSnapshot,
+    // which bundles sessionCardsCaptured into the same undo snapshot as the board.
+    private val undoSessionCardsCaptured = ArrayDeque<Int>()
 
     private fun snapshotForUndo() {
         val st = _state.value
@@ -500,6 +513,7 @@ class HoneycombViewModel(
                 opponentHand = st.opponentHand.map { it.copy() }
             )
         )
+        undoSessionCardsCaptured.addLast(sessionCardsCaptured)
     }
 
     val canUndo: Boolean
@@ -510,6 +524,7 @@ class HoneycombViewModel(
         aiMoveGeneration++ // invalidate any pending delayed AI-turn closure from the move being undone
         hintGeneration++
         _state.value = undoHistory.removeLast()
+        sessionCardsCaptured = undoSessionCardsCaptured.removeLast()
     }
 
     val hasHintsAvailable: Boolean
@@ -646,6 +661,7 @@ class HoneycombViewModel(
             card.bombShelterTurnsRemaining = 3
         }
 
+        com.leah.honeycomb.audio.UISound.play("snap")
         val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
         val flips = newBoard.placeCard(card, boardIndex, st.activeRules)
         sessionCardsCaptured += flips.size
@@ -708,19 +724,24 @@ class HoneycombViewModel(
             if (aiMoveGeneration != gen) return@launch
 
             if (move != null) {
-                val newOpponentHand = _state.value.opponentHand.toMutableList()
+                // Apply against the pre-search snapshot (st), not a fresh _state.value read —
+                // move.first/move.second were computed against st, so re-deriving from a
+                // possibly-mutated _state.value here (if a suspension point is ever added
+                // above) could removeAt() the wrong hand index or place into the wrong cell.
+                val newOpponentHand = st.opponentHand.toMutableList()
                 val cardToPlay = newOpponentHand.removeAt(move.first)
-                
-                val isFirstCard = _state.value.board.cells.all { it.card == null }
-                if (_state.value.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard) {
+
+                val isFirstCard = st.board.cells.all { it.card == null }
+                if (st.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard) {
                     cardToPlay.isFaceDown = true
                     cardToPlay.bombShelterTurnsRemaining = 3
                 }
 
-                val newBoard = _state.value.board.copy(cells = _state.value.board.cells.map { it.copy(card = it.card?.copy()) })
-                val flips = newBoard.placeCard(cardToPlay, move.second, _state.value.activeRules)
+                com.leah.honeycomb.audio.UISound.play("snap")
+                val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
+                val flips = newBoard.placeCard(cardToPlay, move.second, st.activeRules)
                 sessionCardsCaptured += flips.size
-                processBombShelter(newBoard, move.second, _state.value.activeRules)
+                processBombShelter(newBoard, move.second, st.activeRules)
 
                 _state.update {
                     it.copy(
@@ -794,6 +815,7 @@ class HoneycombViewModel(
         val oScore = st.board.opponentScore + st.opponentHand.size
 
         if (pScore > oScore) {
+            com.leah.honeycomb.audio.UISound.play("victory")
             _state.update {
                 it.copy(
                     matchResult = "You Win!",
@@ -1010,10 +1032,9 @@ class HoneycombViewModel(
         for (i in pendingReveals) {
             val card = board.cells[i].card ?: continue
             card.bombShelterTurnsRemaining = null
-            val flips = board.revealFaceDownCard(i, rules)
-            if (card.owner == CardOwner.Player) {
-                sessionCardsCaptured += flips.size
-            }
+            // Reveal-triggered flips are never counted into sessionCardsCaptured, matching
+            // iOS's revealBombShelterCards — only a placement's own direct captures count.
+            board.revealFaceDownCard(i, rules)
         }
     }
 }

@@ -12,6 +12,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.leah.honeycomb.LocalAppContainer
+import com.leah.honeycomb.StringKey
+import com.leah.honeycomb.Strings
 
 // Auto/Pick/Ban selection for the house rules a match can roll. Backed entirely by the
 // existing HoneycombRuleSelectionEngine state machine — this screen is just a UI over it.
@@ -19,14 +22,15 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HoneycombRulesScreen(viewModel: HoneycombViewModel, onBack: () -> Unit) {
     val options by viewModel.options.collectAsState()
+    val language by LocalAppContainer.current.language.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Rules") },
+                title = { Text(Strings.get(StringKey.ToolbarRules, language)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = Strings.get(StringKey.Back, language))
                     }
                 }
             )
@@ -35,11 +39,11 @@ fun HoneycombRulesScreen(viewModel: HoneycombViewModel, onBack: () -> Unit) {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
             items(HoneycombRuleRowID.allCases) { id ->
                 val label = when (id) {
-                    is HoneycombRuleRowID.NormalMode -> "Normal Mode"
+                    is HoneycombRuleRowID.NormalMode -> Strings.get(StringKey.ForceNormalRulesToggle, language)
                     is HoneycombRuleRowID.Rule -> id.rule.displayName
                 }
                 val description = when (id) {
-                    is HoneycombRuleRowID.NormalMode -> "Force a match with no house rules active."
+                    is HoneycombRuleRowID.NormalMode -> Strings.get(StringKey.NormalModeBanListTooltip, language)
                     is HoneycombRuleRowID.Rule -> id.rule.explanation(emptySet())
                 }
                 val state = HoneycombRuleSelection.state(
@@ -58,9 +62,9 @@ fun HoneycombRulesScreen(viewModel: HoneycombViewModel, onBack: () -> Unit) {
                         }
                         SingleChoiceSegmentedButtonRow {
                             listOf(
-                                HoneycombRuleState.Auto to "Auto",
-                                HoneycombRuleState.Picked to "Pick",
-                                HoneycombRuleState.Banned to "Ban"
+                                HoneycombRuleState.Auto to Strings.get(StringKey.RuleStateAuto, language),
+                                HoneycombRuleState.Picked to Strings.get(StringKey.RuleStatePick, language),
+                                HoneycombRuleState.Banned to Strings.get(StringKey.RuleStateBan, language)
                             ).forEachIndexed { index, (candidateState, text) ->
                                 SegmentedButton(
                                     selected = state == candidateState,
