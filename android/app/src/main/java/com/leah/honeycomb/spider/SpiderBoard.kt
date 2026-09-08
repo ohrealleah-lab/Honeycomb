@@ -147,7 +147,7 @@ fun SpiderBoard(
                         Text("TIME", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                         val mins = state.timerSeconds / 60
                         val secs = state.timerSeconds % 60
-                        Text(String.format("%02d:%02d", mins, secs), fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(String.format(java.util.Locale.US, "%02d:%02d", mins, secs), fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
@@ -360,6 +360,21 @@ fun SpiderBoard(
                 }
             }
         }        } // Close inner BoxWithConstraints
+
+        // "No hints available" toast — the fallback HintMove has an empty source pile id.
+        activeHint?.let { hint ->
+            if (hint.sourcePileId.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize().padding(bottom = 32.dp), contentAlignment = Alignment.BottomCenter) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(hint.description, color = Color.White)
+                    }
+                }
+            }
+        }
 
         
         // End Game Overlays

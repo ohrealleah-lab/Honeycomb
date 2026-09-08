@@ -428,6 +428,7 @@ class SpiderViewModel(
         clearHint()
         saveStateForUndo()
         startTimerIfNeeded()
+        com.leah.honeycomb.audio.UISound.play("shuffle")
 
         val stockCards = currentState.stock.cards.toMutableList()
         val tableau = currentState.tableau.map { it.cards.toMutableList() }.toMutableList()
@@ -881,6 +882,7 @@ class SpiderViewModel(
         )
         _isAutoplayRunning.value = false
         _isStuck.value = false
+        _pointPopup.value = null
         checkWinState()
         checkAutocompleteState()
         checkStuckState()
