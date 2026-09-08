@@ -34,9 +34,11 @@ class MainActivity : ComponentActivity() {
     private lateinit var appContainer: AppContainer
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (!::appContainer.isInitialized) {
+            appContainer = AppContainer(applicationContext)
+        }
         super.onCreate(savedInstanceState)
         
-        appContainer = AppContainer(applicationContext)
 
         setContent {
             val themes by appContainer.themeManager.themes.collectAsState()
@@ -58,13 +60,17 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     
-                    LaunchedEffect(navController) {
-                        navController.addOnDestinationChangedListener { _, destination, _ ->
+                    DisposableEffect(navController) {
+                        val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
                             val route = destination.route
                             if (route in listOf("klondike", "spider", "beecell", "blackjack", "videopoker", "honeycomb")) {
                                 appContainer.setLastGameMode(route!!)
                                 currentRoute = route
                             }
+                        }
+                        navController.addOnDestinationChangedListener(listener)
+                        onDispose {
+                            navController.removeOnDestinationChangedListener(listener)
                         }
                     }
                     
