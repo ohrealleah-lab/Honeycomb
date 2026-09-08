@@ -57,6 +57,28 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}) {
 
     val scrollState = rememberScrollState()
 
+    // Deleting is destructive (any theme using this art falls back to a default) and was
+    // previously unreachable from any UI — confirm before actually calling the manager.
+    var pendingDeleteLabel by remember { mutableStateOf<String?>(null) }
+    var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    if (pendingDeleteLabel != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDeleteLabel = null; pendingDeleteAction = null },
+            title = { Text("Delete $pendingDeleteLabel?") },
+            text = { Text("Any theme using this will fall back to a default. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDeleteAction?.invoke()
+                    pendingDeleteLabel = null
+                    pendingDeleteAction = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteLabel = null; pendingDeleteAction = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -109,7 +131,11 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}) {
                     CardBackSelectorItem(
                         cardBackId = custom.id,
                         label = null,
-                        onClick = { themeManager.updateActiveThemeCardBack(custom.id) }
+                        onClick = { themeManager.updateActiveThemeCardBack(custom.id) },
+                        onDelete = {
+                            pendingDeleteLabel = "this custom card back"
+                            pendingDeleteAction = { appContainer.customCardBackManager.deleteCardBack(custom.id) }
+                        }
                     )
                 }
             }
@@ -130,7 +156,11 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}) {
                         label = null,
                         feltColor = FeltColorType.Custom,
                         customBackgroundId = custom.id,
-                        onClick = { themeManager.updateActiveThemeBackground(FeltColorType.Custom, custom.id) }
+                        onClick = { themeManager.updateActiveThemeBackground(FeltColorType.Custom, custom.id) },
+                        onDelete = {
+                            pendingDeleteLabel = "this custom background"
+                            pendingDeleteAction = { appContainer.customBackgroundManager.deleteBackground(custom.id) }
+                        }
                     )
                 }
             }
@@ -182,7 +212,7 @@ fun ThemePreviewItem(theme: SoliBeeTheme, isActive: Boolean, onApply: () -> Unit
 }
 
 @Composable
-fun CardBackSelectorItem(cardBackId: String, label: String?, onClick: () -> Unit) {
+fun CardBackSelectorItem(cardBackId: String, label: String?, onClick: () -> Unit, onDelete: (() -> Unit)? = null) {
     Column(
         modifier = Modifier.clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -198,11 +228,19 @@ fun CardBackSelectorItem(cardBackId: String, label: String?, onClick: () -> Unit
         if (label != null) {
             Text(label, style = MaterialTheme.typography.bodySmall)
         }
+        if (onDelete != null) {
+            Text(
+                "Delete",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.clickable(onClick = onDelete)
+            )
+        }
     }
 }
 
 @Composable
-fun BackgroundSelectorItem(label: String?, feltColor: FeltColorType, customBackgroundId: String?, onClick: () -> Unit) {
+fun BackgroundSelectorItem(label: String?, feltColor: FeltColorType, customBackgroundId: String?, onClick: () -> Unit, onDelete: (() -> Unit)? = null) {
     val dummyTheme = SoliBeeTheme(
         name = "Dummy",
         cardBackTheme = "Solibee",
@@ -225,6 +263,14 @@ fun BackgroundSelectorItem(label: String?, feltColor: FeltColorType, customBackg
         if (label != null) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(label, style = MaterialTheme.typography.bodySmall)
+        }
+        if (onDelete != null) {
+            Text(
+                "Delete",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.clickable(onClick = onDelete)
+            )
         }
     }
 }
