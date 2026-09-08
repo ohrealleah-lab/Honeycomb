@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.leah.honeycomb.OptionsFullScreenView
+import com.leah.honeycomb.IntStepperRow
 import com.leah.honeycomb.Strings
 import com.leah.honeycomb.LocalAppContainer
 
@@ -32,9 +33,14 @@ fun BlackjackOptionsScreen(
         onDismiss = onBack,
         onShowStats = onShowStats,
         gameSettings = {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                // Option to rebuy manually would go here in a full implementation
-                Text("Current starting credits setting: ${options.startingCredits}")
+            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                IntStepperRow(
+                    label = "Starting Credits",
+                    value = options.startingCredits,
+                    step = 100,
+                    range = 10..10000,
+                    onValueChange = { viewModel.updateOptions(options.copy(startingCredits = it)) }
+                )
             }
         }
     )

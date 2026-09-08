@@ -164,6 +164,24 @@ fun BlackjackBoard(
                         else -> ""
                     }
                     Text(outcomeText, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    if (state.playerHands.size > 1) {
+                        // A split round's headline only reflects the aggregate outcome (e.g. "Win" if
+                        // any hand won), which loses the fact that another hand may have lost or
+                        // pushed — show the per-hand breakdown instead so a split result is never
+                        // misreported as a clean win/loss. Matches shared/localizedBlackjackResult.
+                        val perHandText = state.playerHands.mapIndexed { i, hand ->
+                            val label = when (hand.result) {
+                                BlackjackHandResult.Blackjack -> com.leah.honeycomb.Strings.get(StringKey.TouchResultBlackjack, language)
+                                BlackjackHandResult.Win -> com.leah.honeycomb.Strings.get(StringKey.TouchResultWin, language)
+                                BlackjackHandResult.Loss -> com.leah.honeycomb.Strings.get(StringKey.TouchResultLoss, language)
+                                BlackjackHandResult.Push -> com.leah.honeycomb.Strings.get(StringKey.TouchResultPush, language)
+                                BlackjackHandResult.Bust -> com.leah.honeycomb.Strings.get(StringKey.TouchResultBust, language)
+                                null -> ""
+                            }
+                            "Hand ${i + 1}: $label"
+                        }.joinToString("  ·  ")
+                        Text(perHandText, color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp)
+                    }
                     if (!viewModel.isFreePlay) {
                         Text(
                             text = if (state.lastNetResult >= 0) "+$${state.lastNetResult}" else "-$${-state.lastNetResult}",
