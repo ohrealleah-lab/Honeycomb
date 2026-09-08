@@ -286,12 +286,11 @@ The player battles an AI opponent on a 3×3 grid using 5-card hands drawn from a
 
 #### Shared Visual Systems
 - **FR-026**: All game visual elements (card faces, suit symbols, card backs, empty pile indicators, felt texture) MUST be rendered programmatically using vector shapes and gradients — no raster images for gameplay components.
-- **FR-027**: Built-in card back themes MUST include Vulpera, Moogle, and Dingwall; all themes MUST be fully programmatic (no external image files required).
+- **FR-027**:  all themes MUST be fully programmatic (no external image files required).
 - **FR-028**: Custom card backs MUST be importable from local PNG or JPG files, with an editor providing Scale, Horizontal Position, and Vertical Position controls whose preview updates in real time.
 - **FR-029**: Custom face card art MUST be importable per suit-slot (Jack, Queen, King, Ace × 4 suits = 16 configurable slots).
 - **FR-030**: Built-in felt colors MUST include Felt Green, Crimson, Royal Blue, Charcoal, and Desert; a custom color picker MUST also be available.
 - **FR-031**: Custom background images (PNG/JPG, ≤ 25 MB) MUST be importable with an editor providing Scale, Horizontal Position, and Vertical Position controls.
-- **FR-032**: Dark Mode card color scheme MUST be togglable (#1E1E1E card background, #FF4444 red suits, #C0C0C0 black suits).
 - **FR-033**: Named Themes MUST allow saving and restoring any combination of felt color, card back, and background in a single selection.
 - **FR-034**: All visual customization selections MUST apply instantly across all game modes simultaneously and MUST persist across app restarts.
 
