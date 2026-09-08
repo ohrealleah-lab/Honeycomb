@@ -88,6 +88,7 @@ fun SpiderBoard(
         }
     }
 
+    var activeCardW by remember { mutableStateOf(0.dp) }
     var dragState by remember { mutableStateOf(DragState()) }
     val haptics = LocalHapticFeedback.current
     val pileFrames = remember { mutableStateMapOf<String, Rect>() }
@@ -230,8 +231,9 @@ fun SpiderBoard(
             val config = LocalConfiguration.current
             val screenWidth = config.screenWidthDp.dp
             // We have 10 columns in Spider, need to fit them in width
-            // Spacing: 11 gaps of ~2.dp each = 22.dp total spacing.
-            val cardW = ((screenWidth.value - 22f) / 10f).coerceAtMost(90f).dp
+            // 9 gaps of 4.dp = 36dp. Plus 4dp total horizontal padding = 40dp.
+            val cardW = ((maxWidth.value - 40f) / 10f).coerceAtMost(90f).dp
+            activeCardW = cardW
             val cardH = cardW * 1.4f
             val downStep = cardH * 0.12f
             val upStep = cardH * 0.24f
@@ -345,7 +347,7 @@ fun SpiderBoard(
         if (dragState.cards.isNotEmpty()) {
             val config = LocalConfiguration.current
             val screenWidth = config.screenWidthDp.dp
-            val cardW = ((screenWidth.value - 22f) / 10f).coerceAtMost(90f).dp
+            val cardW = activeCardW
             val cardH = cardW * 1.4f
             val upStep = cardH * 0.24f
             Box(modifier = Modifier.fillMaxSize().zIndex(100f)) {

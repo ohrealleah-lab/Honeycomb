@@ -209,7 +209,7 @@ fun BeecellBoard(
             BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
             val config = LocalConfiguration.current
             val screenWidth = config.screenWidthDp.dp
-            val cardW = ((screenWidth.value - 18f) / 8f).coerceAtMost(90f).dp
+            val cardW = ((maxWidth.value - 32f) / 8f).coerceAtMost(90f).dp
             val cardH = cardW * 1.4f
             val downStep = cardH * 0.24f
             activeCardW = cardW
