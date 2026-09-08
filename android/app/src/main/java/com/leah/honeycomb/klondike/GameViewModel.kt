@@ -581,6 +581,7 @@ class GameViewModel(
 
         clearHint()
         saveStateForUndo()
+        com.leah.honeycomb.audio.UISound.play("shuffle")
 
         val recycled = currentState.waste.cards.map { it.copy(faceUp = false) }.reversed()
         _state.value = currentState.copy(
@@ -637,6 +638,7 @@ class GameViewModel(
         lastMoveTargetId = targetPile.id
         saveStateForUndo()
         startTimerIfNeeded()
+        com.leah.honeycomb.audio.UISound.play("snap")
 
         val cardIds = cards.map { it.id }.toSet()
         var revealedFaceDownCard = false
@@ -801,7 +803,8 @@ class GameViewModel(
         if (WinDetection.hasWon(totalFoundationCards, 52, _state.value.hasWon)) {
             _state.update { it.copy(hasWon = true) }
             stopTimer()
-            
+            com.leah.honeycomb.audio.UISound.play("victory")
+
             val timeInSeconds = _state.value.timerSeconds
             if (!_options.value.isVegasScoring && timeInSeconds > 0) {
                 val scorePenalty = 2 * (timeInSeconds / 10)

@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Close
@@ -80,6 +79,7 @@ fun KlondikeBoard(
     val noStressMode by viewModel.sharedOptions.noStressMode.collectAsState()
 
     var dragState by remember { mutableStateOf(DragState()) }
+    var lastStockTapTime by remember { mutableStateOf(0L) }
     val haptics = LocalHapticFeedback.current
     val pileFrames = remember { mutableMapOf<String, Rect>() }
 
@@ -249,7 +249,13 @@ fun KlondikeBoard(
                             .size(cardW, cardH)
                             .onGloballyPositioned { pileFrames[state.stock.id] = it.boundsInRoot() }
                             .clip(RoundedCornerShape(4.dp))
-                            .clickable { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); viewModel.drawCard() }
+                            .clickable {
+                                val now = System.currentTimeMillis()
+                                if (now - lastStockTapTime < 250) return@clickable
+                                lastStockTapTime = now
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.drawCard()
+                            }
                             .hintHighlight(isHighlighted = state.stock.id == hintSourceId || state.stock.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
                             Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.2f)))
@@ -444,6 +450,21 @@ fun KlondikeBoard(
                 }
             }
         }
+
+        // "No hints available" toast — the fallback HintMove has an empty source pile id.
+        activeHint?.let { hint ->
+            if (hint.sourcePileId.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize().padding(bottom = 32.dp), contentAlignment = Alignment.BottomCenter) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(hint.description, color = Color.White)
+                    }
+                }
+            }
+        }
             } // Close BoxWithConstraints for landscape root
 
         if (state.hasWon) {
@@ -533,7 +554,9 @@ private fun handleDragEnd(
     if (dropTarget != null) {
         val resolved = SmartDrop.resolve(dragState.cards) { viewModel.isValidMove(it, dropTarget!!) }
         if (resolved != null) {
-            viewModel.moveCards(resolved, dragState.sourcePile, dropTarget)
+            if (viewModel.moveCards(resolved, dragState.sourcePile, dropTarget)) {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
         }
     }
 }
