@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.leah.honeycomb.OptionsFullScreenView
 import com.leah.honeycomb.SegmentedControl
+import com.leah.honeycomb.IntStepperRow
 import com.leah.honeycomb.Strings
 import com.leah.honeycomb.LocalAppContainer
 
@@ -37,12 +38,34 @@ fun VideoPokerOptionsScreen(
         onDismiss = onBack,
         onShowStats = onShowStats,
         gameSettings = {
-            SegmentedControl(
-                items = VideoPokerVariant.values().toList(),
-                selectedItem = options.variant,
-                onItemSelection = { viewModel.updateVariant(it) },
-                itemLabel = { it.name }
-            )
+            Column {
+                SegmentedControl(
+                    items = VideoPokerVariant.values().toList(),
+                    selectedItem = options.variant,
+                    onItemSelection = { viewModel.updateVariant(it) },
+                    itemLabel = {
+                        when (it) {
+                            VideoPokerVariant.JacksOrBetter -> "Jacks or Better"
+                            VideoPokerVariant.DeucesWild -> "Deuces Wild"
+                            VideoPokerVariant.BonusPoker -> "Bonus Poker"
+                        }
+                    }
+                )
+                IntStepperRow(
+                    label = "Starting Credits",
+                    value = options.startingCredits,
+                    step = 100,
+                    range = 10..10000,
+                    onValueChange = { viewModel.updateOptions(options.copy(startingCredits = it)) }
+                )
+                IntStepperRow(
+                    label = "Default Bet",
+                    value = options.betPerHand,
+                    step = 1,
+                    range = 1..5,
+                    onValueChange = { viewModel.updateOptions(options.copy(betPerHand = it)) }
+                )
+            }
         }
     )
 }

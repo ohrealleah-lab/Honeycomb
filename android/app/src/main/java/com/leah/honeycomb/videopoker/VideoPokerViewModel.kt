@@ -164,13 +164,19 @@ class VideoPokerViewModel(
         _state.value = s.copy(heldIndices = newHeld)
     }
 
+    private var drawGeneration = 0
+
+    // Deuces Wild's evaluateWithDeuces() brute-forces up to 13³ candidate hands for 3 held
+    // deuces — background it on Dispatchers.Default instead of running synchronously on
+    // the UI thread from this onClick. drawGeneration guards against a slow evaluation
+    // landing after another draw/deal has already started.
     fun draw() {
         val s = _state.value
         if (s.phase != VideoPokerPhase.Holding) return
-        
+
         val hand = s.hand.toMutableList()
         val deck = s.deck.toMutableList()
-        
+
         for (i in 0 until 5) {
             if (!s.heldIndices.contains(i)) {
                 if (deck.isNotEmpty()) {
@@ -178,29 +184,32 @@ class VideoPokerViewModel(
                 }
             }
         }
-        
+
         _state.value = s.copy(
             hand = hand,
             deck = deck
         )
-        evaluate()
-        _state.value = _state.value.copy(phase = VideoPokerPhase.Result)
+
+        val generation = ++drawGeneration
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            evaluate(generation)
+        }
     }
 
-    private fun evaluate() {
+    private fun evaluate(generation: Int) {
         val s = _state.value
         if (s.hand.size != 5) return
-        
+
         val result = if (_options.value.variant == VideoPokerVariant.DeucesWild) {
             PokerHandEvaluator.evaluateWithDeuces(s.hand)
         } else {
             PokerHandEvaluator.evaluate(s.hand)
         }
-        
+
         var name = "No Win"
         var payout = 0
         var rank: PokerHandRank? = null
-        
+
         for (entry in payTable) {
             if (matches(result, s.hand, entry)) {
                 name = entry.handName
@@ -209,12 +218,15 @@ class VideoPokerViewModel(
                 break
             }
         }
-        
+
+        if (generation != drawGeneration) return
+
         _state.value = s.copy(
             lastHandName = name,
-            lastPayout = payout
+            lastPayout = payout,
+            phase = VideoPokerPhase.Result
         )
-        
+
         var stats = _statistics.value
         
         if (rank != null) {
@@ -303,6 +315,11 @@ class VideoPokerViewModel(
     fun updateVariant(variant: VideoPokerVariant) {
         _options.value = _options.value.copy(variant = variant)
         saveOptions(_options.value)
+    }
+
+    fun updateOptions(newOptions: VideoPokerOptions) {
+        _options.value = newOptions
+        saveOptions(newOptions)
     }
 
     fun resetIfRoundOver() {

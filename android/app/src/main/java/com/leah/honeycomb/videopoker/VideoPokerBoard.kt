@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.GridView
@@ -15,6 +17,7 @@ import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,6 +25,56 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leah.honeycomb.CardView
+
+@Composable
+private fun PayTableDialog(
+    payTable: List<VideoPokerPayEntry>,
+    currentBet: Int,
+    language: AppLanguage,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF14321F)) {
+            Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+                Text("Pay Table", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.weight(2f))
+                    for (bet in 1..5) {
+                        Text(
+                            "$bet",
+                            modifier = Modifier.weight(1f),
+                            color = if (bet == currentBet) Color.Yellow else Color.White.copy(alpha = 0.7f),
+                            fontWeight = if (bet == currentBet) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 13.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+                for (entry in payTable) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                        Text(
+                            localizedHandName(entry.handName, language),
+                            modifier = Modifier.weight(2f),
+                            color = Color.White,
+                            fontSize = 13.sp
+                        )
+                        for (bet in 1..5) {
+                            Text(
+                                "${entry.multipliers[bet - 1]}",
+                                modifier = Modifier.weight(1f),
+                                color = if (bet == currentBet) Color.Yellow else Color.White.copy(alpha = 0.85f),
+                                fontWeight = if (bet == currentBet) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 13.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 // Display-only translation for a poker hand name
 private fun localizedHandName(handName: String, language: AppLanguage): String {
@@ -61,7 +114,17 @@ fun VideoPokerBoard(
     val state by viewModel.state.collectAsState()
     val options by viewModel.options.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showPayTable by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
+
+    if (showPayTable) {
+        PayTableDialog(
+            payTable = viewModel.payTable,
+            currentBet = state.currentBet,
+            language = language,
+            onDismiss = { showPayTable = false }
+        )
+    }
 
     if (showQuitDialog) {
         AlertDialog(
@@ -89,6 +152,7 @@ fun VideoPokerBoard(
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
                 modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .clickable { showPayTable = true }
                     .padding(horizontal = 24.dp, vertical = 8.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
