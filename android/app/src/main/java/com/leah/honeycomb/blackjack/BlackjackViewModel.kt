@@ -337,38 +337,47 @@ class BlackjackViewModel(
         }
     }
 
+    // Paced dealer turn: reveal the hole card, pause, then hit one card at a time with a
+    // beat between each, then a beat before the result shows — a simplified stand-in for
+    // iOS's staged multi-second reveal sequence (which also fades/particles the result
+    // banner in). Previously this whole turn resolved in one synchronous burst.
     private fun executeDealerTurn() {
-        var s = _state.value
+        val s = _state.value
         if (s.phase != BlackjackPhase.Playing) return
-        
+
         val dealerCards = s.dealerCards.toMutableList()
         if (dealerCards.size > 1) {
             dealerCards[1] = dealerCards[1].copy(faceUp = true)
         }
-        
+
         _state.value = s.copy(
             phase = BlackjackPhase.DealerTurn,
             dealerCards = dealerCards
         )
-        
-        while (BlackjackState.handValue(_state.value.dealerCards) < 17) {
-            val card = popCard(faceUp = true) ?: break
-            com.leah.honeycomb.audio.UISound.play("snap")
-            val currentDealerCards = _state.value.dealerCards.toMutableList()
-            currentDealerCards.add(card)
-            _state.value = _state.value.copy(dealerCards = currentDealerCards)
+
+        viewModelScope.launch {
+            delay(600)
+            while (BlackjackState.handValue(_state.value.dealerCards) < 17) {
+                delay(500)
+                val card = popCard(faceUp = true) ?: break
+                com.leah.honeycomb.audio.UISound.play("snap")
+                val currentDealerCards = _state.value.dealerCards.toMutableList()
+                currentDealerCards.add(card)
+                _state.value = _state.value.copy(dealerCards = currentDealerCards)
+            }
+
+            delay(500)
+            evaluateAllHands()
+
+            var finalState = _state.value
+            finalState = finalState.copy(phase = BlackjackPhase.Result)
+
+            if (!isFreePlay && finalState.currentBet > finalState.sessionCredits) {
+                finalState = finalState.copy(currentBet = 1)
+            }
+
+            _state.value = finalState
         }
-        
-        evaluateAllHands()
-        
-        s = _state.value
-        s = s.copy(phase = BlackjackPhase.Result)
-        
-        if (!isFreePlay && s.currentBet > s.sessionCredits) {
-            s = s.copy(currentBet = 1)
-        }
-        
-        _state.value = s
     }
 
     private fun evaluateAllHands() {

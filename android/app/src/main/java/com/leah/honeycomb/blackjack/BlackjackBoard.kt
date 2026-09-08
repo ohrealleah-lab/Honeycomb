@@ -16,10 +16,14 @@ import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -163,7 +167,23 @@ fun BlackjackBoard(
                         BlackjackRoundOutcome.Loss -> com.leah.honeycomb.Strings.get(StringKey.TouchResultLoss, language)
                         else -> ""
                     }
-                    Text(outcomeText, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    val isWin = state.resultOutcome == BlackjackRoundOutcome.Win || state.resultOutcome == BlackjackRoundOutcome.Blackjack
+                    val bannerScale = remember { Animatable(1f) }
+                    LaunchedEffect(state.phase, state.resultOutcome) {
+                        if (isWin) {
+                            bannerScale.snapTo(1.4f)
+                            bannerScale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                        } else {
+                            bannerScale.snapTo(1f)
+                        }
+                    }
+                    Text(
+                        outcomeText,
+                        color = if (isWin) Color.Yellow else Color.White,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.graphicsLayer(scaleX = bannerScale.value, scaleY = bannerScale.value)
+                    )
                     if (state.playerHands.size > 1) {
                         // A split round's headline only reflects the aggregate outcome (e.g. "Win" if
                         // any hand won), which loses the fact that another hand may have lost or
