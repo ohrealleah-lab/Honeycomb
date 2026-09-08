@@ -229,6 +229,29 @@ fun BackgroundSelectorItem(label: String?, feltColor: FeltColorType, customBackg
     }
 }
 
+// One entry per editable color in CustomCardColorGroup — collapses what was a 4-var
+// dialog state + a 5-branch `when` at both the swatch-rendering site and the save site
+// into a single data-driven list, so adding a 6th editable color is one list entry
+// instead of a new branch in two separate places.
+private data class ColorFieldSpec(
+    val label: String,
+    val get: (CustomCardColorGroup) -> List<Double>,
+    val set: (CustomCardColorGroup, Double, Double, Double, Double) -> CustomCardColorGroup
+)
+
+private val colorFieldSpecs = listOf(
+    ColorFieldSpec("Background", { listOf(it.bgRed, it.bgGreen, it.bgBlue, it.bgAlpha) },
+        { c, r, g, b, a -> c.copy(bgRed = r, bgGreen = g, bgBlue = b, bgAlpha = a) }),
+    ColorFieldSpec("Outline", { listOf(it.outlineRed, it.outlineGreen, it.outlineBlue, it.outlineAlpha) },
+        { c, r, g, b, a -> c.copy(outlineRed = r, outlineGreen = g, outlineBlue = b, outlineAlpha = a) }),
+    ColorFieldSpec("Black Suit", { listOf(it.blackSuitRed, it.blackSuitGreen, it.blackSuitBlue, it.blackSuitAlpha) },
+        { c, r, g, b, a -> c.copy(blackSuitRed = r, blackSuitGreen = g, blackSuitBlue = b, blackSuitAlpha = a) }),
+    ColorFieldSpec("Red Suit", { listOf(it.redSuitRed, it.redSuitGreen, it.redSuitBlue, it.redSuitAlpha) },
+        { c, r, g, b, a -> c.copy(redSuitRed = r, redSuitGreen = g, redSuitBlue = b, redSuitAlpha = a) }),
+    ColorFieldSpec("Shadow", { listOf(it.shadowRed, it.shadowGreen, it.shadowBlue, it.shadowAlpha) },
+        { c, r, g, b, a -> c.copy(shadowRed = r, shadowGreen = g, shadowBlue = b, shadowAlpha = a) })
+)
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CustomCardColorSection(themeManager: ThemeManager) {
@@ -266,20 +289,9 @@ fun CustomCardColorSection(themeManager: ThemeManager) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            ColorSwatch("Background", colors.bgRed, colors.bgGreen, colors.bgBlue, colors.bgAlpha) {
-                openDialog("Background", colors.bgRed, colors.bgGreen, colors.bgBlue, colors.bgAlpha)
-            }
-            ColorSwatch("Outline", colors.outlineRed, colors.outlineGreen, colors.outlineBlue, colors.outlineAlpha) {
-                openDialog("Outline", colors.outlineRed, colors.outlineGreen, colors.outlineBlue, colors.outlineAlpha)
-            }
-            ColorSwatch("Black Suit", colors.blackSuitRed, colors.blackSuitGreen, colors.blackSuitBlue, colors.blackSuitAlpha) {
-                openDialog("Black Suit", colors.blackSuitRed, colors.blackSuitGreen, colors.blackSuitBlue, colors.blackSuitAlpha)
-            }
-            ColorSwatch("Red Suit", colors.redSuitRed, colors.redSuitGreen, colors.redSuitBlue, colors.redSuitAlpha) {
-                openDialog("Red Suit", colors.redSuitRed, colors.redSuitGreen, colors.redSuitBlue, colors.redSuitAlpha)
-            }
-            ColorSwatch("Shadow", colors.shadowRed, colors.shadowGreen, colors.shadowBlue, colors.shadowAlpha) {
-                openDialog("Shadow", colors.shadowRed, colors.shadowGreen, colors.shadowBlue, colors.shadowAlpha)
+            colorFieldSpecs.forEach { field ->
+                val (r, g, b, a) = field.get(colors)
+                ColorSwatch(field.label, r, g, b, a) { openDialog(field.label, r, g, b, a) }
             }
         }
     }
@@ -303,15 +315,10 @@ fun CustomCardColorSection(themeManager: ThemeManager) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val newColors = colors.copy()
-                        when (colorToEdit) {
-                            "Background" -> { newColors.bgRed = currentRed; newColors.bgGreen = currentGreen; newColors.bgBlue = currentBlue; newColors.bgAlpha = currentAlpha }
-                            "Outline" -> { newColors.outlineRed = currentRed; newColors.outlineGreen = currentGreen; newColors.outlineBlue = currentBlue; newColors.outlineAlpha = currentAlpha }
-                            "Black Suit" -> { newColors.blackSuitRed = currentRed; newColors.blackSuitGreen = currentGreen; newColors.blackSuitBlue = currentBlue; newColors.blackSuitAlpha = currentAlpha }
-                            "Red Suit" -> { newColors.redSuitRed = currentRed; newColors.redSuitGreen = currentGreen; newColors.redSuitBlue = currentBlue; newColors.redSuitAlpha = currentAlpha }
-                            "Shadow" -> { newColors.shadowRed = currentRed; newColors.shadowGreen = currentGreen; newColors.shadowBlue = currentBlue; newColors.shadowAlpha = currentAlpha }
+                        val field = colorFieldSpecs.find { it.label == colorToEdit }
+                        if (field != null) {
+                            themeManager.updateActiveThemeCustomColors(field.set(colors, currentRed, currentGreen, currentBlue, currentAlpha))
                         }
-                        themeManager.updateActiveThemeCustomColors(newColors)
                         colorToEdit = null
                     }
                 ) { Text("Save") }

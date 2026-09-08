@@ -1,26 +1,21 @@
 package com.leah.honeycomb.theme
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
+import com.leah.honeycomb.PreferencesHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.builtins.serializer
 import java.io.File
-import java.io.FileOutputStream
 import java.util.UUID
 
 // No user-visible name — identity is purely the generated id, matched by thumbnail in the
@@ -41,8 +36,10 @@ class CustomCardBackManager(
     private val coroutineScope: CoroutineScope,
     private val themeManager: ThemeManager
 ) {
-    private val cardBacksKey = stringPreferencesKey("custom_card_backs")
-    private val deletedDefaultsKey = stringPreferencesKey("deleted_default_card_backs")
+    private val cardBacksKey = "custom_card_backs"
+    private val deletedDefaultsKey = "deleted_default_card_backs"
+    private val cardBackListSerializer = ListSerializer(CustomCardBack.serializer())
+    private val stringSetSerializer = SetSerializer(String.serializer())
 
     private val _cardBacks = MutableStateFlow<List<CustomCardBack>>(emptyList())
     val cardBacks: StateFlow<List<CustomCardBack>> = _cardBacks
@@ -54,28 +51,11 @@ class CustomCardBackManager(
     }
 
     init {
-        val prefs = runBlocking { dataStore.data.first() }
+        // PreferencesHelper already falls back to defaultValue on a decode failure, so a
+        // corrupted/incompatible persisted blob can't crash the app on launch here.
+        deletedDefaultDecks = PreferencesHelper.getObjectSync(dataStore, deletedDefaultsKey, stringSetSerializer, emptySet()).toMutableSet()
 
-        val deletedJson = prefs[deletedDefaultsKey]
-        if (!deletedJson.isNullOrEmpty()) {
-            deletedDefaultDecks = try {
-                Json.decodeFromString<List<String>>(deletedJson).toMutableSet()
-            } catch (e: Exception) {
-                mutableSetOf()
-            }
-        }
-
-        val json = prefs[cardBacksKey]
-        // Decode failures fall back to an empty list instead of throwing out of init —
-        // an uncaught exception here would crash the app on every subsequent launch.
-        val decoded = if (!json.isNullOrEmpty()) {
-            try {
-                Json.decodeFromString<List<CustomCardBack>>(json)
-            } catch (e: Exception) {
-                emptyList()
-            }
-        } else emptyList()
-
+        val decoded = PreferencesHelper.getObjectSync(dataStore, cardBacksKey, cardBackListSerializer, emptyList())
         val list = decoded.filter { File(storageDir, it.relativePath).exists() }
 
         _cardBacks.value = list
@@ -90,14 +70,20 @@ class CustomCardBackManager(
 
     private fun save() {
         coroutineScope.launch {
-            dataStore.edit { prefs ->
-                prefs[cardBacksKey] = Json.encodeToString(_cardBacks.value)
-                prefs[deletedDefaultsKey] = Json.encodeToString(deletedDefaultDecks.toList())
-            }
+            PreferencesHelper.setObject(dataStore, cardBacksKey, cardBackListSerializer, _cardBacks.value)
+            PreferencesHelper.setObject(dataStore, deletedDefaultsKey, stringSetSerializer, deletedDefaultDecks)
         }
     }
 
+    // Total available decks right now, custom + built-in-not-yet-deleted — mirrors the
+    // Swift reference's "must keep at least one" guard so deleting the very last deck
+    // (built-in or custom) is never possible, even once a delete UI is wired up to call
+    // this.
+    private fun availableDeckCount(): Int =
+        _cardBacks.value.size + (builtinCardBackNames.size - deletedDefaultDecks.size)
+
     fun deleteCardBack(id: String) {
+        if (availableDeckCount() <= 1) return
         val back = _cardBacks.value.find { it.id == id } ?: return
         val file = File(storageDir, back.relativePath)
         if (file.exists()) file.delete()
@@ -109,50 +95,16 @@ class CustomCardBackManager(
     // Separate from deleteCardBack — built-in decks are identified by their fixed bundled
     // name (see CardView.kt's CardBackView), not a generated id.
     fun deleteDefaultCardBack(name: String) {
+        if (availableDeckCount() <= 1) return
         deletedDefaultDecks.add(name)
         save()
         themeManager.clearCardBackReferences(name)
     }
 
     suspend fun addCardBack(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
-        var pfd: android.os.ParcelFileDescriptor? = null
-        try {
-            pfd = context.contentResolver.openFileDescriptor(uri, "r")
-                ?: return@withContext Result.failure(Exception("Cannot open file"))
-            val sizeBytes = pfd.statSize
-            if (sizeBytes > 25 * 1024 * 1024) {
-                return@withContext Result.failure(Exception("File exceeds 25MB limit"))
-            }
-
-            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor, null, options)
-
-            var scale = 1
-            val maxDim = 1200 // Max 1200px for card backs
-            while (options.outWidth / scale > maxDim || options.outHeight / scale > maxDim) {
-                scale *= 2
-            }
-
-            val decodeOptions = BitmapFactory.Options().apply { inSampleSize = scale }
-            val bitmap = BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor, null, decodeOptions)
-
-            if (bitmap == null) return@withContext Result.failure(Exception("Failed to decode image"))
-
-            val fileName = "${UUID.randomUUID()}.png"
-            val file = File(storageDir, fileName)
-            FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            }
-
-            val newDeck = CustomCardBack(relativePath = fileName)
-            _cardBacks.value = _cardBacks.value + newDeck
+        ImageImportPipeline.importAndDownscale(context, uri, storageDir, maxDim = 1200).map { fileName ->
+            _cardBacks.value = _cardBacks.value + CustomCardBack(relativePath = fileName)
             save()
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        } finally {
-            pfd?.close()
         }
     }
 }

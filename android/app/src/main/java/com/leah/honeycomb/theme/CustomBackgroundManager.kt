@@ -1,26 +1,19 @@
 package com.leah.honeycomb.theme
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
+import com.leah.honeycomb.PreferencesHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.builtins.ListSerializer
 import java.io.File
-import java.io.FileOutputStream
 import java.util.UUID
 
 // No user-visible name — identity is purely the generated id, matched by thumbnail in the
@@ -41,7 +34,8 @@ class CustomBackgroundManager(
     private val coroutineScope: CoroutineScope,
     private val themeManager: ThemeManager
 ) {
-    private val backgroundsKey = stringPreferencesKey("custom_backgrounds")
+    private val backgroundsKey = "custom_backgrounds"
+    private val serializer = ListSerializer(CustomBackground.serializer())
 
     private val _backgrounds = MutableStateFlow<List<CustomBackground>>(emptyList())
     val backgrounds: StateFlow<List<CustomBackground>> = _backgrounds
@@ -53,19 +47,9 @@ class CustomBackgroundManager(
     }
 
     init {
-        val prefs = runBlocking { dataStore.data.first() }
-        val json = prefs[backgroundsKey]
-        // Decode failures (corrupted/incompatible persisted JSON) fall back to an empty
-        // list instead of throwing out of init — an uncaught exception here would crash
-        // the app on every subsequent launch, matching the Swift reference's `try?`.
-        val decoded = if (!json.isNullOrEmpty()) {
-            try {
-                Json.decodeFromString<List<CustomBackground>>(json)
-            } catch (e: Exception) {
-                emptyList()
-            }
-        } else emptyList()
-
+        // PreferencesHelper already falls back to defaultValue on a decode failure, so a
+        // corrupted/incompatible persisted blob can't crash the app on launch here.
+        val decoded = PreferencesHelper.getObjectSync(dataStore, backgroundsKey, serializer, emptyList())
         val list = decoded.filter { File(storageDir, it.relativePath).exists() }
 
         _backgrounds.value = list
@@ -80,9 +64,7 @@ class CustomBackgroundManager(
 
     private fun save() {
         coroutineScope.launch {
-            dataStore.edit { prefs ->
-                prefs[backgroundsKey] = Json.encodeToString(_backgrounds.value)
-            }
+            PreferencesHelper.setObject(dataStore, backgroundsKey, serializer, _backgrounds.value)
         }
     }
 
@@ -97,44 +79,9 @@ class CustomBackgroundManager(
     }
 
     suspend fun addBackground(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
-        var pfd: android.os.ParcelFileDescriptor? = null
-        try {
-            pfd = context.contentResolver.openFileDescriptor(uri, "r")
-                ?: return@withContext Result.failure(Exception("Cannot open file"))
-            val sizeBytes = pfd.statSize
-            if (sizeBytes > 25 * 1024 * 1024) {
-                return@withContext Result.failure(Exception("File exceeds 25MB limit"))
-            }
-
-            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor, null, options)
-
-            var scale = 1
-            val maxDim = 2400
-            while (options.outWidth / scale > maxDim || options.outHeight / scale > maxDim) {
-                scale *= 2
-            }
-
-            val decodeOptions = BitmapFactory.Options().apply { inSampleSize = scale }
-            val bitmap = BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor, null, decodeOptions)
-
-            if (bitmap == null) return@withContext Result.failure(Exception("Failed to decode image"))
-
-            val fileName = "${UUID.randomUUID()}.png"
-            val file = File(storageDir, fileName)
-            FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            }
-
-            val newBg = CustomBackground(relativePath = fileName)
-            _backgrounds.value = _backgrounds.value + newBg
+        ImageImportPipeline.importAndDownscale(context, uri, storageDir, maxDim = 2400).map { fileName ->
+            _backgrounds.value = _backgrounds.value + CustomBackground(relativePath = fileName)
             save()
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        } finally {
-            pfd?.close()
         }
     }
 }

@@ -1,25 +1,28 @@
 package com.leah.honeycomb.theme
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.leah.honeycomb.PreferencesHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.builtins.serializer
 
 class ThemeManager(private val dataStore: DataStore<Preferences>, private val coroutineScope: CoroutineScope) {
-    private val themesKey = stringPreferencesKey("solibee_themes")
+    private val themesKey = "solibee_themes"
+    private val deletedDefaultThemesKey = "solibee_deleted_default_themes"
     private val activeThemeIdKey = stringPreferencesKey("solibee_active_theme_id")
-    private val deletedDefaultThemesKey = stringPreferencesKey("solibee_deleted_default_themes")
     private val showFeltVignetteKey = booleanPreferencesKey("solibee_show_felt_vignette")
+    private val themeListSerializer = ListSerializer(SoliBeeTheme.serializer())
+    private val stringSetSerializer = SetSerializer(String.serializer())
 
     private val _themes = MutableStateFlow<List<SoliBeeTheme>>(emptyList())
     val themes: StateFlow<List<SoliBeeTheme>> = _themes
@@ -66,26 +69,13 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
     }
 
     init {
-        val prefs = runBlocking { dataStore.data.first() }
-        
-        val deletedJson = prefs[deletedDefaultThemesKey]
-        if (!deletedJson.isNullOrEmpty()) {
-            deletedDefaultThemes = try {
-                Json.decodeFromString<List<String>>(deletedJson).toMutableSet()
-            } catch (e: Exception) {
-                mutableSetOf()
-            }
-        }
+        // PreferencesHelper already falls back to defaultValue on a decode failure, so a
+        // corrupted/incompatible persisted blob can't crash the app on launch here.
+        deletedDefaultThemes = PreferencesHelper.getObjectSync(dataStore, deletedDefaultThemesKey, stringSetSerializer, emptySet()).toMutableSet()
 
-        val themesJson = prefs[themesKey]
-        // A decode failure falls back to the default theme set instead of throwing out of
-        // init — an uncaught exception here would crash the app on every subsequent launch.
-        val loadedThemes = if (!themesJson.isNullOrEmpty()) {
-            try {
-                Json.decodeFromString<List<SoliBeeTheme>>(themesJson).toMutableList()
-            } catch (e: Exception) {
-                defaultThemes.filter { !deletedDefaultThemes.contains(it.name.lowercase()) }.toMutableList()
-            }
+        val persistedThemes = PreferencesHelper.getObjectSync(dataStore, themesKey, themeListSerializer, emptyList())
+        val loadedThemes = if (persistedThemes.isNotEmpty()) {
+            persistedThemes.toMutableList()
         } else {
             defaultThemes.filter { !deletedDefaultThemes.contains(it.name.lowercase()) }.toMutableList()
         }
@@ -101,6 +91,8 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
         }
 
         _themes.value = loadedThemes
+
+        val prefs = runBlocking { dataStore.data.first() }
         _activeThemeId.value = prefs[activeThemeIdKey]
         _showFeltVignette.value = prefs[showFeltVignetteKey] ?: true
 
@@ -110,9 +102,9 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
 
     private fun save() {
         coroutineScope.launch {
+            PreferencesHelper.setObject(dataStore, themesKey, themeListSerializer, _themes.value)
+            PreferencesHelper.setObject(dataStore, deletedDefaultThemesKey, stringSetSerializer, deletedDefaultThemes)
             dataStore.edit { prefs ->
-                prefs[themesKey] = Json.encodeToString(_themes.value)
-                prefs[deletedDefaultThemesKey] = Json.encodeToString(deletedDefaultThemes.toList())
                 _activeThemeId.value?.let { prefs[activeThemeIdKey] = it } ?: prefs.remove(activeThemeIdKey)
                 prefs[showFeltVignetteKey] = _showFeltVignette.value
             }
@@ -129,9 +121,9 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
         val currentTheme = if (currentId != null) {
             _themes.value.find { it.id == currentId }
         } else null
-        
+
         if (currentTheme != null) return currentTheme
-        
+
         val newTheme = SoliBeeTheme(
             id = java.util.UUID.randomUUID().toString(),
             name = "Custom",
@@ -184,16 +176,16 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
         val newThemes = _themes.value.toMutableList()
         val theme = newThemes.find { it.id == id } ?: return
         newThemes.removeAll { it.id == id }
-        
+
         val lowercasedName = theme.name.lowercase()
         if (defaultThemes.any { it.name.lowercase() == lowercasedName }) {
             deletedDefaultThemes.add(lowercasedName)
         }
-        
+
         if (_activeThemeId.value == id) {
             _activeThemeId.value = null
         }
-        
+
         _themes.value = newThemes
         save()
     }
