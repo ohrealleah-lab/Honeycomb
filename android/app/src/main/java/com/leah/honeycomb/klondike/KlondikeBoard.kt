@@ -276,7 +276,7 @@ fun KlondikeBoard(
                                     .zIndex(i.toFloat())
                                 ) {
                                     val isDragging = dragState.cards.any { it.id == card.id }
-                                    var layoutPos by remember { mutableStateOf(Offset.Zero) }
+                                    var layoutPos by remember(card.id) { mutableStateOf(Offset.Zero) }
                                     Box(
                                         modifier = Modifier
                                             .size(cardW, cardH)
@@ -361,7 +361,7 @@ fun KlondikeBoard(
                                     val currentY = runningY
                                     val stack = pile.cards.subList(i, pile.cards.size)
                                     val isDragging = dragState.cards.any { it.id == card.id }
-                                    var layoutPos by remember { mutableStateOf(Offset.Zero) }
+                                    var layoutPos by remember(card.id) { mutableStateOf(Offset.Zero) }
                                     Box(
                                         modifier = Modifier
                                             .offset(y = currentY)
@@ -452,6 +452,9 @@ fun KlondikeBoard(
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("You Win!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
                         Text(if (options.isVegasScoring) "Bankroll: " + String.format("$%.2f", state.score / 100.0) else "Score: ${state.score}")
+                        if (!noStressMode) {
+                            Text("Time: ${com.leah.honeycomb.formatSeconds(state.timerSeconds)}")
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.startNewGame() }) { Text("Play Again") }
                     }
@@ -459,10 +462,17 @@ fun KlondikeBoard(
             }
         }
 
-        if (isStuck && !state.hasWon) {
+        var stuckDismissed by remember { mutableStateOf(false) }
+        LaunchedEffect(isStuck) { if (!isStuck) stuckDismissed = false }
+        if (isStuck && !state.hasWon && !stuckDismissed) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
                 Card {
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            IconButton(onClick = { stuckDismissed = true }) {
+                                Icon(Icons.Default.Close, contentDescription = "Dismiss")
+                            }
+                        }
                         Text("Game Over", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
                         Text("No moves remaining")
                         Spacer(modifier = Modifier.height(16.dp))

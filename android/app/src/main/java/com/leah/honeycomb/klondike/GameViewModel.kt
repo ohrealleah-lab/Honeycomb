@@ -141,7 +141,7 @@ class GameViewModel(
         private set
 
     val canUndo: Boolean
-        get() = undoStack.canUndo && !_state.value.hasWon
+        get() = undoStack.canUndo && !_state.value.hasWon && !_isAutoplayRunning.value
 
     // Ported from shared/ViewModels/GameViewModel.swift:972-1191 — ranked/scored hint
     // candidates with 1-ply lookahead, cycling through the ranked queue on repeated taps
@@ -433,6 +433,7 @@ class GameViewModel(
 
     fun startNewGame(countAsNewGame: Boolean = true) {
         stopTimer()
+        clearHint()
 
         val currentState = _state.value
         if (currentState.movesCount > 0 && !currentState.hasWon) {
@@ -519,6 +520,7 @@ class GameViewModel(
     fun restartCurrentGame() {
         val initial = initialState ?: return
         stopTimer()
+        clearHint()
         undoStack.clear()
         if (_options.value.isVegasScoring) {
             _vegasBankroll.value = vegasBankrollAtGameStart
@@ -541,6 +543,7 @@ class GameViewModel(
             return
         }
 
+        clearHint()
         saveStateForUndo()
         hasDrawnFromStockThisGame = true
         startTimerIfNeeded()
@@ -576,6 +579,7 @@ class GameViewModel(
         if (!currentState.stock.isEmpty || currentState.waste.isEmpty) return
         if (!canRecycleStock) return
 
+        clearHint()
         saveStateForUndo()
 
         val recycled = currentState.waste.cards.map { it.copy(faceUp = false) }.reversed()
@@ -872,6 +876,7 @@ class GameViewModel(
 
     fun undoLastAction() {
         val previous = undoStack.pop() ?: return
+        clearHint()
         val currentTimerSeconds = _state.value.timerSeconds
         val currentIsTimerActive = _state.value.isTimerActive
         val scoreBeforeUndo = _state.value.score
