@@ -655,8 +655,8 @@ private fun SharedTransitionScope.OpponentHandRow(animatedVisibilityScope: Anima
                 Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
                     HoneycombCardView(
                         card = card,
-                        isFlipped = !state.openOpponentCardIds.contains(card.data.id.toString()),
-                        modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.data.id.toString()), animatedVisibilityScope = animatedVisibilityScope)
+                        isFlipped = !state.openOpponentCardIds.contains(card.id),
+                        modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope)
                     )
                 }
             }
@@ -690,7 +690,7 @@ private fun SharedTransitionScope.OpponentHandPyramid(animatedVisibilityScope: A
                 for (i in 0 until min(3, cards.size)) {
                     val card = cards[i]
                     Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
-                        HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.data.id.toString()), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.data.id.toString()), animatedVisibilityScope = animatedVisibilityScope))
+                        HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.id), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope))
                     }
                 }
             }
@@ -699,7 +699,7 @@ private fun SharedTransitionScope.OpponentHandPyramid(animatedVisibilityScope: A
                     for (i in 3 until cards.size) {
                         val card = cards[i]
                         Box(modifier = Modifier.width(cardWidth).height(cardHeight)) {
-                            HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.data.id.toString()), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.data.id.toString()), animatedVisibilityScope = animatedVisibilityScope))
+                            HoneycombCardView(card = card, isFlipped = !state.openOpponentCardIds.contains(card.id), modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope))
                         }
                     }
                 }
@@ -848,7 +848,7 @@ private fun SharedTransitionScope.PlayerHandCard(animatedVisibilityScope: Animat
             }
     ) {
         if (draggedIndex != index) {
-            HoneycombCardView(card = card, isFlipped = false, modifier = Modifier.fillMaxSize())
+            HoneycombCardView(card = card, isFlipped = false, modifier = Modifier.fillMaxSize().sharedBounds(rememberSharedContentState(key = card.id), animatedVisibilityScope = animatedVisibilityScope))
         }
     }
 }
