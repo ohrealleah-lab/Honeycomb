@@ -14,20 +14,27 @@ class SoundManager(private val context: Context, private val isSoundEnabled: Sta
     private var snapSoundId: Int = 0
 
     init {
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_GAME)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
+        try {
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
 
-        soundPool = SoundPool.Builder()
-            .setMaxStreams(5)
-            .setAudioAttributes(audioAttributes)
-            .build()
+            soundPool = SoundPool.Builder()
+                .setMaxStreams(5)
+                .setAudioAttributes(audioAttributes)
+                .build()
 
-        soundPool?.let {
-            shuffleSoundId = it.load(context, R.raw.shuffle, 1)
-            victorySoundId = it.load(context, R.raw.victory, 1)
-            snapSoundId = it.load(context, R.raw.snap, 1)
+            soundPool?.let {
+                shuffleSoundId = it.load(context, R.raw.shuffle, 1)
+                victorySoundId = it.load(context, R.raw.victory, 1)
+                snapSoundId = it.load(context, R.raw.snap, 1)
+            }
+        } catch (e: Exception) {
+            // A malformed/missing raw asset or SoundPool construction failure shouldn't
+            // crash app startup — matches iOS's AVAudioPlayer failing silently. Sound IDs
+            // stay 0, so playEffect/playSystemSound's soundId != 0 check keeps this silent.
+            soundPool = null
         }
     }
 
@@ -48,9 +55,9 @@ class SoundManager(private val context: Context, private val isSoundEnabled: Sta
 
     fun playSystemSound(name: String, volume: Float) {
         if (!isSoundEnabled.value) return
-        
-        val soundId = when (name) {
-            "Tink", "Pop" -> snapSoundId
+
+        val soundId = when (name.lowercase()) {
+            "tink", "pop" -> snapSoundId
             else -> return
         }
 
