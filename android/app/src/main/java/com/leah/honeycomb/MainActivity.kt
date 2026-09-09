@@ -33,6 +33,11 @@ import com.leah.honeycomb.videopoker.VideoPokerStatsScreen
 class MainActivity : ComponentActivity() {
     private val appContainer: AppContainer by lazy { (application as HoneycombApplication).container }
 
+    override fun onStop() {
+        super.onStop()
+        kotlinx.coroutines.runBlocking { PreferencesHelper.awaitPendingWrites() }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
