@@ -712,4 +712,7 @@ public enum StringKey
     StatTotalPaidOut,
     StatBiggestPayout,
     BeecellStatisticsTitle,
+    BtnNewBet,
+    BtnRebuy,
+    BtnReDeal,
 }

@@ -707,5 +707,8 @@ enum StringsSpanish {
         .statTotalPaidOut: "Total Pagado",
         .statBiggestPayout: "Mayor Pago",
         .beecellStatisticsTitle: "Estadísticas de Beecell",
+        .btnNewBet: "Nueva Apuesta",
+        .btnRebuy: "Recomprar",
+        .btnReDeal: "Repartir",
     ]
 }

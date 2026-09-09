@@ -723,6 +723,9 @@ public static class Strings
         [StringKey.StatTotalPaidOut] = "Total Paid Out",
         [StringKey.StatBiggestPayout] = "Biggest Payout",
         [StringKey.BeecellStatisticsTitle] = "Beecell Statistics",
+        [StringKey.BtnNewBet] = "New Bet",
+        [StringKey.BtnRebuy] = "Rebuy",
+        [StringKey.BtnReDeal] = "Re-Deal",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1430,5 +1433,8 @@ public static class Strings
         [StringKey.StatTotalPaidOut] = "Total Pagado",
         [StringKey.StatBiggestPayout] = "Mayor Pago",
         [StringKey.BeecellStatisticsTitle] = "Estadísticas de Beecell",
+        [StringKey.BtnNewBet] = "Nueva Apuesta",
+        [StringKey.BtnRebuy] = "Recomprar",
+        [StringKey.BtnReDeal] = "Repartir",
     };
 }
