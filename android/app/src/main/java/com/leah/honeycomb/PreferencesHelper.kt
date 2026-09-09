@@ -1,4 +1,5 @@
 package com.leah.honeycomb
+import kotlinx.coroutines.launch
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -98,6 +99,29 @@ object PreferencesHelper {
         val jsonString = json.encodeToString(serializer, value)
         dataStore.edit { preferences ->
             preferences[prefKey] = jsonString
+        }
+    }
+
+    private val ioScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val pendingWrites = java.util.Collections.newSetFromMap(
+        java.util.concurrent.ConcurrentHashMap<kotlinx.coroutines.Job, Boolean>()
+    )
+
+    fun <T> saveObjectAsync(
+        dataStore: DataStore<Preferences>,
+        key: String,
+        serializer: KSerializer<T>,
+        value: T
+    ) {
+        lateinit var job: kotlinx.coroutines.Job
+        job = ioScope.launch { setObject(dataStore, key, serializer, value) }
+        pendingWrites.add(job)
+        job.invokeOnCompletion { pendingWrites.remove(job) }
+    }
+
+    suspend fun awaitPendingWrites(timeoutMs: Long = 800L) {
+        kotlinx.coroutines.withTimeoutOrNull(timeoutMs) {
+            kotlinx.coroutines.joinAll(*pendingWrites.toTypedArray())
         }
     }
 }
