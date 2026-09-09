@@ -27,6 +27,11 @@ object PreferencesHelper {
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+        // A single field that fails to decode (a renamed/removed enum constant, a null
+        // where non-null is now required) falls back to that field's own default instead
+        // of throwing and wiping the whole persisted object — matches iOS's per-field
+        // try?/?? default recovery, without hand-writing a custom decoder for every class.
+        coerceInputValues = true
     }
 
     fun <T> getObject(
