@@ -28,6 +28,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -51,10 +54,6 @@ class GameViewModel(
         // what the score even means) — unrelated settings like Draw Mode or Timed Match
         // must not discard an in-progress game. Matches Swift's handleOptionsChanged.
         if (newOptions.isVegasScoring != oldOptions.isVegasScoring) {
-            // The highScore StateFlow is a derived observer of _statistics — just need
-            // to trigger a re-emission by posting the current stats again so the
-            // collect{} in the highScore flow updates for the new Vegas mode.
-            _statistics.value = _statistics.value
             _vegasBankroll.value = 0
             startNewGame(countAsNewGame = false)
         }
@@ -96,16 +95,16 @@ class GameViewModel(
     })
     val statistics: StateFlow<GameStatistics> = _statistics.asStateFlow()
 
-    // Derived from statistics so KlondikeStatsScreen / KlondikeBoard callers are unchanged.
-    val highScore: StateFlow<Int> = kotlinx.coroutines.flow.MutableStateFlow(
-        if (_options.value.isVegasScoring) _statistics.value.highScoreVegas else _statistics.value.highScore
-    ).also { flow ->
-        viewModelScope.launch {
-            _statistics.collect { stats ->
-                flow.value = if (_options.value.isVegasScoring) stats.highScoreVegas else stats.highScore
-            }
-        }
-    }
+    // Reacts to both _statistics changes (new high score recorded) and _options changes
+    // (Vegas mode toggled) — combine() ensures re-emission on either source changing,
+    // which a plain _statistics.collect{} subscriber would miss when only _options changes.
+    val highScore: StateFlow<Int> = combine(_statistics, _options) { stats, opts ->
+        if (opts.isVegasScoring) stats.highScoreVegas else stats.highScore
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = if (_options.value.isVegasScoring) _statistics.value.highScoreVegas else _statistics.value.highScore
+    )
 
     private fun updateStatistics(transform: (GameStatistics) -> GameStatistics) {
         val newStats = transform(_statistics.value)
