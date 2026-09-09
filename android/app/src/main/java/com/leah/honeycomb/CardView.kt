@@ -37,7 +37,9 @@ import androidx.compose.ui.platform.LocalContext
 
 object CardDimensions {
     val width = 114.dp
-    val height = 160.dp
+    // Matches iOS/mac's shared aspectRatio constant (181/128) exactly, rather than an
+    // independently-chosen 160dp that was ~1% off — a real, if small, shape mismatch.
+    val height = width * (181f / 128f)
 }
 
 
@@ -93,8 +95,6 @@ fun CardView(
     card: Card,
     modifier: Modifier = Modifier,
     isAnimated: Boolean = false,
-    isFocused: Boolean = false,
-    isSelected: Boolean = false,
     pointPopupText: String? = null
 ) {
     var flipTarget by remember { mutableFloatStateOf(if (card.faceUp) 0f else 180f) }
@@ -188,7 +188,7 @@ fun CardFrontView(card: Card, suitColor: Color) {
             horizontalArrangement = Arrangement.spacedBy(1.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = card.rankString, color = suitColor, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(text = card.rankString, color = suitColor, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
             Text(text = card.suit.symbol, color = suitColor, fontSize = 14.sp)
         }
 
@@ -201,7 +201,7 @@ fun CardFrontView(card: Card, suitColor: Color) {
             horizontalArrangement = Arrangement.spacedBy(1.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = card.rankString, color = suitColor, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(text = card.rankString, color = suitColor, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
             Text(text = card.suit.symbol, color = suitColor, fontSize = 14.sp)
         }
     }
@@ -253,17 +253,22 @@ fun CardCenterSuitView(card: Card, suitColor: Color, modifier: Modifier = Modifi
             modifier = modifier
         )
     } else {
-        Box(modifier = modifier.size(86.dp, 138.dp)) {
+        // suitPositions' x/y/font values are mac's own literal points, authored against
+        // mac's 128pt-wide reference card (mac/src/Views/CardView.swift) — divide by 128
+        // and multiply by CardDimensions.width so they land proportionally on Android's
+        // own reference width instead of carrying mac's absolute numbers over unscaled.
+        val refWidth = CardDimensions.width.value
+        Box(modifier = modifier.fillMaxSize()) {
             val positions = suitPositions[card.rank] ?: emptyList()
             for (pos in positions) {
                 Text(
                     text = card.suit.symbol,
                     color = suitColor,
-                    fontSize = 20.sp, // Reduced to match iOS visual weight
+                    fontSize = (refWidth * 32f / 128f).sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .offset(x = pos.x.dp, y = pos.y.dp)
+                        .offset(x = (pos.x * refWidth / 128f).dp, y = (pos.y * refWidth / 128f).dp)
                         .graphicsLayer { if (pos.isUpsideDown) rotationZ = 180f }
                 )
             }
@@ -319,23 +324,23 @@ fun CardBackView(themeName: String, isAnimated: Boolean) {
                     contentScale = ContentScale.Crop
                 )
             } else {
-                // Fallback to blue box
-                FallbackCardBack()
+                // A stale custom card back whose image file is missing on disk — fall
+                // back to a real designed card back (the app's own default theme) rather
+                // than a generic placeholder, so there's always something on-brand shown.
+                DefaultCardBack()
             }
         } else {
-            FallbackCardBack()
+            DefaultCardBack()
         }
     }
 }
 
 @Composable
-private fun FallbackCardBack() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0.1f, 0.3f, 0.6f).copy(alpha = 0.3f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(modifier = Modifier.background(Color.Blue, RoundedCornerShape(percent = 50)))
-    }
+private fun DefaultCardBack() {
+    Image(
+        painter = painterResource(id = R.drawable.solibee),
+        contentDescription = null,
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.Crop
+    )
 }
