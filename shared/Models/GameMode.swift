@@ -40,4 +40,13 @@ public enum GameMode: String, Codable, CaseIterable, Identifiable {
         case .honeycomb:  return L(.appName, language: language)
         }
     }
+
+    // Apple no longer allows individual (non-organization) developer accounts to
+    // distribute apps with simulated-gambling features — Video Poker, Video
+    // Blackjack, and Klondike's Vegas scoring option are all out on iOS as a
+    // result (App Review, Sept 2026). Mac/Android/Windows are unaffected and
+    // keep the full case list; this filter is iOS-menu-only.
+    public static var iOSStoreSafeCases: [GameMode] {
+        allCases.filter { $0 != .videoPoker && $0 != .blackjack }
+    }
 }

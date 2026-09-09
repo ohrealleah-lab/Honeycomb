@@ -853,7 +853,10 @@ struct KlondikeSettingsSection: View {
             // Sound/No Stress Mode/Honey Mode/Hide Hint/Manually Dismiss Banners live
             // in OptionsFullScreenView's own Global section now — this card is
             // Klondike-specific only.
-            Toggle(coordinator.L(.vegasScoring), isOn: $viewModel.options.isVegasScoring)
+            //
+            // Vegas Scoring toggle intentionally removed on iOS: Apple no longer
+            // allows individual developer accounts to distribute simulated-gambling
+            // features. Mac keeps the toggle (GameUIStyles.swift).
         }
     }
 }

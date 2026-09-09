@@ -12,7 +12,7 @@ struct GameSelectionFullScreenView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     sectionHeading(coordinator.L(.menuSectionGame))
-                    ForEach(GameMode.allCases) { mode in
+                    ForEach(GameMode.iOSStoreSafeCases) { mode in
                         gameRow(mode)
                     }
                 }

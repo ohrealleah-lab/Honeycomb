@@ -16,10 +16,11 @@ struct IOSRouterView: View {
                 BeecellTouchView(viewModel: coordinator.beecellViewModel)
             case .spider:
                 SpiderTouchView(viewModel: coordinator.spiderViewModel)
-            case .videoPoker:
-                VideoPokerTouchView(viewModel: coordinator.videoPokerViewModel)
-            case .blackjack:
-                BlackjackTouchView(viewModel: coordinator.blackjackViewModel)
+            case .videoPoker, .blackjack:
+                // Not offered on iOS (App Review no longer allows simulated-gambling
+                // features under an individual developer account). Only reachable here
+                // via a persisted gameMode from an older build — snap back to Klondike.
+                Color.clear.onAppear { coordinator.gameMode = .klondike }
             case .honeycomb:
                 HoneycombTouchView(viewModel: coordinator.honeycombViewModel)
             }
