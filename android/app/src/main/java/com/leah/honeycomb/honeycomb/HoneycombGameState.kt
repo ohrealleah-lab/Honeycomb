@@ -1,5 +1,8 @@
 package com.leah.honeycomb.honeycomb
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class HoneycombGameState {
     Setup,
     Playing,
@@ -7,6 +10,7 @@ enum class HoneycombGameState {
     SuddenDeath
 }
 
+@Serializable
 enum class HoneycombMatchOutcome {
     None,
     Win,

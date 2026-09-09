@@ -1,4 +1,5 @@
 package com.leah.honeycomb.honeycomb
+import kotlinx.serialization.Serializable
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,11 +24,13 @@ data class HoneycombOptions(
     val bannedRules: Set<String> = emptySet()
 )
 
+@Serializable
 data class PendingSteal(
     val boardIndex: Int,
     val cardName: String
 )
 
+@Serializable
 data class HoneycombState(
     val board: HoneycombBoard = HoneycombBoard(),
     val playerHand: List<HoneycombCard> = emptyList(),
