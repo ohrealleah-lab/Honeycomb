@@ -199,6 +199,71 @@ object HoneycombAI {
         return candidates.sortedByDescending { it.captures }
     }
 
+    // Cheap move-ordering estimate for the recursive search's hot path: counts only the
+    // immediate-neighbor captures a placement would make, ignoring Same/Plus combo
+    // cascades (HoneycombBoard.placeCard's resolveCaptures can ripple further than this).
+    // Good enough to visit strong moves first without paying for a full board copy +
+    // simulation on every candidate before alpha-beta gets a chance to prune any of them —
+    // the real, exact simulation still runs, just only for candidates actually visited.
+    private fun quickCaptureEstimate(
+        board: HoneycombBoard,
+        cardData: HoneycombCardData,
+        cell: Int,
+        owner: CardOwner,
+        rules: List<HoneycombRule>
+    ): Int {
+        val reverse = rules.contains(HoneycombRule.Reverse)
+        val fallenAce = rules.contains(HoneycombRule.FallenAce)
+
+        fun isFallenAceWin(aStat: Int, tStat: Int): Boolean {
+            if (!fallenAce) return false
+            if (!reverse && aStat == 1 && tStat == 10) return true
+            if (reverse && aStat == 10 && tStat == 1) return true
+            return false
+        }
+        fun isFallenAceBlockedLoss(aStat: Int, tStat: Int): Boolean {
+            if (!fallenAce) return false
+            if (!reverse && aStat == 10 && tStat == 1) return true
+            if (reverse && aStat == 1 && tStat == 10) return true
+            return false
+        }
+        fun canCaptureQuick(aStat: Int, tStat: Int): Boolean {
+            if (isFallenAceWin(aStat, tStat)) return true
+            if (isFallenAceBlockedLoss(aStat, tStat)) return false
+            return if (reverse) aStat < tStat else aStat > tStat
+        }
+
+        var score = 0
+        for (direction in 0 until 4) {
+            val neighborIdx = neighborIndex(cell, direction) ?: continue
+            val neighborCard = board.cells[neighborIdx].card ?: continue
+            if (neighborCard.owner == owner || neighborCard.isFaceDown) continue
+            val towardAttacker = (direction + 2) % 4
+            val aStat = cardData.stats[direction]
+            val tStat = neighborCard.stat(towardAttacker)
+            if (canCaptureQuick(aStat, tStat)) score++
+        }
+        return score
+    }
+
+    private fun quickOrderedIndices(
+        deck: List<HoneycombCardData>,
+        handIndices: List<Int>,
+        empties: List<Int>,
+        board: HoneycombBoard,
+        owner: CardOwner,
+        rules: List<HoneycombRule>
+    ): List<Pair<Int, Int>> {
+        val pairs = mutableListOf<Triple<Int, Int, Int>>()
+        for (h in handIndices) {
+            val cardData = deck[h]
+            for (b in empties) {
+                pairs.add(Triple(h, b, quickCaptureEstimate(board, cardData, b, owner, rules)))
+            }
+        }
+        return pairs.sortedByDescending { it.third }.map { it.first to it.second }
+    }
+
     private const val terminalScoreUnit = 1000
 
     private fun minimaxScore(
@@ -255,23 +320,30 @@ object HoneycombAI {
         var currentAlpha = alpha
         var currentBeta = beta
         val owner = if (maximizingOpponent) CardOwner.Opponent else CardOwner.Player
-        val candidates = orderedCandidates(activeDeck, activeDeck.indices.toList(), empties, board, owner, rules)
+        // Cheap-heuristic order only — the real board copy + placeCard simulation happens
+        // lazily below, one candidate at a time, so a pruning cutoff actually stops
+        // remaining candidates from ever being generated (not just from being recursed into).
+        val orderedIndices = quickOrderedIndices(activeDeck, activeDeck.indices.toList(), empties, board, owner, rules)
 
         var best: Int
         if (maximizingOpponent) {
             best = Int.MIN_VALUE
-            for (candidate in candidates) {
-                val remaining = opponentDeck.toMutableList().apply { removeAt(candidate.h) }
-                val score = minimaxScore(candidate.board, remaining, playerDeck, unknownPlayerCardCount, false, depth - 1, currentAlpha, currentBeta, rules, weighFallenAce, tt)
+            for ((h, b) in orderedIndices) {
+                val simBoard = board.copy(cells = board.cells.map { it.copy(card = it.card?.copy()) })
+                simBoard.placeCard(HoneycombCard(data = activeDeck[h], owner = owner), b, rules)
+                val remaining = opponentDeck.toMutableList().apply { removeAt(h) }
+                val score = minimaxScore(simBoard, remaining, playerDeck, unknownPlayerCardCount, false, depth - 1, currentAlpha, currentBeta, rules, weighFallenAce, tt)
                 best = max(best, score)
                 currentAlpha = max(currentAlpha, best)
                 if (currentBeta <= currentAlpha) break
             }
         } else {
             best = Int.MAX_VALUE
-            for (candidate in candidates) {
-                val remaining = playerDeck.toMutableList().apply { removeAt(candidate.h) }
-                val score = minimaxScore(candidate.board, opponentDeck, remaining, unknownPlayerCardCount, true, depth - 1, currentAlpha, currentBeta, rules, weighFallenAce, tt)
+            for ((h, b) in orderedIndices) {
+                val simBoard = board.copy(cells = board.cells.map { it.copy(card = it.card?.copy()) })
+                simBoard.placeCard(HoneycombCard(data = activeDeck[h], owner = owner), b, rules)
+                val remaining = playerDeck.toMutableList().apply { removeAt(h) }
+                val score = minimaxScore(simBoard, opponentDeck, remaining, unknownPlayerCardCount, true, depth - 1, currentAlpha, currentBeta, rules, weighFallenAce, tt)
                 best = min(best, score)
                 currentBeta = min(currentBeta, best)
                 if (currentBeta <= currentAlpha) break
