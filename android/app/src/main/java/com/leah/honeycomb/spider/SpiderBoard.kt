@@ -146,9 +146,7 @@ fun SpiderBoard(
                 if (!noStressMode) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("TIME", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
-                        val mins = state.timerSeconds / 60
-                        val secs = state.timerSeconds % 60
-                        Text(String.format(java.util.Locale.US, "%02d:%02d", mins, secs), fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(com.leah.honeycomb.formatSeconds(state.timerSeconds, zeroPlaceholder = "00:00"), fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }

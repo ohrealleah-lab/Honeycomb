@@ -12,8 +12,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-fun formatSeconds(totalSeconds: Int): String {
-    if (totalSeconds <= 0) return "--:--"
+// zeroPlaceholder distinguishes "no data yet" (stats screens, default "--:--") from a
+// live timer that's genuinely at zero (HUD displays, which want "00:00").
+fun formatSeconds(totalSeconds: Int, zeroPlaceholder: String = "--:--"): String {
+    if (totalSeconds <= 0) return zeroPlaceholder
     val mins = totalSeconds / 60
     val secs = totalSeconds % 60
     return "%02d:%02d".format(mins, secs)
