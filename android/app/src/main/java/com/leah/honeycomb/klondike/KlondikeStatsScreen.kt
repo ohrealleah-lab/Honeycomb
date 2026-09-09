@@ -25,14 +25,14 @@ fun KlondikeStatsScreen(viewModel: GameViewModel, onDismiss: () -> Unit) {
     val highScoreStr = if (options.isVegasScoring) {
         val sign = if (rawHighScore < 0) "-" else ""
         val absScore = Math.abs(rawHighScore) / 100.0
-        String.format("%s$%.2f", sign, absScore)
+        String.format(java.util.Locale.US, "%s$%,.2f", sign, absScore)
     } else {
         "$rawHighScore"
     }
 
     val bankrollColor = if (vegasBankroll >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
     val bankrollSign = if (vegasBankroll < 0) "-" else ""
-    val bankrollStr = String.format("%s$%.2f", bankrollSign, Math.abs(vegasBankroll) / 100.0)
+    val bankrollStr = String.format(java.util.Locale.US, "%s$%,.2f", bankrollSign, Math.abs(vegasBankroll) / 100.0)
 
     StatisticsFullScreenView(title = Strings.get(StringKey.KlondikeStatisticsTitle, language), onDismiss = onDismiss) {
         StatsBlock(listOf(

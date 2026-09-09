@@ -59,6 +59,14 @@ data class DragState(
     val offset: Offset = Offset.Zero
 )
 
+// Vegas score is stored in cents. Formats it as "-$52.00" (sign before the $, not
+// "$-52.00") with thousands grouping — matches KlondikeStatsScreen's Bankroll/High
+// Score formatting, which this HUD/win-dialog display had drifted from.
+private fun formatVegasCurrency(scoreCents: Int): String {
+    val sign = if (scoreCents < 0) "-" else ""
+    return String.format(java.util.Locale.US, "%s$%,.2f", sign, Math.abs(scoreCents) / 100.0)
+}
+
 @Composable
 fun KlondikeBoard(
     viewModel: GameViewModel,
@@ -140,7 +148,7 @@ fun KlondikeBoard(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(if (options.isVegasScoring) "BANKROLL" else "SCORE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
-                        Text(if (options.isVegasScoring) String.format("$%.2f", state.score / 100.0) else "${state.score}", fontWeight = FontWeight.Bold, color = Color.Yellow)
+                        Text(if (options.isVegasScoring) formatVegasCurrency(state.score) else "${state.score}", fontWeight = FontWeight.Bold, color = Color.Yellow)
                     }
                     if (!noStressMode) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -470,7 +478,7 @@ fun KlondikeBoard(
                 Card {
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("You Win!", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
-                        Text(if (options.isVegasScoring) "Bankroll: " + String.format("$%.2f", state.score / 100.0) else "Score: ${state.score}")
+                        Text(if (options.isVegasScoring) "Bankroll: " + formatVegasCurrency(state.score) else "Score: ${state.score}")
                         if (!noStressMode) {
                             Text("Time: ${com.leah.honeycomb.formatSeconds(state.timerSeconds)}")
                         }
