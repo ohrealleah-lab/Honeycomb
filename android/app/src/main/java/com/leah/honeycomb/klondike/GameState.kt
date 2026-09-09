@@ -29,5 +29,7 @@ data class GameState(
     val drawMode: DrawMode = DrawMode.DrawThree,
     val hasWon: Boolean = false,
     val recyclesCount: Int = 0,
-    val wasteDisplayCount: Int = 0
+    val wasteDisplayCount: Int = 0,
+    val vegasBankroll: Int = 0,
+    val vegasBankrollAtGameStart: Int = 0
 )

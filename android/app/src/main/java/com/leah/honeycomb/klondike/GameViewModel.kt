@@ -28,11 +28,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import java.util.UUID
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class GameViewModel(
     val sharedOptions: SharedGameOptions,
     private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
@@ -389,10 +391,39 @@ class GameViewModel(
             return if (maxRec != null) _state.value.recyclesCount < maxRec else true
         }
 
+
     init {
-        // Assume loaded from DataStore via AppContainer or similar...
-        // For now start immediately
-        startNewGame()
+        val defaultState = GameState()
+        val savedState = com.leah.honeycomb.PreferencesHelper.getObjectSync(
+            dataStore, "klondike_saved_state", GameState.serializer(), defaultState
+        )
+        
+        val savedInitialState = com.leah.honeycomb.PreferencesHelper.getObjectSync(
+            dataStore, "klondike_saved_initial_state", GameState.serializer(), defaultState
+        )
+
+        if (savedState != defaultState && !savedState.hasWon) {
+            val restoredState = savedState.copy(isTimerActive = false)
+            _state.value = restoredState
+            initialState = if (savedInitialState != defaultState) savedInitialState else restoredState
+            
+            _vegasBankroll.value = savedState.vegasBankroll
+            vegasBankrollAtGameStart = savedState.vegasBankrollAtGameStart
+        } else {
+            startNewGame()
+        }
+
+        viewModelScope.launch {
+            _state.debounce(500).collect { currentState ->
+                val toSave = if (currentState.hasWon) defaultState else currentState.copy(
+                    vegasBankroll = _vegasBankroll.value,
+                    vegasBankrollAtGameStart = vegasBankrollAtGameStart
+                )
+                com.leah.honeycomb.PreferencesHelper.setObject(
+                    dataStore, "klondike_saved_state", GameState.serializer(), toSave
+                )
+            }
+        }
     }
 
     private fun saveStateForUndo() {
@@ -506,6 +537,16 @@ class GameViewModel(
         
         _state.value = newState
         initialState = newState
+        
+        viewModelScope.launch {
+            val toSaveInitial = newState.copy(
+                vegasBankroll = _vegasBankroll.value,
+                vegasBankrollAtGameStart = vegasBankrollAtGameStart
+            )
+            com.leah.honeycomb.PreferencesHelper.setObject(
+                dataStore, "klondike_saved_initial_state", GameState.serializer(), toSaveInitial
+            )
+        }
         
         _isAutocompleteAvailable.value = false
         _isAutoplayRunning.value = false
