@@ -42,8 +42,8 @@ object HoneycombAI {
                 }
             }
             HoneycombDifficulty.Medium -> greedyMove(board, opponentDeck, eligibleHands, empties, rules)
-            HoneycombDifficulty.Hard -> minimaxMove(board, opponentDeck, simulatedPlayerDeck, 0, eligibleHands, empties, rules, 5, false)
-            HoneycombDifficulty.UltraHard -> minimaxMove(board, opponentDeck, simulatedPlayerDeck, 0, eligibleHands, empties, rules, 6, true)
+            HoneycombDifficulty.Hard -> minimaxMove(board, opponentDeck, simulatedPlayerDeck, eligibleHands, empties, rules, 5, false)
+            HoneycombDifficulty.UltraHard -> minimaxMove(board, opponentDeck, simulatedPlayerDeck, eligibleHands, empties, rules, 6, true)
         }
     }
 
@@ -60,6 +60,13 @@ object HoneycombAI {
         val opponentDeckIds: List<Int>,
         val playerDeckIds: List<Int>
     )
+
+    // The one shared deep-copy for simulating a placement: clones every cell and its card
+    // so mutating the copy (placeCard) never touches the board being searched from.
+    // mirroredOwnership below needs a different, shallower copy — it replaces every cell's
+    // card outright rather than mutating one in place, so it doesn't go through this.
+    private fun HoneycombBoard.deepCopy(): HoneycombBoard =
+        copy(cells = cells.map { it.copy(card = it.card?.copy()) })
 
     private fun mirroredOwnership(board: HoneycombBoard): HoneycombBoard {
         val mirrored = board.copy(cells = board.cells.map { it.copy() })
@@ -90,7 +97,6 @@ object HoneycombAI {
             board = mirroredOwnership(board),
             opponentDeck = playerDeck,
             playerDeck = simulatedOpponentDeck,
-            unknownPlayerCardCount = 0,
             eligibleHands = eligibleHands,
             empties = empties,
             rules = rules,
@@ -112,7 +118,7 @@ object HoneycombAI {
         for (h in eligibleHands) {
             val cardData = opponentDeck[h]
             for (b in empties) {
-                val simBoard = board.copy(cells = board.cells.map { it.copy(card = it.card?.copy()) })
+                val simBoard = board.deepCopy()
                 val score = simBoard.placeCard(HoneycombCard(data = cardData, owner = CardOwner.Opponent), b, rules).size
                 if (score > bestScore) {
                     bestScore = score
@@ -129,7 +135,6 @@ object HoneycombAI {
         board: HoneycombBoard,
         opponentDeck: List<HoneycombCardData>,
         playerDeck: List<HoneycombCardData>,
-        unknownPlayerCardCount: Int,
         eligibleHands: List<Int>,
         empties: List<Int>,
         rules: List<HoneycombRule>,
@@ -154,7 +159,6 @@ object HoneycombAI {
                 board = candidate.board,
                 opponentDeck = remainingOpponentDeck,
                 playerDeck = playerDeck,
-                unknownPlayerCardCount = unknownPlayerCardCount,
                 maximizingOpponent = false,
                 depth = lookaheadPlies - 1,
                 alpha = alpha,
@@ -191,7 +195,7 @@ object HoneycombAI {
         for (h in handIndices) {
             val cardData = deck[h]
             for (b in empties) {
-                val simBoard = board.copy(cells = board.cells.map { it.copy(card = it.card?.copy()) })
+                val simBoard = board.deepCopy()
                 val captures = simBoard.placeCard(HoneycombCard(data = cardData, owner = owner), b, rules).size
                 candidates.add(OrderedCandidate(h, b, captures, simBoard))
             }
@@ -270,7 +274,6 @@ object HoneycombAI {
         board: HoneycombBoard,
         opponentDeck: List<HoneycombCardData>,
         playerDeck: List<HoneycombCardData>,
-        unknownPlayerCardCount: Int,
         maximizingOpponent: Boolean,
         depth: Int,
         alpha: Int,
@@ -305,12 +308,6 @@ object HoneycombAI {
         val empties = board.cells.mapIndexedNotNull { index, cell -> if (cell.card == null) index else null }
         val activeDeck = if (maximizingOpponent) opponentDeck else playerDeck
 
-        if (!maximizingOpponent && unknownPlayerCardCount > 0) {
-            val value = positionalEvaluation(board, opponentDeck, playerDeck, rules, weighFallenAce)
-            tt[ttKey] = TTEntry(value, TTFlag.Exact)
-            return value
-        }
-
         if (depth <= 0 || empties.isEmpty() || activeDeck.isEmpty()) {
             val value = positionalEvaluation(board, opponentDeck, playerDeck, rules, weighFallenAce)
             tt[ttKey] = TTEntry(value, TTFlag.Exact)
@@ -329,10 +326,10 @@ object HoneycombAI {
         if (maximizingOpponent) {
             best = Int.MIN_VALUE
             for ((h, b) in orderedIndices) {
-                val simBoard = board.copy(cells = board.cells.map { it.copy(card = it.card?.copy()) })
+                val simBoard = board.deepCopy()
                 simBoard.placeCard(HoneycombCard(data = activeDeck[h], owner = owner), b, rules)
                 val remaining = opponentDeck.toMutableList().apply { removeAt(h) }
-                val score = minimaxScore(simBoard, remaining, playerDeck, unknownPlayerCardCount, false, depth - 1, currentAlpha, currentBeta, rules, weighFallenAce, tt)
+                val score = minimaxScore(simBoard, remaining, playerDeck, false, depth - 1, currentAlpha, currentBeta, rules, weighFallenAce, tt)
                 best = max(best, score)
                 currentAlpha = max(currentAlpha, best)
                 if (currentBeta <= currentAlpha) break
@@ -340,10 +337,10 @@ object HoneycombAI {
         } else {
             best = Int.MAX_VALUE
             for ((h, b) in orderedIndices) {
-                val simBoard = board.copy(cells = board.cells.map { it.copy(card = it.card?.copy()) })
+                val simBoard = board.deepCopy()
                 simBoard.placeCard(HoneycombCard(data = activeDeck[h], owner = owner), b, rules)
                 val remaining = playerDeck.toMutableList().apply { removeAt(h) }
-                val score = minimaxScore(simBoard, opponentDeck, remaining, unknownPlayerCardCount, true, depth - 1, currentAlpha, currentBeta, rules, weighFallenAce, tt)
+                val score = minimaxScore(simBoard, opponentDeck, remaining, true, depth - 1, currentAlpha, currentBeta, rules, weighFallenAce, tt)
                 best = min(best, score)
                 currentBeta = min(currentBeta, best)
                 if (currentBeta <= currentAlpha) break
