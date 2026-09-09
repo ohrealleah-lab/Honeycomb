@@ -157,15 +157,15 @@ fun VideoPokerBoard(
                     .padding(horizontal = 24.dp, vertical = 8.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("CREDITS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text(com.leah.honeycomb.Strings.get(StringKey.CreditsLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                     Text(if (!viewModel.isFreePlay) "${state.sessionCredits}" else "FREE", fontWeight = FontWeight.Bold, color = Color.Yellow)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("BET", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text(com.leah.honeycomb.Strings.get(StringKey.BetLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                     Text("${state.currentBet}", fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("HANDS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text(com.leah.honeycomb.Strings.get(StringKey.HandsLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                     Text("${state.handsDealt}", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
@@ -266,7 +266,7 @@ fun VideoPokerBoard(
                                 .clickable { UISound.click(); viewModel.maxBet() }
                                 .padding(horizontal = 24.dp, vertical = 16.dp)
                             ) {
-                                Text("Max", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                                Text(com.leah.honeycomb.Strings.get(StringKey.TouchBetMaxButton, language), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
                             }
                             // + Button
                             Box(modifier = Modifier
@@ -284,7 +284,7 @@ fun VideoPokerBoard(
                             .clickable { UISound.click(); viewModel.rebuy() }
                             .padding(horizontal = 48.dp, vertical = 16.dp)
                         ) {
-                            Text("Rebuy", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                            Text(com.leah.honeycomb.Strings.get(StringKey.BtnRebuy, language), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 24.sp)
                         }
                     } else {
                         Box(modifier = Modifier
@@ -292,7 +292,7 @@ fun VideoPokerBoard(
                             .clickable { UISound.click(); haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.deal() }
                             .padding(horizontal = 48.dp, vertical = 16.dp)
                         ) {
-                            Text("Deal", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                            Text(com.leah.honeycomb.Strings.get(StringKey.DealButton, language), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 24.sp)
                         }
                     }
                 } else if (state.phase == VideoPokerPhase.Holding) {
@@ -301,7 +301,7 @@ fun VideoPokerBoard(
                         .clickable { UISound.click(); haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.draw() }
                         .padding(horizontal = 48.dp, vertical = 16.dp)
                     ) {
-                        Text("DRAW", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                        Text(com.leah.honeycomb.Strings.get(StringKey.BtnDraw, language), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
                     }
                 }
             }

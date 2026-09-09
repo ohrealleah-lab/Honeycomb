@@ -736,6 +736,9 @@ object Strings {
         StringKey.StatTotalPaidOut to "Total Paid Out",
         StringKey.StatBiggestPayout to "Biggest Payout",
         StringKey.BeecellStatisticsTitle to "Beecell Statistics",
+        StringKey.BtnNewBet to "New Bet",
+        StringKey.BtnRebuy to "Rebuy",
+        StringKey.BtnReDeal to "Re-Deal",
     )
 
     private val Spanish = mapOf(
@@ -1442,5 +1445,8 @@ object Strings {
         StringKey.StatTotalPaidOut to "Total Pagado",
         StringKey.StatBiggestPayout to "Mayor Pago",
         StringKey.BeecellStatisticsTitle to "Estadísticas de Beecell",
+        StringKey.BtnNewBet to "Nueva Apuesta",
+        StringKey.BtnRebuy to "Recomprar",
+        StringKey.BtnReDeal to "Repartir",
     )
 }

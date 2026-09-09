@@ -23,6 +23,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
+import com.leah.honeycomb.Strings
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
@@ -104,15 +105,15 @@ fun BlackjackBoard(
                     .padding(horizontal = 24.dp, vertical = 8.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("CREDITS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text(com.leah.honeycomb.Strings.get(StringKey.CreditsLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                     Text(if (!viewModel.isFreePlay) "${state.sessionCredits}" else "FREE", fontWeight = FontWeight.Bold, color = Color.Yellow)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("BET", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text(com.leah.honeycomb.Strings.get(StringKey.BetLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                     Text("${state.currentBet}", fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("HANDS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text(com.leah.honeycomb.Strings.get(StringKey.HandsLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                     Text("${state.handsDealt}", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
@@ -249,12 +250,12 @@ fun BlackjackBoard(
                 if (state.phase == BlackjackPhase.Betting || state.phase == BlackjackPhase.Result) {
                     if (state.phase == BlackjackPhase.Result) {
                         Box(modifier = Modifier.padding(bottom = 16.dp)) {
-                            ActionButton("New Bet", Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.resetIfRoundOver() })
+                            ActionButton(Strings.get(StringKey.BtnNewBet, language), Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.resetIfRoundOver() })
                         }
                     }
                     if (viewModel.canRebuy) {
                         Box(modifier = Modifier.padding(bottom = 16.dp)) {
-                            ActionButton("Rebuy", Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.rebuy() })
+                            ActionButton(Strings.get(StringKey.BtnRebuy, language), Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.rebuy() })
                         }
                     }
                     
@@ -271,33 +272,33 @@ fun BlackjackBoard(
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth(0.9f)) {
                         if (!viewModel.isFreePlay) {
                             Box(modifier = Modifier.weight(1f)) {
-                                ActionButton("Clear Bet", Color.DarkGray, { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.clearBet() })
+                                ActionButton(Strings.get(StringKey.BtnClearBet, language), Color.DarkGray, { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.clearBet() })
                             }
                         }
                         Box(modifier = Modifier.weight(1f)) {
-                            ActionButton(if (state.phase == BlackjackPhase.Result) "Re-Deal" else "Deal", Color(0xFFFFC107), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.deal() }, enabled = (viewModel.isFreePlay || state.sessionCredits >= state.currentBet))
+                            ActionButton(if (state.phase == BlackjackPhase.Result) Strings.get(StringKey.BtnReDeal, language) else Strings.get(StringKey.DealButton, language), Color(0xFFFFC107), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.deal() }, enabled = (viewModel.isFreePlay || state.sessionCredits >= state.currentBet))
                         }
                     }
                 } else if (state.phase == BlackjackPhase.Playing) {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth(0.9f)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
                             Box(modifier = Modifier.weight(1f)) {
-                                ActionButton("Hit", Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.hit() }, enabled = !viewModel.isDealerBlackjackPending)
+                                ActionButton(Strings.get(StringKey.TouchActionHit, language), Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.hit() }, enabled = !viewModel.isDealerBlackjackPending)
                             }
                             Box(modifier = Modifier.weight(1f)) {
-                                ActionButton("Stand", Color(0xFFF44336), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.stand() }, enabled = !viewModel.isDealerBlackjackPending)
+                                ActionButton(Strings.get(StringKey.TouchActionStand, language), Color(0xFFF44336), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.stand() }, enabled = !viewModel.isDealerBlackjackPending)
                             }
                         }
                         if (viewModel.canDouble || viewModel.canSplit) {
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
                                 if (viewModel.canDouble) {
                                     Box(modifier = Modifier.weight(1f)) {
-                                        ActionButton("Double", Color(0xFF2196F3), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.doubleDown() }, enabled = !viewModel.isDealerBlackjackPending)
+                                        ActionButton(Strings.get(StringKey.TouchActionDouble, language), Color(0xFF2196F3), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.doubleDown() }, enabled = !viewModel.isDealerBlackjackPending)
                                     }
                                 }
                                 if (viewModel.canSplit) {
                                     Box(modifier = Modifier.weight(1f)) {
-                                        ActionButton("Split", Color(0xFF9C27B0), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.split() }, enabled = !viewModel.isDealerBlackjackPending)
+                                        ActionButton(Strings.get(StringKey.TouchActionSplit, language), Color(0xFF9C27B0), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.split() }, enabled = !viewModel.isDealerBlackjackPending)
                                     }
                                 }
                             }

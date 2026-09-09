@@ -708,4 +708,7 @@ enum class StringKey {
     StatTotalPaidOut,
     StatBiggestPayout,
     BeecellStatisticsTitle,
+    BtnNewBet,
+    BtnRebuy,
+    BtnReDeal,
 }
