@@ -1,31 +1,32 @@
 package com.leah.honeycomb.theme
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
 @Serializable
 data class CustomCardColorGroup(
-    var isEnabled: Boolean = false,
-    var bgRed: Double = 1.0,
-    var bgGreen: Double = 1.0,
-    var bgBlue: Double = 1.0,
-    var bgAlpha: Double = 1.0,
-    var outlineRed: Double = 0.0,
-    var outlineGreen: Double = 0.0,
-    var outlineBlue: Double = 0.0,
-    var outlineAlpha: Double = 0.85,
-    var blackSuitRed: Double = 0.0,
-    var blackSuitGreen: Double = 0.0,
-    var blackSuitBlue: Double = 0.0,
-    var blackSuitAlpha: Double = 1.0,
-    var redSuitRed: Double = 0.8,
-    var redSuitGreen: Double = 0.1,
-    var redSuitBlue: Double = 0.1,
-    var redSuitAlpha: Double = 1.0,
-    var shadowRed: Double = 0.0,
-    var shadowGreen: Double = 0.0,
-    var shadowBlue: Double = 0.0,
-    var shadowAlpha: Double = 0.15
+    val isEnabled: Boolean = false,
+    val bgRed: Double = 1.0,
+    val bgGreen: Double = 1.0,
+    val bgBlue: Double = 1.0,
+    val bgAlpha: Double = 1.0,
+    val outlineRed: Double = 0.0,
+    val outlineGreen: Double = 0.0,
+    val outlineBlue: Double = 0.0,
+    val outlineAlpha: Double = 0.85,
+    val blackSuitRed: Double = 0.0,
+    val blackSuitGreen: Double = 0.0,
+    val blackSuitBlue: Double = 0.0,
+    val blackSuitAlpha: Double = 1.0,
+    val redSuitRed: Double = 0.8,
+    val redSuitGreen: Double = 0.1,
+    val redSuitBlue: Double = 0.1,
+    val redSuitAlpha: Double = 1.0,
+    val shadowRed: Double = 0.0,
+    val shadowGreen: Double = 0.0,
+    val shadowBlue: Double = 0.0,
+    val shadowAlpha: Double = 0.15
 )
 
 @Serializable
@@ -42,18 +43,19 @@ enum class FeltColorType {
     FeltGreen, Crimson, RoyalBlue, Charcoal, Desert, Custom
 }
 
+@Immutable
 @Serializable
 data class SoliBeeTheme(
     val id: String = UUID.randomUUID().toString(),
-    var name: String,
-    var cardBackTheme: String,
-    var feltColor: FeltColorType,
+    val name: String,
+    val cardBackTheme: String,
+    val feltColor: FeltColorType,
     // null means "no custom color chosen yet" — distinct from a genuinely black (0,0,0)
     // custom color, which an all-zero-defaults sentinel couldn't represent.
-    var customFeltRed: Double? = null,
-    var customFeltGreen: Double? = null,
-    var customFeltBlue: Double? = null,
-    var faceArts: MutableList<CustomFaceArt> = mutableListOf(),
-    var customCardColors: CustomCardColorGroup = CustomCardColorGroup(),
-    var customBackgroundName: String? = null
+    val customFeltRed: Double? = null,
+    val customFeltGreen: Double? = null,
+    val customFeltBlue: Double? = null,
+    val faceArts: List<CustomFaceArt> = emptyList(),
+    val customCardColors: CustomCardColorGroup = CustomCardColorGroup(),
+    val customBackgroundName: String? = null
 )
