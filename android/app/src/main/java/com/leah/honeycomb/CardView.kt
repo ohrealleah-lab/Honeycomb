@@ -106,7 +106,6 @@ fun CardView(
     LaunchedEffect(card.faceUp) {
         flipTarget = if (card.faceUp) 0f else 180f
     }
-    val isPastFlipMidpoint = flipDegrees > 90f
     val theme = LocalSoliBeeTheme.current
     
     val colors = rememberCardColors(theme, card.isRed)
@@ -143,17 +142,31 @@ fun CardView(
                     clip = false
                     ambientShadowColor = shadowColor
                     spotShadowColor = shadowColor
+                    rotationY = flipDegrees
+                    cameraDistance = 8 * density
                 }
                 .clip(RoundedCornerShape(cornerRadius))
                 .background(cardBackgroundColor)
                 .border(0.75.dp, outlineColor, RoundedCornerShape(cornerRadius))
         ) {
-        if (card.faceUp) {
-            CardFrontView(card = card, suitColor = suitColor)
-        } else {
-            CardBackView(theme.cardBackTheme, isAnimated = isAnimated)
+        // The card's whole shell (background/border/shadow) rotates via the graphicsLayer
+        // above; past the midpoint that rotation would render this content mirrored, so
+        // counter-rotate it back to +180 to read correctly — the classic Compose flip-card
+        // recipe. showFront tracks which half of the rotation we're in, not card.faceUp
+        // directly, so the outgoing face stays visible until the card is edge-on.
+        val showFront = flipDegrees <= 90f
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { if (!showFront) rotationY = 180f }
+        ) {
+            if (showFront) {
+                CardFrontView(card = card, suitColor = suitColor)
+            } else {
+                CardBackView(theme.cardBackTheme, isAnimated = isAnimated)
+            }
         }
-        
+
         if (pointPopupText != null) {
             Text(
                 text = pointPopupText,
