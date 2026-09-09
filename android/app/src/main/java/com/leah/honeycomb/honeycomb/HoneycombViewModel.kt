@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -78,6 +79,7 @@ data class HoneycombState(
         }
 }
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class HoneycombViewModel(
     val sharedOptions: SharedGameOptions,
     val database: HoneycombDatabase,
@@ -237,7 +239,31 @@ class HoneycombViewModel(
     private var aiMoveGeneration: Int = 0
 
     init {
-        loadOptions()
+        val defaultState = HoneycombState()
+        val savedState = PreferencesHelper.getObjectSync(
+            dataStore, "honeycomb_saved_state", HoneycombState.serializer(), defaultState
+        )
+
+        if (savedState != defaultState && savedState.gameState != HoneycombGameState.Setup && savedState.gameState != HoneycombGameState.GameOver) {
+            _state.value = savedState
+            if (!savedState.isPlayerTurn && savedState.gameState == HoneycombGameState.Playing) {
+                viewModelScope.launch {
+                    delay(1000)
+                    aiPlayTurn()
+                }
+            }
+        } else {
+            loadOptions()
+        }
+
+        viewModelScope.launch {
+            _state.debounce(500).collect { currentState ->
+                val toSave = if (currentState.gameState == HoneycombGameState.GameOver || currentState.gameState == HoneycombGameState.Setup) defaultState else currentState
+                PreferencesHelper.setObject(
+                    dataStore, "honeycomb_saved_state", HoneycombState.serializer(), toSave
+                )
+            }
+        }
     }
 
     fun startNewGame() {

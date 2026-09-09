@@ -31,14 +31,11 @@ import com.leah.honeycomb.videopoker.VideoPokerOptionsScreen
 import com.leah.honeycomb.videopoker.VideoPokerStatsScreen
 
 class MainActivity : ComponentActivity() {
-    private lateinit var appContainer: AppContainer
+    private val appContainer: AppContainer by lazy { (application as HoneycombApplication).container }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (!::appContainer.isInitialized) {
-            appContainer = AppContainer(applicationContext)
-        }
         super.onCreate(savedInstanceState)
-        
+
 
         setContent {
             val themes by appContainer.themeManager.themes.collectAsState()
