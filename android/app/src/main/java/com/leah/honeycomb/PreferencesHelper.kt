@@ -113,8 +113,14 @@ object PreferencesHelper {
         serializer: KSerializer<T>,
         value: T
     ) {
+        trackWrite { setObject(dataStore, key, serializer, value) }
+    }
+
+    // For writes that don't go through setObject's JSON encoding (e.g. a raw
+    // stringPreferencesKey edit) but still need to be tracked by awaitPendingWrites.
+    fun trackWrite(block: suspend () -> Unit) {
         lateinit var job: kotlinx.coroutines.Job
-        job = ioScope.launch { setObject(dataStore, key, serializer, value) }
+        job = ioScope.launch { block() }
         pendingWrites.add(job)
         job.invokeOnCompletion { pendingWrites.remove(job) }
     }

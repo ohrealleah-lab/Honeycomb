@@ -74,7 +74,7 @@ class AppContainer(private val context: Context) {
     }
 
     fun setLastGameMode(mode: String) {
-        coroutineScope.launch {
+        PreferencesHelper.trackWrite {
             context.dataStore.edit { it[lastGameModeKey] = mode }
         }
     }
