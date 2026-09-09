@@ -232,18 +232,24 @@ object HoneycombAI {
         val originalAlpha = alpha
         if (board.isFull) {
             val margin = board.opponentScore - board.playerScore
-            return margin * terminalScoreUnit
+            val value = margin * terminalScoreUnit
+            tt[ttKey] = TTEntry(value, TTFlag.Exact)
+            return value
         }
 
         val empties = board.cells.mapIndexedNotNull { index, cell -> if (cell.card == null) index else null }
         val activeDeck = if (maximizingOpponent) opponentDeck else playerDeck
 
         if (!maximizingOpponent && unknownPlayerCardCount > 0) {
-            return positionalEvaluation(board, opponentDeck, playerDeck, rules, weighFallenAce)
+            val value = positionalEvaluation(board, opponentDeck, playerDeck, rules, weighFallenAce)
+            tt[ttKey] = TTEntry(value, TTFlag.Exact)
+            return value
         }
 
         if (depth <= 0 || empties.isEmpty() || activeDeck.isEmpty()) {
-            return positionalEvaluation(board, opponentDeck, playerDeck, rules, weighFallenAce)
+            val value = positionalEvaluation(board, opponentDeck, playerDeck, rules, weighFallenAce)
+            tt[ttKey] = TTEntry(value, TTFlag.Exact)
+            return value
         }
 
         var currentAlpha = alpha
