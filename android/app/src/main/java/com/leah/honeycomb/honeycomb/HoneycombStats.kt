@@ -29,7 +29,7 @@ data class HoneycombStats(
     val winRate: Double
         get() {
             val decisiveGames = gamesPlayed - matchesDrawn
-            return if (decisiveGames > 0) matchesWon.toDouble() / decisiveGames.toDouble() * 100.0 else 0.0
+            return if (decisiveGames > 0) matchesWon.toDouble() / decisiveGames.toDouble() else 0.0
         }
 
     fun recordGame(

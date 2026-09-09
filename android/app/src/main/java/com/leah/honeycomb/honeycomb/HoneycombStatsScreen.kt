@@ -30,7 +30,7 @@ fun HoneycombStatsScreen(viewModel: HoneycombViewModel, onBack: () -> Unit) {
                 StatRow(Strings.get(StringKey.StatMatchesWon, language), "${stats.matchesWon}")
                 StatRow(Strings.get(StringKey.StatMatchesLost, language), "${stats.matchesLost}")
                 StatRow(Strings.get(StringKey.StatMatchesDrawn, language), "${stats.matchesDrawn}")
-                StatRow(Strings.get(StringKey.WinPercentage, language), "%.0f%%".format(stats.winRate))
+                StatRow(Strings.get(StringKey.WinPercentage, language), "%.0f%%".format(stats.winRate * 100.0))
                 StatRow(Strings.get(StringKey.StatCardsCaptured, language), "${stats.cardsCaptured}")
                 StatRow(Strings.get(StringKey.StatCardsStolen, language), "${stats.cardsStolen}")
                 StatRow(Strings.get(StringKey.StatCurrentWinStreak, language), "${stats.currentWinStreak}")

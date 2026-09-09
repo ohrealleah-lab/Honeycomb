@@ -22,7 +22,7 @@ fun BeecellStatsScreen(viewModel: BeecellViewModel, onBack: () -> Unit) {
             StatRow(Strings.get(StringKey.GamesPlayed, language), "${stats.gamesPlayed}")
             StatRow(Strings.get(StringKey.GamesWon, language), "${stats.gamesWon}")
             StatRow(Strings.get(StringKey.HighScoreColon, language), "${stats.highScore}")
-            StatRow(Strings.get(StringKey.WinPercentage, language), "%.0f%%".format(stats.winPercentage))
+            StatRow(Strings.get(StringKey.WinPercentage, language), "%.0f%%".format(stats.winRate * 100.0))
             StatRow(Strings.get(StringKey.CurrentStreak, language), "${stats.currentStreak}")
             StatRow(Strings.get(StringKey.LongestStreak, language), "${stats.longestStreak}")
             StatRow(Strings.get(StringKey.StatAverageWinTime, language), formatSeconds(stats.averageWinningTime.toInt()))
