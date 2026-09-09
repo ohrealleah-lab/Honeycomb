@@ -7,12 +7,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import java.util.UUID
 import kotlin.math.max
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class BeecellViewModel(
     val sharedOptions: SharedGameOptions,
     private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
@@ -319,7 +321,30 @@ class BeecellViewModel(
     }
 
     init {
-        startNewGame()
+        val defaultState = BeecellState()
+        val savedState = PreferencesHelper.getObjectSync(
+            dataStore, "beecell_saved_state", BeecellState.serializer(), defaultState
+        )
+        val savedInitialState = PreferencesHelper.getObjectSync(
+            dataStore, "beecell_saved_initial_state", BeecellState.serializer(), defaultState
+        )
+
+        if (savedState != defaultState && !savedState.hasWon) {
+            val restoredState = savedState.copy(isTimerActive = false)
+            _state.value = restoredState
+            initialState = if (savedInitialState != defaultState) savedInitialState else restoredState
+        } else {
+            startNewGame()
+        }
+
+        viewModelScope.launch {
+            _state.debounce(500).collect { currentState ->
+                val toSave = if (currentState.hasWon) defaultState else currentState
+                PreferencesHelper.setObject(
+                    dataStore, "beecell_saved_state", BeecellState.serializer(), toSave
+                )
+            }
+        }
     }
     
     fun updateOptions(newOptions: BeecellOptions) {
@@ -411,6 +436,12 @@ class BeecellViewModel(
         
         _state.value = newState
         initialState = newState
+        
+        viewModelScope.launch {
+            PreferencesHelper.setObject(
+                dataStore, "beecell_saved_initial_state", BeecellState.serializer(), newState
+            )
+        }
         
         _isAutocompleteAvailable.value = false
         _isAutoplayRunning.value = false
