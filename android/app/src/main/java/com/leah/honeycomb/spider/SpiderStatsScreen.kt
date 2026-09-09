@@ -28,9 +28,7 @@ fun SpiderStatsScreen(viewModel: SpiderViewModel, onBack: () -> Unit) {
     val stats = statistics.statsBySuits[selectedSuitCount] ?: SpiderModeStats()
 
     val suitNoun = if (selectedSuitCount == 1) Strings.get(StringKey.LabelSuitSingular, language) else Strings.get(StringKey.LabelSuitPlural, language)
-    val title = Strings.get(StringKey.SpiderStatisticsFmt, language)
-        .replace("%d", "$selectedSuitCount")
-        .replace("%@", suitNoun)
+    val title = Strings.format(StringKey.SpiderStatisticsFmt, language, selectedSuitCount, suitNoun)
 
     StatisticsFullScreenView(title = title, onDismiss = onBack) {
         Column {

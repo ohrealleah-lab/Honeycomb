@@ -80,7 +80,7 @@ private fun playerRankName(cardsCollected: Int, totalCards: Int, language: com.l
 }
 
 private fun scoreDealerText(language: com.leah.honeycomb.AppLanguage, name: String, score: Int): String =
-    Strings.get(StringKey.ScoreDealerFmt, language).replaceFirst("%@", name).replaceFirst("%d", "$score")
+    Strings.format(StringKey.ScoreDealerFmt, language, name, score)
 
 // Ported from HoneycombTouchView.swift's rulesBannerLines computed property.
 private fun rulesBannerLines(
@@ -94,9 +94,7 @@ private fun rulesBannerLines(
         return state.activeRules.map { rule ->
             if ((rule == HoneycombRule.Ascension || rule == HoneycombRule.Descension) && state.ascensionDescensionSuits.isNotEmpty()) {
                 val suitNames = state.ascensionDescensionSuits.sorted().map { HoneycombCardData.localizedSuitName(it, language) }
-                Strings.get(StringKey.RuleLineSuitFmt, language)
-                    .replaceFirst("%@", rule.displayName)
-                    .replaceFirst("%@", suitNames.joinToString(", "))
+                Strings.format(StringKey.RuleLineSuitFmt, language, rule.displayName, suitNames.joinToString(", "))
             } else {
                 rule.displayName
             }

@@ -257,6 +257,28 @@ def write_kt_strings(rows: list[dict], path: Path) -> None:
         "        return table[key] ?: (English[key] ?: \"?$key?\")",
         "    }",
         "",
+
+        "    fun format(key: StringKey, language: AppLanguage, vararg args: Any): String {",
+        "        val template = get(key, language)",
+        "        val regex = Regex(\"%@|%d|%\\\\.0f|%\\\\.2f\")",
+        "        var argIndex = 0",
+        "        return regex.replace(template) { matchResult ->",
+        "            if (argIndex < args.size) {",
+        "                val arg = args[argIndex++]",
+        "                when (matchResult.value) {",
+        "                    \"%@\" -> arg.toString()",
+        "                    \"%d\" -> if (arg is Number) arg.toLong().toString() else arg.toString()",
+        "                    \"%.0f\" -> if (arg is Number) String.format(java.util.Locale.US, \"%.0f\", arg.toDouble()) else arg.toString()",
+        "                    \"%.2f\" -> if (arg is Number) String.format(java.util.Locale.US, \"%.2f\", arg.toDouble()) else arg.toString()",
+        "                    else -> matchResult.value",
+        "                }",
+        "            } else {",
+        "                matchResult.value",
+        "            }",
+        "        }",
+        "    }",
+        "",
+
         "    private val English = mapOf(",
     ]
     for row in rows:
