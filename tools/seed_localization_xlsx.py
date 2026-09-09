@@ -43,7 +43,13 @@ ROWS = [
 ]
 
 
+import sys
+
 def main() -> None:
+    if OUT_PATH.exists() and "--force" not in sys.argv:
+        print(f"Error: {OUT_PATH.name} already exists. Use --force to overwrite it.", file=sys.stderr)
+        sys.exit(1)
+        
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Strings"

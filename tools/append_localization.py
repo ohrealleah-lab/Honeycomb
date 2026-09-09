@@ -18,11 +18,22 @@ def main() -> None:
     wb = openpyxl.load_workbook(OUT_PATH)
     ws = wb.active
     
+    existing_keys = set()
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if row and len(row) > 1 and row[1]:
+            existing_keys.add(str(row[1]).strip())
+    
+    added_count = 0
     for row in ROWS:
+        key = row[1]
+        if key in existing_keys:
+            print(f"Warning: Skipping duplicate key '{key}'")
+            continue
         ws.append(list(row))
+        added_count += 1
         
     wb.save(OUT_PATH)
-    print(f"Appended {len(ROWS)} rows to {OUT_PATH.relative_to(REPO_ROOT)}")
+    print(f"Appended {added_count} rows to {OUT_PATH.relative_to(REPO_ROOT)}")
 
 if __name__ == "__main__":
     main()
