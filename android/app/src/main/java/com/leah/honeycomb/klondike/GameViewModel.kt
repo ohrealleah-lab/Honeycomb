@@ -51,17 +51,10 @@ class GameViewModel(
         // what the score even means) — unrelated settings like Draw Mode or Timed Match
         // must not discard an in-progress game. Matches Swift's handleOptionsChanged.
         if (newOptions.isVegasScoring != oldOptions.isVegasScoring) {
-            viewModelScope.launch {
-                _highScore.value = if (newOptions.isVegasScoring) {
-                    com.leah.honeycomb.PreferencesHelper.getObject(
-                        dataStore, "high_score_vegas", kotlinx.serialization.serializer(), -5200
-                    ).first()
-                } else {
-                    com.leah.honeycomb.PreferencesHelper.getObject(
-                        dataStore, "high_score", kotlinx.serialization.serializer(), 0
-                    ).first()
-                }
-            }
+            // The highScore StateFlow is a derived observer of _statistics — just need
+            // to trigger a re-emission by posting the current stats again so the
+            // collect{} in the highScore flow updates for the new Vegas mode.
+            _statistics.value = _statistics.value
             _vegasBankroll.value = 0
             startNewGame(countAsNewGame = false)
         }
@@ -77,10 +70,42 @@ class GameViewModel(
     private val _options = MutableStateFlow(loadOptions())
     val options: StateFlow<GameOptions> = _options.asStateFlow()
 
-    private val _statistics = MutableStateFlow(
-        com.leah.honeycomb.PreferencesHelper.getObjectSync(dataStore, "klondike_statistics", GameStatistics.serializer(), GameStatistics())
-    )
+    private val _statistics = MutableStateFlow(run {
+        val loaded = com.leah.honeycomb.PreferencesHelper.getObjectSync(dataStore, "klondike_statistics", GameStatistics.serializer(), GameStatistics())
+        // One-time migration: if the new highScore/highScoreVegas fields are still at their
+        // defaults (0/-5200), read the old standalone keys and fold their values in so
+        // existing players don't lose their high scores on first launch after this update.
+        val needsMigration = loaded.highScore == 0 || loaded.highScoreVegas == -5200
+        if (needsMigration) {
+            val oldHighScore = com.leah.honeycomb.PreferencesHelper.getObjectSync(
+                dataStore, "high_score", kotlinx.serialization.serializer<Int>(), 0
+            )
+            val oldHighScoreVegas = com.leah.honeycomb.PreferencesHelper.getObjectSync(
+                dataStore, "high_score_vegas", kotlinx.serialization.serializer<Int>(), -5200
+            )
+            val migrated = loaded.copy(
+                highScore = if (loaded.highScore == 0) oldHighScore else loaded.highScore,
+                highScoreVegas = if (loaded.highScoreVegas == -5200) oldHighScoreVegas else loaded.highScoreVegas
+            )
+            // Persist the migrated value immediately so this only runs once.
+            com.leah.honeycomb.PreferencesHelper.saveObjectAsync(dataStore, "klondike_statistics", GameStatistics.serializer(), migrated)
+            migrated
+        } else {
+            loaded
+        }
+    })
     val statistics: StateFlow<GameStatistics> = _statistics.asStateFlow()
+
+    // Derived from statistics so KlondikeStatsScreen / KlondikeBoard callers are unchanged.
+    val highScore: StateFlow<Int> = kotlinx.coroutines.flow.MutableStateFlow(
+        if (_options.value.isVegasScoring) _statistics.value.highScoreVegas else _statistics.value.highScore
+    ).also { flow ->
+        viewModelScope.launch {
+            _statistics.collect { stats ->
+                flow.value = if (_options.value.isVegasScoring) stats.highScoreVegas else stats.highScore
+            }
+        }
+    }
 
     private fun updateStatistics(transform: (GameStatistics) -> GameStatistics) {
         val newStats = transform(_statistics.value)
@@ -88,21 +113,15 @@ class GameViewModel(
         com.leah.honeycomb.PreferencesHelper.saveObjectAsync(dataStore, "klondike_statistics", GameStatistics.serializer(), newStats)
     }
 
-    // Vegas and non-Vegas high scores are tracked separately (Vegas floors at -5200,
-    // the buy-in for a fresh deal, rather than 0) — matches Swift's init.
-    private val _highScore = MutableStateFlow(
-        if (_options.value.isVegasScoring) {
-            com.leah.honeycomb.PreferencesHelper.getObjectSync(dataStore, "high_score_vegas", kotlinx.serialization.serializer(), -5200)
-        } else {
-            com.leah.honeycomb.PreferencesHelper.getObjectSync(dataStore, "high_score", kotlinx.serialization.serializer(), 0)
-        }
-    )
-    val highScore: StateFlow<Int> = _highScore.asStateFlow()
-
     private fun saveHighScore(value: Int) {
-        val key = if (_options.value.isVegasScoring) "high_score_vegas" else "high_score"
-        com.leah.honeycomb.PreferencesHelper.saveObjectAsync(dataStore, key, kotlinx.serialization.serializer(), value)
+        updateStatistics { stats ->
+            if (_options.value.isVegasScoring) stats.copy(highScoreVegas = value)
+            else stats.copy(highScore = value)
+        }
     }
+
+    private fun currentHighScore(): Int =
+        if (_options.value.isVegasScoring) _statistics.value.highScoreVegas else _statistics.value.highScore
 
     private val _vegasBankroll = MutableStateFlow(0)
     val vegasBankroll: StateFlow<Int> = _vegasBankroll.asStateFlow()
@@ -845,9 +864,8 @@ class GameViewModel(
                 newScore += 700000 / timeInSeconds
                 _state.update { it.copy(score = newScore) }
             }
-            if (_state.value.score > _highScore.value) {
-                _highScore.value = _state.value.score
-                saveHighScore(_highScore.value)
+            if (_state.value.score > currentHighScore()) {
+                saveHighScore(_state.value.score)
             }
 
             // Gate the time fields on timeInSeconds > 0 so a No-Stress zero-time win

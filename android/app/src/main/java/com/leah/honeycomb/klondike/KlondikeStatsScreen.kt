@@ -15,17 +15,19 @@ import com.leah.honeycomb.formatSeconds
 @Composable
 fun KlondikeStatsScreen(viewModel: GameViewModel, onDismiss: () -> Unit) {
     val stats by viewModel.statistics.collectAsState()
-    val highScore by viewModel.highScore.collectAsState()
     val vegasBankroll by viewModel.vegasBankroll.collectAsState()
     val options by viewModel.options.collectAsState()
     val language by LocalAppContainer.current.language.collectAsState()
 
+    // Read high score directly from the statistics blob — high_score/high_score_vegas
+    // are now stored as fields on GameStatistics rather than in separate DataStore keys.
+    val rawHighScore = if (options.isVegasScoring) stats.highScoreVegas else stats.highScore
     val highScoreStr = if (options.isVegasScoring) {
-        val sign = if (highScore < 0) "-" else ""
-        val absScore = Math.abs(highScore) / 100.0
+        val sign = if (rawHighScore < 0) "-" else ""
+        val absScore = Math.abs(rawHighScore) / 100.0
         String.format("%s$%.2f", sign, absScore)
     } else {
-        "$highScore"
+        "$rawHighScore"
     }
 
     val bankrollColor = if (vegasBankroll >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
