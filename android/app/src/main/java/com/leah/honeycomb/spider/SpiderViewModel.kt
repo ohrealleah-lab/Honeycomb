@@ -26,9 +26,7 @@ class SpiderViewModel(
         PreferencesHelper.getObjectSync(dataStore, "spider_options", SpiderOptions.serializer(), SpiderOptions())
 
     private fun saveOptions(options: SpiderOptions) {
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "spider_options", SpiderOptions.serializer(), options)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "spider_options", SpiderOptions.serializer(), options)
     }
 
     private val _options = MutableStateFlow(loadOptions())
@@ -46,9 +44,7 @@ class SpiderViewModel(
         newStatsMap[suitCount] = transform(modeStats)
         val newStats = stats.copy(statsBySuits = newStatsMap)
         _statistics.value = newStats
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "spider_statistics", SpiderStatistics.serializer(), newStats)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "spider_statistics", SpiderStatistics.serializer(), newStats)
     }
 
     private val _isAutocompleteAvailable = MutableStateFlow(false)
@@ -305,7 +301,7 @@ class SpiderViewModel(
         viewModelScope.launch {
             _state.debounce(500).collect { currentState ->
                 val toSave = if (currentState.hasWon) defaultState else currentState
-                PreferencesHelper.setObject(
+                PreferencesHelper.saveObjectAsync(
                     dataStore, "spider_saved_state", SpiderState.serializer(), toSave
                 )
             }
@@ -426,11 +422,9 @@ class SpiderViewModel(
         _state.value = newState
         initialState = newState
         
-        viewModelScope.launch {
-            PreferencesHelper.setObject(
-                dataStore, "spider_saved_initial_state", SpiderState.serializer(), newState
-            )
-        }
+        PreferencesHelper.saveObjectAsync(
+            dataStore, "spider_saved_initial_state", SpiderState.serializer(), newState
+        )
         
         _isAutocompleteAvailable.value = false
         _isAutoplayRunning.value = false

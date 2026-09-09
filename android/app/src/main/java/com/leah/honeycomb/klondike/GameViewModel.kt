@@ -71,9 +71,7 @@ class GameViewModel(
         com.leah.honeycomb.PreferencesHelper.getObjectSync(dataStore, "solitaire_options", GameOptions.serializer(), GameOptions())
 
     private fun saveOptions(options: GameOptions) {
-        viewModelScope.launch {
-            com.leah.honeycomb.PreferencesHelper.setObject(dataStore, "solitaire_options", GameOptions.serializer(), options)
-        }
+        com.leah.honeycomb.PreferencesHelper.saveObjectAsync(dataStore, "solitaire_options", GameOptions.serializer(), options)
     }
 
     private val _options = MutableStateFlow(loadOptions())
@@ -87,9 +85,7 @@ class GameViewModel(
     private fun updateStatistics(transform: (GameStatistics) -> GameStatistics) {
         val newStats = transform(_statistics.value)
         _statistics.value = newStats
-        viewModelScope.launch {
-            com.leah.honeycomb.PreferencesHelper.setObject(dataStore, "klondike_statistics", GameStatistics.serializer(), newStats)
-        }
+        com.leah.honeycomb.PreferencesHelper.saveObjectAsync(dataStore, "klondike_statistics", GameStatistics.serializer(), newStats)
     }
 
     // Vegas and non-Vegas high scores are tracked separately (Vegas floors at -5200,
@@ -105,9 +101,7 @@ class GameViewModel(
 
     private fun saveHighScore(value: Int) {
         val key = if (_options.value.isVegasScoring) "high_score_vegas" else "high_score"
-        viewModelScope.launch {
-            com.leah.honeycomb.PreferencesHelper.setObject(dataStore, key, kotlinx.serialization.serializer(), value)
-        }
+        com.leah.honeycomb.PreferencesHelper.saveObjectAsync(dataStore, key, kotlinx.serialization.serializer(), value)
     }
 
     private val _vegasBankroll = MutableStateFlow(0)
@@ -419,7 +413,7 @@ class GameViewModel(
                     vegasBankroll = _vegasBankroll.value,
                     vegasBankrollAtGameStart = vegasBankrollAtGameStart
                 )
-                com.leah.honeycomb.PreferencesHelper.setObject(
+                com.leah.honeycomb.PreferencesHelper.saveObjectAsync(
                     dataStore, "klondike_saved_state", GameState.serializer(), toSave
                 )
             }
@@ -538,15 +532,13 @@ class GameViewModel(
         _state.value = newState
         initialState = newState
         
-        viewModelScope.launch {
-            val toSaveInitial = newState.copy(
-                vegasBankroll = _vegasBankroll.value,
-                vegasBankrollAtGameStart = vegasBankrollAtGameStart
-            )
-            com.leah.honeycomb.PreferencesHelper.setObject(
-                dataStore, "klondike_saved_initial_state", GameState.serializer(), toSaveInitial
-            )
-        }
+        val toSaveInitial = newState.copy(
+            vegasBankroll = _vegasBankroll.value,
+            vegasBankrollAtGameStart = vegasBankrollAtGameStart
+        )
+        com.leah.honeycomb.PreferencesHelper.saveObjectAsync(
+            dataStore, "klondike_saved_initial_state", GameState.serializer(), toSaveInitial
+        )
         
         _isAutocompleteAvailable.value = false
         _isAutoplayRunning.value = false

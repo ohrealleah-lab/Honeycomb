@@ -27,9 +27,7 @@ class BlackjackViewModel(
 
     fun updateOptions(newOptions: BlackjackOptions) {
         _options.value = newOptions
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "blackjack_options", BlackjackOptions.serializer(), newOptions)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "blackjack_options", BlackjackOptions.serializer(), newOptions)
     }
 
     private val _options = MutableStateFlow(
@@ -44,9 +42,7 @@ class BlackjackViewModel(
 
     private fun persistStatistics() {
         val snapshot = _statistics.value
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "blackjack_statistics", BlackjackStatistics.serializer(), snapshot)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "blackjack_statistics", BlackjackStatistics.serializer(), snapshot)
     }
 
     private var handGeneration = 0
@@ -68,7 +64,7 @@ class BlackjackViewModel(
             _state.debounce(500).collect { currentState ->
                 // "this hand is fully resolved" -> Betting phase.
                 val toSave = if (currentState.phase == BlackjackPhase.Betting) defaultState else currentState
-                PreferencesHelper.setObject(
+                PreferencesHelper.saveObjectAsync(
                     dataStore, "blackjack_saved_state", BlackjackState.serializer(), toSave
                 )
             }
@@ -524,11 +520,9 @@ class BlackjackViewModel(
         )
         _state.value = newState
         
-        viewModelScope.launch {
-            PreferencesHelper.setObject(
-                dataStore, "blackjack_saved_initial_state", BlackjackState.serializer(), newState
-            )
-        }
+        PreferencesHelper.saveObjectAsync(
+            dataStore, "blackjack_saved_initial_state", BlackjackState.serializer(), newState
+        )
         _statistics.value = _statistics.value.copy(currentStreak = 0)
         persistStatistics()
     }

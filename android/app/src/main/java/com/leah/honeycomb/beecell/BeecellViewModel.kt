@@ -27,9 +27,7 @@ class BeecellViewModel(
         PreferencesHelper.getObjectSync(dataStore, "beecell_options", BeecellOptions.serializer(), BeecellOptions())
 
     private fun saveOptions(options: BeecellOptions) {
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "beecell_options", BeecellOptions.serializer(), options)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "beecell_options", BeecellOptions.serializer(), options)
     }
 
     private val _options = MutableStateFlow(loadOptions())
@@ -47,9 +45,7 @@ class BeecellViewModel(
         newStatsMap[modeKey] = transform(modeStats)
         val newStats = stats.copy(statsByFreeCells = newStatsMap)
         _statistics.value = newStats
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "beecell_statistics", BeecellStatistics.serializer(), newStats)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "beecell_statistics", BeecellStatistics.serializer(), newStats)
     }
 
     private val _isAutocompleteAvailable = MutableStateFlow(false)
@@ -340,7 +336,7 @@ class BeecellViewModel(
         viewModelScope.launch {
             _state.debounce(500).collect { currentState ->
                 val toSave = if (currentState.hasWon) defaultState else currentState
-                PreferencesHelper.setObject(
+                PreferencesHelper.saveObjectAsync(
                     dataStore, "beecell_saved_state", BeecellState.serializer(), toSave
                 )
             }
@@ -437,11 +433,9 @@ class BeecellViewModel(
         _state.value = newState
         initialState = newState
         
-        viewModelScope.launch {
-            PreferencesHelper.setObject(
-                dataStore, "beecell_saved_initial_state", BeecellState.serializer(), newState
-            )
-        }
+        PreferencesHelper.saveObjectAsync(
+            dataStore, "beecell_saved_initial_state", BeecellState.serializer(), newState
+        )
         
         _isAutocompleteAvailable.value = false
         _isAutoplayRunning.value = false

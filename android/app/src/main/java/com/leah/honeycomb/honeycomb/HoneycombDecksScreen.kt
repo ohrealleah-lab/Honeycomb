@@ -33,7 +33,6 @@ fun HoneycombDecksScreen(
     val options by viewModel.options.collectAsState()
     val savedDecks by profileManager.savedDecks.collectAsState()
     val unlockedIds by profileManager.unlockedCardIds.collectAsState()
-    val scope = rememberCoroutineScope()
 
     var editingDeckIndex by remember { mutableStateOf<Int?>(null) }
 
@@ -55,9 +54,7 @@ fun HoneycombDecksScreen(
                         TextButton(
                             enabled = selectedCardIds.size == 5,
                             onClick = {
-                                scope.launch {
-                                    profileManager.saveDeck(idx, deck.name.ifBlank { "Deck ${idx + 1}" }, selectedCardIds)
-                                }
+                                profileManager.saveDeck(idx, deck.name.ifBlank { "Deck ${idx + 1}" }, selectedCardIds)
                                 editingDeckIndex = null
                             }
                         ) { Text("Save") }

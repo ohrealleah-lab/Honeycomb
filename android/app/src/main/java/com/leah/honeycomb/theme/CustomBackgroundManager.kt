@@ -63,9 +63,7 @@ class CustomBackgroundManager(
     }
 
     private fun save() {
-        coroutineScope.launch {
-            PreferencesHelper.setObject(dataStore, backgroundsKey, serializer, _backgrounds.value)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, backgroundsKey, serializer, _backgrounds.value)
     }
 
     fun deleteBackground(id: String) {

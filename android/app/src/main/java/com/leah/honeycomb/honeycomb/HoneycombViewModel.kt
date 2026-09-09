@@ -102,9 +102,7 @@ class HoneycombViewModel(
         PreferencesHelper.getObjectSync(dataStore, "honeycomb_options", HoneycombOptions.serializer(), HoneycombOptions())
 
     private fun saveOptions(options: HoneycombOptions) {
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "honeycomb_options", HoneycombOptions.serializer(), options)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "honeycomb_options", HoneycombOptions.serializer(), options)
     }
 
     // Bad-luck protection for Roulette (see rollRouletteOnce below): re-rolling a draw
@@ -222,9 +220,7 @@ class HoneycombViewModel(
     private fun updateStatistics(transform: (HoneycombStats) -> HoneycombStats) {
         val newStats = transform(_statistics.value)
         _statistics.value = newStats
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "honeycomb_statistics", HoneycombStats.serializer(), newStats)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "honeycomb_statistics", HoneycombStats.serializer(), newStats)
     }
 
     // Cumulative capture-flip count for the current match — mirrors Swift's
@@ -1100,9 +1096,7 @@ class HoneycombViewModel(
         if (!isStealEligible(card)) return
         hasStolenThisMatch = true
 
-        viewModelScope.launch {
-            profileManager.unlockCard(card.data.id)
-        }
+        profileManager.unlockCard(card.data.id)
 
         updateStatistics { it.copy(cardsStolen = it.cardsStolen + 1) }
     }

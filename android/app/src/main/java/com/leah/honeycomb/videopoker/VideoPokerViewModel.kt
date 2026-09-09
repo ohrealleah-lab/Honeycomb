@@ -23,9 +23,7 @@ class VideoPokerViewModel(
     val state: StateFlow<VideoPokerState> = _state.asStateFlow()
 
     private fun saveOptions(options: VideoPokerOptions) {
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "videopoker_options", VideoPokerOptions.serializer(), options)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "videopoker_options", VideoPokerOptions.serializer(), options)
     }
 
     private val _options = MutableStateFlow(
@@ -40,9 +38,7 @@ class VideoPokerViewModel(
 
     private fun persistStatistics() {
         val snapshot = _statistics.value
-        viewModelScope.launch {
-            PreferencesHelper.setObject(dataStore, "videopoker_statistics", VideoPokerStatistics.serializer(), snapshot)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, "videopoker_statistics", VideoPokerStatistics.serializer(), snapshot)
     }
 
     init {
@@ -60,7 +56,7 @@ class VideoPokerViewModel(
         viewModelScope.launch {
             _state.debounce(500).collect { currentState ->
                 val toSave = if (currentState.phase == VideoPokerPhase.Deal) defaultState else currentState
-                PreferencesHelper.setObject(
+                PreferencesHelper.saveObjectAsync(
                     dataStore, "videopoker_saved_state", VideoPokerState.serializer(), toSave
                 )
             }
@@ -366,11 +362,9 @@ class VideoPokerViewModel(
         )
         _state.value = newState
         
-        viewModelScope.launch {
-            PreferencesHelper.setObject(
-                dataStore, "videopoker_saved_initial_state", VideoPokerState.serializer(), newState
-            )
-        }
+        PreferencesHelper.saveObjectAsync(
+            dataStore, "videopoker_saved_initial_state", VideoPokerState.serializer(), newState
+        )
     }
     
     // For unit tests

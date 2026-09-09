@@ -69,10 +69,8 @@ class CustomCardBackManager(
     }
 
     private fun save() {
-        coroutineScope.launch {
-            PreferencesHelper.setObject(dataStore, cardBacksKey, cardBackListSerializer, _cardBacks.value)
-            PreferencesHelper.setObject(dataStore, deletedDefaultsKey, stringSetSerializer, deletedDefaultDecks)
-        }
+        PreferencesHelper.saveObjectAsync(dataStore, cardBacksKey, cardBackListSerializer, _cardBacks.value)
+        PreferencesHelper.saveObjectAsync(dataStore, deletedDefaultsKey, stringSetSerializer, deletedDefaultDecks)
     }
 
     // Total available decks right now, custom + built-in-not-yet-deleted — mirrors the

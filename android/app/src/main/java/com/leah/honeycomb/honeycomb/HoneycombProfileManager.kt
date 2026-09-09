@@ -96,7 +96,7 @@ class HoneycombProfileManager(
         }
     }
 
-    suspend fun unlockCard(id: Int) {
+    fun unlockCard(id: Int) {
         _unlockedCardIds.value = _unlockedCardIds.value + id
         saveUnlockedCards()
     }
@@ -125,7 +125,7 @@ class HoneycombProfileManager(
         }
     }
 
-    suspend fun startOver() {
+    fun startOver() {
         val alreadyDrawn = mutableSetOf<Int>()
         val newDecks = computeStartOverDecks(
             currentDecks = _savedDecks.value,
@@ -146,7 +146,7 @@ class HoneycombProfileManager(
         saveFavorites()
     }
 
-    suspend fun toggleFavorite(id: Int) {
+    fun toggleFavorite(id: Int) {
         val current = _favoriteCardIds.value
         if (current.contains(id)) {
             _favoriteCardIds.value = current - id
@@ -156,7 +156,7 @@ class HoneycombProfileManager(
         saveFavorites()
     }
 
-    suspend fun saveDeck(index: Int, name: String, cardIds: List<Int>) {
+    fun saveDeck(index: Int, name: String, cardIds: List<Int>) {
         if (index !in _savedDecks.value.indices) return
         val current = _savedDecks.value.toMutableList()
         current[index] = current[index].copy(name = name, cardIds = cardIds)
@@ -164,15 +164,15 @@ class HoneycombProfileManager(
         saveDecks()
     }
 
-    private suspend fun saveUnlockedCards() {
-        PreferencesHelper.setObject(dataStore, "honeycomb_unlocked_cards", ListSerializer(Int.serializer()), _unlockedCardIds.value.toList())
+    private fun saveUnlockedCards() {
+        PreferencesHelper.saveObjectAsync(dataStore, "honeycomb_unlocked_cards", ListSerializer(Int.serializer()), _unlockedCardIds.value.toList())
     }
 
-    private suspend fun saveFavorites() {
-        PreferencesHelper.setObject(dataStore, "honeycomb_favorite_cards", ListSerializer(Int.serializer()), _favoriteCardIds.value.toList())
+    private fun saveFavorites() {
+        PreferencesHelper.saveObjectAsync(dataStore, "honeycomb_favorite_cards", ListSerializer(Int.serializer()), _favoriteCardIds.value.toList())
     }
 
-    private suspend fun saveDecks() {
-        PreferencesHelper.setObject(dataStore, "honeycomb_saved_decks", ListSerializer(HoneycombDeckState.serializer()), _savedDecks.value)
+    private fun saveDecks() {
+        PreferencesHelper.saveObjectAsync(dataStore, "honeycomb_saved_decks", ListSerializer(HoneycombDeckState.serializer()), _savedDecks.value)
     }
 }
