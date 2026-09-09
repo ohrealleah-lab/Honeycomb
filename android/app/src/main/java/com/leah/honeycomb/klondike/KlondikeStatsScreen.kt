@@ -3,10 +3,11 @@ package com.leah.honeycomb.klondike
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
 import com.leah.honeycomb.LocalAppContainer
-import com.leah.honeycomb.RoundedContainer
-import com.leah.honeycomb.StatRow
+import com.leah.honeycomb.StatRowSpec
 import com.leah.honeycomb.StatisticsFullScreenView
+import com.leah.honeycomb.StatsBlock
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.Strings
 import com.leah.honeycomb.formatSeconds
@@ -19,33 +20,34 @@ fun KlondikeStatsScreen(viewModel: GameViewModel, onDismiss: () -> Unit) {
     val options by viewModel.options.collectAsState()
     val language by LocalAppContainer.current.language.collectAsState()
 
+    val highScoreStr = if (options.isVegasScoring) {
+        val sign = if (highScore < 0) "-" else ""
+        val absScore = Math.abs(highScore) / 100.0
+        String.format("%s$%.2f", sign, absScore)
+    } else {
+        "$highScore"
+    }
+
+    val bankrollColor = if (vegasBankroll >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)
+    val bankrollSign = if (vegasBankroll < 0) "-" else ""
+    val bankrollStr = String.format("%s$%.2f", bankrollSign, Math.abs(vegasBankroll) / 100.0)
+
     StatisticsFullScreenView(title = Strings.get(StringKey.KlondikeStatisticsTitle, language), onDismiss = onDismiss) {
-        RoundedContainer {
-            StatRow(Strings.get(StringKey.GamesPlayed, language), "${stats.gamesPlayed}")
-            StatRow(Strings.get(StringKey.GamesWon, language), "${stats.gamesWon}")
-            val highScoreStr = if (options.isVegasScoring) {
-                val sign = if (highScore < 0) "-" else ""
-                val absScore = Math.abs(highScore) / 100.0
-                String.format("%s$%.2f", sign, absScore)
-            } else {
-                "$highScore"
-            }
-            StatRow(Strings.get(StringKey.HighScoreColon, language), highScoreStr)
-            StatRow(Strings.get(StringKey.WinPercentage, language), "%.0f%%".format(stats.winRate * 100.0))
-            StatRow(Strings.get(StringKey.CurrentStreak, language), "${stats.currentStreak}")
-            StatRow(Strings.get(StringKey.LongestStreak, language), "${stats.longestStreak}")
-            StatRow(Strings.get(StringKey.StatAverageWinTime, language), formatSeconds(stats.averageWinningTime.toInt()))
-            StatRow(Strings.get(StringKey.StatShortestWinTime, language), formatSeconds(stats.shortestWinTime))
-            if (options.isVegasScoring) {
-                val bankrollColor = if (vegasBankroll >= 0) androidx.compose.ui.graphics.Color(0xFF4CAF50) else androidx.compose.ui.graphics.Color(0xFFF44336)
-                val sign = if (vegasBankroll < 0) "-" else ""
-                val absBankroll = Math.abs(vegasBankroll) / 100.0
-                StatRow(
-                    label = Strings.get(StringKey.VegasBankrollLabel, language),
-                    value = String.format("%s$%.2f", sign, absBankroll),
-                    valueColor = bankrollColor
-                )
-            }
-        }
+        StatsBlock(listOf(
+            StatRowSpec.Row(Strings.get(StringKey.GamesPlayed, language), "${stats.gamesPlayed}"),
+            StatRowSpec.Row(Strings.get(StringKey.GamesWon, language), "${stats.gamesWon}"),
+            StatRowSpec.Row(Strings.get(StringKey.HighScoreColon, language), highScoreStr),
+            StatRowSpec.Row(Strings.get(StringKey.WinPercentage, language), "%.0f%%".format(stats.winRate * 100.0)),
+            StatRowSpec.Row(Strings.get(StringKey.CurrentStreak, language), "${stats.currentStreak}"),
+            StatRowSpec.Row(Strings.get(StringKey.LongestStreak, language), "${stats.longestStreak}"),
+            StatRowSpec.Row(Strings.get(StringKey.StatAverageWinTime, language), formatSeconds(stats.averageWinningTime.toInt())),
+            StatRowSpec.Row(Strings.get(StringKey.StatShortestWinTime, language), formatSeconds(stats.shortestWinTime)),
+            StatRowSpec.ConditionalRow(
+                label = Strings.get(StringKey.VegasBankrollLabel, language),
+                value = bankrollStr,
+                valueColor = bankrollColor,
+                visible = options.isVegasScoring
+            )
+        ))
     }
 }

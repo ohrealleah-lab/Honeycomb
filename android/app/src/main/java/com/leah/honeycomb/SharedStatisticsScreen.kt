@@ -35,6 +35,38 @@ fun StatRow(label: String, value: String, valueColor: Color = Color.Unspecified)
     }
 }
 
+// A spec describing a single stats row, or a conditional row that is only shown when
+// `visible` is true. Pass a list of these to StatsBlock to avoid hand-writing
+// individual StatRow() calls in every stats screen.
+sealed class StatRowSpec {
+    data class Row(
+        val label: String,
+        val value: String,
+        val valueColor: Color = Color.Unspecified
+    ) : StatRowSpec()
+
+    data class ConditionalRow(
+        val label: String,
+        val value: String,
+        val valueColor: Color = Color.Unspecified,
+        val visible: Boolean
+    ) : StatRowSpec()
+}
+
+@Composable
+fun StatsBlock(rows: List<StatRowSpec>) {
+    RoundedContainer {
+        for (spec in rows) {
+            when (spec) {
+                is StatRowSpec.Row -> StatRow(spec.label, spec.value, spec.valueColor)
+                is StatRowSpec.ConditionalRow -> if (spec.visible) {
+                    StatRow(spec.label, spec.value, spec.valueColor)
+                }
+            }
+        }
+    }
+}
+
 // Same Scaffold/TopAppBar/"Done" shell as OptionsFullScreenView (SharedOptionsScreen.kt),
 // with no reset control — iOS has none either, so neither does this port.
 @OptIn(ExperimentalMaterial3Api::class)
