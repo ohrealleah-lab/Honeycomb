@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
+import com.leah.honeycomb.audio.UISound
 import androidx.compose.runtime.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
@@ -37,7 +38,7 @@ fun BetChip(amount: String, color: Color, onClick: () -> Unit) {
             .size(50.dp)
             .background(color, CircleShape)
             .border(2.dp, Color.White, CircleShape)
-            .clickable { onClick() },
+            .clickable { UISound.click(); onClick() },
         contentAlignment = Alignment.Center
     ) {
         Box(modifier = Modifier.size(40.dp).border(1.dp, Color.White.copy(alpha=0.5f), CircleShape))
@@ -49,7 +50,7 @@ fun BetChip(amount: String, color: Color, onClick: () -> Unit) {
 fun ActionButton(text: String, color: Color, onClick: () -> Unit, enabled: Boolean = true) {
     Box(modifier = Modifier
         .background(if (enabled) color else Color.Gray, RoundedCornerShape(12.dp))
-        .clickable(enabled = enabled) { onClick() }
+        .clickable(enabled = enabled) { UISound.click(); onClick() }
         .padding(horizontal = 24.dp, vertical = 16.dp)
         .fillMaxWidth()
     ) {

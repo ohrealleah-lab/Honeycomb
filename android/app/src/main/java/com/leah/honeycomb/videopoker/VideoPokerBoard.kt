@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leah.honeycomb.CardView
+import com.leah.honeycomb.audio.UISound
 
 @Composable
 private fun PayTableDialog(
@@ -254,7 +255,7 @@ fun VideoPokerBoard(
                             // - Button
                             Box(modifier = Modifier
                                 .background(Color(0xFF4CAF50), RoundedCornerShape(12.dp))
-                                .clickable { viewModel.decreaseBet() }
+                                .clickable { UISound.click(); viewModel.decreaseBet() }
                                 .padding(horizontal = 24.dp, vertical = 16.dp)
                             ) {
                                 Text("-", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
@@ -262,7 +263,7 @@ fun VideoPokerBoard(
                             // Max Button
                             Box(modifier = Modifier
                                 .background(Color(0xFFE67E22), RoundedCornerShape(12.dp))
-                                .clickable { viewModel.maxBet() }
+                                .clickable { UISound.click(); viewModel.maxBet() }
                                 .padding(horizontal = 24.dp, vertical = 16.dp)
                             ) {
                                 Text("Max", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
@@ -270,7 +271,7 @@ fun VideoPokerBoard(
                             // + Button
                             Box(modifier = Modifier
                                 .background(Color(0xFF4CAF50), RoundedCornerShape(12.dp))
-                                .clickable { viewModel.increaseBet() }
+                                .clickable { UISound.click(); viewModel.increaseBet() }
                                 .padding(horizontal = 24.dp, vertical = 16.dp)
                             ) {
                                 Text("+", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
@@ -280,7 +281,7 @@ fun VideoPokerBoard(
                     if (!viewModel.isFreePlay && state.sessionCredits < state.currentBet) {
                         Box(modifier = Modifier
                             .background(Color(0xFFFFC107), RoundedCornerShape(12.dp))
-                            .clickable { viewModel.rebuy() }
+                            .clickable { UISound.click(); viewModel.rebuy() }
                             .padding(horizontal = 48.dp, vertical = 16.dp)
                         ) {
                             Text("Rebuy", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 24.sp)
@@ -288,7 +289,7 @@ fun VideoPokerBoard(
                     } else {
                         Box(modifier = Modifier
                             .background(Color(0xFFFFC107), RoundedCornerShape(12.dp))
-                            .clickable { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.deal() }
+                            .clickable { UISound.click(); haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.deal() }
                             .padding(horizontal = 48.dp, vertical = 16.dp)
                         ) {
                             Text("Deal", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 24.sp)
@@ -297,7 +298,7 @@ fun VideoPokerBoard(
                 } else if (state.phase == VideoPokerPhase.Holding) {
                     Box(modifier = Modifier
                         .background(Color(0xFF4CAF50), RoundedCornerShape(12.dp))
-                        .clickable { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.draw() }
+                        .clickable { UISound.click(); haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.draw() }
                         .padding(horizontal = 48.dp, vertical = 16.dp)
                     ) {
                         Text("DRAW", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
