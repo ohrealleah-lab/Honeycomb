@@ -7,11 +7,13 @@ import com.leah.honeycomb.PreferencesHelper
 import com.leah.honeycomb.SharedGameOptions
 import com.leah.honeycomb.Suit
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class VideoPokerViewModel(
     val sharedOptions: SharedGameOptions,
     private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
@@ -44,7 +46,25 @@ class VideoPokerViewModel(
     }
 
     init {
-        startNewGame()
+        val defaultState = VideoPokerState()
+        val savedState = PreferencesHelper.getObjectSync(
+            dataStore, "videopoker_saved_state", VideoPokerState.serializer(), defaultState
+        )
+
+        if (savedState != defaultState && savedState.phase != VideoPokerPhase.Deal) {
+            _state.value = savedState
+        } else {
+            startNewGame()
+        }
+
+        viewModelScope.launch {
+            _state.debounce(500).collect { currentState ->
+                val toSave = if (currentState.phase == VideoPokerPhase.Deal) defaultState else currentState
+                PreferencesHelper.setObject(
+                    dataStore, "videopoker_saved_state", VideoPokerState.serializer(), toSave
+                )
+            }
+        }
     }
 
     val isFreePlay: Boolean
@@ -340,10 +360,17 @@ class VideoPokerViewModel(
             _statistics.value = _statistics.value.copy(currentStreak = 0)
             persistStatistics()
         }
-        _state.value = VideoPokerState(
+        val newState = VideoPokerState(
             sessionCredits = _options.value.startingCredits,
             currentBet = _options.value.betPerHand
         )
+        _state.value = newState
+        
+        viewModelScope.launch {
+            PreferencesHelper.setObject(
+                dataStore, "videopoker_saved_initial_state", VideoPokerState.serializer(), newState
+            )
+        }
     }
     
     // For unit tests

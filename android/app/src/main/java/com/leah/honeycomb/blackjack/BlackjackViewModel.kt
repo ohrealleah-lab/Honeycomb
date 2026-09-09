@@ -9,12 +9,14 @@ import com.leah.honeycomb.Suit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class BlackjackViewModel(
     val sharedOptions: SharedGameOptions,
     private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
@@ -50,7 +52,27 @@ class BlackjackViewModel(
     private var handGeneration = 0
 
     init {
-        startNewGame()
+        val defaultState = BlackjackState()
+        val savedState = PreferencesHelper.getObjectSync(
+            dataStore, "blackjack_saved_state", BlackjackState.serializer(), defaultState
+        )
+
+        // Clear condition: if phase is Betting, the hand is fully resolved.
+        if (savedState != defaultState && savedState.phase != BlackjackPhase.Betting) {
+            _state.value = savedState
+        } else {
+            startNewGame()
+        }
+
+        viewModelScope.launch {
+            _state.debounce(500).collect { currentState ->
+                // "this hand is fully resolved" -> Betting phase.
+                val toSave = if (currentState.phase == BlackjackPhase.Betting) defaultState else currentState
+                PreferencesHelper.setObject(
+                    dataStore, "blackjack_saved_state", BlackjackState.serializer(), toSave
+                )
+            }
+        }
     }
 
     val isFreePlay: Boolean
@@ -496,10 +518,17 @@ class BlackjackViewModel(
 
     fun startNewGame() {
         handGeneration++
-        _state.value = BlackjackState(
+        val newState = BlackjackState(
             sessionCredits = _options.value.startingCredits,
             currentBet = 1
         )
+        _state.value = newState
+        
+        viewModelScope.launch {
+            PreferencesHelper.setObject(
+                dataStore, "blackjack_saved_initial_state", BlackjackState.serializer(), newState
+            )
+        }
         _statistics.value = _statistics.value.copy(currentStreak = 0)
         persistStatistics()
     }
