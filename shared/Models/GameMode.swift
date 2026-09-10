@@ -42,11 +42,13 @@ public enum GameMode: String, Codable, CaseIterable, Identifiable {
     }
 
     // Apple no longer allows individual (non-organization) developer accounts to
-    // distribute apps with simulated-gambling features — Video Poker, Video
-    // Blackjack, and Klondike's Vegas scoring option are all out on iOS as a
-    // result (App Review, Sept 2026). Mac/Android/Windows are unaffected and
-    // keep the full case list; this filter is iOS-menu-only.
+    // distribute apps with simulated-gambling features. Video Poker and Video
+    // Blackjack stay in the iOS lineup — betting in both is hard-locked off on iOS
+    // (see VideoPokerViewModel/BlackjackViewModel.isFreePlay) so there's no wagering
+    // to flag. Klondike's Vegas scoring option remains iOS-only removed (App Review,
+    // Sept 2026) since it's a real cash-style scoring variant, not a bet mechanic
+    // that can be neutralized the same way. Mac/Android/Windows are unaffected.
     public static var iOSStoreSafeCases: [GameMode] {
-        allCases.filter { $0 != .videoPoker && $0 != .blackjack }
+        allCases
     }
 }

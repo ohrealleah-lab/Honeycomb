@@ -127,7 +127,16 @@ public final class VideoPokerViewModel {
     }
 
     public var isFreePlay: Bool {
-        sharedOptions.noStressMode
+        #if os(iOS)
+        // Hard-locked on iOS: Apple no longer allows individual developer accounts to
+        // distribute apps with simulated-gambling/betting features. Video Poker stays
+        // in the lineup, but betting itself never turns on here, independent of the
+        // user's global No Stress Mode setting (which still controls timers etc.
+        // elsewhere). Mac keeps normal betting behavior.
+        return true
+        #else
+        return sharedOptions.noStressMode
+        #endif
     }
 
     // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
