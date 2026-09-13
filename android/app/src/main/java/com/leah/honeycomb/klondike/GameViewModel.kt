@@ -40,11 +40,57 @@ import java.util.UUID
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 class GameViewModel(
     val sharedOptions: SharedGameOptions,
-    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
+    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+    private val bannerCatalog: com.leah.honeycomb.BannerCatalog
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GameState())
     val state: StateFlow<GameState> = _state.asStateFlow()
+
+    // FIFO banner queue (milestones, loading flavor, idle nudges) — see
+    // com.leah.honeycomb.BannerQueue/BannerCatalog. Mirrors Windows' GameViewModel's
+    // own BannerQueue/EnqueueBanner/CheckWinMilestones/CheckLoadingBanner.
+    private val bannerQueue = com.leah.honeycomb.BannerQueue(viewModelScope) { sharedOptions.manuallyDismissBanners.value }
+    val activeBanner: StateFlow<String?> = bannerQueue.active
+    private fun enqueueBanner(text: String) = bannerQueue.enqueue(text)
+    fun dismissBanner() = bannerQueue.dismissCurrent()
+
+    // Fires once, exactly on the win that crosses a threshold.
+    private fun checkWinMilestones(previousGamesWon: Int, newGamesWon: Int) {
+        val thresholds = listOf(
+            10 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches10TotalWins,
+            100 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches100TotalWins,
+            1000 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches1000TotalWins
+        )
+        for ((threshold, id) in thresholds) {
+            if (newGamesWon != threshold || previousGamesWon >= threshold) continue
+            val result = bannerCatalog.fire(id)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
+
+    // Fires once per app session, the first time this game's view actually appears.
+    private var hasFiredLoadingBannerThisSession = false
+    fun checkLoadingBanner() {
+        if (hasFiredLoadingBannerThisSession) return
+        hasFiredLoadingBannerThisSession = true
+        val result = bannerCatalog.fire(bannerCatalog.loadingBannerId())
+        if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+    }
+
+    // Ambiance/idle nudge: fires if a full minute passes with no move. Re-armed via a
+    // generation token, matching Windows' ScheduleIdleActionCheck.
+    private var idleCheckGeneration = 0
+    fun scheduleIdleActionCheck() {
+        idleCheckGeneration++
+        val generation = idleCheckGeneration
+        viewModelScope.launch {
+            delay(60000)
+            if (idleCheckGeneration != generation || _state.value.hasWon) return@launch
+            val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.IdleActionNoActionTakenForOneMinute)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
 
     fun updateOptions(newOptions: GameOptions) {
         val oldOptions = _options.value
@@ -484,6 +530,10 @@ class GameViewModel(
         }
 
         if (countAsNewGame) {
+            if (_statistics.value.gamesPlayed == 0) {
+                val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.MilestonesFirstLaunchEver)
+                if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+            }
             updateStatistics { it.copy(gamesPlayed = it.gamesPlayed + 1) }
         } else {
             if (_options.value.isVegasScoring && currentState.movesCount > 0) {
@@ -549,7 +599,9 @@ class GameViewModel(
         
         _state.value = newState
         initialState = newState
-        
+        bannerQueue.clear()
+        scheduleIdleActionCheck()
+
         val toSaveInitial = newState.copy(
             vegasBankroll = _vegasBankroll.value,
             vegasBankrollAtGameStart = vegasBankrollAtGameStart
@@ -620,6 +672,7 @@ class GameViewModel(
             wasteDisplayCount = drawn.size,
             movesCount = currentState.movesCount + 1
         )
+        scheduleIdleActionCheck()
 
         checkAutocompleteState()
         checkStuckState()
@@ -642,6 +695,7 @@ class GameViewModel(
             movesCount = currentState.movesCount + 1,
             recyclesCount = currentState.recyclesCount + 1
         )
+        scheduleIdleActionCheck()
         hasDrawnFromStockThisGame = true
         checkStuckState()
     }
@@ -765,6 +819,7 @@ class GameViewModel(
             foundations = foundations,
             movesCount = currentState.movesCount + 1
         )
+        scheduleIdleActionCheck()
 
         adjustScore(sourcePile.type, targetPile.type, revealedFaceDownCard)
         updatePointPopup(cards.lastOrNull(), sourcePile.type, targetPile.type, revealedFaceDownCard, revealedCardId)
@@ -869,6 +924,7 @@ class GameViewModel(
 
             // Gate the time fields on timeInSeconds > 0 so a No-Stress zero-time win
             // doesn't skew averageWinningTime/shortestWinTime — matches iOS.
+            val previousGamesWon = _statistics.value.gamesWon
             updateStatistics { stats ->
                 val newStreak = stats.currentStreak + 1
                 var updated = stats.copy(
@@ -886,6 +942,7 @@ class GameViewModel(
                 }
                 updated
             }
+            checkWinMilestones(previousGamesWon, _statistics.value.gamesWon)
         }
     }
 

@@ -16,11 +16,65 @@ import kotlin.math.max
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 class VideoPokerViewModel(
     val sharedOptions: SharedGameOptions,
-    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
+    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+    private val bannerCatalog: com.leah.honeycomb.BannerCatalog
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(VideoPokerState())
     val state: StateFlow<VideoPokerState> = _state.asStateFlow()
+
+    private val bannerQueue = com.leah.honeycomb.BannerQueue(viewModelScope) { sharedOptions.manuallyDismissBanners.value }
+    val activeBanner: StateFlow<String?> = bannerQueue.active
+    private fun enqueueBanner(text: String) = bannerQueue.enqueue(text)
+    fun dismissBanner() = bannerQueue.dismissCurrent()
+
+    private fun checkWinMilestones(previousHandsWon: Int) {
+        val thresholds = listOf(
+            10 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches10TotalWins,
+            100 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches100TotalWins,
+            1000 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches1000TotalWins
+        )
+        for ((threshold, id) in thresholds) {
+            if (previousHandsWon >= threshold || _statistics.value.handsWon < threshold) continue
+            val result = bannerCatalog.fire(id)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
+
+    private var hasFiredLoadingBannerThisSession = false
+    fun checkLoadingBanner() {
+        if (hasFiredLoadingBannerThisSession) return
+        hasFiredLoadingBannerThisSession = true
+        val result = bannerCatalog.fire(bannerCatalog.loadingBannerId())
+        if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+    }
+
+    private var idleCheckGeneration = 0
+    fun scheduleIdleActionCheck() {
+        idleCheckGeneration++
+        val generation = idleCheckGeneration
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(60000)
+            if (idleCheckGeneration != generation) return@launch
+            val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.IdleActionNoActionTakenForOneMinute)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
+
+    // Called from the view once the win/lose result banner has finished fading.
+    // Mirrors Windows' VideoPokerViewModel.CheckOutOfCredits.
+    fun checkOutOfCredits() {
+        val s = _state.value
+        if (sharedOptions.noStressMode.value || s.sessionCredits > 10) return
+        if (s.lastPayout > 0) return
+        val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.GameplayPlayerRunsOutOfCreditsVideoPokerBlackjack)
+        val text = if (result is com.leah.honeycomb.BannerFireResult.Message) {
+            result.text
+        } else {
+            com.leah.honeycomb.Strings.get(com.leah.honeycomb.StringKey.OutOfCreditsToast, com.leah.honeycomb.AppLanguage.English)
+        }
+        enqueueBanner(text)
+    }
 
     private fun saveOptions(options: VideoPokerOptions) {
         PreferencesHelper.saveObjectAsync(dataStore, "videopoker_options", VideoPokerOptions.serializer(), options)
@@ -138,11 +192,16 @@ class VideoPokerViewModel(
         val newCredits = if (!isFreePlay) s.sessionCredits - totalBet else s.sessionCredits
         val newWagered = if (!isFreePlay) _statistics.value.totalWagered + totalBet else _statistics.value.totalWagered
         
+        if (_statistics.value.handsPlayed == 0) {
+            val firstLaunchResult = bannerCatalog.fire(com.leah.honeycomb.BannerId.MilestonesFirstLaunchEver)
+            if (firstLaunchResult is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(firstLaunchResult.text)
+        }
         _statistics.value = _statistics.value.copy(
             handsPlayed = _statistics.value.handsPlayed + 1,
             totalWagered = newWagered
         )
         persistStatistics()
+        scheduleIdleActionCheck()
 
         val deck = mutableListOf<Card>()
         for (suit in Suit.values()) {
@@ -245,7 +304,8 @@ class VideoPokerViewModel(
         )
 
         var stats = _statistics.value
-        
+        val previousHandsWon = stats.handsWon
+
         if (rank != null) {
             stats = stats.copy(
                 currentStreak = stats.currentStreak + 1,
@@ -271,6 +331,7 @@ class VideoPokerViewModel(
         
         _statistics.value = stats
         persistStatistics()
+        checkWinMilestones(previousHandsWon)
     }
 
     private fun matches(result: PokerHandResult, hand: List<Card>, entry: VideoPokerPayEntry): Boolean {

@@ -1,5 +1,6 @@
 package com.leah.honeycomb.spider
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +37,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -46,6 +48,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.leah.honeycomb.Card
 import com.leah.honeycomb.CardView
+import com.leah.honeycomb.rememberFireOnceTrigger
+import com.leah.honeycomb.rememberDragSettle
 import com.leah.honeycomb.Pile
 import com.leah.honeycomb.SmartDrop
 import com.leah.honeycomb.hintHighlight
@@ -79,6 +83,9 @@ fun SpiderBoard(
     val activeHint by viewModel.activeHint.collectAsState()
     val hintSourceId = activeHint?.sourcePileId
     val hintTargetId = activeHint?.targetPileId
+    val activeBanner by viewModel.activeBanner.collectAsState()
+    val manuallyDismissBanners by viewModel.sharedOptions.manuallyDismissBanners.collectAsState()
+    LaunchedEffect(Unit) { viewModel.checkLoadingBanner() }
 
     var showEmptyStockWarning by remember { mutableStateOf(false) }
     LaunchedEffect(showEmptyStockWarning) {
@@ -92,6 +99,16 @@ fun SpiderBoard(
     var dragState by remember { mutableStateOf(DragState()) }
     val haptics = LocalHapticFeedback.current
     val pileFrames = remember { mutableStateMapOf<String, Rect>() }
+    val density = LocalDensity.current
+    // Drag-drop settle spring (see GameSessionHelpers.kt's DragSettle; matches iOS
+    // SpiderTouchView's withAnimation(.spring(response: 0.25, dampingFraction: 0.8))
+    // around moveCards) — purely cosmetic; the move itself is committed synchronously in
+    // performDragEnd, before this animation starts.
+    val dragSettle = rememberDragSettle()
+    fun beginDrag(newState: DragState) {
+        dragSettle.beginDrag()
+        dragState = newState
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -105,6 +122,15 @@ fun SpiderBoard(
     }
 
     var showQuitDialog by remember { mutableStateOf(false) }
+
+    // Confetti burst on the win overlay — mirrors iOS's SpiderTouchView onChange(of: hasWon)
+    // { showParticles = true; ...cleared after 0.8s }. See FireOnceTrigger for why this
+    // isn't a plain `var + LaunchedEffect` pair.
+    val particleTrigger = rememberFireOnceTrigger(holdMs = 800)
+    LaunchedEffect(state.hasWon) {
+        if (state.hasWon) particleTrigger.fire()
+    }
+    val showParticles = particleTrigger.active
 
     androidx.activity.compose.BackHandler(enabled = state.movesCount > 0 && !state.hasWon) {
         showQuitDialog = true
@@ -130,7 +156,13 @@ fun SpiderBoard(
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isLandscape = maxWidth > maxHeight
-        
+
+        com.leah.honeycomb.BannerToast(
+            text = activeBanner,
+            manuallyDismissBanners = manuallyDismissBanners,
+            onDismiss = { viewModel.dismissBanner() }
+        )
+
         val scoreCapsule = @Composable {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -253,6 +285,33 @@ fun SpiderBoard(
             val downStep = cardH * 0.12f
             val upStep = cardH * 0.24f
 
+            // Resolves the current drag to a target pile (if any), then animates the
+            // floating overlay stack (spring, matching iOS) from its release point to its
+            // exact resting position in that pile before committing the move.
+            fun performDragEnd() {
+                val plan = resolveDrop(dragState, pileFrames, viewModel)
+                val sourcePile = dragState.sourcePile
+                if (plan == null || sourcePile == null) {
+                    dragState = DragState()
+                    return
+                }
+                val frame = pileFrames[plan.target.id]
+                val landing = frame?.let {
+                    var runningPx = 0f
+                    for (c in plan.target.cards) {
+                        runningPx += with(density) { (if (c.faceUp) upStep else downStep).toPx() }
+                    }
+                    Offset(it.left, it.top + runningPx)
+                }
+                val startOffset = Offset(dragState.startPosition.x + dragState.offset.x, dragState.startPosition.y + dragState.offset.y)
+                dragSettle.settle(
+                    start = startOffset,
+                    landing = landing,
+                    commit = { viewModel.moveCards(plan.cards, sourcePile, plan.target) },
+                    onSettled = { dragState = DragState() }
+                )
+            }
+
             Column(modifier = Modifier.padding(top = 8.dp)) {
                 // Top Row: Stock on left, Foundations on right
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
@@ -336,9 +395,9 @@ fun SpiderBoard(
                                                         launch {
                                                             if (viewModel.isValidDragSequence(stack)) {
                                                                 detectDragGestures(
-                                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
+                                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); beginDrag(DragState(stack, pile, layoutPos, Offset.Zero)) },
                                                                     onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                                    onDragEnd = { performDragEnd() },
                                                                     onDragCancel = { dragState = DragState() }
                                                                 )
                                                             }
@@ -365,9 +424,10 @@ fun SpiderBoard(
             val cardW = activeCardW
             val cardH = cardW * 1.4f
             val upStep = cardH * 0.24f
+            val displayOffset = dragSettle.displayOffset(Offset(dragState.startPosition.x + dragState.offset.x, dragState.startPosition.y + dragState.offset.y))
             Box(modifier = Modifier.fillMaxSize().zIndex(100f)) {
                 Box(modifier = Modifier
-                    .offset { IntOffset((dragState.startPosition.x + dragState.offset.x).roundToInt(), (dragState.startPosition.y + dragState.offset.y).roundToInt()) }
+                    .offset { IntOffset(displayOffset.x.roundToInt(), displayOffset.y.roundToInt()) }
                 ) {
                     dragState.cards.forEachIndexed { i, card ->
                         Box(modifier = Modifier.offset(y = upStep * i)) {
@@ -396,6 +456,10 @@ fun SpiderBoard(
         
         // End Game Overlays
         if (state.hasWon) {
+            // No bouncing-card cascade here, deliberately — iOS's SpiderTouchView.swift
+            // only wires WinParticleView for Spider's win, never WinAnimationView (unlike
+            // Klondike/Beecell, which get both). Windows wires it for Spider too, but iOS
+            // is the source of truth for this app.
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
                 Card {
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -405,6 +469,12 @@ fun SpiderBoard(
                         Button(onClick = { viewModel.startNewGame() }) { Text("Play Again") }
                     }
                 }
+            }
+
+            // On top of the win banner, matching iOS's ordering (WinParticleView listed after
+            // the win overlay in SpiderTouchView.swift).
+            Box(modifier = Modifier.fillMaxSize().zIndex(201f)) {
+                com.leah.honeycomb.WinParticleView(active = showParticles)
             }
         } else {
             var stuckDismissed by remember { mutableStateOf(false) }
@@ -450,13 +520,16 @@ fun SpiderBoard(
     }
 }
 
-private fun handleDragEnd(
+// Result of resolving a drag release to a valid drop target — resolving no longer performs
+// the move directly (see performDragEnd) so the caller can animate the settle first.
+private data class DropPlan(val target: Pile, val cards: List<Card>)
+
+private fun resolveDrop(
     dragState: DragState,
     pileFrames: Map<String, Rect>,
-    viewModel: SpiderViewModel,
-    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback
-) {
-    if (dragState.cards.isEmpty() || dragState.sourcePile == null) return
+    viewModel: SpiderViewModel
+): DropPlan? {
+    if (dragState.cards.isEmpty() || dragState.sourcePile == null) return null
     val releaseX = dragState.startPosition.x + dragState.offset.x + 40f
     val releaseY = dragState.startPosition.y + dragState.offset.y + 40f
 
@@ -466,7 +539,7 @@ private fun handleDragEnd(
     // Target Tableau
     for (tab in viewModel.state.value.tableau) {
         if (tab.id == dragState.sourcePile.id) continue
-        
+
         val frame = pileFrames[tab.id] ?: continue
         val margin = 40f
         if (releaseX >= frame.left - margin && releaseX <= frame.right + margin && releaseY >= frame.top - margin) {
@@ -479,10 +552,7 @@ private fun handleDragEnd(
         }
     }
 
-    if (dropTarget != null) {
-        val resolved = SmartDrop.resolve(dragState.cards) { viewModel.isValidMove(it, dropTarget!!) }
-        if (resolved != null) {
-            viewModel.moveCards(resolved, dragState.sourcePile, dropTarget)
-        }
-    }
+    val target = dropTarget ?: return null
+    val resolved = SmartDrop.resolve(dragState.cards) { viewModel.isValidMove(it, target) } ?: return null
+    return DropPlan(target, resolved)
 }

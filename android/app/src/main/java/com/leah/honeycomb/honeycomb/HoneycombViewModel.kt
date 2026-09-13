@@ -5,6 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.leah.honeycomb.SharedGameOptions
 import com.leah.honeycomb.PreferencesHelper
+import com.leah.honeycomb.BannerCatalog
+import com.leah.honeycomb.BannerFireResult
+import com.leah.honeycomb.BannerId
+import com.leah.honeycomb.BannerQueue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,7 +88,9 @@ class HoneycombViewModel(
     val sharedOptions: SharedGameOptions,
     val database: HoneycombDatabase,
     val profileManager: HoneycombProfileManager,
-    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
+    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+    private val bannerCatalog: BannerCatalog,
+    private val appLanguage: kotlinx.coroutines.flow.StateFlow<com.leah.honeycomb.AppLanguage> = kotlinx.coroutines.flow.MutableStateFlow(com.leah.honeycomb.AppLanguage.English)
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HoneycombState())
@@ -231,8 +237,31 @@ class HoneycombViewModel(
     private var hasStolenThisMatch: Boolean = false
     private var starterStreak: Int = 0
     private var lastMatchStarterWasPlayer: Boolean? = null
-    
+
     private var aiMoveGeneration: Int = 0
+
+    // "N rematch wins/losses in a row against the same opponent" — reset by
+    // startNewGame() (a fresh opponent) but NOT by rematch(), so these persist across
+    // an entire rematch chain. Mirrors Swift's consecutiveRematchWins/Losses.
+    private var consecutiveRematchWins: Int = 0
+    private var consecutiveRematchLosses: Int = 0
+
+    // "N matches in a row at the same AI difficulty" — deliberately NOT reset by
+    // startNewGame(): unlike the rematch streaks above, a fresh match can still be at
+    // the same difficulty as the last one, so this persists for the whole app session
+    // and is only broken by the player picking a different difficulty (or by not being
+    // in a rematch chain at all — see checkSameDifficultyStreak). Mirrors Swift's
+    // lastPlayedDifficulty/consecutiveSameDifficultyCount.
+    private var lastPlayedDifficulty: HoneycombDifficulty? = null
+    private var consecutiveSameDifficultyCount: Int = 0
+
+    // "Player uses Undo, thinks about it, and then makes the exact same move they just
+    // undid" — lastPlayerMove tracks every player placement so undoLastAction() can
+    // snapshot which move it's about to revert; pendingUndoRepeatCheck holds that move
+    // only until the player's very next placement, whether or not it matches. Mirrors
+    // Swift's lastPlayerMove/pendingUndoRepeatCheck.
+    private var lastPlayerMove: Pair<Int, Int>? = null
+    private var pendingUndoRepeatCheck: Pair<Int, Int>? = null
 
     init {
         val defaultState = HoneycombState()
@@ -270,6 +299,11 @@ class HoneycombViewModel(
         stealProtectionActive = false
         hasStolenThisMatch = false
         sessionCardsCaptured = 0
+        hintUsageCountThisMatch = 0
+        consecutiveRematchWins = 0
+        consecutiveRematchLosses = 0
+        lastPlayerMove = null
+        pendingUndoRepeatCheck = null
         clearBanners()
 
         var rolledRules = emptyList<HoneycombRule>()
@@ -331,6 +365,9 @@ class HoneycombViewModel(
         hintGeneration++
         hasStolenThisMatch = false
         sessionCardsCaptured = 0
+        hintUsageCountThisMatch = 0
+        lastPlayerMove = null
+        pendingUndoRepeatCheck = null
         clearBanners()
         
         val opponentHand = rematchOpponentDeck.map { HoneycombCard(it, CardOwner.Opponent) }
@@ -361,12 +398,17 @@ class HoneycombViewModel(
 
         var swappedOppCardId: String? = null
         var swappedPlayerCardId: String? = null
+        var swapBannerText: String? = null
         if (rematchActiveRules.contains(HoneycombRule.Swap) && pDeck.isNotEmpty() && oDeck.isNotEmpty()) {
             val pIdx = pDeck.indices.random()
             val oIdx = oDeck.indices.random()
 
             val pCard = pDeck[pIdx]
             val oCard = oDeck[oIdx]
+            swapBannerText = formatSwapRuleForBanner(
+                swappedAwayPlayerFiveStar = pCard.data.stars == 5,
+                tradedUpForPlayer = oCard.data.stars > pCard.data.stars
+            )
 
             pDeck[pIdx] = HoneycombCard(oCard.data, CardOwner.Player, CardOwner.Opponent, oCard.id)
             oDeck[oIdx] = HoneycombCard(pCard.data, CardOwner.Opponent, CardOwner.Player, pCard.id)
@@ -405,7 +447,7 @@ class HoneycombViewModel(
         ) }
 
         if (swapIds.isNotEmpty()) {
-            enqueueBanner("${HoneycombRule.Swap.displayName}!")
+            enqueueBanner(swapBannerText ?: "${HoneycombRule.Swap.displayName}!")
             viewModelScope.launch {
                 delay(2000)
                 _state.update { it.copy(swapHighlightCardIds = emptySet()) }
@@ -521,13 +563,49 @@ class HoneycombViewModel(
         }
         lastMatchStarterWasPlayer = playerStarts
 
-        _state.update { 
+        _state.update {
             it.copy(
                 isPlayerTurn = playerStarts,
                 chaosPlayerIndex = if (it.activeRules.contains(HoneycombRule.Chaos) && it.playerHand.isNotEmpty()) (0 until it.playerHand.size).random() else null,
                 chaosOpponentIndex = if (it.activeRules.contains(HoneycombRule.Chaos) && it.opponentHand.isNotEmpty()) (0 until it.opponentHand.size).random() else null,
             )
         }
+
+        scheduleIdleCheck()
+
+        // Every active rule gets its own line below "First Move" — mirrors Swift's
+        // finishMatchSetup. Swap's line is composed separately in setupPlayerHand
+        // (it needs the actual swap outcome, not just "the rule is active"), so it's
+        // skipped here to avoid a duplicate plain-name line.
+        val language = appLanguage.value
+        val st = _state.value
+        val firstMoveLine = if (playerStarts) {
+            com.leah.honeycomb.Strings.get(com.leah.honeycomb.StringKey.FirstMovePlayer, language)
+        } else {
+            com.leah.honeycomb.Strings.format(com.leah.honeycomb.StringKey.FirstMoveOpponentFmt, language, _options.value.difficulty.displayName)
+        }
+        val ruleLines = st.activeRules.filter { it != HoneycombRule.Swap }.map { formatRuleForBanner(it) }.toMutableList()
+        // A ruleless match has no per-rule line to (20% of the time) swap for flavor
+        // text — this is that same gate, just for the "no extra rules" case, which
+        // only ever adds a line, never replaces one.
+        if (st.activeRules.isEmpty()) {
+            val zeroRulesResult = bannerCatalog.fire(BannerId.RuleSpecificRouletteRollsZeroExtraRules)
+            if (zeroRulesResult is BannerFireResult.Message) ruleLines.add(zeroRulesResult.text)
+        }
+        // NB: startNewGame()/rematch() already call clearBanners() before
+        // setupPlayerHand() enqueues the Swap highlight banner (if any) — this just
+        // queues behind it rather than clearing it, matching the existing FIFO.
+        enqueueBanner((listOf(firstMoveLine) + ruleLines).joinToString("\n"), longDuration = true)
+
+        // stats.gamesPlayed only increments in settleMatch, so it's still 0 here iff
+        // this is the very first match this player has ever started (or the first
+        // since a stats reset).
+        if (_statistics.value.gamesPlayed == 0) {
+            val firstLaunchResult = bannerCatalog.fire(BannerId.MilestonesFirstLaunchEver)
+            if (firstLaunchResult is BannerFireResult.Message) enqueueBanner(firstLaunchResult.text, longDuration = true)
+        }
+
+        checkSameDifficultyStreak()
 
         if (!playerStarts) {
             viewModelScope.launch {
@@ -571,6 +649,12 @@ class HoneycombViewModel(
         _state.value = undoHistory.removeLast()
         sessionCardsCaptured = undoSessionCardsCaptured.removeLast()
         clearBanners()
+        // Item 3: snapshot the move being undone so the player's very next placement can
+        // detect a repeat — cleared unconditionally in playerPlayCard regardless of
+        // whether it matches. Mirrors Swift's `pendingUndoRepeatCheck = lastPlayerMove`.
+        pendingUndoRepeatCheck = lastPlayerMove
+        val result = bannerCatalog.fire(BannerId.GameplayUndoUsedImmediatelyAfterAPlacement)
+        if (result is BannerFireResult.Message) enqueueBanner(result.text)
     }
 
     val hasHintsAvailable: Boolean
@@ -579,53 +663,289 @@ class HoneycombViewModel(
     private val _hintMove = MutableStateFlow<Pair<Int, Int>?>(null)
     val hintMove: StateFlow<Pair<Int, Int>?> = _hintMove.asStateFlow()
 
-    // Foundational port of iOS's bannerQueue/enqueueBanner/advanceBannerQueue — a simple
-    // FIFO of rule-trigger announcements (Same!/Plus!/Fallen Ace!). Durations match iOS:
-    // 1.2s visible + 0.3s fade for a normal banner. iOS's much larger BannerCatalog
-    // (dozens of spreadsheet-driven flavor-text alternates, win-milestone celebrations,
-    // first-launch/idle-nudge banners) is NOT ported here — this covers only the
-    // mechanical "a capture rule just fired" announcements the parity audit called out
-    // as Honeycomb's most-cited missing feedback.
-    private data class BannerEntry(val text: String)
-    private val bannerQueue = ArrayDeque<BannerEntry>()
-    private val _activeBanner = MutableStateFlow<String?>(null)
-    val activeBanner: StateFlow<String?> = _activeBanner.asStateFlow()
-    private var bannerAdvanceJob: Job? = null
+    // Port of iOS's bannerQueue/enqueueBanner/advanceBannerQueue, now backed by the
+    // shared BannerCatalog content (BannerCatalog.kt) rather than Honeycomb's own
+    // hand-rolled mechanical-only queue. See enqueueCaptureBanners/finishMatchSetup/
+    // checkWinMilestones/etc. below for the catalog call sites this replaces.
+    private val bannerQueue = BannerQueue(viewModelScope) { sharedOptions.manuallyDismissBanners.value }
+    val activeBanner: StateFlow<String?> = bannerQueue.active
 
-    private fun enqueueBanner(text: String) {
-        bannerQueue.addLast(BannerEntry(text))
-        if (bannerQueue.size == 1) {
-            showFrontBanner()
-        }
+    // longDuration no longer changes anything display-wise — every toast is a uniform
+    // 2000ms now (see BannerQueue.kt), matching Mac/Windows' 2026-08-07 unification
+    // (commit 6856678, "Unify all toast durations to 2.0s"). Kept as a parameter only
+    // because removing it would mean touching every call site above for no behavioral
+    // gain, mirroring Swift's isLongDuration/flashRuleBannerIsLongDuration being left in
+    // place on the queue for the same reason.
+    private fun enqueueBanner(text: String, longDuration: Boolean = false) {
+        bannerQueue.enqueue(text)
     }
 
     private fun clearBanners() {
-        bannerAdvanceJob?.cancel()
         bannerQueue.clear()
-        _activeBanner.value = null
     }
 
-    private fun showFrontBanner() {
-        val front = bannerQueue.firstOrNull() ?: return
-        _activeBanner.value = front.text
-        bannerAdvanceJob?.cancel()
-        bannerAdvanceJob = viewModelScope.launch {
-            delay(1200)
-            _activeBanner.value = null
-            delay(300)
-            bannerQueue.removeFirstOrNull()
-            if (bannerQueue.isNotEmpty()) showFrontBanner()
+    fun dismissBanner() = bannerQueue.dismissCurrent()
+
+    // Fires `id` through the banner catalog and returns whatever it decided should
+    // show — the catalog's own flavor text (per the 20% gate), or `existingDefaultText`
+    // otherwise. Deliberately uses the caller's own default rather than the catalog
+    // entry's own `fallback` field so this doesn't depend on the catalog's fallback
+    // string matching this platform's existing text exactly. Mirrors Swift's
+    // HoneycombViewModel.bannerCatalogText / Windows' BannerCatalogText.
+    private fun bannerCatalogText(id: BannerId, existingDefaultText: String, tokens: Map<String, String> = emptyMap()): String {
+        return when (val result = bannerCatalog.fire(id, tokens)) {
+            is BannerFireResult.Message -> result.text
+            else -> existingDefaultText
         }
     }
 
-    // Fires the basic Same!/Plus!/Fallen Ace! rule-name banners for a placement's own
-    // direct captures — mirrors the mechanical (non-flavor-text) subset of iOS's
-    // bannerText(placedCard:for:flips:directFlipsCount:).
-    private fun enqueueCaptureBanners(board: HoneycombBoard, rules: List<HoneycombRule>) {
-        if (board.lastSameTriggered) enqueueBanner("${HoneycombRule.Same.displayName}!")
-        if (board.lastPlusTriggered) enqueueBanner("${HoneycombRule.Plus.displayName}!")
+    // Maps a rule to the catalog's "Roulette rolls X" flavor id for that rule's intro
+    // banner line — mirrors Swift's rouletteBannerID(for:). Rules with no catalog
+    // entry (Fallen Ace, Bomb Shelter, Sudden Death) return null and keep their plain
+    // display name unconditionally.
+    private fun rouletteBannerId(rule: HoneycombRule): BannerId? = when (rule) {
+        HoneycombRule.Ascension -> BannerId.RuleSpecificRouletteRollsPollination
+        HoneycombRule.Descension -> BannerId.RuleSpecificRouletteRollsSmokedOut
+        HoneycombRule.Plus -> BannerId.RuleSpecificRouletteRollsMathBee
+        HoneycombRule.Reverse -> BannerId.RuleSpecificRouletteRollsInversion
+        HoneycombRule.AllOpen -> BannerId.RuleSpecificRouletteRollsClearSkies
+        HoneycombRule.ThreeOpen -> BannerId.RuleSpecificRouletteRollsScoutingParty
+        HoneycombRule.Chaos -> BannerId.RuleSpecificRouletteRollsFrenzy
+        HoneycombRule.Same -> BannerId.RuleSpecificRouletteRollsSymmetry
+        HoneycombRule.Swap -> BannerId.RuleSpecificRouletteRollsNectarExchange
+        HoneycombRule.Order -> BannerId.RuleSpecificRouletteRollsHierarchy
+        HoneycombRule.FallenAce, HoneycombRule.BombShelter, HoneycombRule.SuddenDeath -> null
+    }
+
+    // Intro-banner line for one active rule — 20% of the time swaps the plain rule
+    // name for catalog flavor text (e.g. "Pollen is in the air!" instead of
+    // "Pollination"). Mirrors Swift's formatRuleForBanner. Ascension/Descension's
+    // affected-suit annotation (iOS's suitNames line) isn't reproduced here — Android's
+    // rule-name capsule already shows the active suits separately (see
+    // HoneycombMatchUI.kt's RulesCapsule), so this only needs the plain/flavor name.
+    private fun formatRuleForBanner(rule: HoneycombRule): String {
+        val defaultText = rule.displayName
+        val bannerId = rouletteBannerId(rule) ?: return defaultText
+        return bannerCatalogText(bannerId, defaultText)
+    }
+
+    // Nectar Exchange (Swap) gets its own formatter because its flavor text depends on
+    // what the trade actually did, not just that the rule is active. Mirrors Swift's
+    // formatSwapRuleForBanner.
+    private fun formatSwapRuleForBanner(swappedAwayPlayerFiveStar: Boolean, tradedUpForPlayer: Boolean): String {
+        val defaultText = HoneycombRule.Swap.displayName
+        val tokens = mapOf("OpponentName" to _options.value.difficulty.displayName)
+        if (swappedAwayPlayerFiveStar) {
+            return bannerCatalogText(BannerId.RuleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, defaultText, tokens)
+        }
+        if (tradedUpForPlayer) {
+            return bannerCatalogText(BannerId.RuleSpecificNectarExchangeTradesThePlayersWorstCardForThe, defaultText, tokens)
+        }
+        return bannerCatalogText(BannerId.RuleSpecificRouletteRollsNectarExchange, defaultText, tokens)
+    }
+
+    // A card of `suit` (excluding face-down ones) whose modifier has reached at least
+    // `threshold` — used to decide whether Ascension's per-placement banner has earned
+    // its "in full bloom" flavor alternate yet. Ported from Swift's private static
+    // hasCard(matching:modifierAtLeast:on:).
+    private fun hasCardModifierAtLeast(suit: String, threshold: Int, board: HoneycombBoard): Boolean {
+        return board.cells.any { cell ->
+            val card = cell.card
+            card != null && !card.isFaceDown && card.data.suit == suit && card.modifier >= threshold
+        }
+    }
+
+    // A card of `suit` (excluding face-down ones) whose negative modifier has actually
+    // clamped one of its stats down to the 1 floor (HoneycombCard.stat(index) clamps to
+    // 1..10) — used to decide whether Descension's per-placement banner has earned its
+    // "Smoked Out" flavor alternate yet. Ported from Swift's private static
+    // hasCard(matching:clampedToOneOn:).
+    private fun hasCardClampedToOne(suit: String, board: HoneycombBoard): Boolean {
+        return board.cells.any { cell ->
+            val card = cell.card
+            if (card == null || card.isFaceDown || card.data.suit != suit || card.modifier >= 0) return@any false
+            (0 until 4).any { card.data.stats[it] + card.modifier <= 1 }
+        }
+    }
+
+    // Ascension/Descension's per-placement "kicked in" flavor banner — fires for either
+    // side's placement as long as the placed card's own suit is one of the match's 2
+    // chosen suits, skipped on the board's very last move (the win/lose overlay covers
+    // that transition already). Ported from Swift's bannerText's Ascension/Descension
+    // block.
+    private fun ascensionDescensionBannerText(placedCard: HoneycombCard, board: HoneycombBoard, rules: List<HoneycombRule>): String? {
+        val placedSuit = placedCard.data.suit
+        if (board.isFull || !board.ascensionDescensionSuits.contains(placedSuit)) return null
+        if (rules.contains(HoneycombRule.Ascension)) {
+            val defaultText = "${HoneycombRule.Ascension.displayName}!"
+            return if (hasCardModifierAtLeast(placedSuit, 3, board)) {
+                bannerCatalogText(
+                    BannerId.RuleSpecificPollinationPushesACardsModifierTo3OrHigher,
+                    defaultText,
+                    mapOf("AscensionSuit" to HoneycombCardData.suitDisplayName(placedSuit))
+                )
+            } else defaultText
+        } else if (rules.contains(HoneycombRule.Descension)) {
+            val defaultText = "${HoneycombRule.Descension.displayName}!"
+            return if (hasCardClampedToOne(placedSuit, board)) {
+                bannerCatalogText(BannerId.RuleSpecificSmokedOutDropsACardsEffectiveStatTo1, defaultText)
+            } else defaultText
+        }
+        return null
+    }
+
+    // Fires the Same!/Plus!/Fallen Ace! rule-name banners for a placement's own direct
+    // captures, and the Combo x{N} banner for the placement's own chain flips — the
+    // mechanical (non-flavor) subset of Swift's comboBannerText/bannerText, now routed
+    // through the catalog so Plus/Fallen Ace/Combo x4+ occasionally show their flavor
+    // alternates instead of the plain rule name. Also fires the Ascension/Descension
+    // flavor banner (item 1) and the flip-count/rarity/board-state flavor banners (item
+    // 2) for this same placement — all ported from Swift's bannerText.
+    private fun enqueueCaptureBanners(
+        board: HoneycombBoard,
+        rules: List<HoneycombRule>,
+        placedCard: HoneycombCard,
+        boardIndex: Int,
+        flips: List<Int>
+    ) {
+        var comboBannerFired = false
+        if (board.lastSameTriggered) {
+            enqueueBanner("${HoneycombRule.Same.displayName}!")
+            comboBannerFired = true
+        }
+        if (board.lastPlusTriggered) {
+            enqueueBanner(bannerCatalogText(BannerId.RuleSpecificAPlayerTriggersAPlusComboTheMathMatchesPerfectly, "${HoneycombRule.Plus.displayName}!"))
+            comboBannerFired = true
+        }
         if (board.lastFallenAceTriggered && rules.contains(HoneycombRule.FallenAce)) {
-            enqueueBanner("${HoneycombRule.FallenAce.displayName}!")
+            enqueueBanner(bannerCatalogText(BannerId.RuleSpecificFallenAceTriggersA1CapturesA10, "${HoneycombRule.FallenAce.displayName}!"))
+            comboBannerFired = true
+        }
+        if (board.lastComboFlipCount >= 4) {
+            val count = board.lastComboFlipCount
+            enqueueBanner(bannerCatalogText(
+                BannerId.GameplayComboX4OrHigher,
+                "HIVE MIND x$count!",
+                mapOf("ComboCount" to "$count")
+            ))
+            comboBannerFired = true
+        } else if (board.lastComboFlipCount > 0) {
+            enqueueBanner("HIVE MIND x${board.lastComboFlipCount}!")
+            comboBannerFired = true
+        }
+
+        // Item 1: Ascension/Descension "kicked in" flavor banners.
+        ascensionDescensionBannerText(placedCard, board, rules)?.let { enqueueBanner(it) }
+
+        // Item 2: flip-based gameplay banners — ungated/no-fallback-swap, appended
+        // straight from the catalog's own message text (or skipped if the catalog
+        // decided not to fire), matching Swift's bare `.fire(id)` usage here (as
+        // opposed to the bannerCatalogText wrapper used above).
+        if (!comboBannerFired && flips.size >= 3) {
+            val id = if (placedCard.owner == CardOwner.Player) {
+                BannerId.GameplayPlayerFlips3CardsInASingleTurn
+            } else {
+                BannerId.GameplayOpponentFlips3OfThePlayersCardsInASingleTurnNotA
+            }
+            val result = bannerCatalog.fire(id)
+            if (result is BannerFireResult.Message) enqueueBanner(result.text)
+        }
+        val directFlipsCount = flips.count { neighborDirection(boardIndex, it) != null }
+        if (directFlipsCount == 4) {
+            val result = bannerCatalog.fire(BannerId.GameplayAPlacedCardCapturesOnAll4SidesAtOnce)
+            if (result is BannerFireResult.Message) enqueueBanner(result.text)
+        }
+        if (placedCard.data.stars == 1 && flips.isNotEmpty()) {
+            if (flips.size >= 3) {
+                val result = bannerCatalog.fire(BannerId.GameplayA1StarCardCaptures3CardsInOneMove)
+                if (result is BannerFireResult.Message) enqueueBanner(result.text)
+            }
+            val capturedFiveStar = flips.any { board.cells[it].card?.data?.stars == 5 }
+            if (capturedFiveStar) {
+                val result = bannerCatalog.fire(BannerId.GameplayA1StarCardCapturesA5StarCardRarityMismatch)
+                if (result is BannerFireResult.Message) enqueueBanner(result.text)
+            }
+        }
+        val playerOwnedOnBoard = board.cells.count { it.card?.owner == CardOwner.Player }
+        val opponentOwnedOnBoard = board.cells.count { it.card?.owner == CardOwner.Opponent }
+        if (playerOwnedOnBoard == 2 && opponentOwnedOnBoard == 6) {
+            val result = bannerCatalog.fire(BannerId.GameplayPlayerHasOnly2CardsOnTheBoardVsOpponents6Few)
+            if (result is BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
+
+    // Fires once, exactly on the 5th consecutive REMATCH at the same difficulty — not
+    // "count >= 5" (which would fire on every match after that too), and not counting
+    // plain New Game starts: a fresh New Game at the same difficulty doesn't demonstrate
+    // "you keep coming back to fight this same difficulty tier" the way a real Rematch
+    // chain does. Mirrors Swift's checkSameDifficultyStreak/Windows' CheckSameDifficultyStreak.
+    private fun checkSameDifficultyStreak() {
+        if (!isRematchMatch) {
+            consecutiveSameDifficultyCount = 0
+            lastPlayedDifficulty = null
+            return
+        }
+        val difficulty = _options.value.difficulty
+        if (difficulty == lastPlayedDifficulty) {
+            consecutiveSameDifficultyCount++
+        } else {
+            lastPlayedDifficulty = difficulty
+            consecutiveSameDifficultyCount = 1
+        }
+        if (consecutiveSameDifficultyCount == 5) {
+            val result = bannerCatalog.fire(BannerId.GameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow)
+            if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
+        }
+    }
+
+    // Fires once, exactly on the win that crosses a threshold — not "matchesWon >=
+    // threshold", which would fire on every subsequent win too. Mirrors Windows'
+    // GameViewModel.CheckWinMilestones.
+    private fun checkWinMilestones(previousMatchesWon: Int, newMatchesWon: Int) {
+        val thresholds = listOf(
+            10 to BannerId.MilestonesPlayerReaches10TotalWins,
+            100 to BannerId.MilestonesPlayerReaches100TotalWins,
+            1000 to BannerId.MilestonesPlayerReaches1000TotalWins
+        )
+        for ((threshold, id) in thresholds) {
+            if (newMatchesWon != threshold || previousMatchesWon >= threshold) continue
+            val result = bannerCatalog.fire(id)
+            if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
+        }
+    }
+
+    // Fires once per app session, the first time Honeycomb's own screen actually
+    // displays (see HoneycombMatchUI's LaunchedEffect). A "loading" banner belongs to a
+    // screen transition, not a gameplay action. Mirrors Windows' GameView's
+    // vm.CheckLoadingBanner() / BannerCatalog.LoadingBannerId().
+    private var hasFiredLoadingBannerThisSession = false
+
+    fun checkLoadingBanner() {
+        if (hasFiredLoadingBannerThisSession) return
+        hasFiredLoadingBannerThisSession = true
+        val id = bannerCatalog.loadingBannerId()
+        val result = bannerCatalog.fire(id)
+        if (result is BannerFireResult.Message) {
+            val durationMs = if (bannerCatalog.consumeAppLaunchLoadingFlag()) 3000L else 2000L
+            bannerQueue.enqueue(result.text, durationMs)
+        }
+    }
+
+    // Ambiance/idle nudge: fires if a full minute passes with no move. Re-armed via a
+    // generation token so an already-scheduled check from before the last move sees a
+    // mismatch and silently no-ops instead of firing late. Mirrors Windows'
+    // ScheduleIdleActionCheck.
+    private var idleCheckGeneration = 0
+
+    private fun scheduleIdleCheck() {
+        idleCheckGeneration++
+        val generation = idleCheckGeneration
+        viewModelScope.launch {
+            delay(60000)
+            if (idleCheckGeneration != generation) return@launch
+            if (_state.value.gameState != HoneycombGameState.Playing) return@launch
+            val result = bannerCatalog.fire(BannerId.IdleActionNoActionTakenForOneMinute)
+            if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
         }
     }
 
@@ -694,8 +1014,19 @@ class HoneycombViewModel(
     // ownership so the same machinery optimizes for the player instead) at Ultra Hard's
     // 6-ply depth regardless of match difficulty — a hint is meant to be the
     // mathematically best move, not merely as good as whatever difficulty was picked.
+    // Bumped every time a hint is actually shown to the player this match — fires the
+    // catalog's "3 hints used in one match" flavor banner exactly once it hits 3.
+    // Mirrors Swift's hintUsageCountThisMatch.
+    private var hintUsageCountThisMatch = 0
+
     fun findHint() {
         if (!hasHintsAvailable) return
+
+        hintUsageCountThisMatch++
+        if (hintUsageCountThisMatch == 3) {
+            val result = bannerCatalog.fire(BannerId.Gameplay3HintsUsedInOneMatch)
+            if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
+        }
 
         if (precomputedHint != null && precomputedHintGeneration == hintGeneration) {
             _hintMove.value = precomputedHint
@@ -751,6 +1082,18 @@ class HoneycombViewModel(
         val newPlayerHand = st.playerHand.toMutableList()
         val card = newPlayerHand.removeAt(handIndex)
 
+        // Item 3: undo-then-repeat-same-move detection — fires if this placement is the
+        // exact move (same card, same cell) that was just undone, then clears the check
+        // regardless of whether it matched. Mirrors Swift's pendingUndoRepeatCheck usage
+        // in playerPlayCard.
+        val pendingRepeat = pendingUndoRepeatCheck
+        if (pendingRepeat != null && pendingRepeat.first == card.data.id && pendingRepeat.second == boardIndex) {
+            val result = bannerCatalog.fire(BannerId.GameplayPlayerUsesUndoThinksAboutItAndThenMakesTheExact)
+            if (result is BannerFireResult.Message) enqueueBanner(result.text)
+        }
+        pendingUndoRepeatCheck = null
+        lastPlayerMove = card.data.id to boardIndex
+
         val isFirstCard = st.board.cells.all { it.card == null }
         if (st.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard) {
             card.isFaceDown = true
@@ -761,7 +1104,7 @@ class HoneycombViewModel(
         val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
         val flips = newBoard.placeCard(card, boardIndex, st.activeRules)
         sessionCardsCaptured += flips.size
-        enqueueCaptureBanners(newBoard, st.activeRules)
+        enqueueCaptureBanners(newBoard, st.activeRules, card, boardIndex, flips)
         processBombShelter(newBoard, boardIndex, st.activeRules)
 
         _state.update {
@@ -801,6 +1144,21 @@ class HoneycombViewModel(
         val empties = board.cells.indices.filter { board.cells[it].card == null }
         val rules = st.activeRules
 
+        // Item 5: opponent-about-to-win nudge — fires right before the AI's move (not
+        // after), so it reads as anticipation of the last card landing rather than a
+        // recap of something that already happened. Pre-move score already reflects
+        // everything except this one move. Mirrors Swift's aiPlayTurn/Windows'
+        // ScheduleOpponentMove.
+        val preMovePScore = board.playerScore + st.playerHand.size
+        val preMoveOScore = board.opponentScore + st.opponentHand.size
+        if (empties.size == 1 && preMoveOScore - preMovePScore == 2) {
+            val warningResult = bannerCatalog.fire(
+                BannerId.GameplayOpponentIsWinningByTwoCardsAndIsAboutToPlaceThe,
+                mapOf("OpponentName" to difficulty.displayName)
+            )
+            if (warningResult is BannerFireResult.Message) enqueueBanner(warningResult.text)
+        }
+
         viewModelScope.launch {
             // Hard/UltraHard use 5-6 ply minimax with alpha-beta search — run it off the
             // main thread so board-wide UI doesn't freeze while the AI "thinks", matching
@@ -838,7 +1196,7 @@ class HoneycombViewModel(
                 val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
                 val flips = newBoard.placeCard(cardToPlay, move.second, st.activeRules)
                 sessionCardsCaptured += flips.size
-                enqueueCaptureBanners(newBoard, st.activeRules)
+                enqueueCaptureBanners(newBoard, st.activeRules, cardToPlay, move.second, flips)
                 processBombShelter(newBoard, move.second, st.activeRules)
 
                 _state.update {
@@ -922,6 +1280,7 @@ class HoneycombViewModel(
                     showPostGamePrompt = true
                 )
             }
+            val previousMatchesWon = _statistics.value.matchesWon
             updateStatistics {
                 it.recordGame(
                     won = true, drawn = false,
@@ -932,7 +1291,35 @@ class HoneycombViewModel(
                     fallenAceCaptures = st.board.sessionFallenAceCaptures
                 )
             }
+            checkWinMilestones(previousMatchesWon, _statistics.value.matchesWon)
+            if (oScore == 0) {
+                val result = bannerCatalog.fire(BannerId.RuleSpecificPlayerWinsFlawlessOpponentScore0)
+                if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
+            }
+            // A win's margin is pScore - oScore, maximized exactly when oScore is
+            // minimized — i.e. this is always the same condition as the flawless check
+            // above, just framed as "the biggest margin possible" rather than "opponent
+            // got nothing." Both fire in sequence on the same flawless win, matching
+            // Swift/Windows (confirmed: neither reference treats these as mutually
+            // exclusive).
+            if (oScore == 0) {
+                val result = bannerCatalog.fire(BannerId.GameplayPlayerWinsByTheMaximumPossibleMargin)
+                if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
+            }
+            if (st.activeRules.size >= 4) {
+                val result = bannerCatalog.fire(BannerId.GameplayPlayerWinsAMatchWith4RulesActiveAtOnce)
+                if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
+            }
             applyStealProtection()
+            consecutiveRematchLosses = 0
+            consecutiveRematchWins++
+            if (consecutiveRematchWins == 3) {
+                val result = bannerCatalog.fire(
+                    BannerId.Gameplay3RematchWinsInARowAgainstTheSameOpponent,
+                    mapOf("OpponentName" to _options.value.difficulty.displayName)
+                )
+                if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
+            }
         } else if (oScore > pScore) {
             _state.update {
                 it.copy(
@@ -950,6 +1337,19 @@ class HoneycombViewModel(
                     flawless = false,
                     fallenAceCaptures = st.board.sessionFallenAceCaptures
                 )
+            }
+            if (pScore == 0) {
+                val result = bannerCatalog.fire(BannerId.RuleSpecificPlayerLosesFlawless0Captures, mapOf("OpponentName" to _options.value.difficulty.displayName))
+                if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
+            }
+            consecutiveRematchWins = 0
+            consecutiveRematchLosses++
+            if (consecutiveRematchLosses == 3) {
+                val result = bannerCatalog.fire(
+                    BannerId.Gameplay3RematchLossesInARowAgainstTheSameOpponent,
+                    mapOf("OpponentName" to _options.value.difficulty.displayName)
+                )
+                if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
             }
         } else if (st.activeRules.contains(HoneycombRule.SuddenDeath)) {
              _state.update {
@@ -992,6 +1392,8 @@ class HoneycombViewModel(
                     fallenAceCaptures = st.board.sessionFallenAceCaptures
                 )
             }
+            consecutiveRematchWins = 0
+            consecutiveRematchLosses = 0
         }
     }
 

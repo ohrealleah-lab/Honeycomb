@@ -16,11 +16,50 @@ import java.util.UUID
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 class SpiderViewModel(
     val sharedOptions: SharedGameOptions,
-    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
+    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+    private val bannerCatalog: com.leah.honeycomb.BannerCatalog
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SpiderState())
     val state: StateFlow<SpiderState> = _state.asStateFlow()
+
+    private val bannerQueue = com.leah.honeycomb.BannerQueue(viewModelScope) { sharedOptions.manuallyDismissBanners.value }
+    val activeBanner: StateFlow<String?> = bannerQueue.active
+    private fun enqueueBanner(text: String) = bannerQueue.enqueue(text)
+    fun dismissBanner() = bannerQueue.dismissCurrent()
+
+    private fun checkWinMilestones(previousGamesWon: Int, newGamesWon: Int) {
+        val thresholds = listOf(
+            10 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches10TotalWins,
+            100 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches100TotalWins,
+            1000 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches1000TotalWins
+        )
+        for ((threshold, id) in thresholds) {
+            if (newGamesWon != threshold || previousGamesWon >= threshold) continue
+            val result = bannerCatalog.fire(id)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
+
+    private var hasFiredLoadingBannerThisSession = false
+    fun checkLoadingBanner() {
+        if (hasFiredLoadingBannerThisSession) return
+        hasFiredLoadingBannerThisSession = true
+        val result = bannerCatalog.fire(bannerCatalog.loadingBannerId())
+        if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+    }
+
+    private var idleCheckGeneration = 0
+    fun scheduleIdleActionCheck() {
+        idleCheckGeneration++
+        val generation = idleCheckGeneration
+        viewModelScope.launch {
+            delay(60000)
+            if (idleCheckGeneration != generation || _state.value.hasWon) return@launch
+            val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.IdleActionNoActionTakenForOneMinute)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
 
     private fun loadOptions(): SpiderOptions =
         PreferencesHelper.getObjectSync(dataStore, "spider_options", SpiderOptions.serializer(), SpiderOptions())
@@ -362,7 +401,13 @@ class SpiderViewModel(
             updateModeStats(abandonedCount) { it.copy(currentStreak = 0) }
         }
 
+        if ((_statistics.value.statsBySuits[_options.value.suitCount]?.gamesPlayed ?: 0) == 0) {
+            val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.MilestonesFirstLaunchEver)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
         updateModeStats(_options.value.suitCount) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
+        bannerQueue.clear()
+        scheduleIdleActionCheck()
 
         undoStack.clear()
 
@@ -475,6 +520,7 @@ class SpiderViewModel(
             score = maxOf(0, currentState.score - 1),
             movesCount = currentState.movesCount + 1
         )
+        scheduleIdleActionCheck()
 
         checkCompletedRuns()
         checkAutocompleteState()
@@ -541,6 +587,7 @@ class SpiderViewModel(
             score = maxOf(0, currentState.score - 1),
             movesCount = currentState.movesCount + 1
         )
+        scheduleIdleActionCheck()
 
         checkCompletedRuns()
         checkAutocompleteState()
@@ -669,6 +716,7 @@ class SpiderViewModel(
 
             val timeInSeconds = _state.value.timerSeconds
             val finalScore = _state.value.score
+            val previousGamesWon = _statistics.value.statsBySuits[_options.value.suitCount]?.gamesWon ?: 0
             updateModeStats(_options.value.suitCount) { stats ->
                 val newStreak = stats.currentStreak + 1
                 var updated = stats.copy(
@@ -687,6 +735,7 @@ class SpiderViewModel(
                 }
                 updated
             }
+            checkWinMilestones(previousGamesWon, _statistics.value.statsBySuits[_options.value.suitCount]?.gamesWon ?: 0)
         }
     }
 

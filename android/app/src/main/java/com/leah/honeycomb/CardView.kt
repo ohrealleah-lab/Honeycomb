@@ -133,10 +133,24 @@ fun CardView(
             modifier = Modifier
                 .wrapContentSize(align = Alignment.TopStart, unbounded = true)
                 .size(CardDimensions.width, CardDimensions.height)
+                // Scale pivots at the top-left (transformOrigin (0,0)) so the enlarged
+                // virtual card's own top-left lands on this slot's top-left, per the
+                // class doc above. The flip's rotationY must NOT share this graphicsLayer
+                // — a center-pivoted rotation (its default transformOrigin) combined with
+                // this same top-left-pivoted scale would rotate around the wrong point,
+                // mirroring a face-down card's whole shell off to the side of its slot
+                // instead of in place. So rotationY lives on its own nested graphicsLayer
+                // below, which keeps its default center pivot.
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                     transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                }
+        ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
                     shadowElevation = 1.5.dp.toPx()
                     shape = RoundedCornerShape(cornerRadius)
                     clip = false
@@ -180,6 +194,7 @@ fun CardView(
                     .shadow(6.dp, spotColor = suitColor.copy(alpha = 0.9f))
             )
         }
+    }
     }
 }
 }

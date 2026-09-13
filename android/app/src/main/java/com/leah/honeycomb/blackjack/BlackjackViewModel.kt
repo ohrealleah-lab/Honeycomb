@@ -19,11 +19,72 @@ import kotlin.math.min
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 class BlackjackViewModel(
     val sharedOptions: SharedGameOptions,
-    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
+    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+    private val bannerCatalog: com.leah.honeycomb.BannerCatalog
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BlackjackState())
     val state: StateFlow<BlackjackState> = _state.asStateFlow()
+
+    private val bannerQueue = com.leah.honeycomb.BannerQueue(viewModelScope) { sharedOptions.manuallyDismissBanners.value }
+    val activeBanner: StateFlow<String?> = bannerQueue.active
+    private fun enqueueBanner(text: String) = bannerQueue.enqueue(text)
+    fun dismissBanner() = bannerQueue.dismissCurrent()
+
+    // Fires once, exactly on crossing a threshold — checked against the value BEFORE
+    // this round's win(s) were added, using >= rather than == since a split round can
+    // win multiple hands at once and jump straight past a threshold. Mirrors Windows'
+    // BlackjackViewModel.CheckWinMilestones.
+    private fun checkWinMilestones(previousHandsWon: Int) {
+        val thresholds = listOf(
+            10 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches10TotalWins,
+            100 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches100TotalWins,
+            1000 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches1000TotalWins
+        )
+        for ((threshold, id) in thresholds) {
+            if (previousHandsWon >= threshold || _statistics.value.handsWon < threshold) continue
+            val result = bannerCatalog.fire(id)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
+
+    private var hasFiredLoadingBannerThisSession = false
+    fun checkLoadingBanner() {
+        if (hasFiredLoadingBannerThisSession) return
+        hasFiredLoadingBannerThisSession = true
+        val result = bannerCatalog.fire(bannerCatalog.loadingBannerId())
+        if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+    }
+
+    private var idleCheckGeneration = 0
+    fun scheduleIdleActionCheck() {
+        idleCheckGeneration++
+        val generation = idleCheckGeneration
+        viewModelScope.launch {
+            delay(60000)
+            if (idleCheckGeneration != generation) return@launch
+            val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.IdleActionNoActionTakenForOneMinute)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
+
+    // Called from the view once the win/lose result banner has finished fading, so
+    // this toast lands alongside the Rebuy button rather than stacking on top of the
+    // result banner. Mirrors Windows' BlackjackViewModel.CheckOutOfCredits.
+    fun checkOutOfCredits() {
+        val s = _state.value
+        if (sharedOptions.noStressMode.value || s.sessionCredits > 10) return
+        val roundWon = s.playerHands.any { it.result == BlackjackHandResult.Win || it.result == BlackjackHandResult.Blackjack }
+        val roundLost = s.playerHands.any { it.result == BlackjackHandResult.Loss || it.result == BlackjackHandResult.Bust }
+        if (!roundLost || roundWon) return
+        val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.GameplayPlayerRunsOutOfCreditsVideoPokerBlackjack)
+        val text = if (result is com.leah.honeycomb.BannerFireResult.Message) {
+            result.text
+        } else {
+            com.leah.honeycomb.Strings.get(com.leah.honeycomb.StringKey.OutOfCreditsToast, com.leah.honeycomb.AppLanguage.English)
+        }
+        enqueueBanner(text)
+    }
 
     fun updateOptions(newOptions: BlackjackOptions) {
         _options.value = newOptions
@@ -153,11 +214,16 @@ class BlackjackViewModel(
         val newTotalWagered = if (!isFreePlay) _statistics.value.totalWagered + s.currentBet else _statistics.value.totalWagered
         
         val stats = _statistics.value
+        if (stats.handsPlayed == 0) {
+            val firstLaunchResult = bannerCatalog.fire(com.leah.honeycomb.BannerId.MilestonesFirstLaunchEver)
+            if (firstLaunchResult is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(firstLaunchResult.text)
+        }
         _statistics.value = stats.copy(
             handsPlayed = stats.handsPlayed + 1,
             totalWagered = newTotalWagered
         )
         persistStatistics()
+        scheduleIdleActionCheck()
 
         _state.value = s.copy(
             sessionCredits = newSessionCredits,
@@ -406,7 +472,8 @@ class BlackjackViewModel(
         var totalWagered = 0
         
         var stats = _statistics.value
-        
+        val previousHandsWon = stats.handsWon
+
         val hands = s.playerHands.toMutableList()
         
         for (i in hands.indices) {
@@ -498,6 +565,7 @@ class BlackjackViewModel(
         
         _statistics.value = stats
         persistStatistics()
+        checkWinMilestones(previousHandsWon)
     }
 
     fun resetIfRoundOver() {

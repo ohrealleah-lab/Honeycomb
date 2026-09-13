@@ -15,6 +15,15 @@ import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.repeatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.window.Dialog
@@ -25,14 +34,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leah.honeycomb.CardView
+import com.leah.honeycomb.rememberFireOnceTrigger
 import com.leah.honeycomb.audio.UISound
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 private fun PayTableDialog(
     payTable: List<VideoPokerPayEntry>,
     currentBet: Int,
     language: AppLanguage,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    // Both default to "nothing is pulsing" so callers that don't care about the
+    // win-pulse (there are none right now, but keeps this dialog usable standalone)
+    // still compile without wiring it up.
+    isHit: (VideoPokerPayEntry) -> Boolean = { false },
+    winFlash: Boolean = false
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF14321F)) {
@@ -53,19 +70,59 @@ private fun PayTableDialog(
                     }
                 }
                 for (entry in payTable) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                    val hit = isHit(entry)
+                    // Mirrors VideoPokerTouchView.swift's isHit row: bounded 10-rep
+                    // autoreversing pulse driven by winFlash, not repeatForever — a
+                    // forever-repeating animation started while winFlash is true is
+                    // never explicitly canceled once winFlash flips back to false (a
+                    // later hand's isHit going false doesn't stop an already-running
+                    // repeat), so it would keep pulsing indefinitely after the win
+                    // that triggered it. 10 reps (~3s at 300ms/leg) comfortably
+                    // outlasts the ~450ms window winFlash is actually true for, then
+                    // settles and stays stopped.
+                    val rowAlpha = remember(entry.handName) { Animatable(0.7f) }
+                    // Keyed on `hit` alone, not `winFlash` too — winFlash and hit become
+                    // true together when a win resolves, but winFlash clears ~450ms later
+                    // on its own timer while hit stays true for the rest of the hand. Keying
+                    // on winFlash as well would restart (and cancel) this bounded repeat
+                    // right as it flips false, kicking off a brand new ~3s cycle instead of
+                    // letting the already-running one finish and settle as intended above.
+                    LaunchedEffect(hit) {
+                        if (hit) {
+                            rowAlpha.animateTo(
+                                targetValue = if (winFlash) 1f else 0.7f,
+                                animationSpec = repeatable(
+                                    iterations = 10,
+                                    animation = tween(300, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                )
+                            )
+                        } else {
+                            rowAlpha.snapTo(0.7f)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                if (hit) Color.Yellow.copy(alpha = rowAlpha.value) else Color.Transparent,
+                                RoundedCornerShape(4.dp)
+                            )
+                            .padding(vertical = 3.dp, horizontal = if (hit) 4.dp else 0.dp)
+                    ) {
                         Text(
                             localizedHandName(entry.handName, language),
                             modifier = Modifier.weight(2f),
-                            color = Color.White,
+                            color = if (hit) Color.Black else Color.White,
+                            fontWeight = if (hit) FontWeight.Black else FontWeight.Normal,
                             fontSize = 13.sp
                         )
                         for (bet in 1..5) {
                             Text(
                                 "${entry.multipliers[bet - 1]}",
                                 modifier = Modifier.weight(1f),
-                                color = if (bet == currentBet) Color.Yellow else Color.White.copy(alpha = 0.85f),
-                                fontWeight = if (bet == currentBet) FontWeight.Bold else FontWeight.Normal,
+                                color = if (hit) Color.Black else if (bet == currentBet) Color.Yellow else Color.White.copy(alpha = 0.85f),
+                                fontWeight = if (bet == currentBet || hit) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 13.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
@@ -117,13 +174,84 @@ fun VideoPokerBoard(
     var showQuitDialog by remember { mutableStateOf(false) }
     var showPayTable by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
+    val activeBanner by viewModel.activeBanner.collectAsState()
+    val manuallyDismissBanners by viewModel.sharedOptions.manuallyDismissBanners.collectAsState()
+    LaunchedEffect(Unit) { viewModel.checkLoadingBanner() }
+    LaunchedEffect(state.phase) {
+        if (state.phase == VideoPokerPhase.Result) {
+            kotlinx.coroutines.delay(1500)
+            viewModel.checkOutOfCredits()
+        }
+    }
+
+    // Mirrors VideoPokerTouchView.swift's winFlash: flips true for ~0.45s right as a
+    // winning hand resolves, driving the pay-table row pulse, the result headline pop
+    // below, and the confetti burst's own trigger — all three read the same underlying
+    // event (a hand just won), not three independent ones, same as iOS sharing one flag
+    // across them. FireOnceTrigger (see GameSessionHelpers.kt) makes the show-then-hide
+    // immune to `state.phase`/lastHandName/lastPayout changing again mid-window (e.g. a
+    // fast redeal within 450ms) — the LaunchedEffect below only needs to detect the
+    // rising edge and call fire(); it no longer needs an `else` branch to avoid getting
+    // stuck, since active only ever becomes true via fire() itself.
+    val winTrigger = rememberFireOnceTrigger(holdMs = 450)
+    LaunchedEffect(state.phase, state.lastHandName, state.lastPayout) {
+        if (state.phase == VideoPokerPhase.Result && state.lastPayout > 0) {
+            winTrigger.fire()
+        }
+    }
+    val winFlash = winTrigger.active
+    // Confetti burst, fired alongside winFlash — mirrors iOS's winFlashTask, which sets
+    // both winFlash and showParticles together (winFlash clears after 0.45s, the burst
+    // itself keeps running to its own ~1.4s completion regardless).
+    val showParticles = winTrigger.active
+
+    // Result headline pop (VideoPokerTouchView.swift:553-554): scaleEffect(1.1 while
+    // winFlash) driven by a spring, matching BlackjackBoard's bannerScale idiom.
+    val headlineScale = remember { Animatable(1f) }
+    LaunchedEffect(winFlash) {
+        headlineScale.animateTo(
+            targetValue = if (winFlash) 1.1f else 1f,
+            animationSpec = spring(dampingRatio = 0.45f, stiffness = 632f)
+        )
+    }
+
+    // Staggered deal-in (VideoPokerTouchView.swift:291-300, animateDeal()): each of
+    // the 5 cards lifts from below and fades in, 0.06s apart, settling from a small
+    // starting rotation ("wobble"). Triggered by handsDealt (only bumped by deal(),
+    // never by draw()) so redraws after holding don't replay the stagger.
+    val cardOffsetY = remember { List(5) { Animatable(40f) } }
+    val cardAlpha = remember { List(5) { Animatable(0f) } }
+    val cardRotation = remember { List(5) { Animatable(0f) } }
+    LaunchedEffect(state.handsDealt) {
+        if (state.hand.isEmpty()) return@LaunchedEffect
+        val startAngles = listOf(-8f, -5f, 0f, 5f, 8f)
+        for (i in 0 until 5) {
+            cardOffsetY[i].snapTo(40f)
+            cardAlpha[i].snapTo(0f)
+            cardRotation[i].snapTo(startAngles[i])
+        }
+        for (i in 0 until 5) {
+            launch {
+                delay(i * 60L)
+                launch { cardOffsetY[i].animateTo(0f, spring(dampingRatio = 0.5f, stiffness = 632f)) }
+                launch { cardAlpha[i].animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 632f)) }
+                launch { cardRotation[i].animateTo(0f, spring(dampingRatio = 0.4f, stiffness = 987f)) }
+            }
+        }
+    }
 
     if (showPayTable) {
         PayTableDialog(
             payTable = viewModel.payTable,
             currentBet = state.currentBet,
             language = language,
-            onDismiss = { showPayTable = false }
+            onDismiss = { showPayTable = false },
+            isHit = { entry ->
+                state.phase == VideoPokerPhase.Result &&
+                    state.lastPayout > 0 &&
+                    state.lastHandName == entry.handName
+            },
+            winFlash = winFlash
         )
     }
 
@@ -146,6 +274,11 @@ fun VideoPokerBoard(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        com.leah.honeycomb.BannerToast(
+            text = activeBanner,
+            manuallyDismissBanners = manuallyDismissBanners,
+            onDismiss = { viewModel.dismissBanner() }
+        )
         val isLandscape = maxWidth > maxHeight
         val scoreCapsule = @Composable {
             Row(
@@ -195,7 +328,13 @@ fun VideoPokerBoard(
             if (state.phase == VideoPokerPhase.Result) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     if (state.lastPayout > 0) {
-                        Text(localizedHandName(state.lastHandName, language), color = Color.Yellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            localizedHandName(state.lastHandName, language),
+                            color = Color.Yellow,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.graphicsLayer(scaleX = headlineScale.value, scaleY = headlineScale.value)
+                        )
                         Text("Win $${state.lastPayout}", color = Color.Yellow, fontSize = 20.sp)
                     } else {
                         Text(com.leah.honeycomb.Strings.get(StringKey.GameOver, language), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -225,6 +364,14 @@ fun VideoPokerBoard(
                     state.hand.forEachIndexed { index, card ->
                         key(card.id) {
                             val isHeld = state.heldIndices.contains(index)
+                            // Held-card lift (VideoPokerTouchView.swift:499,503): a held card
+                            // rises by 18dp while holding is in progress, eased in/out over
+                            // 150ms.
+                            val lifting = isHeld && state.phase == VideoPokerPhase.Holding
+                            val liftDp by animateFloatAsState(
+                                targetValue = if (lifting) -18f else 0f,
+                                animationSpec = tween(150, easing = FastOutSlowInEasing)
+                            )
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 if (isHeld) {
                                     Text("HELD", color = Color.Yellow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -236,6 +383,11 @@ fun VideoPokerBoard(
                                         .clickable(enabled = state.phase == VideoPokerPhase.Holding) {
                                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             viewModel.toggleHold(index)
+                                        }
+                                        .offset(y = (cardOffsetY[index].value + liftDp).dp)
+                                        .graphicsLayer {
+                                            alpha = cardAlpha[index].value
+                                            rotationZ = cardRotation[index].value
                                         }
                                 ) {
                                     CardView(card = card, modifier = Modifier.size(cardW, cardH))
@@ -342,6 +494,12 @@ fun VideoPokerBoard(
                     }
                 }
             }
+        }
+
+        // Listed last (highest z-order) — matches iOS/Windows: the burst renders in front of
+        // the result banner/pay-table pulse rather than behind it.
+        Box(modifier = Modifier.fillMaxSize()) {
+            com.leah.honeycomb.WinParticleView(active = showParticles)
         }
     }
 }

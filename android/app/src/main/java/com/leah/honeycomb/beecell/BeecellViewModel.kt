@@ -17,11 +17,52 @@ import kotlin.math.max
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 class BeecellViewModel(
     val sharedOptions: SharedGameOptions,
-    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
+    private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+    private val bannerCatalog: com.leah.honeycomb.BannerCatalog
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BeecellState())
     val state: StateFlow<BeecellState> = _state.asStateFlow()
+
+    // FIFO banner queue (milestones, loading flavor, idle nudges) — see
+    // com.leah.honeycomb.BannerQueue/BannerCatalog.
+    private val bannerQueue = com.leah.honeycomb.BannerQueue(viewModelScope) { sharedOptions.manuallyDismissBanners.value }
+    val activeBanner: StateFlow<String?> = bannerQueue.active
+    private fun enqueueBanner(text: String) = bannerQueue.enqueue(text)
+    fun dismissBanner() = bannerQueue.dismissCurrent()
+
+    private fun checkWinMilestones(previousGamesWon: Int, newGamesWon: Int) {
+        val thresholds = listOf(
+            10 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches10TotalWins,
+            100 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches100TotalWins,
+            1000 to com.leah.honeycomb.BannerId.MilestonesPlayerReaches1000TotalWins
+        )
+        for ((threshold, id) in thresholds) {
+            if (newGamesWon != threshold || previousGamesWon >= threshold) continue
+            val result = bannerCatalog.fire(id)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
+
+    private var hasFiredLoadingBannerThisSession = false
+    fun checkLoadingBanner() {
+        if (hasFiredLoadingBannerThisSession) return
+        hasFiredLoadingBannerThisSession = true
+        val result = bannerCatalog.fire(bannerCatalog.loadingBannerId())
+        if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+    }
+
+    private var idleCheckGeneration = 0
+    fun scheduleIdleActionCheck() {
+        idleCheckGeneration++
+        val generation = idleCheckGeneration
+        viewModelScope.launch {
+            delay(60000)
+            if (idleCheckGeneration != generation || _state.value.hasWon) return@launch
+            val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.IdleActionNoActionTakenForOneMinute)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
+    }
 
     private fun loadOptions(): BeecellOptions =
         PreferencesHelper.getObjectSync(dataStore, "beecell_options", BeecellOptions.serializer(), BeecellOptions())
@@ -382,7 +423,13 @@ class BeecellViewModel(
             updateModeStats(4) { it.copy(currentStreak = 0) }
         }
 
+        if ((_statistics.value.statsByFreeCells[4]?.gamesPlayed ?: 0) == 0) {
+            val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.MilestonesFirstLaunchEver)
+            if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
+        }
         updateModeStats(4) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
+        bannerQueue.clear()
+        scheduleIdleActionCheck()
 
         undoStack.clear()
         
@@ -583,6 +630,7 @@ class BeecellViewModel(
             score = maxOf(0, currentState.score + scoreDelta),
             movesCount = currentState.movesCount + 1
         )
+        scheduleIdleActionCheck()
 
         checkWinState()
         checkAutocompleteState()
@@ -625,6 +673,7 @@ class BeecellViewModel(
 
             val timeInSeconds = _state.value.timerSeconds
             val finalScore = _state.value.score
+            val previousGamesWon = _statistics.value.statsByFreeCells[4]?.gamesWon ?: 0
             updateModeStats(4) { stats ->
                 val newStreak = stats.currentStreak + 1
                 var updated = stats.copy(
@@ -643,9 +692,10 @@ class BeecellViewModel(
                 }
                 updated
             }
+            checkWinMilestones(previousGamesWon, _statistics.value.statsByFreeCells[4]?.gamesWon ?: 0)
         }
     }
-    
+
     private fun isProgressiveMove(cards: List<Card>, source: Pile, target: Pile): Boolean {
         if (source.type == PileType.Foundation) return false
         if (target.type == PileType.Foundation) return true

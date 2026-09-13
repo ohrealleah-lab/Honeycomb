@@ -33,15 +33,15 @@ class AppContainer(private val context: Context) {
     // main thread before the first frame, regardless of which game (if any) the player
     // actually opens. Lazy defers each game's reads to the first time it's actually
     // navigated to, so a typical session pays for 1-2 games instead of 6.
-    val klondikeViewModel by lazy { GameViewModel(sharedOptions, context.dataStore) }
-    val spiderViewModel by lazy { SpiderViewModel(sharedOptions, context.dataStore) }
-    val beecellViewModel by lazy { BeecellViewModel(sharedOptions, context.dataStore) }
-    val blackjackViewModel by lazy { BlackjackViewModel(sharedOptions, context.dataStore) }
-    val videoPokerViewModel by lazy { VideoPokerViewModel(sharedOptions, context.dataStore) }
+    val klondikeViewModel by lazy { GameViewModel(sharedOptions, context.dataStore, bannerCatalog) }
+    val spiderViewModel by lazy { SpiderViewModel(sharedOptions, context.dataStore, bannerCatalog) }
+    val beecellViewModel by lazy { BeecellViewModel(sharedOptions, context.dataStore, bannerCatalog) }
+    val blackjackViewModel by lazy { BlackjackViewModel(sharedOptions, context.dataStore, bannerCatalog) }
+    val videoPokerViewModel by lazy { VideoPokerViewModel(sharedOptions, context.dataStore, bannerCatalog) }
 
     val honeycombDatabase by lazy { HoneycombDatabase(context.dataStore) }
     val honeycombProfileManager by lazy { HoneycombProfileManager(context.dataStore, honeycombDatabase) }
-    val honeycombViewModel by lazy { HoneycombViewModel(sharedOptions, honeycombDatabase, honeycombProfileManager, context.dataStore) }
+    val honeycombViewModel by lazy { HoneycombViewModel(sharedOptions, honeycombDatabase, honeycombProfileManager, context.dataStore, bannerCatalog, language) }
     
     val soundManager = com.leah.honeycomb.audio.SoundManager(context, sharedOptions.isSoundEnabled)
     
@@ -54,7 +54,12 @@ class AppContainer(private val context: Context) {
     
     private val _language = MutableStateFlow(AppLanguage.English)
     val language: StateFlow<AppLanguage> = _language
-    
+
+    // Shared banner/toast content runtime — see BannerCatalog.kt. Built eagerly (unlike
+    // the per-game ViewModels below) since it's cheap (one small JSON asset parse) and
+    // every game's ViewModel constructor needs it.
+    val bannerCatalog = BannerCatalog(context, sharedOptions, language, context.dataStore)
+
     var initialGameMode: String = "klondike"
         private set
     

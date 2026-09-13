@@ -1,5 +1,6 @@
 package com.leah.honeycomb.beecell
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +24,8 @@ import com.leah.honeycomb.StringKey
 import com.leah.honeycomb.AppLanguage
 import androidx.compose.runtime.*
 import com.leah.honeycomb.WinAnimationView
+import com.leah.honeycomb.rememberFireOnceTrigger
+import com.leah.honeycomb.rememberDragSettle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -34,6 +37,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -75,13 +79,35 @@ fun BeecellBoard(
     val activeHint by viewModel.activeHint.collectAsState()
     val hintSourceId = activeHint?.sourcePileId
     val hintTargetId = activeHint?.targetPileId
+    val activeBanner by viewModel.activeBanner.collectAsState()
+    val manuallyDismissBanners by viewModel.sharedOptions.manuallyDismissBanners.collectAsState()
+    LaunchedEffect(Unit) { viewModel.checkLoadingBanner() }
     var activeCardW by remember { mutableStateOf(0.dp) }
     var dragState by remember { mutableStateOf(DragState()) }
     val pileFrames = remember { mutableStateMapOf<String, Rect>() }
-    
+
     var showQuitDialog by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
-    
+    val density = LocalDensity.current
+    // Drag-drop settle spring (see GameSessionHelpers.kt's DragSettle; matches iOS
+    // BeecellTouchView's withAnimation(.spring(response: 0.25, dampingFraction: 0.8))
+    // around moveCards) — purely cosmetic; the move itself is committed synchronously in
+    // performDragEnd, before this animation starts.
+    val dragSettle = rememberDragSettle()
+    fun beginDrag(newState: DragState) {
+        dragSettle.beginDrag()
+        dragState = newState
+    }
+
+    // Confetti burst, paired with WinAnimationView's bouncing cards below — mirrors iOS's
+    // BeecellTouchView onChange(of: hasWon) { showParticles = true; ...cleared after 0.8s }.
+    // See FireOnceTrigger for why this isn't a plain `var + LaunchedEffect` pair.
+    val particleTrigger = rememberFireOnceTrigger(holdMs = 800)
+    LaunchedEffect(state.hasWon) {
+        if (state.hasWon) particleTrigger.fire()
+    }
+    val showParticles = particleTrigger.active
+
     // A DragGesture has no guaranteed "cancelled" callback if the app is backgrounded
     // mid-drag — this must be a real ON_STOP lifecycle observer, not composition-dispose
     // (onDispose here only fires on leaving the composition, e.g. navigating away, which
@@ -122,7 +148,13 @@ fun BeecellBoard(
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isLandscape = maxWidth > maxHeight
-        
+
+        com.leah.honeycomb.BannerToast(
+            text = activeBanner,
+            manuallyDismissBanners = manuallyDismissBanners,
+            onDismiss = { viewModel.dismissBanner() }
+        )
+
         val scoreCapsule = @Composable {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -224,6 +256,34 @@ fun BeecellBoard(
             val downStep = cardH * 0.24f
             activeCardW = cardW
 
+            // Resolves the current drag to a target pile (if any), then animates the
+            // floating overlay stack (spring, matching iOS) from its release point to its
+            // exact resting position in that pile before committing the move.
+            fun performDragEnd() {
+                val plan = resolveDrop(dragState, pileFrames, viewModel)
+                val sourcePile = dragState.sourcePile
+                if (plan == null || sourcePile == null) {
+                    dragState = DragState()
+                    return
+                }
+                val frame = pileFrames[plan.target.id]
+                val landing = frame?.let {
+                    if (plan.isTableau) {
+                        val runningPx = plan.target.cards.size * with(density) { downStep.toPx() }
+                        Offset(it.left, it.top + runningPx)
+                    } else {
+                        it.topLeft
+                    }
+                }
+                val startOffset = Offset(dragState.startPosition.x + dragState.offset.x, dragState.startPosition.y + dragState.offset.y)
+                dragSettle.settle(
+                    start = startOffset,
+                    landing = landing,
+                    commit = { viewModel.moveCards(plan.cards, sourcePile, plan.target) },
+                    onSettled = { dragState = DragState() }
+                )
+            }
+
             Column(modifier = Modifier.padding(top = 8.dp)) {
                 // Top Row: Free Cells on left, Foundations on right
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
@@ -252,9 +312,9 @@ fun BeecellBoard(
                                                 }
                                                 launch {
                                                     detectDragGestures(
-                                                        onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), cell, layoutPos, Offset.Zero) },
+                                                        onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); beginDrag(DragState(listOf(card), cell, layoutPos, Offset.Zero)) },
                                                         onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                        onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                        onDragEnd = { performDragEnd() },
                                                         onDragCancel = { dragState = DragState() }
                                                     )
                                                 }
@@ -319,9 +379,9 @@ fun BeecellBoard(
                                                     launch {
                                                         if (viewModel.isValidDragSequence(stack)) {
                                                             detectDragGestures(
-                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
+                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); beginDrag(DragState(stack, pile, layoutPos, Offset.Zero)) },
                                                                 onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                                onDragEnd = { performDragEnd() },
                                                                 onDragCancel = { dragState = DragState() }
                                                             )
                                                         }
@@ -348,6 +408,13 @@ fun BeecellBoard(
                 zoomScale = 1f,
                 onFinished = {}
             )
+
+            // On top of the bouncing cards AND the win dialog below (zIndex 200f) —
+            // matches Klondike/Spider's identical wrapper; without it this defaults to
+            // zIndex 0 and renders underneath the dialog's scrim instead of over it.
+            Box(modifier = Modifier.fillMaxSize().zIndex(201f)) {
+                com.leah.honeycomb.WinParticleView(active = showParticles)
+            }
         }
 
         // Full screen Drag Overlay
@@ -355,9 +422,10 @@ fun BeecellBoard(
             val cardW = activeCardW
             val cardH = cardW * 1.4f
             val downStep = cardH * 0.24f
+            val displayOffset = dragSettle.displayOffset(Offset(dragState.startPosition.x + dragState.offset.x, dragState.startPosition.y + dragState.offset.y))
             Box(modifier = Modifier.fillMaxSize().zIndex(100f)) {
                 Box(modifier = Modifier
-                    .offset { IntOffset((dragState.startPosition.x + dragState.offset.x).roundToInt(), (dragState.startPosition.y + dragState.offset.y).roundToInt()) }
+                    .offset { IntOffset(displayOffset.x.roundToInt(), displayOffset.y.roundToInt()) }
                 ) {
                     dragState.cards.forEachIndexed { i, card ->
                         Box(modifier = Modifier.offset(y = downStep * i)) {
@@ -423,24 +491,29 @@ fun BeecellBoard(
         }
     }
 
-private fun handleDragEnd(
+// Result of resolving a drag release to a valid drop target — resolving no longer performs
+// the move directly (see performDragEnd) so the caller can animate the settle first.
+private data class DropPlan(val target: Pile, val cards: List<Card>, val isTableau: Boolean)
+
+private fun resolveDrop(
     dragState: DragState,
     pileFrames: Map<String, Rect>,
-    viewModel: BeecellViewModel,
-    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback
-) {
-    if (dragState.cards.isEmpty() || dragState.sourcePile == null) return
+    viewModel: BeecellViewModel
+): DropPlan? {
+    if (dragState.cards.isEmpty() || dragState.sourcePile == null) return null
     val releaseX = dragState.startPosition.x + dragState.offset.x + 40f
     val releaseY = dragState.startPosition.y + dragState.offset.y + 40f
 
     var dropTarget: Pile? = null
+    var isTableauTarget = false
     var bestDist = Float.MAX_VALUE
 
+    val tableauIds = viewModel.state.value.tableau.map { it.id }.toSet()
     val allPiles = viewModel.state.value.freeCells + viewModel.state.value.foundations + viewModel.state.value.tableau
 
     for (tab in allPiles) {
         if (tab.id == dragState.sourcePile.id) continue
-        
+
         val frame = pileFrames[tab.id] ?: continue
         val margin = 40f
         if (releaseX >= frame.left - margin && releaseX <= frame.right + margin && releaseY >= frame.top - margin) {
@@ -449,14 +522,12 @@ private fun handleDragEnd(
             if (isValid && dist < bestDist) {
                 bestDist = dist
                 dropTarget = tab
+                isTableauTarget = tab.id in tableauIds
             }
         }
     }
 
-    if (dropTarget != null) {
-        val resolved = SmartDrop.resolve(dragState.cards) { viewModel.isValidMove(it, dropTarget!!) }
-        if (resolved != null) {
-            viewModel.moveCards(resolved, dragState.sourcePile, dropTarget)
-        }
-    }
+    val target = dropTarget ?: return null
+    val resolved = SmartDrop.resolve(dragState.cards) { viewModel.isValidMove(it, target) } ?: return null
+    return DropPlan(target, resolved, isTableauTarget)
 }

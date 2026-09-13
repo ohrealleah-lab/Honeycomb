@@ -1,8 +1,7 @@
 package com.leah.honeycomb.klondike
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -36,6 +35,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -85,11 +85,32 @@ fun KlondikeBoard(
     val pointPopup by viewModel.pointPopup.collectAsState()
     val isStockExhausted by viewModel.isStockExhausted.collectAsState()
     val noStressMode by viewModel.sharedOptions.noStressMode.collectAsState()
+    val activeBanner by viewModel.activeBanner.collectAsState()
+    val manuallyDismissBanners by viewModel.sharedOptions.manuallyDismissBanners.collectAsState()
+    LaunchedEffect(Unit) { viewModel.checkLoadingBanner() }
 
     var dragState by remember { mutableStateOf(DragState()) }
     var lastStockTapTime by remember { mutableStateOf(0L) }
     val haptics = LocalHapticFeedback.current
     val pileFrames = remember { mutableMapOf<String, Rect>() }
+    val density = LocalDensity.current
+    val dragScope = rememberCoroutineScope()
+    // Drag-drop settle spring (see GameSessionHelpers.kt's DragSettle) — purely cosmetic:
+    // animates the drag overlay from its release point to its resting position in the
+    // destination pile so the static per-card render it hands off to never has to "catch
+    // up." The move itself is committed synchronously in performDragEnd, before this
+    // animation starts.
+    val dragSettle = rememberDragSettle()
+
+    // Starts a new drag: invalidates any settle still in flight (see DragSettle) so its
+    // later completion can't clobber this drag's state, then adopts it.
+    fun beginDrag(newState: DragState) {
+        dragSettle.beginDrag()
+        dragState = newState
+    }
+    // Stock -> waste slide-in (matches Windows' CardView.BeginSlideIn / iOS's
+    // withAnimation(.easeInOut(duration: 0.22)) around drawCard()).
+    val wasteSlideOffset = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
 
     // A DragGesture has no guaranteed "cancelled" callback if the app is backgrounded
     // mid-drag (home gesture, notification shade, an incoming call) — without this, the
@@ -107,6 +128,16 @@ fun KlondikeBoard(
 
     var activeCardW by remember { mutableStateOf(0.dp) }
     var showQuitConfirm by remember { mutableStateOf(false) }
+
+    // Confetti burst on the win overlay — mirrors iOS's KlondikeTouchView onChange(of: hasWon)
+    // { showParticles = true; ...cleared after 0.8s }. See FireOnceTrigger for why this
+    // isn't a plain `var + LaunchedEffect(hasWon) { ...delay...}` (that pattern can get
+    // stuck permanently true if interrupted).
+    val particleTrigger = rememberFireOnceTrigger(holdMs = 800)
+    LaunchedEffect(state.hasWon) {
+        if (state.hasWon) particleTrigger.fire()
+    }
+    val showParticles = particleTrigger.active
 
     BackHandler(enabled = state.movesCount > 0 && !state.hasWon) {
         showQuitConfirm = true
@@ -134,7 +165,13 @@ fun KlondikeBoard(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        
+
+        com.leah.honeycomb.BannerToast(
+            text = activeBanner,
+            manuallyDismissBanners = manuallyDismissBanners,
+            onDismiss = { viewModel.dismissBanner() }
+        )
+
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isLandscape = maxWidth > maxHeight
             
@@ -246,6 +283,44 @@ fun KlondikeBoard(
                 val cardW = (baseCardW * heightShrink).dp
                 LaunchedEffect(cardW) { activeCardW = cardW }
                 val cardH = cardW * 1.4f
+                val upStep = cardH * 0.24f
+                val downStep = cardH * 0.12f
+
+                // Resolves the current drag to a target pile (if any), then animates the
+                // floating overlay stack (spring, matching iOS) from its release point to
+                // its exact resting position in that pile before committing the move —
+                // avoids a pop when the overlay hands off to the static per-card offset.
+                fun performDragEnd() {
+                    val plan = resolveDrop(dragState, pileFrames, viewModel)
+                    val sourcePile = dragState.sourcePile
+                    if (plan == null || sourcePile == null) {
+                        dragState = DragState()
+                        return
+                    }
+                    val frame = pileFrames[plan.target.id]
+                    val landing = frame?.let {
+                        if (plan.isTableau) {
+                            var runningPx = 0f
+                            for (c in plan.target.cards) {
+                                runningPx += with(density) { (if (c.faceUp) upStep else downStep).toPx() }
+                            }
+                            Offset(it.left, it.top + runningPx)
+                        } else {
+                            it.topLeft
+                        }
+                    }
+                    val startOffset = Offset(dragState.startPosition.x + dragState.offset.x, dragState.startPosition.y + dragState.offset.y)
+                    dragSettle.settle(
+                        start = startOffset,
+                        landing = landing,
+                        commit = {
+                            val committed = viewModel.moveCards(plan.cards, sourcePile, plan.target)
+                            if (committed) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            committed
+                        },
+                        onSettled = { dragState = DragState() }
+                    )
+                }
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Top Row
@@ -260,7 +335,22 @@ fun KlondikeBoard(
                                 if (now - lastStockTapTime < 250) return@clickable
                                 lastStockTapTime = now
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                val wasRealDraw = state.stock.cards.isNotEmpty()
+                                val stockFrame = pileFrames[state.stock.id]
+                                val wasteFrame = pileFrames[state.waste.id]
                                 viewModel.drawCard()
+                                if (wasRealDraw && stockFrame != null && wasteFrame != null) {
+                                    val newState = viewModel.state.value
+                                    val newWasteCards = newState.waste.cards.takeLast(newState.wasteDisplayCount)
+                                    val topIndex = (newWasteCards.size - 1).coerceAtLeast(0)
+                                    val fanStepPx = with(density) { (cardW * 0.16f).toPx() }
+                                    val landingX = wasteFrame.left + fanStepPx * topIndex
+                                    val landingY = wasteFrame.top
+                                    dragScope.launch {
+                                        wasteSlideOffset.snapTo(Offset(stockFrame.left - landingX, stockFrame.top - landingY))
+                                        wasteSlideOffset.animateTo(Offset.Zero, tween(durationMillis = 210, easing = EaseInOut))
+                                    }
+                                }
                             }
                             .hintHighlight(isHighlighted = state.stock.id == hintSourceId || state.stock.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
@@ -285,6 +375,10 @@ fun KlondikeBoard(
                                 val isTop = i == wasteCards.size - 1
                                 Box(modifier = Modifier
                                     .offset(x = fanStep * i)
+                                    .offset {
+                                        if (isTop) IntOffset(wasteSlideOffset.value.x.roundToInt(), wasteSlideOffset.value.y.roundToInt())
+                                        else IntOffset.Zero
+                                    }
                                     .zIndex(i.toFloat())
                                 ) {
                                     val isDragging = dragState.cards.any { it.id == card.id }
@@ -304,9 +398,9 @@ fun KlondikeBoard(
                                                         }
                                                         launch {
                                                             detectDragGestures(
-                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(card), state.waste, layoutPos, Offset.Zero) },
+                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); beginDrag(DragState(listOf(card), state.waste, layoutPos, Offset.Zero)) },
                                                                 onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                                onDragEnd = { performDragEnd() },
                                                                 onDragCancel = { dragState = DragState() }
                                                             )
                                                         }
@@ -340,9 +434,9 @@ fun KlondikeBoard(
                                             .onGloballyPositioned { layoutPos = it.positionInRoot() }
                                             .pointerInput(topCard.id) {
                                                 detectDragGestures(
-                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(listOf(topCard), pile, layoutPos, Offset.Zero) },
+                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); beginDrag(DragState(listOf(topCard), pile, layoutPos, Offset.Zero)) },
                                                     onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                    onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                    onDragEnd = { performDragEnd() },
                                                     onDragCancel = { dragState = DragState() }
                                                 )
                                             }
@@ -358,8 +452,6 @@ fun KlondikeBoard(
 
                     // Tableau
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                        val upStep = cardH * 0.24f
-                        val downStep = cardH * 0.12f
                         state.tableau.forEach { pile ->
                             Box(modifier = Modifier
                                 .width(cardW)
@@ -391,9 +483,9 @@ fun KlondikeBoard(
                                                         }
                                                         launch {
                                                             detectDragGestures(
-                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); dragState = DragState(stack, pile, layoutPos, Offset.Zero) },
+                                                                onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); beginDrag(DragState(stack, pile, layoutPos, Offset.Zero)) },
                                                                 onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                                onDragEnd = { handleDragEnd(dragState, pileFrames, viewModel, haptics); dragState = DragState() },
+                                                                onDragEnd = { performDragEnd() },
                                                                 onDragCancel = { dragState = DragState() }
                                                             )
                                                         }
@@ -417,9 +509,10 @@ fun KlondikeBoard(
             val cardW = activeCardW
             val cardH = cardW * 1.4f
             val upStep = cardH * 0.24f
+            val displayOffset = dragSettle.displayOffset(Offset(dragState.startPosition.x + dragState.offset.x, dragState.startPosition.y + dragState.offset.y))
             Box(modifier = Modifier.fillMaxSize().zIndex(100f)) {
                 Box(modifier = Modifier
-                    .offset { IntOffset((dragState.startPosition.x + dragState.offset.x).roundToInt(), (dragState.startPosition.y + dragState.offset.y).roundToInt()) }
+                    .offset { IntOffset(displayOffset.x.roundToInt(), displayOffset.y.roundToInt()) }
                 ) {
                     dragState.cards.forEachIndexed { i, card ->
                         Box(modifier = Modifier.offset(y = upStep * i)) {
@@ -474,6 +567,15 @@ fun KlondikeBoard(
             } // Close BoxWithConstraints for landscape root
 
         if (state.hasWon) {
+            // Bouncing-card victory cascade — was wired up on Beecell only; ported to
+            // Klondike here too so all three K/B/S games match (see WinAnimationView.kt).
+            WinAnimationView(
+                foundations = state.foundations,
+                pileFrames = pileFrames,
+                zoomScale = 1f,
+                onFinished = {}
+            )
+
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
                 Card {
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -486,6 +588,12 @@ fun KlondikeBoard(
                         Button(onClick = { viewModel.startNewGame() }) { Text("Play Again") }
                     }
                 }
+            }
+
+            // On top of the win banner, matching iOS's ordering (WinParticleView listed after
+            // the win overlay in KlondikeTouchView.swift).
+            Box(modifier = Modifier.fillMaxSize().zIndex(201f)) {
+                com.leah.honeycomb.WinParticleView(active = showParticles)
             }
         }
 
@@ -513,17 +621,21 @@ fun KlondikeBoard(
     }
 }
 
-private fun handleDragEnd(
+// Result of resolving a drag release to a valid drop target — resolving no longer performs
+// the move directly (see performDragEnd) so the caller can animate the settle first.
+private data class DropPlan(val target: Pile, val cards: List<Card>, val isTableau: Boolean)
+
+private fun resolveDrop(
     dragState: DragState,
     pileFrames: Map<String, Rect>,
-    viewModel: GameViewModel,
-    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback
-) {
-    if (dragState.cards.isEmpty() || dragState.sourcePile == null) return
+    viewModel: GameViewModel
+): DropPlan? {
+    if (dragState.cards.isEmpty() || dragState.sourcePile == null) return null
     val releaseX = dragState.startPosition.x + dragState.offset.x + 50f
     val releaseY = dragState.startPosition.y + dragState.offset.y + 50f
 
     var dropTarget: Pile? = null
+    var isTableauTarget = false
     var bestDist = Float.MAX_VALUE
 
     // Target Tableau
@@ -536,6 +648,7 @@ private fun handleDragEnd(
             if (isValid && dist < bestDist) {
                 bestDist = dist
                 dropTarget = tab
+                isTableauTarget = true
             }
         }
     }
@@ -552,17 +665,13 @@ private fun handleDragEnd(
                 if (isValid && dist < bestDist) {
                     bestDist = dist
                     dropTarget = f
+                    isTableauTarget = false
                 }
             }
         }
     }
 
-    if (dropTarget != null) {
-        val resolved = SmartDrop.resolve(dragState.cards) { viewModel.isValidMove(it, dropTarget!!) }
-        if (resolved != null) {
-            if (viewModel.moveCards(resolved, dragState.sourcePile, dropTarget)) {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-            }
-        }
-    }
+    val target = dropTarget ?: return null
+    val resolved = SmartDrop.resolve(dragState.cards) { viewModel.isValidMove(it, target) } ?: return null
+    return DropPlan(target, resolved, isTableauTarget)
 }

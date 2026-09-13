@@ -169,6 +169,10 @@ fun HoneycombMatchUI(
 
     var showRulesPopover by remember { mutableStateOf(false) }
 
+    // Fires once per app session, the first time this screen actually displays — see
+    // HoneycombViewModel.checkLoadingBanner/BannerCatalog.loadingBannerId.
+    LaunchedEffect(Unit) { viewModel.checkLoadingBanner() }
+
     if (state.pendingSteal != null) {
         AlertDialog(
             onDismissRequest = { viewModel.cancelPendingSteal() },
@@ -479,9 +483,21 @@ fun HoneycombMatchUI(
             }
         }
 
-        // Same!/Plus!/Fallen Ace! capture-rule announcement banner. See
-        // HoneycombViewModel.enqueueCaptureBanners/showFrontBanner for the queue.
-        Box(modifier = Modifier.fillMaxWidth().zIndex(250f), contentAlignment = Alignment.TopCenter) {
+        // Catalog-backed banner: Same!/Plus!/Fallen Ace! captures, combos, milestones,
+        // loading flavor, idle nudges, the match-start rule announcement, etc. See
+        // HoneycombViewModel.enqueueBanner/BannerQueue for the queue.
+        val manuallyDismissBanners by com.leah.honeycomb.LocalAppContainer.current.sharedOptions.manuallyDismissBanners.collectAsState()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(250f)
+                .then(
+                    if (manuallyDismissBanners && activeBanner != null) {
+                        Modifier.clickable { viewModel.dismissBanner() }
+                    } else Modifier
+                ),
+            contentAlignment = Alignment.Center
+        ) {
             AnimatedVisibility(
                 visible = activeBanner != null,
                 enter = fadeIn(animationSpec = tween(150)),
@@ -489,7 +505,6 @@ fun HoneycombMatchUI(
             ) {
                 Box(
                     modifier = Modifier
-                        .padding(top = 12.dp)
                         .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(10.dp))
                         .padding(horizontal = 18.dp, vertical = 10.dp)
                 ) {
