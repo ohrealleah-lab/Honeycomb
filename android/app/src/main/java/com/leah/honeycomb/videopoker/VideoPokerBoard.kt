@@ -320,7 +320,7 @@ fun VideoPokerBoard(
                 modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                     .clickable { showPayTable = true }
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .padding(horizontal = 24.dp, vertical = 4.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(com.leah.honeycomb.Strings.get(StringKey.CreditsLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
@@ -357,16 +357,8 @@ fun VideoPokerBoard(
             }
         }
 
-        // Holding-phase hint only now — the Result-phase content below moved into
-        // resultOverlay (a full-screen modal), since it isn't the same kind of thing as
-        // this inline hint text and doesn't belong in the normal layout flow.
-        val resultText = @Composable {
-            if (state.phase == VideoPokerPhase.Holding) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(com.leah.honeycomb.Strings.get(StringKey.TapHoldDrawHint, language), color = Color.White, fontSize = 16.sp)
-                }
-            }
-        }
+        // Hint text removed — layout space reclaimed for cards and action buttons.
+        val resultText = @Composable {}
 
         // Full-screen win/lose overlay — matches iOS's resultOverlay (ZStack: a dimmed
         // scrim behind a dark banner card, tap-anywhere-to-deal-the-next-hand, no X
