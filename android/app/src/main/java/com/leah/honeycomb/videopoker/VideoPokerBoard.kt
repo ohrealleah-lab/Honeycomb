@@ -3,6 +3,7 @@ package com.leah.honeycomb.videopoker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +24,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.repeatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -33,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.leah.honeycomb.CardView
 import com.leah.honeycomb.rememberFireOnceTrigger
 import com.leah.honeycomb.audio.UISound
@@ -184,6 +187,36 @@ fun VideoPokerBoard(
         }
     }
 
+    // Full-screen result banner: shows ~1.0s after the hand resolves (so the player
+    // sees the final hand first), stays up ~4.0s, then auto-hides — or the player can
+    // tap the scrim/card to deal the next hand immediately. Mirrors iOS's
+    // showResultBanner/resultBannerShowTask/resultAnimationTask/resultHideTask
+    // (VideoPokerTouchView.swift:213-251). Separate from `state.phase == Result` itself
+    // (which stays true the whole time, showing the Deal/chip controls underneath) —
+    // this only gates the modal banner's own visibility.
+    var showResultBanner by remember { mutableStateOf(false) }
+    val resultBannerScope = rememberCoroutineScope()
+    var resultBannerJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    LaunchedEffect(state.phase) {
+        resultBannerJob?.cancel()
+        if (state.phase == VideoPokerPhase.Result) {
+            resultBannerJob = resultBannerScope.launch {
+                kotlinx.coroutines.delay(1000)
+                showResultBanner = true
+                kotlinx.coroutines.delay(4000)
+                showResultBanner = false
+            }
+        } else {
+            showResultBanner = false
+        }
+    }
+    fun dealFromResultBanner() {
+        resultBannerJob?.cancel()
+        showResultBanner = false
+        viewModel.deal()
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+
     // Mirrors VideoPokerTouchView.swift's winFlash: flips true for ~0.45s right as a
     // winning hand resolves, driving the pay-table row pulse, the result headline pop
     // below, and the confetti burst's own trigger — all three read the same underlying
@@ -324,25 +357,72 @@ fun VideoPokerBoard(
             }
         }
 
+        // Holding-phase hint only now — the Result-phase content below moved into
+        // resultOverlay (a full-screen modal), since it isn't the same kind of thing as
+        // this inline hint text and doesn't belong in the normal layout flow.
         val resultText = @Composable {
-            if (state.phase == VideoPokerPhase.Result) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    if (state.lastPayout > 0) {
-                        Text(
-                            localizedHandName(state.lastHandName, language),
-                            color = Color.Yellow,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.graphicsLayer(scaleX = headlineScale.value, scaleY = headlineScale.value)
-                        )
-                        Text("Win $${state.lastPayout}", color = Color.Yellow, fontSize = 20.sp)
-                    } else {
-                        Text(com.leah.honeycomb.Strings.get(StringKey.GameOver, language), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            } else if (state.phase == VideoPokerPhase.Holding) {
+            if (state.phase == VideoPokerPhase.Holding) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(com.leah.honeycomb.Strings.get(StringKey.TapHoldDrawHint, language), color = Color.White, fontSize = 16.sp)
+                }
+            }
+        }
+
+        // Full-screen win/lose overlay — matches iOS's resultOverlay (ZStack: a dimmed
+        // scrim behind a dark banner card, tap-anywhere-to-deal-the-next-hand, no X
+        // button, gold glow only on a win). Gated on showResultBanner (its own timed
+        // show/hide), not state.phase == Result directly — the Deal/chip controls
+        // underneath stay in the normal layout the whole time state.phase == Result.
+        val resultOverlay = @Composable {
+            if (showResultBanner) {
+                val isWin = state.lastPayout > 0
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.45f))
+                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { dealFromResultBanner() }
+                        .zIndex(260f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .shadow(
+                                if (isWin) 24.dp else 0.dp,
+                                RoundedCornerShape(28.dp),
+                                spotColor = Color(0xFFFFD700).copy(alpha = 0.5f)
+                            )
+                            .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(28.dp))
+                            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { dealFromResultBanner() }
+                            .padding(horizontal = 40.dp, vertical = 32.dp)
+                    ) {
+                        if (isWin) {
+                            // Matches iOS's resultHandNameFmt ("%@!") rather than the bare
+                            // hand name with no exclamation, and resultCreditsWonFmt ("+%d
+                            // Credits") rather than hardcoded "Win $N" — same class of copy
+                            // drift as Blackjack's outcome text had (see BlackjackBoard.kt).
+                            Text(
+                                com.leah.honeycomb.Strings.format(StringKey.ResultHandNameFmt, language, localizedHandName(state.lastHandName, language)),
+                                color = Color.Yellow,
+                                fontSize = 40.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.graphicsLayer(scaleX = headlineScale.value, scaleY = headlineScale.value)
+                            )
+                            if (!viewModel.isFreePlay) {
+                                Text(com.leah.honeycomb.Strings.format(StringKey.ResultCreditsWonFmt, language, state.lastPayout), color = Color.White, fontSize = 24.sp)
+                            }
+                        } else {
+                            Text(
+                                com.leah.honeycomb.Strings.get(StringKey.NotTodayPartner, language),
+                                color = Color.Yellow,
+                                fontSize = 40.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                            if (!viewModel.isFreePlay) {
+                                Text(com.leah.honeycomb.Strings.format(StringKey.ResultCreditsLostFmt, language, state.currentBet), color = Color.White, fontSize = 24.sp)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -484,17 +564,21 @@ fun VideoPokerBoard(
                     Spacer(modifier = Modifier.weight(1f))
                 }
                 Row(modifier = Modifier.fillMaxSize().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        cardsRow()
-                    }
-                    Column(modifier = Modifier.width(300.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                         resultText()
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        cardsRow()
+                        Spacer(modifier = Modifier.height(8.dp))
                         bottomControls()
                     }
                 }
             }
         }
+
+        // Overlay, not part of either orientation's layout flow above — centers on the
+        // whole screen regardless of how tall the cards/controls areas are, matching
+        // iOS's own resultOverlay declared outside its content stack.
+        resultOverlay()
 
         // Listed last (highest z-order) — matches iOS/Windows: the burst renders in front of
         // the result banner/pay-table pulse rather than behind it.

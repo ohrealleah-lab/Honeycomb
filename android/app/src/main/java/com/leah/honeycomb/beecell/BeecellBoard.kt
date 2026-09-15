@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -453,39 +454,40 @@ fun BeecellBoard(
 
         
         // End Game Overlays
+        var stuckDismissed by remember { mutableStateOf(false) }
+        LaunchedEffect(isStuck) { if (!isStuck) stuckDismissed = false }
+        var autocompleteDismissed by remember { mutableStateOf(false) }
+        LaunchedEffect(isAutocompleteAvailable) { if (!isAutocompleteAvailable) autocompleteDismissed = false }
+
         if (state.hasWon) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
-                Card {
-                    Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(com.leah.honeycomb.Strings.get(StringKey.YouWin, language), color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
-                        Text("${com.leah.honeycomb.Strings.get(StringKey.ScoreLabel, language)}: ${state.score}")
-                        Text("${com.leah.honeycomb.Strings.get(StringKey.TimeLabel, language)}: ${com.leah.honeycomb.formatSeconds(state.timerSeconds)}")
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.startNewGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.NewGame, language)) }
-                    }
+                com.leah.honeycomb.GameOverlayCard {
+                    Text(com.leah.honeycomb.Strings.get(StringKey.YouWin, language), color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+                    Text("${com.leah.honeycomb.Strings.get(StringKey.ScoreLabel, language)}: ${state.score}", color = Color.White)
+                    Text("${com.leah.honeycomb.Strings.get(StringKey.TimeLabel, language)}: ${com.leah.honeycomb.formatSeconds(state.timerSeconds)}", color = Color.White)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.startNewGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.NewGame, language)) }
                 }
             }
-        } else if (isStuck) {
+        } else if (isStuck && !stuckDismissed) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
-                Card {
-                    Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(com.leah.honeycomb.Strings.get(StringKey.GameOver, language), color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
-                        Text(com.leah.honeycomb.Strings.get(StringKey.NoMovesRemaining, language))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.restartCurrentGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.Restart, language)) }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.startNewGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.NewGame, language)) }
-                    }
+                com.leah.honeycomb.GameOverlayCard(onDismiss = { stuckDismissed = true }) {
+                    Text(com.leah.honeycomb.Strings.get(StringKey.GameOver, language), color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+                    Text(com.leah.honeycomb.Strings.get(StringKey.NoMovesRemaining, language), color = Color.White)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.restartCurrentGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.Restart, language)) }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = { viewModel.startNewGame() }) { Text(com.leah.honeycomb.Strings.get(StringKey.NewGame, language)) }
                 }
             }
-        } else if (isAutocompleteAvailable) {
+        } else if (isAutocompleteAvailable && !autocompleteDismissed) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).zIndex(200f), contentAlignment = Alignment.Center) {
-                Card {
-                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(com.leah.honeycomb.Strings.get(StringKey.VictoryGuaranteed, language), color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.runAutocomplete() }) { Text(com.leah.honeycomb.Strings.get(StringKey.AutocompleteGame, language)) }
-                    }
+                com.leah.honeycomb.GameOverlayCard(onDismiss = { autocompleteDismissed = true }) {
+                    Text(com.leah.honeycomb.Strings.get(StringKey.VictoryGuaranteed, language), color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(com.leah.honeycomb.Strings.get(StringKey.AutocompleteBodyOther, language), color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = { viewModel.runAutocomplete() }) { Text(com.leah.honeycomb.Strings.get(StringKey.AutocompleteGame, language)) }
                 }
             }
         }

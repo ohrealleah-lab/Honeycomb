@@ -216,8 +216,11 @@ fun CardFrontView(card: Card, suitColor: Color) {
             horizontalArrangement = Arrangement.spacedBy(1.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = card.rankString, color = suitColor, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-            Text(text = card.suit.symbol, color = suitColor, fontSize = 14.sp)
+            Text(text = card.rankString, color = suitColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+            // Smaller than the center pips (~13.35sp at CardDimensions' fixed 114dp
+            // reference width, see CardCenterSuitView) — a corner index reads as a
+            // compact label, not another full-size pip.
+            Text(text = card.suit.symbol, color = suitColor, fontSize = 10.sp)
         }
 
         // Bottom Right Index
@@ -229,8 +232,11 @@ fun CardFrontView(card: Card, suitColor: Color) {
             horizontalArrangement = Arrangement.spacedBy(1.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = card.rankString, color = suitColor, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-            Text(text = card.suit.symbol, color = suitColor, fontSize = 14.sp)
+            Text(text = card.rankString, color = suitColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+            // Smaller than the center pips (~13.35sp at CardDimensions' fixed 114dp
+            // reference width, see CardCenterSuitView) — a corner index reads as a
+            // compact label, not another full-size pip.
+            Text(text = card.suit.symbol, color = suitColor, fontSize = 10.sp)
         }
     }
 }
@@ -292,7 +298,13 @@ fun CardCenterSuitView(card: Card, suitColor: Color, modifier: Modifier = Modifi
                 Text(
                     text = card.suit.symbol,
                     color = suitColor,
-                    fontSize = (refWidth * 32f / 128f).sp,
+                    // The tightest row spacing (rank 9/10's stacked pairs) is 28 mac-points
+                    // center-to-center. At the old 32pt font, Compose's default ~1.2x line
+                    // height gave each glyph a ~38pt bounding box — bigger than the 28pt slot
+                    // it sat in, so adjacent pips overlapped regardless of card size (the
+                    // ratio is constant). 17pt keeps the glyph box at roughly 73% of that
+                    // slot (~20pt), leaving a visible gap instead of touching/overlapping.
+                    fontSize = (refWidth * 17f / 128f).sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .align(Alignment.Center)

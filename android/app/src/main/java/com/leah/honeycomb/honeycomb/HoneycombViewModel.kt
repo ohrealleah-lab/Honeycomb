@@ -686,6 +686,12 @@ class HoneycombViewModel(
 
     fun dismissBanner() = bannerQueue.dismissCurrent()
 
+    // Matches iOS's postGameOverlay dismiss button (viewModel.showPostGamePrompt = false) —
+    // the win/lose overlay card's own top-trailing X, not a route/game-state change.
+    fun dismissPostGamePrompt() {
+        _state.update { it.copy(showPostGamePrompt = false) }
+    }
+
     // Fires `id` through the banner catalog and returns whatever it decided should
     // show — the catalog's own flavor text (per the 20% gate), or `existingDefaultText`
     // otherwise. Deliberately uses the caller's own default rather than the catalog

@@ -31,6 +31,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import com.leah.honeycomb.Strings
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.leah.honeycomb.Card
 import com.leah.honeycomb.CardView
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // Dims a color roughly the way SwiftUI's brightness(-0.08) does, for the pressed-state
 // feedback below (CasinoButton.swift:12-14 on iOS: scaleEffect(0.93) + brightness(-0.08)).
@@ -163,6 +166,34 @@ fun BlackjackBoard(
     }
     val showParticles = particleTrigger.active
 
+    // Full-screen result banner: shows ~1.0s after the round resolves (so the player
+    // sees the final hand first), stays up ~4.0s, then auto-hides back to the betting
+    // controls underneath — or the player can tap the scrim/card to dismiss it early.
+    // Mirrors iOS's showResultBanner/resultBannerShowTask/resultHideTask/
+    // dismissResultBannerEarly (BlackjackTouchView.swift:451-493,775-789). Separate
+    // from `state.phase == Result` itself (which stays true the whole time, showing
+    // the next-bet controls) — this only gates the modal banner's own visibility.
+    var showResultBanner by remember { mutableStateOf(false) }
+    val resultBannerScope = rememberCoroutineScope()
+    var resultBannerJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    LaunchedEffect(state.phase, state.resultOutcome) {
+        resultBannerJob?.cancel()
+        if (state.phase == BlackjackPhase.Result && state.resultOutcome != BlackjackRoundOutcome.None) {
+            resultBannerJob = resultBannerScope.launch {
+                kotlinx.coroutines.delay(1000)
+                showResultBanner = true
+                kotlinx.coroutines.delay(4000)
+                showResultBanner = false
+            }
+        } else {
+            showResultBanner = false
+        }
+    }
+    fun dismissResultBannerEarly() {
+        resultBannerJob?.cancel()
+        showResultBanner = false
+    }
+
     if (showQuitDialog) {
         AlertDialog(
             onDismissRequest = { showQuitDialog = false },
@@ -258,16 +289,55 @@ fun BlackjackBoard(
             }
         }
 
+        // Full-screen win/lose overlay — matches iOS's resultOverlay (ZStack: a dimmed
+        // scrim behind a dark banner card, tap-anywhere-to-dismiss, no X button unlike
+        // the solitaire games' win overlays). Gated on showResultBanner (its own timed
+        // show/hide, see above), not state.phase == Result directly — the betting
+        // controls underneath stay in the normal layout the whole time state.phase ==
+        // Result, same as iOS's bettingControls being declared before this overlay.
         val resultOverlay = @Composable {
-            if (state.phase == BlackjackPhase.Result) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+            if (showResultBanner && state.resultOutcome != BlackjackRoundOutcome.None) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.45f))
+                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { dismissResultBannerEarly() }
+                        .zIndex(260f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Matches shared/Blackjack/Models/BlackjackResultLocalization.swift's
+                    // localizedBlackjackResult exactly — was using the plain "WIN"/"LOSS"/
+                    // etc. TouchResultXxx labels instead of this richer copy ("You Win!",
+                    // "Not today, partner!", per-hand breakdown for a split), which iOS/Mac
+                    // both share via that one function so they can't drift apart.
                     val outcomeText = when (state.resultOutcome) {
-                        BlackjackRoundOutcome.Blackjack -> com.leah.honeycomb.Strings.get(StringKey.TouchResultBlackjack, language)
-                        BlackjackRoundOutcome.Win -> com.leah.honeycomb.Strings.get(StringKey.TouchResultWin, language)
-                        BlackjackRoundOutcome.Push -> com.leah.honeycomb.Strings.get(StringKey.TouchResultPush, language)
-                        BlackjackRoundOutcome.Bust -> com.leah.honeycomb.Strings.get(StringKey.TouchResultBust, language)
-                        BlackjackRoundOutcome.Loss -> com.leah.honeycomb.Strings.get(StringKey.TouchResultLoss, language)
+                        BlackjackRoundOutcome.Blackjack -> com.leah.honeycomb.Strings.get(StringKey.ResultHeadlineBlackjack, language)
+                        BlackjackRoundOutcome.Win -> com.leah.honeycomb.Strings.get(StringKey.YouWin, language)
+                        BlackjackRoundOutcome.Push -> com.leah.honeycomb.Strings.get(StringKey.ResultHeadlinePush, language)
+                        BlackjackRoundOutcome.Bust -> com.leah.honeycomb.Strings.get(StringKey.ResultHeadlineBust, language)
+                        BlackjackRoundOutcome.Loss -> com.leah.honeycomb.Strings.get(StringKey.NotTodayPartner, language)
                         else -> ""
+                    }
+                    val subline = if (state.playerHands.size > 1) {
+                        state.playerHands.mapIndexed { i, hand ->
+                            when (hand.result) {
+                                BlackjackHandResult.Blackjack -> com.leah.honeycomb.Strings.get(StringKey.ResultHeadlineBlackjack, language) + " 🃏"
+                                BlackjackHandResult.Win -> com.leah.honeycomb.Strings.format(StringKey.ResultHandWinFmt, language, i + 1)
+                                BlackjackHandResult.Loss -> com.leah.honeycomb.Strings.format(StringKey.ResultHandLossFmt, language, i + 1)
+                                BlackjackHandResult.Push -> com.leah.honeycomb.Strings.format(StringKey.ResultHandPushFmt, language, i + 1)
+                                BlackjackHandResult.Bust -> com.leah.honeycomb.Strings.format(StringKey.ResultHandBustFmt, language, i + 1)
+                                null -> ""
+                            }
+                        }.joinToString("  ·  ")
+                    } else if (state.resultOutcome == BlackjackRoundOutcome.Push) {
+                        com.leah.honeycomb.Strings.get(StringKey.ResultSubPush, language)
+                    } else {
+                        val net = state.lastNetResult
+                        when {
+                            net > 0 -> com.leah.honeycomb.Strings.format(StringKey.ResultSubNetPositiveFmt, language, net)
+                            net < 0 -> com.leah.honeycomb.Strings.format(StringKey.ResultSubNetNegativeFmt, language, net)
+                            else -> com.leah.honeycomb.Strings.get(StringKey.ResultSubEven, language)
+                        }
                     }
                     val isWin = state.resultOutcome == BlackjackRoundOutcome.Win || state.resultOutcome == BlackjackRoundOutcome.Blackjack
                     val bannerScale = remember { Animatable(1f) }
@@ -280,7 +350,7 @@ fun BlackjackBoard(
                     // flash loop only starts once the pop-in's animateTo above actually
                     // completes.
                     val bannerFlash = remember { Animatable(1f) }
-                    LaunchedEffect(state.phase, state.resultOutcome) {
+                    LaunchedEffect(isWin) {
                         if (isWin) {
                             bannerScale.snapTo(1.4f)
                             bannerFlash.snapTo(1f)
@@ -295,38 +365,32 @@ fun BlackjackBoard(
                         }
                     }
                     val totalBannerScale = bannerScale.value * bannerFlash.value
-                    Text(
-                        outcomeText,
-                        color = if (isWin) Color.Yellow else Color.White,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.graphicsLayer(scaleX = totalBannerScale, scaleY = totalBannerScale)
-                    )
-                    if (state.playerHands.size > 1) {
-                        // A split round's headline only reflects the aggregate outcome (e.g. "Win" if
-                        // any hand won), which loses the fact that another hand may have lost or
-                        // pushed — show the per-hand breakdown instead so a split result is never
-                        // misreported as a clean win/loss. Matches shared/localizedBlackjackResult.
-                        val perHandText = state.playerHands.mapIndexed { i, hand ->
-                            val label = when (hand.result) {
-                                BlackjackHandResult.Blackjack -> com.leah.honeycomb.Strings.get(StringKey.TouchResultBlackjack, language)
-                                BlackjackHandResult.Win -> com.leah.honeycomb.Strings.get(StringKey.TouchResultWin, language)
-                                BlackjackHandResult.Loss -> com.leah.honeycomb.Strings.get(StringKey.TouchResultLoss, language)
-                                BlackjackHandResult.Push -> com.leah.honeycomb.Strings.get(StringKey.TouchResultPush, language)
-                                BlackjackHandResult.Bust -> com.leah.honeycomb.Strings.get(StringKey.TouchResultBust, language)
-                                null -> ""
-                            }
-                            "Hand ${i + 1}: $label"
-                        }.joinToString("  ·  ")
-                        Text(perHandText, color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp)
-                    }
-                    if (!viewModel.isFreePlay) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .shadow(
+                                if (isWin) 32.dp else 0.dp,
+                                RoundedCornerShape(24.dp),
+                                spotColor = Color(0xFFFFD700).copy(alpha = 0.5f)
+                            )
+                            .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(24.dp))
+                            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { dismissResultBannerEarly() }
+                            .padding(horizontal = 40.dp, vertical = 36.dp)
+                            .graphicsLayer(scaleX = totalBannerScale, scaleY = totalBannerScale)
+                    ) {
                         Text(
-                            text = if (state.lastNetResult >= 0) "+$${state.lastNetResult}" else "-$${-state.lastNetResult}",
-                            color = if (state.lastNetResult >= 0) Color.Green else Color.Red,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
+                            outcomeText,
+                            color = if (isWin) Color.Yellow else Color.White,
+                            fontSize = 40.sp,
+                            fontWeight = FontWeight.Black
                         )
+                        // Matches iOS: the subline (per-hand breakdown or net credits) is
+                        // entirely gated on free play, same as the dollar amount used to be
+                        // here on its own — a split's per-hand breakdown was previously
+                        // shown unconditionally, which iOS never does.
+                        if (!viewModel.isFreePlay) {
+                            Text(subline, color = Color.White, fontSize = if (state.playerHands.size > 1) 15.sp else 24.sp)
+                        }
                     }
                 }
             }
@@ -435,8 +499,6 @@ fun BlackjackBoard(
                 Spacer(modifier = Modifier.height(24.dp))
                 dealerArea()
                 Spacer(modifier = Modifier.weight(1f))
-                resultOverlay()
-                Spacer(modifier = Modifier.weight(1f))
                 playerArea()
                 Spacer(modifier = Modifier.height(24.dp))
                 controlsArea()
@@ -457,10 +519,7 @@ fun BlackjackBoard(
                         playerArea()
                     }
                     Box(modifier = Modifier.width(180.dp), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            resultOverlay()
-                            controlsArea()
-                        }
+                        controlsArea()
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopStart) {
                         dealerArea()
@@ -468,6 +527,11 @@ fun BlackjackBoard(
                 }
             }
         }
+
+        // Overlay, not part of either orientation's layout flow above — centers on the
+        // whole screen regardless of how tall the dealer/player areas are, matching
+        // iOS's own resultOverlay declared outside its ScrollView content.
+        resultOverlay()
 
         // Listed last (highest z-order), same as iOS/Windows: the burst renders in front of
         // the result banner rather than behind it.

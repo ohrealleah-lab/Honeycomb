@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
@@ -27,6 +28,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -350,51 +352,6 @@ fun HoneycombMatchUI(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                if (state.showPostGamePrompt) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        val resultTitle = when (state.matchOutcome) {
-                            HoneycombMatchOutcome.Win -> Strings.get(StringKey.YouWin, language)
-                            HoneycombMatchOutcome.Loss -> Strings.get(StringKey.YouLose, language)
-                            HoneycombMatchOutcome.Draw -> Strings.get(StringKey.TieResult, language)
-                            else -> state.matchResult
-                        }
-                        Text(
-                            resultTitle,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        state.matchResultFlavorText?.let {
-                            Text(it, style = MaterialTheme.typography.bodyMedium)
-                        }
-                        if (isStealingCard) {
-                            Text(
-                                Strings.get(StringKey.StealInstruction, language),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Yellow
-                            )
-                        } else if (viewModel.canStealCard) {
-                            Button(onClick = { isStealingCard = true }) {
-                                Text(Strings.get(StringKey.StealCard, language))
-                            }
-                        } else if (viewModel.stealProtectionActive && viewModel.hasStealableCard) {
-                            Text(
-                                Strings.get(StringKey.StealProtectionLine, language),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        } else if (viewModel.profileManager.isCardBankFull && viewModel.hasStealableCard) {
-                            Text(
-                                Strings.get(StringKey.CardBankFullLine1, language),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            Text(
-                                Strings.get(StringKey.CardBankFullLine2, language),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
                 // 2. Scaled game content — one fixed "intrinsic" layout, measured against
                 // the space actually available here, uniformly scaled to fit. Mirrors
                 // iOS's GeometryReader + scaleEffect(scale) pattern exactly, using the
@@ -505,13 +462,16 @@ fun HoneycombMatchUI(
             ) {
                 Box(
                     modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 18.dp, vertical = 10.dp)
+                        .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 36.dp, vertical = 20.dp)
                 ) {
                     Text(
                         activeBanner ?: "",
-                        color = Color.Yellow,
-                        fontSize = 18.sp,
+                        // Matches shared/Views/FlashBannerView.swift's golden yellow
+                        // (Color(red: 1.0, green: 0.84, blue: 0.0)), not pure Color.Yellow.
+                        color = Color(1f, 0.84f, 0f),
+                        fontSize = 36.sp,
+                        lineHeight = 44.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -532,6 +492,87 @@ fun HoneycombMatchUI(
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+
+        // Full-screen win/lose overlay — matches iOS's postGameOverlay (ZStack: a dimmed
+        // scrim behind a dark banner card), rather than inline text pushed into the
+        // normal layout flow. zIndex above the toast banner (250f) so a queued toast
+        // fading out underneath doesn't poke through the scrim.
+        if (state.showPostGamePrompt) {
+            val isWinOrTie = state.matchOutcome == HoneycombMatchOutcome.Win || state.matchOutcome == HoneycombMatchOutcome.Draw
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .zIndex(275f),
+                contentAlignment = Alignment.Center
+            ) {
+                Box {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .shadow(16.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFFFFD700).copy(alpha = 0.5f))
+                            .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(16.dp))
+                            .padding(horizontal = 28.dp, vertical = 20.dp)
+                    ) {
+                        val resultTitle = when (state.matchOutcome) {
+                            HoneycombMatchOutcome.Win -> Strings.get(StringKey.YouWin, language)
+                            HoneycombMatchOutcome.Loss -> Strings.get(StringKey.YouLose, language)
+                            HoneycombMatchOutcome.Draw -> Strings.get(StringKey.TieResult, language)
+                            else -> state.matchResult
+                        }
+                        Text(
+                            resultTitle,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isWinOrTie) Color.Yellow else Color.White
+                        )
+                        state.matchResultFlavorText?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                        }
+                        if (isStealingCard) {
+                            Text(
+                                Strings.get(StringKey.StealInstruction, language),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Yellow
+                            )
+                        } else if (viewModel.canStealCard) {
+                            Button(onClick = { isStealingCard = true }) {
+                                Text(Strings.get(StringKey.StealCard, language))
+                            }
+                        } else if (viewModel.stealProtectionActive && viewModel.hasStealableCard) {
+                            Text(
+                                Strings.get(StringKey.StealProtectionLine, language),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White
+                            )
+                        } else if (viewModel.profileManager.isCardBankFull && viewModel.hasStealableCard) {
+                            Text(
+                                Strings.get(StringKey.CardBankFullLine1, language),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White
+                            )
+                            Text(
+                                Strings.get(StringKey.CardBankFullLine2, language),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    // Dismiss lives on the card itself (not the screen corner), matching
+                    // iOS — it never stacks on top of the top bar's Start/Quit button.
+                    IconButton(
+                        onClick = { viewModel.dismissPostGamePrompt() },
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Dismiss",
+                            tint = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                }
             }
         }
 

@@ -46,13 +46,16 @@ fun BannerToast(
         ) {
             Box(
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 18.dp, vertical = 10.dp)
+                    .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 36.dp, vertical = 20.dp)
             ) {
                 Text(
                     text ?: "",
-                    color = Color.Yellow,
-                    fontSize = 18.sp,
+                    // Matches shared/Views/FlashBannerView.swift's golden yellow
+                    // (Color(red: 1.0, green: 0.84, blue: 0.0)), not pure Color.Yellow.
+                    color = Color(1f, 0.84f, 0f),
+                    fontSize = 36.sp,
+                    lineHeight = 44.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
