@@ -490,7 +490,15 @@ public struct HoneycombView: View {
             // shown") catches that case that a same-move-only check would miss. Once
             // showingRuleBanner flips back to false, this condition re-evaluates on its
             // own and the overlay appears — no extra plumbing needed.
-            if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner {
+            //
+            // Also explicitly held back while pendingSteal != nil (the steal confirmation
+            // alert is up) — not just !isStealingCard. Double-clicking a stealable card to
+            // stage the confirmation could otherwise flash this whole "You Win!" overlay
+            // (and the real rulesBanner below) back into view for a render pass, since
+            // isStealingCard is a local @State that isn't guaranteed to stay in lockstep
+            // with the alert's own presentation. pendingSteal lives on the viewModel and
+            // is exactly what drives the alert itself, so gating on it too closes that gap.
+            if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner && viewModel.pendingSteal == nil {
                 Color.black.opacity(0.45)
 
                 ZStack(alignment: .topTrailing) {
@@ -932,11 +940,16 @@ public struct HoneycombView: View {
     // true natural width instead of being squeezed/truncated when the row is tight.
     @ViewBuilder
     private var rulesBanner: some View {
-        // Hidden once a steal is staged (pendingSteal != nil) — the confirmation
-        // alert ("Are you sure you want to steal this card?") takes over from here,
-        // and leaving this instruction toast up underneath it stacked two banners
-        // on screen at once.
-        if isStealingCard && viewModel.pendingSteal == nil {
+        // Checked before isStealingCard, and independently of it: pendingSteal is the
+        // viewModel-backed value that actually drives the confirmation alert ("Are you
+        // sure you want to steal this card?"), so gating this branch on it directly
+        // (rather than trusting isStealingCard to always agree) is what keeps the real
+        // Rules banner from flashing in underneath the alert for a render pass right as
+        // a steal gets staged.
+        if viewModel.pendingSteal != nil {
+            Color.clear
+                .frame(height: Self.rulesBannerHeight, alignment: .bottom)
+        } else if isStealingCard {
             VStack(spacing: 16) {
                 Text(coordinator.L(.stealInstruction))
                     .font(.system(size: 24, weight: .bold))
@@ -955,12 +968,6 @@ public struct HoneycombView: View {
             .cornerRadius(16)
             .shadow(radius: 20)
             .frame(height: Self.rulesBannerHeight, alignment: .bottom)
-        } else if isStealingCard {
-            // pendingSteal != nil here (see the guard above) — the confirmation
-            // alert is up, so render nothing rather than letting the unrelated
-            // Rules banner flash in underneath it for the moment before OK/Cancel.
-            Color.clear
-                .frame(height: Self.rulesBannerHeight, alignment: .bottom)
         } else {
             let isDense = rulesBannerLines.count > 2
             let titleSize: CGFloat = isDense ? 20 : 28

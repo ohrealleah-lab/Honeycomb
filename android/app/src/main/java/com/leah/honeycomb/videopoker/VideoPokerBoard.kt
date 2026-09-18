@@ -555,10 +555,9 @@ fun VideoPokerBoard(
                     }
                     Spacer(modifier = Modifier.weight(1f))
                 }
-                Row(modifier = Modifier.fillMaxSize().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Row(modifier = Modifier.fillMaxSize().padding(top = 4.dp), verticalAlignment = Alignment.Top) {
+                    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Top) {
                         resultText()
-                        Spacer(modifier = Modifier.height(8.dp))
                         cardsRow()
                         Spacer(modifier = Modifier.height(8.dp))
                         bottomControls()

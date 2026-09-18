@@ -304,7 +304,7 @@ fun CardCenterSuitView(card: Card, suitColor: Color, modifier: Modifier = Modifi
                     // it sat in, so adjacent pips overlapped regardless of card size (the
                     // ratio is constant). 17pt keeps the glyph box at roughly 73% of that
                     // slot (~20pt), leaving a visible gap instead of touching/overlapping.
-                    fontSize = (refWidth * 17f / 128f).sp,
+                    fontSize = (refWidth * 19f / 128f).sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .align(Alignment.Center)
