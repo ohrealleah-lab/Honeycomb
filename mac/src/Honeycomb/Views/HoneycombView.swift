@@ -797,9 +797,17 @@ public struct HoneycombView: View {
             // real face-up/down per card internally, so the outer flag only chooses
             // between that and the generic animated-placeholder — no deal-flip
             // animation should replay here, so every slot skips straight to "settled".
+            // max(5, ...) keeps triggerDealFlip's fixed 0..<5 writes in range.
             if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
-                isPlayerCardRevealed = Array(repeating: true, count: 5)
-                isOpponentCardRevealed = Array(repeating: true, count: 5)
+                isPlayerCardRevealed = Array(repeating: true, count: max(5, viewModel.playerHand.count))
+                isOpponentCardRevealed = Array(repeating: true, count: max(5, viewModel.opponentHand.count))
+                handIdentityToken += 1
+            } else if viewModel.gameState == .gameOver {
+                // Remounting on the game-over screen left both hands as all-false
+                // placeholders, and a Rematch from there (no .setup transition to
+                // reset them) left them unplayable.
+                isPlayerCardRevealed = Array(repeating: true, count: max(5, viewModel.playerStartingDeck.count))
+                isOpponentCardRevealed = Array(repeating: true, count: max(5, viewModel.opponentHand.count))
                 handIdentityToken += 1
             }
             dragCancelMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown, .otherMouseDown]) { event in
@@ -1024,14 +1032,20 @@ public struct HoneycombView: View {
     }
 
     private func triggerDealFlip() {
+        // Every path that resets the arrays bumps handIdentityToken, so a stale closure
+        // from an interrupted deal (Quit / Cmd+N inside the stagger window) no-ops
+        // instead of flipping the next screen's placeholders.
+        let generation = handIdentityToken
         for i in 0..<5 {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * Self.dealFlipStagger) {
+                guard handIdentityToken == generation, isPlayerCardRevealed.indices.contains(i) else { return }
                 isPlayerCardRevealed[i] = true
             }
         }
         for i in 0..<5 {
             let delay = Double(5 + i) * Self.dealFlipStagger
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                guard handIdentityToken == generation, isOpponentCardRevealed.indices.contains(i) else { return }
                 isOpponentCardRevealed[i] = true
             }
         }

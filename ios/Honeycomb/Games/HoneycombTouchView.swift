@@ -288,8 +288,12 @@ struct HoneycombTouchView: View {
             // Bumping handIdentityToken makes the freshly-created HoneycombFlipContainers
             // pick these values up as their *initial* state, not something to animate.
             if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
+                // All-true, not per-card visibility: opponentHandCard already decides
+                // face-up/down itself, and a false flag would pin a hidden card to the
+                // placeholder forever (nothing flips it later), hiding the post-win
+                // reveal and any card that becomes visible after the remount.
                 isPlayerCardRevealed = [Bool](repeating: true, count: viewModel.playerHand.count)
-                isOpponentCardRevealed = viewModel.opponentHand.map { viewModel.isOpponentCardVisible(cardId: $0.id) }
+                isOpponentCardRevealed = [Bool](repeating: true, count: viewModel.opponentHand.count)
                 handIdentityToken += 1
             }
             // .gameOver remount (switch games after a match ends, come back): the
@@ -305,6 +309,9 @@ struct HoneycombTouchView: View {
             if newValue == .setup {
                 isPlayerCardRevealed = [Bool](repeating: false, count: 5)
                 isOpponentCardRevealed = [Bool](repeating: false, count: 5)
+                // Invalidates triggerDealFlip closures still pending from an interrupted
+                // deal (Quit within the stagger window), matching Mac.
+                handIdentityToken += 1
             } else if newValue == .playing && (oldValue == .setup || oldValue == .gameOver) {
                 // Both hands start fully unrevealed here (not pre-seeded from the
                 // underlying game-rule visibility) so every card genuinely animates
