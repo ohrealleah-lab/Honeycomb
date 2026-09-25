@@ -116,27 +116,6 @@ public struct HoneycombView: View {
     @State private var isShowingRematchConfirm = false
     @State private var isHoveringRules = false
 
-    // Deal-flip: both hand columns show face-down placeholders during .setup, then
-    // flip to reveal the freshly dealt hands one card at a time once a match actually
-    // starts — mirrors the Windows port's sequential per-card reveal (HoneycombView's
-    // Refresh() awaits each hand slot's RenderCard/PlayRevealAnimation in turn: all 5
-    // player cards, then all 5 opponent cards), which mac previously had no equivalent
-    // animation for at all (the ForEach identity swap from placeholder ids to the real
-    // per-card ids happened instantly, with no transition, all at once). Indexed 0..4
-    // per hand; starts all-false to match gameState's own initial .setup value.
-    @State private var isPlayerCardRevealed: [Bool] = Array(repeating: false, count: 5)
-    @State private var isOpponentCardRevealed: [Bool] = Array(repeating: false, count: 5)
-    // Bumped every time gameState returns to .setup (see the gameState onChange below)
-    // and applied as .id() on each hand grid — forces a clean teardown/recreation of
-    // every HoneycombFlipContainer at that exact boundary instead of letting one
-    // linger mid-flip. Without this, quitting/finishing a match while a container's
-    // displayedRevealed hadn't yet caught up to isPlayerCardRevealed's instant reset
-    // could render playerHandCardView/opponentHandCardView (whose
-    // matchedGeometryEffect keys off card.id) against placeholder data for one frame —
-    // and since both hands' placeholders share the same 5 fixed ids, SwiftUI would try
-    // to interpolate that id's geometry between the player's and dealer's hand
-    // columns, producing a huge, rotated, screen-filling card.
-    @State private var handIdentityToken: Int = 0
     // Time between each card's flip starting — matches HoneycombFlipTiming.duration so
     // cards flip one after another with no overlap, like the Windows port's own
     // sequential (awaited) deal-flip, rather than the staggered/overlapping cadence
@@ -305,7 +284,7 @@ public struct HoneycombView: View {
                             totalCards: HoneycombDatabase.shared.allCards.count,
                             language: coordinator.language))
                         handGrid(hand: displayHand) { i, card in
-                            HoneycombFlipContainer(isRevealed: playerRevealed(i)) {
+                            HoneycombFlipContainer(isRevealed: viewModel.isCardRevealed(card.id)) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
                             } back: {
                                 // Re-keyed by card.id (unlike the container/ForEach
@@ -320,7 +299,7 @@ public struct HoneycombView: View {
                                 playerHandCardView(card: card)
                                     .id(card.id)
                             }
-                            .id(handIdentityToken)
+                            .id(viewModel.handIdentityToken)
                         }
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
@@ -437,14 +416,14 @@ public struct HoneycombView: View {
                         // (e.g. "Baby Bee"), not a card-game dealer role like Blackjack's.
                         handSideLabel(honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language))
                         handGrid(hand: opponentDisplayHand) { i, card in
-                            HoneycombFlipContainer(isRevealed: opponentRevealed(i)) {
+                            HoneycombFlipContainer(isRevealed: viewModel.isCardRevealed(card.id)) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
                             } back: {
                                 // See the player hand's matching .id(card.id) above.
                                 opponentHandCardView(card: card)
                                     .id(card.id)
                             }
-                            .id(handIdentityToken)
+                            .id(viewModel.handIdentityToken)
                         }
                     }
                     .padding(.top, Self.handTopOffset - Self.handLabelBlockHeight)
@@ -687,32 +666,19 @@ public struct HoneycombView: View {
                 availableHeight: windowContentHeight
             )
         }
-        .onChange(of: viewModel.gameState) { oldState, newState in
+        .onChange(of: viewModel.gameState) { _, newState in
             // Safety net: however the match ends up leaving .gameOver (New Game
             // button, surrender, etc.), don't leave steal-card mode stuck active.
             if newState != .gameOver {
                 isStealingCard = false
             }
-            if newState == .setup {
-                // Reset with no animation so the next match's deal starts from
-                // placeholders again, ready to flip once more. Bumping
-                // handIdentityToken forces every HoneycombFlipContainer to be torn
-                // down and rebuilt fresh right here — see its declaration for why.
-                isPlayerCardRevealed = Array(repeating: false, count: 5)
-                isOpponentCardRevealed = Array(repeating: false, count: 5)
-                handIdentityToken += 1
-            } else if oldState == .setup {
-                // Opponent cards only actually flip face-up during the opening
-                // sequence when a rule (Clear Skies/Scouting Party) makes them
-                // visible — otherwise they should just quietly appear face-down with
-                // no animation, since there's nothing being "revealed." Pre-seed
-                // those hidden slots as already-revealed (bumping handIdentityToken
-                // so the flip container captures this as its *initial* state,
-                // before ever rendering false) so triggerDealFlip's later
-                // true-assignment for them is a no-op instead of a real transition
-                // — only genuinely visible slots go through the animated flip.
-                isOpponentCardRevealed = viewModel.opponentHand.map { !viewModel.isOpponentCardVisible(cardId: $0.id) }
-                handIdentityToken += 1
+        }
+        // Reveal state lives in the view model (keyed by card id, seeded in the same step
+        // as the deal), so a fresh deal arrives here as a handIdentityToken bump with cards
+        // already marked unrevealed. Quit and Sudden Death also bump the token but leave
+        // nothing unrevealed / return to .setup, so they skip the flip.
+        .onChange(of: viewModel.handIdentityToken) { _, _ in
+            if viewModel.gameState != .setup && !viewModel.unrevealedCardIds.isEmpty {
                 triggerDealFlip()
             }
         }
@@ -782,34 +748,6 @@ public struct HoneycombView: View {
         .onAppear {
             applyInitialWindowSize()
             viewModel.checkLoadingBanner()
-            // Resync flip state with reality — AppRouterView's `switch` on gameMode
-            // (each case carrying its own .id()) fully unmounts this view when the
-            // player switches to a different game, same as iOS's IOSRouterView, despite
-            // AppCoordinator keeping the underlying viewModel (and its mid-match data)
-            // alive the whole time. Returning here creates a brand-new HoneycombView
-            // with isPlayerCardRevealed/isOpponentCardRevealed reset to their all-false
-            // defaults, and nothing else restores them — .onChange(of: viewModel.gameState)
-            // below only fires on a genuine state *transition*, which doesn't happen
-            // when re-mounting mid-match. Left alone, every hand card stays stuck
-            // showing its face-down front(), including the player's own — unplayable.
-            // All-true (not matching each opponent card's real visibility) mirrors the
-            // .setup-transition handler below: opponentHandCardView already computes
-            // real face-up/down per card internally, so the outer flag only chooses
-            // between that and the generic animated-placeholder — no deal-flip
-            // animation should replay here, so every slot skips straight to "settled".
-            // max(5, ...) keeps triggerDealFlip's fixed 0..<5 writes in range.
-            if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
-                isPlayerCardRevealed = Array(repeating: true, count: max(5, viewModel.playerHand.count))
-                isOpponentCardRevealed = Array(repeating: true, count: max(5, viewModel.opponentHand.count))
-                handIdentityToken += 1
-            } else if viewModel.gameState == .gameOver {
-                // Remounting on the game-over screen left both hands as all-false
-                // placeholders, and a Rematch from there (no .setup transition to
-                // reset them) left them unplayable.
-                isPlayerCardRevealed = Array(repeating: true, count: max(5, viewModel.playerStartingDeck.count))
-                isOpponentCardRevealed = Array(repeating: true, count: max(5, viewModel.opponentHand.count))
-                handIdentityToken += 1
-            }
             dragCancelMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown, .otherMouseDown]) { event in
                 if draggedHandCard != nil {
                     draggedHandCard = nil
@@ -1020,33 +958,25 @@ public struct HoneycombView: View {
     // each opponent slot, rather than animating both hands in parallel). The flip
     // itself is driven by HoneycombFlipContainer's own onChange(of: isRevealed), so
     // this just needs to toggle the flags — no withAnimation wrapping needed here.
-    // Bounds-safe: a hand can transiently outgrow these fixed-size-5 arrays (Sudden Death
-    // rebuilds, remount mid-match) for a render pass. Out-of-range slots are already-known
-    // cards, so default to revealed.
-    private func playerRevealed(_ i: Int) -> Bool {
-        isPlayerCardRevealed.indices.contains(i) ? isPlayerCardRevealed[i] : true
-    }
-
-    private func opponentRevealed(_ i: Int) -> Bool {
-        isOpponentCardRevealed.indices.contains(i) ? isOpponentCardRevealed[i] : true
-    }
-
     private func triggerDealFlip() {
-        // Every path that resets the arrays bumps handIdentityToken, so a stale closure
-        // from an interrupted deal (Quit / Cmd+N inside the stagger window) no-ops
-        // instead of flipping the next screen's placeholders.
-        let generation = handIdentityToken
-        for i in 0..<5 {
+        // Capture the deal's identity so a stale closure from an interrupted deal (Quit /
+        // Cmd+N inside the stagger window) no-ops instead of flipping cards that belong
+        // to a different deal. Closures call the view model directly, so a deal still in
+        // flight keeps revealing even if this view is re-created meanwhile.
+        let generation = viewModel.handIdentityToken
+        let playerIds = viewModel.playerHand.map { $0.id }
+        let opponentIds = viewModel.opponentHand.map { $0.id }
+        for (i, id) in playerIds.enumerated() {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * Self.dealFlipStagger) {
-                guard handIdentityToken == generation, isPlayerCardRevealed.indices.contains(i) else { return }
-                isPlayerCardRevealed[i] = true
+                guard viewModel.handIdentityToken == generation else { return }
+                viewModel.revealCard(id: id)
             }
         }
-        for i in 0..<5 {
+        for (i, id) in opponentIds.enumerated() {
             let delay = Double(5 + i) * Self.dealFlipStagger
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                guard handIdentityToken == generation, isOpponentCardRevealed.indices.contains(i) else { return }
-                isOpponentCardRevealed[i] = true
+                guard viewModel.handIdentityToken == generation else { return }
+                viewModel.revealCard(id: id)
             }
         }
     }

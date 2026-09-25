@@ -50,6 +50,10 @@ struct TestRunner {
         HoneycombBannerTriggerTests.run()
         print("✅ HoneycombBannerTriggerTests passed.")
 
+        print("🧪 Running HoneycombRevealStateTests...")
+        HoneycombRevealStateTests.run()
+        print("✅ HoneycombRevealStateTests passed.")
+
         print("🧪 Running HoneycombCaptureRulesTests...")
         HoneycombCaptureRulesTests.run()
         print("✅ HoneycombCaptureRulesTests passed.")

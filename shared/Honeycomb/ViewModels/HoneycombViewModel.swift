@@ -144,6 +144,41 @@ public final class HoneycombViewModel {
     // shrinks as cards are played, which shifts every later card's index down by one, so
     // an index-based set would silently drift onto the wrong cards mid-match.
     public var openOpponentCardIds: Set<String> = []
+
+    // Deal-flip reveal state, owned here (not in each platform's view) so it changes in
+    // the same step as the hands themselves. Lists cards dealt face-down that are still
+    // waiting for their deal flip; every other card — a Swap's incoming card, a Sudden
+    // Death rebuild, an undo restore, anything on screen after the view was re-created
+    // by switching games — counts as revealed by default, so there is no positional
+    // index or fixed array size to fall out of sync with the hands.
+    public private(set) var unrevealedCardIds: Set<String> = []
+    // Bumped whenever a fresh deal starts or the table resets. Views apply it as .id()
+    // on their flip containers so those are rebuilt with the new initial reveal state
+    // instead of animating a flip from the previous one.
+    public private(set) var handIdentityToken: Int = 0
+
+    // .setup shows placeholder hands, which are always face-down.
+    public func isCardRevealed(_ cardId: String) -> Bool {
+        gameState != .setup && !unrevealedCardIds.contains(cardId)
+    }
+
+    public func revealCard(id cardId: String) {
+        unrevealedCardIds.remove(cardId)
+    }
+
+    private func beginDealReveal() {
+        var ids = Set(playerHand.map { $0.id })
+        #if os(iOS)
+        // iOS flips every dealt card, including the opponent's hidden ones.
+        ids.formUnion(opponentHand.map { $0.id })
+        #else
+        // Mac only animates opponent cards a rule (Clear Skies/Scouting Party) makes
+        // visible; hidden ones just appear face-down with nothing to reveal.
+        ids.formUnion(opponentHand.map { $0.id }.filter { openOpponentCardIds.contains($0) })
+        #endif
+        unrevealedCardIds = ids
+        handIdentityToken += 1
+    }
     // Mirrors openOpponentCardIds for the player's hand — All Open/Three Open reveal
     // both hands to both sides (matching real Triple Triad), not just the opponent's
     // hand to the human. The human always sees their own cards regardless (there's no
@@ -631,6 +666,7 @@ public final class HoneycombViewModel {
     // rematch of the same match should always hand the opening move to whoever didn't
     // have it last time, so replaying repeatedly can't keep favoring one side.
     private func finishMatchSetup(swapResult: SwapResult? = nil, forceAlternateStarter: Bool = false) {
+        beginDealReveal()
         gameState = .playing
         showPostGamePrompt = false
         sessionCardsCaptured = 0
@@ -2432,6 +2468,9 @@ public final class HoneycombViewModel {
         // Sudden Death doesn't reroll rules, so the same suits chosen at match start
         // (setupRules) carry over rather than picking a fresh pair for the tie-break.
         board.ascensionDescensionSuits = ascensionDescensionSuits
+        // Already-known cards moving back into hand: nothing to reveal.
+        unrevealedCardIds.removeAll()
+        handIdentityToken += 1
         gameState = .playing
         // alternate turns on sudden death
         isPlayerTurn.toggle()
@@ -2591,6 +2630,8 @@ public final class HoneycombViewModel {
         isAnimatingPlacement = false
         swapHighlightCardIds.removeAll()
         board = HoneycombBoard()
+        unrevealedCardIds.removeAll()
+        handIdentityToken += 1
         gameState = .setup
     }
 
