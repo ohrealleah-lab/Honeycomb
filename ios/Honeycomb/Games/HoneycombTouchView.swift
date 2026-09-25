@@ -292,6 +292,14 @@ struct HoneycombTouchView: View {
                 isOpponentCardRevealed = viewModel.opponentHand.map { viewModel.isOpponentCardVisible(cardId: $0.id) }
                 handIdentityToken += 1
             }
+            // .gameOver remount (switch games after a match ends, come back): the
+            // all-false size-5 defaults don't match the displayed hands (a Sudden Death
+            // finish can leave >5 opponent cards), so size them to the real hands.
+            else if viewModel.gameState == .gameOver {
+                isPlayerCardRevealed = [Bool](repeating: true, count: playerDisplayHand.count)
+                isOpponentCardRevealed = [Bool](repeating: true, count: opponentDisplayHand.count)
+                handIdentityToken += 1
+            }
         }
         .onChange(of: viewModel.gameState) { oldValue, newValue in
             if newValue == .setup {
@@ -547,7 +555,7 @@ struct HoneycombTouchView: View {
                         totalCards: HoneycombDatabase.shared.allCards.count,
                         language: coordinator.language))
                     pyramidHand(cards: playerDisplayHand, size: landscapeHandCardSize) { i, card in
-                        HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
+                        HoneycombFlipContainer(isRevealed: playerRevealed(i)) {
                             HoneycombCardView(card: card, size: landscapeHandCardSize, isFlipped: true)
                         } back: {
                             playerHandCard(card, size: landscapeHandCardSize)
@@ -572,7 +580,7 @@ struct HoneycombTouchView: View {
                     // (e.g. "Baby Bee"), not a card-game dealer role like Blackjack's.
                     handLabel(honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language))
                     pyramidHand(cards: opponentDisplayHand, size: landscapeHandCardSize) { i, card in
-                        HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
+                        HoneycombFlipContainer(isRevealed: opponentRevealed(i)) {
                             HoneycombCardView(card: card, size: landscapeHandCardSize, isFlipped: true)
                         } back: {
                             opponentHandCard(card, size: landscapeHandCardSize)
@@ -591,7 +599,7 @@ struct HoneycombTouchView: View {
                 // Matches playerCardSize per request — was a smaller, distinct
                 // opponentCardSize before.
                 rowHand(cards: opponentDisplayHand, size: Self.playerCardSize) { i, card in
-                    HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
+                    HoneycombFlipContainer(isRevealed: opponentRevealed(i)) {
                         HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)
                     } back: {
                         opponentHandCard(card, size: Self.playerCardSize)
@@ -614,7 +622,7 @@ struct HoneycombTouchView: View {
                     .padding(.vertical, 4)
 
                 rowHand(cards: playerDisplayHand, size: Self.playerCardSize) { i, card in
-                    HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
+                    HoneycombFlipContainer(isRevealed: playerRevealed(i)) {
                         HoneycombCardView(card: card, size: Self.playerCardSize, isFlipped: true)
                     } back: {
                         playerHandCard(card)
@@ -1174,6 +1182,17 @@ struct HoneycombTouchView: View {
         .background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(.top, 60)
+    }
+
+    // Bounds-safe: a hand can transiently outgrow these arrays (Sudden Death rebuilds,
+    // remount, rematch) for a render pass before onChange resizes them. Out-of-range
+    // slots are cards already known to the player, so default to revealed.
+    private func playerRevealed(_ i: Int) -> Bool {
+        isPlayerCardRevealed.indices.contains(i) ? isPlayerCardRevealed[i] : true
+    }
+
+    private func opponentRevealed(_ i: Int) -> Bool {
+        isOpponentCardRevealed.indices.contains(i) ? isOpponentCardRevealed[i] : true
     }
 
     private func triggerDealFlip() {
