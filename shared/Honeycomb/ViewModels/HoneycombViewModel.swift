@@ -477,6 +477,7 @@ public final class HoneycombViewModel {
         lastPlayerMove = nil
         pendingUndoRepeatCheck = nil
         swapHighlightCardIds.removeAll()
+        swapAnimationPhase = .idle
         clearHint()
         lastHiveSwarmIndex = nil
         isRematchMatch = false
@@ -797,6 +798,7 @@ public final class HoneycombViewModel {
         lastPlayerMove = nil
         pendingUndoRepeatCheck = nil
         swapHighlightCardIds.removeAll()
+        swapAnimationPhase = .idle
         clearHint()
         isAnimatingPlacement = false
         lastHiveSwarmIndex = nil
@@ -2627,12 +2629,22 @@ public final class HoneycombViewModel {
     // blocking playerPlayCard on every future match.
     public func quitMatch() {
         handSetupGeneration += 1
-        isAnimatingPlacement = false
-        swapHighlightCardIds.removeAll()
-        board = HoneycombBoard()
-        unrevealedCardIds.removeAll()
-        handIdentityToken += 1
-        gameState = .setup
+        // No animation for the whole reset: quitting mid-Nectar Exchange used to leave
+        // the swap's card-flight animation running (and swapAnimationPhase stuck at
+        // .lifting/.moving, since the generation-guarded closures that return it to
+        // .idle never fire after a quit), so the setup screen rendered mid-transition
+        // and the two traded cards' slots came up empty.
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isAnimatingPlacement = false
+            swapHighlightCardIds.removeAll()
+            swapAnimationPhase = .idle
+            board = HoneycombBoard()
+            unrevealedCardIds.removeAll()
+            handIdentityToken += 1
+            gameState = .setup
+        }
     }
 
     public func resetStatistics() {
