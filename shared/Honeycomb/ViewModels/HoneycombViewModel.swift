@@ -166,6 +166,14 @@ public final class HoneycombViewModel {
         unrevealedCardIds.remove(cardId)
     }
 
+    // Applies a reset with animations disabled so a swap flight or flip still in progress
+    // from the match being abandoned can't keep playing across the new/blank screen.
+    private func withoutAnimation(_ body: () -> Void) {
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction, body)
+    }
+
     private func beginDealReveal() {
         var ids = Set(playerHand.map { $0.id })
         #if os(iOS)
@@ -176,8 +184,10 @@ public final class HoneycombViewModel {
         // visible; hidden ones just appear face-down with nothing to reveal.
         ids.formUnion(opponentHand.map { $0.id }.filter { openOpponentCardIds.contains($0) })
         #endif
-        unrevealedCardIds = ids
-        handIdentityToken += 1
+        withoutAnimation {
+            unrevealedCardIds = ids
+            handIdentityToken += 1
+        }
     }
     // Mirrors openOpponentCardIds for the player's hand — All Open/Three Open reveal
     // both hands to both sides (matching real Triple Triad), not just the opponent's
@@ -476,8 +486,10 @@ public final class HoneycombViewModel {
         undoStack.removeAll()
         lastPlayerMove = nil
         pendingUndoRepeatCheck = nil
-        swapHighlightCardIds.removeAll()
-        swapAnimationPhase = .idle
+        withoutAnimation {
+            swapHighlightCardIds.removeAll()
+            swapAnimationPhase = .idle
+        }
         clearHint()
         lastHiveSwarmIndex = nil
         isRematchMatch = false
@@ -797,8 +809,10 @@ public final class HoneycombViewModel {
         undoStack.removeAll()
         lastPlayerMove = nil
         pendingUndoRepeatCheck = nil
-        swapHighlightCardIds.removeAll()
-        swapAnimationPhase = .idle
+        withoutAnimation {
+            swapHighlightCardIds.removeAll()
+            swapAnimationPhase = .idle
+        }
         clearHint()
         isAnimatingPlacement = false
         lastHiveSwarmIndex = nil
@@ -2634,9 +2648,7 @@ public final class HoneycombViewModel {
         // .lifting/.moving, since the generation-guarded closures that return it to
         // .idle never fire after a quit), so the setup screen rendered mid-transition
         // and the two traded cards' slots came up empty.
-        var transaction = Transaction(animation: nil)
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
+        withoutAnimation {
             isAnimatingPlacement = false
             swapHighlightCardIds.removeAll()
             swapAnimationPhase = .idle

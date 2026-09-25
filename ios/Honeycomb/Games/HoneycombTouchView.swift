@@ -247,7 +247,6 @@ struct HoneycombTouchView: View {
                 coordinator: coordinator,
                 onShowStats: { showingStats = true },
                 hideHintBinding: Bindable(coordinator).hideHintButton,
-                onNoStressModeChange: { viewModel.startNewGame() },
                 isGlobalSectionDisabled: isMidMatch,
                 globalSectionUnlockNote: coordinator.L(.settingsUnlockNote),
                 showsGameSection: false
@@ -272,6 +271,13 @@ struct HoneycombTouchView: View {
         .onChange(of: viewModel.handIdentityToken) { _, _ in
             if viewModel.gameState != .setup && !viewModel.unrevealedCardIds.isEmpty {
                 triggerDealFlip()
+            }
+        }
+        // Same safety net as Mac: however a match leaves .gameOver (Rematch, Start, New
+        // Game), don't carry steal-card mode into the next one.
+        .onChange(of: viewModel.gameState) { _, newState in
+            if newState != .gameOver {
+                isStealingCard = false
             }
         }
         .onChange(of: viewModel.flashRuleBannerTrigger) { _, _ in
