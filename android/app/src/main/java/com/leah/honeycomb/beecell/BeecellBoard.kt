@@ -162,15 +162,15 @@ fun BeecellBoard(
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
                 modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .padding(horizontal = 24.dp, vertical = 2.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("SCORE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
-                        Text("${state.score}", fontWeight = FontWeight.Bold, color = Color.Yellow)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                    Text("SCORE", fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text("${state.score}", fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, color = Color.Yellow)
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("TIME", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
-                    Text(com.leah.honeycomb.formatSeconds(state.timerSeconds, zeroPlaceholder = "00:00"), fontWeight = FontWeight.Bold, color = Color.White)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                    Text("TIME", fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text(com.leah.honeycomb.formatSeconds(state.timerSeconds, zeroPlaceholder = "00:00"), fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }

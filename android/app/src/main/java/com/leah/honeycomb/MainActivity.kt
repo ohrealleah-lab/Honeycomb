@@ -3,6 +3,7 @@ package com.leah.honeycomb
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import com.leah.honeycomb.StringKey
@@ -40,7 +41,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        enableEdgeToEdge()
 
         setContent {
             val themes by appContainer.themeManager.themes.collectAsState()
@@ -74,9 +75,27 @@ class MainActivity : ComponentActivity() {
                     
                     androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
                         val intensity = if (currentRoute.startsWith(AppRoute.Blackjack.Board.route) || currentRoute.startsWith(AppRoute.VideoPoker.Board.route)) 0.6f else 0.45f
+                        // AppBackground draws full-bleed, edge-to-edge (under the status/nav
+                        // bars, made transparent by enableEdgeToEdge() above) so the felt
+                        // color/gradient shows through instead of the system's default grey
+                        // status bar background. NavHost's own content is inset-padded below,
+                        // but only partially at the top — the full status bar inset leaves a
+                        // gap noticeably taller than the top icon row itself (most phones
+                        // reserve more height there than the row actually needs), so we claw
+                        // back a fixed amount instead of respecting 100% of it. Bottom/side
+                        // insets (nav bar, cutouts) are still fully respected.
                         com.leah.honeycomb.theme.AppBackground(intensity = intensity)
-                        
-                        NavHost(navController = navController, startDestination = appContainer.initialGameMode.takeIf { it != "home" } ?: AppRoute.Klondike.Board.route, modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
+
+                        val statusBarTopInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                        val trimmedTopInset = (statusBarTopInset - 16.dp).coerceAtLeast(0.dp)
+                        NavHost(
+                            navController = navController,
+                            startDestination = appContainer.initialGameMode.takeIf { it != "home" } ?: AppRoute.Klondike.Board.route,
+                            modifier = androidx.compose.ui.Modifier
+                                .fillMaxSize()
+                                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+                                .padding(top = trimmedTopInset)
+                        ) {
 
                         composable(AppRoute.About.route) {
                             com.leah.honeycomb.theme.AboutScreen(onBack = { navController.popBackStack() })

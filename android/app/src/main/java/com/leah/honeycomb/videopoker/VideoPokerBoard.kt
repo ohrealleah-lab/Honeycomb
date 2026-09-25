@@ -559,7 +559,7 @@ fun VideoPokerBoard(
                     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Top) {
                         resultText()
                         cardsRow()
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         bottomControls()
                     }
                 }
