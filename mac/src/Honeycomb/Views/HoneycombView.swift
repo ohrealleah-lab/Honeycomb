@@ -305,7 +305,7 @@ public struct HoneycombView: View {
                             totalCards: HoneycombDatabase.shared.allCards.count,
                             language: coordinator.language))
                         handGrid(hand: displayHand) { i, card in
-                            HoneycombFlipContainer(isRevealed: isPlayerCardRevealed[i]) {
+                            HoneycombFlipContainer(isRevealed: playerRevealed(i)) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
                             } back: {
                                 // Re-keyed by card.id (unlike the container/ForEach
@@ -437,7 +437,7 @@ public struct HoneycombView: View {
                         // (e.g. "Baby Bee"), not a card-game dealer role like Blackjack's.
                         handSideLabel(honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language))
                         handGrid(hand: opponentDisplayHand) { i, card in
-                            HoneycombFlipContainer(isRevealed: isOpponentCardRevealed[i]) {
+                            HoneycombFlipContainer(isRevealed: opponentRevealed(i)) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
                             } back: {
                                 // See the player hand's matching .id(card.id) above.
@@ -1012,6 +1012,17 @@ public struct HoneycombView: View {
     // each opponent slot, rather than animating both hands in parallel). The flip
     // itself is driven by HoneycombFlipContainer's own onChange(of: isRevealed), so
     // this just needs to toggle the flags — no withAnimation wrapping needed here.
+    // Bounds-safe: a hand can transiently outgrow these fixed-size-5 arrays (Sudden Death
+    // rebuilds, remount mid-match) for a render pass. Out-of-range slots are already-known
+    // cards, so default to revealed.
+    private func playerRevealed(_ i: Int) -> Bool {
+        isPlayerCardRevealed.indices.contains(i) ? isPlayerCardRevealed[i] : true
+    }
+
+    private func opponentRevealed(_ i: Int) -> Bool {
+        isOpponentCardRevealed.indices.contains(i) ? isOpponentCardRevealed[i] : true
+    }
+
     private func triggerDealFlip() {
         for i in 0..<5 {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * Self.dealFlipStagger) {
