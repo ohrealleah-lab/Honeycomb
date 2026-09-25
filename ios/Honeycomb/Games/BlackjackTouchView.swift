@@ -417,7 +417,10 @@ struct BlackjackTouchView: View {
                 coordinator: coordinator,
                 onShowStats: { showingStats = true },
                 isGlobalSectionDisabled: !viewModel.canOpenOptions,
-                globalSectionUnlockNote: coordinator.L(.touchSettingsUnlockBetweenHands)
+                globalSectionUnlockNote: coordinator.L(.touchSettingsUnlockBetweenHands),
+                // Starting Credits is the only Blackjack-specific setting, and betting is
+                // hard-locked off on iOS — nothing left to show.
+                showsGameSection: false
             ) {
                 BlackjackSettingsSection(viewModel: viewModel,
                                          canOpenOptions: viewModel.canOpenOptions,

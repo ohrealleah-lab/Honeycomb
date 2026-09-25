@@ -739,20 +739,8 @@ struct VideoPokerSettingsSection: View {
                 // three-hand layout isn't built on iOS yet, so exposing the toggle
                 // would let the player select a mode this view can't render.
 
-                Stepper(coordinator.L(.startingCreditsFmt, viewModel.options.startingCredits),
-                        value: $viewModel.options.startingCredits, in: 100...10000, step: 100)
-
-                HStack {
-                    Text(coordinator.L(.pickerDefaultBetLabel))
-                    Spacer()
-                    Picker(coordinator.L(.pickerDefaultBetLabel), selection: $viewModel.options.betPerHand) {
-                        ForEach(1...5, id: \.self) { bet in
-                            Text("\(bet)").tag(bet)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                }
+                // Starting Credits and Default Bet are intentionally left out — betting
+                // is hard-locked off on iOS.
 
                 // Sound/No Stress Mode/Honey Mode/Manually Dismiss Banners live in
                 // OptionsFullScreenView's own Global section now — this card is
