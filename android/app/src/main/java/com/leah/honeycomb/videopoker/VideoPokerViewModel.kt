@@ -425,8 +425,24 @@ class VideoPokerViewModel(
     }
 
     fun updateVariant(variant: VideoPokerVariant) {
+        val changed = variant != _options.value.variant
         _options.value = _options.value.copy(variant = variant)
         saveOptions(_options.value)
+        // Matches Mac's resetHandDisplay() on a variant change (and Windows' SetVariant):
+        // clear the hand in progress rather than let a hand dealt under one variant be
+        // evaluated under another — Options is reachable mid-hand here, so without this a
+        // player could see two deuces, switch to Deuces Wild, then draw. Credits untouched.
+        if (changed && _state.value.phase != VideoPokerPhase.Deal) {
+            drawGeneration++
+            _state.value = _state.value.copy(
+                phase = VideoPokerPhase.Deal,
+                hand = emptyList(),
+                heldIndices = emptySet(),
+                lastPayout = 0,
+                lastHandName = "",
+                drawCommitted = false
+            )
+        }
     }
 
     fun updateOptions(newOptions: VideoPokerOptions) {
