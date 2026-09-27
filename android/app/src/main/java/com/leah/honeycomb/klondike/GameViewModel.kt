@@ -201,7 +201,9 @@ class GameViewModel(
         private set
 
     val canUndo: Boolean
-        get() = undoStack.canUndo && !_state.value.hasWon && !_isAutoplayRunning.value
+        // Allowed mid-autoplay: undoLastAction() cancels it and reverts to the single
+        // pre-autocomplete snapshot, matching Mac (the source of truth).
+        get() = undoStack.canUndo && !_state.value.hasWon
 
     // Ported from shared/ViewModels/GameViewModel.swift:972-1191 — ranked/scored hint
     // candidates with 1-ply lookahead, cycling through the ranked queue on repeated taps

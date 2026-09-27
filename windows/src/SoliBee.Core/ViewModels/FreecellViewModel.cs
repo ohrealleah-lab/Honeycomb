@@ -176,9 +176,6 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     private string? _lastMoveTargetPileId;
 
     private System.Threading.Timer? _autocompleteTimer;
-    // Windows-fork deviation: once autocomplete has ever run this game, Undo stays
-    // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
-    private bool _autocompleteLocked;
 
     private System.Threading.Timer? _pointPopupTimer;
     private int _pointPopupGeneration;
@@ -197,7 +194,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     // its own; explicit OnPropertyChanged(nameof(MovesCount)) calls at each mutation site
     // are what refresh it.
     public int MovesCount => State?.MovesCount ?? 0;
-    public bool CanUndo => _undoStack.Count > 0 && !_autocompleteLocked && !State.HasWon;
+    public bool CanUndo => _undoStack.Count > 0 && !State.HasWon;
 
     // Freecell has no Vegas-mode option of its own — Options.IsVegasScoring is shared
     // with Klondike/Spider, but Freecell always uses standard scoring regardless of it.
@@ -261,7 +258,6 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         _autocompleteTimer?.Dispose();
         _autocompleteTimer = null;
         IsAutoplayRunning = false;
-        _autocompleteLocked = false;
 
         _gameTimer?.Dispose();
         FreeCells.Clear();
@@ -391,7 +387,6 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         _autocompleteTimer?.Dispose();
         _autocompleteTimer = null;
         IsAutoplayRunning = false;
-        _autocompleteLocked = false;
 
         _gameTimer = new System.Threading.Timer(_ =>
         {
@@ -754,10 +749,9 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         if (!IsAutocompletable || IsAutoplayRunning) return;
 
         // One bundled undo snapshot for the whole sequence — SaveStateForUndo() no-ops
-        // for every move made once IsAutoplayRunning is true. Once autocomplete has
-        // started, Undo stays disabled for the rest of the game (see CanUndo).
+        // for every move made once IsAutoplayRunning is true. Undo mid-sequence cancels
+        // autoplay and reverts to that snapshot (Mac behavior, the source of truth).
         SaveStateForUndo();
-        _autocompleteLocked = true;
         OnPropertyChanged(nameof(CanUndo));
         IsAutoplayRunning = true;
         ScheduleNextAutocompleteMove();
@@ -1163,6 +1157,11 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     public void Undo()
     {
         if (_undoStack.Count == 0 || State.HasWon) return;
+        // Undo cancels a running autocomplete and reverts to its single pre-autocomplete
+        // snapshot — matches Mac (the source of truth) instead of locking Undo for good.
+        _autocompleteTimer?.Dispose();
+        _autocompleteTimer = null;
+        IsAutoplayRunning = false;
         RestoreSnapshot(_undoStack.Pop());
         ClearHintCycle();
         PointPopup = null;

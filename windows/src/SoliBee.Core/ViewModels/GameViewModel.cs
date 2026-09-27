@@ -174,9 +174,6 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     private int _foundationCardCount;
 
     private System.Threading.Timer? _autocompleteTimer;
-    // Windows-fork deviation: once autocomplete has ever run this game, Undo stays
-    // disabled for the rest of the game (rather than allowing mid-autoplay cancel-undo).
-    private bool _autocompleteLocked;
 
     private System.Threading.Timer? _pointPopupTimer;
     private int _pointPopupGeneration;
@@ -280,7 +277,6 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         _autocompleteTimer?.Dispose();
         _autocompleteTimer = null;
         IsAutoplayRunning = false;
-        _autocompleteLocked = false;
         Stock.Cards.Clear();
         Waste.Cards.Clear();
         foreach (var f in Foundations) f.Cards.Clear();
@@ -415,7 +411,6 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         _autocompleteTimer?.Dispose();
         _autocompleteTimer = null;
         IsAutoplayRunning = false;
-        _autocompleteLocked = false;
 
         // Clear everything
         Stock.Cards.Clear();
@@ -848,6 +843,11 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     public void Undo()
     {
         if (_undoStack.Count == 0 || State.HasWon) return;
+        // Undo cancels a running autocomplete and reverts to its single pre-autocomplete
+        // snapshot — matches Mac (the source of truth) instead of locking Undo for good.
+        _autocompleteTimer?.Dispose();
+        _autocompleteTimer = null;
+        IsAutoplayRunning = false;
         ClearHintCycle();
         PointPopup = null;
         _lastMoveSourcePileId = null;
@@ -923,10 +923,9 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         if (!IsAutocompletable || IsAutoplayRunning) return;
 
         // One bundled undo snapshot for the whole sequence — SaveStateForUndo() no-ops
-        // for every move made once IsAutoplayRunning is true. Once autocomplete has
-        // started, Undo stays disabled for the rest of the game (see CanUndo).
+        // for every move made once IsAutoplayRunning is true. Undo mid-sequence cancels
+        // autoplay and reverts to that snapshot (Mac behavior, the source of truth).
         SaveStateForUndo();
-        _autocompleteLocked = true;
         OnPropertyChanged(nameof(CanUndo));
         IsAutoplayRunning = true;
         ScheduleNextAutocompleteMove();
@@ -1562,7 +1561,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         CardSuit.Diamonds => "♦", CardSuit.Clubs => "♣", _ => ""
     };
 
-    public bool CanUndo => _undoStack.Count > 0 && !_autocompleteLocked && !State.HasWon;
+    public bool CanUndo => _undoStack.Count > 0 && !State.HasWon;
 
     private Pile FindPileContaining(Card card)
     {
