@@ -943,6 +943,10 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
     private void AnimateNextAutocompleteMove()
     {
+        // A tick that already fired and was Posted to the UI thread still runs after
+        // New Game/Restart/Undo dispose the timer — without this it would start
+        // auto-playing the fresh board. Mirrors iOS/Android's `guard isAutoplayRunning`.
+        if (!IsAutoplayRunning) return;
         var move = FindNextFoundationMove();
         if (move != null)
         {

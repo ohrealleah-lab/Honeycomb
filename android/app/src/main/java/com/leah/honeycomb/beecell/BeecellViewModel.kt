@@ -880,6 +880,10 @@ class BeecellViewModel(
             timerSeconds = currentTimer,
             isTimerActive = currentActive
         )
+        // Undo cancels a running autocomplete (matching iOS/Mac and Android Spider) —
+        // otherwise the 150ms chain keeps going and re-plays the cards the undo took back.
+        _isAutoplayRunning.value = false
+        clearHint()
         _isStuck.value = false
         checkWinState()
         checkAutocompleteState()

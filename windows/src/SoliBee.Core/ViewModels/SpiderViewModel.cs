@@ -778,6 +778,10 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
 
     private void AnimateNextAutocompleteMove()
     {
+        // A tick that already fired and was Posted to the UI thread still runs after
+        // New Game/Restart/Undo dispose the timer — without this it would start
+        // auto-playing the fresh board. Mirrors iOS/Android's `guard isAutoplayRunning`.
+        if (!IsAutoplayRunning) return;
         var move = FindNextAutocompleteMove();
         if (move != null)
         {
@@ -1053,6 +1057,11 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     public void Undo()
     {
         if (_undoStack.Count == 0 || State.HasWon) return;
+        // Undo cancels a running autocomplete (matching iOS/Mac) — otherwise the timer
+        // keeps firing and immediately re-plays every card the undo just took back.
+        _autocompleteTimer?.Dispose();
+        _autocompleteTimer = null;
+        IsAutoplayRunning = false;
         RestoreSnapshot(_undoStack.Pop());
         ClearHintCycle();
         PointPopup = null;

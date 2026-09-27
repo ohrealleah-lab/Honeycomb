@@ -408,6 +408,9 @@ class SpiderViewModel(
         updateModeStats(_options.value.suitCount) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
         bannerQueue.clear()
         scheduleIdleActionCheck()
+        // Bumps hintGeneration too, so a background hint search from the abandoned deal
+        // can't land on this one. Matches Klondike/Beecell.
+        clearHint()
 
         undoStack.clear()
 
@@ -480,6 +483,7 @@ class SpiderViewModel(
     fun restartCurrentGame() {
         val initial = initialState ?: return
         stopTimer()
+        clearHint()
         undoStack.clear()
         _state.value = initial
         _isAutocompleteAvailable.value = false
@@ -957,6 +961,7 @@ class SpiderViewModel(
         _isAutoplayRunning.value = false
         _isStuck.value = false
         _pointPopup.value = null
+        clearHint()
         checkWinState()
         checkAutocompleteState()
         checkStuckState()

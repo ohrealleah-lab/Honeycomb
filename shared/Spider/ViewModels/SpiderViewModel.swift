@@ -394,6 +394,8 @@ public final class SpiderViewModel {
         isAutoplayRunning = false
         isStuck = false
         initialState = state
+        // Matches Klondike/Beecell: a hint from the abandoned deal must not carry over.
+        clearHint()
         clearKeyboardCursor()
         gameGeneration += 1
         scheduleIdleActionCheck()
@@ -407,6 +409,7 @@ public final class SpiderViewModel {
         isAutocompleteAvailable = false
         isAutoplayRunning = false
         isStuck = false
+        clearHint()
         clearKeyboardCursor()
         gameGeneration += 1
         scheduleIdleActionCheck()
