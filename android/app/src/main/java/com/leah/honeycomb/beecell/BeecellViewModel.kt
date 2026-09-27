@@ -412,6 +412,19 @@ class BeecellViewModel(
         )
     }
 
+    // Reacts to No Stress Mode toggling mid-game — only starts/stops the timer, never
+    // touches the board. Matches Swift's reactToNoStressModeChange (and Klondike/Spider).
+    fun reactToNoStressModeChange() {
+        if (!sharedOptions.noStressMode.value) {
+            if (_state.value.movesCount > 0 && !_state.value.hasWon) {
+                startTimerIfNeeded()
+            }
+        } else if (_state.value.isTimerActive) {
+            stopTimer()
+            _state.update { it.copy(timerSeconds = 0) }
+        }
+    }
+
     fun stopTimer() {
         gameTimer.stop(onSetActive = { active -> _state.update { it.copy(isTimerActive = active) } })
     }

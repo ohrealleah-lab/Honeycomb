@@ -96,12 +96,16 @@ class GameViewModel(
         val oldOptions = _options.value
         _options.value = newOptions
         saveOptions(newOptions)
-        // Only Vegas Scoring toggling actually invalidates the current deal (it changes
-        // what the score even means) — unrelated settings like Draw Mode or Timed Match
-        // must not discard an in-progress game. Matches Swift's handleOptionsChanged.
+        // Vegas Scoring toggling invalidates the current deal (it changes what the score
+        // even means) — re-deal without counting a new game, matching Swift's
+        // handleOptionsChanged. A Draw Mode change deals a fresh, counted game right away,
+        // matching Mac's Options OK handler (drawMode != → startNewGame()); previously
+        // Android only applied it at the next deal, leaving the old mode in play.
         if (newOptions.isVegasScoring != oldOptions.isVegasScoring) {
             _vegasBankroll.value = 0
             startNewGame(countAsNewGame = false)
+        } else if (newOptions.drawMode != oldOptions.drawMode && newOptions.drawMode != _state.value.drawMode) {
+            startNewGame()
         }
     }
 

@@ -26,10 +26,6 @@ fun KlondikeOptionsSheet(
     val sharedOptions = appContainer.sharedOptions
     val language by appContainer.language.collectAsState()
 
-    DisposableEffect(viewModel) {
-        sharedOptions.onNoStressModeChange = { viewModel.reactToNoStressModeChange() }
-        onDispose { sharedOptions.onNoStressModeChange = null }
-    }
 
     OptionsFullScreenView(
         title = Strings.get(StringKey.Options, language),

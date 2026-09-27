@@ -62,6 +62,10 @@ class AppContainer(private val context: Context) {
 
     var initialGameMode: String = "klondike"
         private set
+
+    // Route of the game most recently shown (see setLastGameMode) — "the active game"
+    // for dispatching shared-option reactions, like Mac's AppCoordinator.gameMode.
+    private var activeGameRoute: String = "klondike"
     
     init {
         com.leah.honeycomb.audio.UISound.backend = soundManager
@@ -69,7 +73,23 @@ class AppContainer(private val context: Context) {
         val langString = prefs[appLanguageKey]
         _language.value = if (langString == "Spanish") AppLanguage.Spanish else AppLanguage.English
         initialGameMode = prefs[lastGameModeKey] ?: "klondike"
+        activeGameRoute = initialGameMode
+
+        // The one place No Stress Mode's timer reaction is dispatched, to the active game
+        // only — mirrors Mac's AppCoordinator.init. Previously only the Klondike/Spider
+        // Options screens registered this (and cleared it on leaving), so toggling No
+        // Stress from the app-wide Options screen, or anywhere while in Beecell, never
+        // stopped/reset the timer. Blackjack/Video Poker/Honeycomb have no timer.
+        sharedOptions.onNoStressModeChange = {
+            when (activeGameRoute) {
+                AppRoute.Klondike.Board.route -> klondikeViewModel.reactToNoStressModeChange()
+                AppRoute.Spider.Board.route -> spiderViewModel.reactToNoStressModeChange()
+                AppRoute.Beecell.Board.route -> beecellViewModel.reactToNoStressModeChange()
+                else -> Unit
+            }
+        }
     }
+
     
     fun setLanguage(lang: AppLanguage) {
         _language.value = lang
@@ -79,6 +99,7 @@ class AppContainer(private val context: Context) {
     }
 
     fun setLastGameMode(mode: String) {
+        activeGameRoute = mode
         PreferencesHelper.trackWrite {
             context.dataStore.edit { it[lastGameModeKey] = mode }
         }
