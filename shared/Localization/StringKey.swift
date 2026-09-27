@@ -1312,6 +1312,8 @@ public enum StringKey: String, CaseIterable {
     case touchAddCardBackTitle = "touch_add_card_back_title"
     /// Steal-mode instructional hint, iOS (touch wording — Mac/Windows use the click-based steal_instruction key)
     case stealInstructionTap = "steal_instruction_tap"
+    /// Steal-mode instructional hint shown in the compact top-bar rules pill (replaces the rule name while steal mode is active) — short enough to fit that one-line pill instead of steal_instruction_tap's full two-line wording.
+    case stealInstructionTapCompact = "steal_instruction_tap_compact"
     /// Placeholder/fallback text
     case touchLayoutComingSoon = "touch_layout_coming_soon"
     /// Title-case game label

@@ -662,6 +662,7 @@ public enum StringKey
     TouchResetPositionButton,
     TouchAddCardBackTitle,
     StealInstructionTap,
+    StealInstructionTapCompact,
     TouchLayoutComingSoon,
     TouchBlackjackTitle,
     TouchBlackjackBanner,

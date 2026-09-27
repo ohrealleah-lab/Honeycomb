@@ -657,6 +657,7 @@ enum StringsEnglish {
         .touchResetPositionButton: "Reset Position",
         .touchAddCardBackTitle: "Add Card Back",
         .stealInstructionTap: "Double-tap a captured opponent's card\non the board to steal it.",
+        .stealInstructionTapCompact: "Double-tap to steal a card",
         .touchLayoutComingSoon: "Touch layout coming soon",
         .touchBlackjackTitle: "Blackjack",
         .touchBlackjackBanner: "BLACKJACK",

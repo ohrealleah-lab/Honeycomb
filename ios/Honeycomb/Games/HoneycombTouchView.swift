@@ -211,14 +211,6 @@ struct HoneycombTouchView: View {
                 .allowsHitTesting(showingRuleBanner)
                 .onTapGesture { dismissRuleBanner() }
 
-            // Hidden once a steal is staged (pendingSteal != nil) — the confirmation
-            // alert ("Are you sure you want to steal this card?") takes over from here,
-            // and leaving this instruction toast up underneath it stacked two banners
-            // on screen at once. Matches mac's rulesBanner (HoneycombView.swift).
-            if isStealingCard && viewModel.pendingSteal == nil {
-                stealInstructionBar
-            }
-
             if viewModel.showPostGamePrompt && !isStealingCard && !showingRuleBanner {
                 postGameOverlay
             }
@@ -735,6 +727,12 @@ struct HoneycombTouchView: View {
     }
 
     private var rulesBannerLines: [String] {
+        // Steal mode borrows the rules pill (topBar in landscape, rulesCapsule in
+        // portrait) instead of its own floating banner — always visible, never
+        // overlaps the board cards it's telling the player to double-tap.
+        if isStealingCard {
+            return [coordinator.L(.stealInstructionTapCompact)]
+        }
         if isMidMatch {
             if viewModel.activeRules.isEmpty { return [coordinator.L(.ruleLineNormal)] }
             return viewModel.activeRules.map { rule in
@@ -1108,25 +1106,6 @@ struct HoneycombTouchView: View {
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    }
-
-    private var stealInstructionBar: some View {
-        VStack(spacing: 12) {
-            Text(coordinator.L(.stealInstructionTap))
-                .font(.headline.weight(.bold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-            Button(coordinator.L(.cancel)) {
-                isStealingCard = false
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.blue)
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
-        .background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
-        .frame(maxHeight: .infinity, alignment: .top)
-        .padding(.top, 60)
     }
 
     private func triggerDealFlip() {

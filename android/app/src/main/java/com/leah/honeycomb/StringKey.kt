@@ -658,6 +658,7 @@ enum class StringKey {
     TouchResetPositionButton,
     TouchAddCardBackTitle,
     StealInstructionTap,
+    StealInstructionTapCompact,
     TouchLayoutComingSoon,
     TouchBlackjackTitle,
     TouchBlackjackBanner,
