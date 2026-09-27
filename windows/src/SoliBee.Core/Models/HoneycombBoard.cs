@@ -220,7 +220,10 @@ public class HoneycombBoard
                 if (targetCard.Owner != attacker.Owner)
                 {
                     samePlusActualFlip = true;
-                    if (rules.Contains(HoneycombRule.Same) && sameMatches.Contains(idx)) LastSameTriggered = true;
+                    // Same only counts when it actually qualified (2+ matching sides) — a
+                    // lone same-stat side that got flipped via Plus isn't a Same trigger.
+                    // Matches Mac's sameActuallyFlips (HoneycombBoard.swift).
+                    if (rules.Contains(HoneycombRule.Same) && sameMatches.Count >= 2 && sameMatches.Contains(idx)) LastSameTriggered = true;
                     if (rules.Contains(HoneycombRule.Plus) && plusSums.Values.Any(list => list.Count >= 2 && list.Contains(idx))) LastPlusTriggered = true;
                     
                     targetCard.Owner = attacker.Owner;

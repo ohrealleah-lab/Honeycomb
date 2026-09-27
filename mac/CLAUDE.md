@@ -64,6 +64,9 @@ To add a **brand new trigger**: just add the spreadsheet row with new trigger te
 
 Rebuild + test both platforms after regenerating (`make build && make test` here; `dotnet build && dotnet test` on Windows).
 
+### Honeycomb capture-rule parity vectors
+`shared/Honeycomb/TestVectors/honeycomb_capture_vectors.json` holds ~800 board+placement cases with the exact outcome Mac's `HoneycombBoard` produces (owners, modifiers, flips, Same/Plus/Fallen Ace/combo flags). It's generated from the Swift engine by `SoliBeeTests/HoneycombGoldenVectorTests.swift` and replayed by Android (`HoneycombGoldenVectorTests.kt`) and Windows (`HoneycombGoldenVectorTests.cs`), so any port whose rules drift from Mac fails its own tests. After an **intentional** rules change on Mac, regenerate with `HONEYCOMB_REGEN_VECTORS=1 make test`, commit the JSON, then fix the other engines until their tests pass. Never hand-edit the JSON.
+
 ### Dark mode card colors
 - Red suits (hearts/diamonds): `Color(red: 1.0, green: 0.267, blue: 0.267)` — #FF4444
 - Black suits (spades/clubs): `Color(red: 0.753, green: 0.753, blue: 0.753)` — #C0C0C0

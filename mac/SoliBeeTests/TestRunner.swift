@@ -58,6 +58,10 @@ struct TestRunner {
         HoneycombCaptureRulesTests.run()
         print("✅ HoneycombCaptureRulesTests passed.")
 
+        print("🧪 Running HoneycombGoldenVectorTests...")
+        HoneycombGoldenVectorTests.run()
+        print("✅ HoneycombGoldenVectorTests passed.")
+
         print("🧪 Running CrossGameRegressionTests...")
         CrossGameRegressionTests.run()
         print("✅ CrossGameRegressionTests passed.")
