@@ -469,6 +469,14 @@ class GameViewModel(
             
             _vegasBankroll.value = savedState.vegasBankroll
             vegasBankrollAtGameStart = savedState.vegasBankrollAtGameStart
+            // Derived flags (autocomplete available, stuck) aren't persisted — recompute
+            // them for the restored board, or the Autocomplete button stays hidden until
+            // the player happens to make another move. Posted (not immediate) so it runs
+            // after construction finishes and every property initializer below has run.
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                checkAutocompleteState()
+                checkStuckState()
+            }
         } else {
             startNewGame()
         }
