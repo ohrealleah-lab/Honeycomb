@@ -340,6 +340,11 @@ public partial class HoneycombViewModel : ObservableObject
 
     public void StartNewMatch()
     {
+        // Invalidates every pending continuation from the previous match, exactly like
+        // QuitMatch — Start/Rematch are clickable the moment Phase flips to Result, so the
+        // finished match's ShowPostGamePromptAfterDelay (1.5s) could otherwise land on the
+        // new match and throw the win/lose overlay over it.
+        _matchGeneration++;
         _isAnimating = false;
         ActiveHint = null;
         PendingSteal = null;
@@ -1076,6 +1081,7 @@ public partial class HoneycombViewModel : ObservableObject
             StartNewMatch();
             return;
         }
+        _matchGeneration++; // see StartNewMatch
         _isRematchMatch = true;
 
         // Defensive reset, mirroring StartNewMatch() — a previous match quit (or
