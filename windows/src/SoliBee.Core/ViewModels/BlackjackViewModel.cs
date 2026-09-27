@@ -236,9 +236,8 @@ public partial class BlackjackViewModel : ObservableObject
         if (!freePlay && State.Credits < State.CurrentBet) return;
         _handFreePlay = freePlay;
 
-        // Stats.HandsPlayed only increments later, per resulting hand (in
-        // ApplyPayout) — checking it here, before any of that, is still this game's
-        // equivalent of "is this the very first hand ever."
+        // Stats.HandsPlayed only increments further down this method, so checking it
+        // here, before that, is this game's equivalent of "is this the very first hand ever."
         if (Stats.HandsPlayed == 0)
         {
             var firstLaunchResult = BannerCatalog.Fire(BannerId.MilestonesFirstLaunchEver);
@@ -269,10 +268,11 @@ public partial class BlackjackViewModel : ObservableObject
         };
         ScheduleIdleActionCheck();
 
-        // Stats.HandsPlayed is incremented per resulting hand (in ApplyPayout), not here —
-        // a split round produces 2 resulting hands from 1 round, and HandsWon/Lost/Pushed
-        // are already tallied per resulting hand, so counting HandsPlayed per round instead
-        // would let win-rate (HandsWon/HandsPlayed) mathematically exceed 100%.
+        // Counted at deal (and again in Split(), which creates a second wagered hand) —
+        // matches Mac, which counts here so HandsPlayed stays in lockstep with
+        // TotalCreditsWagered even if the hand is abandoned (New Game) before it settles.
+        // A split still totals 2, one per resulting hand, so win rate can't exceed 100%.
+        Stats.HandsPlayed++;
         _sessionHandsPlayed++;
         if (!freePlay) Stats.TotalCreditsWagered += State.CurrentBet;
 
@@ -344,6 +344,8 @@ public partial class BlackjackViewModel : ObservableObject
             State.Credits -= hand.Bet;
             Stats.TotalCreditsWagered += hand.Bet;
         }
+        // A split creates a second wagered hand — counted here, like Mac's split().
+        Stats.HandsPlayed++;
 
         var hand2 = new BlackjackHand { Bet = hand.Bet, FromSplit = true };
         hand2.Cards.Add(hand.Cards[1]);
@@ -544,8 +546,6 @@ public partial class BlackjackViewModel : ObservableObject
         // Uses the flag snapshotted at Deal(), not a live re-read, so switching No Stress
         // Mode after seeing the hand can't change whether this payout is real money.
         bool freePlay = _handFreePlay;
-
-        Stats.HandsPlayed++;
 
         switch (hand.Result)
         {
