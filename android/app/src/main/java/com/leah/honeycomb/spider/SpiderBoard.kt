@@ -113,13 +113,27 @@ fun SpiderBoard(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
+        // The game timer lives in the app-scoped ViewModel, so without pausing it here it
+        // kept counting while the app was backgrounded and after switching to another game
+        // (Mac/Windows pause it on a game switch, iOS is suspended in the background).
+        // Backgrounding resumes it automatically on return; leaving the board resumes it
+        // on the next move, like Mac.
+        var timerWasRunning = false
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 dragState = DragState()
+                timerWasRunning = viewModel.state.value.isTimerActive
+                viewModel.stopTimer()
+            } else if (event == Lifecycle.Event.ON_START && timerWasRunning) {
+                timerWasRunning = false
+                viewModel.startTimerIfNeeded()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.stopTimer()
+        }
     }
 
     var showQuitDialog by remember { mutableStateOf(false) }
