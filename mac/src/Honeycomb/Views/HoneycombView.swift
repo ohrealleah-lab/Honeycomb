@@ -512,18 +512,18 @@ public struct HoneycombView: View {
                                 .padding(.top, 4)
                         }
 
-                        if viewModel.matchOutcome == .win && !coordinator.noStressMode
+                        if viewModel.matchOutcome == .win && !viewModel.noStressModeThisMatch
                             && HoneycombProfileManager.shared.isCardBankFull {
                             VStack {
                                 Text(coordinator.L(.cardBankFullLine1))
                                 Text(coordinator.L(.cardBankFullLine2))
                             }
                             .foregroundColor(.white).padding()
-                        } else if viewModel.matchOutcome == .win && !coordinator.noStressMode
+                        } else if viewModel.matchOutcome == .win && !viewModel.noStressModeThisMatch
                             && viewModel.hasObtainedAllOpponentCards {
                             Text(coordinator.L(.obtainedAllCardsFmt, honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language)))
                                 .foregroundColor(.white).padding()
-                        } else if viewModel.matchOutcome == .win && !coordinator.noStressMode
+                        } else if viewModel.matchOutcome == .win && !viewModel.noStressModeThisMatch
                             && viewModel.hasStolenThisMatch {
                             VStack {
                                 Text(coordinator.L(.rematchToTakeAnother))
@@ -531,7 +531,7 @@ public struct HoneycombView: View {
                                 Text(remaining == 1 ? coordinator.L(.cardToSteal) : coordinator.L(.cardsToStealFmt, remaining))
                             }
                             .foregroundColor(.white).padding()
-                        } else if viewModel.matchOutcome == .win && !coordinator.noStressMode
+                        } else if viewModel.matchOutcome == .win && !viewModel.noStressModeThisMatch
                             && viewModel.stealProtectionActive && viewModel.hasStealableCard {
                             // Only claims a card is available when one actually is —
                             // stealProtectionActive alone doesn't guarantee that (it
@@ -566,7 +566,7 @@ public struct HoneycombView: View {
                             // Hidden once the card bank is full (nothing left to steal)
                             // or once this match's one steal has already been spent —
                             // Rematch is required to steal again.
-                            if viewModel.matchOutcome == .win && !coordinator.noStressMode
+                            if viewModel.matchOutcome == .win && !viewModel.noStressModeThisMatch
                                 && !HoneycombProfileManager.shared.isCardBankFull
                                 && !viewModel.hasStolenThisMatch
                                 && viewModel.hasStealableCard {
@@ -1166,19 +1166,15 @@ struct HoneycombOptionsView: View {
             availableHeight: availableHeight,
             onViewStats: { isShowingStats = true },
             onOK: {
-                let wasNoStressMode = coordinator.noStressMode
                 // No Stress Mode is app-wide now (AppCoordinator) — pushing the edit
                 // there is what makes it actually apply everywhere. Sound/Honey Mode/
                 // Manually Dismiss Banners/Hide Hint Button/hideBee are already live via
                 // OptionsSheetShell's direct $coordinator.X bindings below.
+                // Honeycomb locks No Stress Mode per match (viewModel.noStressModeThisMatch),
+                // so a mid-match change deliberately doesn't re-deal — it just applies from
+                // the next Start/Rematch, matching iOS and Android.
                 coordinator.noStressMode = noStressMode
                 coordinator.hideBee = hideBee
-                // No Stress Mode's deck composition is only decided at match start, so
-                // toggling it on mid-match has no visible effect until the next deal —
-                // silently deal fresh instead of leaving a stale, unapplied setting.
-                if noStressMode && !wasNoStressMode && (viewModel.gameState == .playing || viewModel.gameState == .suddenDeath) {
-                    viewModel.startNewGame()
-                }
             }
         ) {
             Toggle(coordinator.L(.soundEffects), isOn: $coordinator.isSoundEnabled)

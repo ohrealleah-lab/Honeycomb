@@ -40,6 +40,11 @@ public class HoneycombState
     public int CardsCapturedThisMatch { get; set; } = 0;
     public bool HasStolenThisMatch { get; set; } = false;
 
+    // No Stress Mode as it was when this match was dealt — locked for the whole match.
+    // The player's deck and steal eligibility read this rather than the live setting,
+    // so flipping it mid-match only takes effect at the next Start/Rematch.
+    public bool NoStressModeThisMatch { get; set; } = false;
+
     // Steal Protection: once a stuck rematch chain trips this (see
     // HoneycombViewModel.ApplyStealProtection), ANY not-yet-unlocked card left on the
     // board becomes stealable for this win, not just one actually captured from the

@@ -982,7 +982,7 @@ struct HoneycombTouchView: View {
 
     private var canStealCard: Bool {
         viewModel.matchOutcome == .win
-            && !coordinator.noStressMode
+            && !viewModel.noStressModeThisMatch
             && !viewModel.hasStolenThisMatch
             && !HoneycombProfileManager.shared.isCardBankFull
             && viewModel.hasStealableCard
@@ -1012,7 +1012,7 @@ struct HoneycombTouchView: View {
                         .foregroundColor(viewModel.matchOutcome == .win || viewModel.matchOutcome == .tie ? .yellow : .white)
                 }
 
-                if viewModel.matchOutcome == .win && !coordinator.noStressMode {
+                if viewModel.matchOutcome == .win && !viewModel.noStressModeThisMatch {
                     if HoneycombProfileManager.shared.isCardBankFull {
                         VStack(spacing: 4) {
                             Text(coordinator.L(.cardBankFullLine1))

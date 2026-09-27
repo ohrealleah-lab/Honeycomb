@@ -67,7 +67,12 @@ data class HoneycombState(
     // for iOS's 3-beat lift/fly/land matchedGeometryEffect choreography (swapAnimationPhase
     // in shared/Honeycomb/ViewModels/HoneycombViewModel.swift): a real, working "something
     // changed here" cue, not a byte-faithful port of that animation.
-    val swapHighlightCardIds: Set<String> = emptySet()
+    val swapHighlightCardIds: Set<String> = emptySet(),
+    // No Stress Mode as it was when this match was dealt — locked for the whole match
+    // (deck composition and steal eligibility both read this, never the live toggle),
+    // so flipping the global setting mid-match only takes effect at the next deal.
+    // Persisted with the rest of the state so a restored match keeps its lock.
+    val noStressModeThisMatch: Boolean = false
 ) {
     val mandatedPlayerHandIndex: Int?
         get() {
@@ -270,12 +275,22 @@ class HoneycombViewModel(
         )
 
         if (savedState != defaultState && savedState.gameState != HoneycombGameState.Setup && savedState.gameState != HoneycombGameState.GameOver) {
-            _state.value = savedState
+            // Transient highlight/banner state was mid-animation when it was saved, and
+            // the coroutines that would have cleared it didn't survive the process.
+            _state.value = savedState.copy(
+                showSuddenDeathBanner = false,
+                captureAttackerIds = emptySet(),
+                pointHighlightCardId = null,
+                pointHighlightStatIndices = emptySet(),
+                swapHighlightCardIds = emptySet()
+            )
             if (!savedState.isPlayerTurn && savedState.gameState == HoneycombGameState.Playing) {
-                viewModelScope.launch {
-                    delay(1000)
-                    aiPlayTurn()
-                }
+                scheduleAiTurn(1000)
+            } else if (savedState.gameState == HoneycombGameState.SuddenDeath) {
+                // Saved during the SuddenDeathPending window — the coroutine that would
+                // have called triggerSuddenDeath() died with the process, so restart it
+                // or the match is stuck on a full board with no way forward but Quit.
+                scheduleSuddenDeathSequence()
             }
         } else {
             loadOptions()
@@ -292,8 +307,7 @@ class HoneycombViewModel(
     }
 
     fun startNewGame() {
-        aiMoveGeneration++
-        hintGeneration++
+        resetMatchTransients()
         isRematchMatch = false
         consecutiveNoStealWins = 0
         stealProtectionActive = false
@@ -304,7 +318,6 @@ class HoneycombViewModel(
         consecutiveRematchLosses = 0
         lastPlayerMove = null
         pendingUndoRepeatCheck = null
-        clearBanners()
 
         var rolledRules = emptyList<HoneycombRule>()
         var rolledSuits = emptySet<String>()
@@ -333,7 +346,8 @@ class HoneycombViewModel(
             rolledSuits = setOf(listOf("S", "H", "D", "C").random())
         }
         
-        val deck = rollOpponentDeck(opts.difficulty, rolledRules, rolledSuits)
+        val noStressModeThisMatch = sharedOptions.noStressMode.value
+        val deck = rollOpponentDeck(opts.difficulty, rolledRules, rolledSuits, noStressModeThisMatch)
         
         rematchOpponentDeck = deck
         rematchActiveRules = rolledRules
@@ -341,16 +355,17 @@ class HoneycombViewModel(
 
         val opponentHand = deck.map { HoneycombCard(it, CardOwner.Opponent) }
 
-        _state.update { 
-            it.copy(
-                board = HoneycombBoard().apply { ascensionDescensionSuits = rolledSuits },
-                activeRules = rolledRules,
-                ascensionDescensionSuits = rolledSuits,
-                opponentHand = opponentHand,
-                gameState = HoneycombGameState.Playing,
-                showPostGamePrompt = false
-            )
-        }
+        // Built from defaults rather than copy()'d from the previous match, so nothing
+        // match-scoped (matchOutcome, pendingSteal, Sudden Death banner, highlights...)
+        // can leak across into the new one.
+        _state.value = HoneycombState(
+            board = HoneycombBoard().apply { ascensionDescensionSuits = rolledSuits },
+            activeRules = rolledRules,
+            ascensionDescensionSuits = rolledSuits,
+            opponentHand = opponentHand,
+            gameState = HoneycombGameState.Playing,
+            noStressModeThisMatch = noStressModeThisMatch
+        )
         setupPlayerHand()
         finishMatchSetup()
     }
@@ -360,38 +375,45 @@ class HoneycombViewModel(
             startNewGame()
             return
         }
+        resetMatchTransients()
         isRematchMatch = true
-        aiMoveGeneration++
-        hintGeneration++
         hasStolenThisMatch = false
         sessionCardsCaptured = 0
         hintUsageCountThisMatch = 0
         lastPlayerMove = null
         pendingUndoRepeatCheck = null
-        clearBanners()
-        
+
         val opponentHand = rematchOpponentDeck.map { HoneycombCard(it, CardOwner.Opponent) }
         
-        _state.update {
-            it.copy(
-                board = HoneycombBoard().apply { ascensionDescensionSuits = rematchAscensionDescensionSuits },
-                activeRules = rematchActiveRules,
-                ascensionDescensionSuits = rematchAscensionDescensionSuits,
-                opponentHand = opponentHand,
-                gameState = HoneycombGameState.Playing,
-                showPostGamePrompt = false
-            )
-        }
+        // The opponent deck is reused, not re-rolled, but a rematch is still a new match:
+        // it takes No Stress Mode's current value for its own lock (steal eligibility).
+        _state.value = HoneycombState(
+            board = HoneycombBoard().apply { ascensionDescensionSuits = rematchAscensionDescensionSuits },
+            activeRules = rematchActiveRules,
+            ascensionDescensionSuits = rematchAscensionDescensionSuits,
+            opponentHand = opponentHand,
+            gameState = HoneycombGameState.Playing,
+            noStressModeThisMatch = sharedOptions.noStressMode.value
+        )
         setupPlayerHand()
         finishMatchSetup(forceAlternateStarter = true)
     }
 
     private fun setupPlayerHand() {
-        val activeDeckIndex = _options.value.activeDeckIndex
-        val savedDecks = profileManager.savedDecks.value
-        val deckIds = if (activeDeckIndex in savedDecks.indices) savedDecks[activeDeckIndex].cardIds else emptyList()
-        
-        val pDeckData = deckIds.mapNotNull { database.card(it) }
+        val pDeckData = if (_state.value.noStressModeThisMatch) {
+            // Overpowered deck: one 5★, one 4★, three 3★ — the strongest composition that
+            // still respects the same rarity caps a normal deck must (max one 5★; max one
+            // 4★ once a 5★ is present). Mirrors iOS/Mac's setupPlayerHand and Windows'
+            // BuildPlayerHand, which deal this instead of the saved deck under No Stress.
+            database.randomCards(stars = 5, count = 1) +
+                database.randomCards(stars = 4, count = 1) +
+                database.randomCards(stars = 3, count = 3)
+        } else {
+            val activeDeckIndex = _options.value.activeDeckIndex
+            val savedDecks = profileManager.savedDecks.value
+            val deckIds = if (activeDeckIndex in savedDecks.indices) savedDecks[activeDeckIndex].cardIds else emptyList()
+            deckIds.mapNotNull { database.card(it) }
+        }
         val pDeck = pDeckData.map { HoneycombCard(it, CardOwner.Player) }.toMutableList()
         
         val oDeck = _state.value.opponentHand.toMutableList()
@@ -448,14 +470,19 @@ class HoneycombViewModel(
 
         if (swapIds.isNotEmpty()) {
             enqueueBanner(swapBannerText ?: "${HoneycombRule.Swap.displayName}!")
-            viewModelScope.launch {
+            swapHighlightJob?.cancel()
+            swapHighlightJob = viewModelScope.launch {
                 delay(2000)
                 _state.update { it.copy(swapHighlightCardIds = emptySet()) }
             }
         }
     }
 
-    private fun rollOpponentDeck(difficulty: HoneycombDifficulty, rules: List<HoneycombRule>, suits: Set<String>): List<HoneycombCardData> {
+    // Cancelled by resetMatchTransients() so a quit/new match inside the 2s window can't
+    // clear the next match's Swap highlight early.
+    private var swapHighlightJob: kotlinx.coroutines.Job? = null
+
+    private fun rollOpponentDeck(difficulty: HoneycombDifficulty, rules: List<HoneycombRule>, suits: Set<String>, noStressMode: Boolean): List<HoneycombCardData> {
         // Matches shared/Honeycomb/ViewModels/HoneycombViewModel.swift's
         // normalComposition/reverseComposition exactly — Medium and Hard's star tiers
         // here previously diverged from iOS (Medium included a 1★ slot iOS's Medium never
@@ -490,7 +517,7 @@ class HoneycombViewModel(
         // is already owned by the player, swap the first owned card for an unowned card
         // from the same star tier (if one exists) — guarantees at least one stealable
         // card per match without touching deck quality or rarity composition.
-        if (!sharedOptions.noStressMode.value) {
+        if (!noStressMode) {
             val owned = profileManager.unlockedCardIds.value
             val allOwned = deck.all { owned.contains(it.id) }
             if (allOwned) {
@@ -608,10 +635,7 @@ class HoneycombViewModel(
         checkSameDifficultyStreak()
 
         if (!playerStarts) {
-            viewModelScope.launch {
-                delay(2500)
-                aiPlayTurn()
-            }
+            scheduleAiTurn(2500)
         } else {
             prewarmHint()
         }
@@ -633,7 +657,14 @@ class HoneycombViewModel(
             st.copy(
                 board = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) }),
                 playerHand = st.playerHand.map { it.copy() },
-                opponentHand = st.opponentHand.map { it.copy() }
+                opponentHand = st.opponentHand.map { it.copy() },
+                // Transient highlights are cleared by their own delayed coroutines, which
+                // will have already run by the time this snapshot is restored — keeping
+                // them here would bring them back with nothing left to clear them.
+                captureAttackerIds = emptySet(),
+                pointHighlightCardId = null,
+                pointHighlightStatIndices = emptySet(),
+                swapHighlightCardIds = emptySet()
             )
         )
         undoSessionCardsCaptured.addLast(sessionCardsCaptured)
@@ -1069,10 +1100,36 @@ class HoneycombViewModel(
     }
 
     fun quitMatch() {
-        aiMoveGeneration++
-        undoHistory.clear()
-        clearHint()
+        resetMatchTransients()
         _state.value = HoneycombState()
+    }
+
+    // The one place every match entry/exit point (quit, new game, rematch) goes through
+    // to invalidate the previous match's in-flight work — pending AI turns and the Sudden
+    // Death sequence (aiMoveGeneration), hint searches (hintGeneration), the Swap
+    // highlight clear, queued banners, and the undo stacks. Mirrors the iOS Nectar
+    // Exchange fix: resetting piecemeal per entry point is what let stale callbacks leak.
+    private fun resetMatchTransients() {
+        aiMoveGeneration++
+        clearHint()
+        swapHighlightJob?.cancel()
+        swapHighlightJob = null
+        undoHistory.clear()
+        undoSessionCardsCaptured.clear()
+        clearBanners()
+    }
+
+    // Every delayed AI turn goes through here so it's tied to the generation it was
+    // scheduled in — quit/new game/rematch/undo/Sudden Death all bump aiMoveGeneration,
+    // which turns an abandoned match's pending turn into a no-op instead of letting it
+    // fire early into the next match.
+    private fun scheduleAiTurn(delayMs: Long) {
+        val gen = aiMoveGeneration
+        viewModelScope.launch {
+            delay(delayMs)
+            if (aiMoveGeneration != gen) return@launch
+            aiPlayTurn()
+        }
     }
 
     fun playerPlayCard(handIndex: Int, boardIndex: Int): Boolean {
@@ -1127,10 +1184,7 @@ class HoneycombViewModel(
         checkWinCondition()
 
         if (_state.value.gameState == HoneycombGameState.Playing) {
-            viewModelScope.launch {
-                delay(2500)
-                aiPlayTurn()
-            }
+            scheduleAiTurn(2500)
         }
         return true
     }
@@ -1370,16 +1424,7 @@ class HoneycombViewModel(
             // suddenDeathCount is incremented in triggerSuddenDeath() instead, once the
             // overtime round actually begins (matches Swift/C# reference timing) — not
             // here, since a quit/new-game during the delay below should not count it.
-            val gen = aiMoveGeneration
-            viewModelScope.launch {
-                delay(2500)
-                if (aiMoveGeneration != gen) return@launch
-                _state.update { it.copy(showSuddenDeathBanner = true) }
-                delay(1500)
-                if (aiMoveGeneration != gen) return@launch
-                _state.update { it.copy(showSuddenDeathBanner = false) }
-                triggerSuddenDeath()
-            }
+            scheduleSuddenDeathSequence()
         } else {
             _state.update {
                 it.copy(
@@ -1410,9 +1455,23 @@ class HoneycombViewModel(
     // either side currently owns — whether still in hand or captured on the board —
     // becomes that side's new hand for the next round. Can repeat indefinitely if the
     // overtime round ties again.
+    private fun scheduleSuddenDeathSequence() {
+        val gen = aiMoveGeneration
+        viewModelScope.launch {
+            delay(2500)
+            if (aiMoveGeneration != gen) return@launch
+            _state.update { it.copy(showSuddenDeathBanner = true) }
+            delay(1500)
+            if (aiMoveGeneration != gen) return@launch
+            _state.update { it.copy(showSuddenDeathBanner = false) }
+            triggerSuddenDeath()
+        }
+    }
+
     private fun triggerSuddenDeath() {
         updateStatistics { it.copy(suddenDeathCount = it.suddenDeathCount + 1) }
         undoHistory.clear()
+        undoSessionCardsCaptured.clear()
 
         val st = _state.value
         val playerCards = (st.board.cells.mapNotNull { it.card }.filter { it.owner == CardOwner.Player } + st.playerHand)
@@ -1423,27 +1482,42 @@ class HoneycombViewModel(
         val newBoard = HoneycombBoard().apply { ascensionDescensionSuits = st.ascensionDescensionSuits }
         val nextPlayerTurn = !st.isPlayerTurn
 
+        // Cards change sides here, so the open sets have to be rebuilt against the new
+        // hands. A card is known if it was open in either hand before, or if it was on
+        // the board — every placed card was played face-up in front of both players.
+        val knownIds = st.openOpponentCardIds + st.openPlayerCardIds +
+            st.board.cells.mapNotNull { it.card?.id }
+        val openOpponentIds = opponentCards.map { it.id }.filter { it in knownIds }.toSet()
+        val openPlayerIds = playerCards.map { it.id }.filter { it in knownIds }.toSet()
+
+        // Chaos picks the forced card for whichever side moves first, same as
+        // finishMatchSetup (and iOS's rerollChaosIndexIfNeeded(forPlayerSide:)).
+        val chaos = st.activeRules.contains(HoneycombRule.Chaos)
+        val chaosPlayerIndex = if (chaos && nextPlayerTurn && playerCards.isNotEmpty()) playerCards.indices.random() else null
+        val chaosOpponentIndex = if (chaos && !nextPlayerTurn && opponentCards.isNotEmpty()) opponentCards.indices.random() else null
+
         aiMoveGeneration++
         hintGeneration++
         _state.update {
             it.copy(
                 playerHand = playerCards,
                 opponentHand = opponentCards,
+                openPlayerCardIds = openPlayerIds,
+                openOpponentCardIds = openOpponentIds,
                 board = newBoard,
                 gameState = HoneycombGameState.Playing,
                 isPlayerTurn = nextPlayerTurn,
                 matchOutcome = HoneycombMatchOutcome.None,
                 matchResult = "",
-                chaosPlayerIndex = null,
-                chaosOpponentIndex = null
+                chaosPlayerIndex = chaosPlayerIndex,
+                chaosOpponentIndex = chaosOpponentIndex
             )
         }
 
         if (!nextPlayerTurn) {
-            viewModelScope.launch {
-                delay(2500)
-                aiPlayTurn()
-            }
+            scheduleAiTurn(2500)
+        } else {
+            prewarmHint()
         }
     }
 
@@ -1458,7 +1532,7 @@ class HoneycombViewModel(
 
     val canStealCard: Boolean
         get() = _state.value.matchOutcome == HoneycombMatchOutcome.Win
-            && !sharedOptions.noStressMode.value
+            && !_state.value.noStressModeThisMatch
             && !hasStolenThisMatch
             && !profileManager.isCardBankFull
             && hasStealableCard
@@ -1484,6 +1558,7 @@ class HoneycombViewModel(
 
     fun requestSteal(boardIndex: Int) {
         if (hasStolenThisMatch) return
+        if (_state.value.noStressModeThisMatch) return
         val card = _state.value.board.cells[boardIndex].card ?: return
         if (!isStealEligible(card)) return
 
@@ -1500,6 +1575,8 @@ class HoneycombViewModel(
         val pending = _state.value.pendingSteal ?: return
         _state.update { it.copy(pendingSteal = null) }
 
+        if (_state.value.noStressModeThisMatch) return
+        if (_state.value.matchOutcome != HoneycombMatchOutcome.Win) return
         val card = _state.value.board.cells[pending.boardIndex].card ?: return
         if (!isStealEligible(card)) return
         hasStolenThisMatch = true

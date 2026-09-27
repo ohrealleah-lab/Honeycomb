@@ -1213,7 +1213,10 @@ public partial class MainWindow : Window
         // enabling it while one of those is in progress silently ends it and deals fresh,
         // no confirmation. Klondike/Freecell/Spider apply it live with no reset needed.
         if (_preferencesView != null && _preferencesView.DidEnableNoStressMode() && IsGameInProgress()
-            && (this.DataContext is BlackjackViewModel || this.DataContext is VideoPokerViewModel || this.DataContext is HoneycombViewModel))
+            // Honeycomb is deliberately absent: it locks No Stress Mode per match
+            // (HoneycombState.NoStressModeThisMatch), so the change applies from the
+            // next Start/Rematch instead of discarding the match in progress.
+            && (this.DataContext is BlackjackViewModel || this.DataContext is VideoPokerViewModel))
         {
             ExecuteNewGame();
         }

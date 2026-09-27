@@ -577,9 +577,9 @@ public partial class PreferencesView : UserControl
     }
 
     // True if No Stress Mode was off when the panel opened and is on now — used by
-    // MainWindow's OK button to decide whether to silently end/restart Blackjack,
-    // VideoPoker, or a Honeycomb match, since those are the only games where the
-    // setting doesn't already apply live to a game in progress.
+    // MainWindow's OK button to decide whether to silently end/restart Blackjack or
+    // VideoPoker, since those are the only games where the setting doesn't already
+    // apply live to a game in progress (Honeycomb locks it per match instead).
     public bool DidEnableNoStressMode()
     {
         if (_originalGameOptions != null && DataContext is GameOptions options)

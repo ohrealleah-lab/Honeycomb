@@ -156,6 +156,7 @@ fun HoneycombMatchUI(
     val activeBanner by viewModel.activeBanner.collectAsState()
     val language by com.leah.honeycomb.LocalAppContainer.current.language.collectAsState()
     val hideHintButton by com.leah.honeycomb.LocalAppContainer.current.sharedOptions.hideHintButton.collectAsState()
+    val noStressMode by com.leah.honeycomb.LocalAppContainer.current.sharedOptions.noStressMode.collectAsState()
     val unlockedCardIds by viewModel.profileManager.unlockedCardIds.collectAsState()
     val totalCards = viewModel.database.allCards.size
 
@@ -292,8 +293,13 @@ fun HoneycombMatchUI(
                                 Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
                             }
                             if (!isMidMatch) {
-                                IconButton(onClick = onManageDecksTap) {
-                                    Icon(Icons.Default.Style, contentDescription = "Manage Decks", tint = Color.White)
+                                // Manage Decks edits the player's saved deck — meaningless under
+                                // No Stress Mode, which deals a random strong hand instead. Matches
+                                // iOS/Mac/Windows hiding it in the same case.
+                                if (!noStressMode) {
+                                    IconButton(onClick = onManageDecksTap) {
+                                        Icon(Icons.Default.Style, contentDescription = "Manage Decks", tint = Color.White)
+                                    }
                                 }
                                 IconButton(onClick = onRulesTap) {
                                     Icon(Icons.Default.Hexagon, contentDescription = "Rules", tint = Color.White)

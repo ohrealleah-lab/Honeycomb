@@ -476,6 +476,12 @@ public final class HoneycombViewModel {
     // by startNewGame() (a genuinely new opponent).
     public private(set) var stealProtectionActive: Bool = false
 
+    // No Stress Mode as it was when this match was dealt — locked for the whole match.
+    // The player's deck, the opponent's Favor New Cards roll and steal eligibility all
+    // read this rather than the live toggle, so flipping the global setting mid-match
+    // only takes effect at the next deal (Start or Rematch).
+    public private(set) var noStressModeThisMatch: Bool = false
+
     public func startNewGame() {
         // Invalidates any AI move computation still in flight on a background queue from
         // the match/round this is resetting (e.g. Surrender calling straight into this
@@ -507,6 +513,7 @@ public final class HoneycombViewModel {
         board = HoneycombBoard()
         setupRules()
         board.ascensionDescensionSuits = ascensionDescensionSuits
+        noStressModeThisMatch = sharedOptions.noStressMode
         setupPlayerHand()
 
         let deck = rollOpponentDeck()
@@ -821,6 +828,7 @@ public final class HoneycombViewModel {
         activeRules = rematchActiveRules
         ascensionDescensionSuits = rematchAscensionDescensionSuits
         board.ascensionDescensionSuits = ascensionDescensionSuits
+        noStressModeThisMatch = sharedOptions.noStressMode
         setupPlayerHand()
 
         let swapResult = applyOpponentDeck(rematchOpponentDeck)
@@ -1041,7 +1049,7 @@ public final class HoneycombViewModel {
     }
 
     private func setupPlayerHand() {
-        if sharedOptions.noStressMode {
+        if noStressModeThisMatch {
             // Overpowered deck: one 5*, one 4*, three 3* — the strongest composition
             // that still respects the same rarity caps a normal deck must (max one 5*;
             // max one 4* once a 5* is present), rather than the two-5* deal used
@@ -1160,7 +1168,7 @@ public final class HoneycombViewModel {
         // least one stealable card per match without touching deck quality, AI
         // strength, or the rarity composition — one slot is swapped at most, and only
         // when all 5 slots would otherwise be owned already.
-        if !sharedOptions.noStressMode {
+        if !noStressModeThisMatch {
             let owned = HoneycombProfileManager.shared.unlockedCardIds
             let allOwned = deck.allSatisfy { owned.contains($0.id) }
             if allOwned {
@@ -2477,6 +2485,7 @@ public final class HoneycombViewModel {
         let oCards = (board.cells.compactMap { $0.card }.filter { $0.owner == .opponent } + opponentHand)
             .map { card -> HoneycombCard in var c = card; c.modifier = 0; return c }
 
+        let previousBoardCardIds = Set(board.cells.compactMap { $0.card?.id })
         playerHand = pCards
         opponentHand = oCards
         
@@ -2484,6 +2493,16 @@ public final class HoneycombViewModel {
         // Sudden Death doesn't reroll rules, so the same suits chosen at match start
         // (setupRules) carry over rather than picking a fresh pair for the tie-break.
         board.ascensionDescensionSuits = ascensionDescensionSuits
+        // Cards change sides here, so the open sets have to be rebuilt against the new
+        // hands — otherwise a card keeps its old side's membership (under All Open, your
+        // cards the opponent captured would show face-down in its overtime hand, and the
+        // AI would treat the ones you captured from it as unknown). A card is known if it
+        // was open in either hand before, or if it was on the board, since every placed
+        // card was played face-up in front of both players.
+        let knownIds = openOpponentCardIds.union(openPlayerCardIds)
+            .union(previousBoardCardIds)
+        openOpponentCardIds = Set(oCards.map { $0.id }.filter { knownIds.contains($0) })
+        openPlayerCardIds = Set(pCards.map { $0.id }.filter { knownIds.contains($0) })
         // Already-known cards moving back into hand: nothing to reveal.
         unrevealedCardIds.removeAll()
         handIdentityToken += 1
@@ -2502,6 +2521,8 @@ public final class HoneycombViewModel {
                     self.aiPlayTurn()
                 }
             }
+        } else {
+            prewarmHint()
         }
     }
     
@@ -2598,7 +2619,7 @@ public final class HoneycombViewModel {
     // all, so there's nothing left to validate against deck composition (the old
     // 5★/4★ caps only ever existed to keep a 5-card deck legal).
     public func requestSteal(boardIndex: Int) {
-        guard !hasStolenThisMatch else { return }
+        guard !noStressModeThisMatch, !hasStolenThisMatch else { return }
         guard let incoming = board.cells[boardIndex].card, isStealEligible(incoming) else { return }
 
         pendingSteal = PendingSteal(boardIndex: boardIndex, cardName: incoming.data.name)
@@ -2611,6 +2632,7 @@ public final class HoneycombViewModel {
     public func confirmPendingSteal() {
         guard let steal = pendingSteal else { return }
         pendingSteal = nil
+        guard !noStressModeThisMatch else { return }
         guard let card = board.cells[steal.boardIndex].card, isStealEligible(card) else { return }
 
         HoneycombProfileManager.shared.unlockCard(id: card.data.id)

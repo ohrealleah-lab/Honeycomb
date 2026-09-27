@@ -577,9 +577,8 @@ public partial class HoneycombView : UserControl
             }
             
             // Show Steal Card button if they haven't stolen, and card bank isn't full, and not no-stress, and they won.
-            var globalOpts = SoliBee.Core.Services.SettingsService.LoadOptions();
             bool won = state.PlayerScore > state.OpponentScore;
-            bool canSteal = !globalOpts.IsNoStressMode && !state.HasStolenThisMatch && won;
+            bool canSteal = !state.NoStressModeThisMatch && !state.HasStolenThisMatch && won;
             bool bankFull = HoneycombProfileManager.Shared.UnlockedCardIds.Count >= HoneycombDatabase.Shared.AllCards.Count;
             bool obtainedAllOpponentCards = !bankFull && vm.HasObtainedAllOpponentCards();
 
@@ -626,16 +625,16 @@ public partial class HoneycombView : UserControl
             else
             {
                 StealCardButton.IsVisible = false;
-                BankFullWarningText.IsVisible = !globalOpts.IsNoStressMode && won && bankFull;
-                AllSecretsWarningText.IsVisible = !globalOpts.IsNoStressMode && won && bankFull;
+                BankFullWarningText.IsVisible = !state.NoStressModeThisMatch && won && bankFull;
+                AllSecretsWarningText.IsVisible = !state.NoStressModeThisMatch && won && bankFull;
                 StealProtectionText.IsVisible = false;
 
                 ObtainedAllOpponentCardsText.Text = Strings.Get(StringKey.ObtainedAllCardsFmt, _language).Replace("%@", vm.OpponentNameDisplay);
-                ObtainedAllOpponentCardsText.IsVisible = !globalOpts.IsNoStressMode && won && obtainedAllOpponentCards;
+                ObtainedAllOpponentCardsText.IsVisible = !state.NoStressModeThisMatch && won && obtainedAllOpponentCards;
 
                 // Only the "already stolen" scenario gets its own message here — a
                 // loss/draw or No Stress Mode has nothing steal-related to explain.
-                bool showAlreadyStolen = !globalOpts.IsNoStressMode && won && state.HasStolenThisMatch && !bankFull && !obtainedAllOpponentCards;
+                bool showAlreadyStolen = !state.NoStressModeThisMatch && won && state.HasStolenThisMatch && !bankFull && !obtainedAllOpponentCards;
                 AlreadyStolenWarningText.IsVisible = showAlreadyStolen;
                 // Says how many of this opponent's cards are still left to steal across
                 // future rematches — mirrors the Swift port's opponentCardsRemainingCount.

@@ -383,6 +383,7 @@ public partial class HoneycombViewModel : ObservableObject
         State.Board = new HoneycombBoard();
         State.Board.AscensionDescensionSuits = suits;
 
+        State.NoStressModeThisMatch = SettingsService.LoadOptions().IsNoStressMode;
         State.PlayerHand = BuildPlayerHand();
         State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
 
@@ -461,7 +462,7 @@ public partial class HoneycombViewModel : ObservableObject
     {
         var globalOpts = SettingsService.LoadOptions();
         List<int> playerIds;
-        if (globalOpts.IsNoStressMode)
+        if (State.NoStressModeThisMatch)
         {
             playerIds = new List<int>();
             playerIds.AddRange(HoneycombDatabase.Shared.RandomCards(5, 1).Select(c => c.Id));
@@ -550,6 +551,28 @@ public partial class HoneycombViewModel : ObservableObject
         // Order is active) so tier position never leaks information, regardless of
         // which rules end up active this match.
         deck = deck.OrderBy(_ => Random.Shared.Next()).ToList();
+
+        // Favor New Cards (always on, not a toggle — only skipped under No Stress Mode,
+        // which has no stealing): if every card in the assembled deck is already owned
+        // by the player, swap the first owned card for an unowned card from the same
+        // star tier (if one exists). Guarantees at least one stealable card per match
+        // without touching deck quality or rarity composition. Mirrors the Swift port's
+        // rollOpponentDeck and Android's.
+        if (!State.NoStressModeThisMatch)
+        {
+            var owned = HoneycombProfileManager.Shared.UnlockedCardIds;
+            if (deck.All(c => owned.Contains(c.Id)))
+            {
+                for (int i = 0; i < deck.Count; i++)
+                {
+                    int tier = deck[i].Stars;
+                    var unownedInTier = HoneycombDatabase.Shared.AllCards.Where(c => c.Stars == tier && !owned.Contains(c.Id)).ToList();
+                    if (unownedInTier.Count == 0) continue;
+                    deck[i] = unownedInTier[Random.Shared.Next(unownedInTier.Count)];
+                    break;
+                }
+            }
+        }
 
         return EnsureAscensionCoverage(deck);
     }
@@ -1073,6 +1096,7 @@ public partial class HoneycombViewModel : ObservableObject
         State.Board = new HoneycombBoard();
         State.Board.AscensionDescensionSuits = new List<string>(_rematchAscensionDescensionSuits);
 
+        State.NoStressModeThisMatch = SettingsService.LoadOptions().IsNoStressMode;
         State.PlayerHand = BuildPlayerHand();
         State.PlayerStartingDeck = State.PlayerHand.Select(c => c.Clone()).ToList();
 
@@ -1935,11 +1959,20 @@ public partial class HoneycombViewModel : ObservableObject
 
         var pHand = new List<HoneycombCard>(State.PlayerHand);
         var oHand = new List<HoneycombCard>(State.OpponentHand);
+        // Cards change sides below, so the reveal sets have to be rebuilt against the
+        // new hands — otherwise a card keeps its old side's membership (under All Open,
+        // the player's cards the opponent captured would show face-down in its overtime
+        // hand, and the AI would treat the ones the player captured from it as unknown).
+        // A card is known if it was revealed in either hand before, or if it was on the
+        // board, since every placed card was played face-up in front of both players.
+        var knownIds = new HashSet<Guid>(State.PlayerRevealedIds);
+        knownIds.UnionWith(State.OpponentRevealedIds);
         for (int i=0; i<9; i++)
         {
             var c = State.Board.Cells[i].Card;
             if (c != null)
             {
+                knownIds.Add(c.UniqueInstanceId);
                 c.Modifier = 0;
                 if (c.Owner == 1) pHand.Add(c);
                 else oHand.Add(c);
@@ -1947,6 +1980,8 @@ public partial class HoneycombViewModel : ObservableObject
         }
         State.PlayerHand = pHand;
         State.OpponentHand = oHand;
+        State.PlayerRevealedIds = new HashSet<Guid>(pHand.Select(c => c.UniqueInstanceId).Where(knownIds.Contains));
+        State.OpponentRevealedIds = new HashSet<Guid>(oHand.Select(c => c.UniqueInstanceId).Where(knownIds.Contains));
 
         var suits = State.Board.AscensionDescensionSuits;
         State.Board = new HoneycombBoard();
@@ -2306,7 +2341,7 @@ public partial class HoneycombViewModel : ObservableObject
     // composition (the old 5★/4★ caps only ever existed to keep a 5-card deck legal).
     public void RequestSteal(int boardIndex)
     {
-        if (State.HasStolenThisMatch) return;
+        if (State.NoStressModeThisMatch || State.HasStolenThisMatch) return;
         if (State.PlayerScore <= State.OpponentScore) return; // Must win to steal
         var incoming = State.Board.Cells[boardIndex].Card;
         if (incoming == null || !IsStealEligible(incoming)) return;
@@ -2324,6 +2359,7 @@ public partial class HoneycombViewModel : ObservableObject
         if (PendingSteal == null) return;
         var steal = PendingSteal;
         PendingSteal = null;
+        if (State.NoStressModeThisMatch || State.PlayerScore <= State.OpponentScore) return;
 
         var incoming = State.Board.Cells[steal.BoardIndex].Card;
         if (incoming == null || !IsStealEligible(incoming)) return;
