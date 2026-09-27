@@ -68,9 +68,18 @@ public final class BlackjackViewModel {
         // elsewhere). Mac keeps normal betting behavior.
         return true
         #else
+        // Locked for the hand once it's dealt: deal() deducts the bet based on free
+        // play, and doubleDown/split/evaluateAllHands must use that same answer.
+        // Reading the live toggle mid-hand let a player deal free, turn No Stress off
+        // (e.g. from another game's Options) and collect a real payout. Mirrors
+        // Windows' _handFreePlay.
+        if state.phase == .playing || state.phase == .dealerTurn { return handFreePlay }
         return sharedOptions.noStressMode
         #endif
     }
+
+    // No Stress Mode as it was when the current hand was dealt — see isFreePlay.
+    private var handFreePlay: Bool = false
 
     // FIFO queue of banner texts (milestones, loading flavor) — mirrors the Honeycomb
     // port's bannerQueue/enqueueBanner/advanceBannerQueue.
@@ -252,6 +261,7 @@ public final class BlackjackViewModel {
             enqueueBanner(text)
         }
 
+        handFreePlay = isFreePlay
         if !isFreePlay {
             state.sessionCredits -= state.currentBet
             statistics.totalWagered += state.currentBet

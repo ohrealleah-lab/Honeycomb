@@ -59,7 +59,10 @@ data class BlackjackState(
     val currentBet: Int = 1,
     val handsDealt: Int = 0,
     val resultOutcome: BlackjackRoundOutcome = BlackjackRoundOutcome.None,
-    val lastNetResult: Int = 0
+    val lastNetResult: Int = 0,
+    // No Stress Mode as it was when this hand was dealt — see BlackjackViewModel.isFreePlay.
+    // Persisted so a hand restored after relaunch pays out the same way it was wagered.
+    val handFreePlay: Boolean = false
 ) {
     val isWinRound: Boolean
         get() = resultOutcome == BlackjackRoundOutcome.Blackjack || resultOutcome == BlackjackRoundOutcome.Win

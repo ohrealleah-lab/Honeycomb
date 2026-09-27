@@ -40,7 +40,13 @@ data class VideoPokerState(
     val currentBet: Int = 1,
     val lastPayout: Int = 0,
     val lastHandName: String = "",
-    val handsDealt: Int = 0
+    val handsDealt: Int = 0,
+    // No Stress Mode as it was when this hand was dealt — see VideoPokerViewModel.isFreePlay.
+    val handFreePlay: Boolean = false,
+    // Set the moment draw() replaces cards, before the (background) evaluation lands.
+    // Blocks a second draw on the same hand, and lets a hand restored mid-evaluation
+    // finish evaluating instead of offering the player another draw.
+    val drawCommitted: Boolean = false
 )
 
 enum class VideoPokerVariant {

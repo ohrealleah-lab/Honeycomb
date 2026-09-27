@@ -271,6 +271,12 @@ public partial class VideoPokerViewModel : ObservableObject
 
     // ── Game actions ──────────────────────────────────────────────────────────
 
+    // Snapshotted once at Deal() and reused by Draw() instead of re-reading the live,
+    // player-alterable Options.IsNoStressMode — a live re-read let a player deal free,
+    // turn No Stress Mode off before drawing, and collect a real payout (or the reverse:
+    // pay for the hand and lose the winnings). Mirrors BlackjackViewModel._handFreePlay.
+    private bool _handFreePlay = false;
+
     public void Deal()
     {
         bool freePlay = Options.IsNoStressMode;
@@ -295,6 +301,7 @@ public partial class VideoPokerViewModel : ObservableObject
             if (firstLaunchResult.Kind == BannerFireKind.Message) EnqueueBanner(firstLaunchResult.Text!);
         }
 
+        _handFreePlay = freePlay;
         if (!freePlay) State.SessionCredits -= State.CurrentBet;
         State.HeldSlots        = new bool[5];
         State.WinningCardMask  = new bool[5];
@@ -316,7 +323,7 @@ public partial class VideoPokerViewModel : ObservableObject
     public void Draw()
     {
         if (State.Phase != VideoPokerPhase.Holding) return;
-        bool freePlay = Options.IsNoStressMode;
+        bool freePlay = _handFreePlay;
 
         int drawIdx  = 0;
         var drawPile = _deck.ToList();

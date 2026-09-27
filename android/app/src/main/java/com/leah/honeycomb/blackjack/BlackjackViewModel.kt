@@ -117,6 +117,7 @@ class BlackjackViewModel(
         // Clear condition: if phase is Betting, the hand is fully resolved.
         if (savedState != defaultState && savedState.phase != BlackjackPhase.Betting) {
             _state.value = savedState
+            resumeInterruptedHand()
         } else {
             startNewGame()
         }
@@ -132,8 +133,47 @@ class BlackjackViewModel(
         }
     }
 
+    // Locked for the hand once it's dealt: deal() deducts the bet based on free play, and
+    // doubleDown/split/evaluateAllHands must use that same answer. Reading the live toggle
+    // mid-hand let a player deal free, turn No Stress off, and collect a real payout.
+    // Mirrors Windows' _handFreePlay.
     val isFreePlay: Boolean
-        get() = sharedOptions.noStressMode.value
+        get() {
+            val s = _state.value
+            return if (s.phase == BlackjackPhase.Playing || s.phase == BlackjackPhase.DealerTurn) s.handFreePlay
+            else sharedOptions.noStressMode.value
+        }
+
+    // A hand saved mid-auto-resolve lost the delayed action that would have finished it
+    // when the process died — the dealer-blackjack/player-blackjack/split-aces auto-resolve
+    // or the paced dealer turn itself. Without restarting it, every action refuses
+    // (isDealerBlackjackPending / isBlackjack / isSplitAce guards, deal() needs Betting or
+    // Result) and Blackjack stays stuck across launches.
+    private fun resumeInterruptedHand() {
+        val s = _state.value
+        when (s.phase) {
+            BlackjackPhase.DealerTurn -> {
+                // executeDealerTurn() only starts from Playing; it re-reveals the hole card
+                // (idempotent) and continues drawing from wherever the dealer left off.
+                _state.value = s.copy(phase = BlackjackPhase.Playing)
+                executeDealerTurn()
+            }
+            BlackjackPhase.Playing -> {
+                val active = s.playerHands.getOrNull(s.activeHandIndex)
+                val autoResolvePending = isDealerBlackjackPending ||
+                    (s.playerHands.size == 1 && s.playerHands[0].isBlackjack) ||
+                    active?.isSplitAce == true
+                if (autoResolvePending) {
+                    val generation = ++handGeneration
+                    viewModelScope.launch(Dispatchers.Main) {
+                        delay(1000)
+                        if (handGeneration == generation) executeDealerTurn()
+                    }
+                }
+            }
+            else -> Unit
+        }
+    }
 
     val canOpenOptions: Boolean
         get() = _state.value.phase == BlackjackPhase.Betting || _state.value.phase == BlackjackPhase.Result
@@ -226,6 +266,7 @@ class BlackjackViewModel(
         scheduleIdleActionCheck()
 
         _state.value = s.copy(
+            handFreePlay = isFreePlay,
             sessionCredits = newSessionCredits,
             handsDealt = s.handsDealt + 1,
             deck = freshDeck(),
@@ -439,10 +480,16 @@ class BlackjackViewModel(
             dealerCards = dealerCards
         )
 
+        // Same guard as deal()/split()'s delayed auto-resolves: anything that replaces
+        // the hand (startNewGame) mid-turn must turn this into a no-op rather than let it
+        // append dealer cards, record stats and force Result onto the new state.
+        val generation = handGeneration
         viewModelScope.launch {
             delay(600)
+            if (handGeneration != generation) return@launch
             while (BlackjackState.handValue(_state.value.dealerCards) < 17) {
                 delay(500)
+                if (handGeneration != generation) return@launch
                 val card = popCard(faceUp = true) ?: break
                 com.leah.honeycomb.audio.UISound.play("snap")
                 val currentDealerCards = _state.value.dealerCards.toMutableList()
@@ -451,6 +498,7 @@ class BlackjackViewModel(
             }
 
             delay(500)
+            if (handGeneration != generation) return@launch
             evaluateAllHands()
 
             var finalState = _state.value

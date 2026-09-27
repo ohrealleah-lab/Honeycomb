@@ -95,6 +95,10 @@ class VideoPokerViewModel(
         PreferencesHelper.saveObjectAsync(dataStore, "videopoker_statistics", VideoPokerStatistics.serializer(), snapshot)
     }
 
+    // Declared before init: init may start an evaluation (resuming a hand saved
+    // mid-draw), and a later initializer would reset it back to 0 underneath that.
+    private var drawGeneration = 0
+
     init {
         val defaultState = VideoPokerState()
         val savedState = PreferencesHelper.getObjectSync(
@@ -103,6 +107,11 @@ class VideoPokerViewModel(
 
         if (savedState != defaultState && savedState.phase != VideoPokerPhase.Deal) {
             _state.value = savedState
+            // Saved after draw() replaced the cards but before evaluation landed — finish
+            // evaluating that hand rather than handing the player a second draw on it.
+            if (savedState.phase == VideoPokerPhase.Holding && savedState.drawCommitted) {
+                launchEvaluation(++drawGeneration)
+            }
         } else {
             startNewGame()
         }
@@ -117,8 +126,14 @@ class VideoPokerViewModel(
         }
     }
 
+    // Locked for the hand once it's dealt: deal() deducts the bet based on free play, and
+    // the draw's payout must use that same answer. Reading the live toggle mid-hand let a
+    // player deal free, turn No Stress off, then draw and collect a real payout.
     val isFreePlay: Boolean
-        get() = sharedOptions.noStressMode.value
+        get() {
+            val s = _state.value
+            return if (s.phase == VideoPokerPhase.Holding) s.handFreePlay else sharedOptions.noStressMode.value
+        }
 
     val canOpenOptions: Boolean
         get() = _state.value.phase == VideoPokerPhase.Deal || _state.value.phase == VideoPokerPhase.Result
@@ -215,7 +230,10 @@ class VideoPokerViewModel(
         val hand = deck.take(5)
         val remainingDeck = deck.drop(5)
         
+        drawGeneration++ // a fresh hand invalidates any evaluation still in flight
         _state.value = s.copy(
+            handFreePlay = isFreePlay,
+            drawCommitted = false,
             sessionCredits = newCredits,
             handsDealt = s.handsDealt + 1,
             lastPayout = 0,
@@ -229,7 +247,7 @@ class VideoPokerViewModel(
 
     fun toggleHold(index: Int) {
         val s = _state.value
-        if (s.phase != VideoPokerPhase.Holding || index >= 5) return
+        if (s.phase != VideoPokerPhase.Holding || s.drawCommitted || index >= 5) return
         val newHeld = s.heldIndices.toMutableSet()
         if (newHeld.contains(index)) {
             newHeld.remove(index)
@@ -239,7 +257,6 @@ class VideoPokerViewModel(
         _state.value = s.copy(heldIndices = newHeld)
     }
 
-    private var drawGeneration = 0
 
     // Deuces Wild's evaluateWithDeuces() brute-forces up to 13³ candidate hands for 3 held
     // deuces — background it on Dispatchers.Default instead of running synchronously on
@@ -247,7 +264,7 @@ class VideoPokerViewModel(
     // landing after another draw/deal has already started.
     fun draw() {
         val s = _state.value
-        if (s.phase != VideoPokerPhase.Holding) return
+        if (s.phase != VideoPokerPhase.Holding || s.drawCommitted) return
 
         val hand = s.hand.toMutableList()
         val deck = s.deck.toMutableList()
@@ -260,34 +277,49 @@ class VideoPokerViewModel(
             }
         }
 
+        // drawCommitted flips in the same write as the new cards, so a second tap while
+        // evaluation is still running (phase is still Holding) can't draw again.
         _state.value = s.copy(
             hand = hand,
-            deck = deck
+            deck = deck,
+            drawCommitted = true
         )
         com.leah.honeycomb.audio.UISound.play("snap")
 
-        val generation = ++drawGeneration
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
-            evaluate(generation)
+        launchEvaluation(++drawGeneration)
+    }
+
+    // Only the evaluation itself runs off the main thread; the result is applied back on
+    // Main against the *current* state, and only if nothing replaced the hand meanwhile —
+    // deal()/startNewGame()/resetIfRoundOver() all bump drawGeneration. (Previously the
+    // background thread wrote a copy of its start-of-evaluation snapshot back into
+    // _state, which could overwrite a newer game with the old hand.)
+    private fun launchEvaluation(generation: Int) {
+        val handToEvaluate = _state.value.hand
+        val variant = _options.value.variant
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                if (variant == VideoPokerVariant.DeucesWild) {
+                    PokerHandEvaluator.evaluateWithDeuces(handToEvaluate)
+                } else {
+                    PokerHandEvaluator.evaluate(handToEvaluate)
+                }
+            }
+            if (generation != drawGeneration) return@launch
+            applyEvaluation(handToEvaluate, result)
         }
     }
 
-    private fun evaluate(generation: Int) {
+    private fun applyEvaluation(evaluatedHand: List<Card>, result: PokerHandResult) {
         val s = _state.value
-        if (s.hand.size != 5) return
-
-        val result = if (_options.value.variant == VideoPokerVariant.DeucesWild) {
-            PokerHandEvaluator.evaluateWithDeuces(s.hand)
-        } else {
-            PokerHandEvaluator.evaluate(s.hand)
-        }
+        if (s.phase != VideoPokerPhase.Holding || s.hand != evaluatedHand || evaluatedHand.size != 5) return
 
         var name = "No Win"
         var payout = 0
         var rank: PokerHandRank? = null
 
         for (entry in payTable) {
-            if (matches(result, s.hand, entry)) {
+            if (matches(result, evaluatedHand, entry)) {
                 name = entry.handName
                 payout = entry.payout(s.currentBet)
                 rank = entry.rank
@@ -295,11 +327,12 @@ class VideoPokerViewModel(
             }
         }
 
-        if (generation != drawGeneration) return
-
+        // Read before phase flips to Result, while isFreePlay still returns this hand's lock.
+        val freePlay = s.handFreePlay
         _state.value = s.copy(
             lastHandName = name,
             lastPayout = payout,
+            drawCommitted = false,
             phase = VideoPokerPhase.Result
         )
 
@@ -317,7 +350,7 @@ class VideoPokerViewModel(
                 if (rank == PokerHandRank.RoyalFlush) {
                     stats = stats.copy(royalFlushCount = stats.royalFlushCount + 1)
                 }
-                if (!isFreePlay) {
+                if (!freePlay) {
                     _state.value = _state.value.copy(sessionCredits = _state.value.sessionCredits + payout)
                     stats = stats.copy(
                         totalPaidOut = stats.totalPaidOut + payout,
@@ -403,6 +436,7 @@ class VideoPokerViewModel(
 
     fun resetIfRoundOver() {
         if (_state.value.phase != VideoPokerPhase.Result) return
+        drawGeneration++
         _state.value = _state.value.copy(
             phase = VideoPokerPhase.Deal,
             hand = emptyList(),
@@ -413,6 +447,7 @@ class VideoPokerViewModel(
     }
 
     fun startNewGame() {
+        drawGeneration++ // a pending evaluation from the abandoned hand must not land on the new game
         if (_state.value.phase == VideoPokerPhase.Holding) {
             _statistics.value = _statistics.value.copy(currentStreak = 0)
             persistStatistics()
