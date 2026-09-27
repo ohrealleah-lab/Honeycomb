@@ -345,6 +345,9 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         _gameTimer?.Dispose();
         _undoStack.Clear();
         RestoreSnapshot(_initialSnapshot);
+        // RestoreSnapshot keeps the clock running forward (for Undo); a restart replays
+        // the deal from the top, so the timer goes back to the deal's starting value.
+        State.TimerSeconds = _initialSnapshot.TimerSeconds;
         State.IsTimerActive = false;
         State.HasWon = false;
         IsAutocompletable = false;
@@ -1128,7 +1131,10 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         State.Score = snapshot.Score;
         State.MovesCount = snapshot.MovesCount;
         OnPropertyChanged(nameof(MovesCount));
-        State.TimerSeconds = snapshot.TimerSeconds;
+        // TimerSeconds deliberately NOT restored — the timer must keep running forward
+        // through an undo, not rewind to whatever it read when the undone move's snapshot
+        // was saved (matches Mac's SpiderViewModel.undoLastAction()). Rewinding it let a
+        // player undo their way to a better Best Time.
         State.HasWon = false;
 
         for (int i = 0; i < Tableaus.Count && i < snapshot.Tableaus.Count; i++)

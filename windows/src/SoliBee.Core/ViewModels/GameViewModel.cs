@@ -865,7 +865,9 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
         State.MovesCount = snapshot.MovesCount;
         OnPropertyChanged(nameof(MovesCount));
-        State.TimerSeconds = snapshot.TimerSeconds;
+        // TimerSeconds deliberately NOT restored — the timer must keep running forward
+        // through an undo (matches Mac's GameViewModel.undoLastAction()). Rewinding it let
+        // a player undo their way to a better Best Time.
         State.RecyclesCount = snapshot.RecyclesCount;
         State.HasWon = snapshot.HasWon;
         // IsTimerActive is deliberately NOT restored — undoing a move shouldn't stop the
