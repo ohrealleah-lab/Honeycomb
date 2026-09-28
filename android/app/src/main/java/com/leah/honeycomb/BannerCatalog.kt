@@ -75,6 +75,9 @@ class BannerCatalog(
     private val languageFlow: StateFlow<AppLanguage>,
     private val dataStore: DataStore<Preferences>
 ) {
+    // For a caller's own fallback text when fire() doesn't return a message.
+    val currentLanguage: AppLanguage get() = languageFlow.value
+
     companion object {
         // Sentinel a `fallback` string can equal for `rulesBanner`-location entries —
         // there's no single literal fallback text for those (it depends on which rule

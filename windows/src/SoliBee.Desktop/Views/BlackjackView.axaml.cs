@@ -25,6 +25,13 @@ public partial class BlackjackView : UserControl
     private DispatcherTimer? _bannerDelayTimer;
     private DispatcherTimer? _bannerFadeTimer;
     private DispatcherTimer? _bustFlashTimer;
+    // The out-of-credits toast normally fires as the result banner finishes fading (see
+    // the fade's completion). Set when a result reveal starts; FirePendingOutOfCreditsCheck
+    // also runs it if the banner is cut short by its ✕ button or by the player switching
+    // games (the view unloads and its timers stop) — otherwise a player who went broke
+    // and left mid-banner never got the toast. Mac's timers outlive its view, so it
+    // always fires there.
+    private bool _outOfCreditsCheckPending;
     private DispatcherTimer? _cardsFadeTimer;
     private DispatcherTimer? _idleTimer;
     private DispatcherTimer? _idleFadeTimer;
@@ -173,6 +180,7 @@ public partial class BlackjackView : UserControl
         TopLevel.GetTopLevel(this)?.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
+        FirePendingOutOfCreditsCheck();
         StopTimers();
     }
 
@@ -488,6 +496,7 @@ public partial class BlackjackView : UserControl
         if (vm.State.Phase != BlackjackPhase.Result)
         {
             if (_lastPhase == BlackjackPhase.Result) HideBanner();
+            _outOfCreditsCheckPending = false;
             return;
         }
 
@@ -562,6 +571,7 @@ public partial class BlackjackView : UserControl
         // result is known before the banner appears, so the player always gets a beat
         // to see the final hand before it's covered.
         _resultShowTimer?.Stop();
+        _outOfCreditsCheckPending = true;
         _resultShowTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
         _resultShowTimer.Tick += (_, _) =>
         {
@@ -600,6 +610,16 @@ public partial class BlackjackView : UserControl
     private void BannerDismiss_Click(object? sender, RoutedEventArgs e)
     {
         HideBanner();
+        FirePendingOutOfCreditsCheck();
+    }
+
+    private void FirePendingOutOfCreditsCheck()
+    {
+        if (!_outOfCreditsCheckPending) return;
+        _outOfCreditsCheckPending = false;
+        // Only for the round that's still on the board — a deal that just left Result
+        // (its Refresh not yet run) must not be judged as "out of credits".
+        if (DataContext is BlackjackViewModel vm && vm.State.Phase == BlackjackPhase.Result) vm.CheckOutOfCredits();
     }
 
     private void ShowBanner(bool win, int streak)
@@ -656,7 +676,7 @@ public partial class BlackjackView : UserControl
                 // moment the win/lose result banner has actually finished fading out, so
                 // the toast reads as following it (and landing alongside the Rebuy button)
                 // instead of stacking on top of it.
-                if (DataContext is BlackjackViewModel vm) vm.CheckOutOfCredits();
+                FirePendingOutOfCreditsCheck();
                 StartCardsFade();
                 return;
             }

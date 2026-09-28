@@ -48,6 +48,13 @@ public partial class VideoPokerView : UserControl
     private bool _resultRevealed;
     private DispatcherTimer? _bannerDelayTimer;
     private DispatcherTimer? _bannerFadeTimer;
+    // The out-of-credits toast normally fires as the result banner finishes fading (see
+    // the fade's completion). Set when a result reveal starts; FirePendingOutOfCreditsCheck
+    // also runs it if the banner is cut short by its ✕ button or by the player switching
+    // games (the view unloads and its timers stop) — otherwise a player who went broke
+    // and left mid-banner never got the toast. Mac's timers outlive its view, so it
+    // always fires there.
+    private bool _outOfCreditsCheckPending;
 
     // Cards fade state
     private DispatcherTimer? _cardsFadeTimer;
@@ -202,6 +209,7 @@ public partial class VideoPokerView : UserControl
             InputElement.KeyDownEvent, OnKeyDown);
         WeakReferenceMessenger.Default.Unregister<FaceCardArtChangedMessage>(this);
         WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
+        FirePendingOutOfCreditsCheck();
         _resultShowTimer?.Stop(); _resultShowTimer = null;
         HideActiveBanner();
         StopCardsFade();
@@ -432,6 +440,7 @@ public partial class VideoPokerView : UserControl
             // persists, so don't restart the countdown each time.
             if (_resultShowTimer != null || _resultRevealed) return;
 
+            _outOfCreditsCheckPending = true;
             _resultShowTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
             _resultShowTimer.Tick += (_, _) =>
             {
@@ -465,6 +474,7 @@ public partial class VideoPokerView : UserControl
             _resultShowTimer?.Stop();
             _resultShowTimer = null;
             _resultRevealed  = false;
+            _outOfCreditsCheckPending = false;
             HideActiveBanner();
         }
     }
@@ -554,7 +564,7 @@ public partial class VideoPokerView : UserControl
                 // moment the win/lose result banner has actually finished fading out, so
                 // the toast reads as following it (and landing alongside the Rebuy button)
                 // instead of stacking on top of it.
-                if (DataContext is VideoPokerViewModel vm) vm.CheckOutOfCredits();
+                FirePendingOutOfCreditsCheck();
                 StartCardsFade();
                 return;
             }
@@ -987,6 +997,16 @@ public partial class VideoPokerView : UserControl
     private void BannerDismiss_Click(object? sender, RoutedEventArgs e)
     {
         HideActiveBanner();
+        FirePendingOutOfCreditsCheck();
+    }
+
+    private void FirePendingOutOfCreditsCheck()
+    {
+        if (!_outOfCreditsCheckPending) return;
+        _outOfCreditsCheckPending = false;
+        // Only for the round that's still on the board — a deal that just left Result
+        // (its Refresh not yet run) must not be judged as "out of credits".
+        if (DataContext is VideoPokerViewModel vm && vm.State.Phase == VideoPokerPhase.Result) vm.CheckOutOfCredits();
     }
 
     // Phase flips to Result the instant Draw() resolves, well before the win/loss banner

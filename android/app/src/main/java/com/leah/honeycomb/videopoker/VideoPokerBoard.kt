@@ -182,12 +182,6 @@ fun VideoPokerBoard(
     val activeBanner by viewModel.activeBanner.collectAsState()
     val manuallyDismissBanners by viewModel.sharedOptions.manuallyDismissBanners.collectAsState()
     LaunchedEffect(Unit) { viewModel.checkLoadingBanner() }
-    LaunchedEffect(state.phase) {
-        if (state.phase == VideoPokerPhase.Result) {
-            kotlinx.coroutines.delay(1500)
-            viewModel.checkOutOfCredits()
-        }
-    }
 
     // Full-screen result banner: shows ~1.0s after the hand resolves (so the player
     // sees the final hand first), stays up ~4.0s, then auto-hides — or the player can
@@ -207,11 +201,17 @@ fun VideoPokerBoard(
                 showResultBanner = true
                 kotlinx.coroutines.delay(4000)
                 showResultBanner = false
+                // The out-of-credits toast follows the result banner (Mac/iOS timing) so
+                // it lands alongside the Rebuy button instead of on top of the banner.
+                viewModel.checkOutOfCredits()
             }
         } else {
             showResultBanner = false
         }
     }
+    // Leaving the screen mid-banner cancels the job above — run the check now so a
+    // player who just went broke still gets the toast (the VM keeps it to one per round).
+    DisposableEffect(Unit) { onDispose { viewModel.checkOutOfCredits() } }
     fun dealFromResultBanner() {
         resultBannerJob?.cancel()
         showResultBanner = false

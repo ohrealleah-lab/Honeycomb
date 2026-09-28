@@ -61,17 +61,26 @@ class VideoPokerViewModel(
         }
     }
 
+    // True from the moment a round resolves until its out-of-credits check has run (or
+    // the next round starts). The board calls checkOutOfCredits() from several places —
+    // result banner auto-hide, an early tap-dismiss, and leaving the screen mid-banner
+    // (so the toast isn't lost) — and this keeps it to one toast per round even when the
+    // board is recomposed (e.g. back from Options) and replays its result banner.
+    private var outOfCreditsCheckDue = false
+
     // Called from the view once the win/lose result banner has finished fading.
     // Mirrors Windows' VideoPokerViewModel.CheckOutOfCredits.
     fun checkOutOfCredits() {
         val s = _state.value
+        if (!outOfCreditsCheckDue || s.phase != VideoPokerPhase.Result) return
+        outOfCreditsCheckDue = false
         if (sharedOptions.noStressMode.value || s.sessionCredits > 10) return
         if (s.lastPayout > 0) return
         val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.GameplayPlayerRunsOutOfCreditsVideoPokerBlackjack)
         val text = if (result is com.leah.honeycomb.BannerFireResult.Message) {
             result.text
         } else {
-            com.leah.honeycomb.Strings.get(com.leah.honeycomb.StringKey.OutOfCreditsToast, com.leah.honeycomb.AppLanguage.English)
+            com.leah.honeycomb.Strings.get(com.leah.honeycomb.StringKey.OutOfCreditsToast, bannerCatalog.currentLanguage)
         }
         enqueueBanner(text)
     }
@@ -296,6 +305,7 @@ class VideoPokerViewModel(
             drawCommitted = false,
             phase = VideoPokerPhase.Result
         )
+        outOfCreditsCheckDue = true
 
         var stats = _statistics.value
         val previousHandsWon = stats.handsWon

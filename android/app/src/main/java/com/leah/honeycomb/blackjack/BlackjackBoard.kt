@@ -143,15 +143,6 @@ fun BlackjackBoard(
         targetValue = if (cardsVisible) 1f else 0f,
         animationSpec = tween(durationMillis = if (cardsVisible) 300 else 400)
     )
-    // Fires once the win/lose result banner has had time to fade, so this toast lands
-    // alongside the Rebuy button rather than stacking on top of it. Mirrors Windows'
-    // BlackjackView timing for BannerCatalog.Fire(GameplayPlayerRunsOutOfCreditsVideoPokerBlackjack).
-    LaunchedEffect(state.phase) {
-        if (state.phase == BlackjackPhase.Result) {
-            kotlinx.coroutines.delay(1500)
-            viewModel.checkOutOfCredits()
-        }
-    }
     // Confetti burst on a win — mirrors iOS's BlackjackTouchView bannerShowTask: a 1.0s beat
     // (so the banner pop-in above is visible first) before the burst, held ~0.8s. See
     // FireOnceTrigger for why the hold/reset isn't inlined into this LaunchedEffect
@@ -186,6 +177,9 @@ fun BlackjackBoard(
                 showResultBanner = true
                 kotlinx.coroutines.delay(4000)
                 showResultBanner = false
+                // The out-of-credits toast follows the result banner (Mac/iOS timing) so
+                // it lands alongside the Rebuy button instead of on top of the banner.
+                viewModel.checkOutOfCredits()
             }
         } else {
             showResultBanner = false
@@ -194,7 +188,11 @@ fun BlackjackBoard(
     fun dismissResultBannerEarly() {
         resultBannerJob?.cancel()
         showResultBanner = false
+        viewModel.checkOutOfCredits()
     }
+    // Leaving the screen mid-banner cancels the job above — run the check now so a
+    // player who just went broke still gets the toast (the VM keeps it to one per round).
+    DisposableEffect(Unit) { onDispose { viewModel.checkOutOfCredits() } }
 
     if (showQuitDialog) {
         AlertDialog(

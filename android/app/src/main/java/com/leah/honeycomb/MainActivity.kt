@@ -268,6 +268,13 @@ class MainActivity : ComponentActivity() {
                         GameSelectionSheet(
                             currentRoute = currentRoute,
                             onNavigate = { route ->
+                                // Entering Poker/Blackjack with a finished round still in Result
+                                // (left mid-banner on a previous visit) resets the board instead
+                                // of replaying that round's banner — Mac's AppCoordinator.gameMode.
+                                when (route) {
+                                    AppRoute.VideoPoker.Board.route -> appContainer.videoPokerViewModel.resetIfRoundOver()
+                                    AppRoute.Blackjack.Board.route -> appContainer.blackjackViewModel.resetIfRoundOver()
+                                }
                                 navController.navigate(route) {
                                     popUpTo(0) { inclusive = true }
                                     launchSingleTop = true
