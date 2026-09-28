@@ -1021,6 +1021,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
                     if (Stats.ShortestWinSeconds == 0 || State.TimerSeconds < Stats.ShortestWinSeconds)
                         Stats.ShortestWinSeconds = State.TimerSeconds;
                     Stats.TotalWinSeconds += State.TimerSeconds;
+                    Stats.TimedGamesWon++;
                 }
 
                 if (Options.IsVegasScoring)
@@ -1073,6 +1074,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         stats.VegasCumulativeScore = 0;
         stats.StandardHighScore  = 0;
         stats.ShortestWinSeconds = 0;
+        stats.TimedGamesWon      = 0;
         stats.TotalWinSeconds    = 0;
         StatsService.SaveStats(stats);
         Stats = stats;

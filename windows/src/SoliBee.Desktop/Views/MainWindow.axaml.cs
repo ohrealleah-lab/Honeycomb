@@ -918,7 +918,7 @@ public partial class MainWindow : Window
             var s = klondikeVm.Stats;
             gamesPlayed   = s.GamesPlayed;
             gamesWon      = s.GamesWon;
-            timedGamesWon = gamesWon;
+            timedGamesWon = s.TimedGamesWon;
             currentStreak = s.CurrentStreak;
             longestStreak = s.LongestStreak;
             fastestWinSec = s.ShortestWinSeconds;
@@ -938,7 +938,7 @@ public partial class MainWindow : Window
             var ms = freecellVm.Stats.FreecellStatsByMode.TryGetValue(modeKey, out var m) ? m : new ModeStats();
             gamesPlayed   = ms.GamesPlayed;
             gamesWon      = ms.GamesWon;
-            timedGamesWon = gamesWon;
+            timedGamesWon = ms.TimedGamesWon;
             currentStreak = ms.CurrentStreak;
             longestStreak = ms.LongestStreak;
             fastestWinSec = ms.ShortestWinSeconds;

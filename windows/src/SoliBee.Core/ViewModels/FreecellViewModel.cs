@@ -621,6 +621,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
                 if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
                     ms.ShortestWinSeconds = State.TimerSeconds;
                 ms.TotalWinSeconds += State.TimerSeconds;
+                ms.TimedGamesWon++;
             }
             stats.FreecellStatsByMode[ModeKey] = ms;
             StatsService.SaveStats(stats);

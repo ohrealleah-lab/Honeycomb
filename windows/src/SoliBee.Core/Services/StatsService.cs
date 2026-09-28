@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.IO;
 using System.Reflection;
@@ -57,7 +58,7 @@ public static class StatsService
             {
                 var json = File.ReadAllText(filePath);
                 var stats = JsonSerializer.Deserialize<GameStatistics>(json);
-                if (stats != null) return stats;
+                if (stats != null) { MigrateTimedGamesWon(stats); return stats; }
             }
         }
         catch
@@ -72,6 +73,18 @@ public static class StatsService
     // Vegas scoring. Now that FreecellViewModel.ModeKey always resolves to "standard_*",
     // those old buckets would otherwise sit unreachable in the stats file forever — fold
     // their totals into the standard bucket instead of losing the play history.
+    // Stats saved before TimedGamesWon existed (Klondike, Freecell) or was maintained
+    // (older Spider saves) have TotalWinSeconds but a zero TimedGamesWon. Seed it from
+    // GamesWon — exactly the divisor the stats screen used before — so existing averages
+    // don't jump when the screen switches to dividing by timed wins. Idempotent: once
+    // seeded (or for any stats recorded since), TimedGamesWon > 0 whenever time exists.
+    public static void MigrateTimedGamesWon(GameStatistics stats)
+    {
+        if (stats.TimedGamesWon == 0 && stats.TotalWinSeconds > 0) stats.TimedGamesWon = stats.GamesWon;
+        foreach (var ms in stats.FreecellStatsByMode.Values.Concat(stats.SpiderStatsBySuit.Values))
+            if (ms.TimedGamesWon == 0 && ms.TotalWinSeconds > 0) ms.TimedGamesWon = ms.GamesWon;
+    }
+
     public static void MigrateFreecellVegasStats(GameStatistics stats)
     {
         foreach (var deckSuffix in new[] { "1deck", "2deck" })

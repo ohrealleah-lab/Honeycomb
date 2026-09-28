@@ -13,8 +13,14 @@ public class GameStatistics
     public int StandardHighScore { get; set; }
     public int ShortestWinSeconds { get; set; }
 
-    // Sum of TimerSeconds across all Klondike wins — divide by GamesWon for "Avg Winning Time".
+    // Sum of TimerSeconds across timed Klondike wins — divide by TimedGamesWon for "Avg Winning Time".
     public int TotalWinSeconds { get; set; }
+
+    // Klondike wins that were actually timed (not won in / partly in No Stress Mode) — the
+    // divisor/gate for ShortestWinSeconds/TotalWinSeconds, same as ModeStats.TimedGamesWon.
+    // Dividing by GamesWon deflated Avg Winning Time once any untimed win existed and
+    // showed a bogus "0s" Fastest Win when every win so far was untimed.
+    public int TimedGamesWon { get; set; }
 
     // Freecell per-mode stats: keys are "standard_1deck", "standard_2deck". Freecell has
     // no Vegas mode of its own; any legacy "vegas_*" entries are merged in by
