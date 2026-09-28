@@ -610,6 +610,7 @@ struct SpiderTouchView: View {
                 .frame(maxWidth: 320)
                 .background(Color.black.opacity(0.75))
                 .cornerRadius(12)
+                .compositingGroup() // flatten before the shadow — shadow-on-clipped-content otherwise re-rasterizes every frame (see TouchCardView)
                 .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                 Button {
@@ -649,6 +650,7 @@ struct SpiderTouchView: View {
             // before, which let the board show through and didn't match any other banner.
             .background(Color.black.opacity(0.75))
             .cornerRadius(12)
+            .compositingGroup() // flatten before the shadow — shadow-on-clipped-content otherwise re-rasterizes every frame (see TouchCardView)
             .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
         }
     }
@@ -754,6 +756,7 @@ struct SpiderTouchView: View {
             // Matches mac's SpiderView stuck overlay exactly — see winOverlay above.
             .background(Color.black.opacity(0.75))
             .cornerRadius(12)
+            .compositingGroup() // flatten before the shadow — shadow-on-clipped-content otherwise re-rasterizes every frame (see TouchCardView)
             .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
             .overlay(alignment: .topTrailing) {
                 Button {

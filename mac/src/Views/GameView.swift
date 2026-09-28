@@ -437,6 +437,7 @@ public struct GameView: View {
                         .fixedSize(horizontal: true, vertical: true)
                         .background(Color.black.opacity(0.75))
                         .cornerRadius(12)
+                        .compositingGroup() // flatten before the shadow — shadow-on-clipped-content otherwise re-rasterizes every frame (see CardView)
                         .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                         Button(action: { dismissedStuckBanner = true }) {
@@ -481,6 +482,7 @@ public struct GameView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .background(Color.black.opacity(0.75))
                         .cornerRadius(12)
+                        .compositingGroup() // flatten before the shadow — shadow-on-clipped-content otherwise re-rasterizes every frame (see CardView)
                         .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                         Button(action: { dismissedAutocompleteBanner = true }) {
@@ -537,6 +539,7 @@ public struct GameView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .background(Color.black.opacity(0.75))
                             .cornerRadius(12)
+                            .compositingGroup() // flatten before the shadow — shadow-on-clipped-content otherwise re-rasterizes every frame (see CardView)
                             .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                             Image(systemName: "xmark.circle.fill")
@@ -595,6 +598,7 @@ public struct GameView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .background(Color.black.opacity(0.75))
                         .cornerRadius(12)
+                        .compositingGroup() // flatten before the shadow — shadow-on-clipped-content otherwise re-rasterizes every frame (see CardView)
                         .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                         Button(action: { isShowingRestartConfirm = false }) {
@@ -652,6 +656,7 @@ public struct GameView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .background(Color.black.opacity(0.75))
                         .cornerRadius(12)
+                        .compositingGroup() // flatten before the shadow — shadow-on-clipped-content otherwise re-rasterizes every frame (see CardView)
                         .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 16)
 
                         Button(action: {

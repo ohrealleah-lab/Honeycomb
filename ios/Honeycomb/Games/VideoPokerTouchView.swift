@@ -564,6 +564,7 @@ struct VideoPokerTouchView: View {
                     // 0.75 matches mac/Windows and the other games' win banners.
                     .background(Color.black.opacity(0.75))
                     .cornerRadius(28)
+                    .compositingGroup() // flatten before the shadow — shadow-on-clipped-content otherwise re-rasterizes every frame (see TouchCardView)
                     .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.5), radius: 24)
                     // Scoped to the message box only, not the whole ZStack (which also
                     // contains the full-bleed scrim above) — ignoresSafeArea() only

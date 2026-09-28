@@ -105,6 +105,7 @@ struct TouchCardView: View {
             RoundedRectangle(cornerRadius: width * (10.0 / 128.0))
                 .stroke(outlineColor, lineWidth: 0.75)
         )
+        .compositingGroup() // flatten the (clipped) card once before shadowing — otherwise every card's shadow is re-rasterized from its pixels on each board redraw (same fix as mac CardView)
         .shadow(color: Color.black.opacity(0.15), radius: 1.5, x: 0, y: 1.5)
     }
 
