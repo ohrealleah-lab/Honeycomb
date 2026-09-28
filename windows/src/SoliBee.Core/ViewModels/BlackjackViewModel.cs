@@ -317,6 +317,10 @@ public partial class BlackjackViewModel : ObservableObject
 
     public void DoubleDown()
     {
+        // Rules re-checked here (2 cards, 9-11, affordable), not only via the button's
+        // CanDouble binding — the click handler calls straight in, and Mac's doubleDown()
+        // guards the same way.
+        if (!CanDouble) return;
         bool freePlay = _handFreePlay;
         var hand = ActiveHand;
         if (hand == null || hand.Cards.Count != 2 || (!freePlay && State.Credits < hand.Bet)) return;
@@ -333,6 +337,7 @@ public partial class BlackjackViewModel : ObservableObject
 
     public void Split()
     {
+        if (!CanSplit) return; // see DoubleDown
         bool freePlay = _handFreePlay;
         var hand = ActiveHand;
         if (hand == null || hand.Cards.Count != 2 || (!freePlay && State.Credits < hand.Bet) || State.IsSplit) return;
