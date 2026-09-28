@@ -94,6 +94,8 @@ struct KlondikeHelpView: View {
             RuleSection(title: coordinator.L(.helpRulesHowToPlayTitle),
                         text: coordinator.L(.helpKlondikeRules))
 
+            // Keyboard shortcuts exist only on Mac — the iOS app has none.
+            #if os(macOS)
             VStack(alignment: .leading, spacing: 6) {
                 Text(coordinator.L(.helpControlsShortcutsTitle))
                     .font(.headline)
@@ -110,6 +112,7 @@ struct KlondikeHelpView: View {
                     ShortcutRow(action: coordinator.L(.helpShortcutCycleHints), shortcut: coordinator.L(.helpShortcutHintButton))
                 }
             }
+            #endif
 
             RuleSection(title: coordinator.L(.helpStrategyProTipsTitle),
                         text: coordinator.L(.helpKlondikeStrategy))
@@ -136,6 +139,8 @@ struct BeecellHelpView: View {
             RuleSection(title: coordinator.L(.helpRulesHowToPlayTitle),
                         text: coordinator.L(.helpBeecellRules))
 
+            // Keyboard shortcuts exist only on Mac — the iOS app has none.
+            #if os(macOS)
             VStack(alignment: .leading, spacing: 6) {
                 Text(coordinator.L(.helpControlsShortcutsTitle))
                     .font(.headline)
@@ -149,6 +154,7 @@ struct BeecellHelpView: View {
                     ShortcutRow(action: coordinator.L(.hint), shortcut: coordinator.L(.helpShortcutHintButton))
                 }
             }
+            #endif
 
             RuleSection(title: coordinator.L(.helpStrategyProTipsTitle),
                         text: coordinator.L(.helpBeecellStrategy))
@@ -175,6 +181,8 @@ struct SpiderHelpView: View {
             RuleSection(title: coordinator.L(.helpRulesHowToPlayTitle),
                         text: coordinator.L(.helpSpiderRules))
 
+            // Keyboard shortcuts exist only on Mac — the iOS app has none.
+            #if os(macOS)
             VStack(alignment: .leading, spacing: 6) {
                 Text(coordinator.L(.helpControlsShortcutsTitle))
                     .font(.headline)
@@ -186,6 +194,7 @@ struct SpiderHelpView: View {
                     ShortcutRow(action: coordinator.L(.helpShortcutUndoMove), shortcut: coordinator.L(.helpShortcutCmdZ))
                 }
             }
+            #endif
 
             RuleSection(title: coordinator.L(.helpStrategyProTipsTitle),
                         text: coordinator.L(.helpSpiderStrategy))
@@ -313,6 +322,8 @@ struct HoneycombHelpView: View {
             RuleSection(title: coordinator.L(.helpCardBankStealingTitle),
                         text: coordinator.L(.helpHoneycombCardBank))
 
+            // Keyboard shortcuts exist only on Mac — the iOS app has none.
+            #if os(macOS)
             VStack(alignment: .leading, spacing: 6) {
                 Text(coordinator.L(.helpControlsShortcutsTitle))
                     .font(.headline)
@@ -321,6 +332,7 @@ struct HoneycombHelpView: View {
                     ShortcutRow(action: coordinator.L(.helpShortcutShowBestAiMove), shortcut: coordinator.L(.helpShortcutHintButton))
                 }
             }
+            #endif
 
             RuleSection(title: coordinator.L(.helpNoStressModeTitle),
                         text: coordinator.L(.helpHoneycombNoStress))
