@@ -20,10 +20,11 @@
                     <!-- Large stylized letter for Ace -->
                     <TextBlock x:Name="LargeAceText" FontSize="76" LineHeight="76" FontFamily="Segoe UI Symbol,Apple Symbols,sans-serif" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" IsVisible="False" />
 
-                    <!-- Decorative letter for Face Cards J, Q, K -->
+                    <!-- Decorative letter for Face Cards J, Q, K. Regular weight (like Mac): Apple
+                         Chancery has no bold face, and Avalonia 12 synthesizes one when Bold
+                         is requested, which drew visibly heavier strokes than before. -->
                     <TextBlock x:Name="FaceLetterText"
                                FontFamily="avares://Honeycomb/Assets/#Apple Chancery"
-                               FontWeight="Bold"
                                FontSize="120"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                TextAlignment="Center" IsVisible="False" />
