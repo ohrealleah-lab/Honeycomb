@@ -999,6 +999,11 @@ class GameViewModel(
     }
 
     fun undoLastAction() {
+        // Never past a recorded win: recordWin() already persisted gamesWon/streak, so
+        // reverting the board and winning again would count the same game twice. The UI
+        // gates this via canUndo, but the method itself shouldn't depend on that (Spider's
+        // undo already guards the same way).
+        if (_state.value.hasWon) return
         val previous = undoStack.pop() ?: return
         clearHint()
         val currentTimerSeconds = _state.value.timerSeconds

@@ -1247,6 +1247,11 @@ public final class GameViewModel {
     }
 
     public func undoLastAction() {
+        // Never past a recorded win: recordWin() already persisted gamesWon/streak, so
+        // reverting the board and winning again would count the same game twice. The UI
+        // gates this via canUndo, but the method itself shouldn't depend on that (Spider's
+        // undo already guards the same way).
+        guard !state.hasWon else { return }
         guard let previous = undoStack.pop() else { return }
         // The timer must keep running forward through an undo, not rewind to whatever it
         // read when the undone move's snapshot was saved.
