@@ -142,7 +142,7 @@ public class HoneycombProfileManager
         try
         {
             var json = JsonSerializer.Serialize(UnlockedCardIds.ToList(), new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(UnlockedCardsPath, json);
+            SoliBee.Core.Services.AtomicFile.WriteAllText(UnlockedCardsPath, json);
         }
         catch { }
     }
@@ -158,7 +158,7 @@ public class HoneycombProfileManager
         try
         {
             var json = JsonSerializer.Serialize(SavedDecks, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(SavedDecksPath, json);
+            SoliBee.Core.Services.AtomicFile.WriteAllText(SavedDecksPath, json);
         }
         catch { }
     }
@@ -168,7 +168,7 @@ public class HoneycombProfileManager
         try
         {
             var json = JsonSerializer.Serialize(FavoriteCardIds.ToList(), new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(FavoriteCardsPath, json);
+            SoliBee.Core.Services.AtomicFile.WriteAllText(FavoriteCardsPath, json);
         }
         catch { }
     }

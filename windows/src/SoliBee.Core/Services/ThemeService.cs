@@ -104,7 +104,7 @@ public static class ThemeService
         try
         {
             if (!Directory.Exists(_dataDir)) Directory.CreateDirectory(_dataDir);
-            File.WriteAllText(path, JsonSerializer.Serialize(value, _jsonOpts));
+            SoliBee.Core.Services.AtomicFile.WriteAllText(path, JsonSerializer.Serialize(value, _jsonOpts));
             return true;
         }
         catch { return false; }

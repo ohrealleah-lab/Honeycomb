@@ -43,7 +43,7 @@ public static class FaceCardArtService
     private static void Save()
     {
         EnsureDir();
-        File.WriteAllText(_configPath, JsonSerializer.Serialize(_arts,
+        SoliBee.Core.Services.AtomicFile.WriteAllText(_configPath, JsonSerializer.Serialize(_arts,
             new JsonSerializerOptions { WriteIndented = true }));
     }
 

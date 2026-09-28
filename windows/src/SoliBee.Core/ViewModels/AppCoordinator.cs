@@ -220,7 +220,7 @@ public partial class AppCoordinator : ObservableObject
         {
             var dir = Path.GetDirectoryName(LastModeFile)!;
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-            File.WriteAllText(LastModeFile, mode);
+            SoliBee.Core.Services.AtomicFile.WriteAllText(LastModeFile, mode);
         }
         catch { }
     }

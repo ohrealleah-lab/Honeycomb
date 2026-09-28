@@ -634,7 +634,7 @@ public partial class VideoPokerViewModel : ObservableObject
         try
         {
             Directory.CreateDirectory(DataDir);
-            File.WriteAllText(OptionsPath,
+            SoliBee.Core.Services.AtomicFile.WriteAllText(OptionsPath,
                 JsonSerializer.Serialize(Options, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { }
@@ -664,7 +664,7 @@ public partial class VideoPokerViewModel : ObservableObject
         try
         {
             Directory.CreateDirectory(DataDir);
-            File.WriteAllText(StatisticsPath,
+            SoliBee.Core.Services.AtomicFile.WriteAllText(StatisticsPath,
                 JsonSerializer.Serialize(Stats, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { }

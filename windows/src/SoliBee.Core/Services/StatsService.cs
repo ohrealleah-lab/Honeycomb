@@ -111,7 +111,7 @@ public static class StatsService
                 Directory.CreateDirectory(directory);
             }
             var json = JsonSerializer.Serialize(stats, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
+            SoliBee.Core.Services.AtomicFile.WriteAllText(filePath, json);
         }
         catch
         {

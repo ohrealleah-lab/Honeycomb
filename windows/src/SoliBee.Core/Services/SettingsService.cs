@@ -482,7 +482,7 @@ public static class SettingsService
             }
             string path = Path.Combine(FallbackDirectory, "honeycomb_settings.json");
             var json = JsonSerializer.Serialize(options, HoneycombJsonOptions);
-            File.WriteAllText(path, json);
+            SoliBee.Core.Services.AtomicFile.WriteAllText(path, json);
         }
         catch {}
     }

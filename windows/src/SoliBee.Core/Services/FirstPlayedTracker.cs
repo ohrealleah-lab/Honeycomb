@@ -46,7 +46,7 @@ public static class FirstPlayedTracker
         {
             var dir = Path.GetDirectoryName(FilePath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(data));
+            SoliBee.Core.Services.AtomicFile.WriteAllText(FilePath, JsonSerializer.Serialize(data));
         }
         catch
         {

@@ -85,7 +85,7 @@ public class HoneycombDatabase
         try
         {
             Directory.CreateDirectory(DataDir);
-            File.WriteAllText(SeedPath, CurrentSeed.ToString());
+            SoliBee.Core.Services.AtomicFile.WriteAllText(SeedPath, CurrentSeed.ToString());
         }
         catch { }
     }

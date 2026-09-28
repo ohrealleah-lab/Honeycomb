@@ -633,7 +633,7 @@ public partial class BlackjackViewModel : ObservableObject
 
     public void SaveOptions()
     {
-        try { Directory.CreateDirectory(DataDir); File.WriteAllText(OptionsPath, JsonSerializer.Serialize(Options, new JsonSerializerOptions { WriteIndented = true })); }
+        try { Directory.CreateDirectory(DataDir); SoliBee.Core.Services.AtomicFile.WriteAllText(OptionsPath, JsonSerializer.Serialize(Options, new JsonSerializerOptions { WriteIndented = true })); }
         catch { }
         // Options is the same live instance Preferences edits directly (single consumer,
         // no cross-ViewModel broadcast needed) — notify so the view refreshes immediately.
@@ -651,7 +651,7 @@ public partial class BlackjackViewModel : ObservableObject
 
     private void SaveStatistics()
     {
-        try { Directory.CreateDirectory(DataDir); File.WriteAllText(StatisticsPath, JsonSerializer.Serialize(Stats, new JsonSerializerOptions { WriteIndented = true })); }
+        try { Directory.CreateDirectory(DataDir); SoliBee.Core.Services.AtomicFile.WriteAllText(StatisticsPath, JsonSerializer.Serialize(Stats, new JsonSerializerOptions { WriteIndented = true })); }
         catch { }
     }
 

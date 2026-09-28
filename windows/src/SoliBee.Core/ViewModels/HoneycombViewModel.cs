@@ -2184,7 +2184,7 @@ public partial class HoneycombViewModel : ObservableObject
 
     private void SaveStats()
     {
-        try { Directory.CreateDirectory(DataDir); File.WriteAllText(StatisticsPath, JsonSerializer.Serialize(Stats, new JsonSerializerOptions { WriteIndented = true })); }
+        try { Directory.CreateDirectory(DataDir); SoliBee.Core.Services.AtomicFile.WriteAllText(StatisticsPath, JsonSerializer.Serialize(Stats, new JsonSerializerOptions { WriteIndented = true })); }
         catch { }
     }
 
@@ -2202,7 +2202,7 @@ public partial class HoneycombViewModel : ObservableObject
     {
         var stats = LoadStats();
         stats.TimesStartedOver++;
-        try { Directory.CreateDirectory(DataDir); File.WriteAllText(StatisticsPath, JsonSerializer.Serialize(stats, new JsonSerializerOptions { WriteIndented = true })); }
+        try { Directory.CreateDirectory(DataDir); SoliBee.Core.Services.AtomicFile.WriteAllText(StatisticsPath, JsonSerializer.Serialize(stats, new JsonSerializerOptions { WriteIndented = true })); }
         catch { }
     }
 
