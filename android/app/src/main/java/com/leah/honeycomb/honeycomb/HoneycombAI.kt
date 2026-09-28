@@ -72,7 +72,11 @@ object HoneycombAI {
         val mirrored = board.copy(cells = board.cells.map { it.copy() })
         for (i in mirrored.cells.indices) {
             val card = mirrored.cells[i].card ?: continue
-            val newCard = card.copy(owner = if (card.owner == CardOwner.Player) CardOwner.Opponent else CardOwner.Player)
+            // originalOwner flips too — positionalEvaluation treats the other side's
+            // face-down cards as unknown via originalOwner; flipping only owner made the
+            // hint read the opponent's hidden card and ignore the player's own. Mirrors Swift.
+            fun flip(o: CardOwner) = if (o == CardOwner.Player) CardOwner.Opponent else CardOwner.Player
+            val newCard = card.copy(owner = flip(card.owner), originalOwner = flip(card.originalOwner))
             mirrored.cells[i].card = newCard
         }
         return mirrored
@@ -110,8 +114,14 @@ object HoneycombAI {
         return Pair(eligibleHands.random(), empties.random())
     }
 
-    private fun greedyMove(board: HoneycombBoard, opponentDeck: List<HoneycombCardData>, eligibleHands: List<Int>, empties: List<Int>, rules: List<HoneycombRule>): Pair<Int, Int>? {
-        if (empties.isEmpty() || eligibleHands.isEmpty()) return null
+    private fun greedyMove(board: HoneycombBoard, opponentDeck: List<HoneycombCardData>, eligibleHands: List<Int>, empties: List<Int>, rules: List<HoneycombRule>): Pair<Int, Int>? =
+        greedySearch(board, opponentDeck, eligibleHands, empties, rules).second.randomOrNull()
+
+    // Deterministic part of greedyMove (best capture count + every move achieving it),
+    // split out for the cross-platform AI vectors (HoneycombAIVectorTests). Mirrors
+    // Swift's HoneycombAI.greedySearch.
+    internal fun greedySearch(board: HoneycombBoard, opponentDeck: List<HoneycombCardData>, eligibleHands: List<Int>, empties: List<Int>, rules: List<HoneycombRule>): Pair<Int, List<Pair<Int, Int>>> {
+        if (empties.isEmpty() || eligibleHands.isEmpty()) return Pair(-1, emptyList())
 
         var bestScore = -1
         var bestMoves = mutableListOf<Pair<Int, Int>>()
@@ -128,7 +138,7 @@ object HoneycombAI {
                 }
             }
         }
-        return bestMoves.randomOrNull()
+        return Pair(bestScore, bestMoves)
     }
 
     private fun minimaxMove(
@@ -141,10 +151,31 @@ object HoneycombAI {
         lookaheadPlies: Int,
         weighFallenAce: Boolean
     ): Pair<Int, Int>? {
-        if (empties.isEmpty() || eligibleHands.isEmpty()) return null
+        val (_, bestMoves) = minimaxSearch(board, opponentDeck, playerDeck, eligibleHands, empties, rules, lookaheadPlies, weighFallenAce)
+        val maxCaptures = bestMoves.maxOfOrNull { it.captures } ?: 0
+        val mostAggressive = bestMoves.filter { it.captures == maxCaptures }
+        return mostAggressive.randomOrNull()?.let { Pair(it.h, it.b) }
+    }
+
+    internal data class MoveCandidate(val h: Int, val b: Int, val captures: Int)
+
+    // Deterministic part of minimaxMove: the root minimax score (exact regardless of
+    // move ordering) plus the tied candidates. Split out for the cross-platform AI
+    // vectors (HoneycombAIVectorTests), which compare the score. Mirrors Swift's
+    // HoneycombAI.minimaxSearch.
+    internal fun minimaxSearch(
+        board: HoneycombBoard,
+        opponentDeck: List<HoneycombCardData>,
+        playerDeck: List<HoneycombCardData>,
+        eligibleHands: List<Int>,
+        empties: List<Int>,
+        rules: List<HoneycombRule>,
+        lookaheadPlies: Int,
+        weighFallenAce: Boolean
+    ): Pair<Int, List<MoveCandidate>> {
+        if (empties.isEmpty() || eligibleHands.isEmpty()) return Pair(Int.MIN_VALUE, emptyList())
 
         var bestScore = Int.MIN_VALUE
-        data class MoveCandidate(val h: Int, val b: Int, val captures: Int)
         var bestMoves = mutableListOf<MoveCandidate>()
         var alpha = Int.MIN_VALUE
 
@@ -176,10 +207,13 @@ object HoneycombAI {
                 bestMoves.add(MoveCandidate(candidate.h, candidate.b, candidate.captures))
             }
         }
-        val maxCaptures = bestMoves.maxOfOrNull { it.captures } ?: 0
-        val mostAggressive = bestMoves.filter { it.captures == maxCaptures }
-        return mostAggressive.randomOrNull()?.let { Pair(it.h, it.b) }
+        return Pair(bestScore, bestMoves)
     }
+
+    // Root score of the hint search (same search computeHint runs, from the player's
+    // side) — for the cross-platform AI vectors. Mirrors Swift's hintSearchScore.
+    internal fun hintSearchScore(board: HoneycombBoard, playerDeck: List<HoneycombCardData>, opponentDeck: List<HoneycombCardData>, eligibleHands: List<Int>, empties: List<Int>, rules: List<HoneycombRule>): Int =
+        minimaxSearch(mirroredOwnership(board), playerDeck, opponentDeck, eligibleHands, empties, rules, 6, true).first
 
     data class OrderedCandidate(val h: Int, val b: Int, val captures: Int, val board: HoneycombBoard)
 
@@ -299,7 +333,10 @@ object HoneycombAI {
 
         val originalAlpha = alpha
         if (board.isFull) {
-            val margin = board.opponentScore - board.playerScore
+            // Same scoring settleMatch uses: board ownership PLUS cards still in hand (one
+            // side always ends holding one). Board-only misread ties as wins/losses.
+            // Mirrors Swift's minimaxScore and the Windows port.
+            val margin = (board.opponentScore + opponentDeck.size) - (board.playerScore + playerDeck.size)
             val value = margin * terminalScoreUnit
             tt[ttKey] = TTEntry(value, TTFlag.Exact)
             return value

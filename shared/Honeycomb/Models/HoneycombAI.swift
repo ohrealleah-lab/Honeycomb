@@ -82,11 +82,19 @@ enum HoneycombAI {
     // as .player (the minimizing side), so the search now optimizes for the player.
     // originalOwner is left untouched — nothing in the search reads it.
     private static func mirroredOwnership(_ board: HoneycombBoard) -> HoneycombBoard {
+        func flip(_ o: CardOwner) -> CardOwner { o == .player ? .opponent : .player }
         var mirrored = board
         for i in mirrored.cells.indices {
-            guard var card = mirrored.cells[i].card else { continue }
-            card.owner = card.owner == .player ? .opponent : .player
-            mirrored.cells[i].card = card
+            guard let card = mirrored.cells[i].card else { continue }
+            // originalOwner flips too: positionalEvaluation skips the *other* side's
+            // face-down (Capped Brood) cards as unknown via originalOwner. Flipping only
+            // owner made the hint ignore the player's own hidden card and read the
+            // opponent's hidden one — information the player doesn't have.
+            var flipped = HoneycombCard(data: card.data, owner: flip(card.owner), originalOwner: flip(card.originalOwner), id: card.id)
+            flipped.modifier = card.modifier
+            flipped.isFaceDown = card.isFaceDown
+            flipped.bombShelterTurnsRemaining = card.bombShelterTurnsRemaining
+            mirrored.cells[i].card = flipped
         }
         return mirrored
     }
@@ -126,6 +134,12 @@ enum HoneycombAI {
         )
     }
 
+    // Root score of the hint search (same search computeHint runs, from the player's
+    // side) — for the cross-platform AI vectors (HoneycombAIVectorTests).
+    static func hintSearchScore(board: HoneycombBoard, playerDeck: [HoneycombCardData], opponentDeck: [HoneycombCardData], eligibleHands: [Int], empties: [Int], rules: [HoneycombRule]) -> Int {
+        minimaxSearch(board: mirroredOwnership(board), opponentDeck: playerDeck, playerDeck: opponentDeck, unknownPlayerCardCount: 0, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: 6, weighFallenAce: true).score
+    }
+
     // Easy: naive random play — no evaluation at all, matches spec's "Naive random play."
     // Still respects Order/Chaos: if either is active there's only one legal card, so
     // "random" only has the empty board cells left to pick from.
@@ -139,7 +153,14 @@ enum HoneycombAI {
     // randomly among equally-good moves (previously always kept the first-found move,
     // making the AI deterministically predictable/exploitable in tied situations).
     static func greedyMove(board: HoneycombBoard, opponentDeck: [HoneycombCardData], eligibleHands: [Int], empties: [Int], rules: [HoneycombRule]) -> (handIndex: Int, boardIndex: Int)? {
-        guard !empties.isEmpty, !eligibleHands.isEmpty else { return nil }
+        greedySearch(board: board, opponentDeck: opponentDeck, eligibleHands: eligibleHands, empties: empties, rules: rules).moves.randomElement()
+    }
+
+    // The deterministic part of greedyMove — the best immediate capture count and every
+    // move that achieves it — split out so the cross-platform AI vectors
+    // (HoneycombAIVectorTests) can compare it without the random tie-break.
+    static func greedySearch(board: HoneycombBoard, opponentDeck: [HoneycombCardData], eligibleHands: [Int], empties: [Int], rules: [HoneycombRule]) -> (score: Int, moves: [(handIndex: Int, boardIndex: Int)]) {
+        guard !empties.isEmpty, !eligibleHands.isEmpty else { return (-1, []) }
 
         var bestScore = -1
         var bestMoves: [(handIndex: Int, boardIndex: Int)] = []
@@ -156,7 +177,7 @@ enum HoneycombAI {
                 }
             }
         }
-        return bestMoves.randomElement()
+        return (bestScore, bestMoves)
     }
 
     // Hard/Ultra Hard: minimax with alpha-beta pruning, looking `lookaheadPlies` moves
@@ -167,7 +188,19 @@ enum HoneycombAI {
     // random, which could pick a totally passive placement over an equally-scored one
     // that actually flips cards this turn) — genuine remaining ties are broken randomly.
     static func minimaxMove(board: HoneycombBoard, opponentDeck: [HoneycombCardData], playerDeck: [HoneycombCardData], unknownPlayerCardCount: Int = 0, eligibleHands: [Int], empties: [Int], rules: [HoneycombRule], lookaheadPlies: Int, weighFallenAce: Bool) -> (handIndex: Int, boardIndex: Int)? {
-        guard !empties.isEmpty, !eligibleHands.isEmpty else { return nil }
+        let result = minimaxSearch(board: board, opponentDeck: opponentDeck, playerDeck: playerDeck, unknownPlayerCardCount: unknownPlayerCardCount, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: lookaheadPlies, weighFallenAce: weighFallenAce)
+        let maxCaptures = result.moves.map(\.immediateCaptures).max() ?? 0
+        let mostAggressive = result.moves.filter { $0.immediateCaptures == maxCaptures }
+        return mostAggressive.randomElement().map { ($0.handIndex, $0.boardIndex) }
+    }
+
+    // The deterministic part of minimaxMove: the root minimax score (exact regardless of
+    // move ordering — alpha-beta only prunes how it's found, not its value) plus the tied
+    // candidates. Split out for the cross-platform AI vectors (HoneycombAIVectorTests),
+    // which compare the score; the tie SET can legitimately differ by platform, since
+    // pruning bounds depend on each port's candidate ordering.
+    static func minimaxSearch(board: HoneycombBoard, opponentDeck: [HoneycombCardData], playerDeck: [HoneycombCardData], unknownPlayerCardCount: Int = 0, eligibleHands: [Int], empties: [Int], rules: [HoneycombRule], lookaheadPlies: Int, weighFallenAce: Bool) -> (score: Int, moves: [(handIndex: Int, boardIndex: Int, immediateCaptures: Int)]) {
+        guard !empties.isEmpty, !eligibleHands.isEmpty else { return (Int.min, []) }
 
         var bestScore = Int.min
         var bestMoves: [(handIndex: Int, boardIndex: Int, immediateCaptures: Int)] = []
@@ -212,9 +245,7 @@ enum HoneycombAI {
                 bestMoves.append((candidate.h, candidate.b, candidate.captures))
             }
         }
-        let maxCaptures = bestMoves.map(\.immediateCaptures).max() ?? 0
-        let mostAggressive = bestMoves.filter { $0.immediateCaptures == maxCaptures }
-        return mostAggressive.randomElement().map { ($0.handIndex, $0.boardIndex) }
+        return (bestScore, bestMoves)
     }
 
     // Pre-simulates every (hand-index, board-index) candidate for `owner` and sorts by
@@ -289,7 +320,11 @@ enum HoneycombAI {
         // mid-game. Checked ahead of the depth/hand-exhaustion guard below since a full
         // board can be reached exactly as depth hits 0 or a deck empties.
         if board.isFull {
-            let margin = board.opponentScore - board.playerScore
+            // Same scoring settleMatch uses to decide the match: cards owned on the board
+            // PLUS cards still in hand (with 10 cards and 9 cells, one side always ends
+            // holding one). Counting the board alone misread real ties as wins/losses and
+            // narrow wins as ties. Matches the Windows port's terminal score.
+            let margin = (board.opponentScore + opponentDeck.count) - (board.playerScore + playerDeck.count + unknownPlayerCardCount)
             return margin * Self.terminalScoreUnit
         }
 

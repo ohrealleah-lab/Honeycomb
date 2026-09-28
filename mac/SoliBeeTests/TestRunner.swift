@@ -62,6 +62,10 @@ struct TestRunner {
         HoneycombGoldenVectorTests.run()
         print("✅ HoneycombGoldenVectorTests passed.")
 
+        print("🧪 Running HoneycombAIVectorTests...")
+        HoneycombAIVectorTests.run()
+        print("✅ HoneycombAIVectorTests passed.")
+
         print("🧪 Running CrossGameRegressionTests...")
         CrossGameRegressionTests.run()
         print("✅ CrossGameRegressionTests passed.")

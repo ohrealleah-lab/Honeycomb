@@ -80,8 +80,9 @@ public static class HoneycombAI
     }
 
     // Player Hint uses this instead of FindMove(..., HoneycombDifficulty.UltraHard, ...)
-    // — same UltraHard-caliber evaluation (Fallen Ace weighting included) but 5 plies
-    // instead of 6, purely for speed. Deliberately a separate entry point rather than
+    // — same UltraHard-caliber evaluation (Fallen Ace weighting included) at 6 plies,
+    // matching Mac/Android's computeHint (it was 5 here, purely for speed; aligned so a
+    // hint suggests the same move on every platform — see HoneycombAIVectorTests). Deliberately a separate entry point rather than
     // adding a "hint mode" branch to FindMove/depth's difficulty switch, so Killer
     // Bee's own actual opponent-AI moves keep searching at the full 6 plies — only
     // Hint gets the shallower, faster search.
@@ -96,10 +97,19 @@ public static class HoneycombAI
         int? mandatedHandIndex)
     {
         var simulatedOpponentHand = BuildSimulatedHand(opponentHand, unknownOpponentCardCount, opponentOwner);
-        return FindMinimaxMove(board, playerHand, simulatedOpponentHand, rules, 5, true, playerOwner, opponentOwner, mandatedHandIndex);
+        return FindMinimaxMove(board, playerHand, simulatedOpponentHand, rules, 6, true, playerOwner, opponentOwner, mandatedHandIndex);
     }
 
     private static (int, int) FindGreedyMove(HoneycombBoard board, List<HoneycombCard> hand, HashSet<HoneycombRule> rules, int owner, int? mandatedHandIndex)
+    {
+        var bestMoves = GreedySearch(board, hand, rules, owner, mandatedHandIndex).Moves;
+        return bestMoves[Random.Shared.Next(bestMoves.Count)];
+    }
+
+    // Deterministic part of FindGreedyMove (best capture count + every move achieving it),
+    // split out for the cross-platform AI vectors (HoneycombAIVectorTests). Mirrors Swift's
+    // HoneycombAI.greedySearch.
+    public static (int Score, List<(int HandIndex, int CellIndex)> Moves) GreedySearch(HoneycombBoard board, List<HoneycombCard> hand, HashSet<HoneycombRule> rules, int owner, int? mandatedHandIndex)
     {
         int bestScore = -1;
         var bestMoves = new List<(int, int)>();
@@ -140,7 +150,7 @@ public static class HoneycombAI
             }
         }
 
-        return bestMoves[Random.Shared.Next(bestMoves.Count)];
+        return (bestScore, bestMoves);
     }
 
     // Board-cell state used as part of a transposition-table key — mirrors Swift's
@@ -220,6 +230,16 @@ public static class HoneycombAI
 
     private static (int, int) FindMinimaxMove(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, HashSet<HoneycombRule> rules, int depth, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex)
     {
+        var bestMoves = MinimaxSearch(board, aiHand, playerHand, rules, depth, useFallenAceWeight, aiOwner, playerOwner, mandatedHandIndex).Moves;
+        return bestMoves[Random.Shared.Next(bestMoves.Count)];
+    }
+
+    // Deterministic part of FindMinimaxMove: the root minimax score plus the most-
+    // aggressive tied moves. Split out for the cross-platform AI vectors
+    // (HoneycombAIVectorTests), which compare the score. Mirrors Swift's
+    // HoneycombAI.minimaxSearch.
+    public static (int Score, List<(int HandIndex, int CellIndex)> Moves) MinimaxSearch(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, HashSet<HoneycombRule> rules, int depth, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex)
+    {
         var tt = new Dictionary<TTKey, TTEntry>();
         var bestMoves = new List<(int, int)>();
         int bestScore = int.MinValue;
@@ -284,7 +304,7 @@ public static class HoneycombAI
             }
         }
 
-        return bestMoves[Random.Shared.Next(bestMoves.Count)];
+        return (bestScore, bestMoves);
     }
 
     private static int Minimax(HoneycombBoard board, List<HoneycombCard> aiHand, List<HoneycombCard> playerHand, HashSet<HoneycombRule> rules, int depth, int alpha, int beta, bool isMaximizing, bool useFallenAceWeight, int aiOwner, int playerOwner, int? mandatedHandIndex, Dictionary<TTKey, TTEntry> tt)
