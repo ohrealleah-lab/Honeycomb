@@ -1,11 +1,13 @@
-# SoliBee Windows Port — CLAUDE.md
+# Honeycomb Windows Port — CLAUDE.md
 
 ## Tools
 
 Use the Context7 MCP server automatically for any question involving library or framework API usage, documentation, or version-specific behavior (e.g., Avalonia UI, .NET). Don't wait to be asked — reach for it whenever current/accurate docs would help, instead of relying on training data.
 
 ## Project overview
-Avalonia UI 11.0.10 / .NET 8 solitaire suite (Klondike, Beecell, Spider). Active branch: `004-windows-port`. Ported from a Mac-original codebase.
+Avalonia UI 11.0.10 / .NET 8 port of the **Honeycomb Card Suite** — all six games: Klondike, Freecell (called Beecell on Mac/iOS/Android), Spider, Video Poker, Blackjack, and Honeycomb (the card battle game). Lives in the monorepo's `windows/` folder alongside `mac/`, `ios/`, `android/` and the Swift `shared/` code. ("SoliBee" in namespaces/project names is legacy naming.)
+
+**Parity: Mac is the source of truth.** Game rules, scoring, stats and AI must behave the same as Mac (`shared/` Swift code + `mac/src`); when Windows differs, align it to Mac. Cross-platform golden-vector tests enforce this for the deterministic engines — see "Parity tests" below. Deliberate, documented differences only (e.g. Windows keeps short internal names for two Deuces Wild pay-table rows because they double as stats keys).
 
 ## Build & run
 ```bash
@@ -22,14 +24,32 @@ WAV files (`shuffle.wav`, `snap.wav`, `victory.wav`) must sit in the same direct
 ## Solution layout
 ```
 SoliBee.Core/
-  Models/       Card.cs, GameOptions.cs, FaceCardSlot.cs, GameState.cs, Pile.cs, …
-  Services/     SettingsService.cs, FaceCardArtService.cs, StatsService.cs
-  ViewModels/   GameViewModel.cs, BeecellViewModel.cs, SpiderViewModel.cs, AppCoordinator.cs
+  Models/       Card, Pile, GameState/GameStatistics/ModeStats (solitaire), Blackjack*, VideoPoker*,
+                PokerHandEvaluator, Honeycomb* (Board, Card, AI, CardGenerator, Database, Deck, …)
+  Services/     SettingsService, StatsService, AtomicFile, BannerCatalog, ThemeService,
+                FaceCardArtService, CrashLogger, …
+  ViewModels/   AppCoordinator, GameViewModel (Klondike), FreecellViewModel, SpiderViewModel,
+                VideoPokerViewModel, BlackjackViewModel, HoneycombViewModel
 SoliBee.Desktop/
-  Views/        CardView, GameView, MainWindow, PreferencesView, BeecellView, SpiderView, …
-  Assets/       Images, WAV files (chocobo.png, tonberry.png, moogle.png, J/Q/K PNGs, …)
+  Views/        MainWindow, GameView/FreecellView/SpiderView, VideoPokerView, BlackjackView,
+                HoneycombView (+ HoneycombRulesView, ManageDecksView, DeckBuilderView),
+                PreferencesView, CardView, …
+  Assets/       Card-back images, fonts (Apple Chancery, Parisienne), WAV files, banner catalog JSON
   Properties/PublishProfiles/win-x64.pubxml
+tests/SoliBee.Tests/  xUnit — `dotnet test SoliBee.sln` from windows/
 ```
+
+## Parity tests
+Mac generates shared JSON test vectors (see `mac/CLAUDE.md` → "Honeycomb capture-rule parity vectors"); these tests replay them against the Windows engines and fail on any drift from Mac:
+- `HoneycombGoldenVectorTests` — capture rules (Same/Plus/Fallen Ace/Reverse/Ascension/combos)
+- `HoneycombAIVectorTests` — AI/hint search scores
+- `VideoPokerVectorTests` — hand names + payouts per variant/bet
+- `HoneycombCardDatabaseVectorTests` — card ids/names/stars/suits and tier rules
+
+If one fails after a Windows change, Windows drifted — fix Windows. If it fails after pulling a Mac rules change with regenerated vectors, port that change here.
+
+## Persistence
+Everything persisted (settings, stats, card bank, decks, card-database seed, themes) is written through `AtomicFile.WriteAllText` (write temp, then replace) — never `File.WriteAllText` directly, since loaders fall back to defaults on a parse failure and a half-written file would silently wipe the data on the next save.
 
 ## Key architecture notes
 - **MVVM** via `CommunityToolkit.Mvvm`; settings changes broadcast with `WeakReferenceMessenger` (`OptionsChangedMessage`, `FaceCardArtChangedMessage`)
@@ -45,8 +65,8 @@ SoliBee.Desktop/
 - `FaceCardImage` (J/Q/K/A art): default AXAML 70 × 60; overridden in code per mode (see below)
 - `CardBack` Border: `HorizontalAlignment=Stretch, VerticalAlignment=Stretch` (not fixed size — important for border stroke visibility)
 
-## Face card art system (8-slot custom art)
-- **`FaceCardSlot` enum**: BlackAce, RedAce, BlackJack, RedJack, BlackQueen, RedQueen, BlackKing, RedKing
+## Face card art system (16-slot custom art — A/J/Q/K × 4 suits, same as Mac)
+- **`FaceCardSlot` enum**: the original 8 `Black*`/`Red*` cases (Ace/Jack/Queen/King) are the **Spades**/**Hearts** slots (names kept so existing saved art still loads), followed by `Diamonds*` and `Clubs*` — 16 in total
 - **`FaceCardArtService`** (static singleton, `_loaded` flag): loads art config from JSON; `GetArt(slot)` returns `CustomFaceArt?`
 - **`CustomFaceArt`**: `RelativePath` (filename in art dir), `Scale`, `OffsetX`, `OffsetY`, `IsEnabled`
 - **`_customBitmapCache`** (static dict in `CardView`): cleared by `CardView.InvalidateFaceArtCache()`; populated lazily by `GetCachedFaceArtBitmap(path)`

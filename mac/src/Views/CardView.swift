@@ -180,49 +180,6 @@ struct ShieldShape: Shape {
     }
 }
 
-struct FaceCardImageView: View {
-    let filename: String
-    let absolutePath: String
-    let fallbackView: AnyView
-    var fillFrame: Bool = false
-
-    private static var imageCache: [String: NSImage] = [:]
-
-    var body: some View {
-        let nsImage: NSImage? = {
-            if let cached = Self.imageCache[absolutePath] { return cached }
-            if let image = NSImage(contentsOfFile: absolutePath) {
-                Self.imageCache[absolutePath] = image
-                return image
-            }
-            if let path = Bundle.main.path(forResource: filename, ofType: "png"),
-               let image = NSImage(contentsOfFile: path) {
-                Self.imageCache[absolutePath] = image
-                return image
-            }
-            return nil
-        }()
-
-        if let image = nsImage {
-            if fillFrame {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 77, height: 122)
-            } else {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: 62)
-                    .frame(width: 77, height: 122)
-                    .clipped()
-            }
-        } else {
-            fallbackView
-        }
-    }
-}
-
 struct CardCenterSuitView: View {
     let suit: Card.Suit
     let rank: Int

@@ -16,7 +16,7 @@
     <Product>Honeycomb Card Suite</Product>
     <Company>Leahbee</Company>
     <Copyright>© 2026 Leahbee. All rights reserved.</Copyright>
-    <Description>A solitaire suite featuring Klondike, Freecell, and Spider Solitaire.</Description>
+    <Description>Honeycomb Card Suite: Klondike, Freecell, Spider, Video Poker, Blackjack, and Honeycomb.</Description>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
