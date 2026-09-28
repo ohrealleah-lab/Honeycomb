@@ -370,7 +370,11 @@ class SpiderViewModel(
     }
 
     fun startTimerIfNeeded() {
-        if (sharedOptions.noStressMode.value) return
+        if (sharedOptions.noStressMode.value) {
+            // Called on every move — a move made with No Stress on taints this game's time.
+            if (!_state.value.untimedThisGame) _state.update { it.copy(untimedThisGame = true) }
+            return
+        }
         gameTimer.start(
             checkActive = { _state.value.isTimerActive },
             onSetActive = { active -> _state.update { it.copy(isTimerActive = active) } },
@@ -403,6 +407,9 @@ class SpiderViewModel(
     // Reacts to No Stress Mode toggling mid-game — only starts/stops the timer, never
     // touches the board. Matches Klondike's reactToNoStressModeChange / Swift's original.
     fun reactToNoStressModeChange() {
+        // Toggling mid-game (either way) means this game's clock no longer covers the whole
+        // game — see GameState.untimedThisGame.
+        if (_state.value.movesCount > 0 && !_state.value.hasWon) _state.update { it.copy(untimedThisGame = true) }
         if (!sharedOptions.noStressMode.value) {
             if (_state.value.movesCount > 0 && !_state.value.hasWon) {
                 startTimerIfNeeded()
@@ -744,7 +751,7 @@ class SpiderViewModel(
             stopTimer()
             com.leah.honeycomb.audio.UISound.play("victory")
 
-            val timeInSeconds = _state.value.timerSeconds
+            val timeInSeconds = if (_state.value.untimedThisGame) 0 else _state.value.timerSeconds
             val finalScore = _state.value.score
             val previousGamesWon = _statistics.value.statsBySuits[_options.value.suitCount]?.gamesWon ?: 0
             updateModeStats(_options.value.suitCount) { stats ->
@@ -982,7 +989,8 @@ class SpiderViewModel(
         val currentActive = _state.value.isTimerActive
         _state.value = previous.copy(
             timerSeconds = currentTimer,
-            isTimerActive = currentActive
+            isTimerActive = currentActive,
+            untimedThisGame = _state.value.untimedThisGame
         )
         _isAutoplayRunning.value = false
         _isStuck.value = false

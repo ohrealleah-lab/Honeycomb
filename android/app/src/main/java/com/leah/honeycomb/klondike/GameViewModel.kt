@@ -504,7 +504,11 @@ class GameViewModel(
     }
 
     fun startTimerIfNeeded() {
-        if (sharedOptions.noStressMode.value) return
+        if (sharedOptions.noStressMode.value) {
+            // Called on every move — a move made with No Stress on taints this game's time.
+            if (!_state.value.untimedThisGame) _state.update { it.copy(untimedThisGame = true) }
+            return
+        }
         gameTimer.start(
             checkActive = { _state.value.isTimerActive },
             onSetActive = { active -> _state.update { it.copy(isTimerActive = active) } },
@@ -537,6 +541,9 @@ class GameViewModel(
     // Reacts to No Stress Mode toggling mid-game — only starts/stops the timer, never
     // touches the board. Matches Swift's reactToNoStressModeChange.
     fun reactToNoStressModeChange() {
+        // Toggling mid-game (either way) means this game's clock no longer covers the whole
+        // game — see GameState.untimedThisGame.
+        if (_state.value.movesCount > 0 && !_state.value.hasWon) _state.update { it.copy(untimedThisGame = true) }
         if (!sharedOptions.noStressMode.value) {
             if (_state.value.movesCount > 0 && !_state.value.hasWon) {
                 startTimerIfNeeded()
@@ -943,7 +950,7 @@ class GameViewModel(
             stopTimer()
             com.leah.honeycomb.audio.UISound.play("victory")
 
-            val timeInSeconds = _state.value.timerSeconds
+            val timeInSeconds = if (_state.value.untimedThisGame) 0 else _state.value.timerSeconds
             if (!_options.value.isVegasScoring && timeInSeconds > 0) {
                 val scorePenalty = 2 * (timeInSeconds / 10)
                 var newScore = maxOf(0, _state.value.score - scorePenalty)
@@ -1030,7 +1037,8 @@ class GameViewModel(
 
         var restoredState = previous.copy(
             timerSeconds = currentTimerSeconds,
-            isTimerActive = currentIsTimerActive
+            isTimerActive = currentIsTimerActive,
+            untimedThisGame = _state.value.untimedThisGame
         )
 
         if (!_options.value.isVegasScoring) {

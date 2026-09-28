@@ -237,6 +237,9 @@ public final class GameViewModel {
     // hand nobody is looking at (the exact bug this replaced, see git history:
     // testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync).
     public func reactToNoStressModeChange() {
+        // Toggling mid-game (either way) means this game's clock no longer covers the
+        // whole game — see untimedThisGame.
+        if state.movesCount > 0 && !state.hasWon { untimedThisGame = true }
         if effectiveTimed() {
             if state.movesCount > 0 && !state.hasWon {
                 startTimerIfNeeded()
@@ -450,6 +453,7 @@ public final class GameViewModel {
         
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        untimedThisGame = false
         isStuck = false
         isStockExhausted = false
         recycleCountAtStuck = nil
@@ -471,6 +475,7 @@ public final class GameViewModel {
         state = initial
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        untimedThisGame = false
         isStuck = false
         isStockExhausted = false
         recycleCountAtStuck = nil
@@ -761,8 +766,21 @@ public final class GameViewModel {
         !sharedOptions.noStressMode
     }
 
+    // True once any part of this game was played with No Stress Mode on (a move made
+    // while it was on, or it toggled mid-game). Turning it on zeroes the timer and
+    // turning it off restarts it from there, so without this a player could play most of
+    // a game untimed, switch No Stress off before the last move, and record a
+    // few-second Best Time — plus, in standard scoring, a six-figure 700,000/seconds
+    // time bonus. Such a win still counts; it just records no time and earns no bonus,
+    // the same as a win played entirely in No Stress Mode. Reset each deal/restart.
+    private var untimedThisGame = false
+
     public func startTimerIfNeeded() {
-        guard effectiveTimed() else { return }
+        guard effectiveTimed() else {
+            // Called on every move — a move made with No Stress on taints this game's time.
+            untimedThisGame = true
+            return
+        }
         gameTimer.start(
             isActive: { state.isTimerActive },
             setActive: { state.isTimerActive = $0 },
@@ -782,14 +800,15 @@ public final class GameViewModel {
         if WinDetection.hasWon(foundationCardCount: totalFoundationCards, totalCards: 52, alreadyWon: state.hasWon) {
             state.hasWon = true
             stopTimer()
-            recordWin(timeInSeconds: state.timerSeconds)
+            let recordedTime = untimedThisGame ? 0 : state.timerSeconds
+            recordWin(timeInSeconds: recordedTime)
             playSound(named: "victory")
-            if !options.isVegasScoring && state.timerSeconds > 0 {
+            if !options.isVegasScoring && recordedTime > 0 {
                 // Standard-mode time scoring (Microsoft Solitaire rules), applied once on win:
                 // deduct 2 points for every 10 seconds elapsed (floored at 0, matching the
                 // Windows port), then add the 700,000 / seconds bonus.
-                state.score = max(0, state.score - 2 * (state.timerSeconds / 10))
-                state.score += 700000 / state.timerSeconds
+                state.score = max(0, state.score - 2 * (recordedTime / 10))
+                state.score += 700000 / recordedTime
             }
             if state.score > highScore {
                 highScore = state.score

@@ -226,6 +226,8 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
             // tab) shouldn't wipe elapsed time it already had paused.
             bool noStressJustEnabled  = m.Options.IsNoStressMode && !old.IsNoStressMode;
             bool noStressJustDisabled = !m.Options.IsNoStressMode && old.IsNoStressMode;
+            if (m.Options.IsNoStressMode != Options.IsNoStressMode && State.MovesCount > 0 && !State.HasWon)
+                _untimedThisGame = true;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             OnPropertyChanged(nameof(HideBee));
@@ -247,8 +249,17 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
         InitializeGame();
     }
 
+    // True once any part of this game was played with No Stress Mode on (it toggled
+    // mid-game — OptionsChangedMessage reaches every game, backgrounded ones included).
+    // Turning it on zeroes/stops the timer and turning it off restarts it, so without
+    // this a player could play most of a game untimed, switch No Stress off before the
+    // last move and record a few-second Fastest Win (plus, in Klondike, the time bonus).
+    // Such a win still counts; it just records no time. Mirrors Mac's untimedThisGame.
+    private bool _untimedThisGame;
+
     public void InitializeGame(bool countAsNewGame = true)
     {
+        _untimedThisGame = false;
         bool wasAbandonedGame = State.MovesCount > 0 && !State.HasWon;
 
         ClearHintCycle();
@@ -372,6 +383,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
 
     public void RestartGame()
     {
+        _untimedThisGame = false;
         if (_initialSnapshot == null) return;
         _gameTimer?.Dispose();
         _undoStack.Clear();
@@ -604,7 +616,7 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
             // for the whole game. Recording that 0 here would permanently pin "Fastest
             // Win" to a bogus 0s and silently deflate "Avg Winning Time", so skip both
             // when untimed.
-            if (!Options.IsNoStressMode)
+            if (!Options.IsNoStressMode && !_untimedThisGame)
             {
                 if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
                     ms.ShortestWinSeconds = State.TimerSeconds;

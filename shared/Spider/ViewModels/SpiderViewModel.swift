@@ -211,6 +211,9 @@ public final class SpiderViewModel {
     // hand nobody is looking at (the exact bug this replaced, see git history:
     // testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync).
     public func reactToNoStressModeChange() {
+        // Toggling mid-game (either way) means this game's clock no longer covers the
+        // whole game — see untimedThisGame.
+        if state.movesCount > 0 && !state.hasWon { untimedThisGame = true }
         if effectiveTimed() {
             if state.movesCount > 0 && !state.hasWon {
                 startTimerIfNeeded()
@@ -392,6 +395,7 @@ public final class SpiderViewModel {
         
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        untimedThisGame = false
         isStuck = false
         initialState = state
         // Matches Klondike/Beecell: a hint from the abandoned deal must not carry over.
@@ -408,6 +412,7 @@ public final class SpiderViewModel {
         state = initial
         isAutocompleteAvailable = false
         isAutoplayRunning = false
+        untimedThisGame = false
         isStuck = false
         clearHint()
         clearKeyboardCursor()
@@ -653,7 +658,7 @@ public final class SpiderViewModel {
         if WinDetection.hasWon(foundationCardCount: totalFoundationCards, totalCards: 104, alreadyWon: state.hasWon) {
             state.hasWon = true
             stopTimer()
-            recordWin(timeInSeconds: state.timerSeconds)
+            recordWin(timeInSeconds: untimedThisGame ? 0 : state.timerSeconds)
             playSound(named: "victory")
             
             if state.score > highScore {
@@ -672,8 +677,19 @@ public final class SpiderViewModel {
         !sharedOptions.noStressMode
     }
 
+    // True once any part of this game was played with No Stress Mode on (a move made
+    // while it was on, or it toggled mid-game). Turning it on zeroes the timer and
+    // turning it off restarts it from there, so without this a player could play most of
+    // a game untimed, switch No Stress off before the last move, and record a
+    // few-second Best Time. Such a win still counts; it just records no time, the same as
+    // a win played entirely in No Stress Mode. Reset each deal/restart. Mirrors Klondike.
+    private var untimedThisGame = false
+
     public func startTimerIfNeeded() {
-        guard effectiveTimed() else { return }
+        guard effectiveTimed() else {
+            untimedThisGame = true  // a move made with No Stress on taints this game's time
+            return
+        }
         gameTimer.start(
             isActive: { state.isTimerActive },
             setActive: { state.isTimerActive = $0 },

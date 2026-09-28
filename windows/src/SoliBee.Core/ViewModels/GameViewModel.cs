@@ -235,6 +235,8 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             // tab) shouldn't wipe elapsed time it already had paused.
             bool noStressJustEnabled  = m.Options.IsNoStressMode && !Options.IsNoStressMode;
             bool noStressJustDisabled = !m.Options.IsNoStressMode && Options.IsNoStressMode;
+            if (m.Options.IsNoStressMode != Options.IsNoStressMode && State.MovesCount > 0 && !State.HasWon)
+                _untimedThisGame = true;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             OnPropertyChanged(nameof(HideBee));
@@ -265,8 +267,17 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         InitializeGame();
     }
 
+    // True once any part of this game was played with No Stress Mode on (it toggled
+    // mid-game — OptionsChangedMessage reaches every game, backgrounded ones included).
+    // Turning it on zeroes/stops the timer and turning it off restarts it, so without
+    // this a player could play most of a game untimed, switch No Stress off before the
+    // last move and record a few-second Fastest Win (plus, in Klondike, the time bonus).
+    // Such a win still counts; it just records no time. Mirrors Mac's untimedThisGame.
+    private bool _untimedThisGame;
+
     public void InitializeGame(bool countAsNewGame = true)
     {
+        _untimedThisGame = false;
         if (State.MovesCount > 0 && !State.HasWon)
             Stats.CurrentStreak = 0;
 
@@ -396,6 +407,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
     public void RestartGame()
     {
+        _untimedThisGame = false;
         if (!_initialDeck.Any()) return;
 
         // Restart refunds this deal's Vegas buy-in (see the comment below) on the theory
@@ -1004,7 +1016,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
                 // for the whole game. Recording that 0 here would permanently pin
                 // "Fastest Win" to a bogus 0s (since no real time is ever < 0) and
                 // silently deflate "Avg Winning Time", so skip both when untimed.
-                if (!Options.IsNoStressMode)
+                if (!Options.IsNoStressMode && !_untimedThisGame)
                 {
                     if (Stats.ShortestWinSeconds == 0 || State.TimerSeconds < Stats.ShortestWinSeconds)
                         Stats.ShortestWinSeconds = State.TimerSeconds;
@@ -1022,7 +1034,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
                 {
                     // Standard-mode time penalty and bonus are applied now that the game is over.
                     // No penalties or bonuses in No Stress Mode — TimerSeconds never advances there.
-                    if (!Options.IsNoStressMode)
+                    if (!Options.IsNoStressMode && !_untimedThisGame)
                     {
                         int timePenalty = (State.TimerSeconds / 10) * 2;
                         State.Score = Math.Max(0, State.Score - timePenalty);

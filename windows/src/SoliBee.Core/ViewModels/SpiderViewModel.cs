@@ -203,6 +203,8 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
             // No Stress Mode's whole point is "no timer" — if it's switched on mid-game,
             // stop the timer immediately instead of leaving it ticking until the next deal.
             bool noStressJustEnabled = m.Options.IsNoStressMode && !old.IsNoStressMode;
+            if (m.Options.IsNoStressMode != Options.IsNoStressMode && State.MovesCount > 0 && !State.HasWon)
+                _untimedThisGame = true;
             Options = m.Options;
             OnPropertyChanged(nameof(Options));
             OnPropertyChanged(nameof(HideBee));
@@ -224,8 +226,17 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         InitializeGame();
     }
 
+    // True once any part of this game was played with No Stress Mode on (it toggled
+    // mid-game — OptionsChangedMessage reaches every game, backgrounded ones included).
+    // Turning it on zeroes/stops the timer and turning it off restarts it, so without
+    // this a player could play most of a game untimed, switch No Stress off before the
+    // last move and record a few-second Fastest Win (plus, in Klondike, the time bonus).
+    // Such a win still counts; it just records no time. Mirrors Mac's untimedThisGame.
+    private bool _untimedThisGame;
+
     public void InitializeGame(bool countAsNewGame = true)
     {
+        _untimedThisGame = false;
         bool wasAbandonedGame = State.MovesCount > 0 && !State.HasWon;
 
         _autocompleteTimer?.Dispose();
@@ -341,6 +352,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
 
     public void RestartGame()
     {
+        _untimedThisGame = false;
         if (_initialSnapshot == null) return;
         _gameTimer?.Dispose();
         _undoStack.Clear();
@@ -673,7 +685,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
             // Win" to a bogus 0s and silently deflate "Avg Winning Time", so skip both
             // when untimed, and track timed wins separately from GamesWon so the display
             // can divide/gate on the right count (matches Mac's winningGamesCount).
-            if (!Options.IsNoStressMode)
+            if (!Options.IsNoStressMode && !_untimedThisGame)
             {
                 if (ms.ShortestWinSeconds == 0 || State.TimerSeconds < ms.ShortestWinSeconds)
                     ms.ShortestWinSeconds = State.TimerSeconds;
