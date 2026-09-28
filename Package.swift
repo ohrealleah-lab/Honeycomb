@@ -41,6 +41,7 @@ let package = Package(
                 // Cross-platform capture-rule test data (read by each platform's tests,
                 // not compiled into the app).
                 "shared/Honeycomb/TestVectors",
+                "shared/VideoPoker/TestVectors",
             ],
             sources: ["shared", "mac/src"]
         ),

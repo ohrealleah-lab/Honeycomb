@@ -141,51 +141,8 @@ class VideoPokerViewModel(
     val totalBet: Int
         get() = _state.value.currentBet
 
-    private val jacksOrBetterTable = listOf(
-        VideoPokerPayEntry("Royal Flush", PokerHandRank.RoyalFlush, VideoPokerQualifier.None, listOf(250, 250, 250, 250, 800)),
-        VideoPokerPayEntry("Straight Flush", PokerHandRank.StraightFlush, VideoPokerQualifier.None, listOf(50, 50, 50, 50, 50)),
-        VideoPokerPayEntry("Four of a Kind", PokerHandRank.FourOfAKind, VideoPokerQualifier.None, listOf(25, 25, 25, 25, 25)),
-        VideoPokerPayEntry("Full House", PokerHandRank.FullHouse, VideoPokerQualifier.None, listOf(9, 9, 9, 9, 9)),
-        VideoPokerPayEntry("Flush", PokerHandRank.Flush, VideoPokerQualifier.None, listOf(6, 6, 6, 6, 6)),
-        VideoPokerPayEntry("Straight", PokerHandRank.Straight, VideoPokerQualifier.None, listOf(4, 4, 4, 4, 4)),
-        VideoPokerPayEntry("Three of a Kind", PokerHandRank.ThreeOfAKind, VideoPokerQualifier.None, listOf(3, 3, 3, 3, 3)),
-        VideoPokerPayEntry("Two Pair", PokerHandRank.TwoPair, VideoPokerQualifier.None, listOf(2, 2, 2, 2, 2)),
-        VideoPokerPayEntry("Jacks or Better", PokerHandRank.OnePair, VideoPokerQualifier.JacksOrBetter, listOf(1, 1, 1, 1, 1))
-    )
-
-    private val deucesWildTable = listOf(
-        VideoPokerPayEntry("Natural Royal Flush", PokerHandRank.RoyalFlush, VideoPokerQualifier.None, listOf(250, 250, 250, 250, 800)),
-        VideoPokerPayEntry("Four Deuces", PokerHandRank.FourOfAKind, VideoPokerQualifier.BonusFours(2), listOf(200, 200, 200, 200, 200)),
-        VideoPokerPayEntry("Wild Royal Flush", PokerHandRank.RoyalFlush, VideoPokerQualifier.DeucesWild, listOf(25, 25, 25, 25, 25)),
-        VideoPokerPayEntry("Five of a Kind", PokerHandRank.FourOfAKind, VideoPokerQualifier.DeucesWild, listOf(15, 15, 15, 15, 15)),
-        VideoPokerPayEntry("Straight Flush", PokerHandRank.StraightFlush, VideoPokerQualifier.None, listOf(9, 9, 9, 9, 9)),
-        VideoPokerPayEntry("Four of a Kind", PokerHandRank.FourOfAKind, VideoPokerQualifier.None, listOf(5, 5, 5, 5, 5)),
-        VideoPokerPayEntry("Full House", PokerHandRank.FullHouse, VideoPokerQualifier.None, listOf(3, 3, 3, 3, 3)),
-        VideoPokerPayEntry("Flush", PokerHandRank.Flush, VideoPokerQualifier.None, listOf(2, 2, 2, 2, 2)),
-        VideoPokerPayEntry("Straight", PokerHandRank.Straight, VideoPokerQualifier.None, listOf(2, 2, 2, 2, 2)),
-        VideoPokerPayEntry("Three of a Kind", PokerHandRank.ThreeOfAKind, VideoPokerQualifier.None, listOf(1, 1, 1, 1, 1))
-    )
-
-    private val bonusPokerTable = listOf(
-        VideoPokerPayEntry("Royal Flush", PokerHandRank.RoyalFlush, VideoPokerQualifier.None, listOf(250, 250, 250, 250, 800)),
-        VideoPokerPayEntry("Straight Flush", PokerHandRank.StraightFlush, VideoPokerQualifier.None, listOf(50, 50, 50, 50, 50)),
-        VideoPokerPayEntry("Four Aces", PokerHandRank.FourOfAKind, VideoPokerQualifier.BonusFours(1), listOf(80, 80, 80, 80, 80)),
-        VideoPokerPayEntry("Four 2s–4s", PokerHandRank.FourOfAKind, VideoPokerQualifier.BonusFours(4), listOf(40, 40, 40, 40, 40)),
-        VideoPokerPayEntry("Four of a Kind", PokerHandRank.FourOfAKind, VideoPokerQualifier.None, listOf(25, 25, 25, 25, 25)),
-        VideoPokerPayEntry("Full House", PokerHandRank.FullHouse, VideoPokerQualifier.None, listOf(8, 8, 8, 8, 8)),
-        VideoPokerPayEntry("Flush", PokerHandRank.Flush, VideoPokerQualifier.None, listOf(5, 5, 5, 5, 5)),
-        VideoPokerPayEntry("Straight", PokerHandRank.Straight, VideoPokerQualifier.None, listOf(4, 4, 4, 4, 4)),
-        VideoPokerPayEntry("Three of a Kind", PokerHandRank.ThreeOfAKind, VideoPokerQualifier.None, listOf(3, 3, 3, 3, 3)),
-        VideoPokerPayEntry("Two Pair", PokerHandRank.TwoPair, VideoPokerQualifier.None, listOf(2, 2, 2, 2, 2)),
-        VideoPokerPayEntry("Jacks or Better", PokerHandRank.OnePair, VideoPokerQualifier.JacksOrBetter, listOf(1, 1, 1, 1, 1))
-    )
-
     val payTable: List<VideoPokerPayEntry>
-        get() = when (_options.value.variant) {
-            VideoPokerVariant.JacksOrBetter -> jacksOrBetterTable
-            VideoPokerVariant.DeucesWild -> deucesWildTable
-            VideoPokerVariant.BonusPoker -> bonusPokerTable
-        }
+        get() = VideoPokerScoring.payTable(_options.value.variant)
 
     fun rebuy() {
         val s = _state.value
@@ -323,7 +280,7 @@ class VideoPokerViewModel(
         var rank: PokerHandRank? = null
 
         for (entry in payTable) {
-            if (matches(result, evaluatedHand, entry)) {
+            if (VideoPokerScoring.matches(result, evaluatedHand, entry, _options.value.variant)) {
                 name = entry.handName
                 payout = entry.payout(s.currentBet)
                 rank = entry.rank
@@ -371,42 +328,6 @@ class VideoPokerViewModel(
         checkWinMilestones(previousHandsWon)
     }
 
-    private fun matches(result: PokerHandResult, hand: List<Card>, entry: VideoPokerPayEntry): Boolean {
-        if (result.rank != entry.rank) return false
-        
-        when (entry.qualifier) {
-            is VideoPokerQualifier.None -> {
-                if (_options.value.variant == VideoPokerVariant.DeucesWild && entry.rank == PokerHandRank.RoyalFlush) {
-                    return !hand.any { it.rank == 2 }
-                }
-                return true
-            }
-            is VideoPokerQualifier.JacksOrBetter -> {
-                if (result.rank != PokerHandRank.OnePair) return false
-                val qualifyingRanks = setOf(1, 11, 12, 13)
-                val freq = mutableMapOf<Int, Int>()
-                hand.forEach { freq[it.rank] = freq.getOrDefault(it.rank, 0) + 1 }
-                return freq.any { qualifyingRanks.contains(it.key) && it.value >= 2 }
-            }
-            is VideoPokerQualifier.DeucesWild -> {
-                if (entry.handName == "Five of a Kind") {
-                    return result.kickers.size == 2 && result.kickers[1] == 15
-                }
-                return hand.any { it.rank == 2 }
-            }
-            is VideoPokerQualifier.BonusFours -> {
-                if (result.rank != PokerHandRank.FourOfAKind) return false
-                val freq = mutableMapOf<Int, Int>()
-                hand.forEach { freq[it.rank] = freq.getOrDefault(it.rank, 0) + 1 }
-                val bonusRank = entry.qualifier.rank
-                if (bonusRank == 4) {
-                    return freq.any { listOf(2, 3, 4).contains(it.key) && it.value == 4 }
-                } else {
-                    return freq[bonusRank] == 4
-                }
-            }
-        }
-    }
 
     fun increaseBet() {
         val s = _state.value
@@ -485,4 +406,101 @@ class VideoPokerViewModel(
     
     // For unit tests
     var debugDeck: List<Card>? = null
+}
+
+// Pure hand scoring (pay tables + qualifier rules), independent of any live game, so
+// the cross-platform Video Poker vectors (VideoPokerVectorTests) can check every
+// variant/bet. Mirrors Swift's VideoPokerViewModel.payTable(for:)/scoreHand.
+object VideoPokerScoring {
+    val jacksOrBetterTable = listOf(
+        VideoPokerPayEntry("Royal Flush", PokerHandRank.RoyalFlush, VideoPokerQualifier.None, listOf(250, 250, 250, 250, 800)),
+        VideoPokerPayEntry("Straight Flush", PokerHandRank.StraightFlush, VideoPokerQualifier.None, listOf(50, 50, 50, 50, 50)),
+        VideoPokerPayEntry("Four of a Kind", PokerHandRank.FourOfAKind, VideoPokerQualifier.None, listOf(25, 25, 25, 25, 25)),
+        VideoPokerPayEntry("Full House", PokerHandRank.FullHouse, VideoPokerQualifier.None, listOf(9, 9, 9, 9, 9)),
+        VideoPokerPayEntry("Flush", PokerHandRank.Flush, VideoPokerQualifier.None, listOf(6, 6, 6, 6, 6)),
+        VideoPokerPayEntry("Straight", PokerHandRank.Straight, VideoPokerQualifier.None, listOf(4, 4, 4, 4, 4)),
+        VideoPokerPayEntry("Three of a Kind", PokerHandRank.ThreeOfAKind, VideoPokerQualifier.None, listOf(3, 3, 3, 3, 3)),
+        VideoPokerPayEntry("Two Pair", PokerHandRank.TwoPair, VideoPokerQualifier.None, listOf(2, 2, 2, 2, 2)),
+        VideoPokerPayEntry("Jacks or Better", PokerHandRank.OnePair, VideoPokerQualifier.JacksOrBetter, listOf(1, 1, 1, 1, 1))
+    )
+
+    val deucesWildTable = listOf(
+        VideoPokerPayEntry("Natural Royal Flush", PokerHandRank.RoyalFlush, VideoPokerQualifier.None, listOf(250, 250, 250, 250, 800)),
+        VideoPokerPayEntry("Four Deuces", PokerHandRank.FourOfAKind, VideoPokerQualifier.BonusFours(2), listOf(200, 200, 200, 200, 200)),
+        VideoPokerPayEntry("Wild Royal Flush", PokerHandRank.RoyalFlush, VideoPokerQualifier.DeucesWild, listOf(25, 25, 25, 25, 25)),
+        VideoPokerPayEntry("Five of a Kind", PokerHandRank.FourOfAKind, VideoPokerQualifier.DeucesWild, listOf(15, 15, 15, 15, 15)),
+        VideoPokerPayEntry("Straight Flush", PokerHandRank.StraightFlush, VideoPokerQualifier.None, listOf(9, 9, 9, 9, 9)),
+        VideoPokerPayEntry("Four of a Kind", PokerHandRank.FourOfAKind, VideoPokerQualifier.None, listOf(5, 5, 5, 5, 5)),
+        VideoPokerPayEntry("Full House", PokerHandRank.FullHouse, VideoPokerQualifier.None, listOf(3, 3, 3, 3, 3)),
+        VideoPokerPayEntry("Flush", PokerHandRank.Flush, VideoPokerQualifier.None, listOf(2, 2, 2, 2, 2)),
+        VideoPokerPayEntry("Straight", PokerHandRank.Straight, VideoPokerQualifier.None, listOf(2, 2, 2, 2, 2)),
+        VideoPokerPayEntry("Three of a Kind", PokerHandRank.ThreeOfAKind, VideoPokerQualifier.None, listOf(1, 1, 1, 1, 1))
+    )
+
+    val bonusPokerTable = listOf(
+        VideoPokerPayEntry("Royal Flush", PokerHandRank.RoyalFlush, VideoPokerQualifier.None, listOf(250, 250, 250, 250, 800)),
+        VideoPokerPayEntry("Straight Flush", PokerHandRank.StraightFlush, VideoPokerQualifier.None, listOf(50, 50, 50, 50, 50)),
+        VideoPokerPayEntry("Four Aces", PokerHandRank.FourOfAKind, VideoPokerQualifier.BonusFours(1), listOf(80, 80, 80, 80, 80)),
+        VideoPokerPayEntry("Four 2s–4s", PokerHandRank.FourOfAKind, VideoPokerQualifier.BonusFours(4), listOf(40, 40, 40, 40, 40)),
+        VideoPokerPayEntry("Four of a Kind", PokerHandRank.FourOfAKind, VideoPokerQualifier.None, listOf(25, 25, 25, 25, 25)),
+        VideoPokerPayEntry("Full House", PokerHandRank.FullHouse, VideoPokerQualifier.None, listOf(8, 8, 8, 8, 8)),
+        VideoPokerPayEntry("Flush", PokerHandRank.Flush, VideoPokerQualifier.None, listOf(5, 5, 5, 5, 5)),
+        VideoPokerPayEntry("Straight", PokerHandRank.Straight, VideoPokerQualifier.None, listOf(4, 4, 4, 4, 4)),
+        VideoPokerPayEntry("Three of a Kind", PokerHandRank.ThreeOfAKind, VideoPokerQualifier.None, listOf(3, 3, 3, 3, 3)),
+        VideoPokerPayEntry("Two Pair", PokerHandRank.TwoPair, VideoPokerQualifier.None, listOf(2, 2, 2, 2, 2)),
+        VideoPokerPayEntry("Jacks or Better", PokerHandRank.OnePair, VideoPokerQualifier.JacksOrBetter, listOf(1, 1, 1, 1, 1))
+    )
+
+    fun payTable(variant: VideoPokerVariant): List<VideoPokerPayEntry> = when (variant) {
+        VideoPokerVariant.JacksOrBetter -> jacksOrBetterTable
+        VideoPokerVariant.DeucesWild -> deucesWildTable
+        VideoPokerVariant.BonusPoker -> bonusPokerTable
+    }
+
+    // Returns the paying hand's name and payout, or ("No Win", 0).
+    fun scoreHand(hand: List<Card>, variant: VideoPokerVariant, bet: Int): Pair<String, Int> {
+        if (hand.size != 5) return Pair("No Win", 0)
+        val result = if (variant == VideoPokerVariant.DeucesWild) PokerHandEvaluator.evaluateWithDeuces(hand) else PokerHandEvaluator.evaluate(hand)
+        for (entry in payTable(variant)) {
+            if (matches(result, hand, entry, variant)) return Pair(entry.handName, entry.payout(bet))
+        }
+        return Pair("No Win", 0)
+    }
+
+    fun matches(result: PokerHandResult, hand: List<Card>, entry: VideoPokerPayEntry, variant: VideoPokerVariant): Boolean {
+        if (result.rank != entry.rank) return false
+        
+        when (entry.qualifier) {
+            is VideoPokerQualifier.None -> {
+                if (variant == VideoPokerVariant.DeucesWild && entry.rank == PokerHandRank.RoyalFlush) {
+                    return !hand.any { it.rank == 2 }
+                }
+                return true
+            }
+            is VideoPokerQualifier.JacksOrBetter -> {
+                if (result.rank != PokerHandRank.OnePair) return false
+                val qualifyingRanks = setOf(1, 11, 12, 13)
+                val freq = mutableMapOf<Int, Int>()
+                hand.forEach { freq[it.rank] = freq.getOrDefault(it.rank, 0) + 1 }
+                return freq.any { qualifyingRanks.contains(it.key) && it.value >= 2 }
+            }
+            is VideoPokerQualifier.DeucesWild -> {
+                if (entry.handName == "Five of a Kind") {
+                    return result.kickers.size == 2 && result.kickers[1] == 15
+                }
+                return hand.any { it.rank == 2 }
+            }
+            is VideoPokerQualifier.BonusFours -> {
+                if (result.rank != PokerHandRank.FourOfAKind) return false
+                val freq = mutableMapOf<Int, Int>()
+                hand.forEach { freq[it.rank] = freq.getOrDefault(it.rank, 0) + 1 }
+                val bonusRank = entry.qualifier.rank
+                if (bonusRank == 4) {
+                    return freq.any { listOf(2, 3, 4).contains(it.key) && it.value == 4 }
+                } else {
+                    return freq[bonusRank] == 4
+                }
+            }
+        }
+    }
 }

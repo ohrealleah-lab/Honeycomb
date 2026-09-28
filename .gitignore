@@ -6,3 +6,7 @@
 # iOS: Honeycomb.xcodeproj is generated from ios/project.yml — run `xcodegen generate` in ios/
 ios/Honeycomb.xcodeproj/
 ios/build/
+
+# Temporary copy `make test` places next to the test runner (removed after the run)
+mac/HoneycombBannerCatalog.json
+mac/test_runner

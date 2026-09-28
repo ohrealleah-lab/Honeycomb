@@ -17,7 +17,7 @@ targets:
         name: Shared
         # Cross-platform test data, not an app resource (see mac/CLAUDE.md).
         excludes:
-          - "Honeycomb/TestVectors/**"
+          - "**/TestVectors/**"
       # Game-effect sounds shared with the mac app bundle.
       - path: ../mac/src/shuffle.aiff
         buildPhase: resources

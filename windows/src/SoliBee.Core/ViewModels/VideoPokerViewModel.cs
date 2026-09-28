@@ -489,33 +489,47 @@ public partial class VideoPokerViewModel : ObservableObject
 
     // ── Hand evaluation ───────────────────────────────────────────────────────
 
-    public (VideoPokerPayEntry? Entry, int Payout) EvaluateHand(Card[] hand)
+    public (VideoPokerPayEntry? Entry, int Payout) EvaluateHand(Card[] hand) =>
+        ScoreHand(hand, Options.Variant, State.CurrentBet);
+
+    public static VideoPokerPayEntry[] TableFor(VideoPokerVariant variant) => variant switch
     {
-        bool isDeucesWild = Options.Variant == VideoPokerVariant.DeucesWild;
+        VideoPokerVariant.DeucesWild => DeucesTable,
+        VideoPokerVariant.BonusPoker => BonusTable,
+        _ => JoBTable,
+    };
+
+    // Pure hand scoring — no view-model state — so the cross-platform Video Poker vectors
+    // (VideoPokerVectorTests) can check every variant/bet. Mirrors Swift's
+    // VideoPokerViewModel.scoreHand.
+    public static (VideoPokerPayEntry? Entry, int Payout) ScoreHand(Card[] hand, VideoPokerVariant variant, int bet)
+    {
+        var table = TableFor(variant);
+        bool isDeucesWild = variant == VideoPokerVariant.DeucesWild;
         int wildCount     = isDeucesWild ? hand.Count(c => c.Rank == 2) : 0;
         bool usedWild     = wildCount > 0;
 
         // Four Deuces is a special named hand — detect before normal ranking
         if (isDeucesWild && wildCount == 4)
         {
-            var fdEntry = CurrentTable.FirstOrDefault(e => e.Qualifier == VideoPokerQualifier.FourDeuces);
-            if (fdEntry != null) return (fdEntry, fdEntry.Payout(State.CurrentBet));
+            var fdEntry = table.FirstOrDefault(e => e.Qualifier == VideoPokerQualifier.FourDeuces);
+            if (fdEntry != null) return (fdEntry, fdEntry.Payout(bet));
         }
 
         PokerHandResult result = wildCount > 0
             ? EvaluateWithWilds(hand, wildCount)
             : PokerHandEvaluator.Evaluate(hand);
 
-        foreach (var entry in CurrentTable)
+        foreach (var entry in table)
         {
             if (result.Rank != entry.Rank) continue;
             if (!QualifierMatches(entry.Qualifier, result, wildCount, usedWild)) continue;
-            return (entry, entry.Payout(State.CurrentBet));
+            return (entry, entry.Payout(bet));
         }
         return (null, 0);
     }
 
-    private bool QualifierMatches(
+    private static bool QualifierMatches(
         VideoPokerQualifier q, PokerHandResult result, int wildCount, bool usedWild) => q switch
     {
         VideoPokerQualifier.None          => true,

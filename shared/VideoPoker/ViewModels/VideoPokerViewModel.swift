@@ -22,11 +22,13 @@ public final class VideoPokerViewModel {
 
     // MARK: - Pay table (Jacks or Better 9/6 full-pay by default)
 
-    public var payTable: [VideoPokerPayEntry] {
-        switch options.variant {
-        case .jacksOrBetter: return Self.jacksOrBetterTable
-        case .deucesWild:    return Self.deucesWildTable
-        case .bonusPoker:    return Self.bonusPokerTable
+    public var payTable: [VideoPokerPayEntry] { Self.payTable(for: options.variant) }
+
+    public static func payTable(for variant: VideoPokerVariant) -> [VideoPokerPayEntry] {
+        switch variant {
+        case .jacksOrBetter: return jacksOrBetterTable
+        case .deucesWild:    return deucesWildTable
+        case .bonusPoker:    return bonusPokerTable
         }
     }
 
@@ -411,14 +413,20 @@ public final class VideoPokerViewModel {
         // PokerHandEvaluator requires exactly 5 cards; guard here so every caller
         // (single-hand evaluate() and each triple-play sub-hand) is protected, rather
         // than relying on each call site to check first.
+        Self.scoreHand(hand, variant: options.variant, bet: state.currentBet)
+    }
+
+    // Pure hand scoring — no view-model state — so the cross-platform Video Poker vectors
+    // (VideoPokerVectorTests) can check every variant/bet without a live game.
+    public static func scoreHand(_ hand: [Card], variant: VideoPokerVariant, bet: Int) -> (name: String, payout: Int, rank: PokerHandRank?) {
         guard hand.count == 5 else { return ("No Win", 0, nil) }
-        let result = options.variant == .deucesWild
+        let result = variant == .deucesWild
             ? PokerHandEvaluator.evaluateWithDeuces(hand)
             : PokerHandEvaluator.evaluate(hand)
 
         // Walk the pay table from top (best) to bottom and find first match
-        for entry in payTable where matches(result: result, hand: hand, entry: entry) {
-            return (entry.handName, entry.payout(bet: state.currentBet), entry.rank)
+        for entry in payTable(for: variant) where matches(result: result, hand: hand, entry: entry, variant: variant) {
+            return (entry.handName, entry.payout(bet: bet), entry.rank)
         }
         return ("No Win", 0, nil)
     }
@@ -450,12 +458,12 @@ public final class VideoPokerViewModel {
         }
     }
 
-    private func matches(result: PokerHandResult, hand: [Card], entry: VideoPokerPayEntry) -> Bool {
+    private static func matches(result: PokerHandResult, hand: [Card], entry: VideoPokerPayEntry, variant: VideoPokerVariant) -> Bool {
         guard result.rank == entry.rank else { return false }
 
         switch entry.qualifier {
         case .none:
-            if options.variant == .deucesWild && entry.rank == .royalFlush {
+            if variant == .deucesWild && entry.rank == .royalFlush {
                 return !hand.contains { $0.rank == 2 }
             }
             return true
