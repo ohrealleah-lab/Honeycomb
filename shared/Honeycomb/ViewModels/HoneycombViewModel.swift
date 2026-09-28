@@ -506,7 +506,18 @@ public final class HoneycombViewModel {
     // only takes effect at the next deal (Start or Rematch).
     public private(set) var noStressModeThisMatch: Bool = false
 
+    // Leaving a match that's still being played — Quit Match, or New Match/Restart
+    // mid-match — counts as a loss and ends the win streak (product decision; same idea
+    // as abandoning a solitaire game). Otherwise quitting a match you're losing kept the
+    // streak alive. Sudden Death overtime is still the same match, so it counts too.
+    private func recordAbandonedMatchIfInProgress() {
+        guard gameState == .playing || gameState == .suddenDeath else { return }
+        stats.recordGame(won: false, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
+        saveStats()
+    }
+
     public func startNewGame() {
+        recordAbandonedMatchIfInProgress()
         // Difficulty is locked for the match (and its rematches, which reuse this
         // opponent's deck) — see matchDifficulty.
         matchDifficulty = options.difficulty
@@ -2694,6 +2705,7 @@ public final class HoneycombViewModel {
     // otherwise reset it on a match with no pending Swap of its own — permanently
     // blocking playerPlayCard on every future match.
     public func quitMatch() {
+        recordAbandonedMatchIfInProgress()
         handSetupGeneration += 1
         // No animation for the whole reset: quitting mid-Nectar Exchange used to leave
         // the swap's card-flight animation running (and swapAnimationPhase stuck at

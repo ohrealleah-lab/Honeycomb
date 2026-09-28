@@ -312,7 +312,27 @@ class HoneycombViewModel(
         }
     }
 
+    // Leaving a match that's still being played — Quit Match, or a new match mid-match —
+    // counts as a loss and ends the win streak (product decision; same idea as
+    // abandoning a solitaire game). Otherwise quitting a match you're losing kept the
+    // streak alive. Sudden Death overtime is still the same match, so it counts too.
+    // Mac parity (recordAbandonedMatchIfInProgress).
+    private fun recordAbandonedMatchIfInProgress() {
+        val st = _state.value
+        if (st.gameState != HoneycombGameState.Playing && st.gameState != HoneycombGameState.SuddenDeath) return
+        updateStatistics {
+            it.recordGame(
+                won = false, drawn = false,
+                captures = sessionCardsCaptured,
+                sessionCombos = st.board.sessionSamePlusTriggers,
+                flawless = false,
+                fallenAceCaptures = st.board.sessionFallenAceCaptures
+            )
+        }
+    }
+
     fun startNewGame() {
+        recordAbandonedMatchIfInProgress()
         resetMatchTransients()
         isRematchMatch = false
         consecutiveNoStealWins = 0
@@ -1111,6 +1131,7 @@ class HoneycombViewModel(
     }
 
     fun quitMatch() {
+        recordAbandonedMatchIfInProgress()
         resetMatchTransients()
         _state.value = HoneycombState()
     }

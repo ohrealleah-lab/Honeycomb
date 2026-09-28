@@ -43,6 +43,32 @@ struct HoneycombBannerTriggerTests {
         testFirstLaunchMilestoneFiresOnFreshStart()
         testLoadingBannerFiresOnViewAppear()
         testLoadingBannerDoesNotFireTwiceInSameSession()
+        testQuitOrNewMatchMidMatchCountsAsLoss()
+    }
+
+    // Leaving a match still in play (Quit Match, or a new match mid-match) is a loss and
+    // ends the win streak; quitting from the setup screen or after a finished match isn't.
+    static func testQuitOrNewMatchMidMatchCountsAsLoss() {
+        let vm = HoneycombViewModel()
+        vm.stats = HoneycombStats()
+        vm.stats.currentWinStreak = 4
+
+        vm.quitMatch()
+        assert(vm.stats.matchesLost == 0 && vm.stats.currentWinStreak == 4, "Quitting from setup must not record anything")
+
+        vm.gameState = .playing
+        vm.quitMatch()
+        assert(vm.stats.matchesLost == 1, "Quitting mid-match must count as a loss")
+        assert(vm.stats.currentWinStreak == 0, "Quitting mid-match must end the win streak")
+        assert(vm.stats.gamesPlayed == 1, "The abandoned match counts as played")
+
+        vm.gameState = .suddenDeath
+        vm.startNewGame()
+        assert(vm.stats.matchesLost == 2, "A new match during Sudden Death abandons the current one")
+
+        vm.gameState = .gameOver
+        vm.quitMatch()
+        assert(vm.stats.matchesLost == 2, "Leaving a finished match records nothing more")
     }
 
     // MARK: - Helpers

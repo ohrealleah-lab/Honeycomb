@@ -354,8 +354,20 @@ public partial class HoneycombViewModel : ObservableObject
         return pool[^1];
     }
 
+    // Leaving a match that's still being played — Quit Match, or Start Match mid-match —
+    // counts as a loss and ends the win streak (product decision; same idea as
+    // abandoning a solitaire game). Otherwise quitting a match you're losing kept the
+    // streak alive. Sudden Death overtime is still Playing, so it counts too. Mac parity.
+    private void RecordAbandonedMatchIfInProgress()
+    {
+        if (State.Phase != HoneycombPhase.Playing) return;
+        Stats.RecordGame(false, false, State.CardsCapturedThisMatch, State.Board.SessionSamePlusTriggers, false, State.MatchDifficulty, State.Board.SessionFallenAceCaptures);
+        SaveStats();
+    }
+
     public void StartNewMatch()
     {
+        RecordAbandonedMatchIfInProgress();
         State.MatchDifficulty = Options.Difficulty; // locked for this match — see HoneycombState.MatchDifficulty
         // Invalidates every pending continuation from the previous match, exactly like
         // QuitMatch — Start/Rematch are clickable the moment Phase flips to Result, so the
@@ -1076,6 +1088,7 @@ public partial class HoneycombViewModel : ObservableObject
 
     public void QuitMatch()
     {
+        RecordAbandonedMatchIfInProgress();
         _matchGeneration++;
         _isAnimating = false;
         ActiveHint = null;
