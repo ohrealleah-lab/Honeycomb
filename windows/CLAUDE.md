@@ -5,7 +5,7 @@
 Use the Context7 MCP server automatically for any question involving library or framework API usage, documentation, or version-specific behavior (e.g., Avalonia UI, .NET). Don't wait to be asked — reach for it whenever current/accurate docs would help, instead of relying on training data.
 
 ## Project overview
-Avalonia UI 11.0.10 / .NET 8 port of the **Honeycomb Card Suite** — all six games: Klondike, Freecell (called Beecell on Mac/iOS/Android), Spider, Video Poker, Blackjack, and Honeycomb (the card battle game). Lives in the monorepo's `windows/` folder alongside `mac/`, `ios/`, `android/` and the Swift `shared/` code. ("SoliBee" in namespaces/project names is legacy naming.)
+Avalonia UI 11.0.10 / .NET 10 port of the **Honeycomb Card Suite** — all six games: Klondike, Freecell (called Beecell on Mac/iOS/Android), Spider, Video Poker, Blackjack, and Honeycomb (the card battle game). Lives in the monorepo's `windows/` folder alongside `mac/`, `ios/`, `android/` and the Swift `shared/` code. ("SoliBee" in namespaces/project names is legacy naming.)
 
 **Parity: Mac is the source of truth.** Game rules, scoring, stats and AI must behave the same as Mac (`shared/` Swift code + `mac/src`); when Windows differs, align it to Mac. Cross-platform golden-vector tests enforce this for the deterministic engines — see "Parity tests" below. Deliberate, documented differences only (e.g. Windows keeps short internal names for two Deuces Wild pay-table rows because they double as stats keys).
 
@@ -14,7 +14,7 @@ Avalonia UI 11.0.10 / .NET 8 port of the **Honeycomb Card Suite** — all six ga
 # Debug build (runs on Mac for development)
 dotnet build src/SoliBee.Desktop/SoliBee.Desktop.csproj
 
-# Windows release executable (~118 MB self-contained)
+# Windows release executable (~136 MB self-contained)
 dotnet publish src/SoliBee.Desktop/SoliBee.Desktop.csproj /p:PublishProfile=win-x64
 # Output: src/SoliBee.Desktop/bin/publish/win-x64/Honeycomb.exe  (+ Assets/ folder)
 ```
