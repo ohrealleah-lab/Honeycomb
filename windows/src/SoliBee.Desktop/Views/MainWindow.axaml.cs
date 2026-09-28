@@ -2225,7 +2225,16 @@ public partial class MainWindow : Window
 
         if ((e.KeyModifiers & KeyModifiers.Control) != 0)
         {
-            if (e.Key == Key.N)
+            // Video Poker/Blackjack hide New Game and Restart (a session just continues
+            // hand to hand) — the shortcuts must not reach them either: they reset credits
+            // with no rebuy recorded, and Restart mid-hand dodged a losing Blackjack hand.
+            // Mac disables the same menu items for these two games.
+            bool isCasinoGame = _currentGameTag == "VideoPoker" || _currentGameTag == "Blackjack";
+            if (isCasinoGame && (e.Key == Key.N || e.Key == Key.R))
+            {
+                e.Handled = true;
+            }
+            else if (e.Key == Key.N)
             {
                 e.Handled = true;
                 NewGame_Click(null, new RoutedEventArgs());

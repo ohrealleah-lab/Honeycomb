@@ -43,15 +43,22 @@ struct SoliBeeApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) {
+                // Video Poker/Blackjack have no New Game or Restart on screen — a session
+                // just continues hand to hand. From the menu these reset credits to the
+                // starting amount with no rebuy recorded, and Restart mid-hand walked away
+                // from a losing Blackjack hand with the streak intact.
+                let isCasinoGame = coordinator.gameMode == .videoPoker || coordinator.gameMode == .blackjack
                 Button(coordinator.L(.newGame)) {
                     coordinator.startNewGame()
                 }
                 .keyboardShortcut("n", modifiers: .command)
+                .disabled(isCasinoGame)
 
                 Button(coordinator.L(.restart)) {
                     coordinator.restartCurrentGame()
                 }
                 .keyboardShortcut("r", modifiers: .command)
+                .disabled(isCasinoGame)
 
                 Button(coordinator.L(.undo)) {
                     coordinator.undoLastAction()
