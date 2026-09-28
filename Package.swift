@@ -38,6 +38,9 @@ let package = Package(
                 "mac/src/snap.aiff",
                 "mac/src/victory.aiff",
                 "shared/Honeycomb/Resources/HoneycombBannerCatalog.json",
+                // Cross-platform capture-rule test data (read by each platform's tests,
+                // not compiled into the app).
+                "shared/Honeycomb/TestVectors",
             ],
             sources: ["shared", "mac/src"]
         ),
