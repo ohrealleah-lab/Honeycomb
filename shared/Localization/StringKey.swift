@@ -1460,4 +1460,12 @@ public enum StringKey: String, CaseIterable {
     case selectImageFirstMessage = "select_image_first_message"
     /// Import screen: success snackbar (Android)
     case importSuccessfulMessage = "import_successful_message"
+    /// Confirm before quitting a Honeycomb match in progress
+    case quitMatchConfirmTitle = "quit_match_confirm_title"
+    /// Body of the quit-match confirmation
+    case quitMatchConfirmBody = "quit_match_confirm_body"
+    /// Windows Options: cancel with unsaved changes
+    case discardChangesTitle = "discard_changes_title"
+    /// Windows Options: cancel with unsaved changes
+    case discardChangesBody = "discard_changes_body"
 }

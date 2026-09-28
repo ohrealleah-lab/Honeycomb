@@ -219,14 +219,16 @@ struct HoneycombTouchView: View {
         // "Quit Match" button skips this and only its keyboard shortcut confirms, but
         // iOS has no keyboard-shortcut escape hatch, so the toolbar button here is the
         // only path and should confirm before discarding an in-progress match.
-        .alert(coordinator.L(.newMatchConfirmTitle), isPresented: $isShowingQuitMatchConfirm) {
+        .alert(coordinator.L(.quitMatchConfirmTitle), isPresented: $isShowingQuitMatchConfirm) {
             Button(coordinator.L(.cancel), role: .cancel) {}
-            Button(coordinator.L(.newMatch), role: .destructive) {
+            Button(coordinator.L(.quitButton), role: .destructive) {
                 // Not `viewModel.gameState = .setup` directly: that skips quitMatch()'s
                 // handSetupGeneration bump, so a pending triggerSuddenDeath() would
                 // still run after the quit and drive gameState straight to .playing.
                 viewModel.quitMatch()
             }
+        } message: {
+            Text(coordinator.L(.quitMatchConfirmBody))
         }
         .sheet(isPresented: $showingDecks) { HoneycombDecksSheet(viewModel: viewModel) }
         .environment(\.activeCardBackTheme, coordinator.cardBackTheme)

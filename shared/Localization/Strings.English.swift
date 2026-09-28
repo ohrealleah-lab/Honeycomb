@@ -731,5 +731,9 @@ enum StringsEnglish {
         .deleteTargetCustomBackground: "this custom background",
         .selectImageFirstMessage: "Please select an image first.",
         .importSuccessfulMessage: "Import successful!",
+        .quitMatchConfirmTitle: "Quit this match?",
+        .quitMatchConfirmBody: "It will count as a loss and end your win streak.",
+        .discardChangesTitle: "Discard Changes?",
+        .discardChangesBody: "You have pending changes which will be lost. Are you sure you want to cancel?",
     ]
 }

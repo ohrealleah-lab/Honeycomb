@@ -114,6 +114,7 @@ public struct HoneycombView: View {
 
     @State private var isShowingNewGameConfirm = false
     @State private var isShowingRematchConfirm = false
+    @State private var isShowingQuitMatchConfirm = false
     @State private var isHoveringRules = false
 
     // Time between each card's flip starting — matches HoneycombFlipTiming.duration so
@@ -188,7 +189,7 @@ public struct HoneycombView: View {
                         GameToolbarButton(
                             label: coordinator.L(.toolbarQuitMatch), systemImage: "flag.fill",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold
-                        ) { viewModel.quitMatch() }
+                        ) { isShowingQuitMatchConfirm = true }
                     }
 
                     GameToolbarButton(
@@ -729,6 +730,13 @@ public struct HoneycombView: View {
         .confirmationDialog(coordinator.L(.newMatchConfirmTitle), isPresented: $isShowingNewGameConfirm) {
             Button(coordinator.L(.cancel), role: .cancel) { }
             Button(coordinator.L(.newMatch), role: .destructive) { viewModel.startNewGame() }
+        }
+        // Quitting a match in progress counts as a loss (see quitMatch()), so confirm first.
+        .confirmationDialog(coordinator.L(.quitMatchConfirmTitle), isPresented: $isShowingQuitMatchConfirm) {
+            Button(coordinator.L(.cancel), role: .cancel) { }
+            Button(coordinator.L(.quitButton), role: .destructive) { viewModel.quitMatch() }
+        } message: {
+            Text(coordinator.L(.quitMatchConfirmBody))
         }
         .confirmationDialog(coordinator.L(.rematchConfirmTitle), isPresented: $isShowingRematchConfirm) {
             Button(coordinator.L(.cancel), role: .cancel) { }

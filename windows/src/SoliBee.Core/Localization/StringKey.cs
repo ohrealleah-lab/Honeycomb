@@ -736,4 +736,8 @@ public enum StringKey
     DeleteTargetCustomBackground,
     SelectImageFirstMessage,
     ImportSuccessfulMessage,
+    QuitMatchConfirmTitle,
+    QuitMatchConfirmBody,
+    DiscardChangesTitle,
+    DiscardChangesBody,
 }

@@ -732,4 +732,8 @@ enum class StringKey {
     DeleteTargetCustomBackground,
     SelectImageFirstMessage,
     ImportSuccessfulMessage,
+    QuitMatchConfirmTitle,
+    QuitMatchConfirmBody,
+    DiscardChangesTitle,
+    DiscardChangesBody,
 }

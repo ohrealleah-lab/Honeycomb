@@ -747,6 +747,10 @@ public static class Strings
         [StringKey.DeleteTargetCustomBackground] = "this custom background",
         [StringKey.SelectImageFirstMessage] = "Please select an image first.",
         [StringKey.ImportSuccessfulMessage] = "Import successful!",
+        [StringKey.QuitMatchConfirmTitle] = "Quit this match?",
+        [StringKey.QuitMatchConfirmBody] = "It will count as a loss and end your win streak.",
+        [StringKey.DiscardChangesTitle] = "Discard Changes?",
+        [StringKey.DiscardChangesBody] = "You have pending changes which will be lost. Are you sure you want to cancel?",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1478,5 +1482,9 @@ public static class Strings
         [StringKey.DeleteTargetCustomBackground] = "este fondo personalizado",
         [StringKey.SelectImageFirstMessage] = "Primero selecciona una imagen.",
         [StringKey.ImportSuccessfulMessage] = "¡Importación completada!",
+        [StringKey.QuitMatchConfirmTitle] = "¿Abandonar esta partida?",
+        [StringKey.QuitMatchConfirmBody] = "Contará como una derrota y terminará tu racha de victorias.",
+        [StringKey.DiscardChangesTitle] = "¿Descartar cambios?",
+        [StringKey.DiscardChangesBody] = "Tienes cambios pendientes que se perderán. ¿Seguro que quieres cancelar?",
     };
 }

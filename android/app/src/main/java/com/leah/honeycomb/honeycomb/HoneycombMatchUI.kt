@@ -204,8 +204,9 @@ fun HoneycombMatchUI(
     if (showQuitConfirm) {
         AlertDialog(
             onDismissRequest = { showQuitConfirm = false },
-            title = { Text(Strings.get(StringKey.ToolbarQuitMatch, language)) },
-            text = { Text(Strings.get(StringKey.NewMatchConfirmTitle, language)) },
+            // Quitting a match in progress counts as a loss — say so (Mac parity).
+            title = { Text(Strings.get(StringKey.QuitMatchConfirmTitle, language)) },
+            text = { Text(Strings.get(StringKey.QuitMatchConfirmBody, language)) },
             confirmButton = {
                 TextButton(onClick = {
                     showQuitConfirm = false

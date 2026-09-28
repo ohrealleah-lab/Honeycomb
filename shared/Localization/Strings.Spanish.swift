@@ -731,5 +731,9 @@ enum StringsSpanish {
         .deleteTargetCustomBackground: "este fondo personalizado",
         .selectImageFirstMessage: "Primero selecciona una imagen.",
         .importSuccessfulMessage: "¡Importación completada!",
+        .quitMatchConfirmTitle: "¿Abandonar esta partida?",
+        .quitMatchConfirmBody: "Contará como una derrota y terminará tu racha de victorias.",
+        .discardChangesTitle: "¿Descartar cambios?",
+        .discardChangesBody: "Tienes cambios pendientes que se perderán. ¿Seguro que quieres cancelar?",
     ]
 }

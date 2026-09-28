@@ -602,6 +602,10 @@ public partial class MainWindow : Window
         {
             ExecuteRestartGame();
         }
+        else if (_pendingAction == "QuitMatch")
+        {
+            if (this.DataContext is HoneycombViewModel hVm) hVm.QuitMatch();
+        }
         else if (_pendingAction == "CancelPreferences")
         {
             ExecuteCancelPreferences();
@@ -1239,8 +1243,8 @@ public partial class MainWindow : Window
         if (_preferencesView != null && _preferencesView.HasPendingChanges())
         {
             _pendingAction = "CancelPreferences";
-            ConfirmActionTitle.Text     = "Discard Changes?";
-            ConfirmActionMessage.Text   = "You have pending changes which will be lost. Are you sure you want to cancel?";
+            ConfirmActionTitle.Text     = Strings.Get(StringKey.DiscardChangesTitle, _language);
+            ConfirmActionMessage.Text   = Strings.Get(StringKey.DiscardChangesBody, _language);
             ConfirmActionMessage.IsVisible = true;
             ConfirmActionButton.Content = Strings.Get(StringKey.Yes, _language);
             ConfirmActionOverlay.IsVisible = true;
@@ -1777,10 +1781,20 @@ public partial class MainWindow : Window
 
     private void HoneycombQuitMatch_Click(object? sender, RoutedEventArgs e)
     {
-        if (this.DataContext is HoneycombViewModel hVm)
+        if (this.DataContext is not HoneycombViewModel hVm) return;
+        // Quitting a match in progress counts as a loss (HoneycombViewModel.QuitMatch),
+        // so confirm first — Mac parity.
+        if (IsGameInProgress())
         {
-            hVm.QuitMatch();
+            _pendingAction = "QuitMatch";
+            ConfirmActionTitle.Text = Strings.Get(StringKey.QuitMatchConfirmTitle, _language);
+            ConfirmActionMessage.Text = Strings.Get(StringKey.QuitMatchConfirmBody, _language);
+            ConfirmActionMessage.IsVisible = true;
+            ConfirmActionButton.Content = Strings.Get(StringKey.QuitButton, _language);
+            ConfirmActionOverlay.IsVisible = true;
+            return;
         }
+        hVm.QuitMatch();
     }
 
     private void UpdateHintButtonEnabled()
@@ -2230,7 +2244,10 @@ public partial class MainWindow : Window
             // with no rebuy recorded, and Restart mid-hand dodged a losing Blackjack hand.
             // Mac disables the same menu items for these two games.
             bool isCasinoGame = _currentGameTag == "VideoPoker" || _currentGameTag == "Blackjack";
-            if (isCasinoGame && (e.Key == Key.N || e.Key == Key.R))
+            // Mid-match, Honeycomb's way out is Quit Match (which confirms, since it counts
+            // as a loss); Mac disables New Game/Restart for that too.
+            bool isHoneycombMatchInProgress = DataContext is HoneycombViewModel && IsGameInProgress();
+            if ((isCasinoGame || isHoneycombMatchInProgress) && (e.Key == Key.N || e.Key == Key.R))
             {
                 e.Handled = true;
             }

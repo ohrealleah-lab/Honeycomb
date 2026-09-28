@@ -48,17 +48,22 @@ struct SoliBeeApp: App {
                 // starting amount with no rebuy recorded, and Restart mid-hand walked away
                 // from a losing Blackjack hand with the streak intact.
                 let isCasinoGame = coordinator.gameMode == .videoPoker || coordinator.gameMode == .blackjack
+                // Mid-match, Honeycomb's way out is Quit Match (which confirms, since it
+                // counts as a loss) — these would otherwise abandon the match silently.
+                let honeycombState = coordinator.honeycombViewModel.gameState
+                let isHoneycombMatchInProgress = coordinator.gameMode == .honeycomb
+                    && (honeycombState == .playing || honeycombState == .suddenDeath)
                 Button(coordinator.L(.newGame)) {
                     coordinator.startNewGame()
                 }
                 .keyboardShortcut("n", modifiers: .command)
-                .disabled(isCasinoGame)
+                .disabled(isCasinoGame || isHoneycombMatchInProgress)
 
                 Button(coordinator.L(.restart)) {
                     coordinator.restartCurrentGame()
                 }
                 .keyboardShortcut("r", modifiers: .command)
-                .disabled(isCasinoGame)
+                .disabled(isCasinoGame || isHoneycombMatchInProgress)
 
                 Button(coordinator.L(.undo)) {
                     coordinator.undoLastAction()

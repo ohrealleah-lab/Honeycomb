@@ -760,6 +760,10 @@ object Strings {
         StringKey.DeleteTargetCustomBackground to "this custom background",
         StringKey.SelectImageFirstMessage to "Please select an image first.",
         StringKey.ImportSuccessfulMessage to "Import successful!",
+        StringKey.QuitMatchConfirmTitle to "Quit this match?",
+        StringKey.QuitMatchConfirmBody to "It will count as a loss and end your win streak.",
+        StringKey.DiscardChangesTitle to "Discard Changes?",
+        StringKey.DiscardChangesBody to "You have pending changes which will be lost. Are you sure you want to cancel?",
     )
 
     private val Spanish = mapOf(
@@ -1490,5 +1494,9 @@ object Strings {
         StringKey.DeleteTargetCustomBackground to "este fondo personalizado",
         StringKey.SelectImageFirstMessage to "Primero selecciona una imagen.",
         StringKey.ImportSuccessfulMessage to "¡Importación completada!",
+        StringKey.QuitMatchConfirmTitle to "¿Abandonar esta partida?",
+        StringKey.QuitMatchConfirmBody to "Contará como una derrota y terminará tu racha de victorias.",
+        StringKey.DiscardChangesTitle to "¿Descartar cambios?",
+        StringKey.DiscardChangesBody to "Tienes cambios pendientes que se perderán. ¿Seguro que quieres cancelar?",
     )
 }
