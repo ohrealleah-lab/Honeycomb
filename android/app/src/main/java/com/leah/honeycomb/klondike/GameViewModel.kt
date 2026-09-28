@@ -471,8 +471,16 @@ class GameViewModel(
             _state.value = restoredState
             initialState = if (savedInitialState != defaultState) savedInitialState else restoredState
             
-            _vegasBankroll.value = savedState.vegasBankroll
-            vegasBankrollAtGameStart = savedState.vegasBankrollAtGameStart
+            // The Vegas bankroll starts from $0 on every launch, like classic MS Solitaire
+            // (and Mac/Windows) — so the restored game is this session's first: the
+            // bankroll is just its own buy-in plus what it has earned so far.
+            if (_options.value.isVegasScoring) {
+                vegasBankrollAtGameStart = initialState!!.score
+                _vegasBankroll.value = vegasBankrollAtGameStart + (restoredState.score - initialState!!.score)
+            } else {
+                vegasBankrollAtGameStart = 0
+                _vegasBankroll.value = 0
+            }
             // Derived flags (autocomplete available, stuck) aren't persisted — recompute
             // them for the restored board, or the Autocomplete button stays hidden until
             // the player happens to make another move. Posted (not immediate) so it runs
