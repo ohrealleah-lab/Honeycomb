@@ -107,27 +107,27 @@
                         <!-- SCORE -->
                         <StackPanel x:Name="ScoreStatPanel" Spacing="2" HorizontalAlignment="Center">
                             <TextBlock x:Name="ScoreLabelText" Text="SCORE" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding ScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding ScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- MOVES -->
                         <StackPanel x:Name="MovesStatPanel" Spacing="2" HorizontalAlignment="Center">
                             <TextBlock x:Name="MovesLabelText" Text="MOVES" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding MovesCount}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding MovesCount}" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- TIME -->
                         <StackPanel x:Name="TimeStatPanel" Spacing="2" HorizontalAlignment="Center">
                             <TextBlock x:Name="TimeLabelText" Text="TIME" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding TimeDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- HONEYCOMB SCORE: You -->
                         <StackPanel x:Name="HoneycombYouStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
                             <TextBlock x:Name="HoneycombYouLabelText" Text="You" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding PlayerScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding PlayerScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- HONEYCOMB SCORE: Opponent's difficulty name (e.g. "Baby Bee") -->
                         <StackPanel x:Name="HoneycombOpponentStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
                             <TextBlock Text="{Binding OpponentNameDisplay}" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding OpponentScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding OpponentScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>
                 </DockPanel>
@@ -349,44 +349,44 @@
                         <Grid x:Name="StatsFixedRows" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                             <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,10,14,10">
                                 <TextBlock x:Name="StatsGamesPlayedLabel" Text="Games Played" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" x:Name="StatsGamesPlayedText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsGamesPlayedText" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
                             <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="14,10,0,10">
                                 <TextBlock x:Name="StatsCurrentStreakLabel" Text="Current Streak" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" x:Name="StatsCurrentStreakText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsCurrentStreakText" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
 
                             <Rectangle Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Height="1" Fill="#DDDDDD" />
 
                             <Grid Grid.Row="2" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,10,14,10">
                                 <TextBlock x:Name="StatsGamesWonLabel" Text="Games Won" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" x:Name="StatsGamesWonText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsGamesWonText" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
                             <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="14,10,0,10">
                                 <TextBlock x:Name="StatsLongestStreakLabel" Text="Longest Streak" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" x:Name="StatsLongestStreakText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsLongestStreakText" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
 
                             <Rectangle Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Height="1" Fill="#DDDDDD" />
 
                             <Grid Grid.Row="4" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,10,14,10">
                                 <TextBlock x:Name="StatsHighScoreLabel" Text="High Score" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" x:Name="StatsHighScoreText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsHighScoreText" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
                             <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="14,10,0,10">
                                 <TextBlock x:Name="StatsAvgWinTimeLabel" Text="Avg Winning Time" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" x:Name="StatsAvgWinTimeText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsAvgWinTimeText" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
 
                             <Rectangle Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Height="1" Fill="#DDDDDD" />
 
                             <Grid Grid.Row="6" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,10,14,10">
                                 <TextBlock x:Name="StatsWinPctLabel" Text="Win Percentage" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" x:Name="StatsWinPctText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsWinPctText" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
                             <Grid Grid.Row="6" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="14,10,0,10">
                                 <TextBlock x:Name="StatsFastestWinLabel" Text="Fastest Win" FontSize="13" Foreground="#707070" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" x:Name="StatsFastestWinText" FontSize="17" FontWeight="Black" Foreground="#1A1A1A" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" x:Name="StatsFastestWinText" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" VerticalAlignment="Center" />
                             </Grid>
                         </Grid>
                         <!-- Blackjack / Video Poker / Honeycomb have different field sets, so
@@ -422,7 +422,7 @@
             <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Border Classes="banner-glow" Background="#BF000000" CornerRadius="12" Padding="24,24" MaxWidth="380">
                     <StackPanel Spacing="12" HorizontalAlignment="Center" Width="300">
-                        <TextBlock x:Name="ConfirmActionTitle" Text="Start New Game?" FontSize="36" FontWeight="Black" Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap" />
+                        <TextBlock x:Name="ConfirmActionTitle" Text="Start New Game?" FontSize="36" FontWeight="Bold" Foreground="#FFD600" HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap" />
                         <TextBlock x:Name="ConfirmActionMessage" Text="Are you sure you want to abandon the current game and start a new one?" FontSize="14" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap" />
                         <WrapPanel HorizontalAlignment="Center" Margin="0,12,0,0">
                             <Button x:Name="ConfirmActionButton" Classes="banner-action" Content="New Game" Click="ConfirmAction_Click" Margin="0,0,12,8" />

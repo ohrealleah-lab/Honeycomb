@@ -106,13 +106,13 @@
                     </ScaleTransform.Transitions>
                 </ScaleTransform>
             </Grid.RenderTransform>
-            <TextBlock x:Name="PointPopupTextGlow" FontSize="25" FontWeight="Black"
+            <TextBlock x:Name="PointPopupTextGlow" FontSize="25" FontWeight="Bold"
                        FontFamily="Consolas" Foreground="White">
                 <TextBlock.Effect>
                     <DropShadowEffect Color="White" BlurRadius="6" OffsetX="0" OffsetY="0" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
-            <TextBlock x:Name="PointPopupText" FontSize="25" FontWeight="Black" FontFamily="Consolas">
+            <TextBlock x:Name="PointPopupText" FontSize="25" FontWeight="Bold" FontFamily="Consolas">
                 <TextBlock.Effect>
                     <DropShadowEffect BlurRadius="8" OffsetX="0" OffsetY="0" Opacity="0.9"/>
                 </TextBlock.Effect>

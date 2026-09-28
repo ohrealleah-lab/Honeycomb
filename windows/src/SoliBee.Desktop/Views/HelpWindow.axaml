@@ -38,7 +38,7 @@
         <!-- Title bar -->
         <Border Grid.Row="0" Background="#F5F5F5" Padding="24,16">
             <TextBlock x:Name="HelpGuideTitleText" Text="Help Guide"
-                       FontSize="22" FontWeight="Black"
+                       FontSize="22" FontWeight="Bold"
                        Foreground="#1A1A1A"/>
         </Border>
 
@@ -71,7 +71,7 @@
                 <!-- ── Klondike ──────────────────────────────────────────── -->
                 <Border x:Name="KlondikeAnchor" Margin="0,0,0,6">
                     <TextBlock x:Name="KlondikeHeaderText" Text="KLONDIKE SOLITAIRE"
-                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               FontSize="15" FontWeight="Bold" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
@@ -112,7 +112,7 @@
                 <!-- ── Freecell ────────────────────────────────────────────── -->
                 <Border x:Name="FreecellAnchor" Margin="0,0,0,6">
                     <TextBlock x:Name="FreecellHeaderText" Text="FREECELL (BEECELL)"
-                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               FontSize="15" FontWeight="Bold" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
@@ -153,7 +153,7 @@
                 <!-- ── Spider ────────────────────────────────────────────── -->
                 <Border x:Name="SpiderAnchor" Margin="0,0,0,6">
                     <TextBlock x:Name="SpiderHeaderText" Text="SPIDER SOLITAIRE"
-                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               FontSize="15" FontWeight="Bold" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
@@ -194,7 +194,7 @@
                 <!-- ── Video Poker ───────────────────────────────────────── -->
                 <Border x:Name="VideoPokerAnchor" Margin="0,0,0,6">
                     <TextBlock x:Name="VideoPokerHeaderText" Text="VIDEO POKER"
-                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               FontSize="15" FontWeight="Bold" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
@@ -230,7 +230,7 @@
                 <!-- ── Video Blackjack ───────────────────────────────────── -->
                 <Border x:Name="BlackjackAnchor" Margin="0,0,0,6">
                     <TextBlock x:Name="BlackjackHeaderText" Text="VIDEO BLACKJACK"
-                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               FontSize="15" FontWeight="Bold" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
@@ -266,7 +266,7 @@
                 <!-- ── Honeycomb ─────────────────────────────────────────── -->
                 <Border x:Name="HoneycombAnchor" Margin="0,0,0,6">
                     <TextBlock x:Name="HoneycombHeaderText" Text="HONEYCOMB"
-                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               FontSize="15" FontWeight="Bold" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">
@@ -314,7 +314,7 @@
                 <!-- ── Themes ────────────────────────────────────────────── -->
                 <Border x:Name="ThemesAnchor" Margin="0,0,0,6">
                     <TextBlock x:Name="ThemesHeaderText" Text="THEMES &amp; SETTINGS"
-                               FontSize="15" FontWeight="Black" LetterSpacing="1.5"
+                               FontSize="15" FontWeight="Bold" LetterSpacing="1.5"
                                Foreground="#1155AA"/>
                 </Border>
                 <Border Background="#F2F2F2" CornerRadius="6" Padding="18,14" Margin="0,0,0,28">

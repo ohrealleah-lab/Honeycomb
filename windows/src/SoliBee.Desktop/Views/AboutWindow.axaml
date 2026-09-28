@@ -17,7 +17,7 @@
         <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6" Margin="32,24,32,12">
 
             <TextBlock Text="Honeycomb"
-                       FontSize="32" FontWeight="Black"
+                       FontSize="32" FontWeight="Bold"
                        Foreground="#1A1A1A"
                        HorizontalAlignment="Center"
                        FontFamily="Segoe UI" />

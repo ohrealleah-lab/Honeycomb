@@ -99,7 +99,7 @@
                     </Border>
                     
                     <!-- Top Right Ascension/Descension Modifier -->
-                    <TextBlock x:Name="AscensionModifierText" FontSize="25" FontWeight="Black" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,8,0" IsVisible="False">
+                    <TextBlock x:Name="AscensionModifierText" FontSize="25" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,8,0" IsVisible="False">
                         <TextBlock.Effect>
                             <DropShadowEffect BlurRadius="4" Color="White" Opacity="0.8" />
                         </TextBlock.Effect>

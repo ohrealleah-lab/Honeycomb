@@ -150,7 +150,7 @@ public class PokerChipFace : Control
             Label,
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Segoe UI", FontStyle.Normal, FontWeight.Black),
+            new Typeface("Segoe UI", FontStyle.Normal, FontWeight.Bold),
             d * 0.32,
             _textBrush);
         context.DrawText(text, new Point(center.X - text.Width / 2, center.Y - text.Height / 2));

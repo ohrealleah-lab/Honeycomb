@@ -34,7 +34,7 @@
                 <StackPanel Spacing="12" HorizontalAlignment="Center">
 
                     <TextBlock x:Name="TitleText" Text="You win!"
-                               FontSize="40" FontWeight="Black" Foreground="#FFD600"
+                               FontSize="40" FontWeight="Bold" Foreground="#FFD600"
                                FontFamily="Segoe UI"
                                HorizontalAlignment="Center"/>
 

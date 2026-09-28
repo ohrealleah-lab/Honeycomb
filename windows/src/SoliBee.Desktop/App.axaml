@@ -57,6 +57,15 @@
              overrides a plain Background attribute — same issue already worked around
              for Button.toolbar below — so the :pointerover override here re-asserts the
              same colors to keep the button static regardless of pointer state. -->
+        <!-- Avalonia 12 upgrade notes for text:
+             * Neither Inter (bundled) nor Segoe UI provide a Black/ExtraBold weight under
+               those family names — their heaviest is Bold. Avalonia 11 drew such requests
+               as plain Bold; Avalonia 12 synthesizes a fake heavier weight, which looked
+               smeared. All FontWeight Black/ExtraBold in these views were therefore set to
+               Bold (what was actually drawn before). Use Bold, not Black, for new text.
+             * ClearType (subpixel) text on every window/popup is set in App.axaml.cs
+               (Avalonia 12 exposes TextOptions only as code, not a styleable property). -->
+
         <Style Selector="Button.banner-action">
             <Setter Property="Padding" Value="20,10" />
             <Setter Property="Background" Value="#007AFF" />

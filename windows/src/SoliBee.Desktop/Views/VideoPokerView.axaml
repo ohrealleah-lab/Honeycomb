@@ -166,7 +166,7 @@
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             Background="#80000000" Padding="24,16" CornerRadius="8">
                         <TextBlock x:Name="IdlePromptText" Text="Hit Space to Deal" HorizontalAlignment="Center"
-                                   FontSize="32" FontWeight="Black" Foreground="White"/>
+                                   FontSize="32" FontWeight="Bold" Foreground="White"/>
                     </Border>
 
                     <!-- Overlay layer removed and placed at root -->
@@ -248,7 +248,7 @@
                             IsHitTestVisible="True" PointerPressed="NoWinOverlay_PointerPressed">
                         <StackPanel Spacing="12" HorizontalAlignment="Center">
                             <TextBlock x:Name="NoWinHeadlineText" Text="Not today, partner!"
-                                       FontSize="36" FontWeight="Black" Foreground="#FFD600"
+                                       FontSize="36" FontWeight="Bold" Foreground="#FFD600"
                                        HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"/>
                             <StackPanel x:Name="NoWinPayoutRow" Orientation="Horizontal" HorizontalAlignment="Center">
                                 <TextBlock x:Name="NoWinMinusText" Text="-" Foreground="White" FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"/>
@@ -270,7 +270,7 @@
                             IsHitTestVisible="True" PointerPressed="WinBanner_PointerPressed">
                         <StackPanel Spacing="12" HorizontalAlignment="Center">
                             <TextBlock x:Name="WinHandNameBlock"
-                                       FontSize="36" FontWeight="Black" Foreground="#FFD600"
+                                       FontSize="36" FontWeight="Bold" Foreground="#FFD600"
                                        HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center" TextWrapping="Wrap"/>
                             <TextBlock x:Name="WinPayoutBlock"
                                        FontSize="14" Foreground="White" FontWeight="Regular"

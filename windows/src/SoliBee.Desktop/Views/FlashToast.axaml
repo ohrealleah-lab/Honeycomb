@@ -23,7 +23,7 @@
          still too tall for the toast's available space even after wrapping. -->
     <Border Classes="banner-glow" Background="#BF000000" CornerRadius="24" Padding="48,36" MaxWidth="920">
         <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-            <TextBlock x:Name="MessageText" FontSize="72" FontWeight="Black" Foreground="#FFD600"
+            <TextBlock x:Name="MessageText" FontSize="72" FontWeight="Bold" Foreground="#FFD600"
                        HorizontalAlignment="Center" FontFamily="Segoe UI" TextAlignment="Center"
                        TextWrapping="Wrap" MaxWidth="920"/>
         </Viewbox>
