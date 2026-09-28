@@ -13,10 +13,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Hexagon
 import androidx.compose.material3.*
@@ -40,7 +40,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -316,7 +316,7 @@ fun HoneycombMatchUI(
                         if (isMidMatch) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = { viewModel.undoLastAction() }, enabled = viewModel.canUndo) {
-                                    Icon(Icons.Default.Undo, contentDescription = "Undo", tint = Color.White)
+                                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = Color.White)
                                 }
                                 if (!hideHintButton && displayedDifficulty != HoneycombDifficulty.UltraHard && state.isPlayerTurn) {
                                     IconButton(onClick = { viewModel.findHint() }) {
@@ -331,7 +331,7 @@ fun HoneycombMatchUI(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (state.gameState == HoneycombGameState.GameOver && viewModel.canRematch) {
                                     IconButton(onClick = { viewModel.rematch() }) {
-                                        Icon(Icons.Default.Redo, contentDescription = "Rematch", tint = Color.White)
+                                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Rematch", tint = Color.White)
                                     }
                                 }
                                 Button(onClick = { viewModel.startNewGame() }) {
