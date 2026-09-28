@@ -184,6 +184,11 @@ public partial class HoneycombView : UserControl
                 _vm.OnSwapLifting -= Vm_OnSwapLifting;
                 _vm.OnSwapLanded -= Vm_OnSwapLanded;
             }
+            // A Nectar Exchange lift in progress when the player switches games never
+            // gets its OnSwapLanded (unsubscribed above), which is what clears the lift —
+            // the two cards would come back still scaled up with a shadow.
+            foreach (var v in _playerHandViews) ClearLift(v);
+            foreach (var v in _opponentHandViews) ClearLift(v);
         };
     }
     
@@ -325,6 +330,22 @@ public partial class HoneycombView : UserControl
     // already applied by NotifyStateChanged isn't visible underneath, then revealed
     // once the ghosts land.
     private async Task PlaySwapSlideAnimation(HoneycombCard preSwapPlayerCard, HoneycombCard preSwapOpponentCard, int playerIndex, int opponentIndex)
+    {
+        // Vm_OnSwapLanded hid both real slots before calling this — every exit path,
+        // including the early bail-outs below (no canvas, slots not laid out), must
+        // show them again, or those two hand cards stay invisible for the rest of the match.
+        try
+        {
+            await PlaySwapSlideAnimationCore(preSwapPlayerCard, preSwapOpponentCard, playerIndex, opponentIndex);
+        }
+        finally
+        {
+            if (playerIndex >= 0 && playerIndex < _playerHandViews.Length) _playerHandViews[playerIndex].Opacity = 1;
+            if (opponentIndex >= 0 && opponentIndex < _opponentHandViews.Length) _opponentHandViews[opponentIndex].Opacity = 1;
+        }
+    }
+
+    private async Task PlaySwapSlideAnimationCore(HoneycombCard preSwapPlayerCard, HoneycombCard preSwapOpponentCard, int playerIndex, int opponentIndex)
     {
         if (_dragCanvas == null) _dragCanvas = this.FindControl<Canvas>("HoneycombDragCanvas");
         if (_dragCanvas == null) return;

@@ -132,6 +132,28 @@ public partial class HoneycombCardView : UserControl
         StealHighlightBorder.BorderBrush = _brushStealHighlight;
     }
 
+    // A flip/reveal is ~400ms of awaited steps. If the slot is re-rendered with
+    // different content mid-flip (the board cleared by a quit/new match, the slot now
+    // holding another card), the stale flip must stop — otherwise its midpoint
+    // UpdateVisuals paints its old card back over the newer render, and its unfinished
+    // rotation leaves the slot tilted. Plain refreshes of the SAME card mid-flip (the
+    // board re-renders every card several times per capture) don't stop it; they just
+    // update what the flip reveals at its midpoint.
+    private int _renderGeneration = 0;
+    private Guid? _flippingId;
+    private HoneycombCard? _flipTarget;
+    private bool _flipPastMidpoint;
+
+    private void SupersedeFlip()
+    {
+        _renderGeneration++;
+        _flippingId = null;
+        _flipTarget = null;
+        _flipPastMidpoint = false;
+        FlipContainer.RenderTransform = null;
+        CardBack.RenderTransform = null;
+    }
+
     public async Task RenderCard(HoneycombCard? card, bool faceDown = false, int hIdx = -1, int cIdx = -1, bool isCaptureAttacker = false)
     {
         _handIndex = hIdx;
@@ -139,6 +161,7 @@ public partial class HoneycombCardView : UserControl
 
         if (card == null)
         {
+            SupersedeFlip();
             _card = null;
             _isShowingFaceDown = false;
             _wasCaptureAttacker = false;
@@ -149,6 +172,7 @@ public partial class HoneycombCardView : UserControl
 
         if (faceDown)
         {
+            SupersedeFlip();
             _card = card;
             _isShowingFaceDown = true;
             CardFace.IsVisible = false;
@@ -187,16 +211,24 @@ public partial class HoneycombCardView : UserControl
             TriggerRuleScaleAnimation();
         }
 
-        if (revealedFromFaceDown)
+        if (revealedFromFaceDown || ownerChanged)
         {
-            await PlayRevealAnimation(card);
+            SupersedeFlip();
+            var generation = _renderGeneration;
+            _flippingId = card.UniqueInstanceId;
+            _flipTarget = card;
+            if (revealedFromFaceDown) await PlayRevealAnimation(generation);
+            else await PlayOwnerChangeAnimation(generation);
+            if (generation == _renderGeneration) { _flippingId = null; _flipTarget = null; }
         }
-        else if (ownerChanged)
+        else if (_flippingId == card.UniqueInstanceId)
         {
-            await PlayOwnerChangeAnimation(card);
+            _flipTarget = card; // shown at the running flip's midpoint (or already past it)
+            if (_flipPastMidpoint) UpdateVisuals(card);
         }
         else
         {
+            SupersedeFlip();
             UpdateVisuals(card);
         }
     }
@@ -313,7 +345,7 @@ public partial class HoneycombCardView : UserControl
     private const double FlipTotalMs = 400.0;
     private static readonly TimeSpan FlipStepDelay = TimeSpan.FromMilliseconds(FlipTotalMs / 14.0);
 
-    private async Task PlayOwnerChangeAnimation(HoneycombCard card)
+    private async Task PlayOwnerChangeAnimation(int generation)
     {
         var st = new Rotate3DTransform();
         FlipContainer.RenderTransform = st;
@@ -323,16 +355,19 @@ public partial class HoneycombCardView : UserControl
         {
             st.AngleY = a;
             await Task.Delay(FlipStepDelay);
+            if (generation != _renderGeneration) return;
         }
 
         // 2. Midpoint: Update visuals
-        UpdateVisuals(card);
+        UpdateVisuals(_flipTarget!);
+        _flipPastMidpoint = true;
 
         // 3. Rotate from 270 to 360 (completes the flip without mirroring the text)
         for (double a = 270; a <= 360; a += 15)
         {
             st.AngleY = a;
             await Task.Delay(FlipStepDelay);
+            if (generation != _renderGeneration) return;
         }
         st.AngleY = 0;
     }
@@ -345,7 +380,7 @@ public partial class HoneycombCardView : UserControl
     // continuous card turning over rather than two independently-animated pieces.
     // Mirrors the Swift port's card.isFaceDown onChange flip
     // (shared/Honeycomb/Views/HoneycombCardView.swift).
-    private async Task PlayRevealAnimation(HoneycombCard card)
+    private async Task PlayRevealAnimation(int generation)
     {
         var faceTransform = new Rotate3DTransform();
         var backTransform = new Rotate3DTransform();
@@ -358,10 +393,12 @@ public partial class HoneycombCardView : UserControl
             faceTransform.AngleY = a;
             backTransform.AngleY = a;
             await Task.Delay(FlipStepDelay);
+            if (generation != _renderGeneration) return;
         }
 
         // 2. Midpoint: swap from back to face (UpdateVisuals sets both IsVisible flags)
-        UpdateVisuals(card);
+        UpdateVisuals(_flipTarget!);
+        _flipPastMidpoint = true;
 
         // 3. Rotate from 270 to 360 (completes the flip without mirroring the text)
         for (double a = 270; a <= 360; a += 15)
@@ -369,6 +406,7 @@ public partial class HoneycombCardView : UserControl
             faceTransform.AngleY = a;
             backTransform.AngleY = a;
             await Task.Delay(FlipStepDelay);
+            if (generation != _renderGeneration) return;
         }
         faceTransform.AngleY = 0;
         backTransform.AngleY = 0;
