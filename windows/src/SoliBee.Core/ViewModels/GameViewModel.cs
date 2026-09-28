@@ -166,14 +166,6 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     // a fresh buy-in instead, on top of the winnings kept.
     private int _vegasBalanceBeforeDeal;
 
-    // Running total of every standard-mode "-2 every 8 seconds" time penalty applied so
-    // far this game, tracked separately from State.Score. Undo needs this to reverse only
-    // the specific move it's undoing — if it just restored State.Score to its pre-move
-    // snapshot value, it would also refund any time penalties that legitimately accrued
-    // in the meantime (real time elapsed between the move and pressing Undo), which have
-    // nothing to do with that move.
-
-
     private List<HintMove> _hintCycleList  = new();
     private int            _hintCycleIndex = 0;
 
@@ -1057,9 +1049,10 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
                         int timePenalty = (State.TimerSeconds / 10) * 2;
                         State.Score = Math.Max(0, State.Score - timePenalty);
 
-                        // Matches the classic Microsoft Solitaire logic: bonus = 700,000 / seconds,
-                        // only applied if the game took at least 30 seconds.
-                        if (State.TimerSeconds >= 30)
+                        // Classic Microsoft Solitaire bonus = 700,000 / seconds. No 30-second
+                        // minimum — Mac and Android apply it to any timed win, so the same
+                        // game scores the same everywhere.
+                        if (State.TimerSeconds > 0)
                         {
                             State.Score += 700000 / State.TimerSeconds;
                         }
