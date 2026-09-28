@@ -1,4 +1,6 @@
 package com.leah.honeycomb.blackjack
+
+import com.leah.honeycomb.tr
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 
@@ -263,7 +265,7 @@ fun BlackjackBoard(
                         Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
                     }
                 }
-                Text("Blackjack", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 16.dp))
+                Text(tr(StringKey.TouchBlackjackTitle), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 16.dp))
             }
         }
 

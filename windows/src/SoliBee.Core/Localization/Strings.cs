@@ -727,6 +727,18 @@ public static class Strings
         [StringKey.BtnNewBet] = "New Bet",
         [StringKey.BtnRebuy] = "Rebuy",
         [StringKey.BtnReDeal] = "Re-Deal",
+        [StringKey.PayTableTitle] = "Pay Table",
+        [StringKey.DeleteItemConfirmFmt] = "Delete %@?",
+        [StringKey.ThemeAssetDeleteBody] = "Any theme using this will fall back to a default. This can't be undone.",
+        [StringKey.ImportArtButton] = "Import Art",
+        [StringKey.ImportCustomArtTitle] = "Import Custom Art",
+        [StringKey.ArtTypeLabel] = "Art Type",
+        [StringKey.EnableCustomColorsToggle] = "Enable Custom Colors",
+        [StringKey.EditItemFmt] = "Edit %@",
+        [StringKey.ColorChannelRed] = "Red",
+        [StringKey.ColorChannelGreen] = "Green",
+        [StringKey.ColorChannelBlue] = "Blue",
+        [StringKey.ColorChannelAlpha] = "Alpha",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1438,5 +1450,17 @@ public static class Strings
         [StringKey.BtnNewBet] = "Nueva Apuesta",
         [StringKey.BtnRebuy] = "Recomprar",
         [StringKey.BtnReDeal] = "Repartir",
+        [StringKey.PayTableTitle] = "Tabla de Pagos",
+        [StringKey.DeleteItemConfirmFmt] = "¿Eliminar %@?",
+        [StringKey.ThemeAssetDeleteBody] = "Cualquier tema que use esto volverá a uno predeterminado. Esto no se puede deshacer.",
+        [StringKey.ImportArtButton] = "Importar Arte",
+        [StringKey.ImportCustomArtTitle] = "Importar Arte Personalizado",
+        [StringKey.ArtTypeLabel] = "Tipo de Arte",
+        [StringKey.EnableCustomColorsToggle] = "Activar Colores Personalizados",
+        [StringKey.EditItemFmt] = "Editar %@",
+        [StringKey.ColorChannelRed] = "Rojo",
+        [StringKey.ColorChannelGreen] = "Verde",
+        [StringKey.ColorChannelBlue] = "Azul",
+        [StringKey.ColorChannelAlpha] = "Opacidad",
     };
 }

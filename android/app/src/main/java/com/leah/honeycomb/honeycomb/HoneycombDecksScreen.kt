@@ -1,5 +1,11 @@
 package com.leah.honeycomb.honeycomb
 
+import com.leah.honeycomb.tr
+
+import com.leah.honeycomb.StringKey
+
+import com.leah.honeycomb.trf
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -44,7 +50,7 @@ fun HoneycombDecksScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Edit ${deck.name.ifBlank { "Deck ${idx + 1}" }}") },
+                    title = { Text(trf(StringKey.EditItemFmt, deck.name.ifBlank { trf(StringKey.DeckSlotDefaultNameFmt, idx + 1) })) },
                     navigationIcon = {
                         IconButton(onClick = { editingDeckIndex = null }) {
                             Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -57,7 +63,7 @@ fun HoneycombDecksScreen(
                                 profileManager.saveDeck(idx, deck.name.ifBlank { "Deck ${idx + 1}" }, selectedCardIds)
                                 editingDeckIndex = null
                             }
-                        ) { Text("Save") }
+                        ) { Text(tr(StringKey.Save)) }
                     }
                 )
             }
@@ -109,7 +115,7 @@ fun HoneycombDecksScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Decks") },
+                title = { Text(tr(StringKey.SheetTitleMac)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -153,7 +159,7 @@ fun HoneycombDecksScreen(
                                 Icon(Icons.Filled.Star, contentDescription = "Active deck", tint = Color(0xFFDDA75B))
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
-                            OutlinedButton(onClick = { editingDeckIndex = index }) { Text("Edit") }
+                            OutlinedButton(onClick = { editingDeckIndex = index }) { Text(tr(StringKey.Edit)) }
                         }
                     }
                 }

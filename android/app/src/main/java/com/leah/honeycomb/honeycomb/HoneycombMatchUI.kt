@@ -1,5 +1,7 @@
 package com.leah.honeycomb.honeycomb
 
+import com.leah.honeycomb.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -496,7 +498,8 @@ fun HoneycombMatchUI(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "Sudden Death!",
+                    // Same wording as the rule's own name + "!", matching Mac/Windows.
+                    tr(StringKey.RuleNameSwarmToTheDeath) + "!",
                     color = Color.Yellow,
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold

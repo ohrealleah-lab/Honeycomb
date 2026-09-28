@@ -106,7 +106,7 @@ fun GameSelectionSheet(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF)),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
                 ) {
-                    Text("Done", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(tr(StringKey.Done), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
             

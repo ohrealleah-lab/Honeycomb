@@ -1,5 +1,7 @@
 package com.leah.honeycomb.klondike
 
+import com.leah.honeycomb.tr
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -256,7 +258,7 @@ fun KlondikeBoard(
                             ) {
                                 Icon(Icons.Default.PlayArrow, contentDescription = "New", tint = Color.White, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("New", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(tr(StringKey.TouchNewDealLabel), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                     }

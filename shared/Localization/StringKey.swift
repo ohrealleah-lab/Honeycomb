@@ -1420,4 +1420,28 @@ public enum StringKey: String, CaseIterable {
     case btnRebuy = "btn_rebuy"
     /// Blackjack action button to deal again
     case btnReDeal = "btn_re_deal"
+    /// Video Poker pay-table panel title (Android)
+    case payTableTitle = "pay_table_title"
+    /// Confirm-delete dialog title; %@ = item name (Android Themes)
+    case deleteItemConfirmFmt = "delete_item_confirm_fmt"
+    /// Confirm-delete dialog body for a card back/background/face art (Android Themes)
+    case themeAssetDeleteBody = "theme_asset_delete_body"
+    /// Themes screen top-bar button (Android)
+    case importArtButton = "import_art_button"
+    /// Custom art import screen title (Android)
+    case importCustomArtTitle = "import_custom_art_title"
+    /// Custom art import: art-type picker label (Android)
+    case artTypeLabel = "art_type_label"
+    /// Themes: custom card colors toggle (Android)
+    case enableCustomColorsToggle = "enable_custom_colors_toggle"
+    /// Edit dialog title; %@ = item name (Android)
+    case editItemFmt = "edit_item_fmt"
+    /// Color editor slider label (Android)
+    case colorChannelRed = "color_channel_red"
+    /// Color editor slider label (Android)
+    case colorChannelGreen = "color_channel_green"
+    /// Color editor slider label (Android)
+    case colorChannelBlue = "color_channel_blue"
+    /// Color editor opacity slider label (Android)
+    case colorChannelAlpha = "color_channel_alpha"
 }

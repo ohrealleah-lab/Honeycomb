@@ -1,5 +1,9 @@
 package com.leah.honeycomb.theme
 
+import com.leah.honeycomb.StringKey
+
+import com.leah.honeycomb.tr
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,7 +51,7 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Import Custom Art") },
+                title = { Text(tr(StringKey.ImportCustomArtTitle)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -72,7 +76,7 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                     value = selectedType,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Art Type") },
+                    label = { Text(tr(StringKey.ArtTypeLabel)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDropdown) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
@@ -127,7 +131,7 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 enabled = selectedUri != null
             ) {
-                Text("Save")
+                Text(tr(StringKey.Save))
             }
         }
     }

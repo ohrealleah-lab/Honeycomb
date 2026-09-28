@@ -740,6 +740,18 @@ object Strings {
         StringKey.BtnNewBet to "New Bet",
         StringKey.BtnRebuy to "Rebuy",
         StringKey.BtnReDeal to "Re-Deal",
+        StringKey.PayTableTitle to "Pay Table",
+        StringKey.DeleteItemConfirmFmt to "Delete %@?",
+        StringKey.ThemeAssetDeleteBody to "Any theme using this will fall back to a default. This can't be undone.",
+        StringKey.ImportArtButton to "Import Art",
+        StringKey.ImportCustomArtTitle to "Import Custom Art",
+        StringKey.ArtTypeLabel to "Art Type",
+        StringKey.EnableCustomColorsToggle to "Enable Custom Colors",
+        StringKey.EditItemFmt to "Edit %@",
+        StringKey.ColorChannelRed to "Red",
+        StringKey.ColorChannelGreen to "Green",
+        StringKey.ColorChannelBlue to "Blue",
+        StringKey.ColorChannelAlpha to "Alpha",
     )
 
     private val Spanish = mapOf(
@@ -1450,5 +1462,17 @@ object Strings {
         StringKey.BtnNewBet to "Nueva Apuesta",
         StringKey.BtnRebuy to "Recomprar",
         StringKey.BtnReDeal to "Repartir",
+        StringKey.PayTableTitle to "Tabla de Pagos",
+        StringKey.DeleteItemConfirmFmt to "¿Eliminar %@?",
+        StringKey.ThemeAssetDeleteBody to "Cualquier tema que use esto volverá a uno predeterminado. Esto no se puede deshacer.",
+        StringKey.ImportArtButton to "Importar Arte",
+        StringKey.ImportCustomArtTitle to "Importar Arte Personalizado",
+        StringKey.ArtTypeLabel to "Tipo de Arte",
+        StringKey.EnableCustomColorsToggle to "Activar Colores Personalizados",
+        StringKey.EditItemFmt to "Editar %@",
+        StringKey.ColorChannelRed to "Rojo",
+        StringKey.ColorChannelGreen to "Verde",
+        StringKey.ColorChannelBlue to "Azul",
+        StringKey.ColorChannelAlpha to "Opacidad",
     )
 }

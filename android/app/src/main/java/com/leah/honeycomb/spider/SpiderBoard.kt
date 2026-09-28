@@ -1,5 +1,7 @@
 package com.leah.honeycomb.spider
 
+import com.leah.honeycomb.tr
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -244,7 +246,7 @@ fun SpiderBoard(
                         ) {
                             Icon(Icons.Default.PlayArrow, contentDescription = "New", tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("New", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(tr(StringKey.TouchNewDealLabel), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 }
@@ -264,7 +266,7 @@ fun SpiderBoard(
             BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (showEmptyStockWarning) {
                 Text(
-                    "Fill every empty column before dealing again",
+                    tr(StringKey.EmptyColumnDrawToast),
                     color = Color.Yellow,
                     fontSize = 12.sp,
                     modifier = Modifier

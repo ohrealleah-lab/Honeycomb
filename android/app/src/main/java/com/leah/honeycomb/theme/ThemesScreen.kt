@@ -1,5 +1,11 @@
 package com.leah.honeycomb.theme
 
+import com.leah.honeycomb.tr
+
+import com.leah.honeycomb.StringKey
+
+import com.leah.honeycomb.trf
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -64,17 +70,17 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
     if (pendingDeleteLabel != null) {
         AlertDialog(
             onDismissRequest = { pendingDeleteLabel = null; pendingDeleteAction = null },
-            title = { Text("Delete $pendingDeleteLabel?") },
-            text = { Text("Any theme using this will fall back to a default. This can't be undone.") },
+            title = { Text(trf(StringKey.DeleteItemConfirmFmt, pendingDeleteLabel ?: "")) },
+            text = { Text(tr(StringKey.ThemeAssetDeleteBody)) },
             confirmButton = {
                 TextButton(onClick = {
                     pendingDeleteAction?.invoke()
                     pendingDeleteLabel = null
                     pendingDeleteAction = null
-                }) { Text("Delete") }
+                }) { Text(tr(StringKey.Delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDeleteLabel = null; pendingDeleteAction = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingDeleteLabel = null; pendingDeleteAction = null }) { Text(tr(StringKey.Cancel)) }
             }
         )
     }
@@ -82,7 +88,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Themes") },
+                title = { Text(tr(StringKey.ThemesPanelTitle)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -90,7 +96,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
                 },
                 actions = {
                     TextButton(onClick = onImportArt) {
-                        Text("Import Art")
+                        Text(tr(StringKey.ImportArtButton))
                     }
                     IconButton(onClick = onAbout) {
                         Icon(Icons.Default.Info, contentDescription = "About")
@@ -108,7 +114,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Saved Themes
-            Text("Saved Themes", style = MaterialTheme.typography.titleMedium)
+            Text(tr(StringKey.SavedThemesHeader), style = MaterialTheme.typography.titleMedium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(themes) { theme ->
                     ThemePreviewItem(
@@ -121,7 +127,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
 
             // Card Back — built-ins keep their display name; custom imports are identified
             // by id and shown as an unlabeled thumbnail (no name to show).
-            Text("Card Back", style = MaterialTheme.typography.titleMedium)
+            Text(tr(StringKey.MenuSectionCardBack), style = MaterialTheme.typography.titleMedium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(builtinCardBackNames) { cbName ->
                     CardBackSelectorItem(
@@ -144,7 +150,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
             }
 
             // Background — same built-in-vs-custom split as Card Back above.
-            Text("Background", style = MaterialTheme.typography.titleMedium)
+            Text(tr(StringKey.MenuSectionBackground), style = MaterialTheme.typography.titleMedium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(builtinFeltNames) { bgName ->
                     BackgroundSelectorItem(
@@ -168,7 +174,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Show Vignette")
+                Text(tr(StringKey.FeltVignetteToggle))
                 Spacer(modifier = Modifier.width(8.dp))
                 Switch(
                     checked = showFeltVignette,
@@ -177,7 +183,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
             }
 
             // Custom Card Color
-            Text("Custom Card Color", style = MaterialTheme.typography.titleMedium)
+            Text(tr(StringKey.CustomCardColorHeading), style = MaterialTheme.typography.titleMedium)
             CustomCardColorSection(themeManager)
         }
     }
@@ -205,10 +211,10 @@ fun ThemePreviewItem(theme: SoliBeeTheme, isActive: Boolean, onApply: () -> Unit
         }
         Spacer(modifier = Modifier.height(8.dp))
         if (isActive) {
-            Text("Active", color = MaterialTheme.colorScheme.primary)
+            Text(tr(StringKey.DeckActiveBadge), color = MaterialTheme.colorScheme.primary)
         } else {
             Button(onClick = onApply) {
-                Text("Apply")
+                Text(tr(StringKey.ApplyThemeButton))
             }
         }
     }
@@ -233,7 +239,7 @@ fun CardBackSelectorItem(cardBackId: String, label: String?, onClick: () -> Unit
         }
         if (onDelete != null) {
             Text(
-                "Delete",
+                tr(StringKey.Delete),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.clickable(onClick = onDelete)
@@ -269,7 +275,7 @@ fun BackgroundSelectorItem(label: String?, feltColor: FeltColorType, customBackg
         }
         if (onDelete != null) {
             Text(
-                "Delete",
+                tr(StringKey.Delete),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.clickable(onClick = onDelete)
@@ -324,7 +330,7 @@ fun CustomCardColorSection(themeManager: ThemeManager) {
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Enable Custom Colors")
+        Text(tr(StringKey.EnableCustomColorsToggle))
         Spacer(modifier = Modifier.width(8.dp))
         Switch(
             checked = colors.isEnabled,
@@ -348,16 +354,16 @@ fun CustomCardColorSection(themeManager: ThemeManager) {
     if (colorToEdit != null) {
         AlertDialog(
             onDismissRequest = { colorToEdit = null },
-            title = { Text("Edit $colorToEdit") },
+            title = { Text(trf(StringKey.EditItemFmt, colorToEdit ?: "")) },
             text = {
                 Column {
-                    Text("Red")
+                    Text(tr(StringKey.ColorChannelRed))
                     Slider(value = currentRed.toFloat(), onValueChange = { currentRed = it.toDouble() })
-                    Text("Green")
+                    Text(tr(StringKey.ColorChannelGreen))
                     Slider(value = currentGreen.toFloat(), onValueChange = { currentGreen = it.toDouble() })
-                    Text("Blue")
+                    Text(tr(StringKey.ColorChannelBlue))
                     Slider(value = currentBlue.toFloat(), onValueChange = { currentBlue = it.toDouble() })
-                    Text("Alpha")
+                    Text(tr(StringKey.ColorChannelAlpha))
                     Slider(value = currentAlpha.toFloat(), onValueChange = { currentAlpha = it.toDouble() })
                 }
             },
@@ -370,10 +376,10 @@ fun CustomCardColorSection(themeManager: ThemeManager) {
                         }
                         colorToEdit = null
                     }
-                ) { Text("Save") }
+                ) { Text(tr(StringKey.Save)) }
             },
             dismissButton = {
-                TextButton(onClick = { colorToEdit = null }) { Text("Cancel") }
+                TextButton(onClick = { colorToEdit = null }) { Text(tr(StringKey.Cancel)) }
             }
         )
     }

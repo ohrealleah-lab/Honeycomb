@@ -90,7 +90,7 @@ fun OptionsFullScreenView(
                 title = { Text(title, fontWeight = FontWeight.Bold) },
                 actions = {
                     TextButton(onClick = onDismiss) {
-                        Text("Done", color = Color(0xFF007AFF), fontWeight = FontWeight.Bold)
+                        Text(tr(StringKey.Done), color = Color(0xFF007AFF), fontWeight = FontWeight.Bold)
                     }
                 }
             )

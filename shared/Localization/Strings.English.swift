@@ -711,5 +711,17 @@ enum StringsEnglish {
         .btnNewBet: "New Bet",
         .btnRebuy: "Rebuy",
         .btnReDeal: "Re-Deal",
+        .payTableTitle: "Pay Table",
+        .deleteItemConfirmFmt: "Delete %@?",
+        .themeAssetDeleteBody: "Any theme using this will fall back to a default. This can't be undone.",
+        .importArtButton: "Import Art",
+        .importCustomArtTitle: "Import Custom Art",
+        .artTypeLabel: "Art Type",
+        .enableCustomColorsToggle: "Enable Custom Colors",
+        .editItemFmt: "Edit %@",
+        .colorChannelRed: "Red",
+        .colorChannelGreen: "Green",
+        .colorChannelBlue: "Blue",
+        .colorChannelAlpha: "Alpha",
     ]
 }

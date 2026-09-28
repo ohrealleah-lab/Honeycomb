@@ -711,5 +711,17 @@ enum StringsSpanish {
         .btnNewBet: "Nueva Apuesta",
         .btnRebuy: "Recomprar",
         .btnReDeal: "Repartir",
+        .payTableTitle: "Tabla de Pagos",
+        .deleteItemConfirmFmt: "¿Eliminar %@?",
+        .themeAssetDeleteBody: "Cualquier tema que use esto volverá a uno predeterminado. Esto no se puede deshacer.",
+        .importArtButton: "Importar Arte",
+        .importCustomArtTitle: "Importar Arte Personalizado",
+        .artTypeLabel: "Tipo de Arte",
+        .enableCustomColorsToggle: "Activar Colores Personalizados",
+        .editItemFmt: "Editar %@",
+        .colorChannelRed: "Rojo",
+        .colorChannelGreen: "Verde",
+        .colorChannelBlue: "Azul",
+        .colorChannelAlpha: "Opacidad",
     ]
 }

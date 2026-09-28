@@ -1,5 +1,11 @@
 package com.leah.honeycomb.theme
 
+import com.leah.honeycomb.trf
+
+import com.leah.honeycomb.StringKey
+
+import com.leah.honeycomb.tr
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -15,7 +21,7 @@ fun AboutScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("About Honeycomb") },
+                title = { Text(tr(StringKey.AboutHoneycomb)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -29,9 +35,9 @@ fun AboutScreen(onBack: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Honeycomb Card Suite", style = MaterialTheme.typography.headlineLarge)
+            Text(tr(StringKey.AppNavigationTitle), style = MaterialTheme.typography.headlineLarge)
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Version 1.0.0", style = MaterialTheme.typography.bodyLarge)
+            Text(trf(StringKey.VersionFmt, "1.0.0"), style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(32.dp))
             Text("© 2024 ohrealleah-lab", style = MaterialTheme.typography.bodySmall)
         }

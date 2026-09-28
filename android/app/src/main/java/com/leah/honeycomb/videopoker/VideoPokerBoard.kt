@@ -1,5 +1,7 @@
 package com.leah.honeycomb.videopoker
 
+import com.leah.honeycomb.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,7 +59,7 @@ private fun PayTableDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF14321F)) {
             Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-                Text("Pay Table", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(tr(StringKey.PayTableTitle), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Spacer(modifier = Modifier.weight(2f))
